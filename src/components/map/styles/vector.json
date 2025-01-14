@@ -54,11 +54,6 @@
     "departements": {
       "type": "vector",
       "url": "https://openmaptiles.geo.data.gouv.fr/data/decoupage-administratif.json"
-    },
-    "projetsData": {
-      "type": "geojson",
-      "data": null,
-      "promoteId": "_id"
     }
   },
   "sprite": "https://openmaptiles.github.io/osm-bright-gl-style/sprite",
@@ -2805,77 +2800,6 @@
       }
     },
     {
-      "id": "projets-contours",
-      "type": "line",
-      "source": "projetsData",
-      "paint": {
-        "line-color": "black",
-        "line-width": 0.8
-      }
-    },
-    {
-      "id": "projets-fills",
-      "type": "fill",
-      "source": "projetsData",
-      "paint": {
-        "fill-color": [
-          "match",
-          ["get", "statut"],
-          "investigation", "#ffe386",
-          "convention_signee", "#d8ed75",
-          "marche_public_en_cours", "#b9e45a",
-          "prod_en_cours", "#a7f192",
-          "controle_en_cours", "#87c1ea",
-          "realise", "#175c8b",
-          "disponible", "#5114af",
-          "obsolete", "#7c7c7c",
-          "#0063cb"
-        ],
-        "fill-opacity": 0.6,
-        "fill-outline-color": "grey"
-      }
-    },
-    {
-      "id": "projets-fills-nature",
-      "type": "fill",
-      "source": "projetsData",
-      "layout": {
-        "visibility": "none"
-      },
-      "paint": {
-        "fill-color": [
-          "match",
-          ["get", "nature"],
-          "raster", "#fc916f",
-          "vecteur", "#86b6d8",
-          "mixte", "#cf7bb9",
-          "white"
-        ],
-        "fill-opacity": 0.5,
-        "fill-outline-color": "grey"
-      }
-    },
-    {
-      "id": "projets-fills-regime",
-      "type": "fill",
-      "source": "projetsData",
-      "layout": {
-        "visibility": "none"
-      },
-      "paint": {
-        "fill-color": [
-          "match",
-          ["get", "regime"],
-          "production", "#e4b555",
-          "maj", "#fa856d",
-          "anticipation", "#6d9df8",
-          "white"
-        ],
-        "fill-opacity": 0.5,
-        "fill-outline-color": "grey"
-      }
-    },
-    {
       "id": "contours",
       "type": "line",
       "source": "departements",
@@ -2888,3 +2812,4 @@
   ],
   "id": "osm-bright"
 }
+
