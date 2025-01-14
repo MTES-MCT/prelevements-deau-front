@@ -46,7 +46,7 @@ const RootLayout = async ({children}) => {
           <DsfrProvider>
             <MuiDsfrThemeProvider>
               <Header user={session?.user} />
-              <main className='fr-pt-md-4v' role='main' id='content'>
+              <main role='main' id='content'>
                 {children}
               </main>
               <Footer />
