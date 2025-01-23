@@ -18,7 +18,7 @@ const MapContainer = ({points}) => {
     <Box
       sx={{
         display: 'flex',
-        height: 'calc(100vh - 411.17px)',
+        height: 'calc(100vh - 412px)',
         width: '100%'
       }}
     >
