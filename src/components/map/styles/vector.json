@@ -54,6 +54,13 @@
     "departements": {
       "type": "vector",
       "url": "https://openmaptiles.geo.data.gouv.fr/data/decoupage-administratif.json"
+    },
+    "points-prelevement": {
+      "type": "geojson",
+      "data": {
+        "type": "FeatureCollection",
+        "features": []
+      }
     }
   },
   "sprite": "https://openmaptiles.github.io/osm-bright-gl-style/sprite",
@@ -2807,6 +2814,47 @@
       "paint": {
         "line-color": "grey",
         "line-width": 0.3
+      }
+    },
+    {
+      "id": "points-prelevement-milieux",
+      "type": "circle",
+      "source": "points-prelevement",
+      "paint": {
+        "circle-color": [
+          "match",
+          ["get", "usage"],
+          1, "deepskyblue",
+          2, "lawngreen",
+          3, "grey",
+          4, "darkgrey",
+          5, "skyblue",
+          6, "steelblue",
+          7, "slategrey",
+          8, "lightgrey",
+          9, "lightseagreen",
+          "black"
+        ],
+        "circle-radius": 5,
+        "circle-stroke-width": 1,
+        "circle-stroke-color": "black"
+      }
+    },
+    {
+      "id": "points-prelevement-usages",
+      "type": "circle",
+      "source": "points-prelevement",
+      "paint": {
+        "circle-color": [
+          "match",
+          ["get", "type_milieu"],
+          "1", "deepskyblue",
+          "2", "darkseagreen",
+          "whitesmoke"
+        ],
+        "circle-radius": 5,
+        "circle-stroke-width": 1,
+        "circle-stroke-color": "black"
       }
     }
   ],
