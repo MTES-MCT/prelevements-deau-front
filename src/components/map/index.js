@@ -3,6 +3,7 @@
 import {useEffect, useRef} from 'react'
 
 import {Box, Button} from '@mui/material'
+import {useTheme} from '@mui/material/styles'
 import maplibre from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import {createRoot} from 'react-dom/client'
@@ -11,6 +12,7 @@ import Popup from './popup.js'
 import vector from './styles/vector.json'
 
 const Map = ({points, handleSelectedPoint}) => {
+  const theme = useTheme()
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
 
@@ -138,8 +140,7 @@ const Map = ({points, handleSelectedPoint}) => {
           geometry: point.geom,
           id: point.id_point,
           properties: {
-            ...point,
-            usage: JSON.parse(point.exploitation[0].usage)
+            ...point
           }
         }))
       })
@@ -154,7 +155,8 @@ const Map = ({points, handleSelectedPoint}) => {
       sx={{
         position: 'relative',
         height: '100%',
-        width: '60%'
+        width: '60%',
+        backgroundColor: theme.palette.background.default
       }}
     >
       <div

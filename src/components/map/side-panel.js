@@ -17,16 +17,15 @@ const typesMilieu = {
   3: 'Eaux de transition'
 }
 
-const usages = {
-  1: 'Eau potable',
-  2: 'Agriculture',
-  3: 'Autre',
-  4: 'Camion citerne',
-  5: 'Eau embouteillée',
-  6: 'Hydroélectricité',
-  7: 'Industrie',
-  8: 'Non renseigné',
-  9: 'Thermalisme'
+function cleanAutresNoms(autresNoms) {
+  if (!autresNoms) {
+    return null
+  }
+
+  const cleanedStr = autresNoms.replaceAll(/[{}"]/g, '')
+  const result = [...new Set(cleanedStr.split(','))].join(', ')
+
+  return result
 }
 
 const SidePanel = ({selectedPoint}) => {
@@ -50,19 +49,33 @@ const SidePanel = ({selectedPoint}) => {
             isDialogOpen={isDialogOpen}
             setIsDialogOpen={setIsDialogOpen}
           />
-          <Typography variant='h5'>Informations sur les points de prélèvement :</Typography>
+          <Box>
+            <Typography variant='h5'>{selectedPoint.nom || <i>Pas de nom renseigné</i>}</Typography>
+            <Box
+              sx={{
+                fontSize: '0.8rem',
+                fontStyle: 'italic',
+                p: 2
+              }}
+            >
+              <Box>Autres noms :</Box>
+              <Box>{cleanAutresNoms(selectedPoint.autres_noms) || <i>pas d’autres noms</i>}</Box>
+            </Box>
+            <Box>
+              <Box>Usage : {selectedPoint.usage || <i>Non renseigné</i>}</Box>
+              <Box>Type de milieu : {typesMilieu[selectedPoint.type_milieu] || <i>Non renseigné</i>}</Box>
+            </Box>
+          </Box>
           <Box
             component='div'
             sx={{
               p: 2
             }}
           >
-            <div><b>Nom :</b> {selectedPoint.nom || <i>Non renseigné</i>}</div>
-            <div><b>Autres noms :</b> {selectedPoint.autres_noms || <i>Non renseigné</i>}</div>
             <div><b>Détail localisation :</b> {selectedPoint.detail_localisation || <i>Non renseigné</i>}</div>
             <div><b>Cours d’eau :</b> {selectedPoint.cours_eau || <i>Non renseigné</i>}</div>
             <div><b>Type de milieu :</b> {typesMilieu[selectedPoint.type_milieu] || <i>Non renseigné</i>}</div>
-            <div><b>Usage : </b> {usages[selectedPoint.usage] || <i>Non renseigné</i>}</div>
+            <div><b>Usage : </b> {selectedPoint.usage || <i>Non renseigné</i>}</div>
             <div><b>Précision :</b> {selectedPoint.precision || <i>Non renseigné</i>}</div>
             <div><b>Profondeur :</b> {selectedPoint.profondeur || <i>Non renseigné</i>}</div>
             <div><b>Réservoir biologique :</b> {selectedPoint.reservoir_biologique || <i>Non renseigné</i>}</div>
