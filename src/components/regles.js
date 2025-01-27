@@ -69,13 +69,19 @@ const contraintes = {
 }
 
 const parametres = {
-  1: 'volume',
-  2: 'débit',
-  3: 'concentration',
-  4: 'température',
-  5: 'niveau piézométrique',
-  6: 'conductivité électrique',
-  7: 'pH'
+  1: 'Volume journalier',
+  2: 'Volume mensuel',
+  3: 'Volume annuel',
+  4: 'Relevé d’index',
+  5: 'Débit prélevé',
+  6: 'Débit réservé',
+  7: 'Chlorure',
+  8: 'Nitrates',
+  9: 'Sulfates',
+  10: 'Température',
+  11: 'Niveau piézométrique',
+  12: 'Conductivité électrique',
+  13: 'pH'
 }
 
 const Regles = ({regles}) => (
