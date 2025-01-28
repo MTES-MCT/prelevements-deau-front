@@ -1,6 +1,6 @@
 'use client'
 
-import {useEffect, useRef} from 'react'
+import {useEffect, useRef, useState} from 'react'
 
 import {Box, Button} from '@mui/material'
 import {useTheme} from '@mui/material/styles'
@@ -8,6 +8,8 @@ import maplibre from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import {createRoot} from 'react-dom/client'
 
+import Filters from './filters.js'
+import Legend from './legend.js'
 import Popup from './popup.js'
 import vector from './styles/vector.json'
 
@@ -15,9 +17,25 @@ const Map = ({points, handleSelectedPoint}) => {
   const theme = useTheme()
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
+  const [legend, setLegend] = useState('typesMilieu')
+  const [filters, setFilters] = useState([])
+
+  const handleFilters = e => {
+    if (filters.includes(e)) {
+      setFilters(filters.filter(filter => filter !== e))
+    } else {
+      setFilters([...filters, e])
+    }
+  }
 
   function changeLayout() {
     const layout = mapRef.current.getLayoutProperty('points-prelevement-usages', 'visibility')
+
+    if (legend === 'typesMilieu') {
+      setLegend('usages')
+    } else {
+      setLegend('typesMilieu')
+    }
 
     if (layout === 'visible') {
       mapRef.current.setLayoutProperty('points-prelevement-usages', 'visibility', 'none')
@@ -26,6 +44,10 @@ const Map = ({points, handleSelectedPoint}) => {
       mapRef.current.setLayoutProperty('points-prelevement-usages', 'visibility', 'visible')
       mapRef.current.setLayoutProperty('points-prelevement-milieux', 'visibility', 'none')
     }
+
+    setFilters([])
+    mapRef.current.setFilter('points-prelevement-milieux', null)
+    mapRef.current.setFilter('points-prelevement-usages', null)
   }
 
   useEffect(() => {
@@ -132,7 +154,8 @@ const Map = ({points, handleSelectedPoint}) => {
     })
 
     map.on('load', async () => {
-      mapRef.current.setLayoutProperty('points-prelevement-usages', 'visibility', 'visible')
+      mapRef.current.setLayoutProperty('points-prelevement-milieux', 'visibility', 'visible')
+      mapRef.current.setLayoutProperty('points-prelevement-usages', 'visibility', 'none')
       map.getSource('points-prelevement').setData({
         type: 'FeatureCollection',
         features: points.map(point => ({
@@ -149,6 +172,29 @@ const Map = ({points, handleSelectedPoint}) => {
     return () => map && map.remove()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (mapRef.current && mapRef.current.isStyleLoaded()) {
+      if (legend === 'usages') {
+        const filter = filters.length > 0
+          ? ['match', ['get', 'usage'], filters, false, true]
+          : ['match', ['get', 'usage'], '', true, true]
+
+        mapRef.current.setFilter('points-prelevement-usages', filter)
+      }
+
+      if (legend === 'typesMilieu') {
+        const filter = filters.length > 0
+          ? ['match', ['get', 'typeMilieu'], filters, false, true]
+          : ['match', ['get', 'typeMilieu'], '', true, true]
+
+        mapRef.current.setFilter('points-prelevement-milieux', filter)
+      }
+    }
+  }, [filters, legend])
+
+console.log(filters)
+console.log(legend)
 
   return (
     <Box
@@ -167,6 +213,8 @@ const Map = ({points, handleSelectedPoint}) => {
           position: 'relative'
         }}
       />
+      <Filters layout={legend} setFilters={handleFilters} />
+      <Legend legend={legend} />
       <Button
         type='button'
         variant='contained'
@@ -178,7 +226,7 @@ const Map = ({points, handleSelectedPoint}) => {
         }}
         onClick={() => changeLayout()}
       >
-        Changer
+        Afficher par {legend === 'typesMilieu' ? 'usages' : 'types de milieu'}
       </Button>
     </Box>
   )

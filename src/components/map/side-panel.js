@@ -12,7 +12,7 @@ import {useTheme} from '@mui/material/styles'
 import PointDetails from '@/components/map/point-details.js'
 
 const typesMilieu = {
-  1: 'Eau continentale',
+  1: 'Eau de surface',
   2: 'Eau souterraine',
   3: 'Eaux de transition'
 }
@@ -63,7 +63,7 @@ const SidePanel = ({selectedPoint}) => {
             </Box>
             <Box>
               <Box>Usage : {selectedPoint.usage || <i>Non renseigné</i>}</Box>
-              <Box>Type de milieu : {typesMilieu[selectedPoint.type_milieu] || <i>Non renseigné</i>}</Box>
+              <Box>Type de milieu : {selectedPoint.typeMilieu || <i>Non renseigné</i>}</Box>
             </Box>
           </Box>
           <Box

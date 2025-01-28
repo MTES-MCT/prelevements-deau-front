@@ -2817,7 +2817,7 @@
       }
     },
     {
-      "id": "points-prelevement-milieux",
+      "id": "points-prelevement-usages",
       "type": "circle",
       "source": "points-prelevement",
       "paint": {
@@ -2828,7 +2828,7 @@
           "Agriculture", "lawngreen",
           "Autre", "grey",
           "Camion citerne", "darkgrey",
-          "Eau embouteillee", "skyblue",
+          "Eau embouteillée", "skyblue",
           "Hydroélectricité", "steelblue",
           "Industrie", "slategrey",
           "Non renseigné", "lightgrey",
@@ -2841,15 +2841,16 @@
       }
     },
     {
-      "id": "points-prelevement-usages",
+      "id": "points-prelevement-milieux",
       "type": "circle",
       "source": "points-prelevement",
       "paint": {
         "circle-color": [
           "match",
-          ["get", "type_milieu"],
-          "1", "deepskyblue",
-          "2", "darkseagreen",
+          ["get", "typeMilieu"],
+          "Eau de surface", "deepskyblue",
+          "Eau souterraine", "darkseagreen",
+          "Eau de transition", "lightseagreen",
           "whitesmoke"
         ],
         "circle-radius": 5,
