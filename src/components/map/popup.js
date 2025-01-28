@@ -1,7 +1,9 @@
+import {Box} from '@mui/material'
+
 const Popup = ({properties}) => (
-  <div>
+  <Box>
     <h3 className='text-base text-black font-bold'>{properties.nom || 'Pas de nom renseigné'}</h3>
-  </div>
+  </Box>
 )
 
 export default Popup
