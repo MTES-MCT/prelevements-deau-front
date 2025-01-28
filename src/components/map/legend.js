@@ -1,24 +1,35 @@
-import {Box} from '@mui/material'
+import {Box, Checkbox} from '@mui/material'
 import {useTheme} from '@mui/material/styles'
 
-const Bubble = ({color, text}) => (
-  <Box sx={{display: 'flex', alignItems: 'center'}}>
-    <Box
-      sx={{
-        height: 15,
-        width: 15,
-        backgroundColor: color,
-        border: '1px solid black',
-        borderRadius: '50%',
-        mr: 1
-      }}
+import {legendColors} from './legend-colors.js'
+
+const Bubble = ({color, text, onChange}) => (
+  <Box sx={{display: 'flex', justifyContent: 'space-between'}}>
+    <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+      <Box
+        sx={{
+          height: 15,
+          width: 15,
+          backgroundColor: color,
+          border: '1px solid black',
+          borderRadius: '50%',
+          mr: 1
+        }}
+      />
+      {text}
+    </Box>
+    <Checkbox
+      sx={{p: 0, pl: 1}}
+      size='small'
+      label={text}
+      onChange={onChange}
     />
-    <Box>{text}</Box>
   </Box>
 )
 
-const Legend = ({legend}) => {
+const Legend = ({legend, setFilters}) => {
   const theme = useTheme()
+  const {usages, typesMilieu} = legendColors
 
   return (
     <Box
@@ -33,7 +44,17 @@ const Legend = ({legend}) => {
         color: theme.palette.text.primary
       }}
     >
-      <Box sx={{pb: 2}}>Légende :</Box>
+      <Box>Légende :</Box>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'end',
+          fontSize: '0.8rem',
+          pb: 1
+        }}
+      >
+        <i>Masquer :</i>
+      </Box>
       <Box
         sx={{
           backgroundColor: theme.palette.background.default,
@@ -41,52 +62,26 @@ const Legend = ({legend}) => {
         }}
       >
         {legend === 'usages' && (
-          <>
-            <Bubble
-              color='deepskyblue'
-              text='Eau potable'
-            />
-            <Bubble
-              color='lawngreen'
-              text='Agriculture'
-            />
-            <Bubble
-              color='grey'
-              text='Camion citerne'
-            />
-            <Bubble
-              color='skyblue'
-              text='Eau embouteillée'
-            />
-            <Bubble
-              color='steelblue'
-              text='Hydroélectricité'
-            />
-            <Bubble
-              color='slategrey'
-              text='Industrie'
-            />
-            <Bubble
-              color='lightgrey'
-              text='Non renseigné'
-            />
-            <Bubble
-              color='lightseagreen'
-              text='Thermalisme'
-            />
-          </>
+          usages.map(usage => (
+            <Box key={usage.text}>
+              <Bubble
+                color={usage.color}
+                text={usage.text}
+                onChange={() => setFilters(usage.text)}
+              />
+            </Box>
+          ))
         )}
+
         {legend === 'typesMilieu' && (
-          <>
+          typesMilieu.map(type => (
             <Bubble
-              color='deepskyblue'
-              text='Eau de surface'
+              key={type.text}
+              color={type.color}
+              text={type.text}
+              onChange={() => setFilters(type.text)}
             />
-            <Bubble
-              color='lightseagreen'
-              text='Eau souterraine'
-            />
-          </>
+          ))
         )}
       </Box>
     </Box>

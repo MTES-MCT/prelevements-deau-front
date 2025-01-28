@@ -8,7 +8,6 @@ import maplibre from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import {createRoot} from 'react-dom/client'
 
-import Filters from './filters.js'
 import Legend from './legend.js'
 import Popup from './popup.js'
 import vector from './styles/vector.json'
@@ -193,9 +192,6 @@ const Map = ({points, handleSelectedPoint}) => {
     }
   }, [filters, legend])
 
-console.log(filters)
-console.log(legend)
-
   return (
     <Box
       sx={{
@@ -213,8 +209,7 @@ console.log(legend)
           position: 'relative'
         }}
       />
-      <Filters layout={legend} setFilters={handleFilters} />
-      <Legend legend={legend} />
+      <Legend legend={legend} setFilters={handleFilters} />
       <Button
         type='button'
         variant='contained'
