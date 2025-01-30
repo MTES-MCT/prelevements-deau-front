@@ -1,3 +1,4 @@
+import {Highlight} from '@codegouvfr/react-dsfr/Highlight'
 import {Box, Grid2} from '@mui/material'
 
 const frequences = {
@@ -14,6 +15,12 @@ const frequences = {
   11: 'Non renseigné'
 }
 
+const InfoBox = ({label, value}) => (
+  <Box className='flex align-middle justify-between'>
+    <b>{label} :</b> {value || <i>Non renseigné</i>}
+  </Box>
+)
+
 const Modalite = ({modalite}) => (
   <Grid2
     container
@@ -24,27 +31,27 @@ const Modalite = ({modalite}) => (
     }}
   >
     <Box>
-      <Box><b>Débit prélevé :</b> {frequences[modalite.freq_debit_preleve] || <i>Non renseigné</i>}</Box>
-      <Box><b>Débit réservé :</b> {frequences[modalite.freq_debit_reserve] || <i>Non renseigné</i>}</Box>
-      <Box><b>Volume prélevé :</b> {frequences[modalite.freq_volume_preleve] || <i>Non renseigné</i>}</Box>
+      <InfoBox label='Débit prélevé' value={frequences[modalite.freq_debit_preleve]} />
+      <InfoBox label='Débit réservé' value={frequences[modalite.freq_debit_reserve]} />
+      <InfoBox label='Volume prélevé' value={frequences[modalite.freq_volume_preleve]} />
     </Box>
     <Box>
-      <Box><b>Niveau Eau :</b> {frequences[modalite.freq_niveau_eau] || <i>Non renseigné</i>}</Box>
-      <Box><b>Chlorure :</b> {frequences[modalite.freq_chlorures] || <i>Non renseigné</i>}</Box>
-      <Box><b>Conductivité :</b> {frequences[modalite.freq_conductivite] || <i>Non renseigné</i>}</Box>
+      <InfoBox label='Niveau Eau' value={frequences[modalite.freq_niveau_eau]} />
+      <InfoBox label='Chlorure' value={frequences[modalite.freq_chlorures]} />
+      <InfoBox label='Conductivité' value={frequences[modalite.freq_conductivite]} />
     </Box>
     <Box>
-      <Box><b>Nitrates :</b> {frequences[modalite.freq_nitrates] || <i>Non renseigné</i>}</Box>
-      <Box><b>PH :</b> {frequences[modalite.freq_ph] || <i>Non renseigné</i>}</Box>
-      <Box><b>Sulfates :</b> {frequences[modalite.freq_sutlfates] || <i>Non renseigné</i>}</Box>
+      <InfoBox label='Nitrates' value={frequences[modalite.freq_nitrates]} />
+      <InfoBox label='PH' value={frequences[modalite.freq_ph]} />
+      <InfoBox label='Sulfates' value={frequences[modalite.freq_sutlfates]} />
     </Box>
     <Box>
-      <Box><b>Temperature :</b> {frequences[modalite.freq_temperature] || <i>Non renseigné</i>}</Box>
-      <Box><b>Turbidité :</b> {frequences[modalite.freq_turbidite] || <i>Non renseigné</i>}</Box>
+      <InfoBox label='Temperature' value={frequences[modalite.freq_temperature]} />
+      <InfoBox label='Turbidité' value={frequences[modalite.freq_turbidite]} />
     </Box>
-    <Box>
+    <Highlight>
       <b>Remarque :</b> <i>{modalite.remarque || 'Non renseigné'}</i>
-    </Box>
+    </Highlight>
   </Grid2>
 )
 
