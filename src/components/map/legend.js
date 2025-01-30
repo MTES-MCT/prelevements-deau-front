@@ -1,5 +1,4 @@
-import {Button} from '@codegouvfr/react-dsfr/Button'
-import {Box} from '@mui/material'
+import {Box, Checkbox} from '@mui/material'
 
 import {legendColors} from './legend-colors.js'
 
@@ -18,21 +17,7 @@ const Bubble = ({color, text, isActive, onChange}) => (
       {text}
     </Box>
 
-    {isActive ? (
-      <Button
-        iconId='fr-icon-eye-off-line'
-        priority='tertiary no outline'
-        title={`Afficher ${text}`}
-        onClick={onChange}
-      />
-    ) : (
-      <Button
-        iconId='fr-icon-eye-line'
-        priority='tertiary no outline'
-        title={`Cacher ${text}`}
-        onClick={onChange}
-      />
-    )}
+    <Checkbox checked={isActive} onChange={onChange} />
   </Box>
 )
 
@@ -61,7 +46,7 @@ const Legend = ({legend, activeFilters, setFilters}) => {
               key={type.text}
               color={type.color}
               text={type.text}
-              isActive={activeFilters.includes(type.text)}
+              isActive={!activeFilters.includes(type.text)}
               onChange={() => setFilters(type.text)}
             />
           ))
