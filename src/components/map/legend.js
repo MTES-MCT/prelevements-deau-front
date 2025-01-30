@@ -33,7 +33,7 @@ const Legend = ({legend, activeFilters, setFilters}) => {
               <Bubble
                 color={usage.color}
                 text={usage.text}
-                isActive={activeFilters.includes(usage.text)}
+                isActive={!activeFilters.includes(usage.text)}
                 onChange={() => setFilters(usage.text)}
               />
             </Box>
