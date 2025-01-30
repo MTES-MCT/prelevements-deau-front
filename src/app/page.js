@@ -16,7 +16,7 @@ const Home = async () => {
   }
 
   return (
-    <div className='fr-container'>
+    <div className='fr-container mt-4'>
       <CallOut
         iconId='ri-information-line'
         title='Dossiers déposés'
