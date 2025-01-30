@@ -11,6 +11,7 @@ export const legendColors = {
   ],
   typesMilieu: [
     {text: 'Eau de surface', color: 'deepskyblue'},
-    {text: 'Eau souterraine', color: 'lightseagreen'}
+    {text: 'Eau souterraine', color: 'lightseagreen'},
+    {text: 'Eau de transition', color: 'skyblue'}
   ]
 }

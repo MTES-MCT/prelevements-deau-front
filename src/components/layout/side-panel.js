@@ -11,7 +11,7 @@ const SidePanel = ({title, isOpen, panelContent, handleOpen, children}) => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
 
   return (
-    <div className='w-full h-full overflow-hidden relative'>
+    <div className='w-full h-full relative flex-1 min-h-0'>
       {isMobile ? (
         // --------------------------------
         // Mode mobile
@@ -29,14 +29,11 @@ const SidePanel = ({title, isOpen, panelContent, handleOpen, children}) => {
           <Drawer
             variant='permanent'
             anchor='bottom'
+            className='min-h-14'
             PaperProps={{
-              className: `
-                rounded-t-xl
-                transition-all
-                duration-300
-                ease-in-out
-                ${isOpen ? 'h-1/2' : 'h-16'}
-              `
+              sx: {
+                maxHeight: '66%'
+              }
             }}
           >
             <div className='px-4 py-2 flex items-center justify-between gap-4'>

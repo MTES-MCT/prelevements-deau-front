@@ -1,72 +1,54 @@
-import {Box, Checkbox} from '@mui/material'
-import {useTheme} from '@mui/material/styles'
+import {Button} from '@codegouvfr/react-dsfr/Button'
+import {Box} from '@mui/material'
 
 import {legendColors} from './legend-colors.js'
 
-const Bubble = ({color, text, onChange}) => (
-  <Box sx={{display: 'flex', justifyContent: 'space-between'}}>
-    <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+const Bubble = ({color, text, isActive, onChange}) => (
+  <Box className='flex items-center justify-between gap-2'>
+    <Box className='flex items-center gap-2'>
       <Box
         sx={{
           height: 15,
           width: 15,
           backgroundColor: color,
           border: '1px solid black',
-          borderRadius: '50%',
-          mr: 1
+          borderRadius: '50%'
         }}
       />
       {text}
     </Box>
-    <Checkbox
-      sx={{p: 0, pl: 1}}
-      size='small'
-      label={text}
-      onChange={onChange}
-    />
+
+    {isActive ? (
+      <Button
+        iconId='fr-icon-eye-off-line'
+        priority='tertiary no outline'
+        title={`Afficher ${text}`}
+        onClick={onChange}
+      />
+    ) : (
+      <Button
+        iconId='fr-icon-eye-line'
+        priority='tertiary no outline'
+        title={`Cacher ${text}`}
+        onClick={onChange}
+      />
+    )}
   </Box>
 )
 
-const Legend = ({legend, setFilters}) => {
-  const theme = useTheme()
+const Legend = ({legend, activeFilters, setFilters}) => {
   const {usages, typesMilieu} = legendColors
 
   return (
-    <Box
-      sx={{
-        position: 'absolute',
-        bottom: 10,
-        left: 10,
-        px: 2,
-        py: 1,
-        borderRadius: 2,
-        backgroundColor: theme.palette.background.default,
-        color: theme.palette.text.primary
-      }}
-    >
-      <Box>Légende :</Box>
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'end',
-          fontSize: '0.8rem',
-          pb: 1
-        }}
-      >
-        <i>Masquer :</i>
-      </Box>
-      <Box
-        sx={{
-          backgroundColor: theme.palette.background.default,
-          color: theme.palette.text.primary
-        }}
-      >
+    <Box>
+      <Box>
         {legend === 'usages' && (
           usages.map(usage => (
             <Box key={usage.text}>
               <Bubble
                 color={usage.color}
                 text={usage.text}
+                isActive={activeFilters.includes(usage.text)}
                 onChange={() => setFilters(usage.text)}
               />
             </Box>
@@ -79,6 +61,7 @@ const Legend = ({legend, setFilters}) => {
               key={type.text}
               color={type.color}
               text={type.text}
+              isActive={activeFilters.includes(type.text)}
               onChange={() => setFilters(type.text)}
             />
           ))

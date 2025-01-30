@@ -2,7 +2,9 @@
 
 import {useEffect, useRef, useState} from 'react'
 
-import {Box, Button} from '@mui/material'
+import {
+  Box, Select, MenuItem, Paper
+} from '@mui/material'
 import maplibre from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import {createRoot} from 'react-dom/client'
@@ -25,21 +27,18 @@ const Map = ({points, handleSelectedPoint}) => {
     }
   }
 
-  function changeLayout() {
-    const layout = mapRef.current.getLayoutProperty('points-prelevement-usages', 'visibility')
+  const handleLegendChange = event => {
+    const newLegend = event.target.value
+    setLegend(newLegend)
 
-    if (legend === 'typesMilieu') {
-      setLegend('usages')
-    } else {
-      setLegend('typesMilieu')
-    }
-
-    if (layout === 'visible') {
-      mapRef.current.setLayoutProperty('points-prelevement-usages', 'visibility', 'none')
-      mapRef.current.setLayoutProperty('points-prelevement-milieux', 'visibility', 'visible')
-    } else {
-      mapRef.current.setLayoutProperty('points-prelevement-usages', 'visibility', 'visible')
-      mapRef.current.setLayoutProperty('points-prelevement-milieux', 'visibility', 'none')
+    if (mapRef.current) {
+      if (newLegend === 'usages') {
+        mapRef.current.setLayoutProperty('points-prelevement-usages', 'visibility', 'visible')
+        mapRef.current.setLayoutProperty('points-prelevement-milieux', 'visibility', 'none')
+      } else {
+        mapRef.current.setLayoutProperty('points-prelevement-usages', 'visibility', 'none')
+        mapRef.current.setLayoutProperty('points-prelevement-milieux', 'visibility', 'visible')
+      }
     }
 
     setFilters([])
@@ -167,7 +166,7 @@ const Map = ({points, handleSelectedPoint}) => {
     })
 
     return () => map && map.remove()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -193,20 +192,29 @@ const Map = ({points, handleSelectedPoint}) => {
   return (
     <Box className='flex h-full w-full relative'>
       <div ref={mapContainerRef} className='flex h-full w-full' />
-      <Legend legend={legend} setFilters={handleFilters} />
-      <Button
-        type='button'
-        variant='contained'
+
+      <Paper
+        elevation={2}
         sx={{
           position: 'absolute',
           top: 10,
           right: 10,
-          zIndex: 1
+          padding: 2,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 1
         }}
-        onClick={() => changeLayout()}
       >
-        Afficher par {legend === 'typesMilieu' ? 'usages' : 'types de milieu'}
-      </Button>
+        <Select value={legend} variant='outlined' size='small' onChange={handleLegendChange}>
+          <MenuItem value='typesMilieu'>Types de milieu</MenuItem>
+          <MenuItem value='usages'>Usages</MenuItem>
+        </Select>
+        <Legend
+          legend={legend}
+          activeFilters={filters}
+          setFilters={handleFilters}
+        />
+      </Paper>
     </Box>
   )
 }
