@@ -1,31 +1,35 @@
 'use client'
 
-import {useState} from 'react'
+import {useCallback, useState} from 'react'
 
-import {Box} from '@mui/material'
+import Map from './index.js'
 
-import Map from '@/components/map/index.js'
-import SidePanel from '@/components/map/side-panel.js'
+import SidePanelLayout from '@/components/layout/side-panel.js'
+import SidePanel from '@/components/map/point-side-panel.js'
 
-const MapContainer = ({points}) => {
+const Layout = ({points}) => {
+  // État pour le point sélectionné
   const [selectedPoint, setSelectedPoint] = useState(null)
+  // État qui gère si le panneau est "déplié" (true) ou "replié" (false)
+  const [expanded, setExpanded] = useState(false)
 
-  function handleSelectedPoint(point) {
-    setSelectedPoint(point)
-  }
+  // Sélection d’un point sur la carte => on déplie éventuellement le panneau
+  const handleSelectedPoint = useCallback(pointId => {
+    const selectedPoint = points.find(point => point.id_point === pointId)
+    setSelectedPoint(selectedPoint)
+    setExpanded(true)
+  }, [points])
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        height: 'calc(100vh - 173px)',
-        width: '100%'
-      }}
+    <SidePanelLayout
+      title={selectedPoint ? selectedPoint.nom || 'Pas de nom renseigné' : 'Aucun point sélectionné'}
+      isOpen={expanded}
+      handleOpen={setExpanded}
+      panelContent={<SidePanel point={selectedPoint} />}
     >
-      <SidePanel selectedPoint={selectedPoint} />
-      <Map points={points} handleSelectedPoint={p => handleSelectedPoint(p)} />
-    </Box>
+      <Map points={points} handleSelectedPoint={handleSelectedPoint} />
+    </SidePanelLayout>
   )
 }
 
-export default MapContainer
+export default Layout

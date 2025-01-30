@@ -3,7 +3,6 @@
 import {useEffect, useRef, useState} from 'react'
 
 import {Box, Button} from '@mui/material'
-import {useTheme} from '@mui/material/styles'
 import maplibre from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import {createRoot} from 'react-dom/client'
@@ -13,7 +12,6 @@ import Popup from './popup.js'
 import vector from './styles/vector.json'
 
 const Map = ({points, handleSelectedPoint}) => {
-  const theme = useTheme()
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
   const [legend, setLegend] = useState('typesMilieu')
@@ -108,7 +106,7 @@ const Map = ({points, handleSelectedPoint}) => {
         1
       ])
 
-      handleSelectedPoint(properties)
+      handleSelectedPoint(properties.id_point)
     })
 
     map.on('mouseenter', 'points-prelevement-milieux', e => {
@@ -149,7 +147,7 @@ const Map = ({points, handleSelectedPoint}) => {
         1
       ])
 
-      handleSelectedPoint(properties)
+      handleSelectedPoint(properties.id_point)
     })
 
     map.on('load', async () => {
@@ -193,22 +191,8 @@ const Map = ({points, handleSelectedPoint}) => {
   }, [filters, legend])
 
   return (
-    <Box
-      sx={{
-        position: 'relative',
-        height: '100%',
-        width: '60%',
-        backgroundColor: theme.palette.background.default
-      }}
-    >
-      <div
-        ref={mapContainerRef}
-        style={{
-          height: '100%',
-          width: '100%',
-          position: 'relative'
-        }}
-      />
+    <Box className='flex h-full w-full relative'>
+      <div ref={mapContainerRef} className='flex h-full w-full' />
       <Legend legend={legend} setFilters={handleFilters} />
       <Button
         type='button'
