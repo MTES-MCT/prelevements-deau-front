@@ -135,6 +135,12 @@ const Map = ({points, selectedPoint, handleSelectedPoint}) => {
       })
     })
 
+    const scale = new maplibre.ScaleControl({
+      maxWidth: 80,
+      unit: 'metric'
+    })
+    map.addControl(scale)
+
     return () => map && map.remove()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
