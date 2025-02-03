@@ -15,7 +15,7 @@ import '@codegouvfr/react-dsfr/dsfr/utility/icons/icons.min.css'
 import '@/app/globals.css'
 
 export const metadata = {
-  title: 'Prélèvement d’eau',
+  title: 'Suivi des prélèvements d’eau',
   description: 'Suivre les prélèvements d’eau'
 }
 

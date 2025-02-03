@@ -64,7 +64,7 @@ const HeaderComponent = ({user}) => {
       serviceTitle='Suivi des prélèvements d’eau'
       homeLinkProps={{
         href: '/',
-        title: 'Accueil - Prélèvement d’eau'
+        title: 'Accueil - Suivi des prélèvements d’eau'
       }}
       quickAccessItems={[
         headerFooterDisplayItem,
