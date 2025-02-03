@@ -12,6 +12,7 @@ import Popup from './popup.js'
 import vector from './styles/vector.json'
 
 import {
+  computeBestPopupAnchor,
   eauSouterraine,
   eauSurface,
   createDonutChart,
@@ -71,6 +72,7 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint}) => {
     mapRef.current = map
 
     map.on('load', async () => {
+      // On ajoute la source en ne gardant que les points filtrés
       map.addSource(SOURCE_ID, {
         type: 'geojson',
         data: createPointPrelevementFeatures(points),
@@ -128,7 +130,6 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint}) => {
   }, [])
 
   // À chaque fois que `points` ou `filteredPoints` changent, on met à jour la source.
-  // Plus simple que de changer la visibilité des layers.
   useEffect(() => {
     if (mapRef.current && mapRef.current.getSource(SOURCE_ID)) {
       const visiblePoints = points.filter(pt => filteredPoints.includes(pt.id_point))
@@ -167,11 +168,27 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint}) => {
               point => point.id_point === props.id_point
             )
             root.render(<Popup point={hoveredPoint} />)
-            popupRef.current
+
+            // Supprimez l'ancienne popup si elle existe
+            if (popupRef.current) {
+              popupRef.current.remove()
+            }
+
+            // Créez une nouvelle popup avec l'ancre calculée
+            const dynamicPopup = new maplibre.Popup({
+              closeButton: false,
+              closeOnClick: false,
+              anchor: computeBestPopupAnchor(map, coords)
+            })
+
+            dynamicPopup
               .setLngLat(coords)
               .setDOMContent(popupContainer)
               .addTo(map)
+
+            popupRef.current = dynamicPopup
           })
+
           el.addEventListener('mouseleave', () => {
             map.getCanvas().style.cursor = ''
             popupRef.current.remove()

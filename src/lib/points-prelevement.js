@@ -33,7 +33,6 @@ export function extractTypeMilieu(points) {
   return [...typeMilieuSet]
 }
 
-
 // Filters for classifying points by type of environment
 export const eauSurface = ['==', ['get', 'typeMilieu'], 'Eau de surface']
 export const eauSouterraine = ['==', ['get', 'typeMilieu'], 'Eau souterraine']
@@ -299,4 +298,30 @@ function createPieSegment(cx, cy, r, start, end, color) {
   path.setAttribute('fill', color)
 
   return path
+}
+
+export function computeBestPopupAnchor(map, coords) {
+  // Calcul de la position du point en pixels
+  const canvas = map.getCanvas()
+  const canvasWidth = canvas.clientWidth
+  const canvasHeight = canvas.clientHeight
+  const screenPoint = map.project(coords)
+  const marginTop = screenPoint.y
+  const marginBottom = canvasHeight - screenPoint.y
+  const marginLeft = screenPoint.x
+  const marginRight = canvasWidth - screenPoint.x
+
+  // Choix dynamique de l'ancre en fonction de la marge minimale
+  let anchor = 'bottom' // Valeur par défaut
+  if (marginTop < marginBottom && marginTop < marginLeft && marginTop < marginRight) {
+    anchor = 'top' // Le point est proche du haut → affiche la popup en dessous (ancre "top")
+  } else if (marginBottom < marginTop && marginBottom < marginLeft && marginBottom < marginRight) {
+    anchor = 'bottom' // Le point est proche du bas → affiche la popup au-dessus (ancre "bottom")
+  } else if (marginLeft < marginTop && marginLeft < marginBottom && marginLeft < marginRight) {
+    anchor = 'left' // Le point est proche de la gauche → affiche la popup à droite (ancre "left")
+  } else if (marginRight < marginTop && marginRight < marginBottom && marginRight < marginLeft) {
+    anchor = 'right' // Le point est proche de la droite → affiche la popup à gauche (ancre "right")
+  }
+
+  return anchor
 }
