@@ -1,0 +1,267 @@
+
+// Filters for classifying points by type of environment
+export const eauSurface = ['==', ['get', 'typeMilieu'], 'Eau de surface']
+export const eauSouterraine = ['==', ['get', 'typeMilieu'], 'Eau souterraine']
+
+export const colors = ['#007cbf', '#00a6a6', '#f0f0f0']
+
+export function createPointPrelevementFeatures(points) {
+  return {
+    type: 'FeatureCollection',
+    features: points.map(point => ({
+      type: 'Feature',
+      geometry: point.geom,
+      id: point.id_point,
+      properties: {
+        ...point,
+        textOffset: [0, 2.5 + (0.07 * Math.min(point.nom?.length || 0, 50))]
+      }
+    }))
+  }
+}
+
+// Code for creating an SVG donut chart from feature properties
+export function createDonutChart(props) {
+  const offsets = []
+  const counts = [
+    props.eauSurface,
+    props.eauSouterraine
+  ]
+  let total = 0
+  for (const count of counts) {
+    offsets.push(total)
+    total += count
+  }
+
+  let fontSize
+  if (total >= 1000) {
+    fontSize = 22
+  } else if (total >= 100) {
+    fontSize = 20
+  } else if (total >= 10) {
+    fontSize = 18
+  } else {
+    fontSize = 16
+  }
+
+  let r
+  if (total >= 1000) {
+    r = 50
+  } else if (total >= 100) {
+    r = 32
+  } else if (total >= 10) {
+    r = 24
+  } else {
+    r = 18
+  }
+
+  const r0 = Math.round(r * 0.6)
+  const w = r * 2
+
+  let html
+      = `<div><svg width="${
+        w
+      }" height="${
+        w
+      }" viewbox="0 0 ${
+        w
+      } ${
+        w
+      }" text-anchor="middle" style="font: ${
+        fontSize
+      }px sans-serif; display: block">`
+
+  for (const [i, count] of counts.entries()) {
+    html += donutSegment(
+      offsets[i] / total,
+      (offsets[i] + count) / total,
+      r,
+      r0,
+      colors[i]
+    )
+  }
+
+  html
+      += `<circle cx="${
+      r
+    }" cy="${
+      r
+    }" r="${
+      r0
+    }" fill="white" /><text dominant-baseline="central" transform="translate(${
+      r
+    }, ${
+      r
+    })">${
+      total.toLocaleString()
+    }</text></svg></div>`
+
+  const el = document.createElement('div')
+  el.innerHTML = html
+  return el.firstChild
+}
+
+export function donutSegment(start, end, r, r0, color) {
+  if (end - start === 1) {
+    end -= 0.000_01
+  }
+
+  const a0 = 2 * Math.PI * (start - 0.25)
+  const a1 = 2 * Math.PI * (end - 0.25)
+  const x0 = Math.cos(a0)
+  const y0 = Math.sin(a0)
+  const x1 = Math.cos(a1)
+  const y1 = Math.sin(a1)
+  const largeArc = end - start > 0.5 ? 1 : 0
+
+  return [
+    '<path d="M',
+    r + (r0 * x0),
+    r + (r0 * y0),
+    'L',
+    r + (r * x0),
+    r + (r * y0),
+    'A',
+    r,
+    r,
+    0,
+    largeArc,
+    1,
+    r + (r * x1),
+    r + (r * y1),
+    'L',
+    r + (r0 * x1),
+    r + (r0 * y1),
+    'A',
+    r0,
+    r0,
+    0,
+    largeArc,
+    0,
+    r + (r0 * x0),
+    r + (r0 * y0),
+    `" fill="${color}" />`
+  ].join(' ')
+}
+
+export function highlightPoint(map, layerId, pointId) {
+  map.setPaintProperty(layerId, 'circle-stroke-color', [
+    'case',
+    ['==', ['get', 'id_point'], pointId],
+    'hotpink',
+    'black'
+  ])
+
+  map.setPaintProperty(layerId, 'circle-stroke-width', [
+    'case',
+    ['==', ['get', 'id_point'], pointId],
+    3,
+    1
+  ])
+}
+
+export const usageColors = {
+  'Camion citerne': '#8a2be2',
+  'Eau potable': '#007cbf',
+  Agriculture: '#00a6a6',
+  Hydroélectricité: '#FFCC00',
+  Autre: '#f0f0f0',
+  'Eau embouteillée': '#ffa6c9',
+  Industrie: '#ff6347',
+  'Non renseigné': '#ccc'
+}
+
+/**
+ * Crée un "pie chart" (camembert) <svg> à partir d'un tableau d'usages (ex: ['Agriculture','Eau potable']).
+ */
+export function createUsagePieChart(props) {
+  // On récupère le tableau des usages
+  const usages = Array.isArray(props.usage) ? props.usage : [props.usage, 'Hydroélectricité', 'Industrie']
+  const count = usages.length
+
+  // Conteneur principal
+  const container = document.createElement('div')
+  container.style.width = '24px'
+  container.style.height = '24px'
+  container.style.display = 'block'
+
+  // Prépare un <svg> centré sur (r, r)
+  const svgSize = 24
+  const radius = 10
+  const cx = radius
+  const cy = radius
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  svg.setAttribute('width', String(svgSize))
+  svg.setAttribute('height', String(svgSize))
+  svg.setAttribute('viewBox', `0 0 ${svgSize} ${svgSize}`)
+  svg.style.display = 'block'
+
+  // Ajoute le <svg> au conteneur
+  container.append(svg)
+
+  // Si aucun usage -> affiche un simple cercle gris
+  if (count === 0) {
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+    circle.setAttribute('cx', cx)
+    circle.setAttribute('cy', cy)
+    circle.setAttribute('r', radius)
+    circle.setAttribute('fill', '#ccc')
+    svg.append(circle)
+    return container
+  }
+
+  // Chaque usage aura un segment (start->end)
+  for (let i = 0; i < count; i++) {
+    const usageName = usages[i]
+    const color = usageColors[usageName] || '#ccc'
+    const start = i / count
+    const end = (i + 1) / count
+    const segmentPath = createPieSegment(cx, cy, radius, start, end, color)
+    svg.append(segmentPath)
+  }
+
+  return container
+}
+
+/**
+ * Construit un segment de "pie chart" (camembert).
+ * - (start, end) sont des fractions entre 0 et 1 (ex: 0 => 12h, 0.25 => 9h, etc.)
+ * - Décalage de 0.25 pour avoir l'origine à 12h
+ */
+function createPieSegment(cx, cy, r, start, end, color) {
+  // Évite un arc à 360° complet
+  if (end - start === 1) {
+    end -= 0.000_01
+  }
+
+  const a0 = 2 * Math.PI * (start - 0.25)
+  const a1 = 2 * Math.PI * (end - 0.25)
+
+  const x0 = Math.cos(a0)
+  const y0 = Math.sin(a0)
+  const x1 = Math.cos(a1)
+  const y1 = Math.sin(a1)
+
+  const largeArc = (end - start) > 0.5 ? 1 : 0
+
+  /**
+   * Path "camembert" :
+   * - M (centre)
+   * - L (point sur le cercle, angle start)
+   * - A (arc de cercle jusqu'à angle end)
+   * - Z (on referme vers le centre)
+   */
+  const d = [
+    `M ${cx} ${cy}`,
+    `L ${cx + (r * x0)} ${cy + (r * y0)}`,
+    `A ${r} ${r} 0 ${largeArc} 1 ${cx + (r * x1)} ${cy + (r * y1)}`,
+    'Z'
+  ].join(' ')
+
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+  path.setAttribute('d', d)
+  path.setAttribute('fill', color)
+
+  return path
+}

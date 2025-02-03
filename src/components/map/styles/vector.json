@@ -54,13 +54,6 @@
     "departements": {
       "type": "vector",
       "url": "https://openmaptiles.geo.data.gouv.fr/data/decoupage-administratif.json"
-    },
-    "points-prelevement": {
-      "type": "geojson",
-      "data": {
-        "type": "FeatureCollection",
-        "features": []
-      }
     }
   },
   "sprite": "https://openmaptiles.github.io/osm-bright-gl-style/sprite",
@@ -2814,48 +2807,6 @@
       "paint": {
         "line-color": "grey",
         "line-width": 0.3
-      }
-    },
-    {
-      "id": "points-prelevement-usages",
-      "type": "circle",
-      "source": "points-prelevement",
-      "paint": {
-        "circle-color": [
-          "match",
-          ["get", "usage"],
-          "Eau potable", "deepskyblue",
-          "Agriculture", "lawngreen",
-          "Autre", "grey",
-          "Camion citerne", "darkgrey",
-          "Eau embouteillée", "skyblue",
-          "Hydroélectricité", "steelblue",
-          "Industrie", "slategrey",
-          "Non renseigné", "lightgrey",
-          "Thermalisme", "lightseagreen",
-          "black"
-        ],
-        "circle-radius": 5,
-        "circle-stroke-width": 1,
-        "circle-stroke-color": "black"
-      }
-    },
-    {
-      "id": "points-prelevement-milieux",
-      "type": "circle",
-      "source": "points-prelevement",
-      "paint": {
-        "circle-color": [
-          "match",
-          ["get", "typeMilieu"],
-          "Eau de surface", "deepskyblue",
-          "Eau souterraine", "darkseagreen",
-          "Eau de transition", "lightseagreen",
-          "whitesmoke"
-        ],
-        "circle-radius": 5,
-        "circle-stroke-width": 1,
-        "circle-stroke-color": "black"
       }
     }
   ],
