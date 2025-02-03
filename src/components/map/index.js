@@ -17,11 +17,18 @@ import {
   createDonutChart,
   createUsagePieChart,
   createPointPrelevementFeatures
-} from '@/lib/point-prelevements-map.js'
+} from '@/lib/points-prelevement.js'
 
 const SOURCE_ID = 'points-prelevement'
 
-const Map = ({points, selectedPoint, handleSelectedPoint}) => {
+/**
+ * Props attendues :
+ *  - points : tableau complet des points (chargé côté serveur)
+ *  - filteredPoints : tableau d'id (point.id_point) correspondant aux points à afficher
+ *  - selectedPoint : point sélectionné (objet ou null)
+ *  - handleSelectedPoint : callback recevant l'id du point sélectionné
+ */
+const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint}) => {
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
   const popupRef = useRef(null)
@@ -119,6 +126,16 @@ const Map = ({points, selectedPoint, handleSelectedPoint}) => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // À chaque fois que `points` ou `filteredPoints` changent, on met à jour la source.
+  // Plus simple que de changer la visibilité des layers.
+  useEffect(() => {
+    if (mapRef.current && mapRef.current.getSource(SOURCE_ID)) {
+      const visiblePoints = points.filter(pt => filteredPoints.includes(pt.id_point))
+      const newData = createPointPrelevementFeatures(visiblePoints)
+      mapRef.current.getSource(SOURCE_ID).setData(newData)
+    }
+  }, [points, filteredPoints])
 
   const updateMarkers = useCallback(() => {
     const map = mapRef.current
