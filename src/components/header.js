@@ -61,7 +61,7 @@ const HeaderComponent = ({user}) => {
   return (
     <DSFRHeader
       brandTop={<>Préfet<br />de la Réunion</>}
-      serviceTitle='Prélèvement d’eau'
+      serviceTitle='Suivi des prélèvements d’eau'
       homeLinkProps={{
         href: '/',
         title: 'Accueil - Prélèvement d’eau'
