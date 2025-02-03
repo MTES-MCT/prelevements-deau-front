@@ -176,7 +176,7 @@ export const usageColors = {
  */
 export function createUsagePieChart(props) {
   // On récupère le tableau des usages
-  const usages = Array.isArray(props.usage) ? props.usage : [props.usage, 'Hydroélectricité', 'Industrie']
+  const usages = props.usages ? JSON.parse(props.usages) : []
   const count = usages.length
 
   // Conteneur principal

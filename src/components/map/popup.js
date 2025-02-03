@@ -4,7 +4,7 @@ import {Box, Chip, Typography} from '@mui/material'
 import {formatAutresNoms} from '@/lib/points-prelevement.js'
 
 const Popup = ({point}) => {
-  const {nom, autres_noms: autresNoms, beneficiaires, exploitation, usage, typeMilieu} = point
+  const {nom, autres_noms: autresNoms, beneficiaires, exploitations, usages, typeMilieu} = point
   return (
     <Box className='flex flex-col gap-2'>
       <Typography variant='h6'>{nom || 'Pas de nom renseigné'}</Typography>
@@ -24,17 +24,25 @@ const Popup = ({point}) => {
       </Box>
 
       <Box>
-        {exploitation.length > 0 ? (
+        {exploitations.length > 0 ? (
           <Box className='flex items-center gap-1'>
-            <WaterDropOutlined /> {exploitation.length} exploitation{exploitation.length > 1 ? 's' : ''}
+            <WaterDropOutlined /> {exploitations.length} exploitations{exploitations.length > 1 ? 's' : ''}
           </Box>
         ) : (
           <Typography variant='caption'>Aucun bénéficiaire</Typography>
         )}
       </Box>
 
-      <Box className='flex gap-1'>
-        <Chip label={usage} size='small' variant='outlined' />
+      <Box className='flex flex-col gap-1'>
+        <Box className='flex gap-1'>
+          {usages.map(usage => (
+            <Chip
+              key={usage}
+              label={usage}
+              size='small'
+              variant='outlined' />
+          ))}
+        </Box>
         <Chip label={typeMilieu} size='small' />
       </Box>
     </Box>
