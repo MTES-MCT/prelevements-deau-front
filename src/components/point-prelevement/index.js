@@ -6,7 +6,7 @@ import PointIdentification from './point-identification.js'
 import PointLocalistation from './point-localisation.js'
 import PointTabs from './point-tabs.js'
 
-const PointPrelevement = ({pointPrelevement, lienInfoterre, lienOuvrageBnpe, commune}) => {
+const PointPrelevement = ({pointPrelevement}) => {
   const [selectedTab, setSelectedTab] = useState('identification')
 
   const handleSelectedTab = (event, newValue) => {
@@ -19,14 +19,11 @@ const PointPrelevement = ({pointPrelevement, lienInfoterre, lienOuvrageBnpe, com
       {selectedTab === 'identification' && (
         <PointIdentification
           pointPrelevement={pointPrelevement}
-          lienInfoterre={lienInfoterre}
-          lienOuvrageBnpe={lienOuvrageBnpe}
         />
       )}
       {selectedTab === 'localisation' && (
         <PointLocalistation
           pointPrelevement={pointPrelevement}
-          commune={commune}
         />
       )}
     </>

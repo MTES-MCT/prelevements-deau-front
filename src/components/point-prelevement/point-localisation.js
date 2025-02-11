@@ -11,7 +11,7 @@ const LabelValue = ({label, value}) => {
   }
 }
 
-const PointLocalistation = ({pointPrelevement, commune}) => (
+const PointLocalistation = ({pointPrelevement}) => (
   <Paper
     elevation={1}
     sx={{m: 2, p: 3}}
@@ -20,7 +20,7 @@ const PointLocalistation = ({pointPrelevement, commune}) => (
       gutterBottom
       variant='h3'
     >
-      {commune} - {pointPrelevement.insee_com}
+      {pointPrelevement.libelleCommune} - {pointPrelevement.insee_com}
     </Typography>
     <LabelValue label='Détails de localisation' value={pointPrelevement.detail_localisation} />
     <LabelValue label='Précision géométrique' value={pointPrelevement.precision_geom} />

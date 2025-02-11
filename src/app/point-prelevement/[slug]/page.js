@@ -14,12 +14,13 @@ const Page = async ({params}) => {
   const bnpe = await getBnpe(pointPrelevement.code_bnpe)
   const commune = await getLibelleCommune(pointPrelevement.insee_com)
 
+  pointPrelevement.lienBss = bss?.lien_infoterre || ''
+  pointPrelevement.lienBnpe = bnpe?.uri_ouvrage || ''
+  pointPrelevement.libelleCommune = commune?.nom || ''
+
   return (
     <PointPrelevement
       pointPrelevement={pointPrelevement}
-      lienInfoterre={bss?.lien_infoterre || ''}
-      lienOuvrageBnpe={bnpe?.uri_ouvrage || ''}
-      commune={commune?.nom || ''}
     />
   )
 }
