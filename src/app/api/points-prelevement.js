@@ -12,6 +12,26 @@ export async function getPointPrelevement(id) {
   return dossier
 }
 
+export async function getExploitationsFromPointId(id) {
+  try {
+    const response = await fetch(`${API_URL}/api/points-prelevement/${id}/exploitations`)
+    const exploitations = await response.json()
+    return exploitations
+  } catch {
+    return null
+  }
+}
+
+export async function getDocumentsFromExploitationId(id) {
+  try {
+    const response = await fetch(`${API_URL}/api/exploitations/${id}/documents`)
+    const documents = await response.json()
+    return documents
+  } catch {
+    return null
+  }
+}
+
 export async function getBss(id) {
   try {
     const response = await fetch(`${API_URL}/api/bss/${id}`)
