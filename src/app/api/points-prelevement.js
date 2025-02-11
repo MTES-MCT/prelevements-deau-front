@@ -25,8 +25,19 @@ export async function getBss(id) {
 export async function getBnpe(id) {
   try {
     const response = await fetch(`${API_URL}/api/bnpe/${id}`)
-    const ouvrage = await response.json()
-    return ouvrage
+    const bnpe = await response.json()
+    return bnpe
+  } catch {
+    return null
+  }
+}
+
+export async function getLibelleCommune(codeInsee) {
+  try {
+    const response = await fetch(`${API_URL}/api/commune/${codeInsee}`)
+    const commune = await response.json()
+    console.log(commune)
+    return commune
   } catch {
     return null
   }
