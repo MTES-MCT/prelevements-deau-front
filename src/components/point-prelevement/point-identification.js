@@ -19,18 +19,22 @@ const PointIdentification = ({pointPrelevement, lienInfoterre, lienOuvrageBnpe})
     {pointPrelevement.autres_noms && (
       <div><i>{formatAutresNoms(pointPrelevement.autres_noms)}</i></div>
     )}
-    <Box sx={{mt: 2}}>
-      <Article sx={{m: 1}} />
-      <b>Fiche BSS InfoTerre : </b>
-      <Link sx={{m: 2}} href={lienInfoterre}>{lienInfoterre}</Link>
-      <Launch sx={{ml: 1}} />
-    </Box>
-    <Box>
-      <Article sx={{m: 1}} />
-      <b>Fiche ouvrage BNPE : </b>
-      <Link sx={{m: 2}} href={lienOuvrageBnpe}>{lienOuvrageBnpe}</Link>
-      <Launch sx={{ml: 1}} />
-    </Box>
+    {lienInfoterre && (
+      <Box sx={{mt: 2}}>
+        <Article sx={{m: 1}} />
+        <b>Fiche BSS InfoTerre : </b>
+        <Link sx={{m: 2}} href={lienInfoterre}>{lienInfoterre}</Link>
+        <Launch sx={{ml: 1}} />
+      </Box>
+    )}
+    {lienOuvrageBnpe && (
+      <Box>
+        <Article sx={{m: 1}} />
+        <b>Fiche ouvrage BNPE : </b>
+        <Link sx={{m: 2}} href={lienOuvrageBnpe}>{lienOuvrageBnpe}</Link>
+        <Launch sx={{ml: 1}} />
+      </Box>
+    )}
   </Paper>
 )
 
