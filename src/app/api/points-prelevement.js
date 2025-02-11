@@ -36,7 +36,6 @@ export async function getLibelleCommune(codeInsee) {
   try {
     const response = await fetch(`${API_URL}/api/commune/${codeInsee}`)
     const commune = await response.json()
-    console.log(commune)
     return commune
   } catch {
     return null
