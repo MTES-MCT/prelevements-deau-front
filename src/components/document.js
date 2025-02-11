@@ -1,0 +1,45 @@
+import {Box, Typography, useMediaQuery} from '@mui/material'
+import {format} from 'date-fns'
+
+const API_URL = process.env.NEXT_PUBLIC_STORAGE_URL
+
+const Document = ({document}) => {
+  const isSmallScreen = useMediaQuery(theme => theme.breakpoints.down('sm'))
+
+  return (
+    <Box
+      key={document.id_document}
+      sx={{
+        display: 'flex',
+        flexDirection: isSmallScreen ? 'column' : 'row',
+        justifyContent: 'space-between',
+        p: 1
+      }}
+    >
+      <Box sx={{display: 'flex', flexDirection: 'column', p: 1}}>
+        <Typography sx={{pr: 1}}>
+          {document.nature} - {document.reference} du {format(document.date_signature, 'dd/MM/yyyy')}
+        </Typography>
+        {document.date_fin_validite && (
+          <Typography>
+            <i>(Fin de validité : {format(document.date_fin_validite, 'dd/MM/yyyy')})</i>
+          </Typography>
+        )}
+        {document.remarque && (
+          <Typography>Remarque : {document.remarque}</Typography>
+        )}
+      </Box>
+      <Typography variant='caption' sx={{mt: isSmallScreen ? 1 : 0}}>
+        <a
+          href={`${API_URL}/document/${document.nom_fichier}`}
+          target='_blank'
+          rel='noreferrer'
+        >
+          Ouvrir le document
+        </a>
+      </Typography>
+    </Box>
+  )
+}
+
+export default Document
