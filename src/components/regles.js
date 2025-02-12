@@ -11,7 +11,16 @@ const reglesColumns = [
     headerName: 'Paramètre',
     width: 200
   },
-  {field: 'valeur', headerName: 'Valeur', width: 90},
+  {
+    field: 'valeur',
+    headerName: 'Valeur',
+    width: 90,
+    renderCell(params) {
+      return (
+        params.row.valeur.toLocaleString('fr-FR')
+      )
+    }
+  },
   {
     field: 'unite',
     headerName: 'Unité',
