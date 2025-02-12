@@ -32,6 +32,16 @@ export async function getDocumentsFromExploitationId(id) {
   }
 }
 
+export async function getBeneficiaire(id) {
+  try {
+    const response = await fetch(`${API_URL}/api/beneficiaires/${id}`)
+    const beneficiaires = await response.json()
+    return beneficiaires
+  } catch {
+    return null
+  }
+}
+
 export async function getBss(id) {
   try {
     const response = await fetch(`${API_URL}/api/bss/${id}`)
