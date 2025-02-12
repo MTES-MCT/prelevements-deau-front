@@ -1,3 +1,4 @@
+import {Article} from '@mui/icons-material'
 import {Box, Typography, useMediaQuery} from '@mui/material'
 import {format} from 'date-fns'
 
@@ -12,16 +13,16 @@ const Document = ({document}) => {
       sx={{
         display: 'flex',
         flexDirection: isSmallScreen ? 'column' : 'row',
-        justifyContent: 'space-between',
-        p: 1
+        justifyContent: 'space-between'
       }}
     >
       <Box sx={{display: 'flex', flexDirection: 'column', p: 1}}>
         <Typography sx={{pr: 1}}>
+          <Article sx={{pr: 1, verticalAlign: 'bottom'}} />
           {document.nature} - {document.reference} du {format(document.date_signature, 'dd/MM/yyyy')}
         </Typography>
         {document.date_fin_validite && (
-          <Typography>
+          <Typography variant='caption' sx={{pl: 2}}>
             <i>(Fin de validité : {format(document.date_fin_validite, 'dd/MM/yyyy')})</i>
           </Typography>
         )}
