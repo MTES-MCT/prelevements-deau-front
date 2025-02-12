@@ -37,7 +37,7 @@ const reglesColumns = [
           target='_blank'
           rel='noreferrer'
         >
-          {params.row.document.nom_fichier}
+          {params.row.document.nature}
         </a>
       )
     }
