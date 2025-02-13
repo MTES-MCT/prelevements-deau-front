@@ -2,6 +2,7 @@ import {useState} from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
 import {CallOut} from '@codegouvfr/react-dsfr/CallOut'
+import LaunchIcon from '@mui/icons-material/Launch'
 import PersonIcon from '@mui/icons-material/Person'
 import {
   Box,
@@ -13,6 +14,7 @@ import {
   AlertTitle,
   Alert
 } from '@mui/material'
+import Link from 'next/link.js'
 
 import ExploitationAccordion from '../exploitation-accordion.js'
 import ExploitationDialog from '../exploitation-dialog.js'
@@ -105,6 +107,11 @@ const SidePanel = ({point}) => {
         <Typography>
           <strong>Réservoir biologique :</strong>{' '}
           {isReservoir ? 'Oui' : 'Non'}
+        </Typography>
+        <Typography sx={{pt: 1}}>
+          <Link href={`/point-prelevement/${point.id_point}`}>
+            Plus d’informations <LaunchIcon />
+          </Link>
         </Typography>
       </Box>
 
