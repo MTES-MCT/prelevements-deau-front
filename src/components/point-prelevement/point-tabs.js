@@ -17,7 +17,6 @@ const PointTabs = ({selectedTab, handleSelectedTab}) => {
       <Tab value='identification' label='Identification' />
       <Tab value='localisation' label='Localisation' />
       <Tab value='exploitations' label='Exploitations' />
-      <Tab value='suivis' label='Suivis' />
     </Tabs>
   )
 }
