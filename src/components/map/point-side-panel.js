@@ -47,9 +47,9 @@ const SidePanel = ({point}) => {
     )
   }
 
-  // Conversion basique "f"/"t" => bool
-  const isZre = point.zre === 't'
-  const isReservoir = point.reservoir_biologique === 't'
+  // Conversion basique
+  const isZre = point.zre
+  const isReservoir = point.reservoir_biologique
 
   // Ouverture de la modale pour une exploitation donnée
   const handleOpenModal = exploitation => {
