@@ -79,7 +79,7 @@ const Page = () => {
       }
 
       if (filters.typeMilieu) {
-        matches &&= point.typeMilieu === filters.typeMilieu
+        matches &&= point.type_milieu === filters.typeMilieu
       }
 
       if (filters.usages && filters.usages.length > 0) {

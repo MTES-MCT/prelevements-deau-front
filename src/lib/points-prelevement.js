@@ -27,15 +27,15 @@ export function extractUsages(points) {
 export function extractTypeMilieu(points) {
   const typeMilieuSet = new Set()
   for (const point of points) {
-    typeMilieuSet.add(point.typeMilieu)
+    typeMilieuSet.add(point.type_milieu)
   }
 
   return [...typeMilieuSet]
 }
 
 // Filters for classifying points by type of environment
-export const eauSurface = ['==', ['get', 'typeMilieu'], 'Eau de surface']
-export const eauSouterraine = ['==', ['get', 'typeMilieu'], 'Eau souterraine']
+export const eauSurface = ['==', ['get', 'type_milieu'], 'Eau de surface']
+export const eauSouterraine = ['==', ['get', 'type_milieu'], 'Eau souterraine']
 
 export const colors = ['#007cbf', '#00a6a6', '#f0f0f0']
 

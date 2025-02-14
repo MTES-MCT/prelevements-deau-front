@@ -56,7 +56,7 @@ function loadMap(map, points) {
         'concat',
         ['get', 'nom'],
         '\n(',
-        ['get', 'typeMilieu'],
+        ['get', 'type_milieu'],
         ')'
       ],
       'text-anchor': 'bottom',
