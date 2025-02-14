@@ -1,4 +1,4 @@
-import {useState} from 'react'
+import {useEffect, useState} from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
 import {CallOut} from '@codegouvfr/react-dsfr/CallOut'
@@ -17,6 +17,7 @@ import {
 import ExploitationAccordion from '../exploitation-accordion.js'
 import ExploitationDialog from '../exploitation-dialog.js'
 
+import {getExploitationsByPointId} from '@/app/api/points-prelevement.js'
 import {formatAutresNoms} from '@/lib/points-prelevement.js'
 
 const SectionTitle = ({title}) => (
@@ -32,22 +33,7 @@ const SidePanel = ({point}) => {
   const [openModal, setOpenModal] = useState(false)
   // Stocke l’exploitation sélectionnée dont on veut afficher les règles
   const [selectedExploitation, setSelectedExploitation] = useState(null)
-
-  if (!point) {
-    return (
-      <CallOut
-        className='mt-4'
-        iconId='ri-information-line'
-        title='Consulter les points de prélèvement'
-      >
-        Sélectionnez un point sur la carte pour voir les détails
-      </CallOut>
-    )
-  }
-
-  // Conversion basique "f"/"t" => bool
-  const isZre = point.zre === 't'
-  const isReservoir = point.reservoir_biologique === 't'
+  const [exploitations, setExploitations] = useState([])
 
   // Ouverture de la modale pour une exploitation donnée
   const handleOpenModal = exploitation => {
@@ -59,6 +45,30 @@ const SidePanel = ({point}) => {
   const handleCloseModal = () => {
     setOpenModal(false)
     setSelectedExploitation(null)
+  }
+
+  useEffect(() => {
+    async function fetchExploitations() {
+      if (point) {
+        const exploitations = await getExploitationsByPointId(point.id_point)
+
+        setExploitations(exploitations)
+      }
+    }
+
+    fetchExploitations()
+  }, [point])
+
+  if (!point) {
+    return (
+      <CallOut
+        className='mt-4'
+        iconId='ri-information-line'
+        title='Consulter les points de prélèvement'
+      >
+        Sélectionnez un point sur la carte pour voir les détails
+      </CallOut>
+    )
   }
 
   return (
@@ -87,7 +97,7 @@ const SidePanel = ({point}) => {
           <strong>Usages :</strong> {point.usages.join(', ')}
         </Typography>
         <Typography>
-          <strong>Type de milieu :</strong> {point.typeMilieu}
+          <strong>Type de milieu :</strong> {point.type_milieu}
         </Typography>
         {point.cours_eau && point.cours_eau !== '' && (
           <Typography>
@@ -100,11 +110,11 @@ const SidePanel = ({point}) => {
           </Typography>
         )}
         <Typography>
-          <strong>Zone réglementée (ZRE) :</strong> {isZre ? 'Oui' : 'Non'}
+          <strong>Zone réglementée (ZRE) :</strong> {point.zre ? 'Oui' : 'Non'}
         </Typography>
         <Typography>
           <strong>Réservoir biologique :</strong>{' '}
-          {isReservoir ? 'Oui' : 'Non'}
+          {point.reservoir_biologique ? 'Oui' : 'Non'}
         </Typography>
       </Box>
 
@@ -150,7 +160,7 @@ const SidePanel = ({point}) => {
         {(!point.exploitations || point.exploitations.length === 0) && (
           <Typography sx={{ml: 2}}>Aucune exploitation.</Typography>
         )}
-        {point.exploitations && point.exploitations.map(exploitation => (
+        {exploitations.length > 0 && exploitations.map(exploitation => (
           <ExploitationAccordion
             key={exploitation.id_exploitation}
             exploitation={exploitation}

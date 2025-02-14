@@ -6,16 +6,12 @@ import {
   useTheme
 } from '@mui/material'
 import {format} from 'date-fns'
-import {orderBy} from 'lodash-es'
 
 import {formatAutresNoms} from '@/lib/points-prelevement.js'
 
 const Popup = ({point}) => {
   const theme = useTheme()
-  const {nom, autres_noms: autresNoms, beneficiaires, exploitations, usages, typeMilieu, zre, reservoir_biologique: reservoirBiologique} = point
-  const orderedExploitations = orderBy(exploitations, 'date_debut')
-  const statutExploitation = orderedExploitations.at(-1).statut
-  const dateDebutExploitation = orderedExploitations[0].date_debut
+  const {nom, autres_noms: autresNoms, beneficiaires, exploitationsStatus, exploitationsStartDate, usages, type_milieu: typeMilieu, zre, reservoir_biologique: reservoirBiologique} = point
 
   return (
     // TODO : Utiliser le theme DSFR
@@ -47,21 +43,17 @@ const Popup = ({point}) => {
       </Box>
 
       <Box>
-        {orderedExploitations.length > 0 && (
-          <>
-            <Box className='flex items-center gap-1'>
-              <WaterDropOutlined />Statut de l’exploitation : {statutExploitation || 'non renseigné'}
-            </Box>
-            <Box className='flex items-center gap-1'>
-              Exploité depuis le {format(dateDebutExploitation, 'dd/MM/yyyy')}
-            </Box>
-            <Box>
-              Zonage réglementaire : <Typography variant='caption' display='inline'>
-                {zre ? 'Zone de répartition des eaux' : (reservoirBiologique ? 'Réservoir biologique' : ' - ')}
-              </Typography>
-            </Box>
-          </>
-        )}
+        <Box className='flex items-center gap-1'>
+          <WaterDropOutlined />Statut de l’exploitation : {exploitationsStatus || 'non renseigné'}
+        </Box>
+        <Box className='flex items-center gap-1'>
+          Exploité depuis le {format(exploitationsStartDate, 'dd/MM/yyyy')}
+        </Box>
+        <Box>
+          Zonage réglementaire : <Typography variant='caption' display='inline'>
+            {zre ? 'Zone de répartition des eaux' : (reservoirBiologique ? 'Réservoir biologique' : ' - ')}
+          </Typography>
+        </Box>
       </Box>
 
       <Box className='flex flex-col gap-1'>
