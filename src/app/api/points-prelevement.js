@@ -5,3 +5,9 @@ export async function getPointsPrelevement() {
   const dossiers = await response.json()
   return dossiers
 }
+
+export async function getExploitationsByPointId(pointId) {
+  const response = await fetch(`${API_URL}/api/points-prelevement/${pointId}/exploitations`)
+  const exploitations = await response.json()
+  return exploitations
+}
