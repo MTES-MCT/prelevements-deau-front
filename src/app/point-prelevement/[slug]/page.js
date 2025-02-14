@@ -3,7 +3,6 @@ import {
   getBnpe,
   getPointPrelevement,
   getLibelleCommune,
-  getExploitationsFromPointId,
   getBeneficiaire
 } from '../../api/points-prelevement.js'
 
@@ -15,8 +14,7 @@ const Page = async ({params}) => {
   const bss = await getBss(pointPrelevement.id_bss)
   const bnpe = await getBnpe(pointPrelevement.code_bnpe)
   const commune = await getLibelleCommune(pointPrelevement.insee_com)
-  const exploitations = await getExploitationsFromPointId(pointPrelevement.id_point)
-  const exploitationsWithBeneficiaires = await Promise.all(exploitations.map(async exploitation => {
+  const exploitationsWithBeneficiaires = await Promise.all(pointPrelevement.exploitations.map(async exploitation => {
     const beneficiaire = await getBeneficiaire(exploitation.id_beneficiaire)
     return {
       ...exploitation,
