@@ -5646,6 +5646,7 @@ __metadata:
     "@mui/x-data-grid": "npm:^7.22.0"
     date-fns: "npm:^4.1.0"
     eslint-config-xo-nextjs: "npm:^6.2.1"
+    lodash-es: "npm:^4.17.21"
     maplibre-gl: "npm:^5.0.1"
     next: "npm:^15.0.2"
     next-auth: "npm:^4.24.10"
