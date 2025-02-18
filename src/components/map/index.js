@@ -253,7 +253,16 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, style}
     }
 
     if (selectedPoint) {
-      map.setLayoutProperty('points-prelevement-nom', 'text-size', 20)
+      map.setLayoutProperty(
+        'points-prelevement-nom',
+        'text-size',
+        [
+          'case',
+          ['==', ['get', 'id_point'], selectedPoint.id_point],
+          20,
+          16
+        ]
+      )
       map.setPaintProperty(
         'points-prelevement-nom',
         'text-halo-color',
