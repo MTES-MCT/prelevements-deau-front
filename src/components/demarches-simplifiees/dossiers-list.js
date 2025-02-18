@@ -54,8 +54,8 @@ function renderDateCell(value) {
 const DossiersList = ({dossiers}) => {
   const [selectedDossier, setSelectedDossier] = useState(null)
 
-  const openModal = dossier => {
-    setSelectedDossier(dossier)
+  const openModal = ({id}) => {
+    setSelectedDossier(dossiers.find(d => d._id === id))
     modal.open()
   }
 
