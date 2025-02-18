@@ -110,7 +110,7 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, style}
       maxWidth: 80,
       unit: 'metric'
     })
-    map.addControl(scale)
+    map.addControl(scale, 'bottom-right')
 
     mapRef.current = map
 

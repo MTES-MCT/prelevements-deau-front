@@ -15,6 +15,7 @@ import {getPointsPrelevement} from '@/app/api/points-prelevement.js'
 import SidePanelLayout from '@/components/layout/side-panel.js'
 import LoadingOverlay from '@/components/loading-overlay.js'
 import Map from '@/components/map/index.js'
+import Legend from '@/components/map/legend.js'
 import MapFilters from '@/components/map/map-filters.js'
 import SidePanel from '@/components/map/point-side-panel.js'
 import useEvent from '@/hook/use-event.js'
@@ -153,6 +154,9 @@ const Page = () => {
               <MenuItem value='vector-ign'>IGN vectoriel</MenuItem>
             </Select>
           </FormControl>
+        </Box>
+        <Box>
+          <Legend />
         </Box>
       </Box>
     </SidePanelLayout>

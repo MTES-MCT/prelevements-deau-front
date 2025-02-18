@@ -1,56 +1,45 @@
-import {Box, Checkbox} from '@mui/material'
+import {Box, useTheme} from '@mui/material'
 
 import {legendColors} from './legend-colors.js'
 
-const Bubble = ({color, text, isActive, onChange}) => (
+const Bubble = ({color, text}) => (
   <Box className='flex items-center justify-between gap-2'>
-    <Box className='flex items-center gap-2'>
-      <Box
-        sx={{
-          height: 15,
-          width: 15,
-          backgroundColor: color,
-          border: '1px solid black',
-          borderRadius: '50%'
-        }}
-      />
-      {text}
-    </Box>
-
-    <Checkbox checked={isActive} onChange={onChange} />
+    <Box
+      sx={{
+        height: 15,
+        width: 15,
+        backgroundColor: color,
+        border: '1px solid black',
+        borderRadius: '50%'
+      }}
+    />
+    {text}
   </Box>
 )
 
-const Legend = ({legend, activeFilters, setFilters}) => {
-  const {usages, typesMilieu} = legendColors
+const Legend = () => {
+  const {usages} = legendColors
+  const theme = useTheme()
 
   return (
-    <Box>
+    <Box
+      sx={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        p: 2,
+        backgroundColor: theme.palette.background.default
+      }}
+    >
       <Box>
-        {legend === 'usages' && (
-          usages.map(usage => (
-            <Box key={usage.text}>
-              <Bubble
-                color={usage.color}
-                text={usage.text}
-                isActive={!activeFilters.includes(usage.text)}
-                onChange={() => setFilters(usage.text)}
-              />
-            </Box>
-          ))
-        )}
-
-        {legend === 'milieux' && (
-          typesMilieu.map(type => (
+        {usages.map(usage => (
+          <Box key={usage.text}>
             <Bubble
-              key={type.text}
-              color={type.color}
-              text={type.text}
-              isActive={!activeFilters.includes(type.text)}
-              onChange={() => setFilters(type.text)}
+              color={usage.color}
+              text={usage.text}
             />
-          ))
-        )}
+          </Box>
+        ))}
       </Box>
     </Box>
   )
