@@ -130,8 +130,6 @@ export function createUsagePieChart(props) {
 
   // Conteneur principal
   const container = document.createElement('div')
-  container.style.width = '24px'
-  container.style.height = '24px'
   container.style.display = 'block'
 
   // Prépare un <svg> centré sur (r, r)
@@ -139,11 +137,20 @@ export function createUsagePieChart(props) {
   const radius = 10
   const cx = radius
   const cy = radius
+  container.style.width = svgSize + 4
+  container.style.height = svgSize + 4
 
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  const borderCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+  borderCircle.setAttribute('cx', cx)
+  borderCircle.setAttribute('cy', cy)
+  borderCircle.setAttribute('r', radius + 2)
+  borderCircle.setAttribute('fill', 'white')
+
+  svg.append(borderCircle)
   svg.setAttribute('width', String(svgSize))
   svg.setAttribute('height', String(svgSize))
-  svg.setAttribute('viewBox', `0 0 ${svgSize} ${svgSize}`)
+  svg.setAttribute('viewBox', `-2 -2 ${svgSize} ${svgSize}`)
   svg.style.display = 'block'
 
   // Ajoute le <svg> au conteneur
