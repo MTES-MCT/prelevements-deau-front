@@ -4,6 +4,7 @@ import {useState} from 'react'
 
 import {Badge} from '@codegouvfr/react-dsfr/Badge'
 import {createModal} from '@codegouvfr/react-dsfr/Modal'
+import {Tooltip} from '@mui/material'
 import {DataGrid, GridToolbar} from '@mui/x-data-grid'
 import {frFR} from '@mui/x-data-grid/locales'
 import {format} from 'date-fns'
@@ -26,9 +27,15 @@ const convertDossierToRow = dossier => ({
   dateDepot: dossier.dateDepot ? new Date(dossier.dateDepot) : null,
   dateTraitement: dossier.dateTraitement ? new Date(dossier.dateTraitement) : null,
   typePrelevement: dossier.typePrelevement,
-  typeDonnees: dossier.typeDonnees,
-  demandeur: dossier.demandeur
+  declarant: dossier.declarant.raisonSociale ? dossier.declarant : dossier.demandeur,
+  commentaires: dossier.commentaires,
+  numeroArreteAot: dossier.numeroArreteAot,
+  typeDonnees: dossier.typeDonnees
 })
+
+function getDeclarantName(declarant) {
+  return declarant.raisonSociale || declarant.nom
+}
 
 function renderErrorsCount({field, row}) {
   const value = row[field]
@@ -66,12 +73,13 @@ const DossiersList = ({dossiers}) => {
         }}
         columns={[
           {field: 'numero', headerName: 'Numéro'},
+          {field: 'numeroArreteAot', headerName: 'Numéro AOT', width: 120},
           {
-            field: 'demandeur',
-            headerName: 'Demandeur',
+            field: 'declarant',
+            headerName: 'Déclarant',
             width: 300,
-            sortComparator: (a, b) => a.nom.localeCompare(b.nom),
-            valueFormatter: ({nom, prenom}) => `${nom.toUpperCase()} ${prenom}`
+            sortComparator: (a, b) => getDeclarantName(a).localeCompare(getDeclarantName(b)),
+            valueFormatter: ({raisonSociale, nom, prenom}) => raisonSociale || `${nom.toUpperCase()} ${prenom}`
           },
           {
             field: 'typePrelevement',
@@ -126,6 +134,23 @@ const DossiersList = ({dossiers}) => {
             type: 'date',
             width: 150,
             valueFormatter: renderDateCell
+          },
+          {
+            field: 'dateTraitement',
+            headerName: 'Date de traitement',
+            type: 'date',
+            width: 150,
+            valueFormatter: renderDateCell
+          },
+          {
+            field: 'commentaires',
+            headerName: 'Commentaire',
+            width: 300,
+            renderCell: params => (
+              <Tooltip arrow title={params.value || ''}>
+                <span className='truncate-text'>{params.value}</span>
+              </Tooltip>
+            )
           }
         ]}
         initialState={{
