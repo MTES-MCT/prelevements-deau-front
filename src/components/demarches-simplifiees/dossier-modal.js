@@ -91,7 +91,6 @@ const DossierModal = ({selectedDossier}) => {
 
       {selectedDossier.demandeur && (
         <ModalSection>
-
           <DemandeurDetails {...selectedDossier.demandeur} />
         </ModalSection>
       )}

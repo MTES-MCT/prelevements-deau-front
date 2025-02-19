@@ -1,6 +1,8 @@
 import {WaterDrop} from '@mui/icons-material'
 import {Box, Typography, Chip} from '@mui/material'
 
+import LabelValue from '@/components/ui/label-value.js'
+
 const PointPrelevementDetails = ({nom, id_point: id, typeMilieu, usages}) => (
   <Box className='mt-2'>
     <Typography gutterBottom variant='h6' className='flex items-center gap-1'>
@@ -12,17 +14,11 @@ const PointPrelevementDetails = ({nom, id_point: id, typeMilieu, usages}) => (
         <strong>{nom}</strong> ({id})
       </Typography>
 
-      <Box className='flex flex-wrap gap-2'>
-        <Typography variant='body1' color='text.secondary'>
-          <strong>Type de milieu:</strong>
-        </Typography>
+      <LabelValue label='Type de milieu'>
         <Chip label={typeMilieu} size='small' />
-      </Box>
+      </LabelValue>
 
-      <Box className='flex flex-wrap gap-2'>
-        <Typography variant='body1' color='text.secondary'>
-          <strong>Usages:</strong>
-        </Typography>
+      <LabelValue label='Usages'>
         {usages.some(Boolean).length > 0 ? (
           <Box className='flex gap-1'>
             {usages.map(usage => (
@@ -38,7 +34,7 @@ const PointPrelevementDetails = ({nom, id_point: id, typeMilieu, usages}) => (
             <i>Aucun usage renseigné</i>
           </Typography>
         )}
-      </Box>
+      </LabelValue>
     </Box>
   </Box>
 )

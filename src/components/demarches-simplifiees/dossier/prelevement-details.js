@@ -14,6 +14,7 @@ import {format} from 'date-fns'
 
 import PrelevementTypeBadge from '@/components/demarches-simplifiees/prelevement-type-badge.js'
 import TypeSaisieBadge from '@/components/demarches-simplifiees/type-saisie-badge.js'
+import LabelValue from '@/components/ui/label-value.js'
 
 const PrelevementDetails = ({
   typePrelevement,
@@ -28,18 +29,13 @@ const PrelevementDetails = ({
       Prélèvement
     </Typography>
     <Box className='flex flex-col gap-2'>
-      <Box className='flex gap-2'>
-        <Typography variant='body1' color='text.secondary'>
-          <strong>Type de prélèvement:</strong>
-        </Typography>
+      <LabelValue label='Type de prélèvement'>
         <PrelevementTypeBadge value={typePrelevement} />
-      </Box>
-      <Box className='flex gap-2'>
-        <Typography variant='body1' color='text.secondary'>
-          <strong>Type de saisie:</strong>
-        </Typography>
+      </LabelValue>
+
+      <LabelValue label='Type de saisie'>
         <TypeSaisieBadge value={typeDonnees} />
-      </Box>
+      </LabelValue>
     </Box>
 
     {/* Section Données quantitatives */}
