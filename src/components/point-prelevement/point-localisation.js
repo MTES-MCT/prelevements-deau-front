@@ -1,4 +1,4 @@
-import {Box, Paper, Typography} from '@mui/material'
+import {Box, Typography} from '@mui/material'
 
 const LabelValue = ({label, value}) => {
   if (value) {
@@ -12,10 +12,7 @@ const LabelValue = ({label, value}) => {
 }
 
 const PointLocalistation = ({pointPrelevement}) => (
-  <Paper
-    elevation={1}
-    sx={{m: 2, p: 3}}
-  >
+  <Box sx={{m: 2, p: 3}}>
     <Typography
       gutterBottom
       variant='h3'
@@ -40,7 +37,7 @@ const PointLocalistation = ({pointPrelevement}) => (
         <LabelValue label='Réservoir biologique' value={pointPrelevement.reservoir_bio} />
       </>
     )}
-  </Paper>
+  </Box>
 )
 
 export default PointLocalistation
