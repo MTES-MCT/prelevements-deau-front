@@ -4,13 +4,12 @@ import {
   getPointPrelevement,
   getLibelleCommune,
   getBeneficiaire
-} from '../../api/points-prelevement.js'
-
+} from '@/app/api/points-prelevement.js'
 import PointPrelevement from '@/components/point-prelevement/index.js'
 
 const Page = async ({params}) => {
-  const {slug} = (await params)
-  const pointPrelevement = await getPointPrelevement(slug)
+  const {id} = (await params)
+  const pointPrelevement = await getPointPrelevement(id)
   const bss = await getBss(pointPrelevement.id_bss)
   const bnpe = await getBnpe(pointPrelevement.code_bnpe)
   const commune = await getLibelleCommune(pointPrelevement.insee_com)
@@ -28,9 +27,11 @@ const Page = async ({params}) => {
   pointPrelevement.exploitations = exploitationsWithBeneficiaires
 
   return (
-    <PointPrelevement
-      pointPrelevement={pointPrelevement}
-    />
+    <div className='fr-container mt-4'>
+      <PointPrelevement
+        pointPrelevement={pointPrelevement}
+      />
+    </div>
   )
 }
 
