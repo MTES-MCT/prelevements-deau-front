@@ -5,7 +5,7 @@ import {
   getLibelleCommune,
   getBeneficiaire
 } from '@/app/api/points-prelevement.js'
-import PointPrelevement from '@/components/point-prelevement/index.js'
+import PointPrelevement from '@/components/points-prelevement/index.js'
 
 const Page = async ({params}) => {
   const {id} = (await params)
