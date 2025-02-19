@@ -155,9 +155,7 @@ const Page = () => {
             </Select>
           </FormControl>
         </Box>
-        <Box>
-          <Legend />
-        </Box>
+        <Legend />
       </Box>
     </SidePanelLayout>
   )
