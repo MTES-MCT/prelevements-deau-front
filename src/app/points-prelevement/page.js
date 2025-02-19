@@ -8,6 +8,7 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  Typography,
   useTheme
 } from '@mui/material'
 
@@ -16,7 +17,7 @@ import SidePanelLayout from '@/components/layout/side-panel.js'
 import LoadingOverlay from '@/components/loading-overlay.js'
 import Map from '@/components/map/index.js'
 import MapFilters from '@/components/map/map-filters.js'
-import SidePanel from '@/components/map/point-side-panel.js'
+import PointSidePanel from '@/components/map/point-side-panel.js'
 import useEvent from '@/hook/use-event.js'
 import {extractTypeMilieu, extractUsages} from '@/lib/points-prelevement.js'
 
@@ -94,14 +95,14 @@ const Page = () => {
 
   return (
     <SidePanelLayout
-      title={
-        selectedPoint
-          ? selectedPoint.nom || 'Pas de nom renseigné'
-          : 'Aucun point sélectionné'
+      header={
+        <Typography variant='h6' className='!m-0'>
+          {selectedPoint ? (selectedPoint.nom || 'Pas de nom renseigné') : 'Aucun point sélectionné'}
+        </Typography>
       }
       isOpen={expanded}
       handleOpen={setExpanded}
-      panelContent={<SidePanel point={selectedPoint} />}
+      panelContent={<PointSidePanel point={selectedPoint} />}
     >
       <Box className='flex h-full flex-col relative'>
         {loading && <LoadingOverlay />}
