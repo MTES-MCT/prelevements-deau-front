@@ -38,6 +38,10 @@ export async function getBeneficiaire(id) {
 }
 
 export async function getBss(id) {
+  if (!id) {
+    return null
+  }
+
   try {
     const response = await fetch(`${API_URL}/api/bss/${id}`)
     return response.json()
@@ -47,6 +51,10 @@ export async function getBss(id) {
 }
 
 export async function getBnpe(id) {
+  if (!id) {
+    return null
+  }
+
   try {
     const response = await fetch(`${API_URL}/api/bnpe/${id}`)
     return response.json()
