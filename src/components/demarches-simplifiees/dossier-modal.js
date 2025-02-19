@@ -2,6 +2,7 @@
 
 import {useCallback, useEffect, useState} from 'react'
 
+import {fr} from '@codegouvfr/react-dsfr'
 import {Badge} from '@codegouvfr/react-dsfr/Badge'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
@@ -30,7 +31,11 @@ import PrelevementDetails from '@/components/demarches-simplifiees/dossier/prele
 import FileValidationErrors from '@/components/demarches-simplifiees/file-validation-errors.js'
 
 const ModalSection = ({children}) => (
-  <Box className='bg-slate-50 p-1'>
+  <Box sx={{
+    p: 1,
+    backgroundColor: fr.colors.decisions.background.default.grey.hover
+  }}
+  >
     {children}
   </Box>
 )
