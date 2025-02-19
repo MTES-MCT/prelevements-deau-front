@@ -109,7 +109,7 @@ const SidePanel = ({point}) => {
           {isReservoir ? 'Oui' : 'Non'}
         </Typography>
         <Typography sx={{pt: 1}}>
-          <Link href={`/point-prelevement/${point.id_point}`}>
+          <Link href={`/points-prelevement/${point.id_point}`}>
             Plus d’informations <LaunchIcon />
           </Link>
         </Typography>
