@@ -5,10 +5,14 @@ import {
   getLibelleCommune,
   getBeneficiaire
 } from '@/app/api/points-prelevement.js'
-import PointPrelevement from '@/components/points-prelevement/index.js'
+import PointExploitations from '@/components/points-prelevement/point-exploitations.js'
+import PointIdentification from '@/components/points-prelevement/point-identification.js'
+import PointLocalistation from '@/components/points-prelevement/point-localisation.js'
+import PointTabs from '@/components/points-prelevement/point-tabs.js'
 
 const Page = async ({params}) => {
-  const {id} = (await params)
+  const {id, tab} = (await params)
+  const selectedTab = tab || 'identification'
   const pointPrelevement = await getPointPrelevement(id)
   const bss = await getBss(pointPrelevement.id_bss)
   const bnpe = await getBnpe(pointPrelevement.code_bnpe)
@@ -28,9 +32,22 @@ const Page = async ({params}) => {
 
   return (
     <div className='fr-container mt-4'>
-      <PointPrelevement
-        pointPrelevement={pointPrelevement}
-      />
+      <PointTabs selectedTab={selectedTab} />
+      {selectedTab === 'identification' && (
+        <PointIdentification
+          pointPrelevement={pointPrelevement}
+        />
+      )}
+      {selectedTab === 'localisation' && (
+        <PointLocalistation
+          pointPrelevement={pointPrelevement}
+        />
+      )}
+      {selectedTab === 'exploitations' && (
+        <PointExploitations
+          pointPrelevement={pointPrelevement}
+        />
+      )}
     </div>
   )
 }
