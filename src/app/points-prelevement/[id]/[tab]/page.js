@@ -1,9 +1,10 @@
 import {
-  getBss,
+  getBeneficiaire,
   getBnpe,
-  getPointPrelevement,
+  getBss,
+  getExploitationsFromPointId,
   getLibelleCommune,
-  getBeneficiaire
+  getPointPrelevement
 } from '@/app/api/points-prelevement.js'
 import PointExploitations from '@/components/points-prelevement/point-exploitations.js'
 import PointIdentification from '@/components/points-prelevement/point-identification.js'
@@ -17,7 +18,8 @@ const Page = async ({params}) => {
   const bss = await getBss(pointPrelevement.id_bss)
   const bnpe = await getBnpe(pointPrelevement.code_bnpe)
   const commune = await getLibelleCommune(pointPrelevement.insee_com)
-  const exploitationsWithBeneficiaires = await Promise.all(pointPrelevement.exploitations.map(async exploitation => {
+  const exploitations = await getExploitationsFromPointId(pointPrelevement.id_point)
+  const exploitationsWithBeneficiaires = await Promise.all(exploitations.map(async exploitation => {
     const beneficiaire = await getBeneficiaire(exploitation.id_beneficiaire)
     return {
       ...exploitation,
