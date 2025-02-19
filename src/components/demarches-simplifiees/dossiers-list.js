@@ -69,6 +69,9 @@ const DossiersList = ({dossiers}) => {
         sx={{
           '& .MuiDataGrid-virtualScroller': {
             overflowY: 'hidden'
+          },
+          '&:hover': {
+            cursor: 'pointer'
           }
         }}
         columns={[
@@ -170,6 +173,7 @@ const DossiersList = ({dossiers}) => {
 
       <modal.Component
         title={`Dossier n°${selectedDossier?.numero}`}
+        size='large'
         buttons={selectedDossier ? [
           {
             linkProps: {href: getDossierDSURL(selectedDossier), target: '_blank'},
