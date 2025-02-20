@@ -281,6 +281,24 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, style}
     }
   }, [selectedPoint])
 
+  // Centrage et zoom sur le selectedPoint
+  useEffect(() => {
+    const map = mapRef.current
+    if (map && selectedPoint) {
+      const coords
+        = selectedPoint.coordinates
+        || (selectedPoint.geom && selectedPoint.geom.coordinates)
+      if (coords) {
+        map.flyTo({
+          center: coords,
+          zoom: 14,
+          speed: 1.2,
+          curve: 1.42
+        })
+      }
+    }
+  }, [selectedPoint])
+
   useEffect(() => {
     if (mapRef.current && style && mapRef.current.isStyleLoaded()) {
       mapRef.current.setStyle(styles[style])
