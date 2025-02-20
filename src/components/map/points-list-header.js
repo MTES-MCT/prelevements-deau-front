@@ -14,7 +14,7 @@ const PointsListHeader = ({filters, resultsCount, typeMilieuOptions, usagesOptio
       onClearFilters={() =>
         onFilter({name: '', typeMilieu: '', usages: []})}
     />
-    {resultsCount && (
+    {resultsCount !== null && (
       <Typography variant='body2'>
         {resultsCount === 0 && 'Aucun point ne correspond à vos critères de recherche'}
         {resultsCount > 0 && (
