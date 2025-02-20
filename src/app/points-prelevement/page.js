@@ -117,7 +117,7 @@ const Page = () => {
           />
         ) : (
           <PointsListHeader
-            resultsCount={filteredPoints.length}
+            resultsCount={loading ? null : filteredPoints.length}
             filters={filters}
             typeMilieuOptions={typeMilieuOptions}
             usagesOptions={usagesOptions}

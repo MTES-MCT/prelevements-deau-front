@@ -14,14 +14,16 @@ const PointsListHeader = ({filters, resultsCount, typeMilieuOptions, usagesOptio
       onClearFilters={() =>
         onFilter({name: '', typeMilieu: '', usages: []})}
     />
-    <Typography variant='body2'>
-      {resultsCount === 0 && 'Aucun point ne correspond à vos critères de recherche'}
-      {resultsCount > 0 && (
-        <>
-          <strong>{resultsCount}</strong> point{resultsCount > 1 ? 's' : ''} de prélèvement
-        </>
-      )}
-    </Typography>
+    {resultsCount && (
+      <Typography variant='body2'>
+        {resultsCount === 0 && 'Aucun point ne correspond à vos critères de recherche'}
+        {resultsCount > 0 && (
+          <>
+            <strong>{resultsCount}</strong> point{resultsCount > 1 ? 's' : ''} de prélèvement
+          </>
+        )}
+      </Typography>
+    )}
   </div>
 )
 
