@@ -1,6 +1,6 @@
 'use client'
 
-import {useEffect, useMemo, useState} from 'react'
+import {useCallback, useEffect, useMemo, useState} from 'react'
 
 import {
   Box,
@@ -8,7 +8,6 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Typography,
   useTheme
 } from '@mui/material'
 
@@ -16,8 +15,10 @@ import {getPointsPrelevement} from '@/app/api/points-prelevement.js'
 import SidePanelLayout from '@/components/layout/side-panel.js'
 import LoadingOverlay from '@/components/loading-overlay.js'
 import Map from '@/components/map/index.js'
-import MapFilters from '@/components/map/map-filters.js'
+import PointHeader from '@/components/map/point-header.js'
 import PointSidePanel from '@/components/map/point-side-panel.js'
+import PointsListHeader from '@/components/map/points-list-header.js'
+import PointsList from '@/components/map/points-list.js'
 import useEvent from '@/hook/use-event.js'
 import {extractTypeMilieu, extractUsages} from '@/lib/points-prelevement.js'
 
@@ -70,6 +71,10 @@ const Page = () => {
     setExpanded(true)
   })
 
+  const handleFilter = useCallback(newFilters => {
+    setFilters(prevFilters => ({...prevFilters, ...newFilters}))
+  }, [])
+
   // Mise à jour des points filtrés en fonction des filtres
   useEffect(() => {
     const filtered = points.filter(point => {
@@ -96,25 +101,36 @@ const Page = () => {
   return (
     <SidePanelLayout
       header={
-        <Typography variant='h6' className='!m-0'>
-          {selectedPoint ? (selectedPoint.nom || 'Pas de nom renseigné') : 'Aucun point sélectionné'}
-        </Typography>
+        selectedPoint ? (
+          <PointHeader
+            point={selectedPoint}
+            onClose={() => setSelectedPoint(null)}
+          />
+        ) : (
+          <PointsListHeader
+            filters={filters}
+            typeMilieuOptions={typeMilieuOptions}
+            usagesOptions={usagesOptions}
+            onFilter={handleFilter}
+          />
+        )
       }
       isOpen={expanded}
       handleOpen={setExpanded}
-      panelContent={<PointSidePanel point={selectedPoint} />}
+      panelContent={
+        selectedPoint
+          ? <PointSidePanel point={selectedPoint} />
+          : (
+            <PointsList
+              points={points.filter(pt => filteredPoints.includes(pt.id_point))}
+              onSelect={handleSelectedPoint}
+            />
+          )
+      }
     >
       <Box className='flex h-full flex-col relative'>
         {loading && <LoadingOverlay />}
-        {/* Barre de filtres */}
-        <MapFilters
-          filters={filters}
-          typeMilieuOptions={typeMilieuOptions}
-          usagesOptions={usagesOptions}
-          onFilterChange={setFilters}
-          onClearFilters={() =>
-            setFilters({name: '', typeMilieu: '', usages: []})}
-        />
+
         {/* Composant de la carte interactive */}
         <Map
           points={points}

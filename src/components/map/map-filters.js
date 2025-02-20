@@ -32,26 +32,19 @@ const MapFilters = ({filters, usagesOptions, typeMilieuOptions, onFilterChange, 
   const backgroundColor = fr.colors.getHex({isDark}).decisions.artwork.background.grey.default
 
   return (
-    <Box
-      sx={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 1000,
-        pointerEvents: expanded ? 'auto' : 'none'
-      }}
-    >
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'flex-end',
-          p: 1,
-          backgroundColor: expanded ? backgroundColor : 'transparent'
-        }}
-      >
+    <Box className='flex flex-col gap-2'>
+      <Box className='flex items-center gap-2'>
+        <TextField
+          className='w-full'
+          label='Recherche par nom'
+          value={filters.name}
+          size='small'
+          onChange={e =>
+            onFilterChange({name: e.target.value})}
+        />
+
         <IconButton
-          sx={{pointerEvents: 'auto'}}
+          sx={{pointerEvents: 'auto', width: 40, height: 40}}
           aria-label='Afficher les filtres'
           onClick={() => setExpanded(prev => !prev)}
         >
@@ -75,13 +68,6 @@ const MapFilters = ({filters, usagesOptions, typeMilieuOptions, onFilterChange, 
               gap: 2
             }}
           >
-            <TextField
-              label='Recherche par nom'
-              value={filters.name}
-              size='small'
-              onChange={e =>
-                onFilterChange({...filters, name: e.target.value})}
-            />
             <FormControl size='small'>
               <InputLabel id='filter-typeMilieu-label'>Type Milieu</InputLabel>
               <Select
@@ -89,7 +75,7 @@ const MapFilters = ({filters, usagesOptions, typeMilieuOptions, onFilterChange, 
                 label='Type Milieu'
                 value={filters.typeMilieu}
                 onChange={e =>
-                  onFilterChange({...filters, typeMilieu: e.target.value})}
+                  onFilterChange({typeMilieu: e.target.value})}
               >
                 <MenuItem value=''>Tous</MenuItem>
                 {typeMilieuOptions.map(option => (
@@ -114,7 +100,7 @@ const MapFilters = ({filters, usagesOptions, typeMilieuOptions, onFilterChange, 
                           newUsages = newUsages.filter(u => u !== option)
                         }
 
-                        onFilterChange({...filters, usages: newUsages})
+                        onFilterChange({usages: newUsages})
                       }}
                     />
                   }

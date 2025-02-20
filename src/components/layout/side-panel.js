@@ -37,7 +37,7 @@ const SidePanel = ({header, isOpen, panelContent, handleOpen, children}) => {
             </div>
 
             {isOpen && (
-              <div className='px-4 pb-4 flex-1 overflow-auto'>
+              <div className='flex-1 overflow-auto'>
                 {panelContent}
               </div>
             )}
@@ -52,9 +52,7 @@ const SidePanel = ({header, isOpen, panelContent, handleOpen, children}) => {
             <div className='sticky top-0 z-20 bg-white p-4'>
               {header}
             </div>
-            <div className='p-4'>
-              {panelContent}
-            </div>
+            {panelContent}
           </aside>
 
           <div className='flex-1 overflow-auto flex flex-col'>
