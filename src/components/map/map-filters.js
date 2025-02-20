@@ -1,6 +1,6 @@
 'use client'
 
-import {useState} from 'react'
+import {useState, useMemo, useEffect} from 'react'
 
 import FilterListIcon from '@mui/icons-material/FilterList'
 import {
@@ -17,9 +17,24 @@ import {
   IconButton
 } from '@mui/material'
 import Badge from '@mui/material/Badge'
+import debounce from 'lodash-es/debounce'
 
 const MapFilters = ({filters, usagesOptions, typeMilieuOptions, onFilterChange, onClearFilters}) => {
   const [expanded, setExpanded] = useState(false)
+  const [searchTerm, setSearchTerm] = useState(filters.name || '')
+
+  // Création d'une version "debounced" de onFilterChange pour la recherche par nom
+  const debouncedFilterChange = useMemo(
+    () => debounce(value => onFilterChange({name: value}), 300),
+    [onFilterChange]
+  )
+
+  useEffect(() => {
+    debouncedFilterChange(searchTerm)
+    return () => {
+      debouncedFilterChange.cancel()
+    }
+  }, [searchTerm, debouncedFilterChange])
 
   const filterCount = Object.values(filters).reduce(
     (acc, value) => acc + (Array.isArray(value) ? value.length : (value ? 1 : 0)),
@@ -32,10 +47,9 @@ const MapFilters = ({filters, usagesOptions, typeMilieuOptions, onFilterChange, 
         <TextField
           className='w-full'
           label='Recherche par nom'
-          value={filters.name}
+          value={searchTerm}
           size='small'
-          onChange={e =>
-            onFilterChange({name: e.target.value})}
+          onChange={e => setSearchTerm(e.target.value)}
         />
 
         <IconButton
