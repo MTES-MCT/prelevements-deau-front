@@ -2,8 +2,6 @@
 
 import {useState} from 'react'
 
-import {fr} from '@codegouvfr/react-dsfr'
-import {useIsDark} from '@codegouvfr/react-dsfr/useIsDark'
 import FilterListIcon from '@mui/icons-material/FilterList'
 import {
   Box,
@@ -22,18 +20,15 @@ import Badge from '@mui/material/Badge'
 
 const MapFilters = ({filters, usagesOptions, typeMilieuOptions, onFilterChange, onClearFilters}) => {
   const [expanded, setExpanded] = useState(false)
-  const {isDark} = useIsDark()
 
   const filterCount = Object.values(filters).reduce(
     (acc, value) => acc + (Array.isArray(value) ? value.length : (value ? 1 : 0)),
     0
   )
 
-  const backgroundColor = fr.colors.getHex({isDark}).decisions.artwork.background.grey.default
-
   return (
-    <Box className='flex flex-col gap-2'>
-      <Box className='flex items-center gap-2'>
+    <div className='flex flex-col gap-4'>
+      <div className='flex items-center gap-2'>
         <TextField
           className='w-full'
           label='Recherche par nom'
@@ -53,68 +48,55 @@ const MapFilters = ({filters, usagesOptions, typeMilieuOptions, onFilterChange, 
             <Badge badgeContent={filterCount} color='primary' overlap='circular' />
           </Box>
         </IconButton>
-      </Box>
+      </div>
       {expanded && (
-        <Box
-          sx={{
-            backgroundColor,
-            p: 2
-          }}
-        >
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 2
-            }}
-          >
-            <FormControl size='small'>
-              <InputLabel id='filter-typeMilieu-label'>Type Milieu</InputLabel>
-              <Select
-                labelId='filter-typeMilieu-label'
-                label='Type Milieu'
-                value={filters.typeMilieu}
-                onChange={e =>
-                  onFilterChange({typeMilieu: e.target.value})}
-              >
-                <MenuItem value=''>Tous</MenuItem>
-                {typeMilieuOptions.map(option => (
-                  <MenuItem key={option} value={option}>
-                    {option}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormGroup row>
-              {usagesOptions.map(option => (
-                <FormControlLabel
-                  key={option}
-                  control={
-                    <Checkbox
-                      checked={filters.usages.includes(option)}
-                      onChange={e => {
-                        let newUsages = filters.usages
-                        if (e.target.checked) {
-                          newUsages = [...newUsages, option]
-                        } else {
-                          newUsages = newUsages.filter(u => u !== option)
-                        }
-
-                        onFilterChange({usages: newUsages})
-                      }}
-                    />
-                  }
-                  label={option}
-                />
+        <Box className='flex flex-col gap-2'>
+          <FormControl size='small'>
+            <InputLabel id='filter-typeMilieu-label'>Type Milieu</InputLabel>
+            <Select
+              labelId='filter-typeMilieu-label'
+              label='Type Milieu'
+              value={filters.typeMilieu}
+              onChange={e =>
+                onFilterChange({typeMilieu: e.target.value})}
+            >
+              <MenuItem value=''>Tous</MenuItem>
+              {typeMilieuOptions.map(option => (
+                <MenuItem key={option} value={option}>
+                  {option}
+                </MenuItem>
               ))}
-            </FormGroup>
-            <Button variant='outlined' onClick={onClearFilters}>
-              Effacer tous les filtres
-            </Button>
-          </Box>
+            </Select>
+          </FormControl>
+          <FormGroup row>
+            {usagesOptions.map(option => (
+              <FormControlLabel
+                key={option}
+                control={
+                  <Checkbox
+                    checked={filters.usages.includes(option)}
+                    onChange={e => {
+                      let newUsages = filters.usages
+                      if (e.target.checked) {
+                        newUsages = [...newUsages, option]
+                      } else {
+                        newUsages = newUsages.filter(u => u !== option)
+                      }
+
+                      onFilterChange({usages: newUsages})
+                    }}
+                  />
+                }
+                label={option}
+              />
+            ))}
+          </FormGroup>
+          <Button variant='outlined' onClick={onClearFilters}>
+            Effacer tous les filtres
+          </Button>
         </Box>
       )}
-    </Box>
+    </div>
   )
 }
 

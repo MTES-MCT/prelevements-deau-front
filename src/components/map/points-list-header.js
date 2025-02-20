@@ -2,7 +2,7 @@ import {Typography} from '@mui/material'
 
 import MapFilters from '@/components/map/map-filters.js'
 
-const PointsListHeader = ({filters, typeMilieuOptions, usagesOptions, onFilter}) => (
+const PointsListHeader = ({filters, resultsCount, typeMilieuOptions, usagesOptions, onFilter}) => (
   <div className='flex flex-col gap-2'>
     <Typography variant='h6'>Liste des points de prélèvement</Typography>
     {/* Barre de filtres */}
@@ -14,6 +14,14 @@ const PointsListHeader = ({filters, typeMilieuOptions, usagesOptions, onFilter})
       onClearFilters={() =>
         onFilter({name: '', typeMilieu: '', usages: []})}
     />
+    <Typography variant='body2'>
+      {resultsCount === 0 && 'Aucun point ne correspond à vos critères de recherche'}
+      {resultsCount > 0 && (
+        <>
+          <strong>{resultsCount}</strong> point{resultsCount > 1 ? 's' : ''} de prélèvement
+        </>
+      )}
+    </Typography>
   </div>
 )
 

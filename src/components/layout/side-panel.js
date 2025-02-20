@@ -1,5 +1,8 @@
+import {fr} from '@codegouvfr/react-dsfr'
 import {Button} from '@codegouvfr/react-dsfr/Button'
-import {Drawer, useMediaQuery, useTheme} from '@mui/material'
+import {
+  Drawer, useMediaQuery, Box, useTheme
+} from '@mui/material'
 
 const SidePanel = ({header, isOpen, panelContent, handleOpen, children}) => {
   const theme = useTheme()
@@ -27,14 +30,20 @@ const SidePanel = ({header, isOpen, panelContent, handleOpen, children}) => {
               }
             }}
           >
-            <div className='sticky top-0 z-20 bg-white px-4 py-2 flex items-center justify-between gap-4'>
+            <Box
+              className='sticky top-0 z-20 px-4 py-2 flex justify-between gap-4 shadow'
+              sx={{
+                background: fr.colors.decisions.background.default.grey.default
+              }}
+            >
               {header}
               <Button
+                className='min-w-[40px]'
                 iconId={isOpen ? 'fr-icon-arrow-down-s-line' : 'fr-icon-arrow-up-s-line'}
                 title={isOpen ? 'Fermer' : 'Ouvrir'}
                 onClick={() => handleOpen(!isOpen)}
               />
-            </div>
+            </Box>
 
             {isOpen && (
               <div className='flex-1 overflow-auto'>
@@ -49,9 +58,14 @@ const SidePanel = ({header, isOpen, panelContent, handleOpen, children}) => {
         // --------------------------------
         <div className='flex w-full h-full absolute'>
           <aside className='flex-shrink-0 min-w-[300px] max-w-[600px] basis-1/3 overflow-auto shadow-lg z-10'>
-            <div className='sticky top-0 z-20 bg-white p-4'>
+            <Box
+              className='sticky top-0 z-20 p-4 shadow-md'
+              sx={{
+                background: fr.colors.decisions.background.default.grey.default
+              }}
+            >
               {header}
-            </div>
+            </Box>
             {panelContent}
           </aside>
 

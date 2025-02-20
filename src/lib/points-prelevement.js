@@ -27,7 +27,9 @@ export function extractUsages(points) {
 export function extractTypeMilieu(points) {
   const typeMilieuSet = new Set()
   for (const point of points) {
-    typeMilieuSet.add(point.typeMilieu)
+    if (point.typeMilieu) { // Filter undefined values
+      typeMilieuSet.add(point.typeMilieu)
+    }
   }
 
   return [...typeMilieuSet]

@@ -5,7 +5,7 @@ import {
 
 import {legendColors} from '@/components/map/legend-colors.js'
 
-const PointsList = ({points, onSelect}) => {
+const PointsList = ({points, isLoading, onSelect}) => {
   // Fonction utilitaire pour récupérer la couleur associée à un usage
   const getUsageColor = usage => {
     const usageItem = legendColors.usages.find(u => u.text === usage)
@@ -19,17 +19,11 @@ const PointsList = ({points, onSelect}) => {
   }
 
   // Si points est null, afficher un indicateur de chargement centré
-  if (points === null) {
+  if (isLoading) {
     return (
-      <Box
-        sx={{
-          height: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}
-      >
+      <Box className='flex flex-col h-full items-center justify-center gap-2'>
         <CircularProgress />
+        <Typography variant='body2' className='ml-2'>Chargement…</Typography>
       </Box>
     )
   }
@@ -37,14 +31,6 @@ const PointsList = ({points, onSelect}) => {
   // Sinon, afficher la liste des points
   return (
     <div className='flex flex-col gap-2'>
-      <Typography variant='body2' className='px-4 flex-end'>
-        {points.length === 0 && 'Aucun point ne correspond à vos critères de recherche'}
-        {points.length > 0 && (
-          <>
-            <strong>{points.length}</strong> point{points.length > 1 ? 's' : ''} de prélèvements
-          </>
-        )}
-      </Typography>
       <List>
         {points.map((point, index) => (
           <ListItem
@@ -61,10 +47,7 @@ const PointsList = ({points, onSelect}) => {
             <Typography variant='body1' component='div'>
               {point.nom}
             </Typography>
-            <Box sx={{
-              display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap'
-            }}
-            >
+            <Box className='flex gap-1 mt-1 flex-wrap'>
               {point.typeMilieu && (
                 <Chip
                   label={point.typeMilieu}

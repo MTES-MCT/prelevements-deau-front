@@ -1,6 +1,8 @@
 'use client'
 
-import {useCallback, useEffect, useMemo, useState} from 'react'
+import {
+  useCallback, useEffect, useMemo, useState
+} from 'react'
 
 import {
   Box,
@@ -108,6 +110,7 @@ const Page = () => {
           />
         ) : (
           <PointsListHeader
+            resultsCount={filteredPoints.length}
             filters={filters}
             typeMilieuOptions={typeMilieuOptions}
             usagesOptions={usagesOptions}
@@ -122,6 +125,7 @@ const Page = () => {
           ? <PointSidePanel point={selectedPoint} />
           : (
             <PointsList
+              isLoading={loading}
               points={points.filter(pt => filteredPoints.includes(pt.id_point))}
               onSelect={handleSelectedPoint}
             />
