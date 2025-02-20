@@ -2,6 +2,7 @@ import {fr} from '@codegouvfr/react-dsfr'
 import {
   Box, CircularProgress, List, ListItem, Chip, Typography
 } from '@mui/material'
+import {orderBy} from 'lodash-es'
 
 import {legendColors} from '@/components/map/legend-colors.js'
 
@@ -32,7 +33,7 @@ const PointsList = ({points, isLoading, onSelect}) => {
   return (
     <div className='flex flex-col gap-2'>
       <List>
-        {points.map((point, index) => (
+        {orderBy(points, 'nom').map((point, index) => (
           <ListItem
             key={point.id_point}
             sx={{
@@ -45,7 +46,7 @@ const PointsList = ({points, isLoading, onSelect}) => {
             onClick={() => onSelect(point.id_point)}
           >
             <Typography variant='body1' component='div'>
-              {point.nom}
+              {point.id_point} - {point.nom}
             </Typography>
             <Box className='flex gap-1 mt-1 flex-wrap'>
               {point.typeMilieu && (

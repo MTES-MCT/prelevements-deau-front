@@ -12,6 +12,7 @@ import {
   InputLabel,
   useTheme
 } from '@mui/material'
+import {deburr} from 'lodash-es'
 
 import {getPointsPrelevement} from '@/app/api/points-prelevement.js'
 import SidePanelLayout from '@/components/layout/side-panel.js'
@@ -83,7 +84,13 @@ const Page = () => {
       let matches = true
 
       if (filters.name) {
-        matches &&= point.nom && point.nom.toLowerCase().includes(filters.name.toLowerCase())
+        // Normalisation de la chaîne de recherche et du nom du point
+        const normalizedSearch = deburr(filters.name.toLowerCase().trim())
+        const normalizedName = point.nom ? deburr(point.nom.toLowerCase().trim()) : ''
+        // Conversion de l'id_point en chaîne de caractères
+        const idPointStr = String(point.id_point).toLowerCase()
+        // Le matching est positif si le texte est inclus dans le nom ou dans l'id_point
+        matches &&= normalizedName.includes(normalizedSearch) || idPointStr.includes(normalizedSearch)
       }
 
       if (filters.typeMilieu) {
