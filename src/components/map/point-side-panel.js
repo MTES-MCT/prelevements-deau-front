@@ -2,6 +2,7 @@ import {useState} from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
 import {CallOut} from '@codegouvfr/react-dsfr/CallOut'
+import LaunchIcon from '@mui/icons-material/Launch'
 import PersonIcon from '@mui/icons-material/Person'
 import {
   Box,
@@ -13,6 +14,7 @@ import {
   AlertTitle,
   Alert
 } from '@mui/material'
+import Link from 'next/link.js'
 
 import ExploitationAccordion from '../exploitation-accordion.js'
 import ExploitationDialog from '../exploitation-dialog.js'
@@ -45,9 +47,9 @@ const SidePanel = ({point}) => {
     )
   }
 
-  // Conversion basique "f"/"t" => bool
-  const isZre = point.zre === 't'
-  const isReservoir = point.reservoir_biologique === 't'
+  // Conversion basique
+  const isZre = point.zre
+  const isReservoir = point.reservoir_biologique
 
   // Ouverture de la modale pour une exploitation donnée
   const handleOpenModal = exploitation => {
@@ -105,6 +107,11 @@ const SidePanel = ({point}) => {
         <Typography>
           <strong>Réservoir biologique :</strong>{' '}
           {isReservoir ? 'Oui' : 'Non'}
+        </Typography>
+        <Typography sx={{pt: 1}}>
+          <Link href={`/points-prelevement/${point.id_point}`}>
+            Plus d’informations <LaunchIcon />
+          </Link>
         </Typography>
       </Box>
 

@@ -33,10 +33,6 @@ export function extractTypeMilieu(points) {
   return [...typeMilieuSet]
 }
 
-// Filters for classifying points by type of environment
-export const eauSurface = ['==', ['get', 'typeMilieu'], 'Eau de surface']
-export const eauSouterraine = ['==', ['get', 'typeMilieu'], 'Eau souterraine']
-
 export const colors = ['#007cbf', '#00a6a6', '#f0f0f0']
 
 export function createPointPrelevementFeatures(points) {
@@ -48,91 +44,10 @@ export function createPointPrelevementFeatures(points) {
       id: point.id_point,
       properties: {
         ...point,
-        textOffset: [0, 2.5 + (0.07 * Math.min(point.nom?.length || 0, 50))]
+        textOffset: [0, 1.5 + (0.07 * Math.min(point.nom?.length || 0, 50))]
       }
     }))
   }
-}
-
-// Code for creating an SVG donut chart from feature properties
-export function createDonutChart(props) {
-  const offsets = []
-  const counts = [
-    props.eauSurface,
-    props.eauSouterraine
-  ]
-  let total = 0
-  for (const count of counts) {
-    offsets.push(total)
-    total += count
-  }
-
-  let fontSize
-  if (total >= 1000) {
-    fontSize = 22
-  } else if (total >= 100) {
-    fontSize = 20
-  } else if (total >= 10) {
-    fontSize = 18
-  } else {
-    fontSize = 16
-  }
-
-  let r
-  if (total >= 1000) {
-    r = 50
-  } else if (total >= 100) {
-    r = 32
-  } else if (total >= 10) {
-    r = 24
-  } else {
-    r = 18
-  }
-
-  const r0 = Math.round(r * 0.6)
-  const w = r * 2
-
-  let html
-      = `<div><svg width="${
-        w
-      }" height="${
-        w
-      }" viewbox="0 0 ${
-        w
-      } ${
-        w
-      }" text-anchor="middle" style="font: ${
-        fontSize
-      }px sans-serif; display: block">`
-
-  for (const [i, count] of counts.entries()) {
-    html += donutSegment(
-      offsets[i] / total,
-      (offsets[i] + count) / total,
-      r,
-      r0,
-      colors[i]
-    )
-  }
-
-  html
-      += `<circle cx="${
-      r
-    }" cy="${
-      r
-    }" r="${
-      r0
-    }" fill="white" /><text dominant-baseline="central" transform="translate(${
-      r
-    }, ${
-      r
-    })">${
-      total.toLocaleString()
-    }</text></svg></div>`
-
-  const el = document.createElement('div')
-  el.innerHTML = html
-  return el.firstChild
 }
 
 export function donutSegment(start, end, r, r0, color) {
@@ -215,8 +130,6 @@ export function createUsagePieChart(props) {
 
   // Conteneur principal
   const container = document.createElement('div')
-  container.style.width = '24px'
-  container.style.height = '24px'
   container.style.display = 'block'
 
   // Prépare un <svg> centré sur (r, r)
@@ -224,11 +137,20 @@ export function createUsagePieChart(props) {
   const radius = 10
   const cx = radius
   const cy = radius
+  container.style.width = svgSize + 4
+  container.style.height = svgSize + 4
 
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  const borderCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+  borderCircle.setAttribute('cx', cx)
+  borderCircle.setAttribute('cy', cy)
+  borderCircle.setAttribute('r', radius + 2)
+  borderCircle.setAttribute('fill', 'white')
+
+  svg.append(borderCircle)
   svg.setAttribute('width', String(svgSize))
   svg.setAttribute('height', String(svgSize))
-  svg.setAttribute('viewBox', `0 0 ${svgSize} ${svgSize}`)
+  svg.setAttribute('viewBox', `-2 -2 ${svgSize} ${svgSize}`)
   svg.style.display = 'block'
 
   // Ajoute le <svg> au conteneur
