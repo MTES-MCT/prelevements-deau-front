@@ -1,6 +1,8 @@
 'use client'
 
-import {useEffect, useMemo, useState} from 'react'
+import {
+  useCallback, useEffect, useMemo, useState
+} from 'react'
 
 import {
   Box,
@@ -10,13 +12,17 @@ import {
   InputLabel,
   useTheme
 } from '@mui/material'
+import {deburr} from 'lodash-es'
 
 import {getPointsPrelevement} from '@/app/api/points-prelevement.js'
 import SidePanelLayout from '@/components/layout/side-panel.js'
 import LoadingOverlay from '@/components/loading-overlay.js'
 import Map from '@/components/map/index.js'
-import MapFilters from '@/components/map/map-filters.js'
-import SidePanel from '@/components/map/point-side-panel.js'
+import Legend from '@/components/map/legend.js'
+import PointHeader from '@/components/map/point-header.js'
+import PointSidePanel from '@/components/map/point-side-panel.js'
+import PointsListHeader from '@/components/map/points-list-header.js'
+import PointsList from '@/components/map/points-list.js'
 import useEvent from '@/hook/use-event.js'
 import {extractTypeMilieu, extractUsages} from '@/lib/points-prelevement.js'
 
@@ -69,13 +75,23 @@ const Page = () => {
     setExpanded(true)
   })
 
+  const handleFilter = useCallback(newFilters => {
+    setFilters(prevFilters => ({...prevFilters, ...newFilters}))
+  }, [])
+
   // Mise à jour des points filtrés en fonction des filtres
   useEffect(() => {
     const filtered = points.filter(point => {
       let matches = true
 
       if (filters.name) {
-        matches &&= point.nom && point.nom.toLowerCase().includes(filters.name.toLowerCase())
+        // Normalisation de la chaîne de recherche et du nom du point
+        const normalizedSearch = deburr(filters.name.toLowerCase().trim())
+        const normalizedName = point.nom ? deburr(point.nom.toLowerCase().trim()) : ''
+        // Conversion de l'id_point en chaîne de caractères
+        const idPointStr = String(point.id_point).toLowerCase()
+        // Le matching est positif si le texte est inclus dans le nom ou dans l'id_point
+        matches &&= normalizedName.includes(normalizedSearch) || idPointStr.includes(normalizedSearch)
       }
 
       if (filters.typeMilieu) {
@@ -94,26 +110,39 @@ const Page = () => {
 
   return (
     <SidePanelLayout
-      title={
-        selectedPoint
-          ? selectedPoint.nom || 'Pas de nom renseigné'
-          : 'Aucun point sélectionné'
+      header={
+        selectedPoint ? (
+          <PointHeader
+            point={selectedPoint}
+            onClose={() => setSelectedPoint(null)}
+          />
+        ) : (
+          <PointsListHeader
+            resultsCount={loading ? null : filteredPoints.length}
+            filters={filters}
+            typeMilieuOptions={typeMilieuOptions}
+            usagesOptions={usagesOptions}
+            onFilter={handleFilter}
+          />
+        )
       }
       isOpen={expanded}
       handleOpen={setExpanded}
-      panelContent={<SidePanel point={selectedPoint} />}
+      panelContent={
+        selectedPoint
+          ? <PointSidePanel point={selectedPoint} />
+          : (
+            <PointsList
+              isLoading={loading}
+              points={points.filter(pt => filteredPoints.includes(pt.id_point))}
+              onSelect={handleSelectedPoint}
+            />
+          )
+      }
     >
       <Box className='flex h-full flex-col relative'>
         {loading && <LoadingOverlay />}
-        {/* Barre de filtres */}
-        <MapFilters
-          filters={filters}
-          typeMilieuOptions={typeMilieuOptions}
-          usagesOptions={usagesOptions}
-          onFilterChange={setFilters}
-          onClearFilters={() =>
-            setFilters({name: '', typeMilieu: '', usages: []})}
-        />
+
         {/* Composant de la carte interactive */}
         <Map
           points={points}
@@ -154,6 +183,7 @@ const Page = () => {
             </Select>
           </FormControl>
         </Box>
+        <Legend />
       </Box>
     </SidePanelLayout>
   )

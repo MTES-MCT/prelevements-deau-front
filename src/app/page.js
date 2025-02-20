@@ -32,10 +32,7 @@ const Home = async () => {
           title='Erreur de chargement'
         />
       ) : (
-        <DossiersList dossiers={dossiers.map(dossier => ({
-          ...dossier,
-          errorsCount: dossier.files.reduce((acc, file) => acc + file.errors.length, 0)
-        }))} />
+        <DossiersList dossiers={dossiers} />
       )}
     </div>
   )

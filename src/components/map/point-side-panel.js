@@ -2,6 +2,7 @@ import {useEffect, useState} from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
 import {CallOut} from '@codegouvfr/react-dsfr/CallOut'
+import LaunchIcon from '@mui/icons-material/Launch'
 import PersonIcon from '@mui/icons-material/Person'
 import {
   Box,
@@ -13,6 +14,7 @@ import {
   AlertTitle,
   Alert
 } from '@mui/material'
+import Link from 'next/link.js'
 
 import ExploitationAccordion from '../exploitation-accordion.js'
 import ExploitationDialog from '../exploitation-dialog.js'
@@ -28,7 +30,7 @@ const SectionTitle = ({title}) => (
   </Box>
 )
 
-const SidePanel = ({point}) => {
+const PointSidePanel = ({point}) => {
   // État local pour gérer l’ouverture/fermeture de la modale
   const [openModal, setOpenModal] = useState(false)
   // Stocke l’exploitation sélectionnée dont on veut afficher les règles
@@ -72,7 +74,7 @@ const SidePanel = ({point}) => {
   }
 
   return (
-    <Box className='flex flex-col gap-4'>
+    <Box className='flex flex-col gap-4 px-4 pb-4'>
       {point.autres_noms && (
         <Typography variant='caption'>
           {formatAutresNoms(point.autres_noms)}
@@ -115,6 +117,11 @@ const SidePanel = ({point}) => {
         <Typography>
           <strong>Réservoir biologique :</strong>{' '}
           {point.reservoir_biologique ? 'Oui' : 'Non'}
+        </Typography>
+        <Typography sx={{pt: 1}}>
+          <Link href={`/points-prelevement/${point.id_point}`}>
+            Plus d’informations <LaunchIcon />
+          </Link>
         </Typography>
       </Box>
 
@@ -180,4 +187,4 @@ const SidePanel = ({point}) => {
   )
 }
 
-export default SidePanel
+export default PointSidePanel

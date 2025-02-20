@@ -1,9 +1,7 @@
 'use client'
 
-import {useState} from 'react'
+import {useState, useMemo, useEffect} from 'react'
 
-import {fr} from '@codegouvfr/react-dsfr'
-import {useIsDark} from '@codegouvfr/react-dsfr/useIsDark'
 import FilterListIcon from '@mui/icons-material/FilterList'
 import {
   Box,
@@ -19,39 +17,43 @@ import {
   IconButton
 } from '@mui/material'
 import Badge from '@mui/material/Badge'
+import debounce from 'lodash-es/debounce'
 
 const MapFilters = ({filters, usagesOptions, typeMilieuOptions, onFilterChange, onClearFilters}) => {
   const [expanded, setExpanded] = useState(false)
-  const {isDark} = useIsDark()
+  const [searchTerm, setSearchTerm] = useState(filters.name || '')
+
+  // Création d'une version "debounced" de onFilterChange pour la recherche par nom
+  const debouncedFilterChange = useMemo(
+    () => debounce(value => onFilterChange({name: value}), 300),
+    [onFilterChange]
+  )
+
+  useEffect(() => {
+    debouncedFilterChange(searchTerm)
+    return () => {
+      debouncedFilterChange.cancel()
+    }
+  }, [searchTerm, debouncedFilterChange])
 
   const filterCount = Object.values(filters).reduce(
     (acc, value) => acc + (Array.isArray(value) ? value.length : (value ? 1 : 0)),
     0
   )
 
-  const backgroundColor = fr.colors.getHex({isDark}).decisions.artwork.background.grey.default
-
   return (
-    <Box
-      sx={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 1000,
-        pointerEvents: expanded ? 'auto' : 'none'
-      }}
-    >
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'flex-end',
-          p: 1,
-          backgroundColor: expanded ? backgroundColor : 'transparent'
-        }}
-      >
+    <div className='flex flex-col gap-4'>
+      <div className='flex items-center gap-2'>
+        <TextField
+          className='w-full'
+          label='Recherche par nom ou identifiant'
+          value={searchTerm}
+          size='small'
+          onChange={e => setSearchTerm(e.target.value)}
+        />
+
         <IconButton
-          sx={{pointerEvents: 'auto'}}
+          sx={{pointerEvents: 'auto', width: 40, height: 40}}
           aria-label='Afficher les filtres'
           onClick={() => setExpanded(prev => !prev)}
         >
@@ -60,75 +62,55 @@ const MapFilters = ({filters, usagesOptions, typeMilieuOptions, onFilterChange, 
             <Badge badgeContent={filterCount} color='primary' overlap='circular' />
           </Box>
         </IconButton>
-      </Box>
+      </div>
       {expanded && (
-        <Box
-          sx={{
-            backgroundColor,
-            p: 2
-          }}
-        >
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 2
-            }}
-          >
-            <TextField
-              label='Recherche par nom'
-              value={filters.name}
-              size='small'
+        <Box className='flex flex-col gap-2'>
+          <FormControl size='small'>
+            <InputLabel id='filter-typeMilieu-label'>Type Milieu</InputLabel>
+            <Select
+              labelId='filter-typeMilieu-label'
+              label='Type Milieu'
+              value={filters.typeMilieu}
               onChange={e =>
-                onFilterChange({...filters, name: e.target.value})}
-            />
-            <FormControl size='small'>
-              <InputLabel id='filter-typeMilieu-label'>Type Milieu</InputLabel>
-              <Select
-                labelId='filter-typeMilieu-label'
-                label='Type Milieu'
-                value={filters.typeMilieu}
-                onChange={e =>
-                  onFilterChange({...filters, typeMilieu: e.target.value})}
-              >
-                <MenuItem value=''>Tous</MenuItem>
-                {typeMilieuOptions.map(option => (
-                  <MenuItem key={option} value={option}>
-                    {option}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormGroup row>
-              {usagesOptions.map(option => (
-                <FormControlLabel
-                  key={option}
-                  control={
-                    <Checkbox
-                      checked={filters.usages.includes(option)}
-                      onChange={e => {
-                        let newUsages = filters.usages
-                        if (e.target.checked) {
-                          newUsages = [...newUsages, option]
-                        } else {
-                          newUsages = newUsages.filter(u => u !== option)
-                        }
-
-                        onFilterChange({...filters, usages: newUsages})
-                      }}
-                    />
-                  }
-                  label={option}
-                />
+                onFilterChange({typeMilieu: e.target.value})}
+            >
+              <MenuItem value=''>Tous</MenuItem>
+              {typeMilieuOptions.map(option => (
+                <MenuItem key={option} value={option}>
+                  {option}
+                </MenuItem>
               ))}
-            </FormGroup>
-            <Button variant='outlined' onClick={onClearFilters}>
-              Effacer tous les filtres
-            </Button>
-          </Box>
+            </Select>
+          </FormControl>
+          <FormGroup row>
+            {usagesOptions.map(option => (
+              <FormControlLabel
+                key={option}
+                control={
+                  <Checkbox
+                    checked={filters.usages.includes(option)}
+                    onChange={e => {
+                      let newUsages = filters.usages
+                      if (e.target.checked) {
+                        newUsages = [...newUsages, option]
+                      } else {
+                        newUsages = newUsages.filter(u => u !== option)
+                      }
+
+                      onFilterChange({usages: newUsages})
+                    }}
+                  />
+                }
+                label={option}
+              />
+            ))}
+          </FormGroup>
+          <Button variant='outlined' onClick={onClearFilters}>
+            Effacer tous les filtres
+          </Button>
         </Box>
       )}
-    </Box>
+    </div>
   )
 }
 

@@ -22,7 +22,7 @@ const navigationItems = [
         text: 'Validateur de fichier'
       }
     ],
-    text: 'Démarches simplifées'
+    text: 'Démarches simplifiées'
   },
   {
     linkProps: {
