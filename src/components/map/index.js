@@ -16,9 +16,6 @@ import vector from './styles/vector.json'
 
 import {
   computeBestPopupAnchor,
-  eauSouterraine,
-  eauSurface,
-  createDonutChart,
   createUsagePieChart,
   createPointPrelevementFeatures
 } from '@/lib/points-prelevement.js'
@@ -35,14 +32,7 @@ function loadMap(map, points) {
   // On ajoute la source en ne gardant que les points filtrés
   map.addSource(SOURCE_ID, {
     type: 'geojson',
-    data: createPointPrelevementFeatures(points),
-    cluster: true,
-    clusterRadius: 80,
-    clusterProperties: {
-      // Comptage pour chaque type d'environnement
-      eauSurface: ['+', ['case', eauSurface, 1, 0]],
-      eauSouterraine: ['+', ['case', eauSouterraine, 1, 0]]
-    }
+    data: createPointPrelevementFeatures(points)
   })
 
   // Layer combiné affichant le nom et le typeMilieu (entre parenthèses sur deux lignes)
@@ -50,14 +40,10 @@ function loadMap(map, points) {
     id: 'points-prelevement-nom',
     type: 'symbol',
     source: SOURCE_ID,
-    filter: ['!=', 'cluster', true],
     layout: {
       'text-field': [
-        'concat',
-        ['get', 'nom'],
-        '\n(',
-        ['get', 'typeMilieu'],
-        ')'
+        'get',
+        'nom'
       ],
       'text-anchor': 'bottom',
       'text-offset': ['get', 'textOffset']
@@ -124,7 +110,7 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, style}
       maxWidth: 80,
       unit: 'metric'
     })
-    map.addControl(scale)
+    map.addControl(scale, 'bottom-right')
 
     mapRef.current = map
 
@@ -172,13 +158,11 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, style}
     for (const feature of features) {
       const coords = feature.geometry.coordinates
       const props = feature.properties
-      const id = props.cluster ? props.cluster_id : props.id_point
+      const id = props.id_point
 
       let marker = markersCacheRef.current[id]
       if (!marker) {
-        const el = props.cluster
-          ? createDonutChart(props)
-          : createUsagePieChart(props)
+        const el = createUsagePieChart(props)
 
         if (!props.cluster && !el.dataset.eventsAttached) {
           el.dataset.eventsAttached = 'true'
@@ -253,7 +237,16 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, style}
     }
 
     if (selectedPoint) {
-      map.setLayoutProperty('points-prelevement-nom', 'text-size', 20)
+      map.setLayoutProperty(
+        'points-prelevement-nom',
+        'text-size',
+        [
+          'case',
+          ['==', ['get', 'id_point'], selectedPoint.id_point],
+          20,
+          16
+        ]
+      )
       map.setPaintProperty(
         'points-prelevement-nom',
         'text-halo-color',

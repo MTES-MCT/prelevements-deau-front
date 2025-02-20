@@ -1,0 +1,10 @@
+{
+  "env": {
+    "NEXTAUTH_SECRET": {
+      "generator": "secret"
+    },
+    "NEXTAUTH_URL": {
+      "generator": "url"
+    }
+  }
+}
