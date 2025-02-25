@@ -21,8 +21,9 @@ const PointLocalistation = ({pointPrelevement}) => (
     </Typography>
     <LabelValue label='Détails de localisation' value={pointPrelevement.detail_localisation} />
     <LabelValue label='Précision géométrique' value={pointPrelevement.precision_geom} />
-    <LabelValue label='Type de milieu' value={pointPrelevement.type_milieu} />
-    <Box><b>Type de milieu :</b> <Chip label={pointPrelevement.type_milieu} /></Box>
+    {pointPrelevement.type_milieu && (
+      <Box><b>Type de milieu :</b> <Chip label={pointPrelevement.type_milieu} /></Box>
+    )}
     {pointPrelevement.type_milieu === 'Eau souterraine' && (
       <>
         <LabelValue label='Profondeur' value={pointPrelevement.profondeur} />
