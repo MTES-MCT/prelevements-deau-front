@@ -8,13 +8,18 @@ import {
   LineChart,
   ChartsReferenceLine
 } from '@mui/x-charts'
-import {format, parseISO} from 'date-fns'
+import {format, parseISO, subMonths} from 'date-fns'
 import {fr} from 'date-fns/locale'
 
 const VolumesChart = ({volumes, isLoading}) => {
   const [showAll, setShowAll] = useState(false)
+
+  const mostRecentDate = new Date(Math.max(...volumes.valeurs.map(item => new Date(item.date).getTime())))
+  const twelveMonthsAgoFromRecent = subMonths(mostRecentDate, 12)
   const sortedData = [...volumes.valeurs].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-  const displayData = showAll ? sortedData : sortedData.slice(-12)
+  const lastTwelveMonthsData = sortedData.filter(item => new Date(item.date) >= twelveMonthsAgoFromRecent)
+  const displayData = showAll ? sortedData : lastTwelveMonthsData
+
   const xLabels = displayData.map(item => item.date)
   const volumeData = displayData.map(item => item.volume)
   const exceededData = displayData.map(item => ({
