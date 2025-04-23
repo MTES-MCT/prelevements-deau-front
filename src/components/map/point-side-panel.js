@@ -17,7 +17,6 @@ import {
 import Link from 'next/link.js'
 
 import ExploitationAccordion from '../exploitation-accordion.js'
-import ExploitationDialog from '../exploitation-dialog.js'
 
 import {getExploitationsByPointId} from '@/app/api/points-prelevement.js'
 import {formatAutresNoms} from '@/lib/points-prelevement.js'
@@ -31,23 +30,7 @@ const SectionTitle = ({title}) => (
 )
 
 const PointSidePanel = ({point}) => {
-  // État local pour gérer l’ouverture/fermeture de la modale
-  const [openModal, setOpenModal] = useState(false)
-  // Stocke l’exploitation sélectionnée dont on veut afficher les règles
-  const [selectedExploitation, setSelectedExploitation] = useState(null)
   const [exploitations, setExploitations] = useState([])
-
-  // Ouverture de la modale pour une exploitation donnée
-  const handleOpenModal = exploitation => {
-    setSelectedExploitation(exploitation)
-    setOpenModal(true)
-  }
-
-  // Fermeture de la modale
-  const handleCloseModal = () => {
-    setOpenModal(false)
-    setSelectedExploitation(null)
-  }
 
   useEffect(() => {
     async function fetchExploitations() {
@@ -172,17 +155,9 @@ const PointSidePanel = ({point}) => {
             key={exploitation.id_exploitation}
             exploitation={exploitation}
             beneficiaires={point.beneficiaires}
-            handleOpenModal={handleOpenModal}
           />
         ))}
       </Box>
-
-      {/* ---------- MODALE RÈGLES & DOCUMENTS ---------- */}
-      <ExploitationDialog
-        openModal={openModal}
-        handleClose={handleCloseModal}
-        exploitation={selectedExploitation}
-      />
     </Box>
   )
 }
