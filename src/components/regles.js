@@ -104,18 +104,25 @@ const reglesColumns = [
   {field: 'remarque', headerName: 'Remarque', width: 400}
 ]
 
-const Regles = ({regles}) => (
-  <Box sx={{p: 2}}>
-    <DataGrid
-      disableSelectionOnClick
-      hideFooterPagination
-      slots={{toolbar: GridToolbar}}
-      localeText={frFR.components.MuiDataGrid.defaultProps.localeText}
-      rows={regles}
-      columns={reglesColumns}
-      getRowId={row => row.id_regle}
-    />
-  </Box>
-)
+const Regles = ({regles, documents}) => {
+  const reglesWithDocuments = regles.map(r => ({
+    ...r,
+    document: documents.find(d => d.id_document === r.id_document)
+  }))
+
+  return (
+    <Box sx={{p: 2}}>
+      <DataGrid
+        disableSelectionOnClick
+        hideFooterPagination
+        slots={{toolbar: GridToolbar}}
+        localeText={frFR.components.MuiDataGrid.defaultProps.localeText}
+        rows={reglesWithDocuments}
+        columns={reglesColumns}
+        getRowId={row => row.id_regle}
+      />
+    </Box>
+  )
+}
 
 export default Regles
