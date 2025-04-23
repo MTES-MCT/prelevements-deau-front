@@ -10,24 +10,6 @@ export async function getPointPrelevement(id) {
   return response.json()
 }
 
-export async function getExploitationsFromPointId(id) {
-  try {
-    const response = await fetch(`${API_URL}/api/points-prelevement/${id}/exploitations`)
-    return response.json()
-  } catch {
-    return null
-  }
-}
-
-export async function getDocumentsFromExploitationId(id) {
-  try {
-    const response = await fetch(`${API_URL}/api/exploitations/${id}/documents`)
-    return response.json()
-  } catch {
-    return null
-  }
-}
-
 export async function getBeneficiaire(id) {
   try {
     const response = await fetch(`${API_URL}/api/beneficiaires/${id}`)
@@ -55,41 +37,6 @@ export async function getPointsFromBeneficiaire(idBeneficiaire) {
   }
 }
 
-export async function getBss(id) {
-  if (!id) {
-    return null
-  }
-
-  try {
-    const response = await fetch(`${API_URL}/api/bss/${id}`)
-    return response.json()
-  } catch {
-    return null
-  }
-}
-
-export async function getBnpe(id) {
-  if (!id) {
-    return null
-  }
-
-  try {
-    const response = await fetch(`${API_URL}/api/bnpe/${id}`)
-    return response.json()
-  } catch {
-    return null
-  }
-}
-
-export async function getLibelleCommune(codeInsee) {
-  try {
-    const response = await fetch(`${API_URL}/api/commune/${codeInsee}`)
-    return response.json()
-  } catch {
-    return null
-  }
-}
-
 export async function getExploitationsByPointId(pointId) {
   const response = await fetch(`${API_URL}/api/points-prelevement/${pointId}/exploitations`)
   const exploitations = await response.json()
@@ -98,7 +45,7 @@ export async function getExploitationsByPointId(pointId) {
 
 export async function getStats() {
   const response = await fetch(`${API_URL}/api/stats`)
-  const stats = response.json()
+  const stats = await response.json()
 
   return stats
 }
