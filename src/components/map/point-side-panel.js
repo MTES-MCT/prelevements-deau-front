@@ -101,10 +101,11 @@ const PointSidePanel = ({point}) => {
           <strong>Réservoir biologique :</strong>{' '}
           {point.reservoir_biologique ? 'Oui' : 'Non'}
         </Typography>
-        <Typography sx={{pt: 1}}>
+        <Typography sx={{pt: 2}} variant='h6'>
           <Link href={`/prelevements/${point.id_point}/identification`}>
-            Plus d’informations <LaunchIcon />
+            <b>Plus d’informations</b>
           </Link>
+          <LaunchIcon sx={{ml: 1}} />
         </Typography>
       </Box>
 
