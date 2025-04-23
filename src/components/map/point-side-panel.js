@@ -116,9 +116,9 @@ const PointSidePanel = ({point}) => {
         <SectionTitle title='Préleveurs' />
 
         <Box sx={{ml: 2}}>
-          {point.beneficiaires && point.beneficiaires.length > 0 ? (
+          {point.preleveurs && point.preleveurs.length > 0 ? (
             <List>
-              {point.beneficiaires.map(b => {
+              {point.preleveurs.map(b => {
                 const label
                 = b.raison_sociale
                 || b.sigle
@@ -154,7 +154,7 @@ const PointSidePanel = ({point}) => {
           <ExploitationAccordion
             key={exploitation.id_exploitation}
             exploitation={exploitation}
-            beneficiaires={point.beneficiaires}
+            preleveurs={point.preleveurs}
           />
         ))}
       </Box>
