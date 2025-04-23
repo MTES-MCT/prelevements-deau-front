@@ -12,13 +12,13 @@ const LabelValue = ({label, value}) => {
   }
 }
 
-const PointLocalistation = ({pointPrelevement, libelleCommune}) => (
+const PointLocalistation = ({pointPrelevement}) => (
   <Box sx={{m: 2, p: 3}}>
     <Typography
       gutterBottom
       variant='h3'
     >
-      {libelleCommune} - {pointPrelevement.insee_com}
+      {pointPrelevement.commune.nom} - {pointPrelevement.commune.code}
     </Typography>
     <LabelValue label='Détails de localisation' value={pointPrelevement.detail_localisation} />
     <LabelValue label='Précision géométrique' value={pointPrelevement.precision_geom} />
@@ -36,7 +36,7 @@ const PointLocalistation = ({pointPrelevement, libelleCommune}) => (
         {pointPrelevement.meso && (
           <Box>
             <b>Masse d’eau souterraine (DCE) : </b>
-            <span>{pointPrelevement.meso.code} - {pointPrelevement.meso.nom_provis}</span>
+            <span>{pointPrelevement.meso.code} - {pointPrelevement.meso.nom}</span>
           </Box>
         )}
         <LabelValue label='Zone de répartition des eaux' value={pointPrelevement.zre ? 'oui' : null} />
@@ -47,10 +47,10 @@ const PointLocalistation = ({pointPrelevement, libelleCommune}) => (
         {pointPrelevement.meContinentalesBv && (
           <Box>
             <b>Masse d’eau cours d’eau (DCE) : </b>
-            <span>{pointPrelevement.meContinentalesBv.code_dce} - {pointPrelevement.meContinentalesBv.nom}</span>
+            <span>{pointPrelevement.meContinentalesBv.code} - {pointPrelevement.meContinentalesBv.nom}</span>
           </Box>
         )}
-        <LabelValue label='Cours d’eau (BD Carthage)' value={pointPrelevement.bvBdCarthage?.toponyme_t} />
+        <LabelValue label='Cours d’eau (BD Carthage)' value={pointPrelevement.bvBdCarthage?.nom} />
         <LabelValue label='Cours d’eau indiqué dans l’autorisation' value={pointPrelevement.cours_eau} />
         <LabelValue label='Zone de répartition des eaux' value={pointPrelevement.zre ? 'oui' : null} />
         <LabelValue label='Réservoir biologique' value={pointPrelevement.reservoir_biologique ? 'oui' : null} />
