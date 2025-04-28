@@ -57,7 +57,9 @@ const VolumesChart = ({idExploitation}) => {
 
   const hasVolumeMax = volumes.volumeJournalierMax
   const nbValeursRenseignees = showAll ? volumes.nbValeursRenseignees : displayData.length
-  const nbDepassements = showAll ? volumes.nbDepassements : displayData.filter(v => v.depassement).length
+  const nbDepassements = showAll
+    ? (volumes.nbDepassements ?? '0')
+    : (displayData.some(v => v.depassement).length > 0 ? displayData.filter(v => v.depassement).length : '0')
 
   useEffect(() => {
     async function getVolumes() {
