@@ -10,14 +10,14 @@ import LegendChart from '@/components/prelevements/legend-chart.js'
 
 function getColorForNature(index) {
   const colors = [
-    fr.colors.decisions.artwork.major.greenBourgeon.hover,
-    fr.colors.decisions.artwork.major.greenEmeraude.hover,
-    fr.colors.decisions.artwork.major.greenMenthe.hover,
-    fr.colors.decisions.artwork.major.greenArchipel.hover,
-    fr.colors.decisions.artwork.major.blueEcume.hover,
-    fr.colors.decisions.artwork.major.blueCumulus.hover,
-    fr.colors.decisions.artwork.major.purpleGlycine.hover,
-    fr.colors.decisions.artwork.major.pinkMacaron.hover
+    fr.colors.decisions.artwork.major.greenBourgeon.active,
+    fr.colors.decisions.artwork.major.blueEcume.active,
+    fr.colors.decisions.artwork.major.yellowTournesol.active,
+    fr.colors.decisions.artwork.major.blueCumulus.active,
+    fr.colors.decisions.artwork.major.yellowMoutarde.active,
+    fr.colors.decisions.artwork.major.purpleGlycine.active,
+    fr.colors.decisions.artwork.major.greenArchipel.active,
+    fr.colors.decisions.artwork.major.pinkMacaron.active
   ]
 
   return colors[index % colors.length]
