@@ -7,13 +7,13 @@ import {PieChart} from '@mui/x-charts/PieChart'
 const DebitsReservesChart = ({data}) => {
   const [mounted, setMounted] = useState(false)
 
-  const total = data.reduce((sum, item) => sum + item.nb_exploitations, 0)
+  const total = data.reduce((sum, item) => sum + item.nbExploitations, 0)
 
   const chartData = data.map(item => ({
-    id: item.debit_reserve,
-    value: item.nb_exploitations,
-    label: item.debit_reserve,
-    percentage: ((item.nb_exploitations / total) * 100).toFixed(2) + '%'
+    id: item.debitReserve,
+    value: item.nbExploitations,
+    label: item.debitReserve,
+    percentage: ((item.nbExploitations / total) * 100).toFixed(2) + '%'
   }))
 
   useEffect(() => {
