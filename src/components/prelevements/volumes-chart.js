@@ -41,7 +41,7 @@ const VolumesChart = ({idExploitation}) => {
       area: false,
       curve: 'linear',
       valueFormatter(value) {
-        return value ? `${Number.parseFloat(value).toLocaleString('fr-FR')} m³` : 'Non renseigné'
+        return value ? `${Number.parseFloat(value).toLocaleString('fr-FR')} m³` : null
       }
     },
     {
@@ -104,7 +104,7 @@ const VolumesChart = ({idExploitation}) => {
             xAxis={[
               {
                 data: xLabels,
-                scaleType: 'band',
+                scaleType: 'point',
                 valueFormatter: date => format(parseISO(date), 'dd/MM/yyyy', {locale: fr}),
                 tickLabelStyle: {
                   angle: 45,
