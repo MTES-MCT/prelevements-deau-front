@@ -7,11 +7,10 @@ import {
 } from '@mui/material'
 
 import formatDate from '@/lib/format-date.js'
-import {formatAutresNoms} from '@/lib/points-prelevement.js'
 
 const Popup = ({point}) => {
   const theme = useTheme()
-  const {nom, autres_noms: autresNoms, preleveurs, exploitationsStatus, exploitationsStartDate, usages, type_milieu: typeMilieu, zre, reservoir_biologique: reservoirBiologique} = point
+  const {nom, autresNoms, preleveurs, exploitationsStatus, exploitationsStartDate, usages, type_milieu: typeMilieu, zre, reservoir_biologique: reservoirBiologique} = point
 
   return (
     // TODO : Utiliser le theme DSFR
@@ -21,7 +20,7 @@ const Popup = ({point}) => {
       </Typography>
 
       <Typography variant='caption'>
-        {autresNoms && formatAutresNoms(autresNoms)}
+        {autresNoms}
       </Typography>
 
       <Box>

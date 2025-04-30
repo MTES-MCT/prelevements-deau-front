@@ -19,7 +19,6 @@ import Link from 'next/link.js'
 import ExploitationAccordion from '../exploitation-accordion.js'
 
 import {getExploitationsByPointId} from '@/app/api/points-prelevement.js'
-import {formatAutresNoms} from '@/lib/points-prelevement.js'
 
 const SectionTitle = ({title}) => (
   <Box className='my-4'>
@@ -58,9 +57,9 @@ const PointSidePanel = ({point}) => {
 
   return (
     <Box className='flex flex-col gap-4 px-4 pb-4'>
-      {point.autres_noms && (
+      {point.autresNoms && (
         <Typography variant='caption'>
-          {formatAutresNoms(point.autres_noms)}
+          {point.autresNoms}
         </Typography>
       )}
 
