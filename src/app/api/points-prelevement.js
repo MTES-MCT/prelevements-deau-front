@@ -1,12 +1,18 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL
+const API_TOKEN = process.env.NEXT_PUBLIC_API_TOKEN
+
+const headers = {
+  'Content-Type': 'application/json',
+  Authorization: `Token ${API_TOKEN}`
+}
 
 export async function getPointsPrelevement() {
-  const response = await fetch(`${API_URL}/api/points-prelevement`)
+  const response = await fetch(`${API_URL}/api/points-prelevement`, {headers})
   return response.json()
 }
 
 export async function getPointPrelevement(id) {
-  const response = await fetch(`${API_URL}/api/points-prelevement/${id}`)
+  const response = await fetch(`${API_URL}/api/points-prelevement/${id}`, {headers})
   return response.json()
 }
 
