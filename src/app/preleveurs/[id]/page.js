@@ -1,14 +1,14 @@
 import {Box, Chip, Typography} from '@mui/material'
 import Link from 'next/link'
 
-import {getBeneficiaire, getPointsFromBeneficiaire} from '@/app/api/points-prelevement.js'
+import {getPreleveur, getPointsFromPreleveur} from '@/app/api/points-prelevement.js'
 import {getUsagesColors} from '@/components/map/legend-colors.js'
 import LabelValue from '@/components/ui/label-value.js'
 
 const Page = async ({params}) => {
   const {id} = await params
-  const preleveur = await getBeneficiaire(id)
-  const points = await getPointsFromBeneficiaire(id)
+  const preleveur = await getPreleveur(id)
+  const points = await getPointsFromPreleveur(id)
 
   return (
     <Box className='fr-container h-full w-full flex flex-col gap-5 mb-5'>

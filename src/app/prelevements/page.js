@@ -97,7 +97,7 @@ const Page = () => {
         // Normalisation des valeurs à comparer
         const normalizedName = point.nom ? deburr(point.nom.toLowerCase().trim()) : ''
         const idPointStr = String(point.id_point).toLowerCase()
-        const beneficiaireMatches = point.preleveurs.some(preleveur => {
+        const preleveurMatches = point.preleveurs.some(preleveur => {
           const normalizedRaisonSociale = preleveur.raison_sociale ? deburr(preleveur.raison_sociale.toLowerCase().trim()) : ''
           const normalizedSigle = preleveur.sigle ? deburr(preleveur.sigle.toLowerCase().trim()) : ''
           const normalizedNom = preleveur.nom ? deburr(preleveur.nom.toLowerCase().trim()) : ''
@@ -113,7 +113,7 @@ const Page = () => {
 
         matches &&= normalizedName.includes(normalizedSearch)
           || idPointStr.includes(normalizedSearch)
-          || beneficiaireMatches
+          || preleveurMatches
       }
 
       if (filters.typeMilieu) {

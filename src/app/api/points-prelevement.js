@@ -18,27 +18,27 @@ export async function getPointPrelevement(id) {
   return response.json()
 }
 
-export async function getBeneficiaire(id) {
+export async function getPreleveur(id) {
   try {
-    const response = await fetch(`${API_URL}/api/beneficiaires/${id}`, {headers})
+    const response = await fetch(`${API_URL}/api/preleveurs/${id}`, {headers})
     return response.json()
   } catch {
     return null
   }
 }
 
-export async function getBeneficiaires() {
+export async function getPreleveurs() {
   try {
-    const response = await fetch(`${API_URL}/api/beneficiaires`, {headers})
+    const response = await fetch(`${API_URL}/api/preleveurs`, {headers})
     return response.json()
   } catch {
     return null
   }
 }
 
-export async function getPointsFromBeneficiaire(idBeneficiaire) {
+export async function getPointsFromPreleveur(idPreleveur) {
   try {
-    const response = await fetch(`${API_URL}/api/beneficiaires/${idBeneficiaire}/points-prelevement`, {headers})
+    const response = await fetch(`${API_URL}/api/preleveurs/${idPreleveur}/points-prelevement`, {headers})
     return response.json()
   } catch {
     return null

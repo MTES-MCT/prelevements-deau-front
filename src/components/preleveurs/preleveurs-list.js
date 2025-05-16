@@ -24,7 +24,7 @@ const PreleveursList = ({preleveurs}) => {
   useEffect(() => {
     index.current = new FlexSearch.Document({
       document: {
-        id: 'id_beneficiaire',
+        id: 'id_preleveur',
         index: ['nom', 'prenom', 'raison_sociale', 'sigle'],
         store: true
       },
@@ -35,9 +35,9 @@ const PreleveursList = ({preleveurs}) => {
 
     for (const preleveur of preleveurs) {
       index.current.add(
-        preleveur.id_beneficiaire,
+        preleveur.id_preleveur,
         {
-          idBeneficiaire: preleveur.id_beneficiaire.toString(),
+          idPreleveur: preleveur.id_preleveur.toString(),
           nom: normalizeString(preleveur.nom),
           prenom: normalizeString(preleveur.prenom),
           raison_sociale: normalizeString(preleveur.raison_sociale), // eslint-disable-line camelcase
@@ -74,11 +74,11 @@ const PreleveursList = ({preleveurs}) => {
 
     for (const r of results) {
       for (const doc of r.result) {
-        const newPreleveur = preleveurs.find(p => p.id_beneficiaire === doc.id)
+        const newPreleveur = preleveurs.find(p => p.id_preleveur === doc.id)
 
-        if (newPreleveur && !seenIds.has(newPreleveur.id_beneficiaire)) {
+        if (newPreleveur && !seenIds.has(newPreleveur.id_preleveur)) {
           newPreleveurs.push(newPreleveur)
-          seenIds.add(newPreleveur.id_beneficiaire)
+          seenIds.add(newPreleveur.id_preleveur)
         }
       }
     }
@@ -103,14 +103,14 @@ const PreleveursList = ({preleveurs}) => {
       />
       {filteredPreleveurs.length > 0 && filteredPreleveurs.map((preleveur, index) => (
         <Box
-          key={preleveur.id_beneficiaire}
+          key={preleveur.id_preleveur}
           className='fr-p-2w flex justify-between items-center flex-wrap'
           sx={{
             backgroundColor: index % 2 === 0 ? fr.colors.decisions.background.default.grey.default : fr.colors.decisions.background.alt.blueFrance.default
           }}
         >
-          <Link href={`preleveurs/${preleveur.id_beneficiaire}`}>
-            <span>{preleveur.id_beneficiaire} - </span>
+          <Link href={`preleveurs/${preleveur.id_preleveur}`}>
+            <span>{preleveur.id_preleveur} - </span>
             <span>{preleveur.civilite} {preleveur.nom} {preleveur.prenom} {preleveur.sigle} {preleveur.raison_sociale}</span>
           </Link>
           <div className='fr-mt-1w'>

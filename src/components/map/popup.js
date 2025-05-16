@@ -27,7 +27,7 @@ const Popup = ({point}) => {
         {preleveurs.length > 0 ? (
           preleveurs.length < 4 ? (
             preleveurs.map(preleveur => (
-              <Box key={preleveur.id_beneficiaire} className='flex items-center gap-1'>
+              <Box key={preleveur.id_preleveur} className='flex items-center gap-1'>
                 <Person /> {preleveur?.raison_sociale || preleveur?.sigle || preleveur?.nom}
               </Box>
             ))

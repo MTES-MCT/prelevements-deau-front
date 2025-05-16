@@ -125,7 +125,7 @@ const PointSidePanel = ({point}) => {
                 || (b.nom && `${b.nom} ${b.prenom}`)
                 || 'Bénéficiaire inconnu'
                 return (
-                  <ListItem key={b.id_beneficiaire}>
+                  <ListItem key={b.id_preleveur}>
                     <ListItemIcon>
                       <PersonIcon />
                     </ListItemIcon>

@@ -99,7 +99,7 @@ const Home = async () => {
         >
           <Counter
             label='Nombre de préleveurs actifs : '
-            number={stats.activBeneficiairesCount}
+            number={stats.activPreleveursCount}
           />
           <Box>
             <Link href='/preleveurs' className='fr-btn fr-btn--secondary'>
