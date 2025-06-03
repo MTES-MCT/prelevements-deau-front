@@ -59,7 +59,7 @@ const VolumesChart = ({idExploitation}) => {
   const nbValeursRenseignees = showAll ? volumes.nbValeursRenseignees : displayData.length
   const nbDepassements = showAll
     ? (volumes.nbDepassements ?? '0')
-    : (displayData.some(v => v.depassement).length > 0 ? displayData.filter(v => v.depassement).length : '0')
+    : displayData.filter(v => v.depassement).length
 
   useEffect(() => {
     async function getVolumes() {
