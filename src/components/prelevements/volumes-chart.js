@@ -3,7 +3,7 @@
 import {useState, useEffect} from 'react'
 
 import {fr as frColors} from '@codegouvfr/react-dsfr'
-import {CircularProgress} from '@mui/material'
+import {CircularProgress, Divider} from '@mui/material'
 import {
   LineChart,
   ChartsReferenceLine
@@ -82,7 +82,10 @@ const VolumesChart = ({idExploitation}) => {
   }
 
   return (
-    <div className='w-full border-[1px] p-3'>
+    <div className='w-full p-3'>
+      <Divider sx={{m: 2}} textAlign='left'>
+        Graphique
+      </Divider>
       <div className='flex justify-between p-3 border-b flex-wrap'>
         <p>
           <b>Période du </b>
@@ -126,10 +129,6 @@ const VolumesChart = ({idExploitation}) => {
               right: 20,
               top: 20,
               bottom: 70
-            }}
-            grid={{
-              vertical: true,
-              horizontal: true
             }}
             slotProps={{
               legend: {

@@ -16,7 +16,7 @@ const Document = ({document}) => (
   >
     <Box sx={{display: 'flex', flexDirection: 'column', p: 2}}>
       <Typography sx={{pr: 1}}>
-        <Article sx={{pr: 1, verticalAlign: 'bottom'}} />
+        <Article sx={{pr: 1, verticalAlign: 'bottom', color: '#000091'}} />
         {document.nature} {document.reference ? `- n°${document.reference}` : ''} du {formatDate(document.date_signature)}
       </Typography>
       {document.date_fin_validite && (
@@ -25,7 +25,9 @@ const Document = ({document}) => (
         </Typography>
       )}
       {document.remarque && (
-        <Typography className='pl-3 pt-2'><b>Remarque :</b> <i>{document.remarque}</i></Typography>
+        <Typography className='pl-3 pt-2'>
+          <b>Remarque :</b> <i>{document.remarque}</i>
+        </Typography>
       )}
     </Box>
     <Typography variant='caption' className='p-5'>
