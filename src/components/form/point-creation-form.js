@@ -94,6 +94,7 @@ const PointCreationForm = ({bnpeList, mesoList, meContinentalesBvList}) => {
   useEffect(() => {
     setIsDisabled(!(point.nom && point.type_milieu && point.precision_geom && point.geom))
   }, [point])
+
   return (
     <div className='fr-container'>
       <Typography variant='h3' sx={{pb: 5}}>

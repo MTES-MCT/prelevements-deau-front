@@ -47,12 +47,12 @@ const OptionalPointFieldsForm = (
         onChange: e => setPoint(
           {
             ...point,
-            meso: mesoList.find(m => m.nom_provis === e.target.value).code
+            meso: mesoList.find(() => e.target.value).code
           }
         )
       }}
       options={mesoList.map(meso => ({
-        value: meso,
+        value: meso.nom_provis,
         label: meso.nom_provis
       }))}
     />
