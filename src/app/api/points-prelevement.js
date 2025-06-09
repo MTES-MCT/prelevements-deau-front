@@ -18,6 +18,16 @@ export async function getPointPrelevement(id) {
   return response.json()
 }
 
+export async function createPointPrelevement(payload) {
+  const response = await fetch(`${API_URL}/api/points-prelevement`, {
+    headers,
+    method: 'POST',
+    body: JSON.stringify(payload)
+  })
+
+  return response.json()
+}
+
 export async function getPreleveur(id) {
   try {
     const response = await fetch(`${API_URL}/api/preleveurs/${id}`, {headers})
@@ -62,4 +72,25 @@ export async function getVolumesExploitation(exploitationId) {
   const response = await fetch(`${API_URL}/api/exploitations/${exploitationId}/volumes-preleves`, {headers})
   const volumes = await response.json()
   return volumes
+}
+
+export async function getBnpe() {
+  const response = await fetch(`${API_URL}/api/referentiels/bnpe`, {headers})
+  const bnpe = await response.json()
+
+  return bnpe
+}
+
+export async function getMeso() {
+  const response = await fetch(`${API_URL}/api/referentiels/meso`, {headers})
+  const meso = await response.json()
+
+  return meso
+}
+
+export async function getMeContinentales() {
+  const response = await fetch(`${API_URL}/api/referentiels/me-continentales-bv`, {headers})
+  const meContinentales = await response.json()
+
+  return meContinentales
 }
