@@ -13,7 +13,9 @@ const PointIdentification = ({pointPrelevement, lienBss, lienBnpe}) => {
         variant='h3'
         sx={{pb: 1}}
       >
-        {idPoint} - {nom} <small className='fr-badge fr-badge--success fr-badge--no-icon fr-ml-2w'>{pointPrelevement.exploitationsStatus}</small>
+        {idPoint} - {nom} {pointPrelevement.exploitationsStatus && (
+          <small className='fr-badge fr-badge--success fr-badge--no-icon fr-ml-2w'>{pointPrelevement.exploitationsStatus}</small>
+        )}
       </Typography>
       {pointPrelevement.type_milieu && (
         <Box sx={{py: 2}}>
