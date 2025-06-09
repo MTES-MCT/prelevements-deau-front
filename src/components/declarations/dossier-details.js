@@ -1,6 +1,6 @@
 'use client'
 
-import {useCallback, useEffect, useState} from 'react'
+import {useCallback, useState} from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
 import {Badge} from '@codegouvfr/react-dsfr/Badge'
@@ -15,12 +15,10 @@ import {
   ListItemButton,
   ListItemIcon,
   Box,
-  CircularProgress,
   Typography
 } from '@mui/material'
 
-import {getDossier, getFile} from '@/app/api/dossiers.js'
-import {getPointPrelevement} from '@/app/api/points-prelevement.js'
+import {getFile} from '@/app/api/dossiers.js'
 import DossierCommentaire from '@/components/declarations/dossier/commentaire.js'
 import DeclarantDetails from '@/components/declarations/dossier/declarant-details.js'
 import DemandeurDetails from '@/components/declarations/dossier/demandeur-details.js'
@@ -32,6 +30,7 @@ import FileValidationErrors from '@/components/declarations/file-validation-erro
 
 const ModalSection = ({children}) => (
   <Box sx={{
+    flex: 1,
     p: 1,
     backgroundColor: fr.colors.decisions.background.default.grey.hover
   }}
@@ -40,40 +39,16 @@ const ModalSection = ({children}) => (
   </Box>
 )
 
-const DossierModal = ({selectedDossier}) => {
+const DossierDetails = ({dossier, pointPrelevement}) => {
   const [openFiles, setOpenFiles] = useState({})
-  const [pointPrelevement, setPointPrelevement] = useState(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [files, setFiles] = useState([])
-
-  useEffect(() => {
-    async function fetchDossier() {
-      const dossier = await getDossier(selectedDossier._id)
-      setFiles(dossier.files?.filter(({errors}) => errors.length > 0) || [])
-      setIsLoading(false)
-    }
-
-    async function fetchPointPrelevement() {
-      const pointPrelevement = await getPointPrelevement(selectedDossier.pointPrelevement)
-      setPointPrelevement(pointPrelevement)
-    }
-
-    fetchDossier()
-
-    if (selectedDossier.pointPrelevement) {
-      fetchPointPrelevement()
-    } else {
-      setPointPrelevement(null)
-    }
-  }, [selectedDossier._id, selectedDossier.pointPrelevement])
 
   const toggleFile = useCallback(file => {
     setOpenFiles(prev => ({...prev, [file]: !prev[file]}))
   }, [])
 
-  const downloadFile = useCallback(async ({checksum, filename}) => {
+  const downloadFile = async ({checksum, filename}) => {
     try {
-      const file = await getFile(selectedDossier._id, checksum)
+      const file = await getFile(dossier._id, checksum)
       const url = URL.createObjectURL(file)
       const a = document.createElement('a')
       a.href = url
@@ -83,51 +58,48 @@ const DossierModal = ({selectedDossier}) => {
     } catch (error) {
       console.error('Failed to download file', error)
     }
-  }, [selectedDossier._id])
+  }
 
   return (
     <Box className='flex flex-col gap-2'>
-      <DossierInfos {...selectedDossier} />
+      <DossierInfos {...dossier} />
 
-      {selectedDossier.demandeur && (
+      <div className='flex flex-wrap gap-2'>
+        {dossier.demandeur && (
+          <ModalSection>
+            <DemandeurDetails {...dossier.demandeur} />
+          </ModalSection>
+        )}
+        {dossier.declarant.type !== 'particulier' && (
+          <ModalSection>
+            <DeclarantDetails {...dossier.declarant} />
+          </ModalSection>
+        )}
+      </div>
+
+      {dossier.commentaires && (
         <ModalSection>
-          <DemandeurDetails {...selectedDossier.demandeur} />
-        </ModalSection>
-      )}
-      {selectedDossier.declarant.type !== 'particulier' && (
-        <ModalSection>
-          <DeclarantDetails {...selectedDossier.declarant} />
-        </ModalSection>
-      )}
-      {selectedDossier.commentaires && (
-        <ModalSection>
-          <DossierCommentaire commentaire={selectedDossier.commentaires} />
+          <DossierCommentaire commentaire={dossier.commentaires} />
         </ModalSection>
       )}
 
       {pointPrelevement && (
         <ModalSection>
-          <PointPrelevementDetails {...pointPrelevement} />
+          <PointPrelevementDetails pointPrelevement={pointPrelevement} />
         </ModalSection>
       )}
 
       <ModalSection>
-        <PrelevementDetails {...selectedDossier} />
+        <PrelevementDetails {...dossier} />
       </ModalSection>
 
-      {selectedDossier.typeDonnees === 'tableur' && (
+      {dossier.typeDonnees === 'tableur' && (
         <ModalSection>
-          <FilesDetails {...selectedDossier} handleDownload={downloadFile} />
+          <FilesDetails {...dossier} handleDownload={downloadFile} />
         </ModalSection>
       )}
 
-      {isLoading && (
-        <Box>
-          <CircularProgress />
-        </Box>
-      )}
-
-      {selectedDossier.errorsCount > 0 && files.length > 0 && (
+      {dossier.errorsCount > 0 && dossier.files.length > 0 && (
         <ModalSection>
           <Box className='mt-8'>
             <Typography variant='h6'>
@@ -135,7 +107,7 @@ const DossierModal = ({selectedDossier}) => {
               Erreurs
             </Typography>
             <List>
-              {files.map(
+              {dossier.files.map(
                 ({filename, errors, checksum}) => {
                   const declarantErrors = errors.filter(({destinataire}) => destinataire === 'déclarant')
                   const administrateurErrors = errors.filter(({destinataire}) => destinataire === 'administrateur')
@@ -183,5 +155,5 @@ const DossierModal = ({selectedDossier}) => {
   )
 }
 
-export default DossierModal
+export default DossierDetails
 
