@@ -14,10 +14,10 @@ import {
   AccordionDetails,
   Typography
 } from '@mui/material'
-import {useRouter} from 'next/navigation.js'
+import {useRouter} from 'next/navigation'
 
 import {createPointPrelevement} from '@/app/api/points-prelevement.js'
-import MiniMapForm from '@/components/form//mini-map-form.js'
+import MiniMapForm from '@/components/form/mini-map-form.js'
 import OptionalPointFieldsForm from '@/components/form/optional-point-fields-form.js'
 import {getCommuneFromCoords} from '@/lib/communes.js'
 
@@ -116,7 +116,7 @@ const PointCreationForm = ({bnpeList, mesoList, meContinentalesBvList}) => {
           onChange: e => setPoint({...point, type_milieu: e.target.value})
         }}
         options={typesDeMilieu.map(type => ({
-          type,
+          value: type,
           label: type
         }))}
       />
@@ -137,7 +137,7 @@ const PointCreationForm = ({bnpeList, mesoList, meContinentalesBvList}) => {
           onChange: e => setPoint({...point, precision_geom: e.target.value})
         }}
         options={precisionsGeom.map(precision => ({
-          precision,
+          value: precision,
           label: precision
         }))}
       />

@@ -52,7 +52,7 @@ const OptionalPointFieldsForm = (
         )
       }}
       options={mesoList.map(meso => ({
-        meso,
+        value: meso,
         label: meso.nom_provis
       }))}
     />
@@ -91,7 +91,10 @@ const OptionalPointFieldsForm = (
             id={id}
             placeholder={placeholder}
             type={type}
-            onChange={(e, value) => setPoint({...point, bnpe: value?.bnpe?.code_point_prelevement || null})}
+            onChange={(e, value) => setPoint({
+              ...point,
+              bnpe: value?.bnpe?.code_point_prelevement || null
+            })}
           />
         )}
       />
@@ -110,7 +113,10 @@ const OptionalPointFieldsForm = (
             id={id}
             placeholder={placeholder}
             type={type}
-            onChange={(e, value) => setPoint({...point, meContinentalesBv: value?.meContinentales?.code_dce || null})}
+            onChange={(e, value) => setPoint({
+              ...point,
+              meContinentalesBv: value?.meContinentales?.code_dce || null
+            })}
           />
         )}
       />
@@ -138,7 +144,7 @@ const OptionalPointFieldsForm = (
             label: 'Réservoir biologique'
           }
         ]}
-        checked={point.zone_biologique}
+        checked={point.reservoir_biologique}
         onChange={e => setPoint({...point, reservoir_biologique: e.target.checked})}
       />
     </div>
