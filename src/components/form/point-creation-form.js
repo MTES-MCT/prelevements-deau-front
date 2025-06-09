@@ -146,7 +146,7 @@ const PointCreationForm = ({bnpeList, mesoList, meContinentalesBvList}) => {
           expanded={isExpanded}
           elevation={0}
           sx={{
-            border: '1px solid black'
+            border: '1px solid lightgrey'
           }}
           onChange={() => setIsExpanded(!isExpanded)}
         >
