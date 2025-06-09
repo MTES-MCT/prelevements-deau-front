@@ -1,25 +1,18 @@
 'use client'
 
-import {useState} from 'react'
-
 import {Badge} from '@codegouvfr/react-dsfr/Badge'
-import {createModal} from '@codegouvfr/react-dsfr/Modal'
 import {Tooltip} from '@mui/material'
 import {DataGrid, GridToolbar} from '@mui/x-data-grid'
 import {frFR} from '@mui/x-data-grid/locales'
 import {format} from 'date-fns'
 import {deburr} from 'lodash-es'
+import {useRouter} from 'next/navigation'
 
-import DossierModal from '@/components/declarations/dossier-modal.js'
 import DossierStateBadge from '@/components/declarations/dossier-state-badge.js'
 import PrelevementTypeBadge from '@/components/declarations/prelevement-type-badge.js'
 import TypeSaisieBadge from '@/components/declarations/type-saisie-badge.js'
+import {getDossierURL} from '@/lib/urls.js'
 import {normalizeName} from '@/utils/string.js'
-
-const modal = createModal({
-  id: 'invalid-dossiers-modal',
-  isOpenedByDefault: false
-})
 
 const convertDossierToRow = dossier => ({
   id: dossier._id,
@@ -50,12 +43,7 @@ function renderDateCell(value) {
 }
 
 const DossiersList = ({dossiers}) => {
-  const [selectedDossier, setSelectedDossier] = useState(null)
-
-  const openModal = ({id}) => {
-    setSelectedDossier(dossiers.find(d => d._id === id))
-    modal.open()
-  }
+  const router = useRouter()
 
   return (
     <div className='flex'>
@@ -173,32 +161,10 @@ const DossiersList = ({dossiers}) => {
           }
         }}
         pageSizeOptions={[20, 50, 100]}
-        onRowClick={row => openModal(row.row)}
+        onRowClick={params => router.push(getDossierURL({_id: params.row.id}))}
       />
-
-      <modal.Component
-        title={`Dossier n°${selectedDossier?.numero}`}
-        size='large'
-        buttons={selectedDossier ? [
-          {
-            linkProps: {href: getDossierDSURL(selectedDossier), target: '_blank'},
-            doClosesModal: false, // Default true, clicking a button close the modal.
-            children: 'Consulter le dossier'
-          }
-        ] : []}
-      >
-        {selectedDossier && (
-          <DossierModal selectedDossier={selectedDossier} />
-        )}
-      </modal.Component>
     </div>
   )
 }
 
 export default DossiersList
-
-/* Helpers */
-
-function getDossierDSURL(dossier) {
-  return `https://www.demarches-simplifiees.fr/procedures/${process.env.NEXT_PUBLIC_PROCEDURE_DS_ID}/a-suivre/dossiers/${dossier.numero}`
-}
