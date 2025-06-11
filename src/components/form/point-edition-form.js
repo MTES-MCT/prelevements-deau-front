@@ -63,7 +63,7 @@ const PointEditionForm = ({pointPrelevement, bnpeList, mesoList, meContinentales
   return (
     <div className='fr-container'>
       <Typography variant='h3' sx={{pb: 5}}>
-        Création d&apos;un point de prélèvement
+        Édition du point de prélèvement {point.nom}
       </Typography>
       <PointForm
         point={point}
