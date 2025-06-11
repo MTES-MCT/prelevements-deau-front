@@ -28,6 +28,16 @@ export async function createPointPrelevement(payload) {
   return response.json()
 }
 
+export async function editPointPrelevement(id, payload) {
+  const response = await fetch(`${API_URL}/api/points-prelevement/${id}`, {
+    headers,
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  })
+
+  return response.json()
+}
+
 export async function getPreleveur(id) {
   try {
     const response = await fetch(`${API_URL}/api/preleveurs/${id}`, {headers})
