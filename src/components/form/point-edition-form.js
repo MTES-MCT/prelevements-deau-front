@@ -3,10 +3,17 @@
 import {useState} from 'react'
 
 import Button from '@codegouvfr/react-dsfr/Button'
-import {Typography} from '@mui/material'
+import InfoOutlined from '@mui/icons-material/InfoOutlined'
+import {
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Typography
+} from '@mui/material'
 import {useRouter} from 'next/navigation'
 
-import {editPointPrelevement} from '@/app/api/points-prelevement.js'
+import {editPointPrelevement, deletePointPrelevement} from '@/app/api/points-prelevement.js'
 import PointForm from '@/components/form/point-form.js'
 import {getCommuneFromCoords} from '@/lib/communes.js'
 import {emptyStringToNull} from '@/utils/string.js'
@@ -17,6 +24,7 @@ const PointEditionForm = ({pointPrelevement, bnpeList, mesoList, meContinentales
   const point = {...pointPrelevement}
   const [validationErrors, setValidationErrors] = useState([])
   const [error, setError] = useState(null)
+  const [isDialogOpen, setIsDialogOpen] = useState()
 
   const handleSubmit = async () => {
     setError(null)
@@ -35,6 +43,17 @@ const PointEditionForm = ({pointPrelevement, bnpeList, mesoList, meContinentales
       } else {
         router.push(`/prelevements?point-prelevement=${response.id_point}`)
       }
+    } catch (error) {
+      setError(error.message)
+    }
+  }
+
+  const handleDeletePoint = async () => {
+    setError(null)
+
+    try {
+      await deletePointPrelevement(point.id_point)
+      router.push('/prelevements')
     } catch (error) {
       setError(error.message)
     }
@@ -73,8 +92,53 @@ const PointEditionForm = ({pointPrelevement, bnpeList, mesoList, meContinentales
         meContinentalesBvList={meContinentalesBvList}
         mesoList={mesoList}
       />
+      <div className='border border-red-500 rounded-sm p-5'>
+        <div className='text-red-500'>
+          <InfoOutlined className='mr-3' />
+          Action sensible : Supprimer le point de prélèvement
+        </div>
+        <div className='ml-8'>
+          Cette action est irréversible et peut avoir des conséquences importantes
+        </div>
+        <div className='ml-8 mt-5'>
+          <Button
+            priority='secondary'
+            style={{
+              color: 'red',
+              boxShadow: '0 0 0 1px red'
+            }}
+            onClick={() => setIsDialogOpen(!isDialogOpen)}
+          >
+            Supprimer
+          </Button>
+        </div>
+        <Dialog
+          open={isDialogOpen}
+          maxWidth='md'
+          onClose={() => setIsDialogOpen(false)}
+        >
+          <DialogTitle><InfoOutlined className='mr-3' />Confirmer la suppression du point de prélèvement</DialogTitle>
+          <DialogContent>
+            Êtes-vous sûr de vouloir supprimer ce point de prélèvement ? Cette action est irréversible.
+          </DialogContent>
+          <DialogActions className='m-3'>
+            <Button
+              priority='secondary'
+              onClick={() => setIsDialogOpen(!isDialogOpen)}
+            >
+              Annuler
+            </Button>
+            <Button
+              style={{backgroundColor: 'red'}}
+              onClick={handleDeletePoint}
+            >
+              Supprimer le point de prélèvement
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </div>
       {error && (
-        <div className='text-center p-5 text-red-500'>
+        <div className='text-center p-5 pt-10 text-red-500'>
           <p><b>Un problème est survenu :</b></p>
           {error}
         </div>
@@ -88,7 +152,7 @@ const PointEditionForm = ({pointPrelevement, bnpeList, mesoList, meContinentales
           )}
         </div>
       )}
-      <div className='w-full flex justify-center p-5 mb-8'>
+      <div className='w-full flex justify-center p-5 my-5'>
         <Button onClick={handleSubmit}>
           Valider les modifications sur le point de prélèvement {point.nom}
         </Button>
