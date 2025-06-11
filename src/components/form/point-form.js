@@ -50,16 +50,16 @@ const PointForm = ({
         label='Nom du point de prélèvement *'
         nativeInputProps={{
           placeholder: 'Entrer le nom du point de prélèvement',
-          value: point.nom,
-          onChange: e => setPoint({...point, nom: e.target.value})
+          defaultValue: point.nom,
+          onChange: e => setPoint(prev => ({...prev, nom: e.target.value}))
         }}
       />
       <Select
         label='Type de milieu *'
         placeholder='Sélectionner le type de milieu'
         nativeSelectProps={{
-          value: point.type_milieu,
-          onChange: e => setPoint({...point, type_milieu: e.target.value})
+          defaultValue: point.type_milieu,
+          onChange: e => setPoint(prev => ({...prev, type_milieu: e.target.value}))
         }}
         options={typesDeMilieu.map(type => ({
           value: type,
@@ -79,8 +79,8 @@ const PointForm = ({
         label='Précision géométrique'
         placeholder='Sélectionner une précision géométrique'
         nativeSelectProps={{
-          value: point.precision_geom,
-          onChange: e => setPoint({...point, precision_geom: e.target.value})
+          defaultValue: point.precision_geom,
+          onChange: e => setPoint(prev => ({...prev, precision_geom: e.target.value}))
         }}
         options={precisionsGeom.map(precision => ({
           value: precision,
