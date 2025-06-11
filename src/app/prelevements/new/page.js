@@ -11,7 +11,7 @@ const Page = async () => {
 
   return (
     <div>
-      <div className='pt-5 pl-5'>
+      <div className='p-5'>
         <ArrowBackIcon className='pr-1' />
         <Link href='/prelevements'>Retour</Link>
       </div>

@@ -9,7 +9,7 @@ const Layout = ({children}) => {
 
   return (
     <>
-      <div className='pt-5 pl-5'>
+      <div className='p-5'>
         <ArrowBackIcon className='pr-1' />
         <Link href={`/prelevements?point-prelevement=${id}`}>Retour</Link>
       </div>
