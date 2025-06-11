@@ -29,26 +29,29 @@ const OptionalPointFieldsForm = (
     <Input
       label='Autres noms'
       nativeInputProps={{
+        defaultValue: point?.autresNoms,
         placeholder: 'Entrer les autres noms',
-        onChange: e => setPoint({...point, autresNoms: e.target.value})
+        onChange: e => setPoint(prev => ({...prev, autresNoms: e.target.value}))
       }}
     />
     <Input
       label='Code AIOT'
       nativeInputProps={{
+        defaultValue: point?.code_aiot,
         placeholder: 'Entrer le code AIOT',
-        onChange: e => setPoint({...point, code_aiot: e.target.value})
+        onChange: e => setPoint(prev => ({...prev, code_aiot: e.target.value}))
       }}
     />
     <Select
       label='Code mésorégion hydrographique'
       placeholder='Sélectionner le code MESO'
       nativeSelectProps={{
-        onChange: e => setPoint(
-          {
-            ...point,
+        defaultValue: point?.meso?.nom,
+        onChange: e => setPoint(prev =>
+          ({
+            ...prev,
             meso: mesoList.find(() => e.target.value).code
-          }
+          })
         )
       }}
       options={mesoList.map(meso => ({
@@ -63,8 +66,9 @@ const OptionalPointFieldsForm = (
       <Input
         label='Cours d’eau'
         nativeInputProps={{
+          defaultValue: point?.cours_eau,
           placeholder: 'Entrer le nom du cours d’eau',
-          onChange: e => setPoint({...point, cours_eau: e.target.value})
+          onChange: e => setPoint(prev => ({...prev, cours_eau: e.target.value}))
         }}
       />
       <Input
@@ -72,8 +76,9 @@ const OptionalPointFieldsForm = (
         type='number'
         nativeInputProps={{
           type: 'number',
+          defaultValue: point?.profondeur,
           placeholder: 'Entrer la profondeur',
-          onChange: e => setPoint({...point, profondeur: Number(e.target.value)})
+          onChange: e => setPoint(prev => ({...prev, profondeur: Number(e.target.value)}))
         }}
       />
     </div>
@@ -87,14 +92,15 @@ const OptionalPointFieldsForm = (
               bnpe,
               label: bnpe.code_point_prelevement
             }))}
+            defaultValue={point?.bnpe?.point}
             className={className}
             id={id}
             placeholder={placeholder}
             type={type}
-            onChange={(e, value) => setPoint({
-              ...point,
-              bnpe: value?.bnpe?.code_point_prelevement || null
-            })}
+            onChange={(e, value) => setPoint(prev => ({
+              ...prev,
+              bnpe: value?.bnpe?.code_point_prelevement
+            }))}
           />
         )}
       />
@@ -109,14 +115,15 @@ const OptionalPointFieldsForm = (
               meContinentales,
               label: meContinentales.code_dce
             }))}
+            defaultValue={point?.meContinentalesBv?.code}
             className={className}
             id={id}
             placeholder={placeholder}
             type={type}
-            onChange={(e, value) => setPoint({
-              ...point,
-              meContinentalesBv: value?.meContinentales?.code_dce || null
-            })}
+            onChange={(e, value) => setPoint(prev => ({
+              ...prev,
+              meContinentalesBv: value?.meContinentales?.code_dce
+            }))}
           />
         )}
       />
@@ -124,28 +131,33 @@ const OptionalPointFieldsForm = (
     <Input
       label='Bassin versant BD Carthage'
       nativeInputProps={{
+        defaultValue: point?.bvBdCarthage,
         placeholder: 'Entrer le bassin versant BD Carthage',
-        onChange: e => setPoint({...point, bvBdCarthage: e.target.value})
+        onChange: e => setPoint(prev => ({...prev, bvBdCarthage: e.target.value}))
       }}
     />
     <div className='w-full grid grid-cols-2 gap-4 py-5'>
       <DynamicCheckbox
         options={[
           {
-            label: 'Zone reglementée (ZRE)'
+            label: 'Zone reglementée (ZRE)',
+            nativeInputProps: {
+              defaultChecked: point.zre || false,
+              onChange: e => setPoint(prev => ({...prev, zre: e.target.checked}))
+            }
           }
         ]}
-        checked={point.zre}
-        onChange={e => setPoint({...point, zre: e.target.checked})}
       />
       <DynamicCheckbox
         options={[
           {
-            label: 'Réservoir biologique'
+            label: 'Réservoir biologique',
+            nativeInputProps: {
+              defaultChecked: point.reservoir_biologique || false,
+              onChange: e => setPoint(prev => ({...prev, reservoir_biologique: e.target.checked}))
+            }
           }
         ]}
-        checked={point.reservoir_biologique}
-        onChange={e => setPoint({...point, reservoir_biologique: e.target.checked})}
       />
     </div>
     <Typography variant='h5' sx={{pb: 5}}>
@@ -153,10 +165,12 @@ const OptionalPointFieldsForm = (
     </Typography>
     <Input
       textArea
-      label='Remarques'
-      nativeInputProps={{
-        onChange: e => setPoint({...point, remarques: e.target.value})
+      label='Remarque'
+      nativeTextAreaProps={{
+        placeholder: 'Entrer une remarque',
+        defaultValue: point?.remarque
       }}
+      onChange={e => setPoint(prev => ({...prev, remarque: e.target.value}))}
     />
   </div>
 )

@@ -8,7 +8,7 @@ import maplibre from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import vectorIGN from '@/components/map/styles/vector-ign.json'
 
-const MiniMapForm = ({setGeom}) => {
+const MiniMapForm = ({geom, setGeom}) => {
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
   const geojson = useRef({
@@ -16,10 +16,11 @@ const MiniMapForm = ({setGeom}) => {
     features: [
       {
         type: 'Feature',
-        geometry: {
-          type: 'Point',
-          coordinates: [55.55, -21.13]
-        }
+        geometry: geom
+          ? {...geom} : {
+            type: 'Point',
+            coordinates: [55.55, -21.13]
+          }
       }
     ]
   })
