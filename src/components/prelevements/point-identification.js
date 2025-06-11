@@ -1,3 +1,4 @@
+import {Button} from '@codegouvfr/react-dsfr/Button'
 import Article from '@mui/icons-material/Article'
 import Launch from '@mui/icons-material/Launch'
 import {Box, Chip, Typography} from '@mui/material'
@@ -8,15 +9,28 @@ const PointIdentification = ({pointPrelevement, lienBss, lienBnpe}) => {
 
   return (
     <Box sx={{p: 3}}>
-      <Typography
-        gutterBottom
-        variant='h3'
-        sx={{pb: 1}}
-      >
-        {idPoint} - {nom} {pointPrelevement.exploitationsStatus && (
-          <small className='fr-badge fr-badge--success fr-badge--no-icon fr-ml-2w'>{pointPrelevement.exploitationsStatus}</small>
-        )}
-      </Typography>
+      <div className='flex justify-between'>
+        <Typography
+          gutterBottom
+          variant='h3'
+          sx={{pb: 1}}
+        >
+          {idPoint} - {nom} {pointPrelevement.exploitationsStatus && (
+            <small className='fr-badge fr-badge--success fr-badge--no-icon fr-ml-2w'>{pointPrelevement.exploitationsStatus}</small>
+          )}
+        </Typography>
+        <div>
+          <Button
+            priority='secondary'
+            iconId='fr-icon-edit-line'
+            linkProps={{
+              href: `/prelevements/${idPoint}/edit`
+            }}
+          >
+            Éditer
+          </Button>
+        </div>
+      </div>
       {pointPrelevement.type_milieu && (
         <Box sx={{py: 2}}>
           <b>Type de milieu :</b> <Chip size='small' label={pointPrelevement.type_milieu} />
