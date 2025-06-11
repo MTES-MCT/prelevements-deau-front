@@ -6,6 +6,18 @@ import MapFilters from '@/components/map/map-filters.js'
 const PointsListHeader = ({filters, resultsCount, typeMilieuOptions, usagesOptions, onFilter, exportList}) => (
   <div className='flex flex-col gap-2'>
     <Typography variant='h6'>Liste des points de prélèvement</Typography>
+    <div className='inline-flex justify-end w-full'>
+      <Button
+        priority='secondary'
+        iconId='fr-icon-add-line'
+        size='small'
+        linkProps={{
+          href: '/prelevements/new'
+        }}
+      >
+        Création d’un point
+      </Button>
+    </div>
     {/* Barre de filtres */}
     <MapFilters
       filters={filters}
