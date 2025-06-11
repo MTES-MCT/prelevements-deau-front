@@ -4,22 +4,13 @@
 import {useEffect, useState} from 'react'
 
 import Button from '@codegouvfr/react-dsfr/Button'
-import Input from '@codegouvfr/react-dsfr/Input'
-import Select from '@codegouvfr/react-dsfr/SelectNext'
-import {ChevronRight} from '@mui/icons-material'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import {
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Typography
-} from '@mui/material'
+import {Typography} from '@mui/material'
 import {useRouter} from 'next/navigation'
 
 import {createPointPrelevement} from '@/app/api/points-prelevement.js'
-import MiniMapForm from '@/components/form/mini-map-form.js'
-import OptionalPointFieldsForm from '@/components/form/optional-point-fields-form.js'
+import PointForm from '@/components/form/point-form.js'
 import {getCommuneFromCoords} from '@/lib/communes.js'
+import {emptyStringToNull} from '@/utils/string.js'
 
 const PointCreationForm = ({bnpeList, mesoList, meContinentalesBvList}) => {
   const router = useRouter()
@@ -28,34 +19,17 @@ const PointCreationForm = ({bnpeList, mesoList, meContinentalesBvList}) => {
     type_milieu: '',
     precision_geom: ''
   })
-  const typesDeMilieu = ['Eau de surface', 'Eau souterraine', 'Eau de transition']
-  const [isExpanded, setIsExpanded] = useState(false)
   const [isDisabled, setIsDisabled] = useState(true)
   const [validationErrors, setValidationErrors] = useState([])
   const [error, setError] = useState(null)
-  const precisionsGeom = [
-    'Repérage carte',
-    'Coordonnées précises',
-    'Coordonnées précises (ARS)',
-    'Coordonnées du centroïde de la commune',
-    'Coordonnées précises (rapport HGA)',
-    'Coordonnées précises (ARS 2013)',
-    'Coordonnées précises (AP)',
-    'Coordonnées précises (BSS)',
-    'Coordonnées précises (BNPE – accès restreint)',
-    'Précision inconnue',
-    'Coordonnées estimées (précision du kilomètre)',
-    'Coordonnées précises (BNPE)',
-    'Coordonnées précises (DEAL)',
-    'Coordonnées précises (DLE)'
-  ]
 
   const handleSubmit = async () => {
     setError(null)
     setValidationErrors([])
 
     try {
-      const response = await createPointPrelevement(point)
+      const cleanedPoint = emptyStringToNull(point)
+      const response = await createPointPrelevement(cleanedPoint)
 
       if (response.code === 400) {
         if (response.validationErrors) {
@@ -100,74 +74,14 @@ const PointCreationForm = ({bnpeList, mesoList, meContinentalesBvList}) => {
       <Typography variant='h3' sx={{pb: 5}}>
         Création d&apos;un point de prélèvement
       </Typography>
-      <Input
-        required
-        label='Nom du point de prélèvement *'
-        nativeInputProps={{
-          placeholder: 'Entrer le nom du point de prélèvement',
-          value: point.nom,
-          onChange: e => setPoint({...point, nom: e.target.value})
-        }}
+      <PointForm
+        point={point}
+        setPoint={setPoint}
+        handleSetGeom={handleSetGeom}
+        bnpeList={bnpeList}
+        meContinentalesBvList={meContinentalesBvList}
+        mesoList={mesoList}
       />
-      <Select
-        label='Type de milieu *'
-        placeholder='Sélectionner le type de milieu'
-        nativeSelectProps={{
-          value: point.type_milieu,
-          onChange: e => setPoint({...point, type_milieu: e.target.value})
-        }}
-        options={typesDeMilieu.map(type => ({
-          value: type,
-          label: type
-        }))}
-      />
-      <div className='pb-5'>
-        <Typography variant='h5'>
-          Localisation
-        </Typography>
-        <p>Sélectionner l&apos;emplacement du point sur la carte <small><i>(Cliquer ou déplacer le point)</i></small></p>
-      </div>
-      <div style={{height: '600px', marginBottom: '2rem'}}>
-        <MiniMapForm setGeom={handleSetGeom} />
-      </div>
-      <Select
-        label='Précision géométrique'
-        placeholder='Sélectionner une précision géométrique'
-        nativeSelectProps={{
-          value: point.precision_geom,
-          onChange: e => setPoint({...point, precision_geom: e.target.value})
-        }}
-        options={precisionsGeom.map(precision => ({
-          value: precision,
-          label: precision
-        }))}
-      />
-      <div className='py-5'>
-        <Accordion
-          expanded={isExpanded}
-          elevation={0}
-          sx={{
-            border: '1px solid lightgrey'
-          }}
-          onChange={() => setIsExpanded(!isExpanded)}
-        >
-          <AccordionSummary>
-            <Typography className='text-center w-full'>
-              {isExpanded ? 'Masquer les champs optionnels' : 'Afficher les champs optionnels'}
-              {isExpanded ? <ExpandMoreIcon /> : <ChevronRight />}
-            </Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <OptionalPointFieldsForm
-              point={point}
-              setPoint={setPoint}
-              bnpeList={bnpeList}
-              mesoList={mesoList}
-              meContinentalesBvList={meContinentalesBvList}
-            />
-          </AccordionDetails>
-        </Accordion>
-      </div>
       {error && (
         <div className='text-center p-5 text-red-500'>
           <p><b>Un problème est survenu :</b></p>
