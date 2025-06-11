@@ -33,7 +33,7 @@ const MiniMapForm = ({geom, setGeom}) => {
     const map = new maplibre.Map({
       container: mapContainerRef.current,
       style: vectorIGN,
-      center: [55.55, -21.13],
+      center: geom ? geom.coordinates : [55.55, -21.13],
       zoom: 11,
       attributionControl: {compact: true}
     })
