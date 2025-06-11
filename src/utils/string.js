@@ -17,3 +17,12 @@ export function normalizeName(string) {
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ')
 }
+
+export function emptyStringToNull(obj) {
+  return Object.fromEntries(
+    Object.entries(obj).map(([key, value]) =>
+      [key, (value === '' || value === undefined) ? null : value]
+    )
+  )
+}
+
