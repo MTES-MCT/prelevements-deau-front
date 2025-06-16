@@ -59,11 +59,12 @@ export function transformOutJsonToCalendarData(outJson) {
 }
 
 const PrelevementsCalendar = ({data}) => {
-  console.log('🚀 ~ PrelevementsCalendar ~ data:', data)
   // États pour la modal et le paramètre sélectionné
   const [open, setOpen] = useState(false)
   const [selectedDayInfo, setSelectedDayInfo] = useState(null)
   const [tabIndex, setTabIndex] = useState(0)
+
+  const fifteenParams = data.fifteenMinutesParameters || []
 
   // Handlers
   const handleDayClick = dayInfo => {
@@ -144,59 +145,68 @@ const PrelevementsCalendar = ({data}) => {
                 ))}
               </Box>
 
-              <Tabs
-                variant='scrollable'
-                value={tabIndex}
-                onChange={(e, v) => setTabIndex(v)}
-              >
-                {data.fifteenMinutesParameters.map((param, idx) => {
-                  const missing = selectedDayInfo.dayStyleEntry.values[idx] === null
-                     || selectedDayInfo.dayStyleEntry.fifteenMinutesValues.some(slot => slot.values[idx] === null)
-                  return (
-                    <Tab
-                      key={param.paramIndex}
-                      label={
-                        <Box className='flex items-center gap-2'>
-                          {missing && <Box component='span' className='fr-icon-warning-fill' sx={{color: fr.colors.decisions.background.flat.warning.default}} />}
-                          {param.nom_parametre}
-                        </Box>
-                      }
-                    />
-                  )
-                })}
-              </Tabs>
-              <Box sx={{height: 300, mt: 2}}>
-                <LineChart
-                  series={[{
-                    id: data.fifteenMinutesParameters[tabIndex].nom_parametre,
-                    data: selectedDayInfo.dayStyleEntry.fifteenMinutesValues.map(slot =>
-                      slot.values[tabIndex]
-                    ),
-                    valueFormatter: value =>
-                      value === null
-                        ? 'Aucune donnée'
-                        : `${value} ${data.fifteenMinutesParameters[tabIndex].unite}`
-                  }]}
-                  xAxis={[{
-                    scaleType: 'time',
-                    data: selectedDayInfo.dayStyleEntry.fifteenMinutesValues.map(slot =>
-                      parseISO(`${format(selectedDayInfo.date, 'yyyy-MM-dd')}T${slot.heure}`)
-                    ),
-                    valueFormatter(value) {
-                      const dateObj = value
-                      const hours = dateObj.getHours()
-                      const minutes = dateObj.getMinutes()
-                      // Major tick at midnight: show full date
-                      if (hours === 0 && minutes === 0) {
-                        return format(dateObj, 'EEEE d MMM', {locale})
-                      }
+              {fifteenParams.length > 0 ? (
+                <Tabs
+                  variant='scrollable'
+                  value={tabIndex}
+                  onChange={(e, v) => setTabIndex(v)}
+                >
+                  {fifteenParams.map((param, idx) => {
+                    const missing = selectedDayInfo.dayStyleEntry.values[idx] === null
+                      || selectedDayInfo.dayStyleEntry.fifteenMinutesValues.some(slot => slot.values[idx] === null)
+                    return (
+                      <Tab
+                        key={param.paramIndex}
+                        label={
+                          <Box className='flex items-center gap-2'>
+                            {missing && <Box component='span' className='fr-icon-warning-fill' sx={{color: fr.colors.decisions.background.flat.warning.default}} />}
+                            {param.nom_parametre}
+                          </Box>
+                        }
+                      />
+                    )
+                  })}
+                </Tabs>
+              ) : (
+                <Alert severity='warning'>
+                  Les données de prélèvement à 15 minutes ne sont pas disponibles.
+                </Alert>
+              )}
+              {fifteenParams.length > 0 ? (
+                <Box sx={{height: 300, mt: 2}}>
+                  <LineChart
+                    series={[{
+                      id: fifteenParams[tabIndex].nom_parametre,
+                      data: selectedDayInfo.dayStyleEntry.fifteenMinutesValues.map(slot =>
+                        slot.values[tabIndex]
+                      ),
+                      color: fr.colors.decisions.text.actionHigh.blueFrance.default,
+                      valueFormatter: value =>
+                        value === null
+                          ? 'Aucune donnée'
+                          : `${value} ${fifteenParams[tabIndex].unite}`
+                    }]}
+                    xAxis={[{
+                      scaleType: 'time',
+                      data: selectedDayInfo.dayStyleEntry.fifteenMinutesValues.map(slot =>
+                        parseISO(`${format(selectedDayInfo.date, 'yyyy-MM-dd')}T${slot.heure}`)
+                      ),
+                      valueFormatter(value) {
+                        const dateObj = value
+                        const hours = dateObj.getHours()
+                        const minutes = dateObj.getMinutes()
+                        // Major tick at midnight: show full date
+                        if (hours === 0 && minutes === 0) {
+                          return format(dateObj, 'EEEE d MMM', {locale})
+                        }
 
-                      // Otherwise show hour and minute
-                      return format(dateObj, 'HH:mm', {locale})
-                    }
-                  }]}
-                />
-              </Box>
+                        // Otherwise show hour and minute
+                        return format(dateObj, 'HH:mm', {locale})
+                      }
+                    }]}
+                  />
+                </Box>
+              ) : null}
             </>
           )}
         </Box>

@@ -11,7 +11,7 @@ import {
 
 import {formatNumber} from '@/utils/number.js'
 
-const PrelevementsAccordion = ({idPoint, pointPrelevement, volumePreleveTotal, status, isOpen, handleSelect, children}) => (
+const PrelevementsAccordion = ({idPoint, pointPrelevement, volumePreleveTotal = null, status, isOpen, handleSelect, children}) => (
   <Accordion
     expanded={isOpen}
     onChange={handleSelect}
@@ -25,14 +25,15 @@ const PrelevementsAccordion = ({idPoint, pointPrelevement, volumePreleveTotal, s
                 {pointPrelevement.nom}
               </Typography>
               <Typography variant='body2'>
-                Volume prélevé : {volumePreleveTotal
-                  ? `${formatNumber(volumePreleveTotal)} m³`
-                  : (
+                Volume prélevé : {' '}
+                {volumePreleveTotal === null
+                  ? (
                     <>
                       <Box component='span' className='fr-icon-warning-fill' sx={{color: fr.colors.decisions.background.flat.warning.default}} />
                       Non renseigné
                     </>
-                  )}
+                  )
+                  : `${formatNumber(volumePreleveTotal)} m³`}
               </Typography>
             </Box>
           ) : (
@@ -40,7 +41,9 @@ const PrelevementsAccordion = ({idPoint, pointPrelevement, volumePreleveTotal, s
               <Box component='span' className='fr-icon-warning-fill' sx={{
                 color: fr.colors.decisions.background.flat.warning.default
               }} />
-              {`Le point de prélèvement ${idPoint} n’est pas reconnu`}
+              {idPoint
+                ? `Le point de prélèvement ${idPoint} n’est pas reconnu`
+                : 'Aucun point de prélèvement n’est renseigné pour ces prélèvements'}
             </Typography>
           )}
         </Box>

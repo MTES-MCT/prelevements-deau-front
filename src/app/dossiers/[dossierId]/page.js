@@ -57,7 +57,7 @@ const DossierPage = async ({params}) => {
 
       <DossierDetails
         dossier={dossier}
-        files={files}
+        files={files || []}
         preleveur={preleveur}
         idPoints={getPointsPrelevementId(dossier)}
       />

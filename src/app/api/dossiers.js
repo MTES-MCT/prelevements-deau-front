@@ -21,6 +21,15 @@ export async function getFile(dossierId, storageHash) {
   return response.blob()
 }
 
+export async function getDownloadableFile(dossierId, storageHash) {
+  const response = await fetch(`${API_URL}/dossiers/${dossierId}/files/${storageHash}/download`)
+  if (!response.ok) {
+    throw new Error('Failed to fetch file')
+  }
+
+  return response.blob()
+}
+
 export async function validateFile(buffer, fileType) {
   const response = await fetch(`${API_URL}/validate-file?fileType=${fileType}`, {
     method: 'POST',
