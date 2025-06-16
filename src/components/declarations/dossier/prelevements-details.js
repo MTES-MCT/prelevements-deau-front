@@ -8,7 +8,6 @@ import VolumesPompes from '@/components/declarations/dossier/prelevements/volume
 import SectionCard from '@/components/ui/section-card.js'
 
 const PrelevementsDetails = ({
-  idPoints,
   pointsPrelevement,
   selectedPointId,
   relevesIndex,
@@ -20,24 +19,24 @@ const PrelevementsDetails = ({
   listRefs
 }) => (
   <SectionCard title='Prélèvements' icon='fr-icon-drop-line'>
-    {pointsPrelevement ? (
-      idPoints.map(idPoint => {
-        const file = files.find(file => file.result.data.metadata.pointPrelevement.split(' |')[0] === idPoint)
-
+    {files && pointsPrelevement ? (
+      files.map(file => {
+        const poinPrelevementId = file.result.data.pointPrelevement
         return (
           <Box
-            key={idPoint}
+            key={file._id}
             ref={el => {
-              listRefs.current[idPoint] = el
+              listRefs.current[poinPrelevementId] = el
             }}
             className='my-2'
           >
             <PrelevementsAccordion
-              idPoint={idPoint}
-              isOpen={selectedPointId === idPoint}
-              pointPrelevement={pointsPrelevement.find(point => point.id_point === idPoint)}
-              status={file?.errors?.length > 0 ? 'error' : 'success'}
-              handleSelect={() => selectedPoint(idPoint)}
+              idPoint={poinPrelevementId}
+              isOpen={selectedPointId === poinPrelevementId}
+              pointPrelevement={pointsPrelevement.find(p => p.id_point === poinPrelevementId)}
+              volumePreleveTotal={file.result.data.volumePreleveTotal}
+              status={file?.result.errors?.length > 0 ? 'error' : 'success'}
+              handleSelect={() => selectedPoint(poinPrelevementId)}
             >
               {volumesPompes && volumesPompes.length > 0 && (
                 <VolumesPompes volumesPompes={volumesPompes} />
@@ -45,13 +44,10 @@ const PrelevementsDetails = ({
               {compteur && (
                 <Compteur compteur={compteur} relevesIndex={relevesIndex} />
               )}
-
-              {files && files.length > 0 && (
-                <Spreadsheet
-                  file={file}
-                  downloadFile={handleDownload}
-                />
-              )}
+              <Spreadsheet
+                file={file}
+                downloadFile={handleDownload}
+              />
             </PrelevementsAccordion>
           </Box>
         )

@@ -42,7 +42,7 @@ const ModalSection = ({children}) => (
   </Box>
 )
 
-const DossierDetails = ({dossier, preleveur, idPoints}) => {
+const DossierDetails = ({dossier, preleveur, files, idPoints}) => {
   const [openFiles, setOpenFiles] = useState({})
   const [pointsPrelevement, setPointsPrelevement] = useState(null)
   const [selectedPointId, setSelectedPointId] = useState(idPoints.length === 1 ? idPoints[0] : null)
@@ -110,12 +110,11 @@ const DossierDetails = ({dossier, preleveur, idPoints}) => {
       />
 
       <PrelevementsDetails
-        idPoints={idPoints}
         pointsPrelevement={pointsPrelevement}
         selectedPointId={selectedPointId}
         relevesIndex={dossier.relevesIndex}
         volumesPompes={dossier.volumesPompes}
-        files={dossier.files}
+        files={files}
         compteur={dossier.compteur}
         selectedPoint={idPoint => setSelectedPointId(prev => prev === idPoint ? null : idPoint)}
         listRefs={listRefs}

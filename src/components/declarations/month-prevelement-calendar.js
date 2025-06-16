@@ -12,7 +12,7 @@ const locale = fr
 
 const dayNames = ['L', 'Ma', 'Me', 'J', 'V', 'S', 'D']
 
-const DayCell = ({day, firstDayCurrentMonth, dataMap, renderTooltipContent}) => {
+const DayCell = ({day, firstDayCurrentMonth, dataMap, renderTooltipContent, onDayClick}) => {
   const dayKey = format(day, 'dd-MM-yyyy')
   const isCurrentMonthDay = isSameMonth(day, firstDayCurrentMonth)
   const dayData = isCurrentMonthDay ? dataMap.get(dayKey) : undefined
@@ -42,18 +42,21 @@ const DayCell = ({day, firstDayCurrentMonth, dataMap, renderTooltipContent}) => 
     dayStyleEntry: dayData
   }
 
+  const isClickable = isCurrentMonthDay && dayData
+
   const cellMarkup = (
     <div
       className={cellClasses}
-      style={cellStyle}
+      style={{...cellStyle, cursor: isClickable ? 'pointer' : undefined}}
       role='gridcell'
       aria-label={format(day, 'PPP', {locale})}
+      onClick={isClickable ? () => onDayClick({date: day, dayStyleEntry: dayData}) : undefined}
     />
   )
 
   if (isCurrentMonthDay || dayData) {
     return (
-      <Tooltip arrow enterNextDelay={400} title={renderTooltipContent(dayInfoForTooltip)}>
+      <Tooltip arrow enterNextDelay={400} title={renderTooltipContent ? renderTooltipContent(dayInfoForTooltip) : null}>
         {cellMarkup}
       </Tooltip>
     )
@@ -70,7 +73,8 @@ const MonthPrelevementCalendar = ({
   year,
   month,
   data,
-  renderTooltipContent
+  renderTooltipContent,
+  onDayClick
 }) => {
   const dataMap = useMemo(() => {
     const map = new Map()
@@ -123,6 +127,7 @@ const MonthPrelevementCalendar = ({
             firstDayCurrentMonth={firstDayCurrentMonth}
             dataMap={dataMap}
             renderTooltipContent={renderTooltipContent}
+            onDayClick={onDayClick}
           />
         ))}
       </div>

@@ -24,7 +24,7 @@ function extractMonthsAndYearFromData(data) {
   return monthsArray
 }
 
-const CalendarGrid = ({renderCustomTooltipContent, data}) => {
+const CalendarGrid = ({data, renderCustomTooltipContent, onDayClick}) => {
   const monthsToDisplay = extractMonthsAndYearFromData(data)
   return (
     <div className='grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full'>
@@ -36,6 +36,7 @@ const CalendarGrid = ({renderCustomTooltipContent, data}) => {
             month={monthInfo.monthIndex}
             data={data}
             renderTooltipContent={renderCustomTooltipContent}
+            onDayClick={onDayClick}
           />
         </div>
       ))}

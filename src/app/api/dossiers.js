@@ -12,8 +12,8 @@ export async function getDossier(_id) {
   return dossier
 }
 
-export async function getFile(dossierId, storageKey) {
-  const response = await fetch(`${API_URL}/dossiers/${dossierId}/files/${storageKey}`)
+export async function getFile(dossierId, storageHash) {
+  const response = await fetch(`${API_URL}/dossiers/${dossierId}/files/${storageHash}`)
   if (!response.ok) {
     throw new Error('Failed to fetch file')
   }

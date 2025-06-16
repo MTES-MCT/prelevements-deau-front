@@ -9,7 +9,9 @@ import {
   AccordionDetails
 } from '@mui/material'
 
-const PrelevementsAccordion = ({idPoint, pointPrelevement, status, isOpen, handleSelect, children}) => (
+import {formatNumber} from '@/utils/number.js'
+
+const PrelevementsAccordion = ({idPoint, pointPrelevement, volumePreleveTotal, status, isOpen, handleSelect, children}) => (
   <Accordion
     expanded={isOpen}
     onChange={handleSelect}
@@ -23,13 +25,20 @@ const PrelevementsAccordion = ({idPoint, pointPrelevement, status, isOpen, handl
                 {pointPrelevement.nom}
               </Typography>
               <Typography variant='body2'>
-                {idPoint}
+                Volume prélevé : {volumePreleveTotal
+                  ? `${formatNumber(volumePreleveTotal)} m³`
+                  : (
+                    <>
+                      <Box component='span' className='fr-icon-warning-fill' sx={{color: fr.colors.decisions.background.flat.warning.default}} />
+                      Non renseigné
+                    </>
+                  )}
               </Typography>
             </Box>
           ) : (
             <Typography fontWeight='bold' className='flex gap-2'>
               <Box component='span' className='fr-icon-warning-fill' sx={{
-                color: fr.colors.decisions.text.default.warning.default
+                color: fr.colors.decisions.background.flat.warning.default
               }} />
               {`Le point de prélèvement ${idPoint} n’est pas reconnu`}
             </Typography>
