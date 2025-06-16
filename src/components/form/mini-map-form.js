@@ -3,15 +3,24 @@
 import {useEffect, useRef, useState} from 'react'
 
 import Input from '@codegouvfr/react-dsfr/Input'
+import Select from '@codegouvfr/react-dsfr/SelectNext'
 import {Box} from '@mui/system'
 import maplibre from 'maplibre-gl'
 
 import 'maplibre-gl/dist/maplibre-gl.css'
-import vectorIGN from '@/components/map/styles/vector-ign.json'
+import photo from '@/components/map/styles/photo.json'
+import planIGN from '@/components/map/styles/plan-ign.json'
+
+const stylesMap = {
+  'plan-ign': planIGN,
+  orthophoto: photo
+}
 
 const MiniMapForm = ({geom, setGeom}) => {
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
+  const currentStyleRef = useRef('plan-ign')
+  const [style, setStyle] = useState(currentStyleRef.current)
   const [coordinates, setCoordinates] = useState(
     geom ? [...geom.coordinates] : [55.55, -21.13]
   )
@@ -71,7 +80,7 @@ const MiniMapForm = ({geom, setGeom}) => {
 
     const map = new maplibre.Map({
       container: mapContainerRef.current,
-      style: vectorIGN,
+      style: stylesMap[style],
       center: geom ? geom.coordinates : [55.55, -21.13],
       zoom: 11,
       attributionControl: {compact: true}
@@ -146,9 +155,59 @@ const MiniMapForm = ({geom, setGeom}) => {
     }
   }, [])
 
+  // Mise à jour du style de la carte
+  useEffect(() => {
+    const map = mapRef.current
+
+    if (map && style !== currentStyleRef.current) {
+      const center = map.getCenter()
+      const zoom = map.getZoom()
+
+      map.setStyle(stylesMap[style])
+
+      map.once('styledata', () => {
+        map.setCenter(center)
+        map.setZoom(zoom)
+
+        if (map.getSource('point')) {
+          map.getSource('point').setData(geojson.current)
+        } else {
+          map.addSource('point', {
+            type: 'geojson',
+            data: geojson.current
+          })
+          map.addLayer({
+            id: 'point',
+            type: 'circle',
+            source: 'point',
+            paint: {
+              'circle-radius': 10,
+              'circle-color': '#007cbf',
+              'circle-stroke-width': 2,
+              'circle-stroke-color': 'white'
+            }
+          })
+        }
+      })
+
+      currentStyleRef.current = style
+    }
+  }, [style])
+
   return (
     <Box className='flex flex-col h-full w-full relative border'>
       <div ref={mapContainerRef} className='flex h-full w-full' />
+      <Select
+        style={{position: 'absolute'}}
+        nativeSelectProps={{
+          defaultValue: 'plan-ign',
+          onChange: e => setStyle(e.target.value)
+        }}
+        options={[
+          {value: 'plan-ign', label: 'Plan IGN'},
+          {value: 'orthophoto', label: 'Photographie aérienne'}
+        ]}
+      />
       <div className='p-5 grid grid-cols-2 gap-4'>
         <Input
           label='Longitude'
