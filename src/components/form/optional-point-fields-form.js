@@ -156,7 +156,7 @@ const OptionalPointFieldsForm = (
       <DynamicCheckbox
         options={[
           {
-            label: 'Zone reglementée (ZRE)',
+            label: 'Zone règlementée (ZRE)',
             nativeInputProps: {
               defaultChecked: point.zre || false,
               onChange: e => setPoint(prev => ({...prev, zre: e.target.checked}))
