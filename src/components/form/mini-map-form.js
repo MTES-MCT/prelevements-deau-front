@@ -1,7 +1,8 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 
-import {useEffect, useRef} from 'react'
+import {useEffect, useRef, useState} from 'react'
 
+import Input from '@codegouvfr/react-dsfr/Input'
 import {Box} from '@mui/system'
 import maplibre from 'maplibre-gl'
 
@@ -11,6 +12,9 @@ import vectorIGN from '@/components/map/styles/vector-ign.json'
 const MiniMapForm = ({geom, setGeom}) => {
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
+  const [coordinates, setCoordinates] = useState(
+    geom ? [...geom.coordinates] : [55.55, -21.13]
+  )
   const geojson = useRef({
     type: 'FeatureCollection',
     features: [
@@ -19,11 +23,46 @@ const MiniMapForm = ({geom, setGeom}) => {
         geometry: geom
           ? {...geom} : {
             type: 'Point',
-            coordinates: [55.55, -21.13]
+            coordinates: [...coordinates]
           }
       }
     ]
   })
+
+  const handleCoordinate = (value, coordType) => {
+    const numValue = Number.parseFloat(value)
+    if (Number.isNaN(numValue)) {
+      return
+    }
+
+    const newCoords = [...coordinates]
+    const index = coordType === 'longitude' ? 0 : 1
+    newCoords[index] = numValue
+
+    setCoordinates(newCoords)
+    updateGeometry(newCoords)
+
+    setGeom({
+      type: 'Point',
+      coordinates: newCoords
+    })
+  }
+
+  // Synchronisation entre la carte et les inputs
+  const updateGeometry = newCoords => {
+    geojson.current.features[0].geometry.coordinates = [...newCoords]
+    setGeom({
+      type: 'Point',
+      coordinates: [...newCoords]
+    })
+
+    if (mapRef.current && mapRef.current.getSource('point')) {
+      mapRef.current.getSource('point').setData(geojson.current)
+      mapRef.current.flyTo({
+        center: newCoords
+      })
+    }
+  }
 
   useEffect(() => {
     if (!mapContainerRef.current) {
@@ -108,8 +147,24 @@ const MiniMapForm = ({geom, setGeom}) => {
   }, [])
 
   return (
-    <Box className='flex h-full w-full relative border'>
+    <Box className='flex flex-col h-full w-full relative border'>
       <div ref={mapContainerRef} className='flex h-full w-full' />
+      <div className='p-5 grid grid-cols-2 gap-4'>
+        <Input
+          label='Longitude'
+          nativeInputProps={{
+            defaultValue: geojson.current.features[0].geometry.coordinates[0],
+            onChange: e => handleCoordinate(e.target.value, 'longitude')
+          }}
+        />
+        <Input
+          label='Latitude'
+          nativeInputProps={{
+            defaultValue: geojson.current.features[0].geometry.coordinates[1],
+            onChange: e => handleCoordinate(e.target.value, 'latitude')
+          }}
+        />
+      </div>
     </Box>
   )
 }
