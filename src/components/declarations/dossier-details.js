@@ -84,6 +84,11 @@ const DossierDetails = ({dossier, preleveur, files, idPoints}) => {
     }
   }, [])
 
+  // Compute disabled points (no available prélèvement)
+  const filePointIds = files?.flatMap(file => file.pointsPrelevements) || []
+  const uniqueFilePointIds = new Set(new Set(filePointIds))
+  const pointIdsWithNoPrelevement = idPoints.filter(id => !uniqueFilePointIds.has(id))
+
   return (
     <Box className='flex flex-col gap-2 mb-4'>
       <DossierInfos
@@ -106,7 +111,7 @@ const DossierDetails = ({dossier, preleveur, files, idPoints}) => {
         pointsPrelevementId={idPoints}
         pointsPrelevement={pointsPrelevement}
         handleClick={onClickPointPrelevementMarker}
-        selectedPointId={selectedPointId}
+        disabledPointIds={pointIdsWithNoPrelevement}
       />
 
       <PrelevementsDetails

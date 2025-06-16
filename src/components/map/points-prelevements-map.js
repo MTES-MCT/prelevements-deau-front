@@ -18,7 +18,7 @@ const stylesMap = {
   'vector-ign': vectorIGN
 }
 
-const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector'}) => {
+const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector', disabledPointIds = []}) => {
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
 
@@ -56,7 +56,12 @@ const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector'
         source: 'points-prelevement',
         paint: {
           'circle-radius': 10,
-          'circle-color': '#1978c8',
+          'circle-color': [
+            'case',
+            ['in', ['get', 'id_point'], ['literal', disabledPointIds]],
+            '#ff0000',
+            '#1978c8'
+          ],
           'circle-stroke-width': 2,
           'circle-stroke-color': '#ffffff'
         }
@@ -86,11 +91,14 @@ const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector'
       })
 
       map.on('mouseenter', 'points-prelevement-circles', e => {
-        map.getCanvas().style.cursor = 'pointer'
         const feature = e.features[0]
+        const id = feature.properties.id_point
         const {coordinates} = feature.geometry
-        const name = feature.properties.nom
-        popup.setLngLat(coordinates).setText(name).addTo(map)
+        map.getCanvas().style.cursor = disabledPointIds.includes(id) ? '' : 'pointer'
+        const text = disabledPointIds.includes(id)
+          ? 'Aucun prélèvement n’est disponible pour ce point'
+          : feature.properties.nom
+        popup.setLngLat(coordinates).setText(text).addTo(map)
       })
 
       map.on('mouseleave', 'points-prelevement-circles', () => {
@@ -103,7 +111,9 @@ const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector'
         if (e.features && e.features.length > 0) {
           const feature = e.features[0]
           const id = feature.properties.id_point
-          handleClick(id)
+          if (!disabledPointIds.includes(id)) {
+            handleClick(id)
+          }
         }
       })
     })
@@ -111,7 +121,7 @@ const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector'
     return () => {
       map.remove()
     }
-  }, [pointsPrelevement, handleClick, style])
+  }, [pointsPrelevement, handleClick, style, disabledPointIds])
 
   return (
     <Box className='h-[300px] w-full relative'>
