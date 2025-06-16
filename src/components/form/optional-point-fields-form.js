@@ -31,7 +31,7 @@ const OptionalPointFieldsForm = (
       label='Autres noms'
       nativeInputProps={{
         defaultValue: point?.autresNoms,
-        placeholder: 'Entrer les autres noms',
+        placeholder: 'Entrer les autres noms, séparés par une virgule',
         onChange: e => setPoint(prev => ({...prev, autresNoms: e.target.value}))
       }}
     />
