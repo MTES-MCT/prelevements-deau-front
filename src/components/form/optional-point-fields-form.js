@@ -114,9 +114,9 @@ const OptionalPointFieldsForm = (
           <SearchAutocomplete
             options={meContinentalesBvList.map(meContinentales => ({
               meContinentales,
-              label: meContinentales.code_dce
+              label: `${meContinentales.code_dce} - ${meContinentales.nom}`
             }))}
-            defaultValue={point?.meContinentalesBv?.code}
+            defaultValue={point?.meContinentalesBv?.nom}
             className={className}
             id={id}
             placeholder={placeholder}
