@@ -113,3 +113,10 @@ export async function getMeContinentales() {
 
   return meContinentales
 }
+
+export async function getBvBdcarthage() {
+  const response = await fetch(`${API_URL}/api/referentiels/bv-bdcarthage`, {headers})
+  const bvBdCarthage = await response.json()
+
+  return bvBdCarthage
+}

@@ -1,5 +1,6 @@
 import {
   getBnpe,
+  getBvBdcarthage,
   getMeContinentales,
   getMeso,
   getPointPrelevement
@@ -12,11 +13,13 @@ const Page = async ({params}) => {
   const bnpeList = await getBnpe()
   const mesoList = await getMeso()
   const meContinentalesBvList = await getMeContinentales()
+  const bvBdCarthageList = await getBvBdcarthage()
 
   return (
     <PointEditionForm
       pointPrelevement={pointPrelevement}
       bnpeList={bnpeList}
+      bvBdCarthageList={bvBdCarthageList}
       mesoList={mesoList}
       meContinentalesBvList={meContinentalesBvList}
     />
