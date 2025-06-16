@@ -12,6 +12,7 @@ import {useRouter} from 'next/navigation'
 import DossierStateBadge from '@/components/declarations/dossier-state-badge.js'
 import PrelevementTypeBadge from '@/components/declarations/prelevement-type-badge.js'
 import TypeSaisieBadge from '@/components/declarations/type-saisie-badge.js'
+import {useGridSearchParams} from '@/hook/use-grid-search-params.js'
 import {getDossierURL} from '@/lib/urls.js'
 import {normalizeName} from '@/utils/string.js'
 
@@ -35,6 +36,8 @@ function renderDateCell(value) {
 const DossiersList = ({dossiers}) => {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
+
+  const {initialFilterModel, initialSortModel, onFilterModelChange, onSortModelChange} = useGridSearchParams()
 
   useEffect(() => {
     setMounted(true)
@@ -143,16 +146,18 @@ const DossiersList = ({dossiers}) => {
         ]}
         initialState={{
           pagination: {
-            paginationModel: {
-              pageSize: 20,
-              page: 0
-            }
+            paginationModel: {pageSize: 20, page: 0}
           },
           sorting: {
-            sortModel: [{field: 'dateDepot', sort: 'desc'}]
+            sortModel: initialSortModel
+          },
+          filter: {
+            filterModel: initialFilterModel
           }
         }}
         pageSizeOptions={[20, 50, 100]}
+        onFilterModelChange={onFilterModelChange}
+        onSortModelChange={onSortModelChange}
         onRowClick={params => router.push(getDossierURL({_id: params.row.id}))}
       />
     </div>
