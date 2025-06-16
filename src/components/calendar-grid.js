@@ -29,7 +29,7 @@ const CalendarGrid = ({data, renderCustomTooltipContent, onDayClick}) => {
   return (
     <div className='grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full'>
       {monthsToDisplay.map(monthInfo => (
-        <div key={monthInfo.monthIndex} className='flex flex-col items-center max-w-xs sm:max-w-sm md:max-w-3xl'>
+        <div key={`${monthInfo.year}-${monthInfo.monthIndex}`} className='flex flex-col items-center max-w-xs sm:max-w-sm md:max-w-3xl'>
           {/* Removed redundant month name here as it's inside MonthGrid */}
           <MonthPrelevementCalendar
             year={monthInfo.year}

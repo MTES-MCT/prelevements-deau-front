@@ -66,6 +66,9 @@ const PrelevementsCalendar = ({data}) => {
 
   const fifteenParams = data.fifteenMinutesParameters || []
 
+  // Support for optional fifteenMinutesValues: fallback to empty array if null
+  const fifteenValues = selectedDayInfo?.dayStyleEntry?.fifteenMinutesValues || []
+
   // Handlers
   const handleDayClick = dayInfo => {
     setSelectedDayInfo(dayInfo)
@@ -153,7 +156,7 @@ const PrelevementsCalendar = ({data}) => {
                 >
                   {fifteenParams.map((param, idx) => {
                     const missing = selectedDayInfo.dayStyleEntry.values[idx] === null
-                      || selectedDayInfo.dayStyleEntry.fifteenMinutesValues.some(slot => slot.values[idx] === null)
+                      || fifteenValues.some(slot => slot.values[idx] === null)
                     return (
                       <Tab
                         key={param.paramIndex}
@@ -177,7 +180,7 @@ const PrelevementsCalendar = ({data}) => {
                   <LineChart
                     series={[{
                       id: fifteenParams[tabIndex].nom_parametre,
-                      data: selectedDayInfo.dayStyleEntry.fifteenMinutesValues.map(slot =>
+                      data: fifteenValues.map(slot =>
                         slot.values[tabIndex]
                       ),
                       color: fr.colors.decisions.text.actionHigh.blueFrance.default,
@@ -188,7 +191,7 @@ const PrelevementsCalendar = ({data}) => {
                     }]}
                     xAxis={[{
                       scaleType: 'time',
-                      data: selectedDayInfo.dayStyleEntry.fifteenMinutesValues.map(slot =>
+                      data: fifteenValues.map(slot =>
                         parseISO(`${format(selectedDayInfo.date, 'yyyy-MM-dd')}T${slot.heure}`)
                       ),
                       valueFormatter(value) {
