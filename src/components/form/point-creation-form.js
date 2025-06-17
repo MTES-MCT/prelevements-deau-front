@@ -12,7 +12,12 @@ import PointForm from '@/components/form/point-form.js'
 import {getCommuneFromCoords} from '@/lib/communes.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
-const PointCreationForm = ({bnpeList, mesoList, meContinentalesBvList}) => {
+const PointCreationForm = ({
+  bnpeList,
+  bvBdCarthageList,
+  mesoList,
+  meContinentalesBvList
+}) => {
   const router = useRouter()
   const [point, setPoint] = useState({
     nom: '',
@@ -79,6 +84,7 @@ const PointCreationForm = ({bnpeList, mesoList, meContinentalesBvList}) => {
         setPoint={setPoint}
         handleSetGeom={handleSetGeom}
         bnpeList={bnpeList}
+        bvBdCarthageList={bvBdCarthageList}
         meContinentalesBvList={meContinentalesBvList}
         mesoList={mesoList}
       />
