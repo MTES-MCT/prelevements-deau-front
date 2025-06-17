@@ -91,9 +91,9 @@ const OptionalPointFieldsForm = (
           <SearchAutocomplete
             options={bnpeList.map(bnpe => ({
               bnpe,
-              label: bnpe.code_point_prelevement
+              label: `${bnpe.code_point_prelevement} - ${bnpe.nom_ouvrage}`
             }))}
-            defaultValue={point?.bnpe?.point}
+            defaultValue={point?.bnpe?.nom}
             className={className}
             id={id}
             placeholder={placeholder}
