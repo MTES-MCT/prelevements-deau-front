@@ -1,7 +1,12 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import Link from 'next/link'
 
-import {getBnpe, getBvBdcarthage, getMeContinentales, getMeso} from '@/app/api/points-prelevement.js'
+import {
+  getBnpe,
+  getBvBdcarthage,
+  getMeContinentales,
+  getMeso
+} from '@/app/api/points-prelevement.js'
 import PointCreationForm from '@/components/form/point-creation-form.js'
 
 const Page = async () => {
