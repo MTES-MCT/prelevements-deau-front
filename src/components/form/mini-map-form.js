@@ -212,14 +212,14 @@ const MiniMapForm = ({geom, setGeom}) => {
         <Input
           label='Longitude'
           nativeInputProps={{
-            defaultValue: geojson.current.features[0].geometry.coordinates[0],
+            value: geojson.current.features[0].geometry.coordinates[0],
             onChange: e => handleCoordinate(e.target.value, 'longitude')
           }}
         />
         <Input
           label='Latitude'
           nativeInputProps={{
-            defaultValue: geojson.current.features[0].geometry.coordinates[1],
+            value: geojson.current.features[0].geometry.coordinates[1],
             onChange: e => handleCoordinate(e.target.value, 'latitude')
           }}
         />
