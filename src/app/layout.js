@@ -3,12 +3,11 @@ import {AppRouterCacheProvider} from '@mui/material-nextjs/v13-appRouter'
 import Link from 'next/link'
 import {getServerSession} from 'next-auth'
 
-import {defaultColorScheme} from '../dsfr-bootstrap/default-color-scheme.js'
-import {StartDsfrOnHydration, DsfrProvider} from '../dsfr-bootstrap/index.js'
-import {getHtmlAttributes, DsfrHead} from '../dsfr-bootstrap/server-only-index.js'
-
 import Footer from '@/components/footer.js'
 import Header from '@/components/header.js'
+import {defaultColorScheme} from '@/dsfr-bootstrap/default-color-scheme.js'
+import {StartDsfrOnHydration, DsfrProvider} from '@/dsfr-bootstrap/index.js'
+import {getHtmlAttributes, DsfrHead} from '@/dsfr-bootstrap/server-only-index.js'
 
 import '@codegouvfr/react-dsfr/dsfr/utility/icons/icons.min.css'
 import '@/app/globals.css'
