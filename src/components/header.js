@@ -81,12 +81,12 @@ const HeaderComponent = ({user}) => {
         headerFooterDisplayItem,
         user ? <LoginHeaderItem key={0} /> : null
       ]}
-      navigation={
+      navigation={user && (
         navigationItems.map(item => ({
           ...item,
           isActive: isActive(item.linkProps?.href || item.menuLinks[0].linkProps.href)
         }))
-      }
+      )}
     />
   )
 }
