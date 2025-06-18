@@ -6,6 +6,7 @@ import {
   getPointPrelevement
 } from '@/app/api/points-prelevement.js'
 import PointEditionForm from '@/components/form/point-edition-form.js'
+import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 
 const Page = async ({params}) => {
   const {id} = await params
@@ -16,13 +17,17 @@ const Page = async ({params}) => {
   const bvBdCarthageList = await getBvBdcarthage()
 
   return (
-    <PointEditionForm
-      pointPrelevement={pointPrelevement}
-      bnpeList={bnpeList}
-      bvBdCarthageList={bvBdCarthageList}
-      mesoList={mesoList}
-      meContinentalesBvList={meContinentalesBvList}
-    />
+    <>
+      <StartDsfrOnHydration />
+
+      <PointEditionForm
+        pointPrelevement={pointPrelevement}
+        bnpeList={bnpeList}
+        bvBdCarthageList={bvBdCarthageList}
+        mesoList={mesoList}
+        meContinentalesBvList={meContinentalesBvList}
+      />
+    </>
   )
 }
 

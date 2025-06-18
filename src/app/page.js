@@ -6,12 +6,15 @@ import Link from 'next/link'
 import {getStats} from '@/app/api/points-prelevement.js'
 import Counter from '@/components/counter.js'
 import Pie from '@/components/pie.js'
+import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 
 const Home = async () => {
   const stats = await getStats()
 
   return (
-    <Box>
+    <>
+      <StartDsfrOnHydration />
+
       <Box
         sx={{
           p: 5,
@@ -113,7 +116,7 @@ const Home = async () => {
           Afficher plus de statistiques
         </Link>
       </Box>
-    </Box>
+    </>
   )
 }
 

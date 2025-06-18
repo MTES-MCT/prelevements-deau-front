@@ -24,6 +24,7 @@ import PointHeader from '@/components/map/point-header.js'
 import PointSidePanel from '@/components/map/point-side-panel.js'
 import PointsListHeader from '@/components/map/points-list-header.js'
 import PointsList from '@/components/map/points-list.js'
+import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import useEvent from '@/hook/use-event.js'
 import {downloadCsv} from '@/lib/export-csv.js'
 import {extractTypeMilieu, extractUsages} from '@/lib/points-prelevement.js'
@@ -145,84 +146,88 @@ const Page = () => {
   }
 
   return (
-    <SidePanelLayout
-      header={
-        selectedPoint ? (
-          <PointHeader
-            point={selectedPoint}
-            onClose={() => setSelectedPoint(null)}
-          />
-        ) : (
-          <PointsListHeader
-            resultsCount={loading ? null : filteredPoints.length}
-            filters={filters}
-            typeMilieuOptions={typeMilieuOptions}
-            usagesOptions={usagesOptions}
-            exportList={exportPointsList}
-            onFilter={handleFilter}
-          />
-        )
-      }
-      isOpen={expanded}
-      handleOpen={setExpanded}
-      panelContent={
-        selectedPoint
-          ? <PointSidePanel point={selectedPoint} />
-          : (
-            <PointsList
-              isLoading={loading}
-              points={points.filter(pt => filteredPoints.includes(pt.id_point))}
-              onSelect={handleSelectedPoint}
+    <>
+      <StartDsfrOnHydration />
+
+      <SidePanelLayout
+        header={
+          selectedPoint ? (
+            <PointHeader
+              point={selectedPoint}
+              onClose={() => setSelectedPoint(null)}
+            />
+          ) : (
+            <PointsListHeader
+              resultsCount={loading ? null : filteredPoints.length}
+              filters={filters}
+              typeMilieuOptions={typeMilieuOptions}
+              usagesOptions={usagesOptions}
+              exportList={exportPointsList}
+              onFilter={handleFilter}
             />
           )
-      }
-    >
-      <Box className='flex h-full flex-col relative'>
-        {loading && <LoadingOverlay />}
+        }
+        isOpen={expanded}
+        handleOpen={setExpanded}
+        panelContent={
+          selectedPoint
+            ? <PointSidePanel point={selectedPoint} />
+            : (
+              <PointsList
+                isLoading={loading}
+                points={points.filter(pt => filteredPoints.includes(pt.id_point))}
+                onSelect={handleSelectedPoint}
+              />
+            )
+        }
+      >
+        <Box className='flex h-full flex-col relative'>
+          {loading && <LoadingOverlay />}
 
-        {/* Composant de la carte interactive */}
-        <Map
-          points={points}
-          filteredPoints={filteredPoints}
-          selectedPoint={selectedPoint}
-          handleSelectedPoint={handleSelectedPoint}
-          style={style}
-          setStyle={setStyle}
-        />
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            backgroundColor: theme.palette.background.default,
-            height: 70,
-            width: 300
-          }}
-        >
-          <FormControl
+          {/* Composant de la carte interactive */}
+          <Map
+            points={points}
+            filteredPoints={filteredPoints}
+            selectedPoint={selectedPoint}
+            handleSelectedPoint={handleSelectedPoint}
+            style={style}
+            setStyle={setStyle}
+          />
+          <Box
             sx={{
-              m: 2,
               position: 'absolute',
-              width: 270
+              top: 0,
+              left: 0,
+              backgroundColor: theme.palette.background.default,
+              height: 70,
+              width: 300
             }}
-            size='small'
           >
-            <InputLabel>Style de la carte</InputLabel>
-            <Select
-              value={style}
-              label='Style de la carte'
-              onChange={e => setStyle(e.target.value)}
+            <FormControl
+              sx={{
+                m: 2,
+                position: 'absolute',
+                width: 270
+              }}
+              size='small'
             >
-              <MenuItem value='vector'>Plan OpenMapTiles</MenuItem>
-              <MenuItem value='plan-ign'>Plan IGN</MenuItem>
-              <MenuItem value='photo'>Photographie aérienne</MenuItem>
-              <MenuItem value='vector-ign'>IGN vectoriel</MenuItem>
-            </Select>
-          </FormControl>
+              <InputLabel>Style de la carte</InputLabel>
+              <Select
+                value={style}
+                label='Style de la carte'
+                onChange={e => setStyle(e.target.value)}
+              >
+                <MenuItem value='vector'>Plan OpenMapTiles</MenuItem>
+                <MenuItem value='plan-ign'>Plan IGN</MenuItem>
+                <MenuItem value='photo'>Photographie aérienne</MenuItem>
+                <MenuItem value='vector-ign'>IGN vectoriel</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+          <Legend />
         </Box>
-        <Legend />
-      </Box>
-    </SidePanelLayout>
+      </SidePanelLayout>
+    </>
   )
 }
 

@@ -4,6 +4,7 @@ import {getExploitationsByPointId, getPointPrelevement} from '@/app/api/points-p
 import PointExploitations from '@/components/prelevements/point-exploitations.js'
 import PointIdentification from '@/components/prelevements/point-identification.js'
 import PointLocalisation from '@/components/prelevements/point-localisation.js'
+import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 
 const Page = async ({params}) => {
   const {id} = (await params)
@@ -16,6 +17,8 @@ const Page = async ({params}) => {
 
   return (
     <>
+      <StartDsfrOnHydration />
+
       <PointIdentification
         pointPrelevement={pointPrelevement}
         lienBss={pointPrelevement.bss?.lien || ''}

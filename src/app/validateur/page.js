@@ -1,7 +1,11 @@
 import FileValidateurForm from '@/components/declarations/validateur/form.js'
+import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 
 const Validateur = async () => (
-  <FileValidateurForm />
+  <>
+    <StartDsfrOnHydration />
+    <FileValidateurForm />
+  </>
 )
 
 export default Validateur

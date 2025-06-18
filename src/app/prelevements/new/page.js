@@ -8,6 +8,7 @@ import {
   getMeso
 } from '@/app/api/points-prelevement.js'
 import PointCreationForm from '@/components/form/point-creation-form.js'
+import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 
 const Page = async () => {
   const bnpeList = await getBnpe()
@@ -16,7 +17,9 @@ const Page = async () => {
   const bvBdCarthageList = await getBvBdcarthage()
 
   return (
-    <div>
+    <>
+      <StartDsfrOnHydration />
+
       <div className='p-5'>
         <ArrowBackIcon className='pr-1' />
         <Link href='/prelevements'>Retour</Link>
@@ -27,7 +30,7 @@ const Page = async () => {
         mesoList={mesoList}
         meContinentalesBvList={meContinentalesBvList}
       />
-    </div>
+    </>
   )
 }
 

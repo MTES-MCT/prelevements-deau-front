@@ -6,6 +6,7 @@ import Pie from '@/components/pie.js'
 import DebitsReservesChart from '@/components/prelevements/debits-reserves-chart.js'
 import DocumentChart from '@/components/prelevements/documents-chart.js'
 import RegularisationsCharts from '@/components/prelevements/regularisations-chart.js'
+import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 
 const Page = async () => {
   const stats = await getStats()
@@ -14,6 +15,8 @@ const Page = async () => {
 
   return (
     <>
+      <StartDsfrOnHydration />
+
       <Typography className='text-center pt-10' variant='h3'>Statistiques</Typography>
       <Box className='fr-container text-center pt-12'>
         <Typography variant='h6'>Statut d’exploitation des points de prélèvement</Typography>
