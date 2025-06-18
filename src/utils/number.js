@@ -5,6 +5,8 @@ export function formatNumber(value, options = {}) {
 
   return value.toLocaleString('fr-FR', {
     useGrouping: true,
+    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
     ...options
   })
 }
