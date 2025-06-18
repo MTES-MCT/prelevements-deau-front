@@ -79,7 +79,7 @@ const HeaderComponent = ({user}) => {
       }}
       quickAccessItems={[
         headerFooterDisplayItem,
-        user ? <LoginHeaderItem key={0} /> : null
+        <LoginHeaderItem key='login' user={user} />
       ]}
       navigation={user && (
         navigationItems.map(item => ({

@@ -1,12 +1,12 @@
 import {HeaderQuickAccessItem} from '@codegouvfr/react-dsfr/Header'
 import {signOut} from 'next-auth/react'
 
-const LoginHeaderItem = ({id}) => (
+const LoginHeaderItem = ({id, user}) => (
   <HeaderQuickAccessItem
     id={id}
     quickAccessItem={
-      {
-        iconId: 'ri-account-box-line',
+      user ? {
+        iconId: 'fr-icon-logout-box-r-line',
         text: 'Se déconnecter',
         buttonProps: {
           onClick() {
@@ -15,6 +15,12 @@ const LoginHeaderItem = ({id}) => (
               redirect: true
             })
           }
+        }
+      } : {
+        iconId: 'fr-icon-account-circle-line',
+        text: 'Se connecter',
+        linkProps: {
+          href: '/login'
         }
       }
     }
