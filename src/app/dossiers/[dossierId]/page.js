@@ -2,6 +2,7 @@ import {getDossier, getFile} from '@/app/api/dossiers.js'
 import {getPreleveur} from '@/app/api/points-prelevement.js'
 import DossierHeader from '@/components/declarations/dossier/dossier-header.js'
 import DossierDetails from '@/components/declarations/dossier-details.js'
+import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getPointsPrelevementId} from '@/lib/dossier.js'
 import {getDossierDSURL} from '@/lib/urls.js'
 
@@ -48,6 +49,8 @@ const DossierPage = async ({params}) => {
 
   return (
     <>
+      <StartDsfrOnHydration />
+
       <DossierHeader
         numero={dossier.number}
         status={dossier.status}
