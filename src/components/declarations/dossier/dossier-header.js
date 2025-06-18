@@ -34,7 +34,7 @@ const DossierHeader = ({numero, status, dateDepot, moisDeclaration, dsUrl}) => (
       <Box className='flex flex-wrap gap-2'>
         <Box component='span' className='fr-icon-calendar-event-fill' />
         <Typography variant='body1'>
-          Mois déclaré : {new Intl.DateTimeFormat('fr-FR', {month: 'long', year: 'numeric'}).format(new Date(moisDeclaration))}
+          Mois déclaré : {moisDeclaration ? new Intl.DateTimeFormat('fr-FR', {month: 'long', year: 'numeric'}).format(new Date(moisDeclaration)) : 'Non renseigné'}
         </Typography>
       </Box>
     </Box>
