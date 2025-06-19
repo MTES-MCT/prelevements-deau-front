@@ -254,7 +254,7 @@ const ParameterTrendChart = ({data}) => {
 
   return (
     <Box className='flex flex-col gap-4 mt-4'>
-      <Divider textAlign='left'>Graphique des données journalières</Divider>
+      <Divider textAlign='left'>Graphique de tendance des paramètres</Divider>
 
       {/* Sélecteur de granularité ----------------------------------------- */}
       <ToggleButtonGroup
