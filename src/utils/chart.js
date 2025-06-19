@@ -16,14 +16,12 @@ export function buildSeries({
   parameters, // Paramètres visibles (sélectionnés)
   allParameters, // Liste complète des paramètres pour la granularité courante
   values,
-  hiddenIds,
   unitToAxisId // { 'm³/h': 'left', 'µS/cm': 'right' }
 }) {
   // Retirer les entrées nulles et dédupliquer par nom_parametre
   const dedupedParams = uniqBy(parameters.filter(Boolean), 'nom_parametre')
 
   return dedupedParams
-    .filter(p => p && !hiddenIds.has(p.nom_parametre)) // Gestion visibilité
     .map(p => {
       // Index réel de la colonne dans le tableau values
       const realIdx

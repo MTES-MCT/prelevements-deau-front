@@ -105,9 +105,6 @@ const ParameterTrendChart = ({data}) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resolution])
 
-  // 2. séries masquées (clic sur la légende)
-  const [hiddenIds, setHiddenIds] = useState(new Set())
-
   // ---------- Construction des séries ----------
   const slicedValues = filledValues.slice(startIdx, endIdx + 1)
   const slicedXData = xData.slice(startIdx, endIdx + 1)
@@ -137,10 +134,9 @@ const ParameterTrendChart = ({data}) => {
       parameters: visibleParameters,
       allParameters: parameters,
       values: slicedValues,
-      hiddenIds,
       unitToAxisId
     }),
-  [visibleParameters, parameters, slicedValues, hiddenIds, unitToAxisId])
+  [visibleParameters, parameters, slicedValues, unitToAxisId])
 
   // Mémoiser la configuration des axes selon les unités en usage
   const yAxis = useMemo(() =>
@@ -152,13 +148,6 @@ const ParameterTrendChart = ({data}) => {
   [unitsInUse])
 
   // ---------- Callbacks ----------
-  const handleLegendClick = serieId => {
-    setHiddenIds(prev => {
-      const next = new Set(prev)
-      return next.has(serieId) ? next.delete(serieId) : next.add(serieId)
-    })
-  }
-
   const handleParamChange = newSelection => {
     if (newSelection.length === 0) {
       return
@@ -300,8 +289,7 @@ const ParameterTrendChart = ({data}) => {
         slotProps={{
           legend: {
             direction: 'row',
-            position: {vertical: 'top', horizontal: 'right'},
-            onItemClick: ({seriesId}) => handleLegendClick(seriesId)
+            position: {vertical: 'top', horizontal: 'right'}
           }
         }}
       />
