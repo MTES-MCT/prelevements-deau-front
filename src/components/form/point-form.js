@@ -4,17 +4,11 @@ import {useState} from 'react'
 
 import Input from '@codegouvfr/react-dsfr/Input'
 import Select from '@codegouvfr/react-dsfr/SelectNext'
-import ChevronRight from '@mui/icons-material/ChevronRight'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import {
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Typography
-} from '@mui/material'
+import {Typography} from '@mui/material'
 
 import MiniMapForm from '@/components/form/mini-map-form.js'
 import OptionalPointFieldsForm from '@/components/form/optional-point-fields-form.js'
+import AccordionCentered from '@/components/ui/accordion-centered.js'
 
 const PointForm = ({
   point,
@@ -88,33 +82,20 @@ const PointForm = ({
           label: precision
         }))}
       />
-      <div className='py-5'>
-        <Accordion
-          expanded={isExpanded}
-          elevation={0}
-          sx={{
-            border: '1px solid lightgrey'
-          }}
-          onChange={() => setIsExpanded(!isExpanded)}
-        >
-          <AccordionSummary>
-            <Typography className='text-center w-full'>
-              {isExpanded ? 'Masquer les champs optionnels' : 'Afficher les champs optionnels'}
-              {isExpanded ? <ExpandMoreIcon /> : <ChevronRight />}
-            </Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <OptionalPointFieldsForm
-              point={point}
-              setPoint={setPoint}
-              bnpeList={bnpeList}
-              bvBdCarthageList={bvBdCarthageList}
-              mesoList={mesoList}
-              meContinentalesBvList={meContinentalesBvList}
-            />
-          </AccordionDetails>
-        </Accordion>
-      </div>
+      <AccordionCentered
+        isExpanded={isExpanded}
+        setIsExpanded={setIsExpanded}
+        label='les champs optionnels'
+      >
+        <OptionalPointFieldsForm
+          point={point}
+          setPoint={setPoint}
+          bnpeList={bnpeList}
+          bvBdCarthageList={bvBdCarthageList}
+          mesoList={mesoList}
+          meContinentalesBvList={meContinentalesBvList}
+        />
+      </AccordionCentered>
     </>
   )
 }
