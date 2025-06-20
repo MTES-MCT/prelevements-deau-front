@@ -89,7 +89,7 @@ const reglesColumns = [
     headerName: 'Document',
     width: 250,
     renderCell(params) {
-      return (
+      return params.row.document ? (
         <a
           href={`${API_URL}/document/${params.row.document.nom_fichier}`}
           target='_blank'
@@ -97,7 +97,7 @@ const reglesColumns = [
         >
           {params.row.document.nature}
         </a>
-      )
+      ) : ''
     },
     valueGetter: params => params ? `${API_URL}/document/${params.nom_fichier}` : ''
   },
