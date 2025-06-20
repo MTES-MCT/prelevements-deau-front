@@ -74,6 +74,16 @@ export async function getPointsFromPreleveur(idPreleveur) {
   }
 }
 
+export async function createExploitation(payload) {
+  const response = await fetch(`${API_URL}/api/exploitations`, {
+    headers,
+    method: 'POST',
+    body: JSON.stringify(payload)
+  })
+
+  return response.json()
+}
+
 export async function getExploitationsByPointId(pointId) {
   const response = await fetch(`${API_URL}/api/points-prelevement/${pointId}/exploitations`, {headers})
   const exploitations = await response.json()
