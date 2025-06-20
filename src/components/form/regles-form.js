@@ -52,9 +52,9 @@ const emptyRegle = {
   remarque: ''
 }
 
-const ReglesForm = ({setExploitation}) => {
+const ReglesForm = ({defaultRegles, setExploitation}) => {
   const [error, setError] = useState()
-  const [regles, setRegles] = useState([])
+  const [regles, setRegles] = useState(defaultRegles || [])
   const [regle, setRegle] = useState(emptyRegle)
 
   const handleRegles = () => {
@@ -65,19 +65,18 @@ const ReglesForm = ({setExploitation}) => {
       return
     }
 
-    setRegles(prev => [...prev, emptyStringToNull(regle)])
+    const newRegles = [...regles, emptyStringToNull(regle)]
+
+    setRegles(newRegles)
+    setExploitation(prev => ({...prev, regles: newRegles}))
     setRegle(emptyRegle)
   }
 
-  const handleDeleteRegle = id => {
-    setRegles(prevRegles => prevRegles.filter((_, index) => index !== id))
+  const handleDeleteRegle = idx => {
+    const updatedRegles = regles.filter((_, index) => index !== idx)
+    setRegles(updatedRegles)
+    setExploitation(prev => ({...prev, regles: updatedRegles}))
   }
-
-  useEffect(() => {
-    if (regles.length > 0) {
-      setExploitation(prev => ({...prev, regles}))
-    }
-  }, [regles, setExploitation])
 
   return (
     <div>
