@@ -276,10 +276,22 @@ const ParameterTrendChart = ({data}) => {
         xAxis={[{
           scaleType: 'time',
           data: slicedXData,
-          valueFormatter: v =>
-            diffH < 24
-              ? format(v, 'HH:mm', {locale: fr})
-              : format(v, 'd MMM', {locale: fr})
+          tickMinStep: resolution === '15min' ? 3600 * 1000 : 3600 * 1000 * 24,
+          valueFormatter(date, context) {
+            if (context.location === 'tick') {
+              return diffH < 168
+                ? (diffH < 24
+                  ? format(date, 'HH:mm', {locale: fr})
+                  : format(date, 'd MMM HH:mm', {locale: fr})
+                )
+                : format(date, 'd MMM', {locale: fr})
+            }
+
+            return resolution === '15min'
+              ? format(date, 'd MMM HH:mm', {locale: fr})
+              : format(date, 'd MMM', {locale: fr})
+          }
+
         }]}
         yAxis={yAxis}
         height={300}
@@ -309,7 +321,7 @@ const ParameterTrendChart = ({data}) => {
             ]}
             valueLabelDisplay='on'
             valueLabelFormat={idx =>
-              format(xData[idx], diffH < 24 ? 'HH:mm' : 'd MMM', {locale: fr})}
+              format(xData[idx], 'd MMM', {locale: fr})}
             getAriaValueText={idx =>
               format(xData[idx], diffH < 24 ? 'HH:mm' : 'd MMM', {locale: fr})}
             onChange={handleRangeChange}
