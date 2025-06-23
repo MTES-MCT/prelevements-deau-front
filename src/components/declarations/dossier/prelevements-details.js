@@ -168,9 +168,11 @@ const PrelevementsDetails = ({
 
   return (
     <SectionCard title='Prélèvements' icon='fr-icon-drop-line'>
-      <Alert severity='info'>
-        Volume total prélevé : <b>{formatNumber(volumePrelevementTotal)} m³</b>
-      </Alert>
+      {volumePrelevementTotal !== null && (
+        <Alert severity='info'>
+          Volume total prélevé : <b>{formatNumber(volumePrelevementTotal)} m³</b>
+        </Alert>
+      )}
 
       {content}
     </SectionCard>
