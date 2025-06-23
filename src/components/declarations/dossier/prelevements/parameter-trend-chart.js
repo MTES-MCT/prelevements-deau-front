@@ -143,7 +143,8 @@ const ParameterTrendChart = ({data}) => {
     unitsInUse.map((u, i) => ({
       id: i === 0 ? 'left' : 'right',
       label: u,
-      position: i === 0 ? 'left' : 'right'
+      position: i === 0 ? 'left' : 'right',
+      min: 0
     })),
   [unitsInUse])
 
