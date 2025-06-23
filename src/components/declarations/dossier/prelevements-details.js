@@ -9,6 +9,59 @@ import Spreadsheet from '@/components/declarations/dossier/prelevements/spreadsh
 import VolumesPompes from '@/components/declarations/dossier/prelevements/volumes-pompes.js'
 import SectionCard from '@/components/ui/section-card.js'
 
+// Helpers --------------------------------------------------------------
+
+/**
+ * Sort an array of points de prélèvement alphabetically by their `nom`.
+ * @param {Array} points
+ * @returns {Array}
+ */
+const sortPointsPrelevementByName = points =>
+  [...points].sort((a, b) => {
+    const nomA = a.nom?.toLowerCase() || ''
+    const nomB = b.nom?.toLowerCase() || ''
+    return nomA.localeCompare(nomB)
+  })
+
+/**
+ * Sort files so that those without point de prélèvement come first,
+ * then the others ordered by the name of their point de prélèvement.
+ * @param {Array} files
+ * @param {Array} pointsPrelevement
+ * @returns {Array}
+ */
+const sortFilesByPointPrelevement = (files, pointsPrelevement) => {
+  const findPoint = file =>
+    pointsPrelevement.find(
+      p =>
+        p.id_point
+        === (file.result?.data?.pointPrelevement || file.pointsPrelevements[0])
+    )
+
+  return [...files].sort((a, b) => {
+    const pointA = findPoint(a)
+    const pointB = findPoint(b)
+
+    if (!pointA && pointB) {
+      return -1
+    }
+
+    if (pointA && !pointB) {
+      return 1
+    }
+
+    if (!pointA && !pointB) {
+      return 0
+    }
+
+    const nomA = pointA.nom?.toLowerCase() || ''
+    const nomB = pointB.nom?.toLowerCase() || ''
+    return nomA.localeCompare(nomB)
+  })
+}
+
+// ---------------------------------------------------------------------
+
 const PrelevementsDetails = ({
   moisDeclaration,
   tableauSuiviPrelevements,
@@ -56,8 +109,11 @@ const PrelevementsDetails = ({
     }
 
     if (files && files.length > 0) {
+      const sortedPointsPrelevement = sortPointsPrelevementByName(pointsPrelevement)
+      const filesSorted = sortFilesByPointPrelevement(files, pointsPrelevement)
+
       return (
-        files.map(file => {
+        filesSorted.map(file => {
           const poinPrelevementId = file.result?.data?.pointPrelevement || file.pointsPrelevements[0]
           return (
             <Box
@@ -70,7 +126,7 @@ const PrelevementsDetails = ({
               <PrelevementsAccordion
                 idPoint={poinPrelevementId}
                 isOpen={selectedPointId === poinPrelevementId}
-                pointPrelevement={pointsPrelevement.find(p => p.id_point === poinPrelevementId)}
+                pointPrelevement={sortedPointsPrelevement.find(p => p.id_point === poinPrelevementId)}
                 volumePreleveTotal={file.result?.data?.volumePreleveTotal}
                 status={file?.result.errors?.length > 0 || !file.result.data ? 'error' : 'success'}
                 handleSelect={() => selectedPoint(poinPrelevementId)}
