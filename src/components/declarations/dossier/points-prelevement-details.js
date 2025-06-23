@@ -12,6 +12,9 @@ const PointsPrelevementDetails = ({pointsPrelevementId, pointsPrelevement, handl
       {pointsPrelevementId.length > 0 ? (
         pointsPrelevement ? (
           <Box className='flex flex-col gap-2'>
+            <Alert severity='info'>
+              <b>{pointsPrelevement.length}</b> point{pointsPrelevement.length > 1 ? 's' : ''} de prélèvement identifié{pointsPrelevement.length > 1 ? 's' : ''}
+            </Alert>
             <PointsPrelevementsMap
               pointsPrelevement={pointsPrelevement}
               handleClick={handleClick}

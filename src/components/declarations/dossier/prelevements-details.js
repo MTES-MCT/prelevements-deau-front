@@ -1,6 +1,8 @@
 import {useMemo} from 'react'
 
-import {Skeleton, Box, Alert} from '@mui/material'
+import {
+  Skeleton, Box, Alert
+} from '@mui/material'
 
 import Compteur from './prelevements/compteur.js'
 
@@ -8,6 +10,7 @@ import PrelevementsAccordion from '@/components/declarations/dossier/prelevement
 import Spreadsheet from '@/components/declarations/dossier/prelevements/spreadsheet.js'
 import VolumesPompes from '@/components/declarations/dossier/prelevements/volumes-pompes.js'
 import SectionCard from '@/components/ui/section-card.js'
+import {formatNumber} from '@/utils/number.js'
 
 // Helpers --------------------------------------------------------------
 
@@ -63,6 +66,7 @@ const sortFilesByPointPrelevement = (files, pointsPrelevement) => {
 // ---------------------------------------------------------------------
 
 const PrelevementsDetails = ({
+  volumePrelevementTotal,
   moisDeclaration,
   tableauSuiviPrelevements,
   pointsPrelevement,
@@ -81,20 +85,13 @@ const PrelevementsDetails = ({
     }
 
     if (volumesPompes || compteur) {
-      let volumePreleveTotal = null
-      if (relevesIndex) {
-        volumePreleveTotal = relevesIndex.reduce((acc, volume) => acc + volume.valeur, 0)
-      } else if (volumesPompes) {
-        volumePreleveTotal = volumesPompes.reduce((acc, volume) => acc + volume.volumePompeM3, 0)
-      }
-
       return (
         <PrelevementsAccordion
           isOpen
           idPoint={pointsPrelevement[0]}
           pointPrelevement={pointsPrelevement[0]}
-          volumePreleveTotal={volumePreleveTotal}
-          status={volumePreleveTotal ? 'success' : 'error'}
+          volumePreleveTotal={volumePrelevementTotal}
+          status={volumePrelevementTotal ? 'success' : 'error'}
         >
           {compteur && (
             <Compteur
@@ -155,6 +152,7 @@ const PrelevementsDetails = ({
       </Alert>
     )
   }, [
+    volumePrelevementTotal,
     moisDeclaration,
     tableauSuiviPrelevements,
     pointsPrelevement,
@@ -170,6 +168,10 @@ const PrelevementsDetails = ({
 
   return (
     <SectionCard title='Prélèvements' icon='fr-icon-drop-line'>
+      <Alert severity='info'>
+        Volume total prélevé : <b>{formatNumber(volumePrelevementTotal)} m³</b>
+      </Alert>
+
       {content}
     </SectionCard>
   )

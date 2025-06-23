@@ -6,6 +6,7 @@ import {
 } from 'react'
 
 import {Box} from '@mui/material'
+import {sumBy} from 'lodash'
 
 import {getDownloadableFile} from '@/app/api/dossiers.js'
 import {getPointPrelevement} from '@/app/api/points-prelevement.js'
@@ -14,6 +15,28 @@ import MandataireDetails from '@/components/declarations/dossier/mandataire-deta
 import PointsPrelevementDetails from '@/components/declarations/dossier/points-prelevement-details.js'
 import PrelevementsDetails from '@/components/declarations/dossier/prelevements-details.js'
 import PreleveurDetails from '@/components/declarations/dossier/preleveur-details.js'
+
+function getVolumePrelevementTotal(dossier, files) {
+  const {relevesIndex, volumesPompes} = dossier
+
+  // 1. Priorité aux fichiers si présents
+  if (files?.length) {
+    return sumBy(files, f => f.result?.data?.volumePreleveTotal ?? 0)
+  }
+
+  // 2. Sinon, on regarde les relevés index
+  if (relevesIndex?.length) {
+    return sumBy(relevesIndex, r => r.valeur ?? 0)
+  }
+
+  // 3. Enfin, on se rabat sur les volumes pompés
+  if (volumesPompes?.length) {
+    return sumBy(volumesPompes, v => v.volumePompeM3 ?? 0)
+  }
+
+  // 4. Aucune donnée disponible
+  return null
+}
 
 const DossierDetails = ({dossier, preleveur, files, idPoints}) => {
   const [pointsPrelevement, setPointsPrelevement] = useState(null)
@@ -70,6 +93,8 @@ const DossierDetails = ({dossier, preleveur, files, idPoints}) => {
     return []
   }, [files, idPoints])
 
+  const volumePrelevementTotal = useMemo(() => getVolumePrelevementTotal(dossier, files), [dossier, files])
+
   return (
     <Box className='flex flex-col gap-2 mb-4'>
       <DossierInfos
@@ -91,11 +116,13 @@ const DossierDetails = ({dossier, preleveur, files, idPoints}) => {
       <PointsPrelevementDetails
         pointsPrelevementId={idPoints}
         pointsPrelevement={pointsPrelevement}
+        volumePrelevementTotal={volumePrelevementTotal}
         handleClick={onClickPointPrelevementMarker}
         disabledPointIds={pointIdsWithNoPrelevement}
       />
 
       <PrelevementsDetails
+        volumePrelevementTotal={volumePrelevementTotal}
         moisDeclaration={dossier.moisDeclaration}
         tableauSuiviPrelevements={dossier.tableauSuiviPrelevements}
         pointsPrelevementId={idPoints}
