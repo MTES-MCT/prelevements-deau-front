@@ -114,14 +114,17 @@ const ParameterTrendChart = ({data}) => {
 
   const unitsInUse = useMemo(() => [...new Set(visibleParameters.map(p => p.unite))], [visibleParameters])
 
+  // Limiter à deux unités maximum pour les axes
+  const axisUnits = useMemo(() => unitsInUse.slice(0, 2), [unitsInUse])
+
   const unitToAxisId = useMemo(() => {
     const mapping = {}
-    for (const [i, u] of unitsInUse.entries()) {
-      mapping[u] = i === 0 ? 'left' : 'right'
+    for (const u of axisUnits) {
+      mapping[u] = u
     }
 
     return mapping
-  }, [unitsInUse])
+  }, [axisUnits])
 
   // Durée de la fenêtre (heures) pour formatter l’axe X
   const diffH = slicedXData.length > 1
@@ -129,68 +132,60 @@ const ParameterTrendChart = ({data}) => {
     : 0
 
   // Mémoiser la construction des séries pour éviter les recalculs inutiles
-  const series = useMemo(() =>
-    buildSeries({
-      parameters: visibleParameters,
-      allParameters: parameters,
-      values: slicedValues,
-      unitToAxisId
+  const rawSeries = useMemo(() => buildSeries({
+    parameters: visibleParameters,
+    allParameters: parameters,
+    values: slicedValues,
+    unitToAxisId
+  }), [visibleParameters, parameters, slicedValues, unitToAxisId])
+
+  const series = useMemo(
+    () => rawSeries.map(s => {
+      const param = visibleParameters.find(p => p.nom_parametre === s.id)
+      return {
+        ...s,
+        yAxisId: unitToAxisId[param.unite]
+      }
     }),
-  [visibleParameters, parameters, slicedValues, unitToAxisId])
+    [rawSeries, visibleParameters, unitToAxisId]
+  )
 
   // Mémoiser la configuration des axes selon les unités en usage
   const yAxis = useMemo(() =>
-    unitsInUse.map((u, i) => ({
-      id: i === 0 ? 'left' : 'right',
+    axisUnits.map((u, i) => ({
+      id: u,
       label: u,
       position: i === 0 ? 'left' : 'right',
       min: 0
     })),
-  [unitsInUse])
+  [axisUnits])
 
   // ---------- Callbacks ----------
   const handleParamChange = newSelection => {
-    if (newSelection.length === 0) {
+    if (!Array.isArray(newSelection) || newSelection.length === 0) {
       return
     }
 
-    setSelectedParams(prev => {
-      // Suppression simple
-      if (newSelection.length < prev.length) {
-        return newSelection
-      }
+    // Filtrer les sélections invalides
+    const filteredSelection = newSelection.filter(name => name !== null)
+    if (filteredSelection.length === 0) {
+      return
+    }
 
-      // Ajout : on détecte le paramètre ajouté
-      const added = newSelection.find(p => !prev.includes(p))
-      if (!added) {
-        return prev
-      }
+    // Empêcher plus de deux unités distinctes
+    const nextUnits = new Set(
+      filteredSelection
+        .map(name => {
+          const p = parameters.find(p => p.nom_parametre === name)
+          return p?.unite
+        })
+        .filter(u => u !== null)
+    )
+    if (nextUnits.size > 2) {
+      return
+    }
 
-      const addedUnit = parameters.find(p => p.nom_parametre === added)?.unite
-      if (!addedUnit) {
-        return prev
-      }
-
-      if (prev.length === 0) {
-        return [added]
-      }
-
-      const existingUnit = parameters.find(p => p.nom_parametre === prev[0])?.unite
-
-      if (addedUnit === existingUnit) {
-        // Même unité : on peut empiler (max 2)
-        if (prev.length === 1) {
-          return [...prev, added]
-        }
-
-        if (prev.length === 2) {
-          return [prev[1], added]
-        } // Décale
-      }
-
-      // Incompatible : on remplace la sélection
-      return [added]
-    })
+    setSelectedParams(filteredSelection)
   }
 
   useEffect(() => {
@@ -265,7 +260,11 @@ const ParameterTrendChart = ({data}) => {
         onChange={(_, val) => handleParamChange(val)}
       >
         {uniqBy(paramList, 'nom_parametre').map(p => ( // Dé-duplication des paramètres
-          <ToggleButton key={p.nom_parametre} value={p.nom_parametre}>
+          <ToggleButton
+            key={p.nom_parametre}
+            value={p.nom_parametre}
+            disabled={!p.unite}
+          >
             {p.nom_parametre}
           </ToggleButton>
         ))}
@@ -295,10 +294,9 @@ const ParameterTrendChart = ({data}) => {
 
         }]}
         yAxis={yAxis}
+        leftAxis={axisUnits[0]}
+        rightAxis={axisUnits[1]}
         height={300}
-        margin={{
-          left: 60, right: 60, top: 20, bottom: 60
-        }}
         slotProps={{
           legend: {
             direction: 'row',
