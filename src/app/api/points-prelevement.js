@@ -107,6 +107,15 @@ export async function getExploitationsByPointId(pointId) {
   return exploitations
 }
 
+export async function deleteExploitation(exploitationId) {
+  const response = await fetch(`${API_URL}/api/exploitations/${exploitationId}`, {
+    headers,
+    method: 'DELETE'
+  })
+
+  return response.json()
+}
+
 export async function getStats() {
   const response = await fetch(`${API_URL}/api/stats`)
   const stats = await response.json()
