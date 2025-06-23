@@ -48,7 +48,7 @@ const Spreadsheet = ({moisDeclaration, file, downloadFile}) => {
                 <Box className='flex flex-wrap gap-1 items-center'>
                   Journalier : {file.result.data.dailyParameters.map(param => (
                     <Tag key={param.paramIndex} sx={{m: 1}}>
-                      {param.nom_parametre} / {param.unite}
+                      {param.nom_parametre} ({param.unite})
                     </Tag>
                   ))}
                 </Box>
