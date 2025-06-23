@@ -1,5 +1,5 @@
 /* eslint-disable camelcase */
-import {useState, useEffect} from 'react'
+import {useState} from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
 import Button from '@codegouvfr/react-dsfr/Button'
