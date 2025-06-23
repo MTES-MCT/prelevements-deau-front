@@ -6,6 +6,7 @@ import {Tooltip} from '@mui/material'
 import {DataGrid, GridToolbar} from '@mui/x-data-grid'
 import {frFR} from '@mui/x-data-grid/locales'
 import {format} from 'date-fns'
+import {fr} from 'date-fns/locale'
 import {deburr} from 'lodash-es'
 import {useRouter} from 'next/navigation'
 
@@ -25,8 +26,13 @@ const convertDossierToRow = dossier => ({
   declarant: dossier.declarant.raisonSociale ? dossier.declarant : dossier.demandeur,
   commentaires: dossier.commentaires,
   numeroArreteAot: dossier.numeroArreteAot,
-  typeDonnees: dossier.typeDonnees
+  typeDonnees: dossier.typeDonnees,
+  moisDeclaration: dossier.moisDeclaration
 })
+
+function renderMonthCell(value) {
+  return value ? format(new Date(value), 'MMMM yyyy', {locale: fr}) : '-'
+}
 
 function renderDateCell(value) {
   return value ? format(new Date(value), 'dd/MM/yyyy') : '-'
@@ -115,6 +121,13 @@ const DossiersList = ({dossiers}) => {
               {value: 'en-instruction', label: 'En instruction'},
               {value: 'en-construction', label: 'En construction'}
             ]
+          },
+          {
+            field: 'moisDeclaration',
+            headerName: 'Mois de déclaration',
+            width: 150,
+            type: 'date',
+            valueFormatter: renderMonthCell
           },
           {
             field: 'dateDepot',
