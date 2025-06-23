@@ -16,7 +16,7 @@ import {fr} from 'date-fns/locale'
 import {uniqBy} from 'lodash-es'
 
 import {buildSeries} from '@/utils/chart.js'
-import {formatNumber} from '@/utils/number'
+import {formatNumber} from '@/utils/number.js'
 
 const ParameterTrendChart = ({data}) => {
   // ---------- Données brutes ----------
@@ -158,7 +158,7 @@ const ParameterTrendChart = ({data}) => {
       label: u,
       position: i === 0 ? 'left' : 'right',
       min: 0,
-      valueFormatter: formatNumber
+      valueFormatter: v => formatNumber(v, {maximumFractionDigits: v > 10 ? 0 : 1})
     })),
   [axisUnits])
 
