@@ -22,7 +22,7 @@ const PrelevementsAccordion = ({idPoint, pointPrelevement, volumePreleveTotal = 
           {pointPrelevement ? (
             <Box>
               <Typography fontWeight='bold' className='flex gap-2'>
-                {pointPrelevement.nom}
+                {idPoint && `${idPoint} - `}{pointPrelevement.nom}
               </Typography>
               <Typography variant='body2'>
                 Volume prélevé : {' '}
