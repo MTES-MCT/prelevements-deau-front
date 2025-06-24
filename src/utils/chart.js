@@ -34,7 +34,7 @@ export function buildSeries({
         data: values.map(v => v.values[realIdx]),
         showMark: false,
         curve: 'linear',
-        valueFormatter: v => v ? formatNumber(v) : 'Aucune donnée'
+        valueFormatter: v => v === null || v === undefined ? 'Aucune donnée' : formatNumber(v)
       }
     })
 }
