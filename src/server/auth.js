@@ -29,13 +29,13 @@ export const authOptions = {
   callbacks: {
     async jwt({token, user}) {
       if (user) {
-        token.userId = user.id
+        token.token = user.token
       }
 
       return token
     },
     async session({session, token}) {
-      session.user.id = token.userId
+      session.user.token = token.token
       return session
     }
   },
@@ -49,7 +49,16 @@ export const authOptions = {
         password: {label: 'Password', type: 'password'}
       },
       async authorize(credentials) {
-        return getInfo(credentials.password)
+        const info = await getInfo(credentials.password)
+
+        if (info) {
+          return {
+            ...info,
+            token: credentials.password
+          }
+        }
+
+        return null
       }
     })
   ]
