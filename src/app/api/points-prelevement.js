@@ -11,12 +11,12 @@ export async function getPointPrelevement(id) {
 }
 
 export async function createPointPrelevement(payload) {
-  const response = await executeRequest({url: 'api/points-prelevement', method: 'POST', body: JSON.stringify(payload)})
+  const response = await executeRequest({url: 'api/points-prelevement', method: 'POST', body: payload})
   return response.json()
 }
 
 export async function editPointPrelevement(id, payload) {
-  const response = await executeRequest({url: `api/points-prelevement/${id}`, method: 'PUT', body: JSON.stringify(payload)})
+  const response = await executeRequest({url: `api/points-prelevement/${id}`, method: 'PUT', body: payload})
   return response.json()
 }
 
