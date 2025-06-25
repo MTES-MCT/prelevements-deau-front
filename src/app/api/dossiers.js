@@ -1,17 +1,17 @@
 import {executeRequest} from './util/request.js'
 
 export async function getDossiers() {
-  return executeRequest({url: '/dossiers'})
+  const response = await executeRequest('api/dossiers')
+  return response.json()
 }
 
 export async function getDossier(_id) {
-  const response = await executeRequest({url: `/dossiers/${_id}`})
-  const dossier = await response.json()
-  return dossier
+  const response = await executeRequest(`api/dossiers/${_id}`)
+  return response.json()
 }
 
 export async function getFile(dossierId, storageHash) {
-  const response = await executeRequest({url: `/dossiers/${dossierId}/files/${storageHash}`})
+  const response = await executeRequest(`api/dossiers/${dossierId}/files/${storageHash}`)
   if (!response.ok) {
     throw new Error('Failed to fetch file')
   }
@@ -20,7 +20,7 @@ export async function getFile(dossierId, storageHash) {
 }
 
 export async function getDownloadableFile(dossierId, storageHash) {
-  const response = await executeRequest({url: `/dossiers/${dossierId}/files/${storageHash}/download`})
+  const response = await executeRequest(`api/dossiers/${dossierId}/files/${storageHash}/download`)
   if (!response.ok) {
     throw new Error('Failed to fetch file')
   }
@@ -29,14 +29,16 @@ export async function getDownloadableFile(dossierId, storageHash) {
 }
 
 export async function validateFile(buffer, fileType) {
-  const response = await executeRequest({
-    url: `/validate-file?fileType=${fileType}`,
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/octet-stream'
-    },
-    body: buffer
-  })
+  const response = await executeRequest(
+    `validate-file?fileType=${fileType}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/octet-stream'
+      },
+      body: buffer
+    }
+  )
 
   if (!response.ok) {
     throw new Error('Failed to validate file')
