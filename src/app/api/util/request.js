@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation'
+import {redirect} from 'next/navigation'
 import {getServerSession} from 'next-auth'
 import {getSession, signOut} from 'next-auth/react'
 
