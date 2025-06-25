@@ -1,5 +1,6 @@
+import { redirect } from 'next/navigation'
 import {getServerSession} from 'next-auth'
-import {getSession} from 'next-auth/react'
+import {getSession, signOut} from 'next-auth/react'
 
 import {authOptions} from '@/server/auth.js'
 
@@ -53,6 +54,14 @@ export async function executeRequest(urlOrOptions, moreOptions) {
   const response = await fetch(`${API_URL}/${url}`, fetchOptions)
 
   if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      if (typeof window !== 'undefined') {
+        await signOut({callbackUrl: '/login'})
+      }
+
+      redirect('/login')
+    }
+
     if (response.headers.get('Content-Type')?.startsWith('application/json')) {
       const errorBody = await response.json()
       const error = new Error(errorBody.message)
