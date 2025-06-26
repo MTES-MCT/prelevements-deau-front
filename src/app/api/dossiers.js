@@ -1,30 +1,19 @@
 import {executeRequest} from './util/request.js'
 
 export async function getDossiers() {
-  const response = await executeRequest('api/dossiers')
-  return response.json()
+  return executeRequest('api/dossiers')
 }
 
 export async function getDossier(_id) {
-  const response = await executeRequest(`api/dossiers/${_id}`)
-  return response.json()
+  return executeRequest(`api/dossiers/${_id}`)
 }
 
 export async function getFile(dossierId, storageHash) {
-  const response = await executeRequest(`api/dossiers/${dossierId}/files/${storageHash}`)
-  if (!response.ok) {
-    throw new Error('Failed to fetch file')
-  }
-
-  return response.blob()
+  return executeRequest(`api/dossiers/${dossierId}/files/${storageHash}`)
 }
 
-export async function getDownloadableFile(dossierId, storageHash) {
+export async function getFileBlob(dossierId, storageHash) {
   const response = await executeRequest(`api/dossiers/${dossierId}/files/${storageHash}/download`)
-  if (!response.ok) {
-    throw new Error('Failed to fetch file')
-  }
-
   return response.blob()
 }
 
@@ -39,10 +28,6 @@ export async function validateFile(buffer, fileType) {
       body: buffer
     }
   )
-
-  if (!response.ok) {
-    throw new Error('Failed to validate file')
-  }
 
   return response.json()
 }

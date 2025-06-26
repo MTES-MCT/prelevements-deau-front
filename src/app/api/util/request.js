@@ -75,15 +75,9 @@ export async function executeRequest(urlOrOptions, moreOptions) {
     throw error
   }
 
-  // TODO : Les fonctions qui appellent executeRequest consomment encore directement
-  //        response.json(), ce qui limite la gestion fine des erreurs renvoyées par
-  //        l'API et empêche de profiter des fallbacks d'erreur de Next.js. Quand ces
-  //        fonctions auront été refactorisées pour manipuler la Response (status,
-  //        headers, etc.) avant de parser le JSON, on pourra décommenter ou adapter
-  //        le bloc ci‑dessous.
-  // if (response.headers.get('Content-Type')?.startsWith('application/json')) {
-  //   return response.json()
-  // }
+  if (response.headers.get('Content-Type')?.startsWith('application/json')) {
+    return response.json()
+  }
 
   return response
 }

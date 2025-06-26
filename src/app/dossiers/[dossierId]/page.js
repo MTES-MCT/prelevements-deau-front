@@ -11,40 +11,23 @@ const DossierPage = async ({params}) => {
 
   const dossier = await getDossier(dossierId)
 
-  if (dossier.code === 404) {
-    return <div>Dossier non trouvable</div>
-  }
-
   let files = null
   if (dossier.files && dossier.files.length > 0) {
     files = await Promise.all(dossier.files.map(async file => {
       const [hash] = file.storageKey.split('-')
-      const fileResult = await getFile(dossierId, hash)
-      if (fileResult) {
-        // Read raw text and attempt JSON parse
-        const rawText = await fileResult.text()
-        let data
-        try {
-          data = JSON.parse(rawText)
-        } catch {
-          data = rawText
-        }
+      const data = await getFile(dossierId, hash)
 
-        data.pointsPrelevements = dossier.donneesPrelevements ? dossier.donneesPrelevements.find(point => point.fichier.storageKey === file.storageKey).pointsPrelevements : []
+      data.pointsPrelevements = dossier.donneesPrelevements ? dossier.donneesPrelevements.find(point => point.fichier.storageKey === file.storageKey).pointsPrelevements : []
 
-        return data
-      }
-
-      return null
+      return data
     }))
   }
 
   let preleveur = dossier?.demandeur
   if (dossier?.result?.preleveur) {
-    const response = await getPreleveur(dossier.result.preleveur)
-    if (response?._id) {
-      preleveur = response
-    }
+    try {
+      preleveur = await getPreleveur(dossier.result.preleveur)
+    } catch {}
   }
 
   return (
@@ -70,4 +53,3 @@ const DossierPage = async ({params}) => {
 }
 
 export default DossierPage
-
