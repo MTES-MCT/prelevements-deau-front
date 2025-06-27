@@ -1,11 +1,12 @@
 'use client'
 
 import {fr} from '@codegouvfr/react-dsfr'
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import Button from '@codegouvfr/react-dsfr/Button'
 import Tag from '@codegouvfr/react-dsfr/Tag'
 import {
   Box, Divider,
-  Typography, Alert
+  Typography
 } from '@mui/material'
 
 import ParameterTrendChart from '@/components/declarations/dossier/prelevements/parameter-trend-chart.js'

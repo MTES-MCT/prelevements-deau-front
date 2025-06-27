@@ -3,8 +3,8 @@
 import {useState} from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {
-  Alert,
   Box, Modal, Tab, Tabs, Typography
 } from '@mui/material'
 import {LineChart} from '@mui/x-charts'

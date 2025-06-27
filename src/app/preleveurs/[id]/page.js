@@ -1,5 +1,6 @@
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {
-  Alert, Box, Chip, Typography
+  Box, Chip, Typography
 } from '@mui/material'
 import Link from 'next/link'
 

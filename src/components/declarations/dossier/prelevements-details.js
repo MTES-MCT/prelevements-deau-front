@@ -1,7 +1,8 @@
 import {useMemo} from 'react'
 
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {
-  Skeleton, Box, Alert
+  Skeleton, Box
 } from '@mui/material'
 
 import Compteur from './prelevements/compteur.js'

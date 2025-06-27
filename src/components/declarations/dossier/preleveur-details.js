@@ -1,4 +1,5 @@
-import {Box, Typography, Alert} from '@mui/material'
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
+import {Box, Typography} from '@mui/material'
 
 import LabelWithIcon from '@/components/ui/label-with-icon.js'
 import SectionCard from '@/components/ui/section-card.js'

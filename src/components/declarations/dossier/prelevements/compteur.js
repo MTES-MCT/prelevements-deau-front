@@ -1,8 +1,8 @@
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Badge} from '@codegouvfr/react-dsfr/Badge'
 import Tag from '@codegouvfr/react-dsfr/Tag'
 import {Speed} from '@mui/icons-material'
 import {
-  Alert,
   Box,
   Typography,
   Table,

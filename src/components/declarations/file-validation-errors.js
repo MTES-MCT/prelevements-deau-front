@@ -3,6 +3,7 @@
 import {useState} from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import Tag from '@codegouvfr/react-dsfr/Tag'
 import {Add} from '@mui/icons-material'
 import {
@@ -11,8 +12,7 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Typography,
-  Alert
+  Typography
 } from '@mui/material'
 import {Box} from '@mui/system'
 

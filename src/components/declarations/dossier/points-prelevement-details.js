@@ -1,4 +1,5 @@
-import {Alert, Skeleton} from '@mui/material'
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
+import {Skeleton} from '@mui/material'
 import {Box} from '@mui/system'
 
 import PointsPrelevementsMap from '@/components/map/points-prelevements-map.js'
