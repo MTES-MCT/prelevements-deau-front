@@ -1,3 +1,5 @@
+import {notFound} from 'next/navigation'
+
 import {getDossier, getFile} from '@/app/api/dossiers.js'
 import {getPreleveur} from '@/app/api/points-prelevement.js'
 import DossierHeader from '@/components/declarations/dossier/dossier-header.js'
@@ -10,6 +12,9 @@ const DossierPage = async ({params}) => {
   const {dossierId} = await params
 
   const dossier = await getDossier(dossierId)
+  if (dossier.ok === false) {
+    notFound()
+  }
 
   let files = null
   if (dossier.files && dossier.files.length > 0) {

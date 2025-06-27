@@ -1,3 +1,5 @@
+import {notFound} from 'next/navigation'
+
 import {getExploitationsByPointId, getPointPrelevement} from '@/app/api/points-prelevement.js'
 import PointExploitations from '@/components/prelevements/point-exploitations.js'
 import PointIdentification from '@/components/prelevements/point-identification.js'
@@ -8,6 +10,10 @@ const Page = async ({params}) => {
   const {id} = (await params)
 
   const pointPrelevement = await getPointPrelevement(id)
+  if (pointPrelevement.ok === false) {
+    notFound()
+  }
+
   const exploitations = await getExploitationsByPointId(id)
 
   return (
