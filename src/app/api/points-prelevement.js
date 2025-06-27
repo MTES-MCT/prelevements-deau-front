@@ -35,14 +35,14 @@ export async function getPointsFromPreleveur(idPreleveur) {
 export async function createExploitation(payload) {
   return executeRequest(
     'api/exploitations',
-    {method: 'POST', body: JSON.stringify(payload)}
+    {method: 'POST', body: payload}
   )
 }
 
 export async function updateExploitation(idExploitation, payload) {
   return executeRequest(
     `api/exploitations/${idExploitation}`,
-    {method: 'PUT', body: JSON.stringify(payload)}
+    {method: 'PUT', body: payload}
   )
 }
 
