@@ -6,10 +6,12 @@ import Image from 'next/image'
 import {useRouter} from 'next/navigation'
 
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
+import {parseHttpError} from '@/lib/http-error.js'
 
 const Error = ({error}) => {
   const router = useRouter()
-  const statusCode = error?.statusCode || 500
+
+  const {statusCode, message} = parseHttpError(error)
 
   return (
     <>
@@ -26,14 +28,14 @@ const Error = ({error}) => {
         <Box className='fr-container w-full flex flex-col gap-5'>
           <Box className='fr-container w-full flex flex-col gap-2'>
             <Typography variant='h3' className='fr-mt-3w'>
-              Erreur inattendue
+              {message}
             </Typography>
             <p> Erreur {statusCode}</p>
           </Box>
 
           <Box className='fr-container w-full flex flex-col gap-2'>
             <Typography variant='h6'>
-              Désolé, le service rencontre un problème. Nous travaillons pour le résoudre le plus rapidement possible.
+              Désolé, le service rencontre un problème&nbsp;: {message}. Nous travaillons pour le résoudre le plus rapidement possible.
             </Typography>
             <p className='fr-text--sm fr-mb-5w'>
               Essayez de rafraîchir la page ou bien ressayez plus tard.
