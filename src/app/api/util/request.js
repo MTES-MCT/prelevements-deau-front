@@ -1,8 +1,7 @@
-import {redirect} from 'next/navigation'
+import {notFound, redirect} from 'next/navigation'
 import {getServerSession} from 'next-auth'
 import {getSession, signOut} from 'next-auth/react'
 
-import {createHttpError} from '@/lib/http-error.js'
 import {authOptions} from '@/server/auth.js'
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL
@@ -64,22 +63,9 @@ export async function executeRequest(urlOrOptions, moreOptions) {
       redirect('/login')
     }
 
-    // Build a rich error payload so that the client error boundary can
-    // understand what happened.  We serialise the payload into the Error
-    // message because Next.js only forwards `message` and `digest`.
-    let json
-    if (response.headers.get('Content-Type')?.startsWith('application/json')) {
-      try {
-        json = await response.json()
-      } catch {} // ignore JSON parse errors
+    if (response.status === 404) {
+      return notFound()
     }
-
-    throw createHttpError({
-      status: response.status,
-      code: json?.code ?? response.status,
-      message: json?.message ?? response.statusText,
-      details: json?.details
-    })
   }
 
   if (response.headers.get('Content-Type')?.startsWith('application/json')) {
