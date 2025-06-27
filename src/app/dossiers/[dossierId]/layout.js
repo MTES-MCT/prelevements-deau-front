@@ -7,7 +7,7 @@ import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 const DossierPage = async ({params, children}) => {
   const {dossierId} = await params
   const dossier = await getDossier(dossierId)
-  if (dossier.ok === false) {
+  if (!dossier) {
     notFound()
   }
 

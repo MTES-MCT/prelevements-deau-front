@@ -13,7 +13,7 @@ const Page = async ({params}) => {
   const {id} = await params
 
   const preleveur = await getPreleveur(id)
-  if (preleveur.ok === false) {
+  if (!preleveur) {
     notFound()
   }
 

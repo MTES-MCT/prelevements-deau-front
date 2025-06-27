@@ -62,9 +62,5 @@ export async function executeRequest(urlOrOptions, moreOptions) {
     redirect('/login')
   }
 
-  if (response.ok && response.headers.get('Content-Type')?.startsWith('application/json')) {
-    return response.json()
-  }
-
   return response
 }

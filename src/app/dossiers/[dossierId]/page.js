@@ -12,7 +12,7 @@ const DossierPage = async ({params}) => {
   const {dossierId} = await params
 
   const dossier = await getDossier(dossierId)
-  if (dossier.ok === false) {
+  if (!dossier) {
     notFound()
   }
 

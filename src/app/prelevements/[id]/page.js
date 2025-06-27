@@ -10,7 +10,7 @@ const Page = async ({params}) => {
   const {id} = (await params)
 
   const pointPrelevement = await getPointPrelevement(id)
-  if (pointPrelevement.ok === false) {
+  if (!pointPrelevement) {
     notFound()
   }
 
