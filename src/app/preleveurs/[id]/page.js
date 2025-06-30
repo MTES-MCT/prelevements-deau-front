@@ -1,3 +1,4 @@
+import {Button} from '@codegouvfr/react-dsfr/Button'
 import {
   Alert, Box, Chip, Typography
 } from '@mui/material'
@@ -25,7 +26,20 @@ const Page = async ({params}) => {
 
       <Box className='fr-container h-full w-full flex flex-col gap-5 mb-5'>
         <Typography variant='h4' className='fr-mt-3w'>
-          {preleveur.civilite} {preleveur.nom} {preleveur.prenom} {preleveur.sigle} {preleveur.raison_sociale}
+          <div className='flex justify-between pb-2'>
+            {preleveur.civilite} {preleveur.nom} {preleveur.prenom} {preleveur.sigle} {preleveur.raison_sociale}
+            <div>
+              <Button
+                priority='secondary'
+                iconId='fr-icon-edit-line'
+                linkProps={{
+                  href: `/preleveurs/${preleveur.id_preleveur}/edit`
+                }}
+              >
+                Éditer
+              </Button>
+            </div>
+          </div>
           {preleveur.exploitations && preleveur.exploitations.length > 0 ? (
             <p className='italic'>
               {`${preleveur.exploitations.length} ${
