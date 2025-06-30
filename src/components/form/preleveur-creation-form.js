@@ -91,7 +91,7 @@ const PreleveurCreationForm = () => {
       />
       {isPreleveurPhysique ? (
         <PreleveurPhysiqueForm
-          prelveur={preleveur}
+          preleveur={preleveur}
           setPreleveur={setPreleveur}
         />
       ) : (
