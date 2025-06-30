@@ -33,7 +33,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
           label='Code SIREN'
           nativeInputProps={{
             placeholder: 'Entrer le code SIREN',
-            value: preleveur?.code_siren || '',
+            defaultValue: preleveur?.code_siren || '',
             onChange: e => setPreleveur(prev => ({...prev, code_siren: e.target.value}))
           }}
         />
@@ -43,7 +43,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
         hintText='Nom officiel de l’entreprise'
         nativeInputProps={{
           placeholder: 'Entrer la raison sociale',
-          value: preleveur?.raison_sociale || '',
+          defaultValue: preleveur?.raison_sociale || '',
           onChange: e => setPreleveur(prev => ({...prev, raison_sociale: e.target.value}))
         }}
       />
@@ -52,7 +52,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
           label='Nom du contact'
           nativeInputProps={{
             placeholder: 'Entrer le nom',
-            value: preleveur?.nom || '',
+            defaultValue: preleveur?.nom || '',
             onChange: e => setPreleveur(prev => ({...prev, nom: e.target.value}))
           }}
         />
@@ -60,7 +60,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
           label='Prénom du contact'
           nativeInputProps={{
             placeholder: 'Entrer le prénom',
-            value: preleveur?.prenom || '',
+            defaultValue: preleveur?.prenom || '',
             onChange: e => setPreleveur(prev => ({...prev, prenom: e.target.value}))
           }}
         />
@@ -69,7 +69,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
         label='Adresse email du contact'
         nativeInputProps={{
           placeholder: 'Entrer l’adresse email de contact',
-          value: preleveur?.email || '',
+          defaultValue: preleveur?.email || '',
           onChange: e => setPreleveur(prev => ({...prev, email: e.target.value}))
         }}
       />

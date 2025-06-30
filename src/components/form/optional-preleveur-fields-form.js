@@ -9,7 +9,7 @@ const OptionalPreleveurFieldsForm = ({preleveur, setPreleveur}) => (
       nativeInputProps={{
         type: 'tel',
         placeholder: 'Entrer le numéro de téléphone de contact',
-        value: preleveur?.numero_telephone || '',
+        defaultValue: preleveur?.numero_telephone || '',
         onChange: e => setPreleveur(prev => ({...prev, numero_telephone: e.target.value}))
       }}
     />
@@ -18,7 +18,7 @@ const OptionalPreleveurFieldsForm = ({preleveur, setPreleveur}) => (
       label='Adresse ligne 1'
       nativeInputProps={{
         placeholder: 'Entrer l’adresse',
-        value: preleveur?.adresse_1 || '',
+        defaultValue: preleveur?.adresse_1 || '',
         onChange: e => setPreleveur(prev => ({...prev, adresse_1: e.target.value}))
       }}
     />
@@ -27,7 +27,7 @@ const OptionalPreleveurFieldsForm = ({preleveur, setPreleveur}) => (
       label='Adresse ligne 2'
       nativeInputProps={{
         placeholder: 'Entrer le complément d’adresse',
-        value: preleveur?.adresse_2 || '',
+        defaultValue: preleveur?.adresse_2 || '',
         onChange: e => setPreleveur(prev => ({...prev, adresse_2: e.target.value}))
       }}
     />
@@ -37,7 +37,7 @@ const OptionalPreleveurFieldsForm = ({preleveur, setPreleveur}) => (
         nativeInputProps={{
           type: 'number',
           placeholder: 'Entrer le numéro de boite postale',
-          value: preleveur?.bp || '',
+          defaultValue: preleveur?.bp || '',
           onChange: e => setPreleveur(prev => ({...prev, bp: e.target.value}))
         }}
       />
@@ -45,7 +45,7 @@ const OptionalPreleveurFieldsForm = ({preleveur, setPreleveur}) => (
         label='Code postal'
         nativeInputProps={{
           placeholder: 'Entrer le code postal',
-          value: preleveur?.code_postal || '',
+          defaultValue: preleveur?.code_postal || '',
           onChange: e => setPreleveur(prev => ({...prev, code_postal: e.target.value}))
         }}
       />
@@ -53,7 +53,7 @@ const OptionalPreleveurFieldsForm = ({preleveur, setPreleveur}) => (
         label='Commune'
         nativeInputProps={{
           placeholder: 'Entrer la commune',
-          value: preleveur?.commune || '',
+          defaultValue: preleveur?.commune || '',
           onChange: e => setPreleveur(prev => ({...prev, commune: e.target.value}))
         }}
       />
