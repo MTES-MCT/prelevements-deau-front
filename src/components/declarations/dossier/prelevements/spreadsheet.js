@@ -73,9 +73,15 @@ const Spreadsheet = ({moisDeclaration, file, downloadFile}) => {
             </Divider>
 
             {hasDatesOutsideDeclMonth && (
-              <Alert severity='warning' sx={{mb: 2}}>
-                Certaines dates de prélèvement ne sont pas situées dans le mois déclaré : {new Intl.DateTimeFormat('fr-FR', {month: 'long', year: 'numeric'}).format(new Date(moisDeclaration))}
-              </Alert>
+              <Alert
+                severity='warning'
+                className='mb-2'
+                description={
+                  <>
+                    Certaines dates de prélèvement ne sont pas situées dans le mois déclaré : {new Intl.DateTimeFormat('fr-FR', {month: 'long', year: 'numeric'}).format(new Date(moisDeclaration))}
+                  </>
+                }
+              />
             )}
 
             <PrelevementsCalendar data={file.result.data} />

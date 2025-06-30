@@ -44,11 +44,7 @@ const PreleveurDetails = ({preleveur}) => (
     </Box>
 
     {!preleveur.id_preleveur && (
-      <Alert
-        severity='warning'
-      >
-        Ce préleveur n’a pas pu être identifié.
-      </Alert>
+      <Alert severity='warning' description='Ce préleveur n’a pas pu être identifié.' />
     )}
   </SectionCard>
 )

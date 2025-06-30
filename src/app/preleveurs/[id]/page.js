@@ -25,7 +25,7 @@ const Page = async ({params}) => {
             {preleveur.exploitations && preleveur.exploitations.length > 0 ? (
               `${preleveur.exploitations.length} ${preleveur.exploitations.length === 1 ? 'exploitation' : 'exploitations'}`
             ) : (
-              <Alert severity='info'>Aucune exploitation</Alert>
+              <Alert severity='info' description='Aucune exploitation' />
             )}
           </p>
         </Typography>
@@ -45,7 +45,7 @@ const Page = async ({params}) => {
                 />
               ))
             ) : (
-              <Alert severity='info'>Aucun usage</Alert>
+              <Alert severity='info' description='Aucun usage' />
             )}
           </LabelValue>
         </div>
@@ -59,9 +59,11 @@ const Page = async ({params}) => {
               </div>
             ))
           ) : (
-            <Alert severity='info' className='mt-4'>
-              Aucun point de prélevement
-            </Alert>
+            <Alert
+              severity='info'
+              className='mt-4'
+              description='Aucun point de prélevement'
+            />
           )}
         </div>
       </Box>
