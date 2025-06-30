@@ -9,8 +9,8 @@ import {legendColors} from '@/components/map/legend-colors.js'
 const Point = ({point, index, onSelect}) => {
   // Fonction utilitaire pour récupérer la couleur associée à un usage
   const getUsageColor = usage => {
-    const usageItem = legendColors.usages.find(u => u.text === usage)
-    return usageItem ? usageItem.color : undefined
+    const {color: background, textColor} = legendColors.usages.find(u => u.text === usage) || {}
+    return {background, textColor}
   }
 
   // Fonction utilitaire pour récupérer la couleur associée au type de milieu
@@ -49,8 +49,8 @@ const Point = ({point, index, onSelect}) => {
             key={`${point.id_point}-${usage}`}
             label={usage}
             sx={{
-              backgroundColor: getUsageColor(usage),
-              color: 'white'
+              backgroundColor: getUsageColor(usage).background,
+              color: getUsageColor(usage).textColor
             }}
           />
         ))}
