@@ -26,18 +26,20 @@ const Page = async ({params}) => {
       <Box className='fr-container h-full w-full flex flex-col gap-5 mb-5'>
         <Typography variant='h4' className='fr-mt-3w'>
           {preleveur.civilite} {preleveur.nom} {preleveur.prenom} {preleveur.sigle} {preleveur.raison_sociale}
-          <p className='italic'>
-            {preleveur.exploitations && preleveur.exploitations.length > 0 ? (
-              `${preleveur.exploitations.length} ${preleveur.exploitations.length === 1 ? 'exploitation' : 'exploitations'}`
-            ) : (
-              <Alert severity='info'>Aucune exploitation</Alert>
-            )}
-          </p>
+          {preleveur.exploitations && preleveur.exploitations.length > 0 ? (
+            <p className='italic'>
+              {`${preleveur.exploitations.length} ${
+                preleveur.exploitations.length === 1
+                  ? 'exploitation'
+                  : 'exploitations'}`}
+            </p>
+          ) : (
+            <Alert severity='info'>Aucune exploitation</Alert>
+          )}
         </Typography>
         <div className='italic'>
           <LabelValue label='Usages'>
             {preleveur.usages && preleveur.usages.length > 0 ? (
-
               preleveur.usages.map(u => (
                 <Chip
                   key={`${u}`}
