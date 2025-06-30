@@ -3,11 +3,10 @@
 import {useState} from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
+import Button from '@codegouvfr/react-dsfr/Button'
 import Tag from '@codegouvfr/react-dsfr/Tag'
-import {Add} from '@mui/icons-material'
 import {
   List,
-  Button,
   Accordion,
   AccordionSummary,
   AccordionDetails,
@@ -34,14 +33,15 @@ function extractUniqueCellules(input) {
   return uniques
 }
 
-const ErrorToggleButton = ({onClick}) => (
+const ErrorToggleButton = ({onClick, isAtMax}) => (
   <Button
-    className='self-end m-4'
-    variant='contained'
-    endIcon={<Add />}
+    priority='tertiary'
+    className='self-end mt-4'
+    iconId={isAtMax ? 'fr-icon-subtract-line' : 'fr-icon-add-line'}
+    iconPosition='right'
     onClick={onClick}
   >
-    Voir plus
+    {isAtMax ? 'Voir moins' : 'Voir plus'}
   </Button>
 )
 
@@ -61,7 +61,19 @@ const FileValidationErrors = ({errors: errorList}) => {
     const color = isError
       ? fr.colors.decisions.text.default.error.default
       : fr.colors.decisions.text.default.warning.default
+
+    const initialLimit = 10
+    const isAtMax = isError && limit >= items.length
     const displayItems = isError ? items.slice(0, limit) : items
+
+    const handleToggle = () => {
+      if (isAtMax) {
+        setLimit(initialLimit)
+      } else {
+        setLimit(prev => Math.min(prev + 10, items.length))
+      }
+    }
+
     return (
       <div className={`flex flex-col ${isError ? '' : 'mt-4'}`}>
         {displayItems.map((item, idx) => {
@@ -111,8 +123,11 @@ const FileValidationErrors = ({errors: errorList}) => {
             </Accordion>
           )
         })}
-        {isError && items.length > limit && (
-          <ErrorToggleButton onClick={() => setLimit(limit + 10)} />
+        {isError && items.length > initialLimit && (
+          <ErrorToggleButton
+            isAtMax={isAtMax}
+            onClick={handleToggle}
+          />
         )}
       </div>
     )
