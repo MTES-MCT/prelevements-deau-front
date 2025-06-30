@@ -61,6 +61,24 @@ export async function createPreleveur(payload) {
   return response.json()
 }
 
+export async function updatePreleveur(idPreleveur, payload) {
+  const response = await executeRequest(
+    `api/preleveurs/${idPreleveur}`,
+    {method: 'PUT', body: payload}
+  )
+
+  return response.json()
+}
+
+export async function deletePreleveur(idPreleveur) {
+  const response = await executeRequest(
+    `api/preleveurs/${idPreleveur}`,
+    {method: 'DELETE'}
+  )
+
+  return response.json()
+}
+
 export async function createExploitation(payload) {
   const response = await executeRequest(
     'api/exploitations',
