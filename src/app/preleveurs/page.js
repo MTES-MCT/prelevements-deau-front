@@ -1,3 +1,4 @@
+import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Box, Typography} from '@mui/material'
 import {orderBy} from 'lodash-es'
 
@@ -14,7 +15,21 @@ const Page = async () => {
       <StartDsfrOnHydration />
 
       <Box className='flex flex-col fr-container h-full w-full'>
-        <Typography variant='h4' className='fr-pt-3w'>Liste des préleveurs :</Typography>
+        <div className='flex justify-between items-end'>
+          <Typography variant='h4' className='fr-pt-3w'>Liste des préleveurs :</Typography>
+          <div>
+            <Button
+              priority='secondary'
+              iconId='fr-icon-add-line'
+              size='small'
+              linkProps={{
+                href: '/preleveurs/new'
+              }}
+            >
+              Ajouter un nouveau préleveur
+            </Button>
+          </div>
+        </div>
         <PreleveursList preleveurs={orderedPreleveurs} />
       </Box>
     </>
