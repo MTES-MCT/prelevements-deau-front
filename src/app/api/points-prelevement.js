@@ -52,6 +52,15 @@ export async function getPointsFromPreleveur(idPreleveur) {
   return response.json()
 }
 
+export async function createPreleveur(payload) {
+  const response = await executeRequest(
+    'api/preleveurs',
+    {method: 'POST', body: payload}
+  )
+
+  return response.json()
+}
+
 export async function createExploitation(payload) {
   const response = await executeRequest(
     'api/exploitations',
