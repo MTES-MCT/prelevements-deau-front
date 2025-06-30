@@ -7,6 +7,10 @@ export async function getPointsPrelevement() {
 
 export async function getPointPrelevement(id) {
   const response = await executeRequest(`api/points-prelevement/${id}`)
+  if (response.ok === false) {
+    return null
+  }
+
   return response.json()
 }
 
@@ -26,61 +30,56 @@ export async function deletePointPrelevement(id) {
 }
 
 export async function getPreleveur(id) {
-  try {
-    const response = await executeRequest(`api/preleveurs/${id}`)
-    return response.json()
-  } catch {
+  const response = await executeRequest(`api/preleveurs/${id}`)
+  if (response.ok === false) {
     return null
   }
+
+  return response.json()
 }
 
 export async function getPreleveurs() {
-  try {
-    const response = await executeRequest('api/preleveurs')
-    return response.json()
-  } catch {
-    return null
-  }
+  const response = await executeRequest('api/preleveurs')
+  return response.json()
 }
 
 export async function getPointsFromPreleveur(idPreleveur) {
-  try {
-    const response = await executeRequest(`api/preleveurs/${idPreleveur}/points-prelevement`)
-    return response.json()
-  } catch {
+  const response = await executeRequest(`api/preleveurs/${idPreleveur}/points-prelevement`)
+  if (response.ok === false) {
     return null
   }
+
+  return response.json()
 }
 
 export async function createExploitation(payload) {
   const response = await executeRequest(
     'api/exploitations',
-    {method: 'POST', body: JSON.stringify(payload)}
+    {method: 'POST', body: payload}
   )
-
   return response.json()
 }
 
 export async function updateExploitation(idExploitation, payload) {
   const response = await executeRequest(
     `api/exploitations/${idExploitation}`,
-    {method: 'PUT', body: JSON.stringify(payload)}
+    {method: 'PUT', body: payload}
   )
-
   return response.json()
 }
 
 export async function getExploitation(exploitationId) {
   const response = await executeRequest(`api/exploitations/${exploitationId}`)
-  const exploitation = await response.json()
+  if (response.ok === false) {
+    return null
+  }
 
-  return exploitation
+  return response.json()
 }
 
 export async function getExploitationsByPointId(pointId) {
   const response = await executeRequest(`api/points-prelevement/${pointId}/exploitations`)
-  const exploitations = await response.json()
-  return exploitations
+  return response.json()
 }
 
 export async function deleteExploitation(exploitationId) {
@@ -88,47 +87,35 @@ export async function deleteExploitation(exploitationId) {
     `api/exploitations/${exploitationId}`,
     {method: 'DELETE'}
   )
-
   return response.json()
 }
 
 export async function getStats() {
   const response = await executeRequest('api/stats')
-  const stats = await response.json()
-
-  return stats
+  return response.json()
 }
 
 export async function getVolumesExploitation(exploitationId) {
   const response = await executeRequest(`api/exploitations/${exploitationId}/volumes-preleves`)
-  const volumes = await response.json()
-  return volumes
+  return response.json()
 }
 
 export async function getBnpe() {
   const response = await executeRequest('api/referentiels/bnpe')
-  const bnpe = await response.json()
-
-  return bnpe
+  return response.json()
 }
 
 export async function getMeso() {
   const response = await executeRequest('api/referentiels/meso')
-  const meso = await response.json()
-
-  return meso
+  return response.json()
 }
 
 export async function getMeContinentales() {
   const response = await executeRequest('api/referentiels/me-continentales-bv')
-  const meContinentales = await response.json()
-
-  return meContinentales
+  return response.json()
 }
 
 export async function getBvBdcarthage() {
   const response = await executeRequest('api/referentiels/bv-bdcarthage')
-  const bvBdCarthage = await response.json()
-
-  return bvBdCarthage
+  return response.json()
 }

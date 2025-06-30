@@ -1,3 +1,5 @@
+import {notFound} from 'next/navigation'
+
 import {
   getBnpe,
   getBvBdcarthage,
@@ -11,6 +13,10 @@ import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 const Page = async ({params}) => {
   const {id} = await params
   const pointPrelevement = await getPointPrelevement(id)
+  if (!pointPrelevement) {
+    notFound()
+  }
+
   const bnpeList = await getBnpe()
   const mesoList = await getMeso()
   const meContinentalesBvList = await getMeContinentales()

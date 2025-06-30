@@ -3,6 +3,7 @@ import {
   Box, Chip, Typography
 } from '@mui/material'
 import Link from 'next/link'
+import {notFound} from 'next/navigation'
 
 import {getPreleveur, getPointsFromPreleveur} from '@/app/api/points-prelevement.js'
 import {getUsagesColors} from '@/components/map/legend-colors.js'
@@ -11,7 +12,12 @@ import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 
 const Page = async ({params}) => {
   const {id} = await params
+
   const preleveur = await getPreleveur(id)
+  if (!preleveur) {
+    notFound()
+  }
+
   const points = await getPointsFromPreleveur(id)
 
   return (

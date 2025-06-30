@@ -8,7 +8,7 @@ import {
 import {Box} from '@mui/material'
 import {sumBy} from 'lodash'
 
-import {getDownloadableFile} from '@/app/api/dossiers.js'
+import {getFileBlob} from '@/app/api/dossiers.js'
 import {getPointPrelevement} from '@/app/api/points-prelevement.js'
 import DossierInfos from '@/components/declarations/dossier/infos.js'
 import MandataireDetails from '@/components/declarations/dossier/mandataire-details.js'
@@ -61,7 +61,7 @@ const DossierDetails = ({dossier, preleveur, files, idPoints}) => {
     const [hash, ...filenameParts] = storageKey.split('-')
     const filename = filenameParts.join('-')
     try {
-      const file = await getDownloadableFile(dossier._id, hash)
+      const file = await getFileBlob(dossier._id, hash)
       const url = URL.createObjectURL(file)
       const a = document.createElement('a')
       a.href = url

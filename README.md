@@ -1,30 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Prélèvements d'eau – Front
 
-## Getting Started
+Cette application est le front-end du projet de gestion des prélèvements d'eau. Elle est basée sur [Next.js](https://nextjs.org/) et utilise le Design System de l'État via `@codegouvfr/react-dsfr`.
 
-First, run the development server:
+## Prérequis
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Node.js** ≥ 22.11 et < 23
+- **Yarn** 4 (la version 4.6.0 est recommandée)
+
+## Installation
+
+1. Clonez ce dépôt.
+2. Installez les dépendances :
+   ```bash
+   yarn install
+   ```
+3. Créez un fichier `.env` à la racine en vous basant sur `.env.sample` puis renseignez les variables ci-dessous.
+
+## Variables d'environnement
+
+| Nom                           | Description                                                                             |
+| ----------------------------- | --------------------------------------------------------------------------------------- |
+| `NEXTAUTH_SECRET`             | Clé secrète utilisée par NextAuth pour signer les sessions.                          |
+| `NEXTAUTH_URL`                | URL publique de l'application (ex: `http://localhost:3000`).                            |
+| `NEXT_PUBLIC_API_URL`         | URL de base de l'API métier à laquelle l'application se connecte.                      |
+| `NEXT_PUBLIC_PROCEDURE_DS_ID` | Identifiant de la procédure Démarches Simplifiées pour générer les liens vers les dossiers. |
+
+Exemple de fichier `.env` :
+
+```env
+NEXTAUTH_SECRET=<mysecretkey>
+NEXTAUTH_URL=http://localhost:3000
+NEXT_PUBLIC_API_URL=http://localhost:4000
+NEXT_PUBLIC_PROCEDURE_DS_ID=12345
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Scripts disponibles
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+- `yarn dev` : met à jour les icônes DSFR puis lance le serveur de développement.
+- `yarn build` : génère la version de production.
+- `yarn start` : démarre l'application Next.js construite via `yarn build`.
+- `yarn update-icons` : force la mise à jour des icônes DSFR.
+- `yarn lint` : vérifie la qualité du code avec XO.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Démarrer en développement
 
+```bash
+yarn dev
+```
 
-## Authentication
+L'application sera alors disponible sur [http://localhost:3000](http://localhost:3000).
 
-1. **Login with token** – On `/login`, the user enters a *token*.
-2. **Token → territoire** – The backend must already know this token and the territory it unlocks (configure the mapping in `server/auth.js` or your secrets store).
-3. **Session & headers** – After login, the token is saved in the session. The wrapper **`src/app/api/util/executeRequest.js`** injects `Authorization: Bearer <token>` into every API call.
+Pour générer un build de production :
 
-> This token mechanism is **temporary**; it will be replaced by classic credentials + FranceConnect.
+```bash
+yarn build
+yarn start
+```
+

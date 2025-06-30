@@ -7,22 +7,26 @@ export async function getDossiers() {
 
 export async function getDossier(_id) {
   const response = await executeRequest(`api/dossiers/${_id}`)
+  if (response.ok === false) {
+    return null
+  }
+
   return response.json()
 }
 
 export async function getFile(dossierId, storageHash) {
   const response = await executeRequest(`api/dossiers/${dossierId}/files/${storageHash}`)
-  if (!response.ok) {
-    throw new Error('Failed to fetch file')
+  if (response.ok === false) {
+    return null
   }
 
-  return response.blob()
+  return response.json()
 }
 
-export async function getDownloadableFile(dossierId, storageHash) {
+export async function getFileBlob(dossierId, storageHash) {
   const response = await executeRequest(`api/dossiers/${dossierId}/files/${storageHash}/download`)
-  if (!response.ok) {
-    throw new Error('Failed to fetch file')
+  if (response.ok === false) {
+    return null
   }
 
   return response.blob()
@@ -39,10 +43,6 @@ export async function validateFile(buffer, fileType) {
       body: buffer
     }
   )
-
-  if (!response.ok) {
-    throw new Error('Failed to validate file')
-  }
 
   return response.json()
 }
