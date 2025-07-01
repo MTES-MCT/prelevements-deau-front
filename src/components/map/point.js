@@ -25,7 +25,7 @@ const Point = ({point, index, onSelect}) => (
       backgroundColor: index % 2 === 0 ? fr.colors.decisions.background.default.grey.default : fr.colors.decisions.background.alt.blueFrance.default,
       justifyContent: 'space-between',
       alignItems: 'flex-start',
-      py: 2,
+      gap: 2,
       cursor: 'pointer'
     }}
     onClick={() => onSelect(point.id_point)}
