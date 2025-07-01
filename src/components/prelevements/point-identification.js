@@ -4,8 +4,12 @@ import Launch from '@mui/icons-material/Launch'
 import {Box, Chip, Typography} from '@mui/material'
 import Link from 'next/link'
 
-const PointIdentification = ({pointPrelevement, lienBss, lienBnpe}) => {
-  const {id_point: idPoint, nom} = pointPrelevement
+import {legendColors} from '@/components/map/legend-colors.js'
+
+  const getTypeMilieuColor = typeMilieu => {
+    const typeItem = legendColors.typesMilieu.find(t => t.text === typeMilieu)
+    return typeItem ? typeItem.color : undefined
+  }
 
   return (
     <Box sx={{p: 3}}>
@@ -33,7 +37,14 @@ const PointIdentification = ({pointPrelevement, lienBss, lienBnpe}) => {
       </div>
       {pointPrelevement.type_milieu && (
         <Box sx={{py: 2}}>
-          <b>Type de milieu :</b> <Chip size='small' label={pointPrelevement.type_milieu} />
+          <b>Type de milieu :</b>
+          <Chip
+            size='small'
+            label={pointPrelevement.type_milieu}
+            sx={{
+              backgroundColor: getTypeMilieuColor(pointPrelevement.type_milieu)
+            }}
+          />
         </Box>
       )}
       {lienBss && (
