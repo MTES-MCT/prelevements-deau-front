@@ -6,10 +6,13 @@ import Link from 'next/link'
 
 import {legendColors} from '@/components/map/legend-colors.js'
 
-  const getTypeMilieuColor = typeMilieu => {
-    const typeItem = legendColors.typesMilieu.find(t => t.text === typeMilieu)
-    return typeItem ? typeItem.color : undefined
-  }
+const getTypeMilieuColor = typeMilieu => {
+  const typeItem = legendColors.typesMilieu.find(t => t.text === typeMilieu)
+  return typeItem ? typeItem.color : undefined
+}
+
+const PointIdentification = ({pointPrelevement, lienBss, lienBnpe}) => {
+  const {id_point: idPoint, nom} = pointPrelevement
 
   return (
     <Box sx={{p: 3}}>
