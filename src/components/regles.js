@@ -1,128 +1,94 @@
 'use client'
 
-import {Box, Tooltip} from '@mui/material'
-import {DataGrid, GridToolbar} from '@mui/x-data-grid'
-import {frFR} from '@mui/x-data-grid/locales'
-
-import formatDate, {formatPeriodeDate} from '@/lib/format-date.js'
+import {fr} from '@codegouvfr/react-dsfr'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import WaterDropOutlinedIcon from '@mui/icons-material/WaterDropOutlined'
+import {
+  Box, Typography, Accordion, AccordionSummary,
+  AccordionDetails
+} from '@mui/material'
 
 const API_URL = process.env.NEXT_PUBLIC_STORAGE_URL
 
-const reglesColumns = [
-  {
-    field: 'parametre',
-    headerName: 'Paramètre',
-    width: 200
-  },
-  {
-    field: 'valeur',
-    headerName: 'Valeur',
-    width: 90,
-    renderCell(params) {
-      return (
-        params.row.valeur.toLocaleString('fr-FR')
-      )
-    }
-  },
-  {
-    field: 'unite',
-    headerName: 'Unité',
-    width: 80
-  },
-  {
-    field: 'contrainte',
-    headerName: 'Contrainte',
-    width: 100
-  },
-  {
-    field: 'debut_validite',
-    headerName: 'Début validité',
-    width: 110,
-    renderCell(params) {
-      return (
-        formatDate(params.row.debut_validite)
-      )
-    }
-  },
-  {
-    field: 'fin_validite',
-    headerName: 'Fin validité',
-    width: 110,
-    renderCell(params) {
-      return (
-        formatDate(params.row.fin_validite)
-      )
-    }
-  },
-  {
-    field: 'debut_periode',
-    headerName: 'Début période',
-    width: 120,
-    renderCell(params) {
-      return (
-        <Tooltip
-          arrow
-          title='Début de période d’application de la règle, lorsque celle-ci ne s’applique que sur une période de l’année'
-        >
-          {formatPeriodeDate(params.row.debut_periode)}
-        </Tooltip>
-      )
-    }
-  },
-  {
-    field: 'fin_periode',
-    headerName: 'Fin période',
-    width: 120,
-    renderCell(params) {
-      return (
-        <Tooltip
-          arrow
-          title='Fin de période d’application de la règle, lorsque celle-ci ne s’applique que sur une période de l’année'
-        >
-          {formatPeriodeDate(params.row.fin_periode)}
-        </Tooltip>
-      )
-    }
-  },
-  {
-    field: 'document',
-    headerName: 'Document',
-    width: 250,
-    renderCell(params) {
-      return params.row.document ? (
-        <a
-          href={`${API_URL}/document/${params.row.document.nom_fichier}`}
-          target='_blank'
-          rel='noreferrer'
-        >
-          {params.row.document.nature}
-        </a>
-      ) : ''
-    },
-    valueGetter: params => params ? `${API_URL}/document/${params.nom_fichier}` : ''
-  },
-  {field: 'remarque', headerName: 'Remarque', width: 400}
-]
+const InfoRow = ({label, value}) => (
+  <Box sx={{display: 'flex', justifyContent: 'space-between'}}>
+    <Typography fontWeight='light' className='fr-text--sm'>{label}</Typography>
+    <Typography fontWeight='medium' className='fr-text--sm'>{value || '-'}</Typography>
+  </Box>
+)
 
-const Regles = ({regles, documents}) => {
-  const reglesWithDocuments = regles.map(r => ({
-    ...r,
-    document: documents.find(d => d.id_document === r.id_document)
-  }))
-
-  return (
-    <Box sx={{p: 2}}>
-      <DataGrid
-        disableSelectionOnClick
-        hideFooterPagination
-        slots={{toolbar: GridToolbar}}
-        localeText={frFR.components.MuiDataGrid.defaultProps.localeText}
-        rows={reglesWithDocuments}
-        columns={reglesColumns}
-        getRowId={row => row.id_regle}
-      />
+const RegleHeader = ({parametre, valeur, unite, contrainte}) => (
+  <Box sx={{
+    display: 'flex',
+    flexDirection: 'column',
+    width: '100%',
+    gap: 2,
+    marginRight: 2
+  }}
+  >
+    <div className='flex items-end'>
+      <span style={{color: fr.colors.decisions.text.label.blueFrance.default}}>
+        <WaterDropOutlinedIcon />
+      </span>
+      <Typography fontWeight='bold'>{parametre}</Typography>
+    </div>
+    <Box sx={{display: 'flex', flexDirection: 'column', gap: 1}}>
+      <InfoRow label='Valeur' value={`${valeur} ${unite}`} />
+      <InfoRow label='Contrainte' value={contrainte} />
     </Box>
-  )
-}
+  </Box>
+)
+
+const Regles = ({regles, documents}) => (
+  <Box>
+    {regles.map(regle => {
+      const regleDocument = documents.find(d => d.id_document === regle.id_document)
+
+      return (
+        <Accordion key={regle.id_regle}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <RegleHeader
+              parametre={regle.parametre}
+              valeur={regle.valeur}
+              unite={regle.unite}
+              contrainte={regle.contrainte}
+            />
+          </AccordionSummary>
+          <AccordionDetails>
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 1,
+                borderTop: `solid 1px ${fr.colors.options.grey._950_100.default}`,
+                paddingTop: 1
+              }}
+            >
+              <InfoRow label='Début de validité' value={regle.debut_validite} />
+              <InfoRow label='Fin de validité' value={regle.fin_validite} />
+              <InfoRow label='Début période' value={regle.debut_periode} />
+              <InfoRow label='Fin période' value={regle.fin_periode} />
+              <InfoRow
+                label='Document'
+                value={
+                  regleDocument ? (
+                    <a
+                      href={`${API_URL}/document/${regleDocument.nom_fichier}`}
+                      target='_blank'
+                      rel='noreferrer'
+                    >
+                      {regleDocument.nature}
+                    </a>
+                  ) : '-'
+                }
+              />
+              <InfoRow label='Commentaire' value={regle.remarque} />
+            </Box>
+          </AccordionDetails>
+        </Accordion>
+      )
+    })}
+  </Box>
+)
 
 export default Regles
