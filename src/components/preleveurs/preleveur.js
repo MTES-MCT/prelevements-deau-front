@@ -4,22 +4,18 @@ import {
   Chip,
   Typography
 } from '@mui/material'
-import {useRouter} from 'next/navigation'
+import Link from 'next/link'
 
 import {getUsagesColors} from '@/components/map/legend-colors.js'
 
-const Preleveur = ({preleveur, index}) => {
-  const router = useRouter()
-
-  return (
+const Preleveur = ({preleveur, index}) => (
+  <Link href={`preleveurs/${preleveur.id_preleveur}`}>
     <Box
       key={preleveur.id_preleveur}
       className='fr-p-2w flex justify-between items-top flex-wrap'
       sx={{
-        cursor: 'pointer',
         backgroundColor: index % 2 === 0 ? fr.colors.decisions.background.default.grey.default : fr.colors.decisions.background.alt.blueFrance.default
       }}
-      onClick={() => router.push(`preleveurs/${preleveur.id_preleveur}`)}
     >
       <div className='flex flex-col'>
         <div className='flex gap-2'>
@@ -53,7 +49,7 @@ const Preleveur = ({preleveur, index}) => {
         ))}
       </div>
     </Box>
-  )
-}
+  </Link>
+)
 
 export default Preleveur
