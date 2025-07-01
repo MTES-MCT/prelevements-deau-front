@@ -33,7 +33,7 @@ const Point = ({point, index, onSelect}) => (
     <Typography variant='body1' component='div'>
       {point.id_point} - {point.nom}
     </Typography>
-    <Box className='flex gap-1 flex-wrap'>
+    <Box className='flex gap-1 flex-wrap justify-end'>
       {point.typeMilieu && (
         <Chip
           label={point.typeMilieu}
