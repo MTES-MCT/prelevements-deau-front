@@ -4,12 +4,7 @@ import Launch from '@mui/icons-material/Launch'
 import {Box, Chip, Typography} from '@mui/material'
 import Link from 'next/link'
 
-import {legendColors} from '@/components/map/legend-colors.js'
-
-const getTypeMilieuColor = typeMilieu => {
-  const typeItem = legendColors.typesMilieu.find(t => t.text === typeMilieu)
-  return typeItem ? typeItem.color : undefined
-}
+import {getTypeMilieuColor} from '@/lib/get-colors.js'
 
 const PointIdentification = ({pointPrelevement, lienBss, lienBnpe}) => {
   const {id_point: idPoint, nom} = pointPrelevement
