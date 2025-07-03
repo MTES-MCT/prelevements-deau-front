@@ -19,7 +19,7 @@ import {
 import Badge from '@mui/material/Badge'
 import debounce from 'lodash-es/debounce'
 
-const MapFilters = ({filters, usagesOptions, typeMilieuOptions, onFilterChange, onClearFilters}) => {
+const MapFilters = ({filters, usagesOptions, typeMilieuOptions, statusOptions, onFilterChange, onClearFilters}) => {
   const [expanded, setExpanded] = useState(false)
   const [searchTerm, setSearchTerm] = useState(filters.name || '')
 
@@ -65,6 +65,23 @@ const MapFilters = ({filters, usagesOptions, typeMilieuOptions, onFilterChange, 
       </div>
       {expanded && (
         <Box className='flex flex-col gap-2'>
+          <FormControl size='small'>
+            <InputLabel id='filter-typeMilieu-label'>Statuts</InputLabel>
+            <Select
+              labelId='filter-typeMilieu-label'
+              label='Statuts'
+              value={filters.status}
+              onChange={e =>
+                onFilterChange({status: e.target.value})}
+            >
+              <MenuItem value=''>Tous</MenuItem>
+              {statusOptions.map(option => (
+                <MenuItem key={option} value={option}>
+                  {option}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
           <FormControl size='small'>
             <InputLabel id='filter-typeMilieu-label'>Type Milieu</InputLabel>
             <Select

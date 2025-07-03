@@ -1,4 +1,5 @@
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
+import {Button} from '@codegouvfr/react-dsfr/Button'
 import {
   Box, Chip, Typography
 } from '@mui/material'
@@ -26,19 +27,34 @@ const Page = async ({params}) => {
 
       <Box className='fr-container h-full w-full flex flex-col gap-5 mb-5'>
         <Typography variant='h4' className='fr-mt-3w'>
-          {preleveur.civilite} {preleveur.nom} {preleveur.prenom} {preleveur.sigle} {preleveur.raison_sociale}
-          <p className='italic'>
-            {preleveur.exploitations && preleveur.exploitations.length > 0 ? (
-              `${preleveur.exploitations.length} ${preleveur.exploitations.length === 1 ? 'exploitation' : 'exploitations'}`
-            ) : (
-              <Alert severity='info' description='Aucune exploitation' />
-            )}
-          </p>
+          <div className='flex justify-between pb-2'>
+            {preleveur.civilite} {preleveur.nom} {preleveur.prenom} {preleveur.sigle} {preleveur.raison_sociale}
+            <div>
+              <Button
+                priority='secondary'
+                iconId='fr-icon-edit-line'
+                linkProps={{
+                  href: `/preleveurs/${preleveur.id_preleveur}/edit`
+                }}
+              >
+                Éditer
+              </Button>
+            </div>
+          </div>
+          {preleveur.exploitations && preleveur.exploitations.length > 0 ? (
+            <p className='italic'>
+              {`${preleveur.exploitations.length} ${
+                preleveur.exploitations.length === 1
+                  ? 'exploitation'
+                  : 'exploitations'}`}
+            </p>
+          ) : (
+            <Alert severity='info' description='Aucune exploitation' />
+          )}
         </Typography>
         <div className='italic'>
           <LabelValue label='Usages'>
             {preleveur.usages && preleveur.usages.length > 0 ? (
-
               preleveur.usages.map(u => (
                 <Chip
                   key={`${u}`}

@@ -13,6 +13,17 @@ export function extractUsages(points) {
   return [...usagesSet]
 }
 
+export function extractStatus(points) {
+  const statusSet = new Set()
+  for (const point of points) {
+    if (point.exploitationsStatus) {
+      statusSet.add(point.exploitationsStatus)
+    }
+  }
+
+  return [...statusSet]
+}
+
 export function extractTypeMilieu(points) {
   const typeMilieuSet = new Set()
   for (const point of points) {

@@ -6,34 +6,7 @@ import {authOptions} from '@/server/auth.js'
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL
 
-export async function executeRequest(urlOrOptions, moreOptions) {
-  let url
-  let options
-
-  if (typeof urlOrOptions === 'string') {
-    url = urlOrOptions
-    options = moreOptions
-  } else {
-    url = urlOrOptions.url
-    options = urlOrOptions
-  }
-
-  const {method, body} = options || {}
-
-  const fetchOptions = {
-    method: method || 'GET',
-    headers: {}
-  }
-
-  if (body && body instanceof Blob) {
-    fetchOptions.headers['Content-Type'] = body.type || 'application/octet-stream'
-    fetchOptions.body = body
-  } else if (body) {
-    fetchOptions.headers['Content-Type'] = 'application/json'
-    fetchOptions.body = JSON.stringify(body)
-  }
-
-  // Inject Authorization header with the user's token
+export async function getAuthorization() {
   try {
     let authToken
     if (typeof window === 'undefined') {
@@ -45,10 +18,27 @@ export async function executeRequest(urlOrOptions, moreOptions) {
     }
 
     if (authToken) {
-      fetchOptions.headers.Authorization = `Token ${authToken}`
+      return `Token ${authToken}`
     }
   } catch (error) {
     console.error('Unable to retrieve auth token', error)
+  }
+}
+
+export async function executeRequest(url, options = {}) {
+  const {method, body, headers} = options
+
+  const fetchOptions = {
+    method: method || 'GET',
+    headers
+  }
+
+  if (body && body instanceof Blob) {
+    fetchOptions.headers['Content-Type'] = body.type || 'application/octet-stream'
+    fetchOptions.body = body
+  } else if (body) {
+    fetchOptions.headers['Content-Type'] = 'application/json'
+    fetchOptions.body = JSON.stringify(body)
   }
 
   const response = await fetch(`${API_URL}/${url}`, fetchOptions)

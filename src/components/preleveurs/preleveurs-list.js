@@ -2,19 +2,16 @@
 
 import {useEffect, useRef, useState} from 'react'
 
-import {fr} from '@codegouvfr/react-dsfr'
 import SearchIcon from '@mui/icons-material/Search'
 import {
   Box,
-  Chip,
   InputAdornment,
   TextField
 } from '@mui/material'
-import Link from 'next/link'
 
 import FlexSearch from '../../../node_modules/flexsearch/dist/flexsearch.bundle.module.min.js'
 
-import {getUsagesColors} from '@/components/map/legend-colors.js'
+import Preleveur from '@/components/preleveurs/preleveur.js'
 import {normalizeString} from '@/utils/string.js'
 
 const PreleveursList = ({preleveurs}) => {
@@ -102,32 +99,7 @@ const PreleveursList = ({preleveurs}) => {
         onChange={handleFilter}
       />
       {filteredPreleveurs.length > 0 && filteredPreleveurs.map((preleveur, index) => (
-        <Box
-          key={preleveur.id_preleveur}
-          className='fr-p-2w flex justify-between items-center flex-wrap'
-          sx={{
-            backgroundColor: index % 2 === 0 ? fr.colors.decisions.background.default.grey.default : fr.colors.decisions.background.alt.blueFrance.default
-          }}
-        >
-          <Link href={`preleveurs/${preleveur.id_preleveur}`}>
-            <span>{preleveur.id_preleveur} - </span>
-            <span>{preleveur.civilite} {preleveur.nom} {preleveur.prenom} {preleveur.sigle} {preleveur.raison_sociale}</span>
-          </Link>
-          <div className='fr-mt-1w'>
-            <b>Usages : </b>
-            {preleveur.usages && preleveur.usages.length > 0 && preleveur.usages.map(u => (
-              <Chip
-                key={`${u}`}
-                label={u}
-                sx={{
-                  ml: 1,
-                  backgroundColor: getUsagesColors(u)?.color,
-                  color: getUsagesColors(u)?.textColor
-                }}
-              />
-            ))}
-          </div>
-        </Box>
+        <Preleveur key={preleveur.id_preleveur} preleveur={preleveur} index={index} />
       ))}
       {filteredPreleveurs.length === 0 && (
         <Box className='p-3'>Aucun résultat</Box>

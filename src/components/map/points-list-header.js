@@ -3,7 +3,7 @@ import {Typography} from '@mui/material'
 
 import MapFilters from '@/components/map/map-filters.js'
 
-const PointsListHeader = ({filters, resultsCount, typeMilieuOptions, usagesOptions, onFilter, exportList}) => (
+const PointsListHeader = ({filters, resultsCount, typeMilieuOptions, usagesOptions, statusOptions, onFilter, exportList}) => (
   <div className='flex flex-col gap-2'>
     <Typography variant='h6'>Liste des points de prélèvement</Typography>
     <div className='inline-flex justify-end w-full'>
@@ -23,9 +23,15 @@ const PointsListHeader = ({filters, resultsCount, typeMilieuOptions, usagesOptio
       filters={filters}
       typeMilieuOptions={typeMilieuOptions}
       usagesOptions={usagesOptions}
+      statusOptions={statusOptions}
       onFilterChange={onFilter}
       onClearFilters={() =>
-        onFilter({name: '', typeMilieu: '', usages: []})}
+        onFilter({
+          name: '',
+          typeMilieu: '',
+          status: '',
+          usages: []
+        })}
     />
     {resultsCount !== null && (
       <Typography variant='body2' component='div'>

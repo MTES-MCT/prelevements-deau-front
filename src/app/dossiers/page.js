@@ -4,6 +4,8 @@ import {getDossiers} from '@/app/api/dossiers.js'
 import DossiersList from '@/components/declarations/dossiers-list.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 
+export const dynamic = 'force-dynamic'
+
 const Dossiers = async () => {
   const dossiers = await getDossiers()
 
