@@ -49,10 +49,9 @@ const LoginPage = ({searchParams}) => {
           }}
           segments={[]}
         />
-        <Box sx={{display: 'flex', flexDirection: 'column', gap: 4}}>
-          <Typography variant='h2' component='h1' sx={{textAlign: 'center', width: '100%'}}>Portail de suivi des prélèvements d’eau</Typography>
+        <Box sx={{display: 'flex', width: '100%', justifyContent: 'center'}}>
           <Box sx={{
-            padding: 4, width: 'fit-content', border: `solid 1px ${fr.colors.options.grey._925_125.default}`, alignSelf: 'center'
+            padding: 4, width: 'fit-content', border: `solid 1px ${fr.colors.options.grey._925_125.default}`
           }}
           >
             <Box sx={{
