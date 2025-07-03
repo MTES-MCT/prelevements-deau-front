@@ -14,6 +14,7 @@ const Pictogram = ({pictoName}) => (
       width={100}
       height={100}
       src={`/images/assets/pictograms/${pictoName}.svg`}
+      alt=''
     />
   </Box>
 )
