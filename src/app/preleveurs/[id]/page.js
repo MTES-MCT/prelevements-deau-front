@@ -1,14 +1,29 @@
+import {fr} from '@codegouvfr/react-dsfr'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {
-  Alert, Box, Chip, Typography
+  Box, Chip, List, Typography, ListItem
 } from '@mui/material'
-import Link from 'next/link'
 import {notFound} from 'next/navigation'
 
-import {getPreleveur, getPointsFromPreleveur} from '@/app/api/points-prelevement.js'
+import {getPreleveur} from '@/app/api/points-prelevement.js'
 import {getUsagesColors} from '@/components/map/legend-colors.js'
-import LabelValue from '@/components/ui/label-value.js'
+import ExploitationsSection from '@/components/preleveurs/exploitations-section.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
+
+const ContactItem = ({children, icon}) => (
+  <ListItem sx={{display: 'flex', alignItems: 'flex-end'}}>
+    <span
+      className={`mr-1 fr-icon-${icon} fr-text--sm m-0`}
+      aria-hidden='true'
+      style={{color: fr.colors.decisions.text.label.blueFrance.default}}
+    />
+    {children ? (
+      <div>{children}</div>
+    ) : (
+      <Typography fontWeight='light' fontStyle='italic' className='fr-text--sm'>Donné non communiquée</Typography>
+    )}
+  </ListItem>
+)
 
 const Page = async ({params}) => {
   const {id} = await params
@@ -18,41 +33,46 @@ const Page = async ({params}) => {
     notFound()
   }
 
-  const points = await getPointsFromPreleveur(id)
-
   return (
     <>
       <StartDsfrOnHydration />
 
-      <Box className='fr-container h-full w-full flex flex-col gap-5 mb-5'>
-        <Typography variant='h4' className='fr-mt-3w'>
-          <div className='flex justify-between pb-2'>
-            {preleveur.civilite} {preleveur.nom} {preleveur.prenom} {preleveur.sigle} {preleveur.raison_sociale}
-            <div>
-              <Button
-                priority='secondary'
-                iconId='fr-icon-edit-line'
-                linkProps={{
-                  href: `/preleveurs/${preleveur.id_preleveur}/edit`
-                }}
-              >
-                Éditer
-              </Button>
-            </div>
-          </div>
-          {preleveur.exploitations && preleveur.exploitations.length > 0 ? (
-            <p className='italic'>
-              {`${preleveur.exploitations.length} ${
-                preleveur.exploitations.length === 1
-                  ? 'exploitation'
-                  : 'exploitations'}`}
-            </p>
-          ) : (
-            <Alert severity='info'>Aucune exploitation</Alert>
-          )}
-        </Typography>
-        <div className='italic'>
-          <LabelValue label='Usages'>
+      <Box className='fr-container h-full w-full flex flex-col gap-5 mb-5 mt-5'>
+        <Box sx={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+        }}
+        >
+          <Box sx={{display: 'flex', gap: 1, alignItems: 'center'}}>
+            <span
+              className={`${preleveur.raison_sociale ? 'fr-icon-building-fill' : 'fr-icon-account-circle-fill'}`}
+              style={{color: fr.colors.decisions.text.label.blueFrance.default}}
+            />
+            <Typography variant='h5'>
+              {preleveur.civilite} {preleveur.nom} {preleveur.prenom} {preleveur.sigle} {preleveur.raison_sociale}
+            </Typography>
+          </Box>
+
+          <Button
+            priority='secondary'
+            iconId='fr-icon-edit-line'
+            linkProps={{
+              href: `/preleveurs/${preleveur.id_preleveur}/edit`
+            }}
+          >
+            Éditer
+          </Button>
+        </Box>
+        <Box sx={{
+          display: 'flex', gap: 1, justifyContent: 'space-between', background: fr.colors.options.grey._975_100.default, padding: 2
+        }}
+        >
+          <Box sx={{display: 'flex', gap: 1, alignItems: 'center'}}>
+            <Typography fontWeight='bold'>Nombre d’exploitations : </Typography>
+            <Typography fontWeight='light'>{`${preleveur.exploitations && preleveur.exploitations.length > 0 ? preleveur.exploitations.length : 'Aucune exploitation'}`}</Typography>
+          </Box>
+
+          <Box sx={{display: 'flex', gap: 1, alignItems: 'center'}}>
+            <Typography fontWeight='bold'>Usages : </Typography>
             {preleveur.usages && preleveur.usages.length > 0 ? (
               preleveur.usages.map(u => (
                 <Chip
@@ -66,25 +86,24 @@ const Page = async ({params}) => {
                 />
               ))
             ) : (
-              <Alert severity='info'>Aucun usage</Alert>
+              <Typography fontWeight='light'>Aucun usage</Typography>
             )}
-          </LabelValue>
-        </div>
-        <div><b>Points de prélevement : </b>
-          {points && points.length > 0 ? (
-            points.map(point => (
-              <div key={point.id_point}>
-                <Link href={`/prelevements/${point.id_point}`}>
-                  {point.id_point} - {point.nom}
-                </Link>
-              </div>
-            ))
-          ) : (
-            <Alert severity='info' className='mt-4'>
-              Aucun point de prélevement
-            </Alert>
-          )}
-        </div>
+          </Box>
+        </Box>
+
+        {(preleveur.mail || preleveur.numero_telephone || preleveur.adresse_1) && (
+          <List sx={{border: `1px solid ${fr.colors.decisions.border.default.grey.default}`, padding: 2}}>
+            <ContactItem icon='mail-line'>{preleveur.mail}</ContactItem>
+            <ContactItem icon='phone-line' >{preleveur.numero_telephone}</ContactItem>
+            <ContactItem icon='home-4-line'>
+              {preleveur.adresse_1 && (
+                <Typography className='fr-text--sm'>{`${preleveur.adresse_1}, ${preleveur.adresse_2}, ${preleveur.code_postal} ${preleveur.commune}`}</Typography>
+              )}
+            </ContactItem>
+          </List>
+        )}
+
+        <ExploitationsSection exploitations={preleveur.exploitations} />
       </Box>
     </>
   )
