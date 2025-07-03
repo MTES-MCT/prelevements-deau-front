@@ -38,7 +38,6 @@ const LoginPage = ({searchParams}) => {
     setIsLoading(false)
   }
 
-  console.log(fr.colors.options.grey)
   return (
     <>
       <StartDsfrOnHydration />
