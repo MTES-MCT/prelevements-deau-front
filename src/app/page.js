@@ -13,6 +13,12 @@ import {authOptions} from '@/server/auth.js'
 const Home = async () => {
   const {user} = await getServerSession(authOptions)
   const stats = await getStats(user.territoire)
+  const {
+    activPointsPrelevementCount,
+    activPointsSurfaceCount,
+    activPointsSouterrainCount,
+    activPreleveursCount
+  } = stats
 
   return (
     <>
@@ -60,7 +66,7 @@ const Home = async () => {
         <Box className='flex m-auto'>
           <Counter
             label='Nombre de point de prélèvement en activité : '
-            number={stats.activPointsPrelevementCount}
+            number={activPointsPrelevementCount}
           />
         </Box>
         <Box
@@ -74,8 +80,8 @@ const Home = async () => {
         >
           <Pie
             data={[
-              {id: 'surface', value: stats.activPointsSurfaceCount, label: 'Surface'},
-              {id: 'souterrain', value: stats.activPointsSouterrainCount, label: 'Souterrain'}
+              {id: 'surface', value: activPointsSurfaceCount, label: 'Surface'},
+              {id: 'souterrain', value: activPointsSouterrainCount, label: 'Souterrain'}
             ]}
           />
         </Box>
@@ -105,7 +111,7 @@ const Home = async () => {
         >
           <Counter
             label='Nombre de préleveurs actifs : '
-            number={stats.activPreleveursCount}
+            number={activPreleveursCount}
           />
           <Box>
             <Link href='/preleveurs' className='fr-btn fr-btn--secondary'>
