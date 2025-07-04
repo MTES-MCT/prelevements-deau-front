@@ -13,7 +13,7 @@ import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 const ContactItem = ({children, icon}) => (
   <ListItem sx={{display: 'flex', alignItems: 'flex-end'}}>
     <span
-      className={`mr-1 fr-icon-${icon} fr-text--sm m-0`}
+      className={`mr-1 ${icon} fr-text--sm m-0`}
       aria-hidden='true'
       style={{color: fr.colors.decisions.text.label.blueFrance.default}}
     />
@@ -91,13 +91,13 @@ const Page = async ({params}) => {
           </Box>
         </Box>
 
-        {(preleveur.mail || preleveur.numero_telephone || preleveur.adresse_1) && (
+        {(preleveur.email || preleveur.numero_telephone || preleveur.adresse_1) && (
           <List sx={{border: `1px solid ${fr.colors.decisions.border.default.grey.default}`, padding: 2}}>
-            <ContactItem icon='mail-line'>{preleveur.mail}</ContactItem>
-            <ContactItem icon='phone-line' >{preleveur.numero_telephone}</ContactItem>
-            <ContactItem icon='home-4-line'>
+            <ContactItem icon='ri-at-line'>{preleveur.email}</ContactItem>
+            <ContactItem icon='fr-icon-phone-line' >{preleveur.numero_telephone}</ContactItem>
+            <ContactItem icon='fr-icon-home-4-line'>
               {preleveur.adresse_1 && (
-                <Typography className='fr-text--sm'>{`${preleveur.adresse_1}, ${preleveur.adresse_2}, ${preleveur.code_postal} ${preleveur.commune}`}</Typography>
+                <Typography className='fr-text--sm'>{`${preleveur.adresse_1 || ''} ${preleveur.adresse_2 || ''} ${preleveur.code_postal || ''} ${preleveur.commune || ''}`}</Typography>
               )}
             </ContactItem>
           </List>
