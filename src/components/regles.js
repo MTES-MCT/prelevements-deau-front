@@ -1,12 +1,15 @@
 'use client'
 
 import {fr} from '@codegouvfr/react-dsfr'
+import {Button} from '@codegouvfr/react-dsfr/Button'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import WaterDropOutlinedIcon from '@mui/icons-material/WaterDropOutlined'
 import {
   Box, Typography, Accordion, AccordionSummary,
   AccordionDetails
 } from '@mui/material'
+
+import {downloadCsv} from '@/lib/export-csv.js'
 
 const API_URL = process.env.NEXT_PUBLIC_STORAGE_URL
 
@@ -41,6 +44,18 @@ const RegleHeader = ({parametre, valeur, unite, contrainte}) => (
 
 const Regles = ({regles, documents}) => (
   <Box>
+    <Box sx={{display: 'flex', justifyContent: 'end'}}>
+      <Button
+        priority='secondary'
+        iconId='fr-icon-download-line'
+        size='small'
+        className='mb-3'
+        onClick={() => downloadCsv(regles, 'regles.csv')}
+      >
+        Télécharger au format csv
+      </Button>
+    </Box>
+
     {regles.map(regle => {
       const regleDocument = documents.find(d => d.id_document === regle.id_document)
 
