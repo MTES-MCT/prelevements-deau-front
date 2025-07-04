@@ -150,8 +150,8 @@ export async function deleteExploitation(exploitationId) {
   return response.json()
 }
 
-export async function getStats() {
-  const response = await executeRequest('api/stats')
+export async function getStats(territoire) {
+  const response = await executeRequest(`api/stats/${territoire || ''}`)
   return response.json()
 }
 
