@@ -1,4 +1,6 @@
+import {fr} from '@codegouvfr/react-dsfr'
 import {Box, Typography} from '@mui/material'
+import {getServerSession} from 'next-auth'
 
 import {getStats} from '@/app/api/points-prelevement.js'
 import Counter from '@/components/counter.js'
@@ -7,11 +9,13 @@ import DebitsReservesChart from '@/components/prelevements/debits-reserves-chart
 import DocumentChart from '@/components/prelevements/documents-chart.js'
 import RegularisationsCharts from '@/components/prelevements/regularisations-chart.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
+import {authOptions} from '@/server/auth.js'
 
 const Page = async () => {
-  const stats = await getStats()
   const {activPointsPrelevementCount, pointsCount, documents, regularisations, debitsReserves} = stats
   const unactivPoints = pointsCount - activPointsPrelevementCount
+  const {user} = await getServerSession(authOptions)
+  const stats = await getStats(user.territoire)
 
   return (
     <>
