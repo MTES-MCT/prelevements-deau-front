@@ -2,14 +2,17 @@ import {fr} from '@codegouvfr/react-dsfr'
 import {Box, Typography} from '@mui/material'
 import Image from 'next/image'
 import Link from 'next/link'
+import {getServerSession} from 'next-auth'
 
 import {getStats} from '@/app/api/points-prelevement.js'
 import Counter from '@/components/counter.js'
 import Pie from '@/components/pie.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
+import {authOptions} from '@/server/auth.js'
 
 const Home = async () => {
-  const stats = await getStats()
+  const {user} = await getServerSession(authOptions)
+  const stats = await getStats(user.territoire)
 
   return (
     <>
