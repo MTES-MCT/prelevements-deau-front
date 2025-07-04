@@ -30,12 +30,15 @@ export const authOptions = {
     async jwt({token, user}) {
       if (user) {
         token.token = user.token
+        token.territoire = user.territoire
       }
 
       return token
     },
     async session({session, token}) {
       session.user.token = token.token
+      session.user.territoire = token.territoire
+
       return session
     }
   },
