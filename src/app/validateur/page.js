@@ -49,7 +49,9 @@ const ValidateurPage = () => {
         handleSubmit={submit}
       />
 
-      {fileErrors && <ValidateurResult file={file} errors={fileErrors} />}
+      {fileErrors && (
+        <ValidateurResult file={file} errors={fileErrors} />
+      )}
     </div>
   )
 }
