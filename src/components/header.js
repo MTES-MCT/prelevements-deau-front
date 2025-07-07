@@ -2,7 +2,6 @@
 
 import {useEffect, useState} from 'react'
 
-import {headerFooterDisplayItem} from '@codegouvfr/react-dsfr/Display'
 import {Header as DSFRHeader} from '@codegouvfr/react-dsfr/Header'
 import {usePathname} from 'next/navigation'
 import {getSession} from 'next-auth/react'
@@ -94,7 +93,6 @@ const HeaderComponent = () => {
         title: 'Accueil - Suivi des prélèvements d’eau'
       }}
       quickAccessItems={isLoadingUser ? [] : [
-        headerFooterDisplayItem,
         <LoginHeaderItem key='login' user={user} />
       ]}
       navigation={!isLoadingUser && user && (
