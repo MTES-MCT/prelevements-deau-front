@@ -5,11 +5,11 @@ import {useState} from 'react'
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Select} from '@codegouvfr/react-dsfr/Select'
 import {Upload} from '@codegouvfr/react-dsfr/Upload'
+import {validateMultiParamFile, validateCamionCiterneFile} from '@fabnum/prelevements-deau-timeseries-parsers'
 import {
   Button, Card, CardContent, CircularProgress, Typography, useEventCallback
 } from '@mui/material'
 
-import {validateFile} from '@/app/api/dossiers.js'
 import FileValidationErrors from '@/components/declarations/file-validation-errors.js'
 
 const FileValidateurForm = () => {
@@ -23,7 +23,8 @@ const FileValidateurForm = () => {
     setIsLoading(true)
     try {
       const buffer = await file.arrayBuffer()
-      const {errors} = await validateFile(buffer, fileType)
+      const validation = fileType === 'Données standardisées' ? validateMultiParamFile : validateCamionCiterneFile
+      const {errors} = await validation(buffer)
 
       setFileErrors(errors)
     } catch (error) {
@@ -44,19 +45,25 @@ const FileValidateurForm = () => {
     }
   }, [])
 
+  const handleFileTypeChange = useEventCallback(event => {
+    setFileType(event.target.value)
+    setFileErrors(null)
+    setInputError(null)
+  }, [])
+
   return (
     <div className='fr-container flex flex-col my-4 gap-6'>
       <div className='flex flex-col'>
         <Select
           label='Type de fichier'
           nativeSelectProps={{
-            onChange: event => setFileType(event.target.value),
+            onChange: handleFileTypeChange,
             value: fileType
           }}
         >
           <option disabled hidden value=''>Selectionnez un type de fichier</option>
-          <option value='Tableau de suivi'>Tableau de suivi</option>
           <option value='Données standardisées'>Données standardisées</option>
+          <option disabled value='Tableau de suivi'>Tableau de suivi</option>
         </Select>
 
         <Upload
