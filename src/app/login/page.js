@@ -1,7 +1,6 @@
 'use client'
 import React, {useState} from 'react'
 
-import {fr} from '@codegouvfr/react-dsfr'
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {PasswordInput} from '@codegouvfr/react-dsfr/blocks/PasswordInput'
 import {Button} from '@codegouvfr/react-dsfr/Button'
@@ -52,7 +51,7 @@ const LoginPage = ({searchParams}) => {
         />
         <Box sx={{display: 'flex', width: '100%', justifyContent: 'center'}}>
           <Box sx={{
-            padding: 4, width: 'fit-content', border: `solid 1px ${fr.colors.options.grey._925_125.default}`
+            padding: 4, width: 'fit-content', border: 'solid 1px var(--artwork-motif-grey)'
           }}
           >
             <Box sx={{
