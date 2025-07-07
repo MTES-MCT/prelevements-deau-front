@@ -10,6 +10,8 @@ import {
 import PointCreationForm from '@/components/form/point-creation-form.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 
+export const dynamic = 'force-dynamic'
+
 const Page = async () => {
   const bnpeList = await getBnpe()
   const mesoList = await getMeso()

@@ -1,8 +1,8 @@
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Badge} from '@codegouvfr/react-dsfr/Badge'
 import Tag from '@codegouvfr/react-dsfr/Tag'
 import {Speed} from '@mui/icons-material'
 import {
-  Alert,
   Box,
   Typography,
   Table,
@@ -39,15 +39,19 @@ const Compteur = ({compteur, relevesIndex, moisDeclaration}) => {
       </Box>
 
       {hasDatesOutsideDeclMonth && (
-        <Alert severity='warning' sx={{mb: 2}}>
-          Certaines dates de prélèvement ne sont pas situées dans le mois déclaré : {new Intl.DateTimeFormat('fr-FR', {month: 'long', year: 'numeric'}).format(new Date(moisDeclaration))}
-        </Alert>
+        <Alert
+          severity='warning'
+          className='mb-2'
+          description={
+            <>
+              Certaines dates de prélèvement ne sont pas situées dans le mois déclaré : {new Intl.DateTimeFormat('fr-FR', {month: 'long', year: 'numeric'}).format(new Date(moisDeclaration))}
+            </>
+          }
+        />
       )}
 
       {compteur.signalementPanneOuChangement && (
-        <Alert severity='info'>
-          Une panne ou un changement de compteur a été signalé sur ce compteur.
-        </Alert>
+        <Alert severity='info' description='Une panne ou un changement de compteur a été signalé sur ce compteur.' />
       )}
 
       {relevesIndex && relevesIndex.length > 0 ? (
@@ -72,9 +76,7 @@ const Compteur = ({compteur, relevesIndex, moisDeclaration}) => {
           </TableContainer>
         </Box>
       ) : (
-        <Alert severity='warning'>
-          Aucun relevé trouvé pour ce compteur.
-        </Alert>
+        <Alert severity='warning' description='Aucun relevé trouvé pour ce compteur.' />
       )}
     </>
   )

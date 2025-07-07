@@ -1,8 +1,11 @@
 'use client'
 
+import {useEffect, useState} from 'react'
+
 import {headerFooterDisplayItem} from '@codegouvfr/react-dsfr/Display'
 import {Header as DSFRHeader} from '@codegouvfr/react-dsfr/Header'
 import {usePathname} from 'next/navigation'
+import {getSession} from 'next-auth/react'
 
 import LoginHeaderItem from '@/components/ui/login-header-item.js'
 
@@ -54,8 +57,21 @@ const navigationItems = [
   }
 ]
 
-const HeaderComponent = ({user}) => {
+const HeaderComponent = () => {
+  const [user, setUser] = useState(null)
+  const [isLoadingUser, setIsLoadingUser] = useState(true)
+
   const pathname = usePathname()
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const session = await getSession()
+      setUser(session?.user)
+      setIsLoadingUser(false)
+    }
+
+    fetchUser()
+  }, [])
 
   const isActive = href => {
     if (href === '/') {
@@ -77,11 +93,11 @@ const HeaderComponent = ({user}) => {
         href: '/',
         title: 'Accueil - Suivi des prélèvements d’eau'
       }}
-      quickAccessItems={[
+      quickAccessItems={isLoadingUser ? [] : [
         headerFooterDisplayItem,
         <LoginHeaderItem key='login' user={user} />
       ]}
-      navigation={user && (
+      navigation={!isLoadingUser && user && (
         navigationItems.map(item => ({
           ...item,
           isActive: isActive(item.linkProps?.href || item.menuLinks[0].linkProps.href)

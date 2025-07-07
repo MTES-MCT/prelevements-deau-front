@@ -1,7 +1,8 @@
 import {useMemo} from 'react'
 
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {
-  Skeleton, Box, Alert
+  Skeleton, Box
 } from '@mui/material'
 
 import Compteur from './prelevements/compteur.js'
@@ -129,9 +130,7 @@ const PrelevementsDetails = ({
                 handleSelect={() => selectedPoint(poinPrelevementId)}
               >
                 {tableauSuiviPrelevements && (
-                  <Alert severity='info'>
-                    Ce type de dossier n’est pas encore pris en charge.
-                  </Alert>
+                  <Alert severity='info' description=' Ce type de dossier n’est pas encore pris en charge.' />
                 )}
 
                 <Spreadsheet
@@ -147,9 +146,7 @@ const PrelevementsDetails = ({
     }
 
     return (
-      <Alert severity='warning'>
-        Aucun prélèvement n&apos;a été renseigné.
-      </Alert>
+      <Alert severity='warning' description=' Aucun prélèvement n&apos;a été renseigné.' />
     )
   }, [
     volumePrelevementTotal,
@@ -169,11 +166,15 @@ const PrelevementsDetails = ({
   return (
     <SectionCard title='Prélèvements' icon='fr-icon-drop-line'>
       {volumePrelevementTotal !== null && (
-        <Alert severity='info'>
-          Volume total prélevé : <b>{formatNumber(volumePrelevementTotal)} m³</b>
-        </Alert>
+        <Alert
+          severity='info'
+          description={
+            <>
+              Volume total prélevé : <b>{formatNumber(volumePrelevementTotal)} m³</b>
+            </>
+          }
+        />
       )}
-
       {content}
     </SectionCard>
   )

@@ -1,6 +1,7 @@
 import {useEffect, useState} from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {CallOut} from '@codegouvfr/react-dsfr/CallOut'
 import LaunchIcon from '@mui/icons-material/Launch'
 import PersonIcon from '@mui/icons-material/Person'
@@ -10,9 +11,7 @@ import {
   List,
   ListItem,
   ListItemIcon,
-  ListItemText,
-  AlertTitle,
-  Alert
+  ListItemText
 } from '@mui/material'
 import Link from 'next/link.js'
 
@@ -64,10 +63,11 @@ const PointSidePanel = ({point}) => {
       )}
 
       {point.remarque && (
-        <Alert severity='info'>
-          <AlertTitle>Remarque</AlertTitle>
-          {point.remarque}
-        </Alert>
+        <Alert
+          description={point.remarque}
+          severity='info'
+          title='Remarque'
+        />
       )}
 
       <Box className='mt-2 p-2' sx={{

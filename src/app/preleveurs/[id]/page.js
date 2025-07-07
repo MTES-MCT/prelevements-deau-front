@@ -1,6 +1,7 @@
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {
-  Alert, Box, Chip, Typography
+  Box, Chip, Typography
 } from '@mui/material'
 import Link from 'next/link'
 import {notFound} from 'next/navigation'
@@ -48,7 +49,7 @@ const Page = async ({params}) => {
                   : 'exploitations'}`}
             </p>
           ) : (
-            <Alert severity='info'>Aucune exploitation</Alert>
+            <Alert severity='info' description='Aucune exploitation' />
           )}
         </Typography>
         <div className='italic'>
@@ -66,7 +67,7 @@ const Page = async ({params}) => {
                 />
               ))
             ) : (
-              <Alert severity='info'>Aucun usage</Alert>
+              <Alert severity='info' description='Aucun usage' />
             )}
           </LabelValue>
         </div>
@@ -80,9 +81,11 @@ const Page = async ({params}) => {
               </div>
             ))
           ) : (
-            <Alert severity='info' className='mt-4'>
-              Aucun point de prélevement
-            </Alert>
+            <Alert
+              severity='info'
+              className='mt-4'
+              description='Aucun point de prélevement'
+            />
           )}
         </div>
       </Box>

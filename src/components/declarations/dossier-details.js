@@ -47,7 +47,7 @@ const DossierDetails = ({dossier, preleveur, files, idPoints}) => {
   useEffect(() => {
     const fetchPointsPrelevement = async () => {
       const points = await Promise.all(idPoints.map(idPoint => getPointPrelevement(idPoint)))
-      setPointsPrelevement(points.filter(point => point._id)) // Filtre 404 not found
+      setPointsPrelevement(points.filter(Boolean)) // Filtre 404 not found
     }
 
     if (idPoints.length > 0) {

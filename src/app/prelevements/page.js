@@ -27,7 +27,7 @@ import PointsList from '@/components/map/points-list.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import useEvent from '@/hook/use-event.js'
 import {downloadCsv} from '@/lib/export-csv.js'
-import {extractTypeMilieu, extractUsages} from '@/lib/points-prelevement.js'
+import {extractStatus, extractTypeMilieu, extractUsages} from '@/lib/points-prelevement.js'
 
 const Page = () => {
   const theme = useTheme()
@@ -44,6 +44,7 @@ const Page = () => {
   const [filters, setFilters] = useState({
     name: '',
     typeMilieu: '',
+    status: '',
     usages: []
   })
   const [filteredPoints, setFilteredPoints] = useState([])
@@ -66,11 +67,12 @@ const Page = () => {
   }, [])
 
   // Calculer les options pour les filtres dès que les données sont disponibles
-  const {typeMilieuOptions, usagesOptions} = useMemo(() => {
+  const {typeMilieuOptions, usagesOptions, statusOptions} = useMemo(() => {
     const typeMilieuOptions = points ? extractTypeMilieu(points) : []
     const usagesOptions = points ? extractUsages(points) : []
+    const statusOptions = points ? extractStatus(points) : []
 
-    return {typeMilieuOptions, usagesOptions}
+    return {typeMilieuOptions, usagesOptions, statusOptions}
   }, [points])
 
   // Gestion de la sélection d'un point sur la carte
@@ -121,6 +123,10 @@ const Page = () => {
         matches &&= point.type_milieu === filters.typeMilieu
       }
 
+      if (filters.status) {
+        matches &&= point.exploitationsStatus === filters.status
+      }
+
       if (filters.usages && filters.usages.length > 0) {
         matches &&= filters.usages.some(usage => point.usages.includes(usage))
       }
@@ -162,6 +168,7 @@ const Page = () => {
               filters={filters}
               typeMilieuOptions={typeMilieuOptions}
               usagesOptions={usagesOptions}
+              statusOptions={statusOptions}
               exportList={exportPointsList}
               onFilter={handleFilter}
             />
