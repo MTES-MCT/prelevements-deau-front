@@ -1,23 +1,19 @@
-import {fr} from '@codegouvfr/react-dsfr'
-
-const {options, decisions} = fr.colors
-
-const defaultTextColor = decisions.text.default.grey
-const lightTextColor = options.grey._1000_100.default
+const defaultTextColor = 'var(--text-default-grey)'
+const lightTextColor = 'var(--text-inverted-grey)'
 
 export const legendColors = {
   usages: [
-    {text: 'Eau potable', color: options.blueCumulus.main526.default, textColor: lightTextColor},
-    {text: 'Agriculture', color: options.greenArchipel.main557.default, textColor: lightTextColor},
-    {text: 'Camion citerne', color: options.purpleGlycine.main494.default, textColor: lightTextColor},
-    {text: 'Eau embouteillée', color: options.purpleGlycine._850_200.default, textColor: defaultTextColor},
-    {text: 'Hydroélectricité', color: options.yellowMoutarde._850_200.default, textColor: defaultTextColor},
-    {text: 'Industrie', color: options.redMarianne._425_625.default, textColor: lightTextColor},
-    {text: 'Non renseigné', color: options.grey._900_175.default, textColor: defaultTextColor}
+    {text: 'Eau potable', color: 'var(--background-flat-blue-cumulus)', textColor: lightTextColor},
+    {text: 'Agriculture', color: 'var(--background-flat-green-archipel)', textColor: lightTextColor},
+    {text: 'Camion citerne', color: 'var(--artwork-major-green-archipel-hover)', textColor: lightTextColor},
+    {text: 'Eau embouteillée', color: 'var(--artwork-motif-purple-glycine)', textColor: defaultTextColor},
+    {text: 'Hydroélectricité', color: 'var(--background-contrast-yellow-moutarde-active)', textColor: defaultTextColor},
+    {text: 'Industrie', color: 'var(--artwork-major-red-marianne-active)', textColor: lightTextColor},
+    {text: 'Non renseigné', color: 'var(--artwork-motif-grey)', textColor: defaultTextColor}
   ],
   typesMilieu: [
-    {text: 'Eau de surface', color: options.blueFrance._850_200.default},
-    {text: 'Eau souterraine', color: options.greenMenthe._850_200.default}
+    {text: 'Eau de surface', color: 'var(--artwork-minor-blue-france)', textColor: lightTextColor},
+    {text: 'Eau souterraine', color: 'var(--artwork-minor-green-menthe)', textColor: lightTextColor}
   ]
 }
 
