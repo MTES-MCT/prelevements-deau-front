@@ -4,7 +4,7 @@ import {
   Box, ListItem, Chip, Typography
 } from '@mui/material'
 
-import {getUsageColor, getTypeMilieuColor} from '@/lib/get-colors.js'
+import {getUsageColor, getTypeMilieuColor} from '@/lib/points-prelevement.js'
 
 const Point = ({point, index, onSelect}) => (
   <ListItem

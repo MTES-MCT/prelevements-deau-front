@@ -4,7 +4,7 @@ import Launch from '@mui/icons-material/Launch'
 import {Box, Chip, Typography} from '@mui/material'
 import Link from 'next/link'
 
-import {getTypeMilieuColor} from '@/lib/get-colors.js'
+import {getTypeMilieuColor} from '@/lib/points-prelevement.js'
 
 const PointIdentification = ({pointPrelevement, lienBss, lienBnpe}) => {
   const {id_point: idPoint, nom} = pointPrelevement
@@ -40,7 +40,8 @@ const PointIdentification = ({pointPrelevement, lienBss, lienBnpe}) => {
             size='small'
             label={pointPrelevement.type_milieu}
             sx={{
-              backgroundColor: getTypeMilieuColor(pointPrelevement.type_milieu)
+              backgroundColor: getTypeMilieuColor(pointPrelevement.type_milieu).background,
+              color: getTypeMilieuColor(pointPrelevement.type_milieu).textColor
             }}
           />
         </Box>
