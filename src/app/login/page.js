@@ -5,6 +5,7 @@ import {fr} from '@codegouvfr/react-dsfr'
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {PasswordInput} from '@codegouvfr/react-dsfr/blocks/PasswordInput'
 import {Button} from '@codegouvfr/react-dsfr/Button'
+import SelfTraining from '@codegouvfr/react-dsfr/picto/SelfTraining'
 import {Typography, Box} from '@mui/material'
 import dynamic from 'next/dynamic'
 import {signIn} from 'next-auth/react'
@@ -58,7 +59,7 @@ const LoginPage = ({searchParams}) => {
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4
             }}
             >
-              <Pictogram pictoName='self-training' />
+              <Pictogram pictogram={SelfTraining} />
               <Typography variant='h4' component='h2'>Connexion à l’espace instructeur</Typography>
             </Box>
             <div className='flex flex-1 flex-col justify-center p-6'>
