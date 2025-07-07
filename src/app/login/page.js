@@ -62,7 +62,6 @@ const LoginPage = ({searchParams}) => {
 
             {params.error && (
               <Alert
-                small
                 description='Le mot de passe est incorrect.'
                 severity='error'
               />

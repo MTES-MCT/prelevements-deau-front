@@ -1,7 +1,6 @@
 import MuiDsfrThemeProvider from '@codegouvfr/react-dsfr/mui'
 import {AppRouterCacheProvider} from '@mui/material-nextjs/v13-appRouter'
 import Link from 'next/link'
-import {getServerSession} from 'next-auth'
 
 import Footer from '@/components/footer.js'
 import Header from '@/components/header.js'
@@ -17,36 +16,32 @@ export const metadata = {
   description: 'Suivre les prélèvements d’eau'
 }
 
-const RootLayout = async ({children}) => {
-  const session = await getServerSession()
-
-  return (
-    <html {...getHtmlAttributes({defaultColorScheme})} >
-      <head>
-        <StartDsfrOnHydration />
-        <DsfrHead Link={Link}
-          preloadFonts={[
-            'Marianne-Regular',
-            'Marianne-Medium',
-            'Marianne-Bold'
-          ]}
-        />
-      </head>
-      <body>
-        <AppRouterCacheProvider>
-          <DsfrProvider>
-            <MuiDsfrThemeProvider>
-              <Header user={session?.user} />
-              <main role='main' id='content'>
-                {children}
-              </main>
-              <Footer />
-            </MuiDsfrThemeProvider>
-          </DsfrProvider>
-        </AppRouterCacheProvider>
-      </body>
-    </html>
-  )
-}
+const RootLayout = async ({children}) => (
+  <html {...getHtmlAttributes({defaultColorScheme})} >
+    <head>
+      <StartDsfrOnHydration />
+      <DsfrHead Link={Link}
+        preloadFonts={[
+          'Marianne-Regular',
+          'Marianne-Medium',
+          'Marianne-Bold'
+        ]}
+      />
+    </head>
+    <body>
+      <AppRouterCacheProvider>
+        <DsfrProvider>
+          <MuiDsfrThemeProvider>
+            <Header />
+            <main role='main' id='content'>
+              {children}
+            </main>
+            <Footer />
+          </MuiDsfrThemeProvider>
+        </DsfrProvider>
+      </AppRouterCacheProvider>
+    </body>
+  </html>
+)
 
 export default RootLayout
