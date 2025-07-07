@@ -8,8 +8,8 @@ export const getUsageColor = usage => {
 
 // Fonction utilitaire pour récupérer la couleur associée au type de milieu
 export const getTypeMilieuColor = typeMilieu => {
-  const typeItem = legendColors.typesMilieu.find(t => t.text === typeMilieu)
-  return typeItem ? typeItem.color : undefined
+  const {color: background, textColor} = legendColors.typesMilieu.find(u => u.text === typeMilieu) || {}
+  return {background, textColor}
 }
 
 export function extractUsages(points) {

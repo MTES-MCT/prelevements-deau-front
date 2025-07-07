@@ -26,8 +26,8 @@ const Point = ({point, index, onSelect}) => (
         <Chip
           label={point.typeMilieu}
           sx={{
-            backgroundColor: getTypeMilieuColor(point.typeMilieu),
-            color: 'white'
+            backgroundColor: getTypeMilieuColor(point.typeMilieu).background,
+            color: getTypeMilieuColor(point.typeMilieu).textColor
           }}
         />
       )}
