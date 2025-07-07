@@ -45,7 +45,7 @@ const FileValidateurForm = ({isLoading, resetForm, handleSubmit}) => {
       >
         <option disabled hidden value=''>Selectionnez un type de fichier</option>
         <option value='Données standardisées'>Données standardisées</option>
-        <option disabled value='Tableau de suivi'>Tableau de suivi</option>
+        <option disabled value='Tableau de suivi'>Tableau de suivi (à venir)</option>
       </Select>
 
       <Upload
