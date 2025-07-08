@@ -1,11 +1,10 @@
-import {fr} from '@codegouvfr/react-dsfr'
 import {Box} from '@mui/system'
 
 const Pictogram = ({pictogram: PictogramComponent}) => (
   <Box
     sx={{
       borderRadius: '100%',
-      backgroundColor: fr.colors.options.grey._975_100.default,
+      backgroundColor: 'var(--background-alt-raised-grey)',
       padding: 2,
       width: 'fit-content'
     }}
