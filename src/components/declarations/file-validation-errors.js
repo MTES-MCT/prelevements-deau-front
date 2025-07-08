@@ -48,7 +48,7 @@ const ErrorToggleButton = ({onClick, isAtMax}) => (
 const FileValidationErrors = ({errors: errorList}) => {
   const [limit, setLimit] = useState(10)
 
-  const errors = errorList.filter(error => error.severity === 'error')
+  const errors = errorList.filter(error => !error.severity || error.severity === 'error')
   const warnings = errorList.filter(error => error.severity === 'warning')
 
   const renderSection = (items, severity) => {
