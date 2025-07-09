@@ -76,25 +76,15 @@ const Page = async ({params}) => {
           </Box>
         </Box>
 
-        {(preleveur.email || preleveur.numero_telephone || preleveur.adresse_1) && (
-          <List className='border border-[var(--border-default-grey)] !p-4 flex flex-col gap-2'>
-            <LabelWithIcon icon='ri-at-line'>
-              {preleveur.email}
-            </LabelWithIcon>
-
-            <LabelWithIcon icon='fr-icon-phone-line'>
-              {preleveur.numero_telephone}
-            </LabelWithIcon>
-
-            <LabelWithIcon icon='fr-icon-home-4-line'>
-              {preleveur.adresse_1 && (
-                <Typography className='fr-text--sm'>
-                  {`${preleveur.adresse_1 || ''} ${preleveur.adresse_2 || ''} ${preleveur.code_postal || ''} ${preleveur.commune || ''}`}
-                </Typography>
-              )}
-            </LabelWithIcon>
-          </List>
-        )}
+        <List className='border border-[var(--border-default-grey)] !p-4 flex flex-col gap-2'>
+          <LabelWithIcon icon='ri-at-line'>{preleveur.email}</LabelWithIcon>
+          <LabelWithIcon icon='fr-icon-phone-line'>{preleveur.numero_telephone}</LabelWithIcon>
+          <LabelWithIcon icon='fr-icon-home-4-line'>
+            {preleveur.adresse_1 && (
+              `${preleveur.adresse_1 || ''} ${preleveur.adresse_2 || ''} ${preleveur.code_postal || ''} ${preleveur.commune || ''}`
+            )}
+          </LabelWithIcon>
+        </List>
 
         <ExploitationsSection exploitations={preleveur.exploitations} />
       </Box>
