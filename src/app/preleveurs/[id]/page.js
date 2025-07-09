@@ -1,29 +1,15 @@
 import {fr} from '@codegouvfr/react-dsfr'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {
-  Box, Chip, List, Typography, ListItem
+  Box, Chip, List, Typography
 } from '@mui/material'
 import {notFound} from 'next/navigation'
 
 import {getPreleveur} from '@/app/api/points-prelevement.js'
 import {getUsagesColors} from '@/components/map/legend-colors.js'
 import ExploitationsSection from '@/components/preleveurs/exploitations-section.js'
+import LabelWithIcon from '@/components/ui/label-with-icon.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-
-const ContactItem = ({children, icon}) => (
-  <ListItem sx={{display: 'flex', alignItems: 'flex-end'}}>
-    <span
-      className={`mr-1 ${icon} fr-text--sm m-0`}
-      aria-hidden='true'
-      style={{color: fr.colors.decisions.text.label.blueFrance.default}}
-    />
-    {children ? (
-      <div>{children}</div>
-    ) : (
-      <Typography fontWeight='light' fontStyle='italic' className='fr-text--sm'>Donné non communiquée</Typography>
-    )}
-  </ListItem>
-)
 
 const Page = async ({params}) => {
   const {id} = await params
@@ -92,14 +78,22 @@ const Page = async ({params}) => {
         </Box>
 
         {(preleveur.email || preleveur.numero_telephone || preleveur.adresse_1) && (
-          <List sx={{border: `1px solid ${fr.colors.decisions.border.default.grey.default}`, padding: 2}}>
-            <ContactItem icon='ri-at-line'>{preleveur.email}</ContactItem>
-            <ContactItem icon='fr-icon-phone-line' >{preleveur.numero_telephone}</ContactItem>
-            <ContactItem icon='fr-icon-home-4-line'>
+          <List className='border border-[var(--border-default-grey)] !p-4 flex flex-col gap-2'>
+            <LabelWithIcon icon='ri-at-line'>
+              {preleveur.email}
+            </LabelWithIcon>
+
+            <LabelWithIcon icon='fr-icon-phone-line'>
+              {preleveur.numero_telephone}
+            </LabelWithIcon>
+
+            <LabelWithIcon icon='fr-icon-home-4-line'>
               {preleveur.adresse_1 && (
-                <Typography className='fr-text--sm'>{`${preleveur.adresse_1 || ''} ${preleveur.adresse_2 || ''} ${preleveur.code_postal || ''} ${preleveur.commune || ''}`}</Typography>
+                <Typography className='fr-text--sm'>
+                  {`${preleveur.adresse_1 || ''} ${preleveur.adresse_2 || ''} ${preleveur.code_postal || ''} ${preleveur.commune || ''}`}
+                </Typography>
               )}
-            </ContactItem>
+            </LabelWithIcon>
           </List>
         )}
 
