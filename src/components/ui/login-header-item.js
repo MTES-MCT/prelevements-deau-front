@@ -70,7 +70,15 @@ const LoginHeaderItem = ({user}) => (
       </ListItem>
     )}
 
-    {user?.isAdmin && <Chip label='Instructeur' />}
+    {user && (
+      <Chip
+        label={user.role || 'Administrateur'}
+        sx={{
+          backgroundColor: 'var(--artwork-decorative-blue-france)',
+          color: 'var(--text-default-grey)'
+        }}
+      />
+    )}
   </List>
 )
 
