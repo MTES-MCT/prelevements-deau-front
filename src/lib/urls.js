@@ -17,3 +17,7 @@ export function getPreleveurURL(preleveur) {
 export function getPreleveurEditURL(id) {
   return `/preleveurs/${id}/edit`
 }
+
+export function getExploitationCreationURL() {
+  return '/exploitations/new'
+}
