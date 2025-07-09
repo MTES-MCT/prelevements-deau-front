@@ -10,6 +10,7 @@ import {getUsagesColors} from '@/components/map/legend-colors.js'
 import ExploitationsSection from '@/components/preleveurs/exploitations-section.js'
 import LabelWithIcon from '@/components/ui/label-with-icon.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
+import {getPreleveurEditURL} from '@/lib/urls.js'
 
 const Page = async ({params}) => {
   const {id} = await params
@@ -41,9 +42,7 @@ const Page = async ({params}) => {
           <Button
             priority='secondary'
             iconId='fr-icon-edit-line'
-            linkProps={{
-              href: `/preleveurs/${preleveur.id_preleveur}/edit`
-            }}
+            linkProps={{href: getPreleveurEditURL(preleveur.id_preleveur)}}
           >
             Éditer
           </Button>
