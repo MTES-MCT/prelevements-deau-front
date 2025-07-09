@@ -7,7 +7,7 @@ import Link from 'next/link'
 import {signOut} from 'next-auth/react'
 
 const LoginHeaderItem = ({user}) => (
-  <List sx={{display: 'flex', alignItems: 'center'}}>
+  <List className='flex items-center'>
     {user ? (
       <ListItem>
         {user.prenom || user.nom ? (
@@ -18,30 +18,14 @@ const LoginHeaderItem = ({user}) => (
               type='menu'
               className='fr-nav__btn fr-mb-0 gap-1'
             >
-              {user.prenom || user.nom ? (
-                <>
-                  <span className='fr-icon-account-circle-fill fr-icon--sm' />
-                  {user.prenom} {user.nom}
-                </>
-              ) : (
-                <>
-                  <span className='fr-icon-logout-box-r-line fr-icon--sm' aria-hidden='true' />
-                  <Typography className='fr-text--sm'>Se déconnecter</Typography>
-                </>
-              )}
+              <span className='fr-icon-account-circle-fill fr-icon--sm' />
+              {user.prenom} {user.nom}
             </Button>
 
             <div className='fr-collapse fr-menu' id='collapse-menu-01'>
-              <List className='fr-menu__list' sx={{
-                width: 'fit-content'
-              }}
-              >
+              <List className='fr-menu__list w-fit'>
                 <ListItem
-                  sx={{
-                    cursor: 'pointer',
-                    gap: 1,
-                    whiteSpace: 'nowrap'
-                  }}
+                  className='cursor-pointer gap-1 whitespace-nowrap'
                   onClick={() => signOut({callbackUrl: '/login', redirect: true})}
                 >
                   <span className='fr-icon-logout-box-r-line fr-icon--sm' aria-hidden='true' />
@@ -53,17 +37,16 @@ const LoginHeaderItem = ({user}) => (
         ) : (
           <Button
             iconId='fr-icon-logout-box-r-line'
-            className='fr-text--sm'
+            className='fr-text--sm fr-m-0'
             onClick={() => signOut({callbackUrl: '/login', redirect: true})}
           >
             Se déconnecter
           </Button>
         )}
-
       </ListItem>
     ) : (
       <ListItem>
-        <Link href='/login' className='fr-btn fr-mb-0 gap-1'>
+        <Link href='/login' className='fr-btn fr-mb-0 gap-1 flex items-center'>
           <Typography className='fr-icon-account-circle-fill fr-icon--sm' aria-hidden='true' />
           Se connecter
         </Link>
