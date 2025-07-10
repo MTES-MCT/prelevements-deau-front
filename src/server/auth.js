@@ -30,12 +30,14 @@ export const authOptions = {
     async jwt({token, user}) {
       if (user) {
         token.token = user.token
+        token.role = user.isAdmin ? 'administrateur' : null
       }
 
       return token
     },
     async session({session, token}) {
       session.user.token = token.token
+      session.user.role = token.role
       return session
     }
   },
