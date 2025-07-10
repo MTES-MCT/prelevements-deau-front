@@ -1,4 +1,4 @@
-import MuiDsfrThemeProvider from '@codegouvfr/react-dsfr/mui'
+import {MuiDsfrThemeProvider} from '@codegouvfr/react-dsfr/mui'
 import {AppRouterCacheProvider} from '@mui/material-nextjs/v13-appRouter'
 import Link from 'next/link'
 
