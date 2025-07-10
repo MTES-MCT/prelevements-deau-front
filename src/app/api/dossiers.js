@@ -1,12 +1,18 @@
-import {executeRequest} from './util/request.js'
+import {executeRequest, getAuthorization} from './util/request.js'
 
 export async function getDossiers() {
-  const response = await executeRequest('api/dossiers')
+  const response = await executeRequest(
+    'api/dossiers',
+    {headers: {Authorization: await getAuthorization()}})
+
   return response.json()
 }
 
 export async function getDossier(_id) {
-  const response = await executeRequest(`api/dossiers/${_id}`)
+  const response = await executeRequest(
+    `api/dossiers/${_id}`,
+    {headers: {Authorization: await getAuthorization()}})
+
   if (response.ok === false) {
     return null
   }
@@ -15,7 +21,10 @@ export async function getDossier(_id) {
 }
 
 export async function getFile(dossierId, storageHash) {
-  const response = await executeRequest(`api/dossiers/${dossierId}/files/${storageHash}`)
+  const response = await executeRequest(
+    `api/dossiers/${dossierId}/files/${storageHash}`,
+    {headers: {Authorization: await getAuthorization()}})
+
   if (response.ok === false) {
     return null
   }
@@ -24,7 +33,9 @@ export async function getFile(dossierId, storageHash) {
 }
 
 export async function getFileBlob(dossierId, storageHash) {
-  const response = await executeRequest(`api/dossiers/${dossierId}/files/${storageHash}/download`)
+  const response = await executeRequest(
+    `api/dossiers/${dossierId}/files/${storageHash}/download`,
+    {headers: {Authorization: await getAuthorization()}})
   if (response.ok === false) {
     return null
   }

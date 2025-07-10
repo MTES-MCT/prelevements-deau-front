@@ -1,4 +1,5 @@
-import {Box, Typography, Alert} from '@mui/material'
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
+import {Box, Typography} from '@mui/material'
 
 import LabelWithIcon from '@/components/ui/label-with-icon.js'
 import SectionCard from '@/components/ui/section-card.js'
@@ -43,11 +44,7 @@ const PreleveurDetails = ({preleveur}) => (
     </Box>
 
     {!preleveur.id_preleveur && (
-      <Alert
-        severity='warning'
-      >
-        Ce préleveur n’a pas pu être identifié.
-      </Alert>
+      <Alert severity='warning' description='Ce préleveur n’a pas pu être identifié.' />
     )}
   </SectionCard>
 )

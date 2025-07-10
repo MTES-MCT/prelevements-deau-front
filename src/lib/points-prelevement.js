@@ -1,3 +1,17 @@
+import {legendColors} from '@/components/map/legend-colors.js'
+
+// Fonction utilitaire pour récupérer la couleur associée à un usage
+export const getUsageColor = usage => {
+  const {color: background, textColor} = legendColors.usages.find(u => u.text === usage) || {}
+  return {background, textColor}
+}
+
+// Fonction utilitaire pour récupérer la couleur associée au type de milieu
+export const getTypeMilieuColor = typeMilieu => {
+  const {color: background, textColor} = legendColors.typesMilieu.find(u => u.text === typeMilieu) || {}
+  return {background, textColor}
+}
+
 export function extractUsages(points) {
   const usagesSet = new Set()
   for (const point of points) {
@@ -11,6 +25,17 @@ export function extractUsages(points) {
   }
 
   return [...usagesSet]
+}
+
+export function extractStatus(points) {
+  const statusSet = new Set()
+  for (const point of points) {
+    if (point.exploitationsStatus) {
+      statusSet.add(point.exploitationsStatus)
+    }
+  }
+
+  return [...statusSet]
 }
 
 export function extractTypeMilieu(points) {

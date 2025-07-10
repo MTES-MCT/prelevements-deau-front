@@ -3,6 +3,7 @@
 import {useState} from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import Button from '@codegouvfr/react-dsfr/Button'
 import Tag from '@codegouvfr/react-dsfr/Tag'
 import {
@@ -10,8 +11,7 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Typography,
-  Alert
+  Typography
 } from '@mui/material'
 import {Box} from '@mui/system'
 
@@ -48,7 +48,7 @@ const ErrorToggleButton = ({onClick, isAtMax}) => (
 const FileValidationErrors = ({errors: errorList}) => {
   const [limit, setLimit] = useState(10)
 
-  const errors = errorList.filter(error => error.severity === 'error')
+  const errors = errorList.filter(error => !error.severity || error.severity === 'error')
   const warnings = errorList.filter(error => error.severity === 'warning')
 
   const renderSection = (items, severity) => {
@@ -116,9 +116,7 @@ const FileValidationErrors = ({errors: errorList}) => {
                   </Box>
                 </AccordionDetails>
               ) : (
-                <Alert severity='info'>
-                  Pas d’autre information disponible.
-                </Alert>
+                <Alert severity='info' description='Pas d’autre information disponible.' />
               )}
             </Accordion>
           )

@@ -6,6 +6,8 @@ import {getPreleveurs} from '@/app/api/points-prelevement.js'
 import PreleveursList from '@/components/preleveurs/preleveurs-list.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 
+export const dynamic = 'force-dynamic'
+
 const Page = async () => {
   const preleveurs = await getPreleveurs()
   const orderedPreleveurs = orderBy(preleveurs, [p => Number.parseInt(p.id_preleveur, 10)])

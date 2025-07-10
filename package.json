@@ -15,6 +15,7 @@
     "@emotion/react": "^11.14.0",
     "@emotion/server": "^11.11.0",
     "@emotion/styled": "^11.14.0",
+    "@fabnum/prelevements-deau-timeseries-parsers": "0.0.3",
     "date-fns": "^4.1.0",
     "flexsearch": "^0.7.43",
     "lodash-es": "^4.17.21",
@@ -25,7 +26,7 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "@codegouvfr/react-dsfr": "^1.22.2",
+    "@codegouvfr/react-dsfr": "^1.25.3",
     "@mui/icons-material": "^6.4.10",
     "@mui/material": "^6.4.10",
     "@mui/material-nextjs": "^6.4.3",

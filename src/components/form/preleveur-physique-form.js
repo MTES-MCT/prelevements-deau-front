@@ -28,7 +28,7 @@ const PreleveurPhysiqueForm = ({preleveur, setPreleveur}) => {
           label='Nom *'
           nativeInputProps={{
             placeholder: 'Entrer le nom',
-            value: preleveur?.nom || '',
+            defaultValue: preleveur?.nom || '',
             onChange: e => setPreleveur(prev => ({...prev, nom: e.target.value}))
           }}
         />
@@ -36,7 +36,7 @@ const PreleveurPhysiqueForm = ({preleveur, setPreleveur}) => {
           label='Prénom *'
           nativeInputProps={{
             placeholder: 'Entrer le prénom',
-            value: preleveur?.prenom || '',
+            defaultValue: preleveur?.prenom || '',
             onChange: e => setPreleveur(prev => ({...prev, prenom: e.target.value}))
           }}
         />
@@ -45,7 +45,7 @@ const PreleveurPhysiqueForm = ({preleveur, setPreleveur}) => {
         label='Adresse e-mail *'
         nativeInputProps={{
           type: 'email',
-          value: preleveur?.email || '',
+          defaultValue: preleveur?.email || '',
           placeholder: 'Entrez l’adresse e-mail de contact',
           onChange: e => setPreleveur(prev => ({...prev, email: e.target.value}))
         }}

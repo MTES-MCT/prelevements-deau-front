@@ -1,10 +1,10 @@
-import MuiDsfrThemeProvider from '@codegouvfr/react-dsfr/mui'
+import {MuiDsfrThemeProvider} from '@codegouvfr/react-dsfr/mui'
 import {AppRouterCacheProvider} from '@mui/material-nextjs/v13-appRouter'
 import Link from 'next/link'
-import {getServerSession} from 'next-auth'
 
 import Footer from '@/components/footer.js'
 import Header from '@/components/header.js'
+import SessionProvider from '@/components/session-provider.js'
 import {defaultColorScheme} from '@/dsfr-bootstrap/default-color-scheme.js'
 import {StartDsfrOnHydration, DsfrProvider} from '@/dsfr-bootstrap/index.js'
 import {getHtmlAttributes, DsfrHead} from '@/dsfr-bootstrap/server-only-index.js'
@@ -17,26 +17,24 @@ export const metadata = {
   description: 'Suivre les prélèvements d’eau'
 }
 
-const RootLayout = async ({children}) => {
-  const session = await getServerSession()
-
-  return (
-    <html {...getHtmlAttributes({defaultColorScheme})} >
-      <head>
-        <StartDsfrOnHydration />
-        <DsfrHead Link={Link}
-          preloadFonts={[
-            'Marianne-Regular',
-            'Marianne-Medium',
-            'Marianne-Bold'
-          ]}
-        />
-      </head>
-      <body>
+const RootLayout = ({children}) => (
+  <html {...getHtmlAttributes({defaultColorScheme})} >
+    <head>
+      <StartDsfrOnHydration />
+      <DsfrHead Link={Link}
+        preloadFonts={[
+          'Marianne-Regular',
+          'Marianne-Medium',
+          'Marianne-Bold'
+        ]}
+      />
+    </head>
+    <body>
+      <SessionProvider>
         <AppRouterCacheProvider>
           <DsfrProvider>
             <MuiDsfrThemeProvider>
-              <Header user={session?.user} />
+              <Header />
               <main role='main' id='content'>
                 {children}
               </main>
@@ -44,9 +42,9 @@ const RootLayout = async ({children}) => {
             </MuiDsfrThemeProvider>
           </DsfrProvider>
         </AppRouterCacheProvider>
-      </body>
-    </html>
-  )
-}
+      </SessionProvider>
+    </body>
+  </html>
+)
 
 export default RootLayout
