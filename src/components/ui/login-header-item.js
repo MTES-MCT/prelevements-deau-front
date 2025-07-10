@@ -53,10 +53,11 @@ const LoginHeaderItem = ({user}) => (
       </ListItem>
     )}
 
-    {user && (
+    {user?.role && (
       <Chip
-        label={user.role || 'Administrateur'}
+        label={user.role}
         sx={{
+          textTransform: 'capitalize',
           backgroundColor: 'var(--artwork-decorative-blue-france)',
           color: 'var(--text-default-grey)'
         }}
