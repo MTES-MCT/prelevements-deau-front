@@ -4,6 +4,7 @@ import Link from 'next/link'
 
 import Footer from '@/components/footer.js'
 import Header from '@/components/header.js'
+import SessionProvider from '@/components/session-provider.js'
 import {defaultColorScheme} from '@/dsfr-bootstrap/default-color-scheme.js'
 import {StartDsfrOnHydration, DsfrProvider} from '@/dsfr-bootstrap/index.js'
 import {getHtmlAttributes, DsfrHead} from '@/dsfr-bootstrap/server-only-index.js'
@@ -16,7 +17,7 @@ export const metadata = {
   description: 'Suivre les prélèvements d’eau'
 }
 
-const RootLayout = async ({children}) => (
+const RootLayout = ({children}) => (
   <html {...getHtmlAttributes({defaultColorScheme})} >
     <head>
       <StartDsfrOnHydration />
@@ -29,17 +30,19 @@ const RootLayout = async ({children}) => (
       />
     </head>
     <body>
-      <AppRouterCacheProvider>
-        <DsfrProvider>
-          <MuiDsfrThemeProvider>
-            <Header />
-            <main role='main' id='content'>
-              {children}
-            </main>
-            <Footer />
-          </MuiDsfrThemeProvider>
-        </DsfrProvider>
-      </AppRouterCacheProvider>
+      <SessionProvider>
+        <AppRouterCacheProvider>
+          <DsfrProvider>
+            <MuiDsfrThemeProvider>
+              <Header />
+              <main role='main' id='content'>
+                {children}
+              </main>
+              <Footer />
+            </MuiDsfrThemeProvider>
+          </DsfrProvider>
+        </AppRouterCacheProvider>
+      </SessionProvider>
     </body>
   </html>
 )

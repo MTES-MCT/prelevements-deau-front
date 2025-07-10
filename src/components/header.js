@@ -1,10 +1,8 @@
 'use client'
 
-import {useEffect, useState} from 'react'
-
 import {Header as DSFRHeader} from '@codegouvfr/react-dsfr/Header'
 import {usePathname} from 'next/navigation'
-import {getSession} from 'next-auth/react'
+import {useSession} from 'next-auth/react'
 
 import LoginHeaderItem from '@/components/ui/login-header-item.js'
 
@@ -57,20 +55,11 @@ const navigationItems = [
 ]
 
 const HeaderComponent = () => {
-  const [user, setUser] = useState(null)
-  const [isLoadingUser, setIsLoadingUser] = useState(true)
+  const {data: session, status} = useSession()
+  const user = session?.user
+  const isLoadingUser = status === 'loading'
 
   const pathname = usePathname()
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      const session = await getSession()
-      setUser(session?.user)
-      setIsLoadingUser(false)
-    }
-
-    fetchUser()
-  }, [])
 
   const isActive = href => {
     if (href === '/') {
