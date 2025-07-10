@@ -1,12 +1,31 @@
 'use client'
 
+import {useMemo} from 'react'
+
 import {Header as DSFRHeader} from '@codegouvfr/react-dsfr/Header'
 import {usePathname} from 'next/navigation'
 import {useSession} from 'next-auth/react'
 
 import LoginHeaderItem from '@/components/ui/login-header-item.js'
 
-const navigationItems = [
+const defaultNavigation = [
+  {
+    linkProps: {
+      href: '/',
+      target: '_self'
+    },
+    text: 'Accueil'
+  },
+  {
+    linkProps: {
+      href: '/validateur',
+      target: '_self'
+    },
+    text: 'Validateur'
+  }
+]
+
+const adminNavigation = [
   {
     linkProps: {
       href: '/',
@@ -61,17 +80,29 @@ const HeaderComponent = () => {
 
   const pathname = usePathname()
 
-  const isActive = href => {
-    if (href === '/') {
-      return pathname === '/'
+  const navigation = useMemo(() => {
+    if (isLoadingUser) {
+      return null
     }
 
-    if (href === '/dossiers') {
-      return pathname === '/dossiers' || pathname === '/validateur'
+    const isActive = href => {
+      if (href === '/') {
+        return pathname === '/'
+      }
+
+      if (href === '/dossiers') {
+        return pathname === '/dossiers' || pathname === '/validateur'
+      }
+
+      return pathname.startsWith(href) // Correspondance partielle pour les autres chemins
     }
 
-    return pathname.startsWith(href) // Correspondance partielle pour les autres chemins
-  }
+    const navigation = user ? adminNavigation : defaultNavigation
+    return navigation.map(item => ({
+      ...item,
+      isActive: isActive(item.linkProps?.href || item.menuLinks?.[0].linkProps.href)
+    }))
+  }, [user, isLoadingUser, pathname])
 
   return (
     <DSFRHeader
@@ -84,12 +115,7 @@ const HeaderComponent = () => {
       quickAccessItems={isLoadingUser ? [] : [
         <LoginHeaderItem key='login' user={user} />
       ]}
-      navigation={!isLoadingUser && user && (
-        navigationItems.map(item => ({
-          ...item,
-          isActive: isActive(item.linkProps?.href || item.menuLinks[0].linkProps.href)
-        }))
-      )}
+      navigation={navigation}
     />
   )
 }

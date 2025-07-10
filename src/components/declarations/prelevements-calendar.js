@@ -3,8 +3,8 @@
 import {useState} from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {
-  Alert,
   Box, Modal, Tab, Tabs, Typography
 } from '@mui/material'
 import {LineChart} from '@mui/x-charts'
@@ -80,9 +80,7 @@ const PrelevementsCalendar = ({data}) => {
 
   if (data.dailyValues.length === 0) {
     return (
-      <Alert severity='warning'>
-        Aucune donnée de prélèvement n’a été trouvée.
-      </Alert>
+      <Alert severity='warning' description='Aucune donnée de prélèvement n’a été trouvée.' />
     )
   }
 
@@ -171,9 +169,7 @@ const PrelevementsCalendar = ({data}) => {
                   })}
                 </Tabs>
               ) : (
-                <Alert severity='warning'>
-                  Les données de prélèvement à 15 minutes ne sont pas disponibles.
-                </Alert>
+                <Alert severity='warning' description='Les données de prélèvement à 15 minutes ne sont pas disponibles.' />
               )}
               {fifteenParams.length > 0 ? (
                 <Box sx={{height: 300, mt: 2}}>
