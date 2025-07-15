@@ -32,11 +32,15 @@ const Regles = ({regles, documents}) => {
         }}
         gap={{xs: 2, md: 3}}
       >
-        {regles.map(regle => (
-          <Box key={regle.id_regle}>
-            <Regle regle={regle} documents={documents} />
-          </Box>
-        ))}
+        {regles.map(regle => {
+          const document = documents.find(d => d.id_document === regle.id_document)
+
+          return (
+            <Box key={regle.id_regle}>
+              <Regle regle={regle} document={document} />
+            </Box>
+          )
+        })}
       </Grid>
     </Box>
   )

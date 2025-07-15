@@ -51,47 +51,43 @@ const RegleHeader = ({parametre, debutValidite, finValidite, debutPeriode, finPe
   )
 }
 
-const Regle = ({regle, documents}) => {
-  const regleDocument = documents.find(d => d.id_document === regle.id_document)
-
-  return (
-    <Accordion className='fr-card' sx={{boxShadow: 'none'}}>
-      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-        <RegleHeader
-          parametre={regle.parametre}
-          debutValidite={regle.debut_validite}
-          debutPeriode={regle.debut_periode}
-          finValidite={regle.fin_validite}
-          finPeriode={regle.fin_periode}
-          unite={regle.unite}
-          valeur={regle.valeur}
-          contrainte={regle.contrainte}
+const Regle = ({regle, document}) => (
+  <Accordion className='fr-card' sx={{boxShadow: 'none'}}>
+    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+      <RegleHeader
+        parametre={regle.parametre}
+        debutValidite={regle.debut_validite}
+        debutPeriode={regle.debut_periode}
+        finValidite={regle.fin_validite}
+        finPeriode={regle.fin_periode}
+        unite={regle.unite}
+        valeur={regle.valeur}
+        contrainte={regle.contrainte}
+      />
+    </AccordionSummary>
+    <AccordionDetails>
+      <Box
+        className='flex flex-col gap-1 border-t pt-1'
+        style={{borderColor: fr.colors.decisions.background.contrast.grey.default}}
+      >
+        <InfoRow
+          label='Document'
+          value={
+            document ? (
+              <a
+                href={`${API_URL}/document/${document.nom_fichier}`}
+                target='_blank'
+                rel='noreferrer'
+              >
+                {`${document.nature} ${document.reference} du ${formatFullDateFr(document.date_signature)}`}
+              </a>
+            ) : '-'
+          }
         />
-      </AccordionSummary>
-      <AccordionDetails>
-        <Box
-          className='flex flex-col gap-1 border-t pt-1'
-          style={{borderColor: fr.colors.decisions.background.contrast.grey.default}}
-        >
-          <InfoRow
-            label='Document'
-            value={
-              regleDocument ? (
-                <a
-                  href={`${API_URL}/document/${regleDocument.nom_fichier}`}
-                  target='_blank'
-                  rel='noreferrer'
-                >
-                  {`${regleDocument.nature} ${regleDocument.reference} du ${formatFullDateFr(regleDocument.date_signature)}`}
-                </a>
-              ) : '-'
-            }
-          />
-          <InfoRow label='Commentaire' value={regle.remarque} />
-        </Box>
-      </AccordionDetails>
-    </Accordion>
-  )
-}
+        <InfoRow label='Commentaire' value={regle.remarque} />
+      </Box>
+    </AccordionDetails>
+  </Accordion>
+)
 
 export default Regle
