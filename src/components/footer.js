@@ -1,5 +1,6 @@
 'use client'
 
+import {headerFooterDisplayItem} from '@codegouvfr/react-dsfr/Display'
 import {Footer as DSFRFooter} from '@codegouvfr/react-dsfr/Footer'
 import {usePathname} from 'next/navigation'
 
@@ -14,6 +15,7 @@ const FooterComponent = () => {
 
   return (
     <DSFRFooter
+      bottomItems={[headerFooterDisplayItem]}
       accessibility='fully compliant'
       contentDescription=''
     />

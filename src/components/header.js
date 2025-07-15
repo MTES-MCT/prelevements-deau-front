@@ -1,11 +1,10 @@
 'use client'
 
-import {useEffect, useMemo, useState} from 'react'
+import {useMemo} from 'react'
 
-import {headerFooterDisplayItem} from '@codegouvfr/react-dsfr/Display'
 import {Header as DSFRHeader} from '@codegouvfr/react-dsfr/Header'
 import {usePathname} from 'next/navigation'
-import {getSession} from 'next-auth/react'
+import {useSession} from 'next-auth/react'
 
 import LoginHeaderItem from '@/components/ui/login-header-item.js'
 
@@ -75,20 +74,11 @@ const adminNavigation = [
 ]
 
 const HeaderComponent = () => {
-  const [user, setUser] = useState(null)
-  const [isLoadingUser, setIsLoadingUser] = useState(true)
+  const {data: session, status} = useSession()
+  const user = session?.user
+  const isLoadingUser = status === 'loading'
 
   const pathname = usePathname()
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      const session = await getSession()
-      setUser(session?.user)
-      setIsLoadingUser(false)
-    }
-
-    fetchUser()
-  }, [])
 
   const navigation = useMemo(() => {
     if (isLoadingUser) {
@@ -123,7 +113,6 @@ const HeaderComponent = () => {
         title: 'Accueil - Suivi des prélèvements d’eau'
       }}
       quickAccessItems={isLoadingUser ? [] : [
-        headerFooterDisplayItem,
         <LoginHeaderItem key='login' user={user} />
       ]}
       navigation={navigation}
