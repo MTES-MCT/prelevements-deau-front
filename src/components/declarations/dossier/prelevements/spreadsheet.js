@@ -13,8 +13,8 @@ import ParameterTrendChart from '@/components/declarations/dossier/prelevements/
 import FileValidationErrors from '@/components/declarations/file-validation-errors.js'
 import PrelevementsCalendar from '@/components/declarations/prelevements-calendar.js'
 
-const Spreadsheet = ({moisDeclaration, file, downloadFile}) => {
-  const [, ...filename] = file.storageKey.split('-')
+const Spreadsheet = ({moisDeclaration, storageKey = '', data = {}, errors, downloadFile}) => {
+  const [, ...filename] = storageKey.split('-')
 
   // Vérifie si les dates de prélèvement (minDate / maxDate) se situent dans le mois déclaré
   const isInDeclarationMonth = date => {
@@ -24,7 +24,7 @@ const Spreadsheet = ({moisDeclaration, file, downloadFile}) => {
            && d.getFullYear() === declarationDate.getFullYear()
   }
 
-  const {minDate, maxDate} = file.result?.data ?? {}
+  const {minDate, maxDate} = data
 
   const hasDatesOutsideDeclMonth = (() => {
     if (!minDate || !maxDate || !moisDeclaration) {
@@ -35,9 +35,8 @@ const Spreadsheet = ({moisDeclaration, file, downloadFile}) => {
   })()
 
   return (
-    <Box key={file.id_file} className='flex flex-col gap-6'>
-
-      {file.result.data && (
+    <Box className='flex flex-col gap-6'>
+      {data && (
         <>
           <Box className='flex flex-col gap-4'>
             <Divider textAlign='left'>
@@ -45,9 +44,9 @@ const Spreadsheet = ({moisDeclaration, file, downloadFile}) => {
             </Divider>
 
             <Box className='flex flex-col gap-2'>
-              {file.result.data.dailyParameters && (
+              {data.dailyParameters && (
                 <Box className='flex flex-wrap gap-1 items-center'>
-                  Journalier : {file.result.data.dailyParameters.map(param => (
+                  Journalier : {data.dailyParameters.map(param => (
                     <Tag key={param.paramIndex} sx={{m: 1}}>
                       {param.nom_parametre} ({param.unite})
                     </Tag>
@@ -55,9 +54,9 @@ const Spreadsheet = ({moisDeclaration, file, downloadFile}) => {
                 </Box>
               )}
 
-              {file.result.data.fifteenMinutesParameters && (
+              {data.fifteenMinutesParameters && (
                 <Box className='flex flex-wrap gap-1 items-center'>
-                  Quinze minutes : {file.result.data.fifteenMinutesParameters.map(param => (
+                  Quinze minutes : {data.fifteenMinutesParameters.map(param => (
                     <Tag key={param.paramIndex} sx={{m: 1}}>
                       {param.nom_parametre} ({param.unite})
                     </Tag>
@@ -84,32 +83,34 @@ const Spreadsheet = ({moisDeclaration, file, downloadFile}) => {
               />
             )}
 
-            <PrelevementsCalendar data={file.result.data} />
-            <ParameterTrendChart data={file.result.data} />
+            <PrelevementsCalendar data={data} />
+            <ParameterTrendChart data={data} />
           </Box>
         </>
       )}
 
-      {file.result.errors && (
-        <FileValidationErrors errors={file.result.errors} />
+      {errors && (
+        <FileValidationErrors errors={errors} />
       )}
 
-      <Box className='flex flex-wrap justify-between mt-4'>
-        <Box className='flex flex-col p-2'>
-          <Typography>
-            <Box component='span' className='pr-1' sx={{color: fr.colors.decisions.text.label.blueFrance.default}} />
-            {filename.join('-')}
-          </Typography>
-        </Box>
+      {downloadFile && storageKey && (
+        <Box className='flex flex-wrap justify-between mt-4'>
+          <Box className='flex flex-col p-2'>
+            <Typography>
+              <Box component='span' className='pr-1' sx={{color: fr.colors.decisions.text.label.blueFrance.default}} />
+              {filename.join('-')}
+            </Typography>
+          </Box>
 
-        <Button
-          variant='contained'
-          iconId='fr-icon-download-line'
-          onClick={() => downloadFile(file.storageKey)}
-        >
-          Télécharger
-        </Button>
-      </Box>
+          <Button
+            variant='contained'
+            iconId='fr-icon-download-line'
+            onClick={() => downloadFile(storageKey)}
+          >
+            Télécharger
+          </Button>
+        </Box>
+      )}
     </Box>
   )
 }

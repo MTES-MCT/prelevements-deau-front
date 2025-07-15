@@ -135,7 +135,9 @@ const PrelevementsDetails = ({
 
                 <Spreadsheet
                   moisDeclaration={moisDeclaration}
-                  file={file}
+                  storageKey={file?.storageKey || ''}
+                  data={file.result?.data || {}}
+                  errors={file.result?.errors}
                   downloadFile={handleDownload}
                 />
               </PrelevementsAccordion>
