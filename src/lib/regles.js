@@ -24,7 +24,18 @@ const regleParametres = [
   {name: 'Turbidité', label: 'Turbidité', icon: <LocalDrinkOutlinedIcon />}
 ]
 
+const regleContrainte = [
+  {name: 'minimum', label: '>'},
+  {name: 'maximum', label: '<'},
+  {name: 'moyenne', label: '≃'}
+]
+
 export const getParametreInfo = parametre => {
   const parametreItem = regleParametres.find(param => param.name === parametre)
   return parametreItem ? {label: parametreItem.label, icon: parametreItem.icon} : undefined
+}
+
+export const getRegleContrainte = contrainte => {
+  const contrainteItem = regleContrainte.find(param => param.name === contrainte)
+  return contrainteItem ? contrainteItem.label : undefined
 }

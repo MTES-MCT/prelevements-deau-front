@@ -7,7 +7,7 @@ import {
 } from '@mui/material'
 
 import {formatDateRange, formatFullDateFr} from '@/lib/format-date.js'
-import {getParametreInfo} from '@/lib/regles.js'
+import {getParametreInfo, getRegleContrainte} from '@/lib/regles.js'
 
 const API_URL = process.env.NEXT_PUBLIC_STORAGE_URL
 
@@ -21,7 +21,7 @@ const InfoRow = ({label, value, description}) => (
   </Box>
 )
 
-const RegleHeader = ({parametre, debutValidite, finValidite, debutPeriode, finPeriode}) => {
+const RegleHeader = ({parametre, debutValidite, finValidite, debutPeriode, finPeriode, unite, valeur, contrainte}) => {
   const {label, icon} = getParametreInfo(parametre)
 
   return (
@@ -30,7 +30,8 @@ const RegleHeader = ({parametre, debutValidite, finValidite, debutPeriode, finPe
         <span style={{color: fr.colors.decisions.text.label.blueFrance.default}}>
           {icon}
         </span>
-        <Typography fontWeight='bold'>{label}</Typography>
+        <Typography fontWeight='bold'>{label} :</Typography>
+        <Typography>{`${getRegleContrainte(contrainte)} ${valeur} ${unite}`}</Typography>
       </Box>
 
       <Box className='mr-3'>
@@ -62,6 +63,9 @@ const Regle = ({regle, documents}) => {
           debutPeriode={regle.debut_periode}
           finValidite={regle.fin_validite}
           finPeriode={regle.fin_periode}
+          unite={regle.unite}
+          valeur={regle.valeur}
+          contrainte={regle.contrainte}
         />
       </AccordionSummary>
       <AccordionDetails>
