@@ -5,7 +5,7 @@ import Link from 'next/link'
 
 const BorderedSection = ({title, linkPath, handleAction, icon, buttonLabel, children}) => (
   <Box sx={{display: 'flex', flexDirection: 'column', gap: 1}}>
-    <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+    <Box className='flex justify-between items-center flex-wrap gap-1'>
       <Typography variant='h6'>{title}</Typography>
       {handleAction ? (
         <Button
@@ -17,7 +17,8 @@ const BorderedSection = ({title, linkPath, handleAction, icon, buttonLabel, chil
         </Button>
       ) : (
         <Link href={linkPath} className='fr-btn fr-btn--secondary'>
-          <span className={`fr-icon-${icon}`} /> {buttonLabel}
+          <span className={`fr-icon-${icon}`} />
+          {buttonLabel}
         </Link>
       )}
     </Box>
