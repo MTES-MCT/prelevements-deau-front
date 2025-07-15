@@ -46,8 +46,8 @@ const Page = async ({params}) => {
         <Typography variant='h3'>
           Gestion des documents
         </Typography>
-        <DocumentUploadForm idPreleveur={preleveur.id_preleveur} />
         <DocumentsListForm documents={documents} idPreleveur={preleveur.id_preleveur} />
+        <DocumentUploadForm idPreleveur={preleveur.id_preleveur} />
       </div>
     </>
   )
