@@ -55,9 +55,11 @@ const LoginPage = ({searchParams}) => {
                       className={params.error ? 'fr-input-group--error' : ''}
                       id='password'
                       label='* Mot de passe'
-                      name='password'
-                      value={input || ''}
-                      onChange={handleChange}
+                      nativeInputProps={{
+                        name: 'password',
+                        value: input || '',
+                        onChange: handleChange
+                      }}
                     />
                   </div>
 
