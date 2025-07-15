@@ -9,6 +9,7 @@ import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Input} from '@codegouvfr/react-dsfr/Input'
 import {Select} from '@codegouvfr/react-dsfr/SelectNext'
 import {Upload} from '@codegouvfr/react-dsfr/Upload'
+import {Typography} from '@mui/material'
 import {format} from 'date-fns'
 import {useRouter} from 'next/navigation'
 
@@ -89,6 +90,9 @@ const DocumentUploadForm = ({idPreleveur}) => {
 
   return (
     <div className='p-3 m-3 border'>
+      <Typography variant='h5'>
+        Associer un document
+      </Typography>
       <div>
         {isLoading ? (
           <div className='flex p-5 my-5 justify-center'>
