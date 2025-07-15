@@ -9,6 +9,7 @@ import {
 import {formatDateRange, formatFullDateFr} from '@/lib/format-date.js'
 import {getParametreInfo, getRegleContrainte} from '@/lib/regles.js'
 import {getDocumentURL} from '@/lib/urls.js'
+import {formatNumber} from '@/utils/number.js'
 
 const InfoRow = ({label, value, description}) => (
   <Box className='flex justify-between'>
@@ -30,7 +31,7 @@ const RegleHeader = ({parametre, debutValidite, finValidite, debutPeriode, finPe
           {icon}
         </span>
         <Typography fontWeight='bold'>{label}</Typography>
-        <Typography>{`${getRegleContrainte(contrainte)} ${valeur} ${unite}`}</Typography>
+        <Typography>{`${getRegleContrainte(contrainte)} ${formatNumber(valeur)} ${unite}`}</Typography>
       </Box>
 
       <Box className='mr-3'>
