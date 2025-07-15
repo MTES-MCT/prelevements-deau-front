@@ -364,14 +364,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@fabnum/prelevements-deau-timeseries-parsers@npm:0.0.3":
-  version: 0.0.3
-  resolution: "@fabnum/prelevements-deau-timeseries-parsers@npm:0.0.3"
+"@fabnum/prelevements-deau-timeseries-parsers@npm:0.0.4":
+  version: 0.0.4
+  resolution: "@fabnum/prelevements-deau-timeseries-parsers@npm:0.0.4"
   dependencies:
     file-type: "npm:^21.0.0"
     lodash-es: "npm:^4.17.21"
     xlsx: "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
-  checksum: 10c0/0e995cb36012d31d4296c592b9bb65fa76d44f659c7ac8cda1f56a37c2373f0867c46ac7e001d1115501c41d8bc5fc771739f27faf4815da397990c58288c834
+  checksum: 10c0/2f5a464a3af9c3027d6dc0701da8c95639d4a5184fd01f72195b84b88a52d4021b379ee209d93e5ac9b2855b573ed501f570e79fa35daf5921815b4ee89c8de3
   languageName: node
   linkType: hard
 
@@ -6026,7 +6026,7 @@ __metadata:
     "@emotion/react": "npm:^11.14.0"
     "@emotion/server": "npm:^11.11.0"
     "@emotion/styled": "npm:^11.14.0"
-    "@fabnum/prelevements-deau-timeseries-parsers": "npm:0.0.3"
+    "@fabnum/prelevements-deau-timeseries-parsers": "npm:0.0.4"
     "@mui/icons-material": "npm:^6.4.10"
     "@mui/material": "npm:^6.4.10"
     "@mui/material-nextjs": "npm:^6.4.3"
