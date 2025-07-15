@@ -29,7 +29,7 @@ const RegleHeader = ({parametre, debutValidite, finValidite, debutPeriode, finPe
         <span style={{color: fr.colors.decisions.text.label.blueFrance.default}}>
           {icon}
         </span>
-        <Typography fontWeight='bold'>{label} :</Typography>
+        <Typography fontWeight='bold'>{label}</Typography>
         <Typography>{`${getRegleContrainte(contrainte)} ${valeur} ${unite}`}</Typography>
       </Box>
 
