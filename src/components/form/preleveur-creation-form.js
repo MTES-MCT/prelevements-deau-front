@@ -26,6 +26,7 @@ const PreleveurCreationForm = () => {
   const [error, setError] = useState(null)
   const [validationErrors, setValidationErrors] = useState([])
   const [preleveur, setPreleveur] = useState({
+    civilite: '',
     raison_sociale: '',
     sigle: '',
     nom: '',
