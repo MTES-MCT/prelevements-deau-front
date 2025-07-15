@@ -1,3 +1,5 @@
+const API_URL = process.env.NEXT_PUBLIC_STORAGE_URL
+
 export function getDossierURL(dossier) {
   return `/dossiers/${dossier._id}`
 }
@@ -12,4 +14,8 @@ export function getDossiersURL() {
 
 export function getPreleveurURL(preleveur) {
   return `/preleveurs/${preleveur.id_preleveur}`
+}
+
+export function getDocumentURL(document) {
+  return `${API_URL}/document/${document.nom_fichier}`
 }

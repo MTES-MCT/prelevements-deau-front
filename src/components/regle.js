@@ -8,8 +8,7 @@ import {
 
 import {formatDateRange, formatFullDateFr} from '@/lib/format-date.js'
 import {getParametreInfo, getRegleContrainte} from '@/lib/regles.js'
-
-const API_URL = process.env.NEXT_PUBLIC_STORAGE_URL
+import {getDocumentURL} from '@/lib/urls.js'
 
 const InfoRow = ({label, value, description}) => (
   <Box className='flex justify-between'>
@@ -75,7 +74,7 @@ const Regle = ({regle, document}) => (
           value={
             document ? (
               <a
-                href={`${API_URL}/document/${document.nom_fichier}`}
+                href={getDocumentURL(document)}
                 target='_blank'
                 rel='noreferrer'
               >
