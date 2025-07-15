@@ -1,4 +1,5 @@
 import {fr} from '@codegouvfr/react-dsfr'
+import Breadcrumb from '@codegouvfr/react-dsfr/Breadcrumb.js'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {
   Box, Chip, List, Typography
@@ -29,14 +30,28 @@ const Page = async ({params}) => {
           display: 'flex', justifyContent: 'space-between', alignItems: 'center'
         }}
         >
-          <Box sx={{display: 'flex', gap: 1, alignItems: 'center'}}>
-            <span
-              className={`${preleveur.raison_sociale ? 'fr-icon-building-fill' : 'fr-icon-account-circle-fill'}`}
-              style={{color: fr.colors.decisions.text.label.blueFrance.default}}
+          <Box>
+            <Breadcrumb
+              currentPageLabel={`${preleveur.nom} ${preleveur.prenom}`}
+              homeLinkProps={{
+                href: '/'
+              }}
+              segments={[{
+                label: 'Préleveurs',
+                linkProps: {
+                  href: '/preleveurs'
+                }
+              }]}
             />
-            <Typography variant='h5'>
-              {preleveur.civilite} {preleveur.nom} {preleveur.prenom} {preleveur.sigle} {preleveur.raison_sociale}
-            </Typography>
+            <Box sx={{display: 'flex', gap: 1, alignItems: 'center'}}>
+              <span
+                className={`${preleveur.raison_sociale ? 'fr-icon-building-fill' : 'fr-icon-account-circle-fill'}`}
+                style={{color: fr.colors.decisions.text.label.blueFrance.default}}
+              />
+              <Typography variant='h5'>
+                {preleveur.civilite} {preleveur.nom} {preleveur.prenom} {preleveur.sigle} {preleveur.raison_sociale}
+              </Typography>
+            </Box>
           </Box>
 
           <Button
