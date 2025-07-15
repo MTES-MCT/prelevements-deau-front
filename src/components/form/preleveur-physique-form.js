@@ -3,6 +3,7 @@
 import {useEffect, useState} from 'react'
 
 import {Input} from '@codegouvfr/react-dsfr/Input'
+import {Select} from '@codegouvfr/react-dsfr/SelectNext'
 import {Typography} from '@mui/material'
 
 import AccordionCentered from '../ui/accordion-centered.js'
@@ -23,7 +24,21 @@ const PreleveurPhysiqueForm = ({preleveur, setPreleveur}) => {
       <Typography variant='h5' className='pb-5'>
         Informations générales
       </Typography>
-      <div className='w-full grid grid-cols-2 gap-4 pb-5'>
+      <div className='w-full grid grid-cols-[1fr_2fr_2fr] gap-4 pb-5'>
+        <Select
+          label='Civilité *'
+          placeholder='Choisir la civilité'
+          nativeSelectProps={{
+            placeholder: 'Choisir la civilité',
+            defaultValue: preleveur?.civilite || '',
+            onChange: e => setPreleveur(prev => ({...prev, civilite: e.target.value}))
+          }}
+          options={[
+            {value: 'M.', label: 'M. '},
+            {value: 'Mme', label: 'Mme'},
+            {value: '', label: 'Non indiqué'}
+          ]}
+        />
         <Input
           label='Nom *'
           nativeInputProps={{
