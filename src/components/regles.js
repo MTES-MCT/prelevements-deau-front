@@ -4,8 +4,7 @@ import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Box} from '@mui/material'
 import {Grid} from '@mui/system'
 
-import Regle from './regle.js'
-
+import Regle from '@/components/regle.js'
 import {downloadCsv} from '@/lib/export-csv.js'
 
 const Regles = ({regles, documents}) => {
