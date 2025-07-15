@@ -36,9 +36,11 @@ const Regles = ({regles, documents}) => {
           const document = documents.find(d => d.id_document === regle.id_document)
 
           return (
-            <Box key={regle.id_regle}>
-              <Regle regle={regle} document={document} />
-            </Box>
+            <Regle
+              key={regle.id_regle}
+              regle={regle}
+              document={document}
+            />
           )
         })}
       </Grid>
