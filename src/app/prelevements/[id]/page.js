@@ -28,7 +28,10 @@ const Page = async ({params}) => {
       <PointLocalisation
         pointPrelevement={pointPrelevement}
       />
-      <ExploitationsSection exploitations={exploitations} />
+      <ExploitationsSection
+        isPreleveurDisplayed
+        exploitations={exploitations}
+      />
     </>
   )
 }
