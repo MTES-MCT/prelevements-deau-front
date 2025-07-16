@@ -1,14 +1,6 @@
 import {format} from 'date-fns'
 import {fr} from 'date-fns/locale'
 
-function transformFrenchFirst(day) {
-  if (day === 1) {
-    return '1er'
-  }
-
-  return day
-}
-
 function formatDate(date) {
   if (!date) {
     return null
@@ -17,15 +9,41 @@ function formatDate(date) {
   return format(date, 'dd/MM/yyyy')
 }
 
-export function formatPeriodeDate(dateString) {
+export function formatFullDateFr(dateString) {
   if (!dateString) {
     return null
   }
 
   const date = new Date(dateString)
-  const day = date.getDate()
+  const dayNum = date.getDate()
+  const day = dayNum === 1 ? '1er' : String(dayNum).padStart(2, '0')
+  const month = format(date, 'MMMM', {locale: fr})
 
-  return `${transformFrenchFirst(day)} ${format(date, 'MMMM', {locale: fr})}`
+  const year = date.getFullYear()
+  if (year === 1) {
+    return `${day} ${month}`
+  }
+
+  return `${day} ${month} ${year}`
+}
+
+export function formatDateRange(start, end) {
+  const startFormated = formatFullDateFr(start)
+  const endFormated = formatFullDateFr(end)
+
+  if (startFormated && endFormated) {
+    return `Du ${startFormated} au ${endFormated}`
+  }
+
+  if (startFormated) {
+    return `Depuis le ${startFormated}`
+  }
+
+  if (endFormated) {
+    return `Jusqu’au ${endFormated}`
+  }
+
+  return 'Non renseignée'
 }
 
 export default formatDate

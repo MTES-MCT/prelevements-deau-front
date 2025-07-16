@@ -20,7 +20,6 @@ const parametres = [
   'Volume journalier',
   'Volume mensuel',
   'Volume annuel',
-  'Relevé d’index',
   'Débit prélevé',
   'Débit réservé',
   'Chlorure',
