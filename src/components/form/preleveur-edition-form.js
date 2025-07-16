@@ -33,6 +33,10 @@ const PreleveurEditionForm = ({preleveur}) => {
     setError(null)
     setValidationErrors(null)
 
+    if (Object.keys(payload).length === 0) {
+      router.push(`/preleveurs/${preleveur.id_preleveur}`)
+    }
+
     if (payload.numero_telephone && !/^\d{10}$/.test(payload.numero_telephone)) {
       setValidationErrors([
         {message: 'Le numéro de téléphone doit être composé de dix chiffres'}
