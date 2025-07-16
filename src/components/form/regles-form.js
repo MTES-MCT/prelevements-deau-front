@@ -140,24 +140,24 @@ const ReglesForm = ({defaultRegles, setExploitation}) => {
           label: contrainte
         }))}
       />
-      <div className='grid grid-cols-2 gap-4'>
-        <Input
-          label='Début de validité *'
-          nativeInputProps={{
-            type: 'date',
-            value: regle?.debut_validite,
-            onChange: e => setRegle(prev => ({...prev, debut_validite: e.target.value}))
-          }}
-        />
-        <Input
-          label='Fin de validité'
-          nativeInputProps={{
-            type: 'date',
-            value: regle?.fin_validite,
-            onChange: e => setRegle(prev => ({...prev, fin_validite: e.target.value}))
-          }}
-        />
-      </div>
+      <Input
+        label='Début de validité *'
+        hintText='Date à laquelle commence à s’appliquer la règle (en général, la date du document dont est issue la règle)'
+        nativeInputProps={{
+          type: 'date',
+          value: regle?.debut_validite,
+          onChange: e => setRegle(prev => ({...prev, debut_validite: e.target.value}))
+        }}
+      />
+      <Input
+        label='Fin de validité'
+        hintText='Date de fin d’application de la règle. Dans le cas où les valeurs seuils d’un paramètre évoluent au fil du temps, une nouvelle règle doit être créée pour ce paramètre, commençant à s’appliquer au lendemain de la fin de validité de la règle précédente'
+        nativeInputProps={{
+          type: 'date',
+          value: regle?.fin_validite,
+          onChange: e => setRegle(prev => ({...prev, fin_validite: e.target.value}))
+        }}
+      />
       <Input
         textArea
         label='Remarque'
