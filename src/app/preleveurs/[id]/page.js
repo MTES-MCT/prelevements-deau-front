@@ -7,8 +7,8 @@ import {
 import {notFound} from 'next/navigation'
 
 import {getPreleveur} from '@/app/api/points-prelevement.js'
+import ExploitationsSection from '@/components/exploitations/exploitations-section.js'
 import {getUsagesColors} from '@/components/map/legend-colors.js'
-import ExploitationsSection from '@/components/preleveurs/exploitations-section.js'
 import LabelWithIcon from '@/components/ui/label-with-icon.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getPreleveurEditURL} from '@/lib/urls.js'
