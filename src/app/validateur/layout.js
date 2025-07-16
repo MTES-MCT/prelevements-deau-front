@@ -1,5 +1,7 @@
+import {fr} from '@codegouvfr/react-dsfr'
+import {Download} from '@codegouvfr/react-dsfr/Download'
 import {Notice} from '@codegouvfr/react-dsfr/Notice'
-import {Typography} from '@mui/material'
+import {Typography, Box} from '@mui/material'
 
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 
@@ -22,7 +24,36 @@ const Validateur = async ({children}) => (
       </p>
 
       {children}
+
     </div>
+    <Box
+      className='flex flex-wrap justify-between gap-4'
+      sx={{
+        pt: 3,
+        pb: 2,
+        backgroundColor: fr.colors.decisions.background.alt.blueFrance.default
+      }}
+    >
+      <div className='fr-container'>
+        <h3 className='fr-h5'>
+          Besoin du template de déclaration ?
+        </h3>
+        <Download
+          details='XLSX – 318 ko'
+          label='Télécharger le template de déclaration AEP'
+          linkProps={{
+            href: '/templates/aep.xlsx'
+          }}
+        />
+        <Download
+          details='XLSX – 18 ko'
+          label='Télécharger le template de déclaration de camion citerne'
+          linkProps={{
+            href: '/templates/camion-citerne.xlsx'
+          }}
+        />
+      </div>
+    </Box>
   </>
 )
 
