@@ -24,6 +24,7 @@ Cette application est le front-end du projet de gestion des prélèvements d'eau
 | `NEXTAUTH_URL`                | URL publique de l'application (ex: `http://localhost:3000`).                            |
 | `NEXT_PUBLIC_API_URL`         | URL de base de l'API métier à laquelle l'application se connecte.                      |
 | `NEXT_PUBLIC_PROCEDURE_DS_ID` | Identifiant de la procédure Démarches Simplifiées pour générer les liens vers les dossiers. |
+| `NEXT_PUBLIC_STORAGE_URL`     | URL de base du stockage des documents.                                                 |
 
 Exemple de fichier `.env` :
 
@@ -32,6 +33,7 @@ NEXTAUTH_SECRET=<mysecretkey>
 NEXTAUTH_URL=http://localhost:3000
 NEXT_PUBLIC_API_URL=http://localhost:4000
 NEXT_PUBLIC_PROCEDURE_DS_ID=12345
+NEXT_PUBLIC_STORAGE_URL=http://localhost:5000
 ```
 
 ## Scripts disponibles
