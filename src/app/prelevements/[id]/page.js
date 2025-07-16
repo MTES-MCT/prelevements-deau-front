@@ -1,3 +1,4 @@
+import {Box} from '@mui/system'
 import {notFound} from 'next/navigation'
 
 import {getExploitationsByPointId, getPointPrelevement} from '@/app/api/points-prelevement.js'
@@ -20,18 +21,20 @@ const Page = async ({params}) => {
     <>
       <StartDsfrOnHydration />
 
-      <PointIdentification
-        pointPrelevement={pointPrelevement}
-        lienBss={pointPrelevement.bss?.lien || ''}
-        lienBnpe={pointPrelevement.bnpe?.lien || ''}
-      />
-      <PointLocalisation
-        pointPrelevement={pointPrelevement}
-      />
-      <ExploitationsSection
-        isPreleveurDisplayed
-        exploitations={exploitations}
-      />
+      <Box className='mb-5'>
+        <PointIdentification
+          pointPrelevement={pointPrelevement}
+          lienBss={pointPrelevement.bss?.lien || ''}
+          lienBnpe={pointPrelevement.bnpe?.lien || ''}
+        />
+        <PointLocalisation
+          pointPrelevement={pointPrelevement}
+        />
+        <ExploitationsSection
+          isPreleveurDisplayed
+          exploitations={exploitations}
+        />
+      </Box>
     </>
   )
 }
