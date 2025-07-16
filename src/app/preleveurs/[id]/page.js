@@ -32,15 +32,11 @@ const Page = async ({params}) => {
         >
           <Box>
             <Breadcrumb
-              currentPageLabel={`${preleveur.nom} ${preleveur.prenom}`}
-              homeLinkProps={{
-                href: '/'
-              }}
+              currentPageLabel={preleveur?.raison_sociale || `${preleveur?.nom || ''} ${preleveur?.prenom || ''}`.trim()}
+              homeLinkProps={{href: '/'}}
               segments={[{
                 label: 'Préleveurs',
-                linkProps: {
-                  href: '/preleveurs'
-                }
+                linkProps: {href: '/preleveurs'}
               }]}
             />
             <Box sx={{display: 'flex', gap: 1, alignItems: 'center'}}>
