@@ -26,6 +26,7 @@ const PreleveurCreationForm = () => {
   const [error, setError] = useState(null)
   const [validationErrors, setValidationErrors] = useState([])
   const [preleveur, setPreleveur] = useState({
+    civilite: '',
     raison_sociale: '',
     sigle: '',
     nom: '',
@@ -43,6 +44,22 @@ const PreleveurCreationForm = () => {
   const handleSubmit = async () => {
     setError(null)
     setValidationErrors([])
+
+    if (preleveur.numero_telephone && !/^\d{10}$/.test(preleveur.numero_telephone)) {
+      setValidationErrors([
+        {message: 'Le numéro de téléphone doit être composé de dix chiffres.'}
+      ])
+
+      return
+    }
+
+    if (preleveur.code_postal && !/^\d{5}$/.test(preleveur.code_postal)) {
+      setValidationErrors([
+        {message: 'Le code postal doit être composé de 5 chiffres.'}
+      ])
+
+      return
+    }
 
     try {
       const cleanedPreleveur = emptyStringToNull(preleveur)

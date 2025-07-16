@@ -14,6 +14,7 @@ import {
   Typography
 } from '@mui/material'
 import {Box} from '@mui/system'
+import {uniqueId} from 'lodash-es'
 
 import {normalizeString} from '@/utils/string.js'
 
@@ -80,7 +81,7 @@ const FileValidationErrors = ({errors: errorList}) => {
           const [messageText, cells] = item.message.split('pour les cellule')
           return (
             <Accordion
-              key={normalizeString(messageText)}
+              key={uniqueId('error-')}
               sx={{
                 backgroundColor: idx % 2 === 1 ? fr.colors.decisions.background.alt.grey.default : fr.colors.decisions.background.default.grey.default
               }}

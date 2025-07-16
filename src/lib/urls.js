@@ -1,3 +1,5 @@
+const STORAGE_URL = process.env.NEXT_PUBLIC_STORAGE_URL
+
 export function getDossierURL(dossier) {
   return `/dossiers/${dossier._id}`
 }
@@ -20,4 +22,8 @@ export function getPreleveurEditURL(id) {
 
 export function getExploitationCreationURL() {
   return '/exploitations/new'
+}
+
+export function getDocumentURL(document) {
+  return `${STORAGE_URL}/document/${document.nom_fichier}`
 }

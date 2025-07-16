@@ -4,6 +4,7 @@
 import {useEffect, useState} from 'react'
 
 import {Input} from '@codegouvfr/react-dsfr/Input'
+import {Select} from '@codegouvfr/react-dsfr/SelectNext'
 import {Typography} from '@mui/material'
 
 import OptionalPreleveurFieldsForm from '@/components/form/optional-preleveur-fields-form.js'
@@ -48,6 +49,19 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
         }}
       />
       <div className='grid grid-cols-2 gap-4 pb-5'>
+        <Select
+          label='Civilité du contact *'
+          placeholder='Choisir la civilité'
+          nativeSelectProps={{
+            defaultValue: preleveur?.civilite || '',
+            onChange: e => setPreleveur(prev => ({...prev, civilite: e.target.value}))
+          }}
+          options={[
+            {value: 'M.', label: 'M. '},
+            {value: 'Mme', label: 'Mme'},
+            {value: '', label: 'Non indiqué'}
+          ]}
+        />
         <Input
           label='Nom du contact'
           nativeInputProps={{
