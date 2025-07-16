@@ -59,7 +59,6 @@ const PreleveurPhysiqueForm = ({preleveur, setPreleveur}) => {
       <Input
         label='Adresse e-mail *'
         nativeInputProps={{
-          type: 'email',
           defaultValue: preleveur?.email || '',
           placeholder: 'Entrez l’adresse e-mail de contact',
           onChange: e => setPreleveur(prev => ({...prev, email: e.target.value}))
