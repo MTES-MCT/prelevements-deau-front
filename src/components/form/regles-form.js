@@ -12,18 +12,16 @@ import {emptyStringToNull} from '@/utils/string.js'
 
 const contraintes = [
   'minimum',
-  'maximum',
-  'moyenne'
+  'maximum'
 ]
 
 const parametres = [
   'Volume journalier',
   'Volume mensuel',
   'Volume annuel',
-  'Relevé d’index',
   'Débit prélevé',
   'Débit réservé',
-  'Chlorure',
+  'Chlorures',
   'Nitrates',
   'Sulfates',
   'Température',
@@ -33,13 +31,13 @@ const parametres = [
 ]
 
 const unites = [
-  'm3',
-  'L/s',
-  'm3/h',
-  'mg/L',
-  'degré Celsius',
-  'm NGR',
-  'µS/cm'
+  {value: 'm3', label: 'm³'},
+  {value: 'L/s', label: 'L/s'},
+  {value: 'm3/h', label: 'm³/h'},
+  {value: 'mg/L', label: 'mg/L'},
+  {value: 'degré Celsius', label: 'degrès Celsius'},
+  {value: 'm NGR', label: 'm NGR'},
+  {value: 'µS/cm', label: 'µS/cm'}
 ]
 
 const emptyRegle = {
