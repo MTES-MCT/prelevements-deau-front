@@ -33,6 +33,22 @@ const PreleveurEditionForm = ({preleveur}) => {
     setError(null)
     setValidationErrors(null)
 
+    if (payload.numero_telephone && !/^\d{10}$/.test(payload.numero_telephone)) {
+      setValidationErrors([
+        {message: 'Le numéro de téléphone doit être composé de dix chiffres'}
+      ])
+
+      return
+    }
+
+    if (preleveur.code_postal && !/^\d{5}$/.test(preleveur.code_postal)) {
+      setValidationErrors([
+        {message: 'Le code postal doit être composé de 5 chiffres.'}
+      ])
+
+      return
+    }
+
     try {
       const cleanedPreleveur = emptyStringToNull(payload)
       const response = await updatePreleveur(preleveur.id_preleveur, cleanedPreleveur)
