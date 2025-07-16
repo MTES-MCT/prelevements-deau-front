@@ -46,16 +46,16 @@ const Validateur = async ({children}) => (
         </h3>
         <Download
           details='XLSX – 318 ko'
-          label='Télécharger le template de déclaration AEP'
+          label='Télécharger le template « Données standardisées »'
           linkProps={{
-            href: '/templates/aep.xlsx'
+            href: '/templates/donnees-standardisees.xlsx'
           }}
         />
         <Download
           details='XLSX – 7 ko'
-          label='Télécharger le template de déclaration camion citerne'
+          label='Télécharger le template « Tableau de suivi »'
           linkProps={{
-            href: '/templates/camion-citerne.xlsx'
+            href: '/templates/tableau-de-suivi.xlsx'
           }}
         />
       </div>
