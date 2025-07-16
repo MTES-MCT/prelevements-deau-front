@@ -12,7 +12,13 @@ const Validateur = async ({children}) => (
       className='mb-4'
       severity='info'
       title='Cet outil est en cours de développement.'
-      description='Merci de nous signaler toute erreur non détectée ou injustifiée.'
+      description='Merci de nous signaler tout problème à l’adresse :'
+      link={{
+        linkProps: {
+          href: 'mailto:prelevements-deau@beta.gouv.fr?subject=Retour%20d%27utilisation%20du%20validateur%20de%20déclaration'
+        },
+        text: 'prelevements-deau@beta.gouv.fr'
+      }}
     />
 
     <div className='fr-container flex flex-col my-4 gap-10'>
@@ -47,7 +53,7 @@ const Validateur = async ({children}) => (
         />
         <Download
           details='XLSX – 18 ko'
-          label='Télécharger le template de déclaration de camion citerne'
+          label='Télécharger le template de déclaration camion citerne'
           linkProps={{
             href: '/templates/camion-citerne.xlsx'
           }}
