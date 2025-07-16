@@ -87,7 +87,7 @@ const ReglesForm = ({defaultRegles, setExploitation}) => {
         </p>
       </div>
       <Select
-        label='Paramètre'
+        label='Paramètre *'
         placeholder='Sélectionner un paramètre'
         nativeSelectProps={{
           value: regle?.parametre,
@@ -100,19 +100,19 @@ const ReglesForm = ({defaultRegles, setExploitation}) => {
       />
       <div className='grid grid-cols-2 gap-4'>
         <Select
-          label='Unité'
+          label='Unité *'
           placeholder='Sélectionner une unité'
           nativeSelectProps={{
             value: regle?.unite,
             onChange: e => setRegle(prev => ({...prev, unite: e.target.value}))
           }}
           options={unites.map(unite => ({
-            value: unite,
-            label: unite
+            value: unite.value,
+            label: unite.label
           }))}
         />
         <Input
-          label='Valeur'
+          label='Valeur *'
           nativeInputProps={{
             type: 'number',
             placeholder: 'Entrer une valeur',
@@ -122,7 +122,7 @@ const ReglesForm = ({defaultRegles, setExploitation}) => {
         />
       </div>
       <Select
-        label='Contrainte'
+        label='Contrainte *'
         placeholder='Sélectionner un niveau de contrainte'
         nativeSelectProps={{
           value: regle?.contrainte,
@@ -135,7 +135,7 @@ const ReglesForm = ({defaultRegles, setExploitation}) => {
       />
       <div className='grid grid-cols-2 gap-4'>
         <Input
-          label='Début de validité'
+          label='Début de validité *'
           nativeInputProps={{
             type: 'date',
             value: regle?.debut_validite,
