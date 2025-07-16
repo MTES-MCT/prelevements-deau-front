@@ -52,7 +52,7 @@ const Validateur = async ({children}) => (
           }}
         />
         <Download
-          details='XLSX – 18 ko'
+          details='XLSX – 7 ko'
           label='Télécharger le template de déclaration camion citerne'
           linkProps={{
             href: '/templates/camion-citerne.xlsx'
