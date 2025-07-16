@@ -58,10 +58,17 @@ const ReglesForm = ({defaultRegles, setExploitation}) => {
   const handleRegles = () => {
     setError(null)
 
+    if (!/^-?\d+(\.\d+)?$/.test(regle.valeur)) {
+      setError('La valeur doit être un nombre (positif/négatif/entier ou non)')
+      return
+    }
+
     if (!regle.parametre || !regle.unite || !regle.valeur || !regle.contrainte || !regle.debut_validite) {
       setError('Les champs "Paramètre", "Unité", "Valeur", "Contrainte" et "Début de validité" sont requis.')
       return
     }
+
+    regle.valeur = Number(regle.valeur)
 
     const newRegles = [...regles, emptyStringToNull(regle)]
 
@@ -117,7 +124,7 @@ const ReglesForm = ({defaultRegles, setExploitation}) => {
             type: 'number',
             placeholder: 'Entrer une valeur',
             value: regle?.valeur,
-            onChange: e => setRegle(prev => ({...prev, valeur: Number(e.target.value)}))
+            onChange: e => setRegle(prev => ({...prev, valeur: e.target.value}))
           }}
         />
       </div>
