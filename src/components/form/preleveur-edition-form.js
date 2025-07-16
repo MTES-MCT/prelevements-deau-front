@@ -41,7 +41,7 @@ const PreleveurEditionForm = ({preleveur}) => {
       return
     }
 
-    if (preleveur.code_postal && !/^\d{5}$/.test(preleveur.code_postal)) {
+    if (payload.code_postal && !/^\d{5}$/.test(payload.code_postal)) {
       setValidationErrors([
         {message: 'Le code postal doit être composé de 5 chiffres.'}
       ])
