@@ -29,6 +29,7 @@ const Regles = ({regles, documents}) => {
           xs: '1fr',
           md: isSingle ? '1fr' : '1fr 1fr'
         }}
+        sx={{alignItems: 'start'}}
         gap={{xs: 2, md: 3}}
       >
         {regles.map(regle => {

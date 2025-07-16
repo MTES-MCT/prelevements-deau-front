@@ -12,7 +12,7 @@ import {getDocumentURL} from '@/lib/urls.js'
 import {formatNumber} from '@/utils/number.js'
 
 const InfoRow = ({label, value, description}) => (
-  <Box className='flex justify-between'>
+  <Box className='flex justify-between sm:flex-row flex-col gap-1'>
     <Typography fontWeight='medium' className='fr-text--sm'>{label}</Typography>
     <Box className='flex gap-1'>
       <Typography fontWeight='light' className='fr-text--sm'>{value || '-'}</Typography>
@@ -52,7 +52,11 @@ const RegleHeader = ({parametre, debutValidite, finValidite, debutPeriode, finPe
 }
 
 const Regle = ({regle, document}) => (
-  <Accordion className='fr-card' sx={{boxShadow: 'none'}}>
+  <Accordion
+    disableGutters
+    className='fr-card'
+    sx={{boxShadow: 'none'}}
+  >
     <AccordionSummary expandIcon={<ExpandMoreIcon />}>
       <RegleHeader
         parametre={regle.parametre}
