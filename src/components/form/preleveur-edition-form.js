@@ -122,6 +122,9 @@ const PreleveurEditionForm = ({preleveur}) => {
           <DialogTitle><InfoOutlined className='mr-3' />Confirmer la suppression de ce préleveur</DialogTitle>
           <DialogContent>
             Êtes-vous sûr de vouloir supprimer ce préleveur ? Cette action est irréversible.
+            <p>
+              <small>Vous ne pourrez pas le supprimer s’il dispose d’exploitations en activité.</small>
+            </p>
           </DialogContent>
           <DialogActions className='m-3'>
             <Button
