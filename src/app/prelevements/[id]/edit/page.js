@@ -1,3 +1,4 @@
+import {Button} from '@codegouvfr/react-dsfr/Button'
 import {notFound} from 'next/navigation'
 
 import {
@@ -25,6 +26,18 @@ const Page = async ({params}) => {
   return (
     <>
       <StartDsfrOnHydration />
+
+      <div className='flex justify-end'>
+        <Button
+          priority='secondary'
+          iconId='fr-icon-close-line'
+          linkProps={{
+            href: `/prelevements/${id}`
+          }}
+        >
+          Annuler
+        </Button>
+      </div>
 
       <PointEditionForm
         pointPrelevement={pointPrelevement}
