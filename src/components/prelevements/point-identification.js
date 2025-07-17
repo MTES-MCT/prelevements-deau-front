@@ -2,16 +2,26 @@ import {Button} from '@codegouvfr/react-dsfr/Button'
 import Article from '@mui/icons-material/Article'
 import Launch from '@mui/icons-material/Launch'
 import {Box, Chip, Typography} from '@mui/material'
-import Link from 'next/link'
 
 import {getTypeMilieuColor} from '@/lib/points-prelevement.js'
+
+const LinkWithIcon = ({label, href}) => (
+  <Box className='flex flex-wrap gap-1'>
+    <Article />
+    <b>{label} :</b>
+    <span className='flex items-center gap-1'>
+      <a href={href}>{href}</a>
+      <Launch />
+    </span>
+  </Box>
+)
 
 const PointIdentification = ({pointPrelevement, lienBss, lienBnpe}) => {
   const {id_point: idPoint, nom} = pointPrelevement
 
   return (
     <div className='flex flex-col gap-4'>
-      <div className='flex justify-between items-center gap-4 pb-2'>
+      <div className='flex justify-between md:items-center sm:items-start gap-4 pb-2'>
         <Typography variant='h3'>
           <div className='flex flex-wrap items-center gap-4'>
             {idPoint} - {nom} {pointPrelevement.exploitationsStatus && (
@@ -48,20 +58,16 @@ const PointIdentification = ({pointPrelevement, lienBss, lienBnpe}) => {
 
       <div className='flex flex-col gap-1'>
         {lienBss && (
-          <Box className='flex gap-1'>
-            <Article />
-            <b>Fiche BSS InfoTerre : </b>
-            <Link href={lienBss}>{lienBss}</Link>
-            <Launch />
-          </Box>
+          <LinkWithIcon
+            href={lienBss}
+            label='Fiche BSS InfoTerre'
+          />
         )}
         {lienBnpe && (
-          <Box className='flex gap-1'>
-            <Article />
-            <b>Fiche ouvrage BNPE : </b>
-            <Link href={lienBnpe}>{lienBnpe}</Link>
-            <Launch />
-          </Box>
+          <LinkWithIcon
+            href={lienBnpe}
+            label='Fiche ouvrage BNPE'
+          />
         )}
       </div>
     </div>
