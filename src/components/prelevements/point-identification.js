@@ -9,8 +9,8 @@ const LinkWithIcon = ({label, href}) => (
   <Box className='flex flex-wrap gap-1'>
     <Article />
     <b>{label} :</b>
-    <span className='flex items-center gap-1'>
-      <a href={href}>{href}</a>
+    <span>
+      <a className='mr-1' href={href}>{href}</a>
       <Launch />
     </span>
   </Box>
