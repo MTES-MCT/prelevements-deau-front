@@ -12,7 +12,7 @@ const LabelValue = ({label, value}) => {
 }
 
 const PointLocalistation = ({pointPrelevement}) => (
-  <>
+  <div>
     <Typography
       gutterBottom
       variant='h5'
@@ -53,7 +53,7 @@ const PointLocalistation = ({pointPrelevement}) => (
         <LabelValue label='Réservoir biologique' value={pointPrelevement.reservoir_biologique ? 'oui' : null} />
       </>
     )}
-  </>
+  </div>
 )
 
 export default PointLocalistation
