@@ -4,6 +4,7 @@ import {Notice} from '@codegouvfr/react-dsfr/Notice'
 import {Typography, Box} from '@mui/material'
 
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
+import {getDeclarationTemplateAEP, getDeclarationTemplateTableauSuivi} from '@/lib/urls.js'
 
 const Validateur = async ({children}) => (
   <>
@@ -48,14 +49,14 @@ const Validateur = async ({children}) => (
           details='XLSX – 318 ko'
           label='Télécharger le template « Données standardisées »'
           linkProps={{
-            href: '/templates/donnees-standardisees.xlsx'
+            href: getDeclarationTemplateAEP()
           }}
         />
         <Download
           details='XLSX – 7 ko'
           label='Télécharger le template « Tableau de suivi »'
           linkProps={{
-            href: '/templates/tableau-de-suivi.xlsx'
+            href: getDeclarationTemplateTableauSuivi()
           }}
         />
       </div>
