@@ -26,6 +26,7 @@ import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import useEvent from '@/hook/use-event.js'
 import {downloadCsv} from '@/lib/export-csv.js'
 import {extractStatus, extractTypeMilieu, extractUsages} from '@/lib/points-prelevement.js'
+import {getPointPrelevementURL} from '@/lib/urls.js'
 
 const Page = () => {
   const theme = useTheme()
@@ -73,8 +74,8 @@ const Page = () => {
   }, [points])
 
   // Gestion de la sélection d'un point sur la carte
-  const handleSelectedPoint = useEvent(pointId => {
-    router.push(`/prelevements/${pointId}`)
+  const handleSelectedPoint = useEvent(point => {
+    router.push(getPointPrelevementURL(point))
   })
 
   const handleFilter = useCallback(newFilters => {

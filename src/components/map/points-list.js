@@ -5,6 +5,7 @@ import {orderBy} from 'lodash-es'
 import Link from 'next/link'
 
 import Point from '@/components/map/point.js'
+import {getPointPrelevementURL} from '@/lib/urls.js'
 
 const PointsList = ({points, isLoading}) => {
   // Si points est null, afficher un indicateur de chargement centré
@@ -22,7 +23,7 @@ const PointsList = ({points, isLoading}) => {
     <div className='flex flex-col gap-2'>
       <List>
         {orderBy(points, 'nom').map((point, index) => (
-          <Link key={point._id} href={`/prelevements/${point.id_point}`}>
+          <Link key={point._id} href={getPointPrelevementURL(point)}>
             <Point
               point={point}
               index={index}
