@@ -21,7 +21,7 @@ export function getDocumentURL(document) {
 }
 
 export function getDeclarationTemplateAEP() {
-  return `${STORAGE_URL}/declaration-templates/donnees-standardisees_v2.5.xlsx`
+  return `${STORAGE_URL}/declaration-templates/donnees-standardisees_v2.9.xlsx`
 }
 
 export function getDeclarationTemplateTableauSuivi() {
