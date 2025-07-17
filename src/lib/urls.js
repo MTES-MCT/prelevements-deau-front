@@ -16,6 +16,10 @@ export function getPreleveurURL(preleveur) {
   return `/preleveurs/${preleveur.id_preleveur}`
 }
 
+export function getPointPrelevementURL(point) {
+  return `/prelevements/${point.id_point}`
+}
+
 export function getDocumentURL(document) {
   return `${STORAGE_URL}/document/${document.nom_fichier}`
 }

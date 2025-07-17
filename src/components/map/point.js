@@ -6,7 +6,7 @@ import {
 
 import {getUsageColor, getTypeMilieuColor} from '@/lib/points-prelevement.js'
 
-const Point = ({point, index, onSelect}) => (
+const Point = ({point, index}) => (
   <ListItem
     key={point.id_point}
     sx={{
@@ -16,7 +16,6 @@ const Point = ({point, index, onSelect}) => (
       gap: 2,
       cursor: 'pointer'
     }}
-    onClick={() => onSelect(point.id_point)}
   >
     <Typography variant='body1' component='div'>
       {point.id_point} - {point.nom}

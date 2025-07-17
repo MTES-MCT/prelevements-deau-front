@@ -2,10 +2,12 @@ import {
   Box, CircularProgress, List, Typography
 } from '@mui/material'
 import {orderBy} from 'lodash-es'
+import Link from 'next/link'
 
 import Point from '@/components/map/point.js'
+import {getPointPrelevementURL} from '@/lib/urls.js'
 
-const PointsList = ({points, isLoading, onSelect}) => {
+const PointsList = ({points, isLoading}) => {
   // Si points est null, afficher un indicateur de chargement centré
   if (isLoading) {
     return (
@@ -21,12 +23,12 @@ const PointsList = ({points, isLoading, onSelect}) => {
     <div className='flex flex-col gap-2'>
       <List>
         {orderBy(points, 'nom').map((point, index) => (
-          <Point
-            key={point._id}
-            point={point}
-            index={index}
-            onSelect={onSelect}
-          />
+          <Link key={point._id} href={getPointPrelevementURL(point)}>
+            <Point
+              point={point}
+              index={index}
+            />
+          </Link>
         ))}
       </List>
     </div>
