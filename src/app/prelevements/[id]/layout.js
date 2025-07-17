@@ -1,23 +1,33 @@
-'use client'
+import Breadcrumb from '@codegouvfr/react-dsfr/Breadcrumb'
+import {notFound} from 'next/navigation'
 
-import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import Link from 'next/link'
-import {useParams} from 'next/navigation'
-
+import {getPointPrelevement} from '@/app/api/points-prelevement.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
+import {getPointsPrelevementURL} from '@/lib/urls.js'
 
-const Layout = ({children}) => {
-  const {id} = useParams()
+const Layout = async ({params, children}) => {
+  const {id} = await params
+
+  const pointPrelevement = await getPointPrelevement(id)
+  if (!pointPrelevement) {
+    notFound()
+  }
 
   return (
     <>
       <StartDsfrOnHydration />
+      <div className='fr-container mt-4'>
 
-      <div className='p-5'>
-        <ArrowBackIcon className='pr-1' />
-        <Link href={`/prelevements?point-prelevement=${id}`}>Retour</Link>
-      </div>
-      <div className='fr-container h-full'>
+        <Breadcrumb
+          currentPageLabel={`${id} - ${pointPrelevement.nom}`}
+          segments={[{
+            label: 'Points de prélèvement',
+            linkProps: {
+              href: getPointsPrelevementURL()
+            }
+          }]}
+        />
+
         {children}
       </div>
     </>

@@ -10,7 +10,7 @@ const PointIdentification = ({pointPrelevement, lienBss, lienBnpe}) => {
   const {id_point: idPoint, nom} = pointPrelevement
 
   return (
-    <Box sx={{p: 3}}>
+    <>
       <div className='flex justify-between'>
         <Typography
           gutterBottom
@@ -62,7 +62,7 @@ const PointIdentification = ({pointPrelevement, lienBss, lienBnpe}) => {
           <Launch sx={{ml: 1}} />
         </Box>
       )}
-    </Box>
+    </>
   )
 }
 
