@@ -2,9 +2,10 @@
 import {useState} from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
-import Button from '@codegouvfr/react-dsfr/Button'
-import Input from '@codegouvfr/react-dsfr/Input'
-import Select from '@codegouvfr/react-dsfr/SelectNext'
+import {Button} from '@codegouvfr/react-dsfr/Button'
+import {Input} from '@codegouvfr/react-dsfr/Input'
+import {Select} from '@codegouvfr/react-dsfr/SelectNext'
+import {Tooltip} from '@codegouvfr/react-dsfr/Tooltip'
 import {Typography} from '@mui/material'
 import {uniqueId} from 'lodash-es'
 
@@ -12,8 +13,7 @@ import {emptyStringToNull} from '@/utils/string.js'
 
 const contraintes = [
   'minimum',
-  'maximum',
-  'moyenne'
+  'maximum'
 ]
 
 const parametres = [
@@ -22,7 +22,7 @@ const parametres = [
   'Volume annuel',
   'Débit prélevé',
   'Débit réservé',
-  'Chlorure',
+  'Chlorures',
   'Nitrates',
   'Sulfates',
   'Température',
@@ -32,13 +32,13 @@ const parametres = [
 ]
 
 const unites = [
-  'm3',
-  'L/s',
-  'm3/h',
-  'mg/L',
-  'degré Celsius',
-  'm NGR',
-  'µS/cm'
+  {value: 'm3', label: 'm³'},
+  {value: 'L/s', label: 'L/s'},
+  {value: 'm3/h', label: 'm³/h'},
+  {value: 'mg/L', label: 'mg/L'},
+  {value: 'degré Celsius', label: 'degrès Celsius'},
+  {value: 'm NGR', label: 'm NGR'},
+  {value: 'µS/cm', label: 'µS/cm'}
 ]
 
 const emptyRegle = {
@@ -48,6 +48,8 @@ const emptyRegle = {
   contrainte: '',
   debut_validite: '',
   fin_validite: '',
+  debut_periode: '',
+  fin_periode: '',
   remarque: ''
 }
 
@@ -59,10 +61,25 @@ const ReglesForm = ({defaultRegles, setExploitation}) => {
   const handleRegles = () => {
     setError(null)
 
+    if (!/^-?\d+(\.\d+)?$/.test(regle.valeur)) {
+      setError('La valeur doit être un nombre (positif/négatif/entier ou non)')
+      return
+    }
+
+    if (
+      (regle.debut_periode && !/^(0?[1-9]|[12]\d|3[01])\/(0?[1-9]|1[0-2])$/.test(regle.debut_periode))
+      || (regle.fin_periode && !/^(0?[1-9]|[12]\d|3[01])\/(0?[1-9]|1[0-2])$/.test(regle.fin_periode))
+    ) {
+      setError('La valeur d’une période doit avoir le format jj/mm et être une date valide')
+      return
+    }
+
     if (!regle.parametre || !regle.unite || !regle.valeur || !regle.contrainte || !regle.debut_validite) {
       setError('Les champs "Paramètre", "Unité", "Valeur", "Contrainte" et "Début de validité" sont requis.')
       return
     }
+
+    regle.valeur = Number(regle.valeur)
 
     const newRegles = [...regles, emptyStringToNull(regle)]
 
@@ -88,7 +105,7 @@ const ReglesForm = ({defaultRegles, setExploitation}) => {
         </p>
       </div>
       <Select
-        label='Paramètre'
+        label='Paramètre *'
         placeholder='Sélectionner un paramètre'
         nativeSelectProps={{
           value: regle?.parametre,
@@ -101,29 +118,29 @@ const ReglesForm = ({defaultRegles, setExploitation}) => {
       />
       <div className='grid grid-cols-2 gap-4'>
         <Select
-          label='Unité'
+          label='Unité *'
           placeholder='Sélectionner une unité'
           nativeSelectProps={{
             value: regle?.unite,
             onChange: e => setRegle(prev => ({...prev, unite: e.target.value}))
           }}
           options={unites.map(unite => ({
-            value: unite,
-            label: unite
+            value: unite.value,
+            label: unite.label
           }))}
         />
         <Input
-          label='Valeur'
+          label='Valeur *'
           nativeInputProps={{
             type: 'number',
             placeholder: 'Entrer une valeur',
             value: regle?.valeur,
-            onChange: e => setRegle(prev => ({...prev, valeur: Number(e.target.value)}))
+            onChange: e => setRegle(prev => ({...prev, valeur: e.target.value}))
           }}
         />
       </div>
       <Select
-        label='Contrainte'
+        label='Contrainte *'
         placeholder='Sélectionner un niveau de contrainte'
         nativeSelectProps={{
           value: regle?.contrainte,
@@ -136,7 +153,16 @@ const ReglesForm = ({defaultRegles, setExploitation}) => {
       />
       <div className='grid grid-cols-2 gap-4'>
         <Input
-          label='Début de validité'
+          label='Début de validité *'
+          hintText={
+            <>
+              <span className='pr-2'>Date à laquelle commence à s’appliquer la règle</span>
+              <Tooltip
+                kind='hover'
+                title='Dans le cas où les valeurs seuils d’un paramètre évoluent au fil du temps, une nouvelle règle doit être créée pour ce paramètre, commençant à s’appliquer au lendemain de la fin de validité de la règle précédente'
+              />
+            </>
+          }
           nativeInputProps={{
             type: 'date',
             value: regle?.debut_validite,
@@ -145,10 +171,52 @@ const ReglesForm = ({defaultRegles, setExploitation}) => {
         />
         <Input
           label='Fin de validité'
+          hintText={
+            <>
+              <span className='pr-2'>Date de fin d’application de la règle.</span>
+              <Tooltip kind='hover' title='(en général, la date du document dont est issue la règle)' />
+            </>
+          }
           nativeInputProps={{
             type: 'date',
             value: regle?.fin_validite,
             onChange: e => setRegle(prev => ({...prev, fin_validite: e.target.value}))
+          }}
+        />
+      </div>
+      <div className='grid grid-cols-2 gap-4'>
+        <Input
+          label='Début de période'
+          hintText={
+            <>
+              <span className='pr-2'>Début de la période durant laquelle s’applique la règle</span>
+              <Tooltip
+                kind='hover'
+                title='(par exemple 01/05 pour une règle ne s’appliquant qu’à partir du 1er mai de chaque année)'
+              />
+            </>
+          }
+          nativeInputProps={{
+            value: regle?.debut_periode,
+            placeholder: ' jj / mm',
+            onChange: e => setRegle(prev => ({...prev, debut_periode: e.target.value}))
+          }}
+        />
+        <Input
+          label='Fin de période'
+          hintText={
+            <>
+              <span className='pr-2'>Fin de la période de l’année durant laquelle s’applique la règle</span>
+              <Tooltip
+                kind='hover'
+                title='(par exemple 30/09 pour une règle cessant de s’appliquer au 30 septembre de chaque année)'
+              />
+            </>
+          }
+          nativeInputProps={{
+            value: regle?.fin_periode,
+            placeholder: ' jj / mm',
+            onChange: e => setRegle(prev => ({...prev, fin_periode: e.target.value}))
           }}
         />
       </div>
