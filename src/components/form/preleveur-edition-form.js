@@ -35,6 +35,8 @@ const PreleveurEditionForm = ({preleveur}) => {
 
     if (Object.keys(payload).length === 0) {
       router.push(`/preleveurs/${preleveur.id_preleveur}`)
+
+      return
     }
 
     if (payload.numero_telephone && !/^\d{10}$/.test(payload.numero_telephone)) {
@@ -75,7 +77,14 @@ const PreleveurEditionForm = ({preleveur}) => {
     setError(null)
 
     try {
-      await deletePreleveur(preleveur.id_preleveur)
+      const response = await deletePreleveur(preleveur.id_preleveur)
+
+      if (response.code) {
+        setIsDialogOpen(false)
+        setError(response.message)
+        return
+      }
+
       router.push('/preleveurs')
     } catch (error) {
       setError(error.message)

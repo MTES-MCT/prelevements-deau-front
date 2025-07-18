@@ -2,7 +2,7 @@
 
 'use client'
 
-import {useState} from 'react'
+import {useEffect, useState} from 'react'
 
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Typography} from '@mui/material'
@@ -22,6 +22,8 @@ const DynamicCheckbox = dynamic(
 
 const PreleveurCreationForm = () => {
   const router = useRouter()
+
+  const [isDisabled, setIsDisabled] = useState(true)
   const [isPreleveurPhysique, setIsPreleveurPhysique] = useState(true)
   const [error, setError] = useState(null)
   const [validationErrors, setValidationErrors] = useState([])
@@ -79,6 +81,10 @@ const PreleveurCreationForm = () => {
     }
   }
 
+  useEffect(() => {
+    setIsDisabled(!(preleveur.nom && preleveur.prenom && preleveur.email))
+  }, [preleveur])
+
   return (
     <div className='fr-container'>
       <Typography variant='h3' sx={{pb: 5}}>
@@ -133,7 +139,7 @@ const PreleveurCreationForm = () => {
         </div>
       )}
       <div className='w-full flex justify-center p-5 mb-8'>
-        <Button onClick={handleSubmit}>
+        <Button disabled={isDisabled} onClick={handleSubmit}>
           Valider la création du préleveur
         </Button>
       </div>

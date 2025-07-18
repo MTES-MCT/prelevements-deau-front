@@ -26,7 +26,7 @@ const PreleveurPhysiqueForm = ({preleveur, setPreleveur}) => {
       </Typography>
       <div className='w-full grid grid-cols-[1fr_2fr_2fr] gap-4 pb-5'>
         <Select
-          label='Civilité *'
+          label='Civilité'
           placeholder='Choisir la civilité'
           nativeSelectProps={{
             placeholder: 'Choisir la civilité',
