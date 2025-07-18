@@ -179,12 +179,12 @@ const ReglesForm = ({defaultRegles, setExploitation}) => {
       </div>
       <div className='grid grid-cols-2 gap-4'>
         <DayMonthSelector
-          label='Début de période *'
+          label='Début de période'
           toolTip='Début de la période durant laquelle s’applique la règle (par exemple 01/05 pour une règle ne s’appliquant qu’à partir du 1er mai de chaque année)'
           onChange={date => setRegle(prev => ({...prev, debut_periode: date}))}
         />
         <DayMonthSelector
-          label='Fin de période *'
+          label='Fin de période'
           toolTip='Fin de la période de l’année durant laquelle s’applique la règle (par exemple 30/09 pour une règle cessant de s’appliquer au 30 septembre de chaque année)'
           onChange={date => setRegle(prev => ({...prev, fin_periode: date}))}
         />
