@@ -35,6 +35,8 @@ const PreleveurEditionForm = ({preleveur}) => {
 
     if (Object.keys(payload).length === 0) {
       router.push(`/preleveurs/${preleveur.id_preleveur}`)
+
+      return
     }
 
     if (payload.numero_telephone && !/^\d{10}$/.test(payload.numero_telephone)) {
