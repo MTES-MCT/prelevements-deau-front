@@ -9,6 +9,7 @@ import {Tooltip} from '@codegouvfr/react-dsfr/Tooltip'
 import {Typography} from '@mui/material'
 import {uniqueId} from 'lodash-es'
 
+import DayMonthSelector from '@/components/form/day-month-selector.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
 const contraintes = [
@@ -63,14 +64,6 @@ const ReglesForm = ({defaultRegles, setExploitation}) => {
 
     if (!/^-?\d+(\.\d+)?$/.test(regle.valeur)) {
       setError('La valeur doit être un nombre (positif/négatif/entier ou non)')
-      return
-    }
-
-    if (
-      (regle.debut_periode && !/^(0?[1-9]|[12]\d|3[01])\/(0?[1-9]|1[0-2])$/.test(regle.debut_periode))
-      || (regle.fin_periode && !/^(0?[1-9]|[12]\d|3[01])\/(0?[1-9]|1[0-2])$/.test(regle.fin_periode))
-    ) {
-      setError('La valeur d’une période doit avoir le format jj/mm et être une date valide')
       return
     }
 
@@ -157,10 +150,7 @@ const ReglesForm = ({defaultRegles, setExploitation}) => {
           hintText={
             <>
               <span className='pr-2'>Date à laquelle commence à s’appliquer la règle</span>
-              <Tooltip
-                kind='hover'
-                title='Dans le cas où les valeurs seuils d’un paramètre évoluent au fil du temps, une nouvelle règle doit être créée pour ce paramètre, commençant à s’appliquer au lendemain de la fin de validité de la règle précédente'
-              />
+              <Tooltip kind='hover' title='(en général, la date du document dont est issue la règle)' />
             </>
           }
           nativeInputProps={{
@@ -174,7 +164,10 @@ const ReglesForm = ({defaultRegles, setExploitation}) => {
           hintText={
             <>
               <span className='pr-2'>Date de fin d’application de la règle.</span>
-              <Tooltip kind='hover' title='(en général, la date du document dont est issue la règle)' />
+              <Tooltip
+                kind='hover'
+                title='Dans le cas où les valeurs seuils d’un paramètre évoluent au fil du temps, une nouvelle règle doit être créée pour ce paramètre, commençant à s’appliquer au lendemain de la fin de validité de la règle précédente'
+              />
             </>
           }
           nativeInputProps={{
@@ -185,39 +178,15 @@ const ReglesForm = ({defaultRegles, setExploitation}) => {
         />
       </div>
       <div className='grid grid-cols-2 gap-4'>
-        <Input
-          label='Début de période'
-          hintText={
-            <>
-              <span className='pr-2'>Début de la période durant laquelle s’applique la règle</span>
-              <Tooltip
-                kind='hover'
-                title='(par exemple 01/05 pour une règle ne s’appliquant qu’à partir du 1er mai de chaque année)'
-              />
-            </>
-          }
-          nativeInputProps={{
-            value: regle?.debut_periode,
-            placeholder: ' jj / mm',
-            onChange: e => setRegle(prev => ({...prev, debut_periode: e.target.value}))
-          }}
+        <DayMonthSelector
+          label='Début de période *'
+          toolTip='Début de la période durant laquelle s’applique la règle (par exemple 01/05 pour une règle ne s’appliquant qu’à partir du 1er mai de chaque année)'
+          onChange={date => setRegle(prev => ({...prev, debut_periode: date}))}
         />
-        <Input
-          label='Fin de période'
-          hintText={
-            <>
-              <span className='pr-2'>Fin de la période de l’année durant laquelle s’applique la règle</span>
-              <Tooltip
-                kind='hover'
-                title='(par exemple 30/09 pour une règle cessant de s’appliquer au 30 septembre de chaque année)'
-              />
-            </>
-          }
-          nativeInputProps={{
-            value: regle?.fin_periode,
-            placeholder: ' jj / mm',
-            onChange: e => setRegle(prev => ({...prev, fin_periode: e.target.value}))
-          }}
+        <DayMonthSelector
+          label='Fin de période *'
+          toolTip='Fin de la période de l’année durant laquelle s’applique la règle (par exemple 30/09 pour une règle cessant de s’appliquer au 30 septembre de chaque année)'
+          onChange={date => setRegle(prev => ({...prev, fin_periode: date}))}
         />
       </div>
       <Input
