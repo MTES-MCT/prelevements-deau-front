@@ -75,7 +75,14 @@ const PreleveurEditionForm = ({preleveur}) => {
     setError(null)
 
     try {
-      await deletePreleveur(preleveur.id_preleveur)
+      const response = await deletePreleveur(preleveur.id_preleveur)
+
+      if (response.code) {
+        setIsDialogOpen(false)
+        setError(response.message)
+        return
+      }
+
       router.push('/preleveurs')
     } catch (error) {
       setError(error.message)
