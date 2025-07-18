@@ -48,7 +48,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
           onChange: e => setPreleveur(prev => ({...prev, raison_sociale: e.target.value}))
         }}
       />
-      <div className='grid grid-cols-2 gap-4 pb-5'>
+      <div className='w-full grid grid-cols-[1fr_2fr_2fr] gap-4 pb-5'>
         <Select
           label='Civilité du contact *'
           placeholder='Choisir la civilité'
