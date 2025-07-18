@@ -20,26 +20,24 @@ import SidePanelLayout from '@/components/layout/side-panel.js'
 import LoadingOverlay from '@/components/loading-overlay.js'
 import Map from '@/components/map/index.js'
 import Legend from '@/components/map/legend.js'
-import PointHeader from '@/components/map/point-header.js'
-import PointSidePanel from '@/components/map/point-side-panel.js'
 import PointsListHeader from '@/components/map/points-list-header.js'
 import PointsList from '@/components/map/points-list.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import useEvent from '@/hook/use-event.js'
 import {downloadCsv} from '@/lib/export-csv.js'
 import {extractStatus, extractTypeMilieu, extractUsages} from '@/lib/points-prelevement.js'
+import {getPointPrelevementURL} from '@/lib/urls.js'
 
 const Page = () => {
   const theme = useTheme()
   const searchParams = useSearchParams()
   const router = useRouter()
-  const pointId = searchParams.get('point-prelevement')
+  const selectedPointId = searchParams.get('point-prelevement')
   // État pour les données
   const [points, setPoints] = useState([])
   const [loading, setLoading] = useState(true)
 
   // États locaux pour l'interface
-  const [selectedPoint, setSelectedPoint] = useState(null)
   const [expanded, setExpanded] = useState(false)
   const [filters, setFilters] = useState({
     name: '',
@@ -76,12 +74,8 @@ const Page = () => {
   }, [points])
 
   // Gestion de la sélection d'un point sur la carte
-  const handleSelectedPoint = useEvent(pointId => {
-    // On recherche dans le state actuel
-    const point = points.find(p => p.id_point === pointId)
-    setSelectedPoint(point)
-    setExpanded(true)
-    router.push(`?point-prelevement=${point.id_point}`)
+  const handleSelectedPoint = useEvent(point => {
+    router.push(getPointPrelevementURL(point))
   })
 
   const handleFilter = useCallback(newFilters => {
@@ -137,14 +131,6 @@ const Page = () => {
     setFilteredPoints(filtered.map(point => point.id_point))
   }, [filters, points])
 
-  useEffect(() => {
-    if (pointId) {
-      const point = points.find(point => pointId === point.id_point)
-
-      setSelectedPoint(point)
-    }
-  }, [pointId, points])
-
   const exportPointsList = () => {
     const result = points.filter(p => filteredPoints.includes(p.id_point))
 
@@ -157,35 +143,23 @@ const Page = () => {
 
       <SidePanelLayout
         header={
-          selectedPoint ? (
-            <PointHeader
-              point={selectedPoint}
-              onClose={() => setSelectedPoint(null)}
-            />
-          ) : (
-            <PointsListHeader
-              resultsCount={loading ? null : filteredPoints.length}
-              filters={filters}
-              typeMilieuOptions={typeMilieuOptions}
-              usagesOptions={usagesOptions}
-              statusOptions={statusOptions}
-              exportList={exportPointsList}
-              onFilter={handleFilter}
-            />
-          )
+          <PointsListHeader
+            resultsCount={loading ? null : filteredPoints.length}
+            filters={filters}
+            typeMilieuOptions={typeMilieuOptions}
+            usagesOptions={usagesOptions}
+            statusOptions={statusOptions}
+            exportList={exportPointsList}
+            onFilter={handleFilter}
+          />
         }
         isOpen={expanded}
         handleOpen={setExpanded}
         panelContent={
-          selectedPoint
-            ? <PointSidePanel point={selectedPoint} />
-            : (
-              <PointsList
-                isLoading={loading}
-                points={points.filter(pt => filteredPoints.includes(pt.id_point))}
-                onSelect={handleSelectedPoint}
-              />
-            )
+          <PointsList
+            isLoading={loading}
+            points={points.filter(pt => filteredPoints.includes(pt.id_point))}
+          />
         }
       >
         <Box className='flex h-full flex-col relative'>
@@ -195,7 +169,7 @@ const Page = () => {
           <Map
             points={points}
             filteredPoints={filteredPoints}
-            selectedPoint={selectedPoint}
+            selectedPoint={selectedPointId ? points.find(point => selectedPointId === point.id_point) : null}
             handleSelectedPoint={handleSelectedPoint}
             style={style}
             setStyle={setStyle}
