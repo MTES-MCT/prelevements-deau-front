@@ -50,7 +50,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
       />
       <div className='w-full grid grid-cols-[1fr_2fr_2fr] gap-4 pb-5'>
         <Select
-          label='Civilité du contact *'
+          label='Civilité du contact'
           placeholder='Choisir la civilité'
           nativeSelectProps={{
             defaultValue: preleveur?.civilite || '',
@@ -63,7 +63,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
           ]}
         />
         <Input
-          label='Nom du contact'
+          label='Nom du contact *'
           nativeInputProps={{
             placeholder: 'Entrer le nom',
             defaultValue: preleveur?.nom || '',
@@ -71,7 +71,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
           }}
         />
         <Input
-          label='Prénom du contact'
+          label='Prénom du contact *'
           nativeInputProps={{
             placeholder: 'Entrer le prénom',
             defaultValue: preleveur?.prenom || '',
@@ -80,7 +80,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
         />
       </div>
       <Input
-        label='Adresse email du contact'
+        label='Adresse email du contact *'
         nativeInputProps={{
           placeholder: 'Entrer l’adresse email de contact',
           defaultValue: preleveur?.email || '',
