@@ -8,8 +8,7 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
-  Typography
+  DialogTitle
 } from '@mui/material'
 import {useRouter} from 'next/navigation'
 
@@ -86,10 +85,7 @@ const PointEditionForm = ({
   }
 
   return (
-    <div className='fr-container'>
-      <Typography variant='h3' sx={{pb: 5}}>
-        Édition du point de prélèvement {point.nom}
-      </Typography>
+    <div>
       <PointForm
         point={point}
         setPoint={setPayload}

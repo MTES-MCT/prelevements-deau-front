@@ -1,3 +1,5 @@
+import {Button} from '@codegouvfr/react-dsfr/Button'
+import {Typography} from '@mui/material'
 import {notFound} from 'next/navigation'
 
 import {
@@ -25,6 +27,22 @@ const Page = async ({params}) => {
   return (
     <>
       <StartDsfrOnHydration />
+
+      <div className='flex justify-between gap-4 items-center mb-4'>
+        <Typography variant='h3'>
+          Édition du point de prélèvement {pointPrelevement.nom}
+        </Typography>
+
+        <Button
+          priority='secondary'
+          iconId='fr-icon-close-line'
+          linkProps={{
+            href: `/prelevements/${id}`
+          }}
+        >
+          Annuler
+        </Button>
+      </div>
 
       <PointEditionForm
         pointPrelevement={pointPrelevement}

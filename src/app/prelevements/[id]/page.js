@@ -20,18 +20,20 @@ const Page = async ({params}) => {
     <>
       <StartDsfrOnHydration />
 
-      <PointIdentification
-        pointPrelevement={pointPrelevement}
-        lienBss={pointPrelevement.bss?.lien || ''}
-        lienBnpe={pointPrelevement.bnpe?.lien || ''}
-      />
-      <PointLocalisation
-        pointPrelevement={pointPrelevement}
-      />
-      <PointExploitations
-        pointPrelevement={pointPrelevement}
-        exploitations={exploitations}
-      />
+      <div className='flex flex-col gap-8 mb-16 h-full'>
+        <PointIdentification
+          pointPrelevement={pointPrelevement}
+          lienBss={pointPrelevement.bss?.lien || ''}
+          lienBnpe={pointPrelevement.bnpe?.lien || ''}
+        />
+        <PointLocalisation
+          pointPrelevement={pointPrelevement}
+        />
+        <PointExploitations
+          pointPrelevement={pointPrelevement}
+          exploitations={exploitations}
+        />
+      </div>
     </>
   )
 }
