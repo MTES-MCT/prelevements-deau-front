@@ -67,6 +67,7 @@ const ValidateurResult = ({file, typePrelevement, pointsPrelevement, data, error
                 <Spreadsheet
                   data={d}
                   errors={errors}
+                  typePrelevement={typePrelevement}
                 />
               </PrelevementsAccordion>
             )

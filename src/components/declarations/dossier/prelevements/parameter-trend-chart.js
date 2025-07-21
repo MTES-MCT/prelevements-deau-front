@@ -18,7 +18,7 @@ import {uniqBy} from 'lodash-es'
 import {buildSeries} from '@/utils/chart.js'
 import {formatNumber} from '@/utils/number.js'
 
-const ParameterTrendChart = ({data}) => {
+const ParameterTrendChart = ({data, connectNulls}) => {
   // ---------- Données brutes ----------
   const {
     dailyValues = [], dailyParameters = [],
@@ -137,8 +137,10 @@ const ParameterTrendChart = ({data}) => {
     parameters: visibleParameters,
     allParameters: parameters,
     values: slicedValues,
-    unitToAxisId
-  }), [visibleParameters, parameters, slicedValues, unitToAxisId])
+    unitToAxisId,
+    showMark: slicedValues.length <= 31,
+    connectNulls
+  }), [visibleParameters, parameters, slicedValues, unitToAxisId, connectNulls])
 
   const series = useMemo(
     () => rawSeries.map(s => {
