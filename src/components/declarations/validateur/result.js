@@ -1,3 +1,5 @@
+import {useState} from 'react'
+
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {
   Card, CardContent, Typography
@@ -9,8 +11,8 @@ import Spreadsheet from '@/components/declarations/dossier/prelevements/spreadsh
 import FileValidationErrors from '@/components/declarations/file-validation-errors.js'
 import {formatBytes} from '@/utils/size.js'
 
-const ValidateurResult = ({file, fileType, pointPrelevement, data, errors = []}) => {
-  const noError = errors.length === 0
+const ValidateurResult = ({file, fileType, pointsPrelevement, data, errors = []}) => {
+  const [selectedPointId, setSelectedPointId] = useState(data?.length === 1 ? data[0].pointPrelevement : null)
   return (
     <Box className='flex flex-col gap-4'>
       <Alert
@@ -35,23 +37,26 @@ const ValidateurResult = ({file, fileType, pointPrelevement, data, errors = []})
         )}
 
         {data && (
-          <PrelevementsAccordion
-            isOpen
-            idPoint={data.pointPrelevement}
-            pointPrelevement={pointPrelevement}
-            volumePreleveTotal={data.volumePreleveTotal}
-            status={errors?.length > 0 || !data ? 'error' : 'success'}
-          >
-            {fileType === 'Données standardisées' ? (
-              <Spreadsheet
-                data={data}
-                errors={errors}
-              />
-            ) : (
-              <Alert severity='info' description=' Ce type de dossier n’est pas encore pris en charge.' />
-            )}
+          data.map(d => {
+            const poinPrelevementId = d?.pointPrelevement || pointsPrelevement[0]
 
-          </PrelevementsAccordion>
+            return (
+              <PrelevementsAccordion
+                key={d.pointPrelevement}
+                isOpen={selectedPointId === poinPrelevementId}
+                idPoint={d.pointPrelevement}
+                pointPrelevement={pointsPrelevement.find(p => p.id_point === d.pointPrelevement)}
+                volumePreleveTotal={d.volumePreleveTotal}
+                status={status}
+                handleSelect={() => setSelectedPointId(poinPrelevementId)}
+              >
+                <Spreadsheet
+                  data={d}
+                  errors={errors}
+                />
+              </PrelevementsAccordion>
+            )
+          })
         )}
       </Card>
     </Box>

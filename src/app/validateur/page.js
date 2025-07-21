@@ -13,7 +13,7 @@ const ValidateurPage = () => {
   const [file, setFile] = useState(null)
   const [result, setResult] = useState(null)
   const [fileType, setFileType] = useState(null)
-  const [pointPrelevement, setPointPrelevement] = useState(null)
+  const [pointsPrelevement, setPointsPrelevement] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
 
   const resetForm = () => {
@@ -29,13 +29,14 @@ const ValidateurPage = () => {
       const buffer = await file.arrayBuffer()
       const validation = fileType === 'Données standardisées' ? validateMultiParamFile : validateCamionCiterneFile
       const result = await validation(buffer)
+      result.data = result.data ? (fileType === 'Données standardisées' ? [result.data] : result.data) : undefined
+
+      if (result.data) {
+        const pointsPrelevement = await Promise.all(result.data.map(({pointPrelevement}) => getPointPrelevement(pointPrelevement)))
+        setPointsPrelevement(pointsPrelevement)
+      }
 
       setResult(result)
-
-      if (result.data.pointPrelevement) {
-        const pointPrelevement = await getPointPrelevement(result.data.pointPrelevement)
-        setPointPrelevement(pointPrelevement)
-      }
     } catch (error) {
       console.error('Erreur lors de la validation du fichier:', error)
     }
@@ -57,7 +58,7 @@ const ValidateurPage = () => {
           <ValidateurResult
             file={file}
             fileType={fileType}
-            pointPrelevement={pointPrelevement}
+            pointsPrelevement={pointsPrelevement}
             data={result.data}
             errors={result.errors}
           />
