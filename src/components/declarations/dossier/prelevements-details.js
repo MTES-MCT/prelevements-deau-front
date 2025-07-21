@@ -69,7 +69,7 @@ const sortFilesByPointPrelevement = (files, pointsPrelevement) => {
 const PrelevementsDetails = ({
   volumePrelevementTotal,
   moisDeclaration,
-  tableauSuiviPrelevements,
+  typePrelevement,
   pointsPrelevement,
   selectedPointId,
   relevesIndex,
@@ -129,8 +129,12 @@ const PrelevementsDetails = ({
                 status={file?.result.errors?.length > 0 || !file.result.data ? 'error' : 'success'}
                 handleSelect={() => selectedPoint(poinPrelevementId)}
               >
-                {tableauSuiviPrelevements && (
-                  <Alert severity='info' description=' Ce type de dossier n’est pas encore pris en charge.' />
+                {typePrelevement === 'camion-citerne' && (
+                  <Alert
+                    className='mb-4'
+                    severity='info'
+                    description='Ce type de dossier n’est pas encore pris en charge.'
+                  />
                 )}
 
                 <Spreadsheet
@@ -139,6 +143,7 @@ const PrelevementsDetails = ({
                   data={file.result?.data || {}}
                   errors={file.result?.errors}
                   downloadFile={handleDownload}
+                  typePrelevement={typePrelevement}
                 />
               </PrelevementsAccordion>
             </Box>
@@ -153,7 +158,7 @@ const PrelevementsDetails = ({
   }, [
     volumePrelevementTotal,
     moisDeclaration,
-    tableauSuiviPrelevements,
+    typePrelevement,
     pointsPrelevement,
     selectedPointId,
     relevesIndex,

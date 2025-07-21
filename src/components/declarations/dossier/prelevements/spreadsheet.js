@@ -36,57 +36,57 @@ const Spreadsheet = ({moisDeclaration, storageKey = '', data = {}, errors, typeP
 
   return (
     <Box className='flex flex-col gap-6'>
-      {data && (
-        <>
-          <Box className='flex flex-col gap-4'>
-            <Divider textAlign='left'>
-              Paramètres par pas de temps
-            </Divider>
+      <Box className='flex flex-col gap-4'>
+        <Divider textAlign='left'>
+          Paramètres par pas de temps
+        </Divider>
 
-            <Box className='flex flex-col gap-2'>
-              {data.dailyParameters && (
-                <Box className='flex flex-wrap gap-1 items-center'>
-                  Journalier : {data.dailyParameters.map(param => (
-                    <Tag key={param.paramIndex} sx={{m: 1}}>
-                      {param.nom_parametre} ({param.unite})
-                    </Tag>
-                  ))}
-                </Box>
-              )}
-
-              {data.fifteenMinutesParameters && (
-                <Box className='flex flex-wrap gap-1 items-center'>
-                  Quinze minutes : {data.fifteenMinutesParameters.map(param => (
-                    <Tag key={param.paramIndex} sx={{m: 1}}>
-                      {param.nom_parametre} ({param.unite})
-                    </Tag>
-                  ))}
-                </Box>
-              )}
+        <Box className='flex flex-col gap-2'>
+          {data.dailyParameters ? (
+            <Box className='flex flex-wrap gap-1 items-center'>
+              Journalier : {data.dailyParameters.map(param => (
+                <Tag key={param.paramIndex} sx={{m: 1}}>
+                  {param.nom_parametre} ({param.unite})
+                </Tag>
+              ))}
             </Box>
-          </Box>
+          ) : (
+            <Alert severity='warning' description='Aucun paramètre journalier renseigné.' />
+          )}
 
-          <Box className='flex flex-col gap-4'>
-            <Divider textAlign='left'>
-              Calendrier des prélèvements
-            </Divider>
+          {data.fifteenMinutesParameters && (
+            <Box className='flex flex-wrap gap-1 items-center'>
+              Quinze minutes : {data.fifteenMinutesParameters.map(param => (
+                <Tag key={param.paramIndex} sx={{m: 1}}>
+                  {param.nom_parametre} ({param.unite})
+                </Tag>
+              ))}
+            </Box>
+          )}
+        </Box>
+      </Box>
 
-            {hasDatesOutsideDeclMonth && (
-              <Alert
-                severity='warning'
-                className='mb-2'
-                description={
-                  <>
-                    Certaines dates de prélèvement ne sont pas situées dans le mois déclaré : {new Intl.DateTimeFormat('fr-FR', {month: 'long', year: 'numeric'}).format(new Date(moisDeclaration))}
-                  </>
-                }
-              />
-            )}
+      {Object.keys(data).length > 0 && (
+        <Box className='flex flex-col gap-4'>
+          <Divider textAlign='left'>
+            Calendrier des prélèvements
+          </Divider>
 
-            <PrelevementsCalendar data={data} />
-            <ParameterTrendChart data={data} connectNulls={typePrelevement === 'camion-citerne'} />
-          </Box>
-        </>
+          {hasDatesOutsideDeclMonth && (
+            <Alert
+              severity='warning'
+              className='mb-2'
+              description={
+                <>
+                  Certaines dates de prélèvement ne sont pas situées dans le mois déclaré : {new Intl.DateTimeFormat('fr-FR', {month: 'long', year: 'numeric'}).format(new Date(moisDeclaration))}
+                </>
+              }
+            />
+          )}
+
+          <PrelevementsCalendar data={data} />
+          <ParameterTrendChart data={data} connectNulls={typePrelevement === 'camion-citerne'} />
+        </Box>
       )}
 
       {errors && (
