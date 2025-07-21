@@ -117,7 +117,7 @@ const FileValidationErrors = ({errors: errorList}) => {
                   </Box>
                 </AccordionDetails>
               ) : (
-                <Alert severity='info' description='Pas d’autre information disponible.' />
+                <Alert severity='info' description={item.explanation || 'Pas d’autre information disponible.'} />
               )}
             </Accordion>
           )
