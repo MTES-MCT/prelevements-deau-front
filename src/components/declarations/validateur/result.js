@@ -11,7 +11,7 @@ import Spreadsheet from '@/components/declarations/dossier/prelevements/spreadsh
 import FileValidationErrors from '@/components/declarations/file-validation-errors.js'
 import {formatBytes} from '@/utils/size.js'
 
-const ValidateurResult = ({file, fileType, pointsPrelevement, data, errors = []}) => {
+const ValidateurResult = ({file, typePrelevement, pointsPrelevement, data, errors = []}) => {
   const [selectedPointId, setSelectedPointId] = useState(data?.length === 1 ? data[0].pointPrelevement : null)
 
   const hasError = errors.some(({severity}) => severity === 'error')

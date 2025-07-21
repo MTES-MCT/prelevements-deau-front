@@ -12,7 +12,7 @@ import ValidateurResult from '@/components/declarations/validateur/result.js'
 const ValidateurPage = () => {
   const [file, setFile] = useState(null)
   const [result, setResult] = useState(null)
-  const [fileType, setFileType] = useState(null)
+  const [typePrelevement, setTypePrelevement] = useState(null)
   const [pointsPrelevement, setPointsPrelevement] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -21,15 +21,15 @@ const ValidateurPage = () => {
     setResult(null)
   }
 
-  const submit = async (file, fileType) => {
-    setFileType(fileType)
+  const submit = async (file, prelevementType) => {
+    setTypePrelevement(prelevementType)
     setFile(file)
     setIsLoading(true)
     try {
       const buffer = await file.arrayBuffer()
-      const validation = fileType === 'Données standardisées' ? validateMultiParamFile : validateCamionCiterneFile
+      const validation = prelevementType === 'aep-zre' ? validateMultiParamFile : validateCamionCiterneFile
       const result = await validation(buffer)
-      result.data = result.data ? (fileType === 'Données standardisées' ? [result.data] : result.data) : undefined
+      result.data = result.data ? (prelevementType === 'aep-zre' ? [result.data] : result.data) : undefined
 
       if (result.data) {
         const pointsPrelevement = await Promise.all(result.data.map(({pointPrelevement}) => getPointPrelevement(pointPrelevement)))
@@ -57,7 +57,7 @@ const ValidateurPage = () => {
           <Divider component='div' />
           <ValidateurResult
             file={file}
-            fileType={fileType}
+            typePrelevement={typePrelevement}
             pointsPrelevement={pointsPrelevement}
             data={result.data}
             errors={result.errors}

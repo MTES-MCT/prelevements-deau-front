@@ -10,7 +10,7 @@ import {
 
 const FileValidateurForm = ({isLoading, resetForm, handleSubmit}) => {
   const [file, setFile] = useState(null)
-  const [fileType, setFileType] = useState('Données standardisées')
+  const [fileType, setFileType] = useState('aep-zre')
   const [inputError, setInputError] = useState(null)
 
   const handleFileChange = useEventCallback(event => {
@@ -44,8 +44,8 @@ const FileValidateurForm = ({isLoading, resetForm, handleSubmit}) => {
         }}
       >
         <option disabled hidden value=''>Selectionnez un type de fichier</option>
-        <option value='Données standardisées'>Données standardisées</option>
-        <option value='Tableau de suivi'>Tableau de suivi</option>
+        <option value='aep-zre'>Données standardisées</option>
+        <option value='camion-citerne'>Tableau de suivi</option>
       </Select>
 
       <Upload
