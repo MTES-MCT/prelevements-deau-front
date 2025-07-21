@@ -13,14 +13,28 @@ import {formatBytes} from '@/utils/size.js'
 
 const ValidateurResult = ({file, fileType, pointsPrelevement, data, errors = []}) => {
   const [selectedPointId, setSelectedPointId] = useState(data?.length === 1 ? data[0].pointPrelevement : null)
+
+  const hasError = errors.some(({severity}) => severity === 'error')
+  const hasWarning = errors.some(({severity}) => severity === 'warning')
+  const status = hasError ? 'error' : (hasWarning ? 'warning' : 'success')
+
   return (
     <Box className='flex flex-col gap-4'>
-      <Alert
-        closable={false}
-        title={noError ? 'Le fichier est valide' : 'Le fichier est invalide'}
-        description={noError ? 'Aucune erreur détectée' : `Le fichier contient ${errors.length} erreur${errors.length > 1 ? 's' : ''}`}
-        severity={noError ? 'success' : 'error'}
-      />
+      {hasError ? (
+        <Alert
+          closable={false}
+          title='Le fichier est invalide'
+          description={`Le fichier contient ${errors.length} erreur${errors.length > 1 ? 's' : ''}`}
+          severity='error'
+        />
+      ) : (
+        <Alert
+          closable={false}
+          title={hasWarning ? 'Le fichier contient des avertissements' : 'Le fichier est valide'}
+          description={hasWarning ? `Le fichier contient ${errors.length} avertissement${errors.length > 1 ? 's' : ''}` : 'Aucune erreur détectée'}
+          severity={hasWarning ? 'warning' : 'success'}
+        />
+      )}
 
       <Card variant='outlined'>
         <CardContent>
