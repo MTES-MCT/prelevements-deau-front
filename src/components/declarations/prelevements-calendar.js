@@ -78,7 +78,7 @@ const PrelevementsCalendar = ({data}) => {
 
   const handleClose = () => setOpen(false)
 
-  if (data.dailyValues.length === 0) {
+  if (data.dailyValues && data.dailyValues.length === 0) {
     return (
       <Alert severity='warning' description='Aucune donnée de prélèvement n’a été trouvée.' />
     )
@@ -120,7 +120,7 @@ const PrelevementsCalendar = ({data}) => {
             </>
           )
         }}
-        onDayClick={handleDayClick}
+        onDayClick={fifteenValues ? handleDayClick : undefined}
       />
 
       <Modal open={open} onClose={handleClose}>
