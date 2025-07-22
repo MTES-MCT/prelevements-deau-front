@@ -160,7 +160,7 @@ const ParameterTrendChart = ({data, connectNulls}) => {
       label: u,
       position: i === 0 ? 'left' : 'right',
       min: 0,
-      valueFormatter: v => formatNumber(v, {maximumFractionDigits: v > 10 ? 0 : 1})
+      valueFormatter: v => formatNumber(v, v < 1 ? {maximumFractionDigits: 2, minimumFractionDigits: 2} : {})
     })),
   [axisUnits])
 

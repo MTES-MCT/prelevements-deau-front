@@ -108,7 +108,9 @@ const PrelevementsCalendar = ({data}) => {
               <strong>{date.toLocaleDateString('fr-FR')}</strong>
               {Object.keys(data.dailyParameters).map(paramIndex => (
                 <Typography key={paramIndex}>
-                  {data.dailyParameters[paramIndex].nom_parametre} : {values[paramIndex] ? formatNumber(values[paramIndex]) : '—'} m³
+                  {data.dailyParameters[paramIndex].nom_parametre} : {Number.isNaN(values[paramIndex])
+                    ? '—'
+                    : formatNumber(values[paramIndex], values[paramIndex] < 1 && values[paramIndex] !== 0 ? {maximumFractionDigits: 2, minimumFractionDigits: 2} : {})} m³
                   {warnings[0] && <Box component='span' className='fr-icon-warning-fill' />}
                 </Typography>
               ))}
@@ -134,9 +136,11 @@ const PrelevementsCalendar = ({data}) => {
               <Box className='flex gap-2'>
                 {data.dailyParameters.map((param, idx) => (
                   <Typography key={param.paramIndex}>
-                    {param.nom_parametre}: {selectedDayInfo.dayStyleEntry.values[idx]
-                      ? formatNumber(selectedDayInfo.dayStyleEntry.values[idx], {maximumFractionDigits: 2})
-                      : '—'} {param.unite}
+                    {param.nom_parametre}: {
+                      Number.isNaN(selectedDayInfo.dayStyleEntry.values[idx])
+                        ? '—'
+                        : formatNumber(selectedDayInfo.dayStyleEntry.values[idx], {maximumFractionDigits: 2})
+                    } {param.unite}
                   </Typography>
                 ))}
               </Box>
