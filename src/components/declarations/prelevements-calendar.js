@@ -100,13 +100,8 @@ const PrelevementsCalendar = ({data}) => {
             )
           }
 
-          const {values, fifteenMinutesValues} = dayStyleEntry
-          const warnings = values.map((v, i) => {
-            const dailyMissing = v === null
-            const fifteenMissing = !Array.isArray(fifteenMinutesValues)
-              || fifteenMinutesValues.some(slot => slot.values[i] === null)
-            return dailyMissing || fifteenMissing
-          })
+          const {values} = dayStyleEntry
+          const warnings = values.map(v => v === null || v === undefined || v < 0)
 
           return (
             <>
