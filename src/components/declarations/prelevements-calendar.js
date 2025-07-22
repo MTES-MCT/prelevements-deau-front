@@ -120,7 +120,7 @@ const PrelevementsCalendar = ({data}) => {
             </>
           )
         }}
-        onDayClick={fifteenValues ? handleDayClick : undefined}
+        onDayClick={fifteenValues.length > 0 ? handleDayClick : undefined}
       />
 
       <Modal open={open} onClose={handleClose}>
