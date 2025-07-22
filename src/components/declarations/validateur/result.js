@@ -1,3 +1,5 @@
+import {useState} from 'react'
+
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {
   Card, CardContent, Typography
@@ -9,16 +11,30 @@ import Spreadsheet from '@/components/declarations/dossier/prelevements/spreadsh
 import FileValidationErrors from '@/components/declarations/file-validation-errors.js'
 import {formatBytes} from '@/utils/size.js'
 
-const ValidateurResult = ({file, fileType, pointPrelevement, data, errors = []}) => {
-  const noError = errors.length === 0
+const ValidateurResult = ({file, typePrelevement, pointsPrelevement, data, errors = []}) => {
+  const [selectedPointId, setSelectedPointId] = useState(data?.length === 1 ? data[0].pointPrelevement : null)
+
+  const hasError = errors.some(({severity}) => severity === 'error')
+  const hasWarning = errors.some(({severity}) => severity === 'warning')
+  const status = hasError ? 'error' : (hasWarning ? 'warning' : 'success')
+
   return (
     <Box className='flex flex-col gap-4'>
-      <Alert
-        closable={false}
-        title={noError ? 'Le fichier est valide' : 'Le fichier est invalide'}
-        description={noError ? 'Aucune erreur détectée' : `Le fichier contient ${errors.length} erreur${errors.length > 1 ? 's' : ''}`}
-        severity={noError ? 'success' : 'error'}
-      />
+      {hasError ? (
+        <Alert
+          closable={false}
+          title='Le fichier est invalide'
+          description={`Le fichier contient ${errors.length} erreur${errors.length > 1 ? 's' : ''}`}
+          severity='error'
+        />
+      ) : (
+        <Alert
+          closable={false}
+          title={hasWarning ? 'Le fichier contient des avertissements' : 'Le fichier est valide'}
+          description={hasWarning ? `Le fichier contient ${errors.length} avertissement${errors.length > 1 ? 's' : ''}` : 'Aucune erreur détectée'}
+          severity={hasWarning ? 'warning' : 'success'}
+        />
+      )}
 
       <Card variant='outlined'>
         <CardContent>
@@ -35,23 +51,27 @@ const ValidateurResult = ({file, fileType, pointPrelevement, data, errors = []})
         )}
 
         {data && (
-          <PrelevementsAccordion
-            isOpen
-            idPoint={data.pointPrelevement}
-            pointPrelevement={pointPrelevement}
-            volumePreleveTotal={data.volumePreleveTotal}
-            status={errors?.length > 0 || !data ? 'error' : 'success'}
-          >
-            {fileType === 'Données standardisées' ? (
-              <Spreadsheet
-                data={data}
-                errors={errors}
-              />
-            ) : (
-              <Alert severity='info' description=' Ce type de dossier n’est pas encore pris en charge.' />
-            )}
+          data.map(d => {
+            const poinPrelevementId = d?.pointPrelevement || pointsPrelevement[0]
 
-          </PrelevementsAccordion>
+            return (
+              <PrelevementsAccordion
+                key={d.pointPrelevement}
+                isOpen={selectedPointId === poinPrelevementId}
+                idPoint={d.pointPrelevement}
+                pointPrelevement={pointsPrelevement.find(p => p.id_point === d.pointPrelevement)}
+                volumePreleveTotal={d.volumePreleveTotal}
+                status={status}
+                handleSelect={() => setSelectedPointId(poinPrelevementId)}
+              >
+                <Spreadsheet
+                  data={d}
+                  errors={errors}
+                  typePrelevement={typePrelevement}
+                />
+              </PrelevementsAccordion>
+            )
+          })
         )}
       </Card>
     </Box>

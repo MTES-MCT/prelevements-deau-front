@@ -42,7 +42,7 @@ const DayCell = ({day, firstDayCurrentMonth, dataMap, renderTooltipContent, onDa
     dayStyleEntry: dayData
   }
 
-  const isClickable = isCurrentMonthDay && dayData
+  const isClickable = onDayClick && isCurrentMonthDay && dayData
 
   const cellMarkup = (
     <div

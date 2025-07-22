@@ -14,32 +14,29 @@ import {fr as locale} from 'date-fns/locale'
 import CalendarGrid from '@/components/calendar-grid.js'
 import {formatNumber} from '@/utils/number.js'
 
-function determineColors(values, fifteenMinutesValues) {
-  const nParams = values.length
-  const dailyComplete = values.map(v => v !== null && v !== undefined)
-  const hasDaily = dailyComplete.some(Boolean)
-  if (!hasDaily) {
-    // Aucune valeur journalière renseignée
-    return {colorA: 'grey', colorB: null}
+function determineColors(values, fifteenMinutesValues, dailyParameters) {
+  const hasNegativeValue = values.some(v => v < 0)
+  if (hasNegativeValue) {
+    return {colorA: fr.colors.decisions.background.flat.error.default, colorB: null}
   }
 
-  // Vérifie que chaque paramètre a toutes les valeurs 15min
-  const fifteenComplete = values.map((_, i) =>
-    Array.isArray(fifteenMinutesValues)
-    && fifteenMinutesValues.length > 0
-    && fifteenMinutesValues.every(slot =>
-      slot.values && slot.values[i] !== null && slot.values[i] !== undefined
-    )
-  )
-  // Un paramètre est complet si le journalier ET les 15min sont complets
-  const completeParams = dailyComplete.map((d, i) => d && fifteenComplete[i])
-  const nComplete = completeParams.filter(Boolean).length
-  if (nComplete === nParams) {
-    // Toutes les données sont complètes
+  const volumePreleveParam = dailyParameters?.find(p => p.nom_parametre === 'volume prélevé')
+  const volumePreleveIndex = volumePreleveParam ? dailyParameters.indexOf(volumePreleveParam) : -1
+
+  const hasAnyData = values.some(v => Number.isNaN(v)) || (fifteenMinutesValues?.length > 0)
+
+  if (volumePreleveIndex > -1 && !Number.isNaN(values[volumePreleveIndex])) {
+    // Bleu si la donnée journalière pour le volume prélevé est présente
     return {colorA: fr.colors.decisions.text.actionHigh.blueFrance.default, colorB: null}
   }
 
-  return {colorA: fr.colors.decisions.background.flat.warning.default}
+  if (hasAnyData) {
+    // Orange s'il y a d'autres données mais pas le volume prélevé journalier
+    return {colorA: fr.colors.decisions.background.flat.warning.default, colorB: null}
+  }
+
+  // Gris si aucune donnée
+  return {colorA: 'grey', colorB: null}
 }
 
 export function transformOutJsonToCalendarData(outJson) {
@@ -47,7 +44,7 @@ export function transformOutJsonToCalendarData(outJson) {
   return daily.map(({date, values, fifteenMinutesValues}) => {
     // Reformattage de la date pour dd-MM-yyyy
     const dateKey = format(parseISO(date), 'dd-MM-yyyy')
-    const {colorA, colorB} = determineColors(values, fifteenMinutesValues)
+    const {colorA, colorB} = determineColors(values, fifteenMinutesValues, outJson.dailyParameters)
     return {
       date: dateKey,
       values,
@@ -78,7 +75,7 @@ const PrelevementsCalendar = ({data}) => {
 
   const handleClose = () => setOpen(false)
 
-  if (data.dailyValues.length === 0) {
+  if (data.dailyValues && data.dailyValues.length === 0) {
     return (
       <Alert severity='warning' description='Aucune donnée de prélèvement n’a été trouvée.' />
     )
@@ -100,27 +97,24 @@ const PrelevementsCalendar = ({data}) => {
             )
           }
 
-          const {values, fifteenMinutesValues} = dayStyleEntry
-          const warnings = values.map((v, i) => {
-            const dailyMissing = v === null
-            const fifteenMissing = !Array.isArray(fifteenMinutesValues)
-              || fifteenMinutesValues.some(slot => slot.values[i] === null)
-            return dailyMissing || fifteenMissing
-          })
+          const {values} = dayStyleEntry
+          const warnings = values.map(v => v === null || v === undefined || v < 0)
 
           return (
             <>
               <strong>{date.toLocaleDateString('fr-FR')}</strong>
               {Object.keys(data.dailyParameters).map(paramIndex => (
                 <Typography key={paramIndex}>
-                  {data.dailyParameters[paramIndex].nom_parametre} : {values[paramIndex] ? formatNumber(values[paramIndex]) : '—'} m³
+                  {data.dailyParameters[paramIndex].nom_parametre} : {Number.isNaN(values[paramIndex])
+                    ? '—'
+                    : formatNumber(values[paramIndex], values[paramIndex] < 1 && values[paramIndex] !== 0 ? {maximumFractionDigits: 2, minimumFractionDigits: 2} : {})} m³
                   {warnings[0] && <Box component='span' className='fr-icon-warning-fill' />}
                 </Typography>
               ))}
             </>
           )
         }}
-        onDayClick={handleDayClick}
+        onDayClick={fifteenValues.length > 0 ? handleDayClick : undefined}
       />
 
       <Modal open={open} onClose={handleClose}>
@@ -139,9 +133,11 @@ const PrelevementsCalendar = ({data}) => {
               <Box className='flex gap-2'>
                 {data.dailyParameters.map((param, idx) => (
                   <Typography key={param.paramIndex}>
-                    {param.nom_parametre}: {selectedDayInfo.dayStyleEntry.values[idx]
-                      ? formatNumber(selectedDayInfo.dayStyleEntry.values[idx], {maximumFractionDigits: 2})
-                      : '—'} {param.unite}
+                    {param.nom_parametre}: {
+                      Number.isNaN(selectedDayInfo.dayStyleEntry.values[idx])
+                        ? '—'
+                        : formatNumber(selectedDayInfo.dayStyleEntry.values[idx], {maximumFractionDigits: 2})
+                    } {param.unite}
                   </Typography>
                 ))}
               </Box>
