@@ -106,9 +106,9 @@ const VolumesChart = ({idExploitation}) => {
             series={series}
             xAxis={[
               {
-                data: xLabels,
-                scaleType: 'point',
-                valueFormatter: date => format(parseISO(date), 'dd/MM/yyyy', {locale: fr}),
+                data: xLabels.map(date => parseISO(date)),
+                scaleType: 'time',
+                valueFormatter: date => format(date, 'dd/MM/yyyy', {locale: fr}),
                 tickLabelStyle: {
                   angle: 45,
                   textAnchor: 'start',
