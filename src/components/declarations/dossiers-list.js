@@ -13,6 +13,8 @@ import {useRouter} from 'next/navigation'
 import DossierStateBadge from '@/components/declarations/dossier-state-badge.js'
 import PrelevementTypeBadge from '@/components/declarations/prelevement-type-badge.js'
 import TypeSaisieBadge from '@/components/declarations/type-saisie-badge.js'
+import ValidationStatus from '@/components/declarations/validation-status.js'
+import {validationStatus} from '@/lib/dossier.js'
 import {getDossierURL} from '@/lib/urls.js'
 import {normalizeName} from '@/utils/string.js'
 
@@ -27,7 +29,8 @@ const convertDossierToRow = dossier => ({
   commentaires: dossier.commentaires,
   numeroArreteAot: dossier.numeroArreteAot,
   typeDonnees: dossier.typeDonnees,
-  moisDeclaration: dossier.moisDeclaration
+  moisDeclaration: dossier.moisDeclaration,
+  validationStatus: dossier.validationStatus
 })
 
 function renderMonthCell(value) {
@@ -120,6 +123,17 @@ const DossiersList = ({dossiers}) => {
               {value: 'accepte', label: 'Accepté'},
               {value: 'en-instruction', label: 'En instruction'},
               {value: 'en-construction', label: 'En construction'}
+            ]
+          },
+          {
+            field: 'validationStatus',
+            headerName: 'Vérification',
+            width: 200,
+            renderCell: ValidationStatus,
+            type: 'singleSelect',
+            valueOptions: [
+              ...Object.keys(validationStatus).map(key => ({value: key, label: validationStatus[key]})),
+              {value: null, label: 'Non vérifié'}
             ]
           },
           {
