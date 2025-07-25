@@ -49,7 +49,7 @@ const PrelevementsAccordion = ({idPoint, pointPrelevement, volumePreleveTotal = 
         </Box>
 
         <Badge severity={status}>
-          {status === 'success' ? 'OK' : (status === 'warning' ? 'Anomalie' : 'Erreur')}
+          {status === 'success' ? 'OK' : (status === 'warning' ? 'Avertissement' : 'Erreur')}
         </Badge>
       </Box>
     </AccordionSummary>
