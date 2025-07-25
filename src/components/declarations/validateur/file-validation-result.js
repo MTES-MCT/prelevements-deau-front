@@ -11,7 +11,7 @@ import PrelevementsAccordion from '@/components/declarations/dossier/prelevement
 import FileValidationErrors from '@/components/declarations/file-validation-errors.js'
 import {formatBytes} from '@/utils/size.js'
 
-const ValidateurResult = ({file, typePrelevement, pointsPrelevement, data, errors = []}) => {
+const FileValidationResult = ({file, typePrelevement, pointsPrelevement, data, errors = []}) => {
   const [selectedPointId, setSelectedPointId] = useState(data?.length === 1 ? data[0].pointPrelevement : null)
 
   const hasError = errors.some(({severity}) => severity === 'error')
@@ -78,4 +78,4 @@ const ValidateurResult = ({file, typePrelevement, pointsPrelevement, data, error
   )
 }
 
-export default ValidateurResult
+export default FileValidationResult

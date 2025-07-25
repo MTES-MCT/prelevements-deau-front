@@ -6,8 +6,8 @@ import {validateMultiParamFile, validateCamionCiterneFile} from '@fabnum/preleve
 import {Divider} from '@mui/material'
 
 import {getPointPrelevement} from '@/app/api/points-prelevement.js'
+import FileValidationResult from '@/components/declarations/validateur/file-validation-result.js'
 import ValidateurForm from '@/components/declarations/validateur/form.js'
-import ValidateurResult from '@/components/declarations/validateur/result.js'
 
 const ValidateurPage = () => {
   const [file, setFile] = useState(null)
@@ -55,7 +55,7 @@ const ValidateurPage = () => {
       {result && (
         <>
           <Divider component='div' />
-          <ValidateurResult
+          <FileValidationResult
             file={file}
             typePrelevement={typePrelevement}
             pointsPrelevement={pointsPrelevement}
