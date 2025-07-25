@@ -6,7 +6,7 @@ import {
 } from 'react'
 
 import {Box} from '@mui/material'
-import {sumBy} from 'lodash'
+import {flatMap, sumBy} from 'lodash'
 
 import {getFileBlob} from '@/app/api/dossiers.js'
 import {getPointPrelevement} from '@/app/api/points-prelevement.js'
@@ -17,10 +17,16 @@ import PrelevementsDetails from '@/components/declarations/dossier/prelevements-
 import PreleveurDetails from '@/components/declarations/dossier/preleveur-details.js'
 
 function getVolumePrelevementTotal(dossier, files) {
-  const {relevesIndex, volumesPompes} = dossier
+  const {relevesIndex, volumesPompes, typePrelevement} = dossier
 
   // 1. Priorité aux fichiers si présents
   if (files?.length) {
+    if (typePrelevement === 'camion-citerne') {
+      return sumBy(flatMap(files, file => file.result.data),
+        'volumePreleveTotal'
+      )
+    }
+
     return sumBy(files, f => f.result?.data?.volumePreleveTotal ?? 0)
   }
 
