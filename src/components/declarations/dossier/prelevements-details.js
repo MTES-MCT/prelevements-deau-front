@@ -7,8 +7,8 @@ import {
 
 import Compteur from './prelevements/compteur.js'
 
+import DeclarationFileDetails from '@/components/declarations/dossier/prelevements/declaration-file-details.js'
 import PrelevementsAccordion from '@/components/declarations/dossier/prelevements/prelevements-accordion.js'
-import Spreadsheet from '@/components/declarations/dossier/prelevements/spreadsheet.js'
 import VolumesPompes from '@/components/declarations/dossier/prelevements/volumes-pompes.js'
 import SectionCard from '@/components/ui/section-card.js'
 import {formatNumber} from '@/utils/number.js'
@@ -137,7 +137,7 @@ const PrelevementsDetails = ({
                   />
                 )}
 
-                <Spreadsheet
+                <DeclarationFileDetails
                   moisDeclaration={moisDeclaration}
                   storageKey={file?.storageKey || ''}
                   data={file.result?.data || {}}

@@ -13,7 +13,7 @@ import ParameterTrendChart from '@/components/declarations/dossier/prelevements/
 import FileValidationErrors from '@/components/declarations/file-validation-errors.js'
 import PrelevementsCalendar from '@/components/declarations/prelevements-calendar.js'
 
-const Spreadsheet = ({moisDeclaration, storageKey = '', data = {}, errors, typePrelevement = 'aep-zre', downloadFile}) => {
+const DeclarationFileDetails = ({moisDeclaration, storageKey = '', data = {}, errors, typePrelevement = 'aep-zre', downloadFile}) => {
   const [, ...filename] = storageKey.split('-')
 
   // Vérifie si les dates de prélèvement (minDate / maxDate) se situent dans le mois déclaré
@@ -115,4 +115,4 @@ const Spreadsheet = ({moisDeclaration, storageKey = '', data = {}, errors, typeP
   )
 }
 
-export default Spreadsheet
+export default DeclarationFileDetails

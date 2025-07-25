@@ -6,8 +6,8 @@ import {
 } from '@mui/material'
 import {Box} from '@mui/system'
 
+import DeclarationFileDetails from '@/components/declarations/dossier/prelevements/declaration-file-details.js'
 import PrelevementsAccordion from '@/components/declarations/dossier/prelevements/prelevements-accordion.js'
-import Spreadsheet from '@/components/declarations/dossier/prelevements/spreadsheet.js'
 import FileValidationErrors from '@/components/declarations/file-validation-errors.js'
 import {formatBytes} from '@/utils/size.js'
 
@@ -64,7 +64,7 @@ const ValidateurResult = ({file, typePrelevement, pointsPrelevement, data, error
                 status={status}
                 handleSelect={() => setSelectedPointId(poinPrelevementId)}
               >
-                <Spreadsheet
+                <DeclarationFileDetails
                   data={d}
                   errors={errors}
                   typePrelevement={typePrelevement}
