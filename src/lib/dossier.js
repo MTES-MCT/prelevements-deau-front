@@ -1,3 +1,7 @@
+import {flatMap} from 'lodash-es'
+
+import {getFile} from '@/app/api/dossiers.js'
+
 export const validationStatus = {
   success: 'Succès',
   error: 'Erreur',
@@ -5,14 +9,32 @@ export const validationStatus = {
   failed: 'Échec'
 }
 
-export function getPointsPrelevementId(dossier) {
-  if (dossier.pointPrelevement) {
-    return [dossier.pointPrelevement]
+export function getFileNameFromStorageKey(storageKey) {
+  const [, ...fileName] = storageKey.split('-')
+  return fileName.join('-')
+}
+
+export function getPointsPrelementIdFromDossier(dossier, files) {
+  const {pointPrelevement, donneesPrelevements} = dossier
+
+  if (pointPrelevement) {
+    return [pointPrelevement]
   }
 
-  if (dossier.donneesPrelevements) {
-    return dossier.donneesPrelevements.flatMap(({pointsPrelevements}) => pointsPrelevements)
+  if (donneesPrelevements) {
+    return dossier.donneesPrelevements.flatMap(({pointsPrelevements}) => flatMap(pointsPrelevements))
   }
 
-  return []
+  return files.flatMap(file => file?.result?.data?.map(({pointPrelevement}) => pointPrelevement))
+}
+
+export async function getDossierFiles(dossier) {
+  if (!dossier.files) {
+    return []
+  }
+
+  return Promise.all(dossier.files.map(async file => {
+    const [hash] = file.storageKey.split('-')
+    return getFile(dossier._id, hash)
+  }))
 }

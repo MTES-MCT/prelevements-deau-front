@@ -56,7 +56,7 @@ const ValidateurPage = () => {
         <>
           <Divider component='div' />
           <FileValidationResult
-            file={file}
+            fileName={file.name}
             typePrelevement={typePrelevement}
             pointsPrelevement={pointsPrelevement}
             data={result.data}

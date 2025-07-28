@@ -1,21 +1,18 @@
 'use client'
+import {useMemo} from 'react'
 
-import {fr} from '@codegouvfr/react-dsfr'
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
-import Button from '@codegouvfr/react-dsfr/Button'
 import Tag from '@codegouvfr/react-dsfr/Tag'
-import {
-  Box, Divider,
-  Typography
-} from '@mui/material'
+import {Box, Divider} from '@mui/material'
 
 import ParameterTrendChart from '@/components/declarations/dossier/prelevements/parameter-trend-chart.js'
-import FileValidationErrors from '@/components/declarations/file-validation-errors.js'
 import PrelevementsCalendar from '@/components/declarations/prelevements-calendar.js'
 
-const DeclarationFileDetails = ({moisDeclaration, storageKey = '', data = {}, errors, typePrelevement = 'aep-zre', downloadFile}) => {
-  const [, ...filename] = storageKey.split('-')
-
+const DeclarationFileDetails = ({
+  moisDeclaration,
+  data = {},
+  typePrelevement = 'aep-zre'
+}) => {
   // Vérifie si les dates de prélèvement (minDate / maxDate) se situent dans le mois déclaré
   const isInDeclarationMonth = date => {
     const declarationDate = new Date(moisDeclaration)
@@ -33,6 +30,12 @@ const DeclarationFileDetails = ({moisDeclaration, storageKey = '', data = {}, er
 
     return !isInDeclarationMonth(minDate) || !isInDeclarationMonth(maxDate)
   })()
+
+  const dataWithDatesOnly = useMemo(() => ({
+    ...data,
+    dailyValues: data.dailyValues.filter(({date}) => Boolean(date)),
+    fifteenMinutesValues: data?.fifteenMinutesValues?.filter(({date}) => Boolean(date)) || undefined
+  }), [data])
 
   return (
     <Box className='flex flex-col gap-6'>
@@ -84,31 +87,8 @@ const DeclarationFileDetails = ({moisDeclaration, storageKey = '', data = {}, er
             />
           )}
 
-          <PrelevementsCalendar data={data} />
-          <ParameterTrendChart data={data} connectNulls={typePrelevement === 'camion-citerne'} />
-        </Box>
-      )}
-
-      {errors && (
-        <FileValidationErrors errors={errors} />
-      )}
-
-      {downloadFile && storageKey && (
-        <Box className='flex flex-wrap justify-between mt-4'>
-          <Box className='flex flex-col p-2'>
-            <Typography>
-              <Box component='span' className='pr-1' sx={{color: fr.colors.decisions.text.label.blueFrance.default}} />
-              {filename.join('-')}
-            </Typography>
-          </Box>
-
-          <Button
-            variant='contained'
-            iconId='fr-icon-download-line'
-            onClick={() => downloadFile(storageKey)}
-          >
-            Télécharger
-          </Button>
+          <PrelevementsCalendar data={dataWithDatesOnly} />
+          <ParameterTrendChart data={dataWithDatesOnly} connectNulls={typePrelevement === 'camion-citerne'} />
         </Box>
       )}
     </Box>
