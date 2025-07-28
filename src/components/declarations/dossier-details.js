@@ -23,6 +23,7 @@ import Compteur from '@/components/declarations/dossier/prelevements/compteur.js
 import PreleveurDetails from '@/components/declarations/dossier/preleveur-details.js'
 import FileValidationResult from '@/components/declarations/validateur/file-validation-result.js'
 import {getFileNameFromStorageKey} from '@/lib/dossier.js'
+import {computePointsStatus} from '@/lib/points-prelevement.js'
 import {formatNumber} from '@/utils/number.js'
 
 function getVolumePrelevementTotal(dossier, files) {
@@ -105,6 +106,9 @@ const DossierDetails = ({dossier, preleveur, files, idPoints}) => {
 
   const volumePrelevementTotal = useMemo(() => getVolumePrelevementTotal(dossier, files), [dossier, files])
 
+  const pointsStatus = useMemo(() => computePointsStatus({dossier, files, pointsPrelevement}),
+    [dossier, files, pointsPrelevement]
+  )
   return (
     <Box className='flex flex-col gap-2 mb-4'>
       <DossierInfos
@@ -128,6 +132,7 @@ const DossierDetails = ({dossier, preleveur, files, idPoints}) => {
         pointsPrelevement={pointsPrelevement}
         handleClick={onClickPointPrelevementMarker}
         disabledPointIds={pointIdsWithNoPrelevement}
+        pointsStatus={pointsStatus}
       />
 
       {pointsPrelevement && (

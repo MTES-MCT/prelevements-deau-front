@@ -1,5 +1,7 @@
 import {useEffect, useRef} from 'react'
 
+import {fr} from '@codegouvfr/react-dsfr'
+import {useIsDark} from '@codegouvfr/react-dsfr/useIsDark'
 import {Box} from '@mui/system'
 import maplibre from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -18,17 +20,23 @@ const stylesMap = {
   'vector-ign': vectorIGN
 }
 
-const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector', disabledPointIds = []}) => {
+const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector', pointsStatus = {}}) => {
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
+  const {isDark} = useIsDark()
 
   useEffect(() => {
     if (!mapContainerRef.current || !pointsPrelevement?.length) {
       return
     }
 
+    const pointsWithStatus = pointsPrelevement.map(p => ({
+      ...p,
+      status: pointsStatus[p.id_point] || 'unknown'
+    }))
+
     // Compute center from coordinates
-    const coords = pointsPrelevement.map(p => p.geom.coordinates)
+    const coords = pointsWithStatus.map(p => p.geom.coordinates)
     const lons = coords.map(c => c[0])
     const lats = coords.map(c => c[1])
     const center = [
@@ -46,7 +54,7 @@ const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector'
     mapRef.current = map
 
     map.on('load', () => {
-      const geojson = createPointPrelevementFeatures(pointsPrelevement)
+      const geojson = createPointPrelevementFeatures(pointsWithStatus)
       map.addSource('points-prelevement', {type: 'geojson', data: geojson})
 
       // Circle layer for points
@@ -58,9 +66,13 @@ const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector'
           'circle-radius': 10,
           'circle-color': [
             'case',
-            ['in', ['get', 'id_point'], ['literal', disabledPointIds]],
-            '#ff0000',
-            '#1978c8'
+            ['==', ['get', 'status'], 'success'],
+            fr.colors.getHex({isDark}).decisions.background.actionHigh.success.default,
+            ['==', ['get', 'status'], 'warning'],
+            fr.colors.getHex({isDark}).decisions.background.actionHigh.warning.default,
+            ['==', ['get', 'status'], 'error'],
+            fr.colors.getHex({isDark}).decisions.background.actionHigh.redMarianne.default,
+            fr.colors.getHex({isDark}).decisions.background.disabled.grey.default
           ],
           'circle-stroke-width': 2,
           'circle-stroke-color': '#ffffff'
@@ -92,10 +104,9 @@ const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector'
 
       map.on('mouseenter', 'points-prelevement-circles', e => {
         const feature = e.features[0]
-        const id = feature.properties.id_point
         const {coordinates} = feature.geometry
-        map.getCanvas().style.cursor = disabledPointIds.includes(id) ? '' : 'pointer'
-        const text = disabledPointIds.includes(id)
+        map.getCanvas().style.cursor = feature.properties.status === 'unknown' ? '' : 'pointer'
+        const text = feature.properties.status === 'unknown'
           ? 'Aucun prélèvement n’est disponible pour ce point'
           : feature.properties.nom
         popup.setLngLat(coordinates).setText(text).addTo(map)
@@ -110,9 +121,8 @@ const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector'
       map.on('click', 'points-prelevement-circles', e => {
         if (e.features && e.features.length > 0) {
           const feature = e.features[0]
-          const id = feature.properties.id_point
-          if (!disabledPointIds.includes(id)) {
-            handleClick(id)
+          if (feature.properties.status !== 'unknown') {
+            handleClick(feature.properties.id_point)
           }
         }
       })
@@ -121,7 +131,7 @@ const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector'
     return () => {
       map.remove()
     }
-  }, [pointsPrelevement, handleClick, style, disabledPointIds])
+  }, [pointsPrelevement, handleClick, style, pointsStatus, isDark])
 
   return (
     <Box className='h-[300px] w-full relative'>

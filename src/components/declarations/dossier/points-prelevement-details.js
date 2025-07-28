@@ -5,7 +5,7 @@ import {Box} from '@mui/system'
 import PointsPrelevementsMap from '@/components/map/points-prelevements-map.js'
 import SectionCard from '@/components/ui/section-card.js'
 
-const PointsPrelevementDetails = ({pointsPrelevementId, pointsPrelevement, handleClick, disabledPointIds}) => {
+const PointsPrelevementDetails = ({pointsPrelevementId, pointsPrelevement, handleClick, disabledPointIds, pointsStatus}) => {
   const pointsNotFound = pointsPrelevementId.filter(id => !pointsPrelevement?.some(point => point.id_point === id))
   const usePlural = pointsNotFound.length > 1
   return (
@@ -25,6 +25,7 @@ const PointsPrelevementDetails = ({pointsPrelevementId, pointsPrelevement, handl
               pointsPrelevement={pointsPrelevement}
               handleClick={handleClick}
               disabledPointIds={disabledPointIds}
+              pointsStatus={pointsStatus}
             />
 
             {pointsNotFound.length > 0 && (
