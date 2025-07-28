@@ -1,11 +1,11 @@
 import {notFound} from 'next/navigation'
 
-import {getDossier, getFile} from '@/app/api/dossiers.js'
+import {getDossier} from '@/app/api/dossiers.js'
 import {getPreleveur} from '@/app/api/points-prelevement.js'
 import DossierHeader from '@/components/declarations/dossier/dossier-header.js'
 import DossierDetails from '@/components/declarations/dossier-details.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {getPointsPrelevementId} from '@/lib/dossier.js'
+import {getDossierFiles, getPointsPrelementIdFromDossier} from '@/lib/dossier.js'
 import {getDossierDSURL} from '@/lib/urls.js'
 
 const DossierPage = async ({params}) => {
@@ -16,17 +16,8 @@ const DossierPage = async ({params}) => {
     notFound()
   }
 
-  let files = null
-  if (dossier.files && dossier.files.length > 0) {
-    files = await Promise.all(dossier.files.map(async file => {
-      const [hash] = file.storageKey.split('-')
-      const data = await getFile(dossierId, hash)
-
-      data.pointsPrelevements = dossier.donneesPrelevements ? dossier.donneesPrelevements.find(point => point.fichier.storageKey === file.storageKey).pointsPrelevements : []
-
-      return data
-    }))
-  }
+  const files = await getDossierFiles(dossier)
+  const idPoints = getPointsPrelementIdFromDossier(dossier, files)
 
   let preleveur = dossier?.demandeur
   if (dossier?.result?.preleveur) {
@@ -49,9 +40,9 @@ const DossierPage = async ({params}) => {
 
       <DossierDetails
         dossier={dossier}
-        files={files || []}
+        files={files}
         preleveur={preleveur}
-        idPoints={getPointsPrelevementId(dossier)}
+        idPoints={idPoints}
       />
     </>
   )
