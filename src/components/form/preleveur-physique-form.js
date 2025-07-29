@@ -34,7 +34,7 @@ const PreleveurPhysiqueForm = ({preleveur, setPreleveur}) => {
             onChange: e => setPreleveur(prev => ({...prev, civilite: e.target.value}))
           }}
           options={[
-            {value: 'M.', label: 'M. '},
+            {value: 'M', label: 'M.'},
             {value: 'Mme', label: 'Mme'},
             {value: '', label: 'Non indiqué'}
           ]}
