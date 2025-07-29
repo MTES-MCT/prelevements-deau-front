@@ -3,7 +3,7 @@ import {Box, Typography} from '@mui/material'
 
 import LabelWithIcon from '@/components/ui/label-with-icon.js'
 import SectionCard from '@/components/ui/section-card.js'
-import {getPreleveurURL} from '@/lib/urls.js'
+import {getNewPreleveurURL, getPreleveurURL} from '@/lib/urls.js'
 
 const PreleveurDetails = ({preleveur}) => (
   <SectionCard
@@ -11,12 +11,14 @@ const PreleveurDetails = ({preleveur}) => (
     icon='fr-icon-user-line'
     buttonProps={{
       priority: 'secondary',
-      disabled: !preleveur.id_preleveur,
       linkProps: preleveur.id_preleveur ? {
         href: getPreleveurURL(preleveur),
         target: '_blank'
-      } : undefined,
-      children: 'Consulter la fiche'
+      } : {
+        href: getNewPreleveurURL(preleveur),
+        target: '_blank'
+      },
+      children: preleveur.id_preleveur ? 'Consulter la fiche' : 'Ajouter le préleveur'
     }}
   >
 
@@ -24,7 +26,7 @@ const PreleveurDetails = ({preleveur}) => (
       color='primary'
       variant='h4'
     >
-      {preleveur.nom} {preleveur.prenom}
+      {preleveur.__typename === 'PersonnePhysique' ? `${preleveur.nom || ''} ${preleveur.prenom || ''}` : preleveur.raison_sociale}
     </Typography>
 
     <Box className='flex flex-col gap-1 my-2'>

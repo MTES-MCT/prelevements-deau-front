@@ -6,8 +6,9 @@ import {useEffect, useState} from 'react'
 
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Typography} from '@mui/material'
+import {omit} from 'lodash-es'
 import dynamic from 'next/dynamic'
-import {useRouter} from 'next/navigation'
+import {useRouter, useSearchParams} from 'next/navigation'
 
 import PreleveurMoralForm from './preleveur-moral-form.js'
 import PreleveurPhysiqueForm from './preleveur-physique-form.js'
@@ -22,6 +23,7 @@ const DynamicCheckbox = dynamic(
 
 const PreleveurCreationForm = () => {
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   const [isDisabled, setIsDisabled] = useState(true)
   const [isPreleveurPhysique, setIsPreleveurPhysique] = useState(true)
@@ -42,6 +44,16 @@ const PreleveurCreationForm = () => {
     numero_telephone: '',
     code_siren: ''
   })
+
+  useEffect(() => {
+    const preleveur = {}
+    for (const [key, value] of searchParams.entries()) {
+      preleveur[key] = value
+    }
+
+    setIsPreleveurPhysique(preleveur.__typename === 'PersonnePhysique')
+    setPreleveur(omit(preleveur, '__typename'))
+  }, [searchParams])
 
   const handleSubmit = async () => {
     setError(null)

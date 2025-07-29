@@ -34,7 +34,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
           label='Code SIREN'
           nativeInputProps={{
             placeholder: 'Entrer le code SIREN',
-            defaultValue: preleveur?.code_siren || '',
+            value: preleveur?.code_siren || '',
             onChange: e => setPreleveur(prev => ({...prev, code_siren: e.target.value}))
           }}
         />
@@ -44,7 +44,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
         hintText='Nom officiel de l’entreprise'
         nativeInputProps={{
           placeholder: 'Entrer la raison sociale',
-          defaultValue: preleveur?.raison_sociale || '',
+          value: preleveur?.raison_sociale || '',
           onChange: e => setPreleveur(prev => ({...prev, raison_sociale: e.target.value}))
         }}
       />
@@ -53,7 +53,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
           label='Civilité du contact'
           placeholder='Choisir la civilité'
           nativeSelectProps={{
-            defaultValue: preleveur?.civilite || '',
+            value: preleveur?.civilite || '',
             onChange: e => setPreleveur(prev => ({...prev, civilite: e.target.value}))
           }}
           options={[
@@ -66,7 +66,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
           label='Nom du contact *'
           nativeInputProps={{
             placeholder: 'Entrer le nom',
-            defaultValue: preleveur?.nom || '',
+            value: preleveur?.nom || '',
             onChange: e => setPreleveur(prev => ({...prev, nom: e.target.value}))
           }}
         />
@@ -74,7 +74,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
           label='Prénom du contact *'
           nativeInputProps={{
             placeholder: 'Entrer le prénom',
-            defaultValue: preleveur?.prenom || '',
+            value: preleveur?.prenom || '',
             onChange: e => setPreleveur(prev => ({...prev, prenom: e.target.value}))
           }}
         />
@@ -83,7 +83,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
         label='Adresse email du contact *'
         nativeInputProps={{
           placeholder: 'Entrer l’adresse email de contact',
-          defaultValue: preleveur?.email || '',
+          value: preleveur?.email || '',
           onChange: e => setPreleveur(prev => ({...prev, email: e.target.value}))
         }}
       />
