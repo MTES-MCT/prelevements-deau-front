@@ -16,8 +16,14 @@ export function getPreleveurURL(preleveur) {
   return `/preleveurs/${preleveur.id_preleveur}`
 }
 
-export function getNewPreleveurURL() {
-  return '/preleveurs/new'
+export function getNewPreleveurURL(params) {
+  const url = '/preleveurs/new'
+  if (params) {
+    const query = new URLSearchParams(params).toString()
+    return `${url}?${query}`
+  }
+
+  return url
 }
 
 export function getPointsPrelevementURL() {

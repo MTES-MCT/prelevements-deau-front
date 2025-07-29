@@ -15,7 +15,7 @@ const PreleveurDetails = ({preleveur}) => (
         href: getPreleveurURL(preleveur),
         target: '_blank'
       } : {
-        href: getNewPreleveurURL(),
+        href: getNewPreleveurURL(preleveur),
         target: '_blank'
       },
       children: preleveur.id_preleveur ? 'Consulter la fiche' : 'Ajouter le préleveur'
@@ -26,7 +26,7 @@ const PreleveurDetails = ({preleveur}) => (
       color='primary'
       variant='h4'
     >
-      {preleveur.nom} {preleveur.prenom}
+      {preleveur.__typename === 'PersonnePhysique' ? `${preleveur.nom || ''} ${preleveur.prenom || ''}` : preleveur.raison_sociale}
     </Typography>
 
     <Box className='flex flex-col gap-1 my-2'>
