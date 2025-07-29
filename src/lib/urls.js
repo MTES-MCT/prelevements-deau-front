@@ -16,6 +16,10 @@ export function getPreleveurURL(preleveur) {
   return `/preleveurs/${preleveur.id_preleveur}`
 }
 
+export function getNewPreleveurURL() {
+  return '/preleveurs/new'
+}
+
 export function getPointsPrelevementURL() {
   return '/prelevements'
 }
