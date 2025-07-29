@@ -3,6 +3,7 @@ import {
 } from 'react'
 
 import Button from '@codegouvfr/react-dsfr/Button'
+import Notice from '@codegouvfr/react-dsfr/Notice'
 import {Card} from '@mui/material'
 import {Box} from '@mui/system'
 
@@ -73,36 +74,54 @@ const FileValidationResult = ({
 
         {data && (
           <div className='mt-1'>
-            {data.map(d => {
-              const poinPrelevementId = d?.pointPrelevement || pointsPrelevement[0]
+            {data
+              .map(d => {
+                if (!d) {
+                  return (
+                    <div key='no-data'>
+                      <Notice
+                        small
+                        severity='alert'
+                        title='Aucune donnée'
+                        description='n’a été trouvée dans le fichier.'
+                      />
 
-              return (
-                <div
-                  key={d.pointPrelevement}
-                  ref={element => {
-                    pointRefs.current[poinPrelevementId] = element
-                  }}
-                >
-                  <PrelevementsAccordion
-                    isOpen={selectedPointId === poinPrelevementId}
-                    idPoint={d.pointPrelevement}
-                    pointPrelevement={pointsPrelevement.find(p => p.id_point === d.pointPrelevement)}
-                    volumePreleveTotal={d.volumePreleveTotal}
-                    status={status}
-                    handleSelect={() => handleSelectPoint(poinPrelevementId)}
+                      {errors && (
+                        <FileValidationErrors errors={errors} />
+                      )}
+                    </div>
+                  )
+                }
+
+                const poinPrelevementId = d?.pointPrelevement || pointsPrelevement[0]
+
+                return (
+                  <div
+                    key={poinPrelevementId}
+                    ref={element => {
+                      pointRefs.current[poinPrelevementId] = element
+                    }}
                   >
-                    <DeclarationFileDetails
-                      data={d}
-                      typePrelevement={typePrelevement}
-                    />
+                    <PrelevementsAccordion
+                      isOpen={selectedPointId === poinPrelevementId}
+                      idPoint={poinPrelevementId}
+                      pointPrelevement={pointsPrelevement.find(p => p.id_point === poinPrelevementId)}
+                      volumePreleveTotal={d.volumePreleveTotal}
+                      status={status}
+                      handleSelect={() => handleSelectPoint(poinPrelevementId)}
+                    >
+                      <DeclarationFileDetails
+                        data={d}
+                        typePrelevement={typePrelevement}
+                      />
 
-                    {errors && (
-                      <FileValidationErrors errors={errors} />
-                    )}
-                  </PrelevementsAccordion>
-                </div>
-              )
-            })}
+                      {errors && (
+                        <FileValidationErrors errors={errors} />
+                      )}
+                    </PrelevementsAccordion>
+                  </div>
+                )
+              })}
           </div>
         )}
       </Card>
