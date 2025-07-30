@@ -93,22 +93,22 @@ const FileValidationResult = ({
                   )
                 }
 
-                const poinPrelevementId = d?.pointPrelevement || pointsPrelevement[0]
+                const pointPrelevementId = d?.pointPrelevement // TODO: Use points from donneesPrelevement when ready
 
                 return (
                   <div
-                    key={poinPrelevementId}
+                    key={pointPrelevementId}
                     ref={element => {
-                      pointRefs.current[poinPrelevementId] = element
+                      pointRefs.current[pointPrelevementId] = element
                     }}
                   >
                     <PrelevementsAccordion
-                      isOpen={selectedPointId === poinPrelevementId}
-                      idPoint={poinPrelevementId}
-                      pointPrelevement={pointsPrelevement.find(p => p.id_point === poinPrelevementId)}
+                      isOpen={selectedPointId === pointPrelevementId}
+                      idPoint={pointPrelevementId}
+                      pointPrelevement={pointsPrelevement.find(p => p.id_point === pointPrelevementId)}
                       volumePreleveTotal={d.volumePreleveTotal}
                       status={status}
-                      handleSelect={() => handleSelectPoint(poinPrelevementId)}
+                      handleSelect={() => handleSelectPoint(pointPrelevementId)}
                     >
                       <DeclarationFileDetails
                         data={d}
