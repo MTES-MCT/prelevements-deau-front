@@ -85,7 +85,7 @@ const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector'
         type: 'symbol',
         source: 'points-prelevement',
         layout: {
-          'text-field': ['get', 'nom'],
+          'text-field': ['concat', ['get', 'id_point'], ' - ', ['get', 'nom']],
           'text-anchor': 'bottom',
           'text-offset': ['get', 'textOffset']
         },
