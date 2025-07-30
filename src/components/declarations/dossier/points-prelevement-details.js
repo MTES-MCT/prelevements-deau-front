@@ -6,8 +6,8 @@ import PointsPrelevementsMap from '@/components/map/points-prelevements-map.js'
 import SectionCard from '@/components/ui/section-card.js'
 
 const PointsPrelevementDetails = ({pointsPrelevementId, pointsPrelevement, handleClick, disabledPointIds, pointsStatus}) => {
-  const pointsNotFound = pointsPrelevementId.filter(id => !pointsPrelevement?.some(point => point.id_point === id))
-  const usePlural = pointsNotFound.length > 1
+  const pointsWithoutData = pointsPrelevementId.filter(id => !pointsPrelevement?.some(point => point.id_point === id))
+  const usePlural = pointsWithoutData.length > 1
   return (
     <SectionCard title='Points de prélèvement' icon='fr-icon-map-pin-2-line'>
       {pointsPrelevementId.length > 0 ? (
@@ -21,20 +21,22 @@ const PointsPrelevementDetails = ({pointsPrelevementId, pointsPrelevement, handl
                 </>
               }
             />
-            <PointsPrelevementsMap
-              pointsPrelevement={pointsPrelevement}
-              handleClick={handleClick}
-              disabledPointIds={disabledPointIds}
-              pointsStatus={pointsStatus}
-            />
+            {pointsPrelevement.length > 0 && (
+              <PointsPrelevementsMap
+                pointsPrelevement={pointsPrelevement}
+                handleClick={handleClick}
+                disabledPointIds={disabledPointIds}
+                pointsStatus={pointsStatus}
+              />
+            )}
 
-            {pointsNotFound.length > 0 && (
+            {pointsWithoutData.length > 0 && (
               <Alert
                 severity='warning'
                 description={
                   usePlural
-                    ? `Les points de prélèvement ${pointsNotFound.join(', ')} n’ont pas pu être identifiés.`
-                    : `Le point de prélèvement ${pointsNotFound[0]} n’a pas pu être identifié.`
+                    ? `Aucune déclaration n’a été faite pour les points de prélèvement suivant : ${pointsWithoutData.join(', ')}.`
+                    : `Aucune décalration n’a été faite pour le point de prélèvement ${pointsWithoutData[0]}.`
                 }
               />
             )}
