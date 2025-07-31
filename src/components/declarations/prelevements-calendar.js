@@ -4,62 +4,106 @@ import {useMemo} from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
-import {
-  Box, Typography
-} from '@mui/material'
+import {Box, Typography} from '@mui/material'
 import {parseISO, format} from 'date-fns'
+import {
+  isEqual, keyBy, union, some as _some
+} from 'lodash-es'
 
 import CalendarGrid from '@/components/calendar-grid.js'
 import {formatNumber} from '@/utils/number.js'
 
-function determineColor(values, fifteenMinutesValues, dailyParameters) {
-  const hasNegativeValue = values.some(v => v < 0)
-  if (hasNegativeValue) {
-    return fr.colors.decisions.background.flat.error.default
-  }
-
-  const volumePreleveParam = dailyParameters?.find(p => p.nom_parametre === 'volume prélevé')
-  const volumePreleveIndex = volumePreleveParam ? dailyParameters.indexOf(volumePreleveParam) : -1
-
-  const hasAnyData = values.some(v => Number.isNaN(v)) || (fifteenMinutesValues?.length > 0)
-
-  if (volumePreleveIndex > -1 && !Number.isNaN(values[volumePreleveIndex])) {
-    // Bleu si la donnée journalière pour le volume prélevé est présente
-    return fr.colors.decisions.text.actionHigh.blueFrance.default
-  }
-
-  if (hasAnyData) {
-    // Orange s'il y a d'autres données mais pas le volume prélevé journalier
-    return fr.colors.decisions.background.flat.warning.default
-  }
-
-  // Gris si aucune donnée
-  return 'grey'
+/**
+ * Indique si une entrée contient au moins une valeur numérique valide.
+ */
+function hasValues(entry) {
+  return (
+    entry
+      && (_some(entry.values, v => !Number.isNaN(v))
+        || (entry.fifteenMinutesValues || []).length > 0)
+  )
 }
 
-export function transformOutJsonToCalendarData(outJson) {
-  const daily = outJson.dailyValues || []
-  return daily.map(({date, values, fifteenMinutesValues}) => {
-    // Reformattage de la date pour dd-MM-yyyy
-    const dateKey = format(parseISO(date), 'dd-MM-yyyy')
-    const color = determineColor(values, fifteenMinutesValues, outJson.dailyParameters)
+/**
+ * Détermine la couleur d’un jour donné selon la présence / égalité des données.
+ */
+function determineColor(currentEntry, previousEntry) {
+  const hasCurrent = hasValues(currentEntry)
+  const hasPrevious = hasValues(previousEntry)
+
+  if (!hasCurrent && !hasPrevious) {
+    return 'grey'
+  } // Aucune déclaration (gris)
+
+  if (hasCurrent && !hasPrevious) {
+    return fr.colors.decisions.text.actionHigh.blueFrance.default
+  } // Nouvelle déclaration (bleu)
+
+  if (!hasCurrent && hasPrevious) {
+    return fr.colors.decisions.background.flat.success.default
+  } // Déclaration déjà existante (vert)
+
+  // Les deux jeux de données existent : identiques ?
+  const identical
+     = isEqual(currentEntry.values, previousEntry.values)
+     && isEqual(
+       currentEntry.fifteenMinutesValues,
+       previousEntry.fifteenMinutesValues
+     )
+
+  return identical
+    ? fr.colors.decisions.background.flat.success.default // Déclaration inchangée (vert)
+    : fr.colors.decisions.background.flat.warning.default // Déclaration en conflit (orange)
+}
+
+/**
+  * Construit le tableau attendu par <CalendarGrid/> en fusionnant data & previousData.
+  */
+export function transformDataToCalendarData(data = {}, previousData = {}) {
+  const currentByDate = keyBy(data.dailyValues || [], 'date')
+  const previousByDate = keyBy(previousData.dailyValues || [], 'date')
+  const allDates = union(Object.keys(currentByDate), Object.keys(previousByDate))
+
+  return allDates.map(isoDate => {
+    const current = currentByDate[isoDate]
+    const previous = previousByDate[isoDate]
+    const color = determineColor(current, previous)
+
     return {
-      date: dateKey,
-      values,
-      fifteenMinutesValues,
+      date: format(parseISO(isoDate), 'dd-MM-yyyy'),
+      values: current?.values ?? previous?.values ?? [],
+      fifteenMinutesValues:
+         current?.fifteenMinutesValues ?? previous?.fifteenMinutesValues ?? [],
       color
+
     }
   })
 }
 
-const PrelevementsCalendar = ({data}) => {
-  const calendarData = useMemo(() => data.dailyValues && data.dailyValues.length > 0 ? transformOutJsonToCalendarData(data) : null, [data])
+/**
+  * Composant visuel principal.
+  */
+const PrelevementsCalendar = ({data, previousData}) => {
+  const calendarData = useMemo(() => {
+    const hasAnyData
+       = (data?.dailyValues?.length ?? 0) > 0
+       || (previousData?.dailyValues?.length ?? 0) > 0
 
-  if (!data.dailyValues || data.dailyValues.length === 0) {
+    return hasAnyData
+      ? transformDataToCalendarData(data, previousData)
+      : null
+  }, [data, previousData])
+
+  if (!calendarData) {
     return (
       <Alert severity='warning' description='Aucune donnée de prélèvement n’a été trouvée.' />
     )
   }
+
+  const dailyParameters
+     = data?.dailyParameters?.length > 0
+       ? data.dailyParameters
+       : previousData?.dailyParameters ?? []
 
   return (
     <CalendarGrid
@@ -82,12 +126,22 @@ const PrelevementsCalendar = ({data}) => {
         return (
           <>
             <strong>{date.toLocaleDateString('fr-FR')}</strong>
-            {Object.keys(data.dailyParameters).map(paramIndex => (
-              <Typography key={paramIndex}>
-                {data.dailyParameters[paramIndex].nom_parametre} : {Number.isNaN(values[paramIndex])
+            {dailyParameters.map((param, index) => (
+              <Typography key={param.nom_parametre}>
+                {param.nom_parametre} :{' '}
+                {Number.isNaN(values[index])
                   ? '—'
-                  : formatNumber(values[paramIndex], values[paramIndex] < 1 && values[paramIndex] !== 0 ? {maximumFractionDigits: 2, minimumFractionDigits: 2} : {})} m³
-                {warnings[0] && <Box component='span' className='fr-icon-warning-fill' />}
+                  : formatNumber(
+                    values[index],
+                    values[index] < 1 && values[index] !== 0
+                      ? {maximumFractionDigits: 2, minimumFractionDigits: 2}
+                      : {}
+
+                  )}{' '}
+                m³
+                {warnings[index] && (
+                  <Box component='span' className='fr-icon-warning-fill' />
+                )}
               </Typography>
             ))}
           </>
