@@ -1,5 +1,7 @@
 'use client'
 
+import {useMemo} from 'react'
+
 import {fr} from '@codegouvfr/react-dsfr'
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {
@@ -51,7 +53,9 @@ export function transformOutJsonToCalendarData(outJson) {
 }
 
 const PrelevementsCalendar = ({data}) => {
-  if (data.dailyValues && data.dailyValues.length === 0) {
+  const calendarData = useMemo(() => data.dailyValues && data.dailyValues.length > 0 ? transformOutJsonToCalendarData(data) : null, [data])
+
+  if (!data.dailyValues || data.dailyValues.length === 0) {
     return (
       <Alert severity='warning' description='Aucune donnée de prélèvement n’a été trouvée.' />
     )
@@ -59,7 +63,7 @@ const PrelevementsCalendar = ({data}) => {
 
   return (
     <CalendarGrid
-      data={transformOutJsonToCalendarData(data)}
+      data={calendarData}
       renderCustomTooltipContent={({date, dayStyleEntry}) => {
         if (!dayStyleEntry) {
           return (
