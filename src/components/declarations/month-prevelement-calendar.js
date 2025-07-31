@@ -21,13 +21,8 @@ const DayCell = ({day, firstDayCurrentMonth, dataMap, renderTooltipContent, onDa
   let cellClasses = 'aspect-square rounded flex items-center justify-center text-xs transition-colors duration-150 ease-in-out'
 
   if (dayData) {
-    if (dayData.colorA && dayData.colorB) {
-      cellStyle = {
-        background: `repeating-linear-gradient(45deg, ${dayData.colorA}, ${dayData.colorA} 3px, ${dayData.colorB} 3px, ${dayData.colorB} 6px)`
-      }
-      cellClasses += ' text-white font-semibold'
-    } else if (dayData.colorA) {
-      cellStyle = {backgroundColor: dayData.colorA}
+    if (dayData.color) {
+      cellStyle = {backgroundColor: dayData.color}
       cellClasses += ' text-white font-semibold'
     }
   } else if (isCurrentMonthDay) {
