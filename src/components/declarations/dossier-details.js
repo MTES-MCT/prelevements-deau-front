@@ -33,7 +33,7 @@ function getVolumePrelevementTotal(dossier, files) {
   // 1. Priorité aux fichiers si présents
   if (files?.length) {
     if (typePrelevement === 'camion-citerne') {
-      return sumBy(flatMap(files, file => file.result.data),
+      return sumBy(flatMap(files, file => file.result?.data),
         'volumePreleveTotal'
       )
     }
@@ -172,8 +172,8 @@ const DossierDetails = ({dossier, preleveur, files, idPoints}) => {
                   storageKey={file.storageKey}
                   typePrelevement={dossier.typePrelevement}
                   pointsPrelevement={pointsPrelevement}
-                  data={file.processingError ? null : (dossier.typePrelevement === 'aep-zre' ? [file.result.data] : file.result.data)}
-                  errors={file.processingError ? [{severity: 'error', message: file.processingError}] : file.result.errors}
+                  data={file.processingError ? null : (dossier.typePrelevement === 'aep-zre' ? [file?.result?.data] : file?.result?.data)}
+                  errors={file.processingError ? [{severity: 'error', message: file.processingError}] : file.result?.errors}
                   processingError={file.processingError}
                   downloadFile={downloadFile}
                 />
