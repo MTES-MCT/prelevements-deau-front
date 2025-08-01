@@ -131,7 +131,7 @@ function buildMinuteItems(params, curr15, prev15) {
 /**
  * Détermine s’il existe :
  *  - un conflit « journalière » (différence de valeurs)
- *  - un conflit « 15min »   (différence de séries)
+ *  - un conflit « 15min » (différence de séries)
  *
  * @returns {{daily: boolean, minute: boolean}}
  */
@@ -142,10 +142,17 @@ function detectConflicts(current, previous, curr15, prev15) {
   )
 
   const minute = current.some((_, idx) => {
-    // Conflit 15min : séries différentes (au moins une valeur diffère)
-    const c = curr15.map(seg => seg?.values?.[idx])
-    const p = prev15.map(seg => seg?.values?.[idx])
-    return !isEqual(c, p)
+    const cSeries = curr15.map(seg => seg?.values?.[idx])
+    const pSeries = prev15.map(seg => seg?.values?.[idx])
+
+    const cHas = cSeries.some(val => isDeclared(val))
+    const pHas = pSeries.some(val => isDeclared(val))
+
+    if (!(cHas && pHas)) {
+      return false // Pas de données de part et d'autre => pas de conflit
+    }
+
+    return !isEqual(cSeries, pSeries)
   })
 
   return {daily, minute}
