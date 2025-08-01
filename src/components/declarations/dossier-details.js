@@ -16,9 +16,9 @@ import VolumesPompes from './dossier/prelevements/volumes-pompes.js'
 
 import {getFileBlob} from '@/app/api/dossiers.js'
 import {getPointPrelevement} from '@/app/api/points-prelevement.js'
+import DeclarantDetails from '@/components/declarations/dossier/declarant-details.js'
 import DemandeurDetails from '@/components/declarations/dossier/demandeur-details.js'
 import DossierInfos from '@/components/declarations/dossier/infos.js'
-import MandataireDetails from '@/components/declarations/dossier/mandataire-details.js'
 import PointsPrelevementDetails from '@/components/declarations/dossier/points-prelevement-details.js'
 import Compteur from '@/components/declarations/dossier/prelevements/compteur.js'
 import PreleveurDetails from '@/components/declarations/dossier/preleveur-details.js'
@@ -127,8 +127,12 @@ const DossierDetails = ({dossier, preleveur, files, idPoints}) => {
         {!preleveur && dossier.demandeur && (
           <DemandeurDetails demandeur={dossier.demandeur} />
         )}
-        {dossier.declarant && dossier.declarant.type !== 'particulier' && (
-          <MandataireDetails mandataire={dossier.declarant} />
+
+        {dossier.declarant && (
+          <DeclarantDetails
+            declarant={dossier.declarant}
+            isMandataire={dossier.deposeParUnTiers}
+          />
         )}
       </div>
 
