@@ -13,16 +13,12 @@ import {
 import CalendarGrid from '@/components/calendar-grid.js'
 import {formatNumber} from '@/utils/number.js'
 
-/* ------------------------------------------------------------------ */
-/* Utils                                                              */
-/* ------------------------------------------------------------------ */
-
 /** Retourne vrai si la valeur représente une déclaration (0 accepté). */
 function isDeclared(value) {
   return value !== null && value !== undefined && !Number.isNaN(value)
 }
 
-/** Indique si une entrée contient au moins une valeur (journalière ou 15 min). */
+/** Indique si une entrée contient au moins une valeur (journalière ou 15min). */
 function hasValues(entry) {
   return (
     entry
@@ -63,11 +59,22 @@ function determineColor(currentEntry, previousEntry) {
 
 /* ---------- Tooltip helpers to keep render function simple ---------- */
 
+/**
+ * Construit deux listes <li> :
+ *  - journalier : valeurs « à afficher » (priorité à data courante, sinon précédente)
+ *  - previousJournalier : valeurs issues de previousData, avec delta vis‑à‑vis de la valeur courante
+ *
+ * @param {Array} params   Tableau des paramètres {nom_parametre, unite, …}
+ * @param {Array} current  Tableau des valeurs courantes (data)
+ * @param {Array} previous Tableau des valeurs précédentes (previousData)
+ * @returns {{journalier: ReactNode[], previousJournalier: ReactNode[]}}
+ */
 function buildJournalierItems(params, current, previous) {
   const journalier = []
   const previousJournalier = []
 
   for (const [idx, param] of params.entries()) {
+    // Choisit la valeur à afficher : priorité aux données courantes
     const val = isDeclared(current[idx]) ? current[idx] : previous[idx]
     if (isDeclared(val)) {
       journalier.push(
@@ -77,6 +84,7 @@ function buildJournalierItems(params, current, previous) {
       )
     }
 
+    // Calcule le delta lorsque les deux jeux de données possèdent une valeur
     const delta
       = isDeclared(current[idx]) && isDeclared(previous[idx])
         ? current[idx] - previous[idx]
@@ -95,9 +103,15 @@ function buildJournalierItems(params, current, previous) {
   return {journalier, previousJournalier}
 }
 
+/**
+ * Retourne la liste <li> des paramètres ayant au moins une valeur 15min
+ * (courante ou précédente). Les vraies valeurs ne sont pas affichées,
+ * seul le nom du paramètre + unité est indiqué.
+ */
 function buildMinuteItems(params, curr15, prev15) {
   const items = []
   for (const [idx, param] of params.entries()) {
+    // Vérifie la présence d'au moins une valeur déclarée à la maille 15min
     const currSeg = curr15.map(seg => seg?.values?.[idx])
     const prevSeg = prev15.map(seg => seg?.values?.[idx])
     const hasMinute
@@ -114,12 +128,21 @@ function buildMinuteItems(params, curr15, prev15) {
   return items
 }
 
+/**
+ * Détermine s’il existe :
+ *  - un conflit « journalière » (différence de valeurs)
+ *  - un conflit « 15min »   (différence de séries)
+ *
+ * @returns {{daily: boolean, minute: boolean}}
+ */
 function detectConflicts(current, previous, curr15, prev15) {
+  // Conflit journalier : deux valeurs déclarées différentes
   const daily = current.some(
     (v, i) => isDeclared(v) && isDeclared(previous[i]) && v !== previous[i]
   )
 
   const minute = current.some((_, idx) => {
+    // Conflit 15min : séries différentes (au moins une valeur diffère)
     const c = curr15.map(seg => seg?.values?.[idx])
     const p = prev15.map(seg => seg?.values?.[idx])
     return !isEqual(c, p)
@@ -144,7 +167,6 @@ export function transformDataToCalendarData(data = {}, previousData = {}) {
       previousValues: previous?.values ?? [],
       currentFifteenMinutesValues: current?.fifteenMinutesValues ?? [],
       previousFifteenMinutesValues: previous?.fifteenMinutesValues ?? [],
-      // Legacy :
       values: current?.values ?? previous?.values ?? [],
       fifteenMinutesValues:
         current?.fifteenMinutesValues ?? previous?.fifteenMinutesValues ?? [],
@@ -216,7 +238,7 @@ const PrelevementsCalendar = ({data, previousData}) => {
 
         {minuteItems.length > 0 && (
           <>
-            <div>Prélèvement 15 minutes :</div>
+            <div>Prélèvement 15minutes :</div>
             <ul>{minuteItems}</ul>
           </>
         )}
