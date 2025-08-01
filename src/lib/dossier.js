@@ -38,3 +38,9 @@ export async function getDossierFiles(dossier) {
     return getFile(dossier._id, hash)
   }))
 }
+
+export function getPersonnePhysiqueFullName({civilite, nom, prenom}) {
+  return nom && prenom
+    ? `${civilite}. ${nom || ''} ${prenom || ''}`
+    : 'Nom et prénom non renseignés'
+}

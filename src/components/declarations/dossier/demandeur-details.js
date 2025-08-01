@@ -1,49 +1,51 @@
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Box, Typography} from '@mui/material'
 
 import LabelWithIcon from '@/components/ui/label-with-icon.js'
 import SectionCard from '@/components/ui/section-card.js'
 import {getPersonnePhysiqueFullName} from '@/lib/dossier.js'
-import {getPreleveurURL} from '@/lib/urls.js'
+import {getNewPreleveurURL} from '@/lib/urls.js'
 
-const PreleveurDetails = ({preleveur}) => (
+const DemandeurDetails = ({demandeur}) => (
   <SectionCard
-    title='Préleveur'
+    title='Demandeur'
     icon='fr-icon-user-line'
     buttonProps={{
       priority: 'secondary',
       linkProps: {
-        href: getPreleveurURL(preleveur),
+        href: getNewPreleveurURL(demandeur),
         target: '_blank'
       },
-      children: 'Consulter la fiche'
+      children: 'Ajouter le préleveur'
     }}
   >
-
     <Typography
       color='primary'
       variant='h4'
     >
-      {preleveur.__typename === 'PersonnePhysique'
-        ? getPersonnePhysiqueFullName(preleveur)
-        : preleveur.raison_sociale}
+      {demandeur.__typename === 'PersonnePhysique'
+        ? getPersonnePhysiqueFullName(demandeur)
+        : demandeur.raisonSociale}
     </Typography>
 
     <Box className='flex flex-col gap-1 my-2'>
       <LabelWithIcon icon='ri-at-line'>
-        {preleveur.email && (
-          <a href={`mailto:${preleveur.email}`}>{preleveur.email}</a>
+        {demandeur.email && (
+          <a href={`mailto:${demandeur.email}`}>{demandeur.email}</a>
         )}
       </LabelWithIcon>
       <LabelWithIcon icon='fr-icon-phone-line'>
-        {preleveur.telephone && (
-          <a href={`tel:${preleveur.telephone}`}>{preleveur.telephone}</a>
+        {demandeur.telephone && (
+          <a href={`tel:${demandeur.telephone}`}>{demandeur.telephone}</a>
         )}
       </LabelWithIcon>
       <LabelWithIcon icon='fr-icon-home-4-line'>
-        {preleveur.adresse}
+        {demandeur.adresse}
       </LabelWithIcon>
     </Box>
+
+    <Alert severity='warning' description='Ce demandeur n’a pas pu être identifié comme préleveur.' />
   </SectionCard>
 )
 
-export default PreleveurDetails
+export default DemandeurDetails
