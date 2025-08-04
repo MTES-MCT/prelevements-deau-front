@@ -66,6 +66,7 @@ const PointForm = ({
           Localisation
         </Typography>
         <p>Sélectionner l&apos;emplacement du point sur la carte <small><i>(Cliquer ou déplacer le point)</i></small></p>
+        <p>Ou renseigner les coordonnées manuellement sous la carte</p>
       </div>
       <div style={{height: '600px', marginBottom: '2rem'}}>
         <MiniMapForm geom={point.geom} setGeom={handleSetGeom} />
