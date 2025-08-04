@@ -71,6 +71,14 @@ const PointForm = ({
       <div style={{height: '600px', marginBottom: '2rem'}}>
         <MiniMapForm geom={point.geom} setGeom={handleSetGeom} />
       </div>
+      <Input
+        label='Détails sur la localisation'
+        nativeInputProps={{
+          placeholder: 'Entrer les détails sur la localisation',
+          defaultValue: point.detail_localisation,
+          onChange: e => setPoint(prev => ({...prev, detail_localisation: e.target.value}))
+        }}
+      />
       <Select
         label='Précision géométrique'
         placeholder='Sélectionner une précision géométrique'
