@@ -51,6 +51,8 @@ const PointCreationForm = ({
   }
 
   const handleSetGeom = async geom => {
+    setError(null)
+
     try {
       const commune = await getCommuneFromCoords(
         {
