@@ -21,6 +21,7 @@ const Page = async () => {
   const meContinentalesBvList = await getMeContinentales()
   const bvBdCarthageList = await getBvBdcarthage()
   const orderedMesoList = orderBy(mesoList, ['nom_provis'])
+  const orderedMeContinentaleBvList = orderBy(meContinentalesBvList, 'nom')
 
   return (
     <>
@@ -35,7 +36,7 @@ const Page = async () => {
         bssList={bssList}
         bvBdCarthageList={bvBdCarthageList}
         mesoList={orderedMesoList}
-        meContinentalesBvList={meContinentalesBvList}
+        meContinentalesBvList={orderedMeContinentaleBvList}
       />
     </>
   )
