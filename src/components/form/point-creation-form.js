@@ -14,6 +14,7 @@ import {emptyStringToNull} from '@/utils/string.js'
 
 const PointCreationForm = ({
   bnpeList,
+  bssList,
   bvBdCarthageList,
   mesoList,
   meContinentalesBvList
@@ -51,6 +52,8 @@ const PointCreationForm = ({
   }
 
   const handleSetGeom = async geom => {
+    setError(null)
+
     try {
       const commune = await getCommuneFromCoords(
         {
@@ -84,6 +87,7 @@ const PointCreationForm = ({
         setPoint={setPoint}
         handleSetGeom={handleSetGeom}
         bnpeList={bnpeList}
+        bssList={bssList}
         bvBdCarthageList={bvBdCarthageList}
         meContinentalesBvList={meContinentalesBvList}
         mesoList={mesoList}

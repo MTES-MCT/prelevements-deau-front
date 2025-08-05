@@ -170,6 +170,15 @@ export async function getBnpe() {
   return response.json()
 }
 
+export async function getBss() {
+  const response = await executeRequest(
+    'api/referentiels/bss',
+    {headers: {Authorization: await getAuthorization()}}
+  )
+
+  return response.json()
+}
+
 export async function getMeso() {
   const response = await executeRequest(
     'api/referentiels/meso',

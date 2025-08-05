@@ -1,8 +1,10 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import {orderBy} from 'lodash-es'
 import Link from 'next/link'
 
 import {
   getBnpe,
+  getBss,
   getBvBdcarthage,
   getMeContinentales,
   getMeso
@@ -14,9 +16,12 @@ export const dynamic = 'force-dynamic'
 
 const Page = async () => {
   const bnpeList = await getBnpe()
+  const bssList = await getBss()
   const mesoList = await getMeso()
   const meContinentalesBvList = await getMeContinentales()
   const bvBdCarthageList = await getBvBdcarthage()
+  const orderedMesoList = orderBy(mesoList, ['nom_provis'])
+  const orderedMeContinentaleBvList = orderBy(meContinentalesBvList, 'nom')
 
   return (
     <>
@@ -28,9 +33,10 @@ const Page = async () => {
       </div>
       <PointCreationForm
         bnpeList={bnpeList}
+        bssList={bssList}
         bvBdCarthageList={bvBdCarthageList}
-        mesoList={mesoList}
-        meContinentalesBvList={meContinentalesBvList}
+        mesoList={orderedMesoList}
+        meContinentalesBvList={orderedMeContinentaleBvList}
       />
     </>
   )

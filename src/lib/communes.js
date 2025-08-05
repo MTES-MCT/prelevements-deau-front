@@ -1,6 +1,6 @@
 export async function getCommuneFromCoords({lat, lon}) {
-  const response = await fetch(`https://geo.api.gouv.fr/communes?lat=${lat}&lon=${lon}&fields=code,nom`)
+  const response = await fetch(`https://data.geopf.fr/geocodage/reverse?index=poi&category=commune&lon=${lon}&lat=${lat}`)
   const communes = await response.json()
 
-  return communes[0]
+  return communes?.features[0]?.properties?.name[0]
 }
