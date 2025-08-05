@@ -210,18 +210,6 @@ const OptionalPointFieldsForm = (
         ]}
       />
     </div>
-    <Typography variant='h5' sx={{pb: 5}}>
-      Autre
-    </Typography>
-    <Input
-      textArea
-      label='Remarque'
-      nativeTextAreaProps={{
-        placeholder: 'Entrer une remarque',
-        defaultValue: point?.remarque
-      }}
-      onChange={e => setPoint(prev => ({...prev, remarque: e.target.value}))}
-    />
   </div>
 )
 
