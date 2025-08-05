@@ -1,9 +1,11 @@
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Typography} from '@mui/material'
+import {orderBy} from 'lodash-es'
 import {notFound} from 'next/navigation'
 
 import {
   getBnpe,
+  getBss,
   getBvBdcarthage,
   getMeContinentales,
   getMeso,
@@ -20,9 +22,12 @@ const Page = async ({params}) => {
   }
 
   const bnpeList = await getBnpe()
+  const bssList = await getBss()
   const mesoList = await getMeso()
   const meContinentalesBvList = await getMeContinentales()
   const bvBdCarthageList = await getBvBdcarthage()
+  const orderedMesoList = orderBy(mesoList, ['nom_provis'])
+  const orderedMeContinentaleBvList = orderBy(meContinentalesBvList, 'nom')
 
   return (
     <>
@@ -47,9 +52,10 @@ const Page = async ({params}) => {
       <PointEditionForm
         pointPrelevement={pointPrelevement}
         bnpeList={bnpeList}
+        bssList={bssList}
         bvBdCarthageList={bvBdCarthageList}
-        mesoList={mesoList}
-        meContinentalesBvList={meContinentalesBvList}
+        mesoList={orderedMesoList}
+        meContinentalesBvList={orderedMeContinentaleBvList}
       />
     </>
   )

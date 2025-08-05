@@ -19,6 +19,7 @@ import {emptyStringToNull} from '@/utils/string.js'
 
 const PointEditionForm = ({
   pointPrelevement,
+  bssList,
   bnpeList,
   bvBdCarthageList,
   mesoList,
@@ -91,6 +92,7 @@ const PointEditionForm = ({
         setPoint={setPayload}
         handleSetGeom={handleSetGeom}
         bnpeList={bnpeList}
+        bssList={bssList}
         bvBdCarthageList={bvBdCarthageList}
         meContinentalesBvList={meContinentalesBvList}
         mesoList={mesoList}
