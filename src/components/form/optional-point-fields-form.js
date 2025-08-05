@@ -3,6 +3,7 @@
 import Input from '@codegouvfr/react-dsfr/Input'
 import SearchBar from '@codegouvfr/react-dsfr/SearchBar'
 import Select from '@codegouvfr/react-dsfr/SelectNext'
+import {Tooltip} from '@codegouvfr/react-dsfr/Tooltip'
 import {Typography} from '@mui/material'
 import dynamic from 'next/dynamic'
 
@@ -29,7 +30,15 @@ const OptionalPointFieldsForm = (
       Informations d’identification
     </Typography>
     <Input
-      label='Autres noms'
+      label={(
+        <>
+          <span className='pr-1'>Autres noms</span>
+          <Tooltip
+            kind='hover'
+            title='Autres noms utilisés pour ce point de prélèvement dans d’autres systèmes d’information'
+          />
+        </>
+      )}
       nativeInputProps={{
         defaultValue: point?.autresNoms,
         placeholder: 'Entrer les autres noms, séparés par une virgule',
