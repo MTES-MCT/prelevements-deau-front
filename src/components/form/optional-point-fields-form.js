@@ -46,6 +46,28 @@ const OptionalPointFieldsForm = (
       }}
     />
     <div className='pb-5'>
+      <p className='pb-2'>Code point BNPE</p>
+      <SearchBar
+        label='Rechercher dans la Banque nationale des prélèvements d’eau'
+        renderInput={({className, id, placeholder, type}) => (
+          <SearchAutocomplete
+            options={bnpeList.map(bnpe => ({
+              bnpe,
+              label: `${bnpe.nom_ouvrage} (${bnpe.code_point_prelevement})`
+            }))}
+            defaultValue={point?.bnpe?.nom || point?.bnpe?.point}
+            className={className}
+            id={id}
+            placeholder={placeholder}
+            type={type}
+            onChange={(e, value) => setPoint(prev => ({
+              ...prev,
+              bnpe: value?.bnpe?.code_point_prelevement
+            }))}
+          />
+        )}
+      />
+    </div>
     <div className='pb-5'>
       <p className='pb-2'>Code BSS (nouveau)</p>
       <SearchBar
@@ -115,29 +137,6 @@ const OptionalPointFieldsForm = (
           placeholder: 'Entrer la profondeur',
           onChange: e => setPoint(prev => ({...prev, profondeur: Number(e.target.value)}))
         }}
-      />
-    </div>
-    <div className='pb-5'>
-      <p className='pb-2'>Banque Nationale des prélèvements d’eau</p>
-      <SearchBar
-        label='Rechercher la BNPE'
-        renderInput={({className, id, placeholder, type}) => (
-          <SearchAutocomplete
-            options={bnpeList.map(bnpe => ({
-              bnpe,
-              label: `${bnpe.code_point_prelevement} - ${bnpe.nom_ouvrage}`
-            }))}
-            defaultValue={point?.bnpe?.nom || point?.bnpe?.point}
-            className={className}
-            id={id}
-            placeholder={placeholder}
-            type={type}
-            onChange={(e, value) => setPoint(prev => ({
-              ...prev,
-              bnpe: value?.bnpe?.code_point_prelevement
-            }))}
-          />
-        )}
       />
     </div>
     <div className='pb-5'>
