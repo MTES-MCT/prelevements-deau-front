@@ -119,28 +119,8 @@ const OptionalPointFieldsForm = (
         label: `${meso.code} - ${meso.nom_provis}`
       }))}
     />
-    <div className='w-full grid grid-cols-2 gap-4'>
-      <Input
-        label='Cours d’eau'
-        nativeInputProps={{
-          defaultValue: point?.cours_eau,
-          placeholder: 'Entrer le nom du cours d’eau',
-          onChange: e => setPoint(prev => ({...prev, cours_eau: e.target.value}))
-        }}
-      />
-      <Input
-        label='Profondeur'
-        type='number'
-        nativeInputProps={{
-          type: 'number',
-          defaultValue: point?.profondeur,
-          placeholder: 'Entrer la profondeur',
-          onChange: e => setPoint(prev => ({...prev, profondeur: Number(e.target.value)}))
-        }}
-      />
-    </div>
     <div className='pb-5'>
-      <p className='pb-2'>Masse d’eau continentale</p>
+      <p className='pb-2'>Masse d’eau de surface continentale (DCE)</p>
       <SearchBar
         label='Rechercher le code masse d’eau continentale'
         renderInput={({className, id, placeholder, type}) => (
@@ -185,11 +165,31 @@ const OptionalPointFieldsForm = (
         )}
       />
     </div>
+    <div className='w-full grid grid-cols-2 gap-4'>
+      <Input
+        label='Cours d’eau'
+        nativeInputProps={{
+          defaultValue: point?.cours_eau,
+          placeholder: 'Entrer le nom du cours d’eau',
+          onChange: e => setPoint(prev => ({...prev, cours_eau: e.target.value}))
+        }}
+      />
+      <Input
+        label='Profondeur'
+        type='number'
+        nativeInputProps={{
+          type: 'number',
+          defaultValue: point?.profondeur,
+          placeholder: 'Entrer la profondeur en m (pour les puits et forages)',
+          onChange: e => setPoint(prev => ({...prev, profondeur: Number(e.target.value)}))
+        }}
+      />
+    </div>
     <div className='w-full grid grid-cols-2 gap-4 py-5'>
       <DynamicCheckbox
         options={[
           {
-            label: 'Zone règlementée (ZRE)',
+            label: 'Zone de répartition des eaux',
             nativeInputProps: {
               defaultChecked: point.zre || false,
               onChange: e => setPoint(prev => ({...prev, zre: e.target.checked}))
