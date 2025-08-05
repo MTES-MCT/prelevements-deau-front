@@ -23,20 +23,20 @@ const PointForm = ({
   const [isExpanded, setIsExpanded] = useState(false)
   const typesDeMilieu = ['Eau de surface', 'Eau souterraine', 'Eau de transition']
   const precisionsGeom = [
-    'Repérage carte',
     'Coordonnées précises',
-    'Coordonnées précises (ARS)',
+    'Coordonnées estimées (précision du kilomètre)',
     'Coordonnées du centroïde de la commune',
-    'Coordonnées précises (rapport HGA)',
-    'Coordonnées précises (ARS 2013)',
     'Coordonnées précises (AP)',
+    'Coordonnées précises (ARS)',
+    'Coordonnées précises (ARS 2013)',
     'Coordonnées précises (BSS)',
     'Coordonnées précises (BNPE – accès restreint)',
-    'Précision inconnue',
-    'Coordonnées estimées (précision du kilomètre)',
     'Coordonnées précises (BNPE)',
     'Coordonnées précises (DEAL)',
-    'Coordonnées précises (DLE)'
+    'Coordonnées précises (DLE)',
+    'Coordonnées précises (rapport HGA)',
+    'Précision inconnue',
+    'Repérage carte'
   ]
 
   return (
