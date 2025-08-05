@@ -99,8 +99,11 @@ const OptionalPointFieldsForm = (
         onChange: e => setPoint(prev => ({...prev, code_aiot: e.target.value}))
       }}
     />
+    <Typography variant='h5' sx={{py: 5}}>
+      Localisation : Informations complémentaires
+    </Typography>
     <Select
-      label='Code mésorégion hydrographique'
+      label='Masse d’eau souterraine (DCE)'
       placeholder='Sélectionner le code MESO'
       nativeSelectProps={{
         defaultValue: point?.meso?.nom,
@@ -113,12 +116,9 @@ const OptionalPointFieldsForm = (
       }}
       options={mesoList.map(meso => ({
         value: meso.nom_provis,
-        label: meso.nom_provis
+        label: `${meso.code} - ${meso.nom_provis}`
       }))}
     />
-    <Typography variant='h5' sx={{py: 5}}>
-      Caractéristique du point d’eau
-    </Typography>
     <div className='w-full grid grid-cols-2 gap-4'>
       <Input
         label='Cours d’eau'

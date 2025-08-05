@@ -1,4 +1,5 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import {orderBy} from 'lodash-es'
 import Link from 'next/link'
 
 import {
@@ -19,6 +20,7 @@ const Page = async () => {
   const mesoList = await getMeso()
   const meContinentalesBvList = await getMeContinentales()
   const bvBdCarthageList = await getBvBdcarthage()
+  const orderedMesoList = orderBy(mesoList, ['nom_provis'])
 
   return (
     <>
@@ -32,7 +34,7 @@ const Page = async () => {
         bnpeList={bnpeList}
         bssList={bssList}
         bvBdCarthageList={bvBdCarthageList}
-        mesoList={mesoList}
+        mesoList={orderedMesoList}
         meContinentalesBvList={meContinentalesBvList}
       />
     </>
