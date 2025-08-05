@@ -15,6 +15,7 @@ const PointForm = ({
   setPoint,
   handleSetGeom,
   bnpeList,
+  bssList,
   bvBdCarthageList,
   meContinentalesBvList,
   mesoList
@@ -100,6 +101,7 @@ const PointForm = ({
           point={point}
           setPoint={setPoint}
           bnpeList={bnpeList}
+          bssList={bssList}
           bvBdCarthageList={bvBdCarthageList}
           mesoList={mesoList}
           meContinentalesBvList={meContinentalesBvList}

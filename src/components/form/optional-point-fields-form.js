@@ -18,6 +18,7 @@ const OptionalPointFieldsForm = (
     point,
     setPoint,
     bnpeList,
+    bssList,
     bvBdCarthageList,
     mesoList,
     meContinentalesBvList
@@ -35,6 +36,30 @@ const OptionalPointFieldsForm = (
         onChange: e => setPoint(prev => ({...prev, autresNoms: e.target.value}))
       }}
     />
+    <div className='pb-5'>
+    <div className='pb-5'>
+      <p className='pb-2'>Code BSS (nouveau)</p>
+      <SearchBar
+        label='Code national du point d’eau dans la Banque Nationale du Sous-Sol (code "nouveau" commençant par BSS...)'
+        renderInput={({className, id, placeholder, type}) => (
+          <SearchAutocomplete
+            options={bssList.map(bss => ({
+              bss,
+              label: `${bss.id_bss} (${bss.lien_infoterre})`
+            }))}
+            defaultValue={point?.bss?.nom || point?.bss?.point}
+            className={className}
+            id={id}
+            placeholder={placeholder}
+            type={type}
+            onChange={(e, value) => setPoint(prev => ({
+              ...prev,
+              bss: value?.bss?.id_bss
+            }))}
+          />
+        )}
+      />
+    </div>
     <Input
       label='Code AIOT'
       nativeInputProps={{

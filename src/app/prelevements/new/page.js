@@ -3,6 +3,7 @@ import Link from 'next/link'
 
 import {
   getBnpe,
+  getBss,
   getBvBdcarthage,
   getMeContinentales,
   getMeso
@@ -14,6 +15,7 @@ export const dynamic = 'force-dynamic'
 
 const Page = async () => {
   const bnpeList = await getBnpe()
+  const bssList = await getBss()
   const mesoList = await getMeso()
   const meContinentalesBvList = await getMeContinentales()
   const bvBdCarthageList = await getBvBdcarthage()
@@ -28,6 +30,7 @@ const Page = async () => {
       </div>
       <PointCreationForm
         bnpeList={bnpeList}
+        bssList={bssList}
         bvBdCarthageList={bvBdCarthageList}
         mesoList={mesoList}
         meContinentalesBvList={meContinentalesBvList}
