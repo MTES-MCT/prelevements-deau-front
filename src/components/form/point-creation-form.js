@@ -74,7 +74,7 @@ const PointCreationForm = ({
   }
 
   useEffect(() => {
-    setIsDisabled(!(point.nom && point.type_milieu && point.precision_geom && point.geom))
+    setIsDisabled(!(point.nom && point.type_milieu && point.geom))
   }, [point])
 
   return (
