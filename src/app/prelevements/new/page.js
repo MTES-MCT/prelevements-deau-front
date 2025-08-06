@@ -20,6 +20,7 @@ const Page = async () => {
   const mesoList = await getMeso()
   const meContinentalesBvList = await getMeContinentales()
   const bvBdCarthageList = await getBvBdcarthage()
+  const orderedBnpeList = orderBy(bnpeList, 'nom_ouvrage')
   const orderedMesoList = orderBy(mesoList, ['nom_provis'])
   const orderedMeContinentaleBvList = orderBy(meContinentalesBvList, 'nom')
 
@@ -32,7 +33,7 @@ const Page = async () => {
         <Link href='/prelevements'>Retour</Link>
       </div>
       <PointCreationForm
-        bnpeList={bnpeList}
+        bnpeList={orderedBnpeList}
         bssList={bssList}
         bvBdCarthageList={bvBdCarthageList}
         mesoList={orderedMesoList}

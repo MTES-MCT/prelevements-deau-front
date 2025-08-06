@@ -26,6 +26,7 @@ const Page = async ({params}) => {
   const mesoList = await getMeso()
   const meContinentalesBvList = await getMeContinentales()
   const bvBdCarthageList = await getBvBdcarthage()
+  const orderedBnpeList = orderBy(bnpeList, 'nom_ouvrage')
   const orderedMesoList = orderBy(mesoList, ['nom_provis'])
   const orderedMeContinentaleBvList = orderBy(meContinentalesBvList, 'nom')
 
@@ -51,7 +52,7 @@ const Page = async ({params}) => {
 
       <PointEditionForm
         pointPrelevement={pointPrelevement}
-        bnpeList={bnpeList}
+        bnpeList={orderedBnpeList}
         bssList={bssList}
         bvBdCarthageList={bvBdCarthageList}
         mesoList={orderedMesoList}
