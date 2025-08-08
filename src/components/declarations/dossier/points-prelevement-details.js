@@ -35,8 +35,8 @@ const PointsPrelevementDetails = ({pointsPrelevementId, pointsPrelevement, handl
                 severity='warning'
                 description={
                   usePlural
-                    ? `Aucune déclaration n’a été faite pour les points de prélèvement suivant : ${pointsWithoutData.join(', ')}.`
-                    : `Aucune décalration n’a été faite pour le point de prélèvement ${pointsWithoutData[0]}.`
+                    ? `Aucune déclaration n’a été faite pour les points de prélèvement suivants : ${pointsWithoutData.join(', ')}.`
+                    : `Aucune déclaration n’a été faite pour le point de prélèvement ${pointsWithoutData[0]}.`
                 }
               />
             )}
