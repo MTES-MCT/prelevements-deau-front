@@ -36,9 +36,14 @@ const PointEditionForm = ({
     setError(null)
     setValidationErrors([])
 
+    if (Object.keys(payload).length === 0) {
+      router.push(`/prelevements?point-prelevement=${point._id}`)
+      return
+    }
+
     try {
       const cleanedPayload = emptyStringToNull(payload)
-      const response = await editPointPrelevement(point.id_point, cleanedPayload)
+      const response = await editPointPrelevement(point._id, cleanedPayload)
 
       if (response.code === 400) {
         if (response.validationErrors) {
@@ -47,7 +52,7 @@ const PointEditionForm = ({
           setError(response.message)
         }
       } else {
-        router.push(`/prelevements?point-prelevement=${response.id_point}`)
+        router.push(`/prelevements?point-prelevement=${response._id}`)
       }
     } catch (error) {
       setError(error.message)
@@ -58,7 +63,7 @@ const PointEditionForm = ({
     setError(null)
 
     try {
-      await deletePointPrelevement(point.id_point)
+      await deletePointPrelevement(point._id)
       router.push('/prelevements')
     } catch (error) {
       setError(error.message)

@@ -31,7 +31,7 @@ export function getPointsPrelevementURL() {
 }
 
 export function getPointPrelevementURL(point) {
-  return `/prelevements/${point.id_point}`
+  return `/prelevements/${point._id}`
 }
 
 export function getDocumentURL(document) {
