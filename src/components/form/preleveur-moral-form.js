@@ -53,7 +53,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
           label='Civilité du contact'
           placeholder='Choisir la civilité'
           nativeSelectProps={{
-            value: preleveur?.civilite || '',
+            defaultValue: preleveur?.civilite || '',
             onChange: e => setPreleveur(prev => ({...prev, civilite: e.target.value}))
           }}
           options={[
@@ -66,7 +66,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
           label='Nom du contact *'
           nativeInputProps={{
             placeholder: 'Entrer le nom',
-            value: preleveur?.nom || '',
+            defaultValue: preleveur?.nom || '',
             onChange: e => setPreleveur(prev => ({...prev, nom: e.target.value}))
           }}
         />
@@ -74,7 +74,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
           label='Prénom du contact *'
           nativeInputProps={{
             placeholder: 'Entrer le prénom',
-            value: preleveur?.prenom || '',
+            defaultValue: preleveur?.prenom || '',
             onChange: e => setPreleveur(prev => ({...prev, prenom: e.target.value}))
           }}
         />
@@ -83,7 +83,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
         label='Adresse email du contact *'
         nativeInputProps={{
           placeholder: 'Entrer l’adresse email de contact',
-          value: preleveur?.email || '',
+          defaultValue: preleveur?.email || '',
           onChange: e => setPreleveur(prev => ({...prev, email: e.target.value}))
         }}
       />

@@ -34,7 +34,7 @@ const Page = async ({params}) => {
                 priority='secondary'
                 iconId='fr-icon-edit-line'
                 linkProps={{
-                  href: `/preleveurs/${preleveur.id_preleveur}/edit`
+                  href: `/preleveurs/${preleveur._id}/edit`
                 }}
               >
                 Éditer
@@ -74,8 +74,8 @@ const Page = async ({params}) => {
         <div><b>Points de prélevement : </b>
           {points && points.length > 0 ? (
             points.map(point => (
-              <div key={point.id_point}>
-                <Link href={`/prelevements/${point.id_point}`}>
+              <div key={point._id}>
+                <Link href={`/prelevements/${point._id}`}>
                   {point.id_point} - {point.nom}
                 </Link>
               </div>

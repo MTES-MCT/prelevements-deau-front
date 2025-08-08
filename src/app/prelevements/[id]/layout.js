@@ -19,7 +19,7 @@ const Layout = async ({params, children}) => {
       <div className='fr-container mt-4'>
 
         <Breadcrumb
-          currentPageLabel={`${id} - ${pointPrelevement.nom}`}
+          currentPageLabel={`${pointPrelevement.id_point} - ${pointPrelevement.nom}`}
           segments={[{
             label: 'Points de prélèvement',
             linkProps: {

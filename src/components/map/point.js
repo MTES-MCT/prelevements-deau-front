@@ -8,7 +8,7 @@ import {getUsageColor, getTypeMilieuColor} from '@/lib/points-prelevement.js'
 
 const Point = ({point, index}) => (
   <ListItem
-    key={point.id_point}
+    key={point._id}
     sx={{
       backgroundColor: index % 2 === 0 ? fr.colors.decisions.background.default.grey.default : fr.colors.decisions.background.alt.blueFrance.default,
       justifyContent: 'space-between',
@@ -32,7 +32,7 @@ const Point = ({point, index}) => (
       )}
       {point.usages && point.usages.map(usage => (
         <Chip
-          key={`${point.id_point}-${usage}`}
+          key={`${point._id}-${usage}`}
           label={usage}
           sx={{
             backgroundColor: getUsageColor(usage).background,
