@@ -86,7 +86,7 @@ const PreleveurCreationForm = () => {
           setError(response.message)
         }
       } else {
-        router.push(`/preleveurs/${response.id_preleveur}`)
+        router.push(`/preleveurs/${response._id}`)
       }
     } catch (error) {
       setError(error.message)

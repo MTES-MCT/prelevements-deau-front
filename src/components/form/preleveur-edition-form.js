@@ -34,7 +34,7 @@ const PreleveurEditionForm = ({preleveur}) => {
     setValidationErrors(null)
 
     if (Object.keys(payload).length === 0) {
-      router.push(`/preleveurs/${preleveur.id_preleveur}`)
+      router.push(`/preleveurs/${preleveur._id}`)
 
       return
     }
@@ -57,7 +57,7 @@ const PreleveurEditionForm = ({preleveur}) => {
 
     try {
       const cleanedPreleveur = emptyStringToNull(payload)
-      const response = await updatePreleveur(preleveur.id_preleveur, cleanedPreleveur)
+      const response = await updatePreleveur(preleveur._id, cleanedPreleveur)
 
       if (response.code === 400) {
         if (response.validationErrors) {
@@ -66,7 +66,7 @@ const PreleveurEditionForm = ({preleveur}) => {
           setError(response.message)
         }
       } else {
-        router.push(`/preleveurs/${response.id_preleveur}`)
+        router.push(`/preleveurs/${response._id}`)
       }
     } catch (error) {
       setError(error.message)
@@ -77,7 +77,7 @@ const PreleveurEditionForm = ({preleveur}) => {
     setError(null)
 
     try {
-      const response = await deletePreleveur(preleveur.id_preleveur)
+      const response = await deletePreleveur(preleveur._id)
 
       if (response.code) {
         setIsDialogOpen(false)
