@@ -52,6 +52,18 @@ export async function getPreleveur(id) {
   return response.json()
 }
 
+export async function getDocumentsFromPreleveur(id) {
+  const response = await executeRequest(`api/preleveurs/${id}/documents`, {
+    headers: {Authorization: await getAuthorization()}
+  })
+
+  if (response.ok === false) {
+    return null
+  }
+
+  return response.json()
+}
+
 export async function getPreleveurs() {
   const response = await executeRequest('api/preleveurs', {headers: {Authorization: await getAuthorization()}})
   return response.json()
@@ -98,6 +110,47 @@ export async function deletePreleveur(idPreleveur) {
       method: 'DELETE'
     }
   )
+  return response.json()
+}
+
+export async function createDocument(idPreleveur, payload) {
+  const response = await executeRequest(
+    `api/preleveurs/${idPreleveur}/documents`,
+    {
+      headers: {Authorization: await getAuthorization()},
+      method: 'POST',
+      body: payload
+    }
+  )
+
+  return response.json()
+}
+
+export async function uploadDocument(idPreleveur, document) {
+  const formData = new FormData()
+  formData.append('document', document)
+
+  const response = await fetch(
+    `http://localhost:5000/api/preleveurs/${idPreleveur}/documents/upload`,
+    {
+      headers: {Authorization: await getAuthorization()},
+      method: 'POST',
+      body: formData
+    }
+  )
+
+  return response.json()
+}
+
+export async function deleteDocument(idPreleveur, idDocument) {
+  const response = await executeRequest(
+    `api/preleveurs/${idPreleveur}/documents/${idDocument}`,
+    {
+      headers: {Authorization: await getAuthorization()},
+      method: 'DELETE'
+    }
+  )
+
   return response.json()
 }
 

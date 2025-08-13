@@ -5,9 +5,10 @@ import formatDate from '@/lib/format-date.js'
 
 const API_URL = process.env.NEXT_PUBLIC_STORAGE_URL
 
-const Document = ({document}) => (
+const Document = ({document, ...props}) => (
   <Box
     key={document.id_document}
+    {...props}
     sx={{
       display: 'flex',
       flexWrap: 'wrap',
