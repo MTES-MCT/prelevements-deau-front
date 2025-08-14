@@ -13,7 +13,7 @@ export function getDossiersURL() {
 }
 
 export function getPreleveurURL(preleveur) {
-  return `/preleveurs/${preleveur.id_preleveur}`
+  return `/preleveurs/${preleveur._id}`
 }
 
 export function getNewPreleveurURL(params) {
