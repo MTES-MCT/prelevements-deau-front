@@ -1,5 +1,5 @@
-import "@codegouvfr/react-dsfr/main.css";
-import { startReactDsfr } from "@codegouvfr/react-dsfr/spa";
+import "@codegouvfr/react-dsfr/main.css"
+import {startReactDsfr} from "@codegouvfr/react-dsfr/spa"
 
 startReactDsfr({
     defaultColorScheme: "light",
@@ -15,6 +15,6 @@ const preview = {
             },
         },
     },
-};
+}
 
-export default preview;
+export default preview
