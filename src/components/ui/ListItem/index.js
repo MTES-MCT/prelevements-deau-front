@@ -27,18 +27,20 @@ const ListItem = ({background = 'primary', title, subtitle, subtitleIcon: Subtit
         </Box>}
       </Box>
 
-      <Typography
-        variant='body2'
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          color: fr.colors.decisions.text.disabled.grey.default,
-          gap: 0.5
-        }}
-      >
-        {SubtitleIcon && <SubtitleIcon sx={{fontSize: 16}} />}
-        {subtitle}
-      </Typography>
+      {subtitle && (
+        <Typography
+          variant='body2'
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            color: fr.colors.decisions.text.disabled.grey.default,
+            gap: 0.5
+          }}
+        >
+          {SubtitleIcon && <SubtitleIcon sx={{fontSize: 16}} />}
+          {subtitle}
+        </Typography>
+      )}
     </Box>
   )
 

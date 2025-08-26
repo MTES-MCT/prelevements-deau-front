@@ -73,3 +73,9 @@ export const WithoutExtras = {
     background: 'secondary'
   }
 }
+
+export const WithoutSubtitle = {
+  args: {
+    subtitle: null
+  }
+}
