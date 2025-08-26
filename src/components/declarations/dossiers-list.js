@@ -10,10 +10,12 @@ import {fr} from 'date-fns/locale'
 import {deburr} from 'lodash-es'
 import {useRouter} from 'next/navigation'
 
+import {getDossiersByStatus} from '@/app/api/dossiers.js'
 import DossierStateBadge from '@/components/declarations/dossier-state-badge.js'
 import PrelevementTypeBadge from '@/components/declarations/prelevement-type-badge.js'
 import TypeSaisieBadge from '@/components/declarations/type-saisie-badge.js'
 import ValidationStatus from '@/components/declarations/validation-status.js'
+import SimpleLoading from '@/components/ui/simple-loading.js'
 import {validationStatus} from '@/lib/dossier.js'
 import {getDossierURL} from '@/lib/urls.js'
 import {normalizeName} from '@/utils/string.js'
@@ -41,9 +43,24 @@ function renderDateCell(value) {
   return value ? format(new Date(value), 'dd/MM/yyyy') : '-'
 }
 
-const DossiersList = ({dossiers}) => {
+const DossiersList = ({status}) => {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [dossiers, setDossiers] = useState()
+
+  useEffect(() => {
+    async function fetchDossiers() {
+      setIsLoading(true)
+
+      const dossiers = await getDossiersByStatus(status)
+      setDossiers(dossiers)
+
+      setIsLoading(false)
+    }
+
+    fetchDossiers()
+  }, [status])
 
   useEffect(() => {
     setMounted(true)
@@ -51,6 +68,10 @@ const DossiersList = ({dossiers}) => {
 
   if (!mounted) {
     return null
+  }
+
+  if (isLoading) {
+    return <SimpleLoading />
   }
 
   return (
