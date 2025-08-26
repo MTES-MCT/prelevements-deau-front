@@ -4,7 +4,7 @@ import {Card} from '@codegouvfr/react-dsfr/Card'
 import {Tooltip} from '@codegouvfr/react-dsfr/Tooltip'
 import {Typography, Box} from '@mui/material'
 
-const ListItem = ({background = 'primary', title, subtitle, subtitleIcon: SubtitleIcon, extras, tags, metas}) => {
+const ListItem = ({background = 'primary', title, subtitle, subtitleIcon: SubtitleIcon, rightIcons, tags, metas}) => {
   const TagsList = () => (
     <ul className='fr-badges-group'>
       {tags.map(tag => <li key={tag.label}><Badge severity={tag.severity}>{tag.label}</Badge></li>)}
@@ -18,8 +18,8 @@ const ListItem = ({background = 'primary', title, subtitle, subtitleIcon: Subtit
       }}
       >
         <Typography variant='h6' fontWeight='bold'>{title}</Typography>
-        {extras && <Box sx={{display: 'flex', gap: 1}}>
-          {extras.map(({label, icon: Icon}) => (
+        {rightIcons && <Box sx={{display: 'flex', gap: 1}}>
+          {rightIcons.map(({label, icon: Icon}) => (
             <Tooltip key={label} title={label}>
               <Icon />
             </Tooltip>

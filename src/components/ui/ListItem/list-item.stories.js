@@ -20,7 +20,7 @@ const meta = {
       {icon: EventAvailableOutlined, content: 'Validé le 20/08/2025'},
       {icon: TableRowsOutlined, content: 'Saisie par tableur'}
     ],
-    extras: [
+    rightIcons: [
       {
         label: 'Camion citerne',
         icon: LocalShippingOutlined
@@ -69,7 +69,7 @@ export const WithoutTags = {
 
 export const WithoutExtras = {
   args: {
-    extras: null,
+    rightIcons: null,
     background: 'secondary'
   }
 }
