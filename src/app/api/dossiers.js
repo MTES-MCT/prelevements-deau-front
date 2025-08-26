@@ -8,6 +8,23 @@ export async function getDossiers() {
   return response.json()
 }
 
+export async function getDossiersByStatus(status) {
+  const response = await executeRequest(
+    `api/dossiers?status=${status}`,
+    {headers: {Authorization: await getAuthorization()}})
+
+  return response.json()
+}
+
+export async function getDossiersStats() {
+  const response = await executeRequest(
+    'api/dossiers/stats',
+    {headers: {Authorization: await getAuthorization()}}
+  )
+
+  return response.json()
+}
+
 export async function getDossier(_id) {
   const response = await executeRequest(
     `api/dossiers/${_id}`,
