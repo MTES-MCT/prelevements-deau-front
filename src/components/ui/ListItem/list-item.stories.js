@@ -67,7 +67,7 @@ export const WithoutTags = {
   }
 }
 
-export const WithoutExtras = {
+export const WithoutRightIcons = {
   args: {
     rightIcons: null,
     background: 'secondary'
