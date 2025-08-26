@@ -15,7 +15,7 @@ const meta = {
     subtitleIcon: ArticleOutlined,
     tags: [{label: 'valide', severity: 'success'}, {label: 'accepté', severity: 'success'}],
     metas: [
-      {icon: CalendarMonthOutlined, content: 'Déposition de mai'},
+      {icon: CalendarMonthOutlined, content: 'Transmission du mois de mai'},
       {icon: CalendarTodayOutlined, content: 'Déposé le 12/08/2025'},
       {icon: EventAvailableOutlined, content: 'Validé le 20/08/2025'},
       {icon: TableRowsOutlined, content: 'Saisie par tableur'}
