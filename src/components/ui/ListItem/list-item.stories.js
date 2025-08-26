@@ -1,5 +1,6 @@
 import {
-  CalendarMonthOutlined, LocalDrink, ArticleOutlined, WavesOutlined, CalendarTodayOutlined, EventAvailableOutlined, TableRowsOutlined
+  CalendarMonthOutlined, ArticleOutlined, CalendarTodayOutlined, EventAvailableOutlined, TableRowsOutlined,
+  LocalShippingOutlined
 } from '@mui/icons-material'
 
 import ListItem from './index.js'
@@ -21,8 +22,8 @@ const meta = {
     ],
     extras: [
       {
-        label: 'AEP ou ZRE',
-        icons: [WavesOutlined, LocalDrink]
+        label: 'Camion citerne',
+        icon: LocalShippingOutlined
       }
     ],
     background: 'primary'

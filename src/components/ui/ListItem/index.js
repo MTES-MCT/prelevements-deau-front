@@ -19,11 +19,9 @@ const ListItem = ({background = 'primary', title, subtitle, subtitleIcon: Subtit
       >
         <Typography variant='h6' fontWeight='bold'>{title}</Typography>
         {extras && <Box sx={{display: 'flex', gap: 1}}>
-          {extras.map(extra => (
-            <Tooltip key={extra.label} title={extra.label}>
-              <Box sx={{display: 'flex', gap: 0.5}}>
-                {extra.icons.map(Icon => <Icon key={Icon} />)}
-              </Box>
+          {extras.map(({label, icon: Icon}) => (
+            <Tooltip key={label} title={label}>
+              <Icon />
             </Tooltip>
           ))}
         </Box>}
