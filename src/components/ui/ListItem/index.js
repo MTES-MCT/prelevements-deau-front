@@ -5,11 +5,21 @@ import {Tooltip} from '@codegouvfr/react-dsfr/Tooltip'
 import {Typography, Box} from '@mui/material'
 
 const ListItem = ({background = 'primary', title, subtitle, subtitleIcon: SubtitleIcon, rightIcons, tags, metas}) => {
-  const TagsList = () => (
-    <ul className='fr-badges-group'>
-      {tags.map(tag => <li key={tag.label}><Badge severity={tag.severity}>{tag.label}</Badge></li>)}
-    </ul>
-  )
+  const TagsList = () => {
+    if (!tags || tags.length === 0) {
+      return null
+    }
+
+    return (
+      <ul className='fr-badges-group'>
+        {tags.map(tag => (
+          <li key={tag.label}>
+            <Badge severity={tag.severity}>{tag.label}</Badge>
+          </li>
+        ))}
+      </ul>
+    )
+  }
 
   const CardTitle = () => (
     <Box>
@@ -44,33 +54,39 @@ const ListItem = ({background = 'primary', title, subtitle, subtitleIcon: Subtit
     </Box>
   )
 
-  const Metas = () => (
-    <Box sx={{
-      display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center'
-    }}
-    >
-      {metas.map(({content, icon: Icon}) => (
-        <Typography
-          key={content}
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 0.5,
-            color: fr.colors.decisions.text.disabled.grey.default
-          }}
-        >
-          <Icon sx={{fontSize: 18, color: fr.colors.decisions.text.default.grey.default}} />
-          {content}
-        </Typography>
-      ))}
-    </Box>
-  )
+  const Metas = () => {
+    if (!metas || metas.length === 0) {
+      return null
+    }
+
+    return (
+      <Box sx={{
+        display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center'
+      }}
+      >
+        {metas.map(({content, icon: Icon}) => (
+          <Typography
+            key={content}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5,
+              color: fr.colors.decisions.text.disabled.grey.default
+            }}
+          >
+            <Icon sx={{fontSize: 18, color: fr.colors.decisions.text.default.grey.default}} />
+            {content}
+          </Typography>
+        ))}
+      </Box>
+    )
+  }
 
   return (
     <Card
-      start={tags && <TagsList />}
+      start={<TagsList />}
       title={<CardTitle />}
-      end={metas && <Metas />}
+      end={<Metas />}
       border={false}
       size='small'
       style={{
