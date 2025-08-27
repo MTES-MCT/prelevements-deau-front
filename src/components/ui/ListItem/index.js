@@ -6,15 +6,15 @@ import {Typography, Box} from '@mui/material'
 
 const ListItem = ({background = 'primary', title, subtitle, subtitleIcon: SubtitleIcon, rightIcons, tags, metas}) => {
   const TagsList = () => {
-    if (!tags || tags.length === 0) {
+    if (!Array.isArray(tags) || tags.length === 0) {
       return null
     }
 
     return (
       <ul className='fr-badges-group'>
         {tags.map(tag => (
-          <li key={tag.label}>
-            <Badge severity={tag.severity}>{tag.label}</Badge>
+          <li key={tag.label || Math.random()}>
+            <Badge severity={tag.severity || 'info'}>{tag.label || ''}</Badge>
           </li>
         ))}
       </ul>
@@ -27,14 +27,18 @@ const ListItem = ({background = 'primary', title, subtitle, subtitleIcon: Subtit
         display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%'
       }}
       >
-        <Typography variant='h6' fontWeight='bold'>{title}</Typography>
-        {rightIcons && <Box sx={{display: 'flex', gap: 1}}>
-          {rightIcons.map(({label, icon: Icon}) => (
-            <Tooltip key={label} title={label}>
-              <Icon />
-            </Tooltip>
-          ))}
-        </Box>}
+        <Typography variant='h6' fontWeight='bold'>{title || ''}</Typography>
+        {Array.isArray(rightIcons) && rightIcons.length > 0 && (
+          <Box sx={{display: 'flex', gap: 1}}>
+            {rightIcons.map(({label, icon: Icon}, index) =>
+              Icon && (
+                <Tooltip key={label || index} title={label || ''}>
+                  <Icon />
+                </Tooltip>
+              )
+            )}
+          </Box>
+        )}
       </Box>
 
       {subtitle && (
@@ -55,7 +59,7 @@ const ListItem = ({background = 'primary', title, subtitle, subtitleIcon: Subtit
   )
 
   const Metas = () => {
-    if (!metas || metas.length === 0) {
+    if (!Array.isArray(metas) || metas.length === 0) {
       return null
     }
 
@@ -64,20 +68,22 @@ const ListItem = ({background = 'primary', title, subtitle, subtitleIcon: Subtit
         display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center'
       }}
       >
-        {metas.map(({content, icon: Icon}) => (
-          <Typography
-            key={content}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 0.5,
-              color: fr.colors.decisions.text.disabled.grey.default
-            }}
-          >
-            <Icon sx={{fontSize: 18, color: fr.colors.decisions.text.default.grey.default}} />
-            {content}
-          </Typography>
-        ))}
+        {metas.map(({content, icon: Icon}, index) =>
+          (content || Icon) && (
+            <Typography
+              key={content || index}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                color: fr.colors.decisions.text.disabled.grey.default
+              }}
+            >
+              {Icon && <Icon sx={{fontSize: 18, color: fr.colors.decisions.text.default.grey.default}} />}
+              {content || ''}
+            </Typography>
+          )
+        )}
       </Box>
     )
   }
