@@ -1,4 +1,10 @@
-import {format} from 'date-fns'
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek
+} from 'date-fns'
 import {fr} from 'date-fns/locale'
 
 function formatDate(date) {
@@ -44,6 +50,34 @@ export function formatDateRange(start, end) {
   }
 
   return 'Non renseignée'
+}
+
+export function getDefaultDate(periodType, today = new Date()) {
+  return periodType === 'month'
+    ? startOfMonth(today)
+    : startOfWeek(today, {weekStartsOn: 1})
+}
+
+export function getRange(dates, periodType) {
+  if (!Array.isArray(dates) || dates.length === 0) {
+    return {from: null, to: null, ranges: []}
+  }
+
+  const sorted = [...dates].sort((a, b) => a - b)
+  const ranges = sorted.map(date =>
+    periodType === 'month'
+      ? {from: startOfMonth(date), to: endOfMonth(date)}
+      : {from: startOfWeek(date, {weekStartsOn: 1}), to: endOfWeek(date, {weekStartsOn: 1})}
+  )
+  return {
+    from: ranges[0].from,
+    to: ranges.at(-1).to,
+    ranges
+  }
+}
+
+export function startOfDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
 }
 
 export default formatDate
