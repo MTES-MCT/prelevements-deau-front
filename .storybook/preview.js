@@ -1,5 +1,6 @@
 import "@codegouvfr/react-dsfr/main.css"
 import {startReactDsfr} from "@codegouvfr/react-dsfr/spa"
+import '../src/app/globals.css'
 
 startReactDsfr({
     defaultColorScheme: "light",
