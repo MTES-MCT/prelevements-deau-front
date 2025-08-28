@@ -113,6 +113,13 @@ const DossiersList = ({status, filters}) => {
 
   return (
     <div>
+      <div className='fr-p-1w text-right'>
+        {filteredDossiers.length !== dossiers.length && (
+          filteredDossiers.length === 1
+            ? <i>1 dossier correspond à cette recherche</i>
+            : <i>{`${filteredDossiers.length} dossiers correpondent à cette recherche`}</i>
+        )}
+      </div>
       {filteredDossiers?.map((d, idx) => (
         <DossierCard
           key={d._id}
