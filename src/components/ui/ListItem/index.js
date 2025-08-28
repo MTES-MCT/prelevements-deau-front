@@ -70,18 +70,18 @@ const ListItem = ({background = 'primary', title, subtitle, subtitleIcon: Subtit
       >
         {metas.map(({content, icon: Icon}, index) =>
           (content || Icon) && (
-            <Typography
+            <Box
               key={content || index}
               sx={{
+                color: fr.colors.decisions.text.disabled.grey.default,
                 display: 'flex',
                 alignItems: 'center',
-                gap: 0.5,
-                color: fr.colors.decisions.text.disabled.grey.default
+                gap: '3px'
               }}
             >
               {Icon && <Icon sx={{fontSize: 18, color: fr.colors.decisions.text.default.grey.default}} />}
               {content || ''}
-            </Typography>
+            </Box>
           )
         )}
       </Box>
