@@ -68,7 +68,9 @@ const typeDonnees = typeDonnees => {
 const metas = dossier => ([
   {
     icon: CalendarTodayOutlined,
-    content: `Déposé le : ${format(new Date(dossier.dateDepot), 'dd/MM/yyyy')}`
+    content: dossier.dateDepot
+      ? `Déposé le : ${format(new Date(dossier.dateDepot), 'dd/MM/yyyy')}`
+      : 'Date de dépôt inconnue'
   },
   {
     icon: TableRowsOutlined,

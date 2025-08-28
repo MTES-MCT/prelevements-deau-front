@@ -39,7 +39,7 @@ const DossiersFilters = ({setFilters}) => (
         label='Mois déclaré'
         options={monthOptions}
         className='fr-col-6 fr-p-2w'
-        defaultValue='last-6-months'
+        defaultValue='all'
         onChange={e => setFilters(prev => ({...prev, periode: e.target.value}))}
       />
       <DynamicSelect
