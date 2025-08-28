@@ -72,8 +72,12 @@ const ListItem = ({background = 'primary', title, subtitle, subtitleIcon: Subtit
           (content || Icon) && (
             <Box
               key={content || index}
-              className='flex items-center gap-1'
-              sx={{color: fr.colors.decisions.text.disabled.grey.default}}
+              sx={{
+                color: fr.colors.decisions.text.disabled.grey.default,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px'
+              }}
             >
               {Icon && <Icon sx={{fontSize: 18, color: fr.colors.decisions.text.default.grey.default}} />}
               {content || ''}
