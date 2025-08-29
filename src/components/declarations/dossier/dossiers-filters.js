@@ -51,7 +51,7 @@ const DossiersFilters = ({filters, setFilters}) => (
         }}
       />
       <DynamicSelect
-        label='Type de prélevement'
+        label='Type de prélèvement'
         options={[
           {value: 'all', label: 'Tous les types'},
           {value: 'aep-zre', label: 'Prélèvement AEP ou en ZRE'},
