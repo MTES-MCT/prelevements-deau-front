@@ -8,6 +8,7 @@ import {
   FactoryOutlined
 } from '@mui/icons-material'
 import {format} from 'date-fns'
+import Link from 'next/link'
 
 import ListItem from '@/components/ui/ListItem/index.js'
 
@@ -78,22 +79,24 @@ const metas = dossier => ([
   }
 ])
 
-const DossierCard = ({dossier, background}) => (
-  <ListItem
-    border
-    title={dossier?.declarant?.raisonSociale
-      ?? `${dossier.demandeur?.nom} ${dossier.demandeur?.prenom}`}
-    subtitle={dossier.number}
-    subtitleIcon={ArticleOutlined}
-    background={background}
-    tags={tags[dossier.validationStatus]
-      ? [tags[dossier.validationStatus]]
-      : []}
-    rightIcons={dossier.typePrelevement
-      ? [rightIcons[dossier.typePrelevement]]
-      : []}
-    metas={metas(dossier)}
-  />
+const DossierCard = ({dossier, background, url}) => (
+  <Link href={url || ''} style={{textDecoration: 'none'}}>
+    <ListItem
+      border
+      title={dossier?.declarant?.raisonSociale
+        ?? `${dossier.demandeur?.nom} ${dossier.demandeur?.prenom}`}
+      subtitle={dossier.number}
+      subtitleIcon={ArticleOutlined}
+      background={background}
+      tags={tags[dossier.validationStatus]
+        ? [tags[dossier.validationStatus]]
+        : []}
+      rightIcons={dossier.typePrelevement
+        ? [rightIcons[dossier.typePrelevement]]
+        : []}
+      metas={metas(dossier)}
+    />
+  </Link>
 )
 
 export default DossierCard

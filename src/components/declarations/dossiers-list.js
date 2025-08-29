@@ -3,7 +3,6 @@
 import {useEffect, useState} from 'react'
 
 import {deburr, toLower} from 'lodash-es'
-import {useRouter} from 'next/navigation'
 
 import {getDossiersByStatus} from '@/app/api/dossiers.js'
 import DossierCard from '@/components/declarations/dossier/dossier-card.js'
@@ -11,7 +10,6 @@ import SimpleLoading from '@/components/ui/simple-loading.js'
 import {getDossierURL} from '@/lib/urls.js'
 
 const DossiersList = ({status, filters}) => {
-  const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [dossiers, setDossiers] = useState([])
@@ -126,7 +124,7 @@ const DossiersList = ({status, filters}) => {
           background={idx % 2 === 0 ? 'primary' : 'secondary'}
           className='fr-mb-2w'
           dossier={d}
-          onClick={() => router.push(getDossierURL({_id: d._id}))}
+          url={getDossierURL(d)}
         />
       ))}
     </div>
