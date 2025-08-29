@@ -20,18 +20,24 @@ const monthOptions = [
   })
 ]
 
-const DossiersFilters = ({setFilters}) => (
+const DossiersFilters = ({filters, setFilters}) => (
   <div className='fr-mb-4w fr-grid-row'>
     <div className='fr-col-6 fr-p-2w'>
       <Input
         label='Préleveur'
-        onChange={e => setFilters(prev => ({...prev, declarant: e.target.value}))}
+        nativeInputProps={{
+          value: filters.declarant || '',
+          onChange: e => setFilters(prev => ({...prev, declarant: e.target.value}))
+        }}
       />
     </div>
     <div className='fr-col-6 fr-p-2w'>
       <Input
         label='Numéro de dossier'
-        onChange={e => setFilters(prev => ({...prev, numeroDossier: e.target.value}))}
+        nativeInputProps={{
+          value: filters.numeroDossier || '',
+          onChange: e => setFilters(prev => ({...prev, numeroDossier: e.target.value}))
+        }}
       />
     </div>
     <div className='fr-col-12 fr-grid-row'>
@@ -39,8 +45,10 @@ const DossiersFilters = ({setFilters}) => (
         label='Mois déclaré'
         options={monthOptions}
         className='fr-col-6 fr-p-2w'
-        defaultValue='all'
-        onChange={e => setFilters(prev => ({...prev, periode: e.target.value}))}
+        nativeSelectProps={{
+          value: filters.periode || 'all',
+          onChange: e => setFilters(prev => ({...prev, periode: e.target.value}))
+        }}
       />
       <DynamicSelect
         label='Type de prélevement'
@@ -52,8 +60,10 @@ const DossiersFilters = ({setFilters}) => (
           {value: 'autre', label: 'Autre'}
         ]}
         className='fr-col-6 fr-p-2w'
-        defaultValue='all'
-        onChange={e => setFilters(prev => ({...prev, typePrelevement: e.target.value}))}
+        nativeSelectProps={{
+          value: filters.typePrelevement || 'all',
+          onChange: e => setFilters(prev => ({...prev, typePrelevement: e.target.value}))
+        }}
       />
     </div>
   </div>

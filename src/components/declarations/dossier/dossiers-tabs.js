@@ -4,6 +4,7 @@ import {useState} from 'react'
 
 import {Tabs} from '@codegouvfr/react-dsfr/Tabs'
 import {Tag} from '@codegouvfr/react-dsfr/Tag'
+import {useRouter, usePathname, useSearchParams} from 'next/navigation'
 
 import DossiersFilters from '@/components/declarations/dossier/dossiers-filters.js'
 import DossiersList from '@/components/declarations/dossiers-list.js'
@@ -18,12 +19,45 @@ const tabConfig = [
 ]
 
 const DossiersTabs = ({dossiersStats}) => {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState('en-instruction')
-  const [filters, setFilters] = useState({})
+
+  const getFiltersFromURL = () => {
+    const filters = {}
+    for (const key of ['declarant', 'numeroDossier', 'periode', 'typePrelevement']) {
+      const value = searchParams.get(key)
+      if (value) {
+        filters[key] = value
+      }
+    }
+
+    return filters
+  }
+
+  const filters = getFiltersFromURL()
+
+  const handleSetFilters = updater => {
+    const next = updater(filters)
+    const params = new URLSearchParams()
+
+    for (const [key, value] of Object.entries(next)) {
+      if (value && value !== 'all') {
+        params.set(key, value)
+      }
+    }
+
+    router.replace(`${pathname}?${params.toString()}`)
+  }
+
+  if (!dossiersStats) {
+    return null
+  }
 
   return (
     <>
-      <DossiersFilters setFilters={setFilters} />
+      <DossiersFilters filters={filters} setFilters={handleSetFilters} />
       <Tabs
         selectedTabId={activeTab}
         tabs={tabConfig.map(tab => ({
@@ -42,7 +76,7 @@ const DossiersTabs = ({dossiersStats}) => {
         }))}
         onTabChange={setActiveTab}
       >
-        <DossiersList status={activeTab || 'en-instruction'} filters={filters} />
+        <DossiersList status={activeTab} filters={filters} />
       </Tabs>
     </>
   )
