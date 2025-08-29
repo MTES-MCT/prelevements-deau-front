@@ -58,11 +58,11 @@ const DossiersList = ({status, filters}) => {
         const year = Number.parseInt(monthMatch[1], 10)
         const month = Number.parseInt(monthMatch[2], 10) // 1-based month from value
         filtered = filtered.filter(d => {
-          if (!d.dateDepot) {
+          if (!d.moisDeclaration) {
             return false
           }
 
-          const date = new Date(d.dateDepot)
+          const date = new Date(d.moisDeclaration)
           return date.getFullYear() === year && (date.getMonth() + 1) === month
         })
       }

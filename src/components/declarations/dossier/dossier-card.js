@@ -8,6 +8,7 @@ import {
   FactoryOutlined
 } from '@mui/icons-material'
 import {format} from 'date-fns'
+import {fr} from 'date-fns/locale'
 import Link from 'next/link'
 
 import ListItem from '@/components/ui/ListItem/index.js'
@@ -69,8 +70,8 @@ const typeDonnees = typeDonnees => {
 const metas = dossier => ([
   {
     icon: CalendarTodayOutlined,
-    content: dossier.dateDepot
-      ? `Déposé le : ${format(new Date(dossier.dateDepot), 'dd/MM/yyyy')}`
+    content: dossier.moisDeclaration
+      ? `Déclaration du mois : ${format(new Date(dossier.moisDeclaration), 'MMMM', {locale: fr})}`
       : 'Date de dépôt inconnue'
   },
   {
