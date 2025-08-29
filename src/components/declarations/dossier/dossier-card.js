@@ -57,11 +57,11 @@ const typeDonnees = typeDonnees => {
   }
 
   if (typeDonnees === 'tableur') {
-    return 'Saisie par tableur'
+    return 'Saisie par fichier'
   }
 
   if (typeDonnees === 'vide') {
-    return 'Type de saisie inconnu'
+    return 'Déclaration vide'
   }
 
   return typeDonnees
@@ -72,7 +72,7 @@ const metas = dossier => ([
     icon: CalendarTodayOutlined,
     content: dossier.moisDeclaration
       ? `Déclaration du mois : ${format(new Date(dossier.moisDeclaration), 'MMMM', {locale: fr})}`
-      : 'Date de dépôt inconnue'
+      : 'Régularisation'
   },
   {
     icon: TableRowsOutlined,
