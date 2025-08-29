@@ -12,7 +12,7 @@ import {getDossierURL} from '@/lib/urls.js'
 const DossiersList = ({status, filters}) => {
   const [mounted, setMounted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [dossiers, setDossiers] = useState([])
+  const [dossiers, setDossiers] = useState()
   const [filteredDossiers, setFilteredDossiers] = useState([])
 
   useEffect(() => {
