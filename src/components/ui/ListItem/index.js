@@ -4,7 +4,16 @@ import {Card} from '@codegouvfr/react-dsfr/Card'
 import {Tooltip} from '@codegouvfr/react-dsfr/Tooltip'
 import {Typography, Box} from '@mui/material'
 
-const ListItem = ({background = 'primary', title, subtitle, subtitleIcon: SubtitleIcon, rightIcons, tags, metas}) => {
+const ListItem = ({
+  background = 'primary',
+  title,
+  subtitle,
+  subtitleIcon: SubtitleIcon,
+  rightIcons,
+  tags,
+  metas,
+  border
+}) => {
   const TagsList = () => {
     if (!Array.isArray(tags) || tags.length === 0) {
       return null
@@ -93,7 +102,7 @@ const ListItem = ({background = 'primary', title, subtitle, subtitleIcon: Subtit
       start={<TagsList />}
       title={<CardTitle />}
       end={<Metas />}
-      border={false}
+      border={border || false}
       size='small'
       style={{
         backgroundColor:
