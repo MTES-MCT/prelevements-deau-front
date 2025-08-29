@@ -16,3 +16,8 @@ main {
   display: flex;
   flex-direction: column;
 }
+
+table[role="grid"] {
+  border-collapse: separate !important;
+  border-spacing: 0 5px !important;
+}
