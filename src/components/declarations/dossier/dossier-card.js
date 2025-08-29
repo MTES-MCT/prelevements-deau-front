@@ -71,7 +71,7 @@ const metas = dossier => ([
   {
     icon: CalendarTodayOutlined,
     content: dossier.moisDeclaration
-      ? `Déclaration du mois : ${format(new Date(dossier.moisDeclaration), 'MMMM', {locale: fr})}`
+      ? `Déclaration du mois : ${format(new Date(dossier.moisDeclaration), 'MMMM yyyy', {locale: fr})}`
       : 'Régularisation'
   },
   {
