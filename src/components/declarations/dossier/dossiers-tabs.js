@@ -22,7 +22,8 @@ const DossiersTabs = ({dossiersStats}) => {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [activeTab, setActiveTab] = useState('en-instruction')
+  const tabFromURL = searchParams.get('tab')
+  const [activeTab, setActiveTab] = useState(tabFromURL || 'en-instruction')
 
   const getFiltersFromURL = () => {
     const filters = {}
@@ -48,6 +49,14 @@ const DossiersTabs = ({dossiersStats}) => {
       }
     }
 
+    params.set('tab', activeTab)
+    router.replace(`${pathname}?${params.toString()}`)
+  }
+
+  const handleTabChange = tabId => {
+    setActiveTab(tabId)
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('tab', tabId)
     router.replace(`${pathname}?${params.toString()}`)
   }
 
@@ -74,7 +83,7 @@ const DossiersTabs = ({dossiersStats}) => {
             </span>
           )
         }))}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
       >
         <DossiersList status={activeTab} filters={filters} />
       </Tabs>
