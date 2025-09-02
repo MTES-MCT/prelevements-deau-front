@@ -28,7 +28,7 @@ const DossiersFilters = ({filters, setFilters}) => (
         label='Préleveur'
         nativeInputProps={{
           defaultValue: filters.declarant || '',
-          onChange: debounce(e => setFilters(prev => ({...prev, declarant: e.target.value})), 100)
+          onChange: debounce(e => setFilters(prev => ({...prev, declarant: e.target.value})), 300)
         }}
       />
     </div>
@@ -37,7 +37,7 @@ const DossiersFilters = ({filters, setFilters}) => (
         label='Numéro de dossier'
         nativeInputProps={{
           defaultValue: filters.numeroDossier || '',
-          onChange: debounce(e => setFilters(prev => ({...prev, numeroDossier: e.target.value})), 100)
+          onChange: debounce(e => setFilters(prev => ({...prev, numeroDossier: e.target.value})), 300)
         }}
       />
     </div>
