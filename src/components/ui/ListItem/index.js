@@ -1,8 +1,9 @@
 import {fr} from '@codegouvfr/react-dsfr'
-import {Badge} from '@codegouvfr/react-dsfr/Badge'
 import {Card} from '@codegouvfr/react-dsfr/Card'
 import {Tooltip} from '@codegouvfr/react-dsfr/Tooltip'
 import {Typography, Box} from '@mui/material'
+
+import TagsList from '@/components/ui/TagsList/index.js'
 
 const ListItem = ({
   background = 'primary',
@@ -14,22 +15,6 @@ const ListItem = ({
   metas,
   border
 }) => {
-  const TagsList = () => {
-    if (!Array.isArray(tags) || tags.length === 0) {
-      return null
-    }
-
-    return (
-      <ul className='fr-badges-group'>
-        {tags.map(tag => (
-          <li key={tag.label || Math.random()}>
-            <Badge severity={tag.severity || 'info'}>{tag.label || ''}</Badge>
-          </li>
-        ))}
-      </ul>
-    )
-  }
-
   const CardTitle = () => (
     <Box>
       <Box sx={{
@@ -99,7 +84,7 @@ const ListItem = ({
 
   return (
     <Card
-      start={<TagsList />}
+      start={<TagsList tags={tags} />}
       title={<CardTitle />}
       end={<Metas />}
       border={border || false}
