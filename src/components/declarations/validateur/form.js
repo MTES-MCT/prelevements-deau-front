@@ -43,7 +43,7 @@ const FileValidateurForm = ({isLoading, resetForm, handleSubmit}) => {
           value: fileType
         }}
       >
-        <option disabled hidden value=''>Selectionnez un type de fichier</option>
+        <option disabled hidden value=''>Sélectionnez un type de fichier</option>
         <option value='aep-zre'>Données standardisées (Tableau multi-paramètre)</option>
         <option value='camion-citerne'>Tableau de suivi camions citerne</option>
       </Select>
