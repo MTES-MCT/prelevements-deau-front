@@ -1,4 +1,5 @@
 import {Input} from '@codegouvfr/react-dsfr/Input'
+import {debounce} from 'lodash-es'
 import dynamic from 'next/dynamic'
 
 const DynamicSelect = dynamic(
@@ -26,8 +27,8 @@ const DossiersFilters = ({filters, setFilters}) => (
       <Input
         label='Préleveur'
         nativeInputProps={{
-          value: filters.declarant || '',
-          onChange: e => setFilters(prev => ({...prev, declarant: e.target.value}))
+          defaultValue: filters.declarant || '',
+          onChange: debounce(e => setFilters(prev => ({...prev, declarant: e.target.value})), 300)
         }}
       />
     </div>
@@ -35,8 +36,8 @@ const DossiersFilters = ({filters, setFilters}) => (
       <Input
         label='Numéro de dossier'
         nativeInputProps={{
-          value: filters.numeroDossier || '',
-          onChange: e => setFilters(prev => ({...prev, numeroDossier: e.target.value}))
+          defaultValue: filters.numeroDossier || '',
+          onChange: debounce(e => setFilters(prev => ({...prev, numeroDossier: e.target.value})), 300)
         }}
       />
     </div>
@@ -46,7 +47,7 @@ const DossiersFilters = ({filters, setFilters}) => (
         options={monthOptions}
         className='fr-col-6 fr-p-2w'
         nativeSelectProps={{
-          value: filters.periode || 'all',
+          defaultValue: filters.periode || 'all',
           onChange: e => setFilters(prev => ({...prev, periode: e.target.value}))
         }}
       />
@@ -61,7 +62,7 @@ const DossiersFilters = ({filters, setFilters}) => (
         ]}
         className='fr-col-6 fr-p-2w'
         nativeSelectProps={{
-          value: filters.typePrelevement || 'all',
+          defaultValue: filters.typePrelevement || 'all',
           onChange: e => setFilters(prev => ({...prev, typePrelevement: e.target.value}))
         }}
       />

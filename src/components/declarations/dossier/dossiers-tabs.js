@@ -2,13 +2,16 @@
 
 import {useState} from 'react'
 
-import {Tabs} from '@codegouvfr/react-dsfr/Tabs'
-import {Tag} from '@codegouvfr/react-dsfr/Tag'
+import dynamic from 'next/dynamic.js'
 import {useRouter, usePathname, useSearchParams} from 'next/navigation'
 
 import DossiersFilters from '@/components/declarations/dossier/dossiers-filters.js'
 import DossiersList from '@/components/declarations/dossiers-list.js'
 
+const DynamicTabs = dynamic(
+  () => import('@codegouvfr/react-dsfr/Tabs'),
+  {ssr: false}
+)
 const tabConfig = [
   {tabId: 'en-instruction', label: 'En cours d’instruction', statsKey: 'en-instruction'},
   {tabId: 'accepte', label: 'Acceptés', statsKey: 'accepte'},
@@ -18,11 +21,12 @@ const tabConfig = [
   {tabId: 'archive', label: 'Archivés', statsKey: 'archive'}
 ]
 
-const DossiersTabs = ({dossiersStats}) => {
+const DossiersTabs = () => {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [activeTab, setActiveTab] = useState('en-instruction')
+  const tabFromURL = searchParams.get('statut')
+  const [activeTab, setActiveTab] = useState(tabFromURL || 'en-instruction')
 
   const getFiltersFromURL = () => {
     const filters = {}
@@ -48,37 +52,30 @@ const DossiersTabs = ({dossiersStats}) => {
       }
     }
 
+    params.set('statut', activeTab)
     router.replace(`${pathname}?${params.toString()}`)
   }
 
-  if (!dossiersStats) {
-    return null
+  const handleTabChange = tabId => {
+    setActiveTab(tabId)
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('statut', tabId)
+    router.replace(`${pathname}?${params.toString()}`)
   }
 
   return (
-    <>
+    <DynamicTabs
+      className='fr-mt-4w'
+      selectedTabId={activeTab}
+      tabs={tabConfig.map(statut => ({
+        tabId: statut.tabId,
+        label: statut.label
+      }))}
+      onTabChange={handleTabChange}
+    >
       <DossiersFilters filters={filters} setFilters={handleSetFilters} />
-      <Tabs
-        selectedTabId={activeTab}
-        tabs={tabConfig.map(tab => ({
-          tabId: tab.tabId,
-          label: (
-            <span>
-              <Tag
-                dismissible
-                small
-              >
-                {dossiersStats[tab.statsKey] || 0}
-              </Tag>
-              <span className='fr-pl-1w'>{tab.label}</span>
-            </span>
-          )
-        }))}
-        onTabChange={setActiveTab}
-      >
-        <DossiersList status={activeTab} filters={filters} />
-      </Tabs>
-    </>
+      <DossiersList status={activeTab} filters={filters} />
+    </DynamicTabs>
   )
 }
 
