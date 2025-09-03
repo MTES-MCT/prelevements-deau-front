@@ -1,15 +1,9 @@
-import {useMemo} from 'react'
-
 import {fr} from '@codegouvfr/react-dsfr'
 import {Box} from '@mui/system'
+import uniqBy from 'lodash-es/uniqBy'
 
 const MetasList = ({metas = []}) => {
-  // Éviter les doublons
-  const uniqueMetas = useMemo(() => [...new Map(metas.map(meta => [meta.content, meta])).values()], [metas])
-
-  if (uniqueMetas.length === 0) {
-    return null
-  }
+  const uniqueMetas = uniqBy(metas, 'content')
 
   return (
     <Box
@@ -20,35 +14,26 @@ const MetasList = ({metas = []}) => {
         alignItems: 'center'
       }}
     >
-      {uniqueMetas.map(({content, icon: Icon}) => {
-        const iconName = Icon?.displayName || Icon?.name || 'noicon'
-        const key = `${iconName}-${content ?? 'nocontent'}`
-
-        if (!content && !Icon) {
-          return null
-        }
-
-        return (
-          <Box
-            key={key}
-            sx={{
-              color: fr.colors.decisions.text.disabled.grey.default,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '3px'
-            }}
-          >
-            {Icon && (
-              <Icon
-                sx={{fontSize: 18, color: fr.colors.decisions.text.default.grey.default}}
-                title={iconName}
-                aria-label={iconName}
-              />
-            )}
-            {content}
-          </Box>
-        )
-      })}
+      {uniqueMetas.map(({content, icon: Icon}, idx) => (
+        <Box
+          key={content || idx}
+          sx={{
+            color: fr.colors.decisions.text.disabled.grey.default,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '3px'
+          }}
+        >
+          {Icon && (
+            <Icon
+              sx={{fontSize: 18, color: fr.colors.decisions.text.default.grey.default}}
+              title={Icon.displayName || Icon.name}
+              aria-label={Icon.displayName || Icon.name}
+            />
+          )}
+          {content}
+        </Box>
+      ))}
     </Box>
   )
 }
