@@ -9,7 +9,7 @@ const TagsList = ({tags}) => {
     <ul className='fr-badges-group'>
       {tags.map(tag => (
         <li key={tag.label || Math.random()}>
-          <Badge severity={tag?.severity}>{tag.label || ''}</Badge>
+          <Badge style={{marginBottom: 0}} severity={tag?.severity}>{tag.label || ''}</Badge>
         </li>
       ))}
     </ul>
