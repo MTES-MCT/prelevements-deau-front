@@ -2,7 +2,7 @@ import {fr} from '@codegouvfr/react-dsfr'
 import Button from '@codegouvfr/react-dsfr/Button'
 import Tag from '@codegouvfr/react-dsfr/Tag'
 import {Typography, Box} from '@mui/material'
-import {uniq, uniqBy} from 'lodash-es'
+import {uniqBy} from 'lodash-es'
 
 import MetasList from '@/components/ui/MetasList/index.js'
 import TagsList from '@/components/ui/TagsList/index.js'
@@ -61,7 +61,7 @@ const EntityHeader = ({
                 </Box>
               )}
 
-              {uniq && (
+              {uniqHrefButtons?.length && (
                 <Box className='flex items-center w-fit gap-2'>
                   {uniqHrefButtons.map(
                     ({label, icon, alt, priority = 'secondary', href}, index) => (

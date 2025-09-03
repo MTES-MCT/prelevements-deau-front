@@ -103,7 +103,7 @@ export const WithoutTags = args => (
 )
 
 export const WithoutActions = args => (
-  <EntityHeader {...args} actions={[]} />
+  <EntityHeader {...args} hrefButtons={[]} />
 )
 
 export const WithoutTitleIcon = args => (
