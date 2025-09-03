@@ -12,10 +12,10 @@ const meta = {
   },
   args: {
     tags: [
-      {label: 'info', severity: 'info', id: 1},
-      {label: 'succès', severity: 'success', id: 2},
-      {label: 'alerte', severity: 'warning', id: 3},
-      {label: 'erreur', severity: 'error', id: 4}
+      {label: 'info', severity: 'info'},
+      {label: 'succès', severity: 'success'},
+      {label: 'alerte', severity: 'warning'},
+      {label: 'erreur', severity: 'error'}
     ]
   }
 }
@@ -29,8 +29,8 @@ export const Default = {
 export const WithoutSeverity = {
   args: {
     tags: [
-      {label: 'Tag 1', id: 1},
-      {label: 'Tag 2', id: 2}
+      {label: 'Tag 1'},
+      {label: 'Tag 2'}
     ]
   }
 }
