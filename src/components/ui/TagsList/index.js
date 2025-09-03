@@ -8,7 +8,7 @@ const TagsList = ({tags}) => {
   return (
     <ul className='fr-badges-group'>
       {tags.map(({label, severity, id}) => (
-        <li key={id}>
+        <li key={id || label}>
           <Badge style={{marginBottom: 0}} severity={severity || ''}>{label || ''}</Badge>
         </li>
       ))}
