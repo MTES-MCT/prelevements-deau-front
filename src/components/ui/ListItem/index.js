@@ -3,8 +3,8 @@ import {Card} from '@codegouvfr/react-dsfr/Card'
 import {Tooltip} from '@codegouvfr/react-dsfr/Tooltip'
 import {Typography, Box} from '@mui/material'
 
-import TagsList from '@/components/ui/TagsList/index.js'
 import MetasList from '@/components/ui/MetasList/index.js'
+import TagsList from '@/components/ui/TagsList/index.js'
 
 const ListItem = ({
   background = 'primary',
