@@ -9,15 +9,15 @@ const meta = {
   argTypes: {
     metas: {
       control: 'object',
-      description: 'Liste de métadonnées à afficher. Format: [{iconKey, content}].'
+      description: 'Liste de métadonnées à afficher. Format: [{icon?, content}]. La propriété "icon" est optionnelle.'
     }
   },
   args: {
     metas: [
-      {icon: InfoOutlined, content: 'Information'},
-      {icon: AccessTimeOutlined, content: 'Horodatage'},
-      {icon: CalendarTodayOutlined, content: 'Date'},
-      {content: 'Sans icône'}
+      {icon: InfoOutlined, content: 'Information', id: 1},
+      {icon: AccessTimeOutlined, content: 'Horodatage', id: 2},
+      {icon: CalendarTodayOutlined, content: 'Date', id: 3},
+      {content: 'Sans icône', id: 4}
     ]
   }
 }
@@ -35,8 +35,8 @@ export const Default = {render: renderMetasList}
 export const SansIcones = {
   args: {
     metas: [
-      {content: 'Aucune icône 1'},
-      {content: 'Aucune icône 2'}
+      {content: 'Aucune icône 1', id: 1},
+      {content: 'Aucune icône 2', id: 2}
     ]
   },
   render: renderMetasList
