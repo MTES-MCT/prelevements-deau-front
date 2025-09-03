@@ -7,14 +7,15 @@ const meta = {
   argTypes: {
     tags: {
       control: 'object',
-      description: 'Liste de tags affichés. Chaque tag accepte {label, severity}.'
+      description: 'List of displayed tags. Each tag accepts {label, severity}.'
     }
   },
   args: {
     tags: [
-      {label: 'valide', severity: 'success'},
-      {label: 'accepté', severity: 'success'},
-      {label: 'en attente', severity: 'warning'}
+      {label: 'info', severity: 'info', id: 1},
+      {label: 'succès', severity: 'success', id: 2},
+      {label: 'alerte', severity: 'warning', id: 3},
+      {label: 'erreur', severity: 'error', id: 4}
     ]
   }
 }
@@ -22,21 +23,14 @@ const meta = {
 export default meta
 
 export const Default = {
-  args: {
-    tags: [
-      {label: 'info', severity: 'info'},
-      {label: 'succès', severity: 'success'},
-      {label: 'alerte', severity: 'warning'},
-      {label: 'erreur', severity: 'error'}
-    ]
-  }
+  args: {}
 }
 
 export const WithoutSeverity = {
   args: {
     tags: [
-      {label: 'Tag 1'},
-      {label: 'Tag 2'}
+      {label: 'Tag 1', id: 1},
+      {label: 'Tag 2', id: 2}
     ]
   }
 }
