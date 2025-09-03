@@ -14,10 +14,10 @@ const meta = {
   },
   args: {
     metas: [
-      {icon: InfoOutlined, content: 'Information', id: 1},
-      {icon: AccessTimeOutlined, content: 'Horodatage', id: 2},
-      {icon: CalendarTodayOutlined, content: 'Date', id: 3},
-      {content: 'Sans icône', id: 4}
+      {icon: InfoOutlined, content: 'Information'},
+      {icon: AccessTimeOutlined, content: 'Horodatage'},
+      {icon: CalendarTodayOutlined, content: 'Date'},
+      {content: 'Sans icône'}
     ]
   }
 }
@@ -35,8 +35,8 @@ export const Default = {render: renderMetasList}
 export const SansIcones = {
   args: {
     metas: [
-      {content: 'Aucune icône 1', id: 1},
-      {content: 'Aucune icône 2', id: 2}
+      {content: 'Aucune icône 1'},
+      {content: 'Aucune icône 2'}
     ]
   },
   render: renderMetasList
