@@ -4,6 +4,7 @@ import {Tooltip} from '@codegouvfr/react-dsfr/Tooltip'
 import {Typography, Box} from '@mui/material'
 
 import TagsList from '@/components/ui/TagsList/index.js'
+import MetasList from '@/components/ui/MetasList/index.js'
 
 const ListItem = ({
   background = 'primary',
@@ -52,41 +53,11 @@ const ListItem = ({
     </Box>
   )
 
-  const Metas = () => {
-    if (!Array.isArray(metas) || metas.length === 0) {
-      return null
-    }
-
-    return (
-      <Box sx={{
-        display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center'
-      }}
-      >
-        {metas.map(({content, icon: Icon}, index) =>
-          (content || Icon) && (
-            <Box
-              key={content || index}
-              sx={{
-                color: fr.colors.decisions.text.disabled.grey.default,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '3px'
-              }}
-            >
-              {Icon && <Icon sx={{fontSize: 18, color: fr.colors.decisions.text.default.grey.default}} />}
-              {content || ''}
-            </Box>
-          )
-        )}
-      </Box>
-    )
-  }
-
   return (
     <Card
       start={<TagsList tags={tags} />}
       title={<CardTitle />}
-      end={<Metas />}
+      end={<MetasList metas={metas} />}
       border={border || false}
       size='small'
       style={{
