@@ -41,9 +41,9 @@ const EntityHeader = ({
             <TagsList tags={tags} />
           </Box>
 
-          {(uniqHrefButtons?.length || rightBadges?.length) && (
+          {(uniqRightBadges.length > 0 || uniqHrefButtons.length > 0) && (
             <Box className='flex items-center w-fit gap-4 flex-wrap'>
-              {rightBadges && (
+              {uniqRightBadges.length > 0 && (
                 <Box className='flex items-center w-fit gap-1'>
                   {uniqRightBadges.map(({icon: Icon, label}, index) => (
                     <Tag
@@ -61,7 +61,7 @@ const EntityHeader = ({
                 </Box>
               )}
 
-              {uniqHrefButtons?.length && (
+              {uniqHrefButtons.length > 0 && (
                 <Box className='flex items-center w-fit gap-2'>
                   {uniqHrefButtons.map(
                     ({label, icon, alt, priority = 'secondary', href}, index) => (
