@@ -45,9 +45,9 @@ const EntityHeader = ({
             <Box className='flex items-center w-fit gap-4 flex-wrap'>
               {uniqRightBadges.length > 0 && (
                 <Box className='flex items-center w-fit gap-1'>
-                  {uniqRightBadges.map(({icon: Icon, label}, index) => (
+                  {uniqRightBadges.map(({icon: Icon, label}) => (
                     <Tag
-                      key={label || index}
+                      key={label}
                       className='flex items-center w-fit gap-1'
                       style={{
                         backgroundColor: fr.colors.decisions.background.actionLow.blueFrance.default,
@@ -64,15 +64,13 @@ const EntityHeader = ({
               {uniqHrefButtons.length > 0 && (
                 <Box className='flex items-center w-fit gap-2'>
                   {uniqHrefButtons.map(
-                    ({label, icon, alt, priority = 'secondary', href}, index) => (
+                    ({label, icon, alt, priority = 'secondary', href}) => (
                       <Button
-                        key={label || index}
+                        key={label}
                         priority={priority}
                         iconId={icon}
                         alt={alt}
-                        linkProps={{
-                          href
-                        }}
+                        linkProps={{href}}
                       >
                         {label}
                       </Button>
