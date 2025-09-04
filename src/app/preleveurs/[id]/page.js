@@ -6,7 +6,8 @@ import {
 import Link from 'next/link'
 import {notFound} from 'next/navigation'
 
-import {getPreleveur, getPointsFromPreleveur} from '@/app/api/points-prelevement.js'
+import {getPreleveur, getPointsFromPreleveur, getDocumentsFromPreleveur} from '@/app/api/points-prelevement.js'
+import Document from '@/components/document.js'
 import {getUsagesColors} from '@/components/map/legend-colors.js'
 import LabelValue from '@/components/ui/label-value.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
@@ -20,6 +21,7 @@ const Page = async ({params}) => {
   }
 
   const points = await getPointsFromPreleveur(id)
+  const documents = await getDocumentsFromPreleveur(id)
 
   return (
     <>
@@ -88,6 +90,36 @@ const Page = async ({params}) => {
             />
           )}
         </div>
+        {documents.length > 0 ? (
+          <>
+            <div className='flex justify-between'>
+              <Typography variant='h6' className='fr-mt-1w'>
+                Documents :
+              </Typography>
+              <Button
+                size='small'
+                priority='secondary'
+                linkProps={{
+                  href: `/preleveurs/${id}/documents`
+                }}
+              >
+                Gestion des documents
+              </Button>
+            </div>
+            <div className='border m-3 bg-white'>
+              {documents.map(document => (
+                <div
+                  key={document.id_document}
+                  className='flex w-full even:bg-[#f5f5fe]'
+                >
+                  <Document document={document} className='w-full' />
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <p><i>Pas de documents</i></p>
+        )}
       </Box>
     </>
   )
