@@ -37,7 +37,7 @@ const PointEditionForm = ({
     setValidationErrors([])
 
     if (Object.keys(payload).length === 0) {
-      router.push(`/prelevements?point-prelevement=${point._id}`)
+      router.push(`/prelevements?point-prelevement=${point.id_point}`)
       return
     }
 
@@ -52,7 +52,7 @@ const PointEditionForm = ({
           setError(response.message)
         }
       } else {
-        router.push(`/prelevements?point-prelevement=${response._id}`)
+        router.push(`/prelevements?point-prelevement=${response.id_point}`)
       }
     } catch (error) {
       setError(error.message)
