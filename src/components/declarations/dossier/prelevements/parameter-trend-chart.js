@@ -4,8 +4,9 @@ import {
   useMemo, useState, useEffect
 } from 'react'
 
+import {fr as dsfrFr} from '@codegouvfr/react-dsfr'
 import {
-  Box, Divider, ToggleButton, ToggleButtonGroup, Slider
+  Box, ToggleButton, ToggleButtonGroup, Slider
 } from '@mui/material'
 import {LineChart} from '@mui/x-charts'
 import {
@@ -243,8 +244,6 @@ const ParameterTrendChart = ({data, connectNulls}) => {
 
   return (
     <Box className='flex flex-col gap-4 mt-4'>
-      <Divider textAlign='left'>Graphique de tendance des paramètres</Divider>
-
       {/* Sélecteur de granularité ----------------------------------------- */}
       <ToggleButtonGroup
         exclusive size='small'
