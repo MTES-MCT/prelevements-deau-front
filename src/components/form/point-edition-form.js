@@ -63,7 +63,14 @@ const PointEditionForm = ({
     setError(null)
 
     try {
-      await deletePointPrelevement(point._id)
+      const response = await deletePointPrelevement(point._id)
+
+      if (response.code) {
+        setIsDialogOpen(false)
+        setError(response.message)
+        return
+      }
+
       router.push('/prelevements')
     } catch (error) {
       setError(error.message)
