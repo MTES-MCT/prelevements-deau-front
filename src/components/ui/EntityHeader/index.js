@@ -23,7 +23,7 @@ const EntityHeader = ({
     <Box className='w-fill flex flex-col gap-10 fr-mt-3w'>
       <Box className='w-fill flex flex-col gap-1'>
         <Box className='flex items-center justify-between w-fill flex-wrap-reverse gap-2'>
-          <Box className='flex items-center gap-3 flex-wrap-reverse'>
+          <Box className='flex items-center sm:gap-3 flex-wrap'>
             <Box className='flex items-center'>
               <Box
                 sx={{
@@ -42,9 +42,9 @@ const EntityHeader = ({
           </Box>
 
           {(uniqRightBadges.length > 0 || uniqHrefButtons.length > 0) && (
-            <Box className='flex items-center w-fit gap-4 flex-wrap'>
+            <Box className='flex items-start sm:items-center content-between sm:w-fill gap-4'>
               {uniqRightBadges.length > 0 && (
-                <Box className='flex items-center w-fit gap-1'>
+                <Box className='flex items-center w-fit gap-1 flex-wrap'>
                   {uniqRightBadges.map(({icon: Icon, label}) => (
                     <Tag
                       key={label}
