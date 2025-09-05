@@ -4,8 +4,8 @@ import {MuiDsfrThemeProvider} from '@codegouvfr/react-dsfr/mui'
 import '../src/app/globals.css'
 
 startReactDsfr({
-    defaultColorScheme: "light",
-    useLang: () => "fr",
+    defaultColorScheme: 'light',
+    useLang: () => 'fr',
 });
 
 const preview = {
