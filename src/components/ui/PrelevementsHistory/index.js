@@ -1,5 +1,3 @@
-'use client'
-
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import Tag from '@codegouvfr/react-dsfr/Tag'
 import {Box, Divider, Typography} from '@mui/material'
