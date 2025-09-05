@@ -4,7 +4,6 @@ import {
   useMemo, useState, useEffect
 } from 'react'
 
-import {fr as dsfrFr} from '@codegouvfr/react-dsfr'
 import {
   Box, ToggleButton, ToggleButtonGroup, Slider
 } from '@mui/material'
