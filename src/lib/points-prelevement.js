@@ -59,7 +59,7 @@ export function createPointPrelevementFeatures(points) {
     features: points.map(point => ({
       type: 'Feature',
       geometry: point.geom,
-      id: point._id,
+      id: point.id_point,
       properties: {
         ...point,
         textOffset: [0, 1.5 + (0.07 * Math.min(point.nom?.length || 0, 50))]

@@ -34,7 +34,7 @@ const PreleveurEditionForm = ({preleveur}) => {
     setValidationErrors(null)
 
     if (Object.keys(payload).length === 0) {
-      router.push(`/preleveurs/${preleveur._id}`)
+      router.push(`/preleveurs/${preleveur.id_preleveur}`)
 
       return
     }
@@ -57,7 +57,7 @@ const PreleveurEditionForm = ({preleveur}) => {
 
     try {
       const cleanedPreleveur = emptyStringToNull(payload)
-      const response = await updatePreleveur(preleveur._id, cleanedPreleveur)
+      const response = await updatePreleveur(preleveur.id_preleveur, cleanedPreleveur)
 
       if (response.code === 400) {
         if (response.validationErrors) {
@@ -66,7 +66,7 @@ const PreleveurEditionForm = ({preleveur}) => {
           setError(response.message)
         }
       } else {
-        router.push(`/preleveurs/${response._id}`)
+        router.push(`/preleveurs/${response.id_preleveur}`)
       }
     } catch (error) {
       setError(error.message)

@@ -34,7 +34,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
           label='Code SIREN'
           nativeInputProps={{
             placeholder: 'Entrer le code SIREN',
-            value: preleveur?.code_siren || '',
+            defaultValue: preleveur?.code_siren || '',
             onChange: e => setPreleveur(prev => ({...prev, code_siren: e.target.value}))
           }}
         />
@@ -44,7 +44,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
         hintText='Nom officiel de l’entreprise'
         nativeInputProps={{
           placeholder: 'Entrer la raison sociale',
-          value: preleveur?.raison_sociale || '',
+          defaultValue: preleveur?.raison_sociale || '',
           onChange: e => setPreleveur(prev => ({...prev, raison_sociale: e.target.value}))
         }}
       />

@@ -17,7 +17,7 @@ const LinkWithIcon = ({label, href}) => (
 )
 
 const PointIdentification = ({pointPrelevement, lienBss, lienBnpe}) => {
-  const {_id, id_point: idPoint, nom} = pointPrelevement
+  const {id_point: idPoint, nom} = pointPrelevement
 
   return (
     <div className='flex flex-col gap-4'>
@@ -34,7 +34,7 @@ const PointIdentification = ({pointPrelevement, lienBss, lienBnpe}) => {
             priority='secondary'
             iconId='fr-icon-edit-line'
             linkProps={{
-              href: `/prelevements/${_id}/edit`
+              href: `/prelevements/${idPoint}/edit`
             }}
           >
             Éditer

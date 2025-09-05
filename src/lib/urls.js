@@ -13,7 +13,7 @@ export function getDossiersURL() {
 }
 
 export function getPreleveurURL(preleveur) {
-  return `/preleveurs/${preleveur._id}`
+  return `/preleveurs/${preleveur.id_preleveur}`
 }
 
 export function getNewPreleveurURL(params) {
@@ -31,7 +31,7 @@ export function getPointsPrelevementURL() {
 }
 
 export function getPointPrelevementURL(point) {
-  return `/prelevements/${point._id}`
+  return `/prelevements/${point.id_point}`
 }
 
 export function getDocumentURL(document) {

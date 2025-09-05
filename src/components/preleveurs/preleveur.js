@@ -9,7 +9,7 @@ import Link from 'next/link'
 import {getUsagesColors} from '@/components/map/legend-colors.js'
 
 const Preleveur = ({preleveur, index}) => (
-  <Link href={`preleveurs/${preleveur._id}`}>
+  <Link href={`preleveurs/${preleveur.id_preleveur}`}>
     <Box
       key={preleveur.id_preleveur}
       className='fr-p-2w flex justify-between items-top flex-wrap'
