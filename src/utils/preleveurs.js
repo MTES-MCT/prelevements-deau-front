@@ -12,6 +12,6 @@ export function displayPreleveur(preleveur) {
   }
 
   if (preleveur.nom) {
-    return `${preleveur.civilite || ''} ${preleveur.nom} ${preleveur.prenom}`
+    return [preleveur.civilite, preleveur.nom, preleveur.prenom].filter(Boolean).join(' ')
   }
 }
