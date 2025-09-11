@@ -10,6 +10,7 @@ import {getPreleveur, getPointsFromPreleveur} from '@/app/api/points-prelevement
 import {getUsagesColors} from '@/components/map/legend-colors.js'
 import LabelValue from '@/components/ui/label-value.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
+import {getPointPrelevementURL} from '@/lib/urls.js'
 
 const Page = async ({params}) => {
   const {id} = await params
@@ -75,7 +76,7 @@ const Page = async ({params}) => {
           {points && points.length > 0 ? (
             points.map(point => (
               <div key={point._id}>
-                <Link href={`/prelevements/${point.id_point}`}>
+                <Link href={getPointPrelevementURL(point)}>
                   {point.id_point} - {point.nom}
                 </Link>
               </div>

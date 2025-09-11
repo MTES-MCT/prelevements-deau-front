@@ -35,10 +35,10 @@ const adminNavigation = [
   },
   {
     linkProps: {
-      href: '/prelevements',
+      href: '/points-prelevement',
       target: '_self'
     },
-    text: 'Prélèvements'
+    text: 'Points de prélevement'
   },
   {
     linkProps: {
