@@ -54,7 +54,7 @@ const Page = async ({params}) => {
             <span>
               {preleveur.exploitations.map((exploitation, idx) => (
                 <span key={exploitation.id_exploitation}>
-                  <Link href={`/exploitation/${exploitation.id_exploitation}`}>
+                  <Link href={`/exploitations/${exploitation.id_exploitation}`}>
                     {exploitation.id_exploitation}
                   </Link>
                   {idx < preleveur.exploitations.length - 1 && ', '}
