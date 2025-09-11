@@ -2,6 +2,7 @@
 import {useMemo} from 'react'
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
+import {Button} from '@codegouvfr/react-dsfr/Button'
 import Tag from '@codegouvfr/react-dsfr/Tag'
 import {Box, Divider} from '@mui/material'
 
@@ -39,6 +40,18 @@ const DeclarationFileDetails = ({
 
   return (
     <Box className='flex flex-col gap-6'>
+      <div className='flex justify-end p-3'>
+        <Button
+          priority='secondary'
+          size='small'
+          iconId='fr-icon-external-link-line'
+          linkProps={{
+            href: `/points-prelevement/${data.pointPrelevement}`
+          }}
+        >
+          Consulter la fiche
+        </Button>
+      </div>
       <Box className='flex flex-col gap-4'>
         <Divider textAlign='left'>
           Paramètres par pas de temps
