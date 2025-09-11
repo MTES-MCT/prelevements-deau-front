@@ -49,7 +49,7 @@ const MapFilters = ({filters, usagesOptions, typeMilieuOptions, statusOptions, c
       <div className='flex items-center gap-2'>
         <TextField
           className='w-full'
-          label='Recherche par nom, identifiant, préleveur ou commune'
+          label='Recherche par nom, identifiant ou préleveur'
           value={searchTerm}
           size='small'
           onChange={e => setSearchTerm(e.target.value)}
