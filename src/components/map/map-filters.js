@@ -131,9 +131,9 @@ const MapFilters = ({filters, usagesOptions, typeMilieuOptions, statusOptions, c
             </Select>
           </FormControl>
           <FormControl size='small' className='w-full'>
-            <InputLabel id='filter-typeMilieu-label'>Commune</InputLabel>
+            <InputLabel id='filter-commune-label'>Commune</InputLabel>
             <Select
-              labelId='filter-typeMilieu-label'
+              labelId='filter-commune-label'
               label='Commune'
               value={filters.commune}
               onChange={e =>
