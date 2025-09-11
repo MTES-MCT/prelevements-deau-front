@@ -38,7 +38,7 @@ const adminNavigation = [
       href: '/points-prelevement',
       target: '_self'
     },
-    text: 'Points de prélevement'
+    text: 'Points de prélèvement'
   },
   {
     linkProps: {
