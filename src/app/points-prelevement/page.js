@@ -25,7 +25,12 @@ import PointsList from '@/components/map/points-list.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import useEvent from '@/hook/use-event.js'
 import {downloadCsv} from '@/lib/export-csv.js'
-import {extractStatus, extractTypeMilieu, extractUsages} from '@/lib/points-prelevement.js'
+import {
+  extractStatus,
+  extractTypeMilieu,
+  extractUsages,
+  extractCommunes
+} from '@/lib/points-prelevement.js'
 import {getPointPrelevementURL} from '@/lib/urls.js'
 
 const Page = () => {
@@ -43,6 +48,7 @@ const Page = () => {
     name: '',
     typeMilieu: '',
     status: '',
+    commune: '',
     usages: []
   })
   const [filteredPoints, setFilteredPoints] = useState([])
@@ -65,12 +71,18 @@ const Page = () => {
   }, [])
 
   // Calculer les options pour les filtres dès que les données sont disponibles
-  const {typeMilieuOptions, usagesOptions, statusOptions} = useMemo(() => {
+  const {typeMilieuOptions, usagesOptions, statusOptions, communesOptions} = useMemo(() => {
     const typeMilieuOptions = points ? extractTypeMilieu(points) : []
     const usagesOptions = points ? extractUsages(points) : []
     const statusOptions = points ? extractStatus(points) : []
+    const communesOptions = points ? extractCommunes(points) : []
 
-    return {typeMilieuOptions, usagesOptions, statusOptions}
+    return {
+      typeMilieuOptions,
+      usagesOptions,
+      statusOptions,
+      communesOptions
+    }
   }, [points])
 
   // Gestion de la sélection d'un point sur la carte
@@ -125,6 +137,11 @@ const Page = () => {
         matches &&= filters.usages.some(usage => point.usages.includes(usage))
       }
 
+      if (filters.commune && filters.commune.length > 0) {
+        const communeStr = `${point.commune.nom} - ${point.commune.code}`
+        matches &&= communeStr === filters.commune
+      }
+
       return matches
     })
 
@@ -149,6 +166,7 @@ const Page = () => {
             typeMilieuOptions={typeMilieuOptions}
             usagesOptions={usagesOptions}
             statusOptions={statusOptions}
+            communesOptions={communesOptions}
             exportList={exportPointsList}
             onFilter={handleFilter}
           />
