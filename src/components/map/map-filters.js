@@ -22,7 +22,7 @@ import {
 import Badge from '@mui/material/Badge'
 import debounce from 'lodash-es/debounce'
 
-const MapFilters = ({filters, usagesOptions, typeMilieuOptions, statusOptions, onFilterChange, onClearFilters}) => {
+const MapFilters = ({filters, usagesOptions, typeMilieuOptions, statusOptions, communesOptions, onFilterChange, onClearFilters}) => {
   const [expanded, setExpanded] = useState(false)
   const [searchTerm, setSearchTerm] = useState(filters.name || '')
 
@@ -49,7 +49,7 @@ const MapFilters = ({filters, usagesOptions, typeMilieuOptions, statusOptions, o
       <div className='flex items-center gap-2'>
         <TextField
           className='w-full'
-          label='Recherche par nom, identifiant ou préleveur'
+          label='Recherche par nom, identifiant, préleveur ou commune'
           value={searchTerm}
           size='small'
           onChange={e => setSearchTerm(e.target.value)}
@@ -126,6 +126,23 @@ const MapFilters = ({filters, usagesOptions, typeMilieuOptions, statusOptions, o
               {typeMilieuOptions.map(option => (
                 <MenuItem key={option} value={option}>
                   {option}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl size='small' className='w-full'>
+            <InputLabel id='filter-commune-label'>Commune</InputLabel>
+            <Select
+              labelId='filter-commune-label'
+              label='Commune'
+              value={filters.commune}
+              onChange={e =>
+                onFilterChange({commune: e.target.value})}
+            >
+              <MenuItem value=''>Toutes</MenuItem>
+              {communesOptions.map(commune => (
+                <MenuItem key={commune} value={commune}>
+                  {commune}
                 </MenuItem>
               ))}
             </Select>
