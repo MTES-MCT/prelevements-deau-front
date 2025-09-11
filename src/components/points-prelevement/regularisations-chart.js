@@ -5,7 +5,7 @@ import {useMemo} from 'react'
 import {fr} from '@codegouvfr/react-dsfr'
 import {BarChart} from '@mui/x-charts/BarChart'
 
-import LegendChart from '@/components/prelevements/legend-chart.js'
+import LegendChart from '@/components/points-prelevement/legend-chart.js'
 
 function getColorForStatus(index) {
   const colors = [

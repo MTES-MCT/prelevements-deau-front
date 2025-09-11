@@ -27,11 +27,11 @@ export function getNewPreleveurURL(params) {
 }
 
 export function getPointsPrelevementURL() {
-  return '/prelevements'
+  return '/points-prelevement'
 }
 
 export function getPointPrelevementURL(point) {
-  return `/prelevements/${point.id_point}`
+  return `/points-prelevement/${point.id_point}`
 }
 
 export function getDocumentURL(document) {

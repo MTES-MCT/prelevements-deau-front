@@ -11,6 +11,7 @@ import {
 } from '@/app/api/points-prelevement.js'
 import PointCreationForm from '@/components/form/point-creation-form.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
+import {getPointsPrelevementURL} from '@/lib/urls.js'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,7 +31,7 @@ const Page = async () => {
 
       <div className='p-5'>
         <ArrowBackIcon className='pr-1' />
-        <Link href='/prelevements'>Retour</Link>
+        <Link href={getPointsPrelevementURL()}>Retour</Link>
       </div>
       <PointCreationForm
         bnpeList={orderedBnpeList}
