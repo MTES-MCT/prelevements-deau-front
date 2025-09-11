@@ -42,17 +42,29 @@ const Page = async ({params}) => {
               </Button>
             </div>
           </div>
-          {preleveur.exploitations && preleveur.exploitations.length > 0 ? (
-            <p className='italic'>
+        </Typography>
+        {preleveur.exploitations && preleveur.exploitations.length > 0 ? (
+          <div>
+            <span className='italic font-bold'>
               {`${preleveur.exploitations.length} ${
                 preleveur.exploitations.length === 1
-                  ? 'exploitation'
-                  : 'exploitations'}`}
-            </p>
-          ) : (
-            <Alert severity='info' description='Aucune exploitation' />
-          )}
-        </Typography>
+                  ? 'exploitation : '
+                  : 'exploitations : '}`}
+            </span>
+            <span>
+              {preleveur.exploitations.map((exploitation, idx) => (
+                <span key={exploitation.id_exploitation}>
+                  <Link href={`/exploitations/${exploitation.id_exploitation}`}>
+                    {exploitation.id_exploitation}
+                  </Link>
+                  {idx < preleveur.exploitations.length - 1 && ', '}
+                </span>
+              ))}
+            </span>
+          </div>
+        ) : (
+          <Alert severity='info' description='Aucune exploitation' />
+        )}
         <div className='italic'>
           <LabelValue label='Usages'>
             {preleveur.usages && preleveur.usages.length > 0 ? (
