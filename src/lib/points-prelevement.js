@@ -29,6 +29,17 @@ export function extractUsages(points) {
   return [...usagesSet]
 }
 
+export function extractCommunes(points) {
+  const communesSet = new Set()
+  for (const point of points) {
+    if (point.commune && point.commune.nom && point.commune.code) {
+      communesSet.add(`${point.commune.nom} - ${point.commune.code}`)
+    }
+  }
+
+  return [...communesSet].sort((a, b) => a.localeCompare(b, 'fr', {sensitivity: 'base'}))
+}
+
 export function extractStatus(points) {
   const statusSet = new Set()
   for (const point of points) {
