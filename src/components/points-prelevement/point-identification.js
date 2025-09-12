@@ -34,7 +34,7 @@ const PointIdentification = ({pointPrelevement, lienBss, lienBnpe}) => {
             priority='secondary'
             iconId='fr-icon-edit-line'
             linkProps={{
-              href: `/prelevements/${idPoint}/edit`
+              href: `/points-prelevement/${idPoint}/edit`
             }}
           >
             Éditer
