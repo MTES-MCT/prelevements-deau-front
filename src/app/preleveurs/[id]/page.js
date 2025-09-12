@@ -3,14 +3,13 @@ import {Button} from '@codegouvfr/react-dsfr/Button'
 import {
   Box, Chip, Typography
 } from '@mui/material'
-import Link from 'next/link'
 import {notFound} from 'next/navigation'
 
-import {getPreleveur, getPointsFromPreleveur} from '@/app/api/points-prelevement.js'
+import {getPreleveur, getExploitationFromPreleveur, getPointPrelevement} from '@/app/api/points-prelevement.js'
+import ExploitationsList from '@/components/exploitations/exploitations-list.js'
 import {getUsagesColors} from '@/components/map/legend-colors.js'
 import LabelValue from '@/components/ui/label-value.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {getPointPrelevementURL} from '@/lib/urls.js'
 
 const Page = async ({params}) => {
   const {id} = await params
@@ -20,7 +19,12 @@ const Page = async ({params}) => {
     notFound()
   }
 
-  const points = await getPointsFromPreleveur(id)
+  const exploitations = await getExploitationFromPreleveur(id)
+  await Promise.all(exploitations.map(async exploitation => {
+    const point = await getPointPrelevement(exploitation.point)
+
+    exploitation.point = point
+  }))
 
   return (
     <>
@@ -43,28 +47,6 @@ const Page = async ({params}) => {
             </div>
           </div>
         </Typography>
-        {preleveur.exploitations && preleveur.exploitations.length > 0 ? (
-          <div>
-            <span className='italic font-bold'>
-              {`${preleveur.exploitations.length} ${
-                preleveur.exploitations.length === 1
-                  ? 'exploitation : '
-                  : 'exploitations : '}`}
-            </span>
-            <span>
-              {preleveur.exploitations.map((exploitation, idx) => (
-                <span key={exploitation.id_exploitation}>
-                  <Link href={`/exploitations/${exploitation.id_exploitation}`}>
-                    {exploitation.id_exploitation}
-                  </Link>
-                  {idx < preleveur.exploitations.length - 1 && ', '}
-                </span>
-              ))}
-            </span>
-          </div>
-        ) : (
-          <Alert severity='info' description='Aucune exploitation' />
-        )}
         <div className='italic'>
           <LabelValue label='Usages'>
             {preleveur.usages && preleveur.usages.length > 0 ? (
@@ -84,23 +66,11 @@ const Page = async ({params}) => {
             )}
           </LabelValue>
         </div>
-        <div><b>Points de prélevement : </b>
-          {points && points.length > 0 ? (
-            points.map(point => (
-              <div key={point._id}>
-                <Link href={getPointPrelevementURL(point)}>
-                  {point.id_point} - {point.nom}
-                </Link>
-              </div>
-            ))
-          ) : (
-            <Alert
-              severity='info'
-              className='mt-4'
-              description='Aucun point de prélevement'
-            />
-          )}
-        </div>
+        {preleveur.exploitations && preleveur.exploitations.length > 0 ? (
+          <ExploitationsList exploitations={exploitations} />
+        ) : (
+          <Alert severity='info' description='Aucune exploitation' />
+        )}
       </Box>
     </>
   )
