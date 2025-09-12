@@ -142,6 +142,14 @@ export async function getExploitationsByPointId(pointId) {
   return response.json()
 }
 
+export async function getExploitationFromPreleveur(idPreleveur) {
+  const response = await executeRequest(
+    `api/preleveurs/${idPreleveur}/exploitations`,
+    {headers: {Authorization: await getAuthorization()}}
+  )
+  return response.json()
+}
+
 export async function deleteExploitation(exploitationId) {
   const response = await executeRequest(`api/exploitations/${exploitationId}`, {
     headers: {Authorization: await getAuthorization()},
