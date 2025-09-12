@@ -31,6 +31,7 @@ const PointsListHeader = ({filters, resultsCount, typeMilieuOptions, usagesOptio
           name: '',
           typeMilieu: '',
           status: '',
+          commune: '',
           usages: []
         })}
     />
