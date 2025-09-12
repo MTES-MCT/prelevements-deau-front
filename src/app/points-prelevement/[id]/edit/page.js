@@ -43,7 +43,7 @@ const Page = async ({params}) => {
           priority='secondary'
           iconId='fr-icon-close-line'
           linkProps={{
-            href: `/prelevements/${id}`
+            href: `/points-prelevement/${id}`
           }}
         >
           Annuler

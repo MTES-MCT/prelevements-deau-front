@@ -14,7 +14,7 @@ const PointTabs = () => {
   const [path, setPath] = useState('identification')
 
   const handleClick = (e, value) => {
-    router.push(`/prelevements/${id}/${value}`)
+    router.push(`/points-prelevement/${id}/${value}`)
   }
 
   useEffect(() => {
@@ -32,7 +32,7 @@ const PointTabs = () => {
     <>
       <div className='pt-5 pl-5'>
         <ArrowBackIcon className='pr-1' />
-        <Link href={`/prelevements?point-prelevement=${id}`}>Retour</Link>
+        <Link href={`/points-prelevement?point-prelevement=${id}`}>Retour</Link>
       </div>
       <div className='fr-container'>
         <Tabs

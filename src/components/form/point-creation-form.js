@@ -44,7 +44,7 @@ const PointCreationForm = ({
           setError(response.message)
         }
       } else {
-        router.push(`/prelevements?point-prelevement=${response.id_point}`)
+        router.push(`/points-prelevement/${response.id_point}`)
       }
     } catch (error) {
       setError(error.message)

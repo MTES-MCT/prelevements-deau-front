@@ -12,7 +12,7 @@ const PointsListHeader = ({filters, resultsCount, typeMilieuOptions, usagesOptio
         iconId='fr-icon-add-line'
         size='small'
         linkProps={{
-          href: '/prelevements/new'
+          href: '/points-prelevement/new'
         }}
       >
         Création d’un point

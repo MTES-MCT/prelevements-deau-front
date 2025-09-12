@@ -30,14 +30,14 @@ const PointEditionForm = ({
   const point = {...pointPrelevement}
   const [validationErrors, setValidationErrors] = useState([])
   const [error, setError] = useState(null)
-  const [isDialogOpen, setIsDialogOpen] = useState()
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   const handleSubmit = async () => {
     setError(null)
     setValidationErrors([])
 
     if (Object.keys(payload).length === 0) {
-      router.push(`/prelevements?point-prelevement=${point.id_point}`)
+      router.push(`/points-prelevement/${point.id_point}`)
       return
     }
 
@@ -52,7 +52,7 @@ const PointEditionForm = ({
           setError(response.message)
         }
       } else {
-        router.push(`/prelevements?point-prelevement=${response.id_point}`)
+        router.push(`/points-prelevement/${response.id_point}`)
       }
     } catch (error) {
       setError(error.message)
@@ -71,7 +71,7 @@ const PointEditionForm = ({
         return
       }
 
-      router.push('/prelevements')
+      router.push('/points-prelevement')
     } catch (error) {
       setError(error.message)
     }
