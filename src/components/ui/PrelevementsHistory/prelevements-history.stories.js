@@ -7,43 +7,84 @@ const meta = {
   component: PrelevementsHistory,
   tags: ['autodocs'],
   argTypes: {
-    dailyItems: {
-      control: 'object',
-      description: 'Liste des paramètres journaliers à afficher sous forme de tags.'
-    },
-    intervalItems: {
-      control: 'object',
-      description: 'Liste des paramètres à intervalle 15 min à afficher sous forme de tags.'
-    },
-    dailyAlert: {
+    dailyParametersAlert: {
       control: 'text',
-      description: 'Message d’alerte à afficher au niveau des paramètres journaliers.'
+      description: `Message d’alerte à afficher au niveau des **paramètres journaliers**.
+Ex : absence de données ou anomalie globale.`
     },
-    dateAlert: {
+    calendarAlert: {
       control: 'text',
-      description: 'Message d’alerte à afficher au niveau du calendrier.'
+      description: `Message d’alerte à afficher au niveau du **calendrier**.
+Ex : dates manquantes, incohérences, problème de saisie.`
     },
-    calendarData: {
+    historyData: {
       control: 'object',
-      description: 'Données du calendrier des prélèvements (dates, valeurs, etc.).'
+      description: `
+Données du **calendrier des prélèvements**.
+
+Structure attendue :
+
+\`\`\`json
+{
+  "pointPrelevement": "string",
+  "minDate": "YYYY-MM-DD",
+  "maxDate": "YYYY-MM-DD",
+  "dailyParameters": [
+    {
+      "paramIndex": number,
+      "nom_parametre": "string",
+      "type": "string",
+      "unite": "string"
+    }
+  ],
+  "fifteenMinutesParameters": [
+    {
+      "paramIndex": number,
+      "nom_parametre": "string",
+      "type": "string",
+      "unite": "string"
+    }
+  ],
+  "dailyValues": [
+    {
+      "date": "YYYY-MM-DD",
+      "values": [number, ...],
+      "fifteenMinutesValues": [
+        {
+          "heure": "HH:mm:ss",
+          "values": [number|null, ...]
+        }
+      ] | null
+    }
+  ],
+  "volumePreleveTotal": number
+}
+\`\`\`
+
+**Détails des propriétés :**
+- \`pointPrelevement\` : identifiant du point de prélèvement.
+- \`minDate\`, \`maxDate\` : bornes de la période affichée (format "YYYY-MM-DD").
+- \`dailyParameters\` : tableau d’objets décrivant chaque paramètre journalier (index, nom, type, unité).
+- \`fifteenMinutesParameters\` : tableau d’objets décrivant chaque paramètre à intervalle 15 min.
+- \`dailyValues\` : tableau d’objets pour chaque date.
+    - \`date\` : date du prélèvement.
+    - \`values\` : valeurs journalières.
+    - \`fifteenMinutesValues\` : tableau d’objets pour chaque créneau de 15 min (ou null si non applicable).
+        - \`heure\` : heure du créneau (format "HH:mm:ss").
+        - \`values\` : valeurs pour chaque paramètre.
+- \`volumePreleveTotal\` : volume total prélevé sur la période.
+`
     },
-    chartData: {
-      control: 'object',
-      description: 'Données pour le graphique de tendance des paramètres.'
-    },
-    connectNulls: {
+    isTrendChartIgnoringNulls: {
       control: 'boolean',
-      description: 'Relie les points manquants dans le graphique de tendance.'
+      description: 'Relie les points manquants dans le graphique de tendance (`true`) ou laisse des ruptures (`false`).'
     }
   },
   args: {
-    dailyItems: dataTest.dailyItems,
-    intervalItems: dataTest.intervalItems,
-    dailyAlert: null,
-    dateAlert: null,
-    calendarData: dataTest.datesData,
-    chartData: dataTest.datesData,
-    connectNulls: true
+    dailyParametersAlert: '',
+    calendarAlert: '',
+    historyData: dataTest.datesData,
+    isTrendChartIgnoringNulls: true
   }
 }
 
@@ -55,35 +96,27 @@ export const Default = {render: renderPrelevementsHistory}
 
 export const DaysOnly = {
   args: {
-    calendarData: dataTest.datesWithoutIntervals,
-    chartData: dataTest.datesWithoutIntervals,
-    intervalItems: null
+    historyData: dataTest.datesWithoutIntervals
   },
   render: renderPrelevementsHistory
 }
 
 export const WithAlerts = {
   args: {
-    dailyItems: null,
-    intervalItems: [],
-    dailyAlert: 'Aucun paramètre journalier disponible',
-    dateAlert: 'Attention, certaines dates sont manquantes',
-    calendarData: dataTest.datesData,
-    chartData: dataTest.datesData,
-    connectNulls: false
+    dailyParametersAlert: 'Aucun paramètre journalier disponible',
+    calendarAlert: 'Attention, certaines dates sont manquantes',
+    historyData: dataTest.datesData,
+    isTrendChartIgnoringNulls: false
   },
   render: renderPrelevementsHistory
 }
 
 export const withoutData = {
   args: {
-    dailyItems: null,
-    intervalItems: [],
-    dailyAlert: null,
-    dateAlert: null,
-    calendarData: null,
-    chartData: null,
-    connectNulls: false
+    dailyParametersAlert: null,
+    calendarAlert: null,
+    historyData: null,
+    isTrendChartIgnoringNulls: false
   },
   render: renderPrelevementsHistory
 }
