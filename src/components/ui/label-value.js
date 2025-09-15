@@ -11,6 +11,8 @@ const LabelValue = ({label, children}) => {
       </Box>
     )
   }
+
+  return null
 }
 
 export default LabelValue
