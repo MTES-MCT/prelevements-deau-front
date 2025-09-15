@@ -15,15 +15,17 @@ const Page = async ({params}) => {
   const {id} = await params
 
   const preleveur = await getPreleveur(id)
+
   if (!preleveur) {
     notFound()
   }
 
   const exploitations = await getExploitationFromPreleveur(id)
-  await Promise.all(exploitations.map(async exploitation => {
+
+  const exploitationsWithPoints = await Promise.all(exploitations.map(async exploitation => {
     const point = await getPointPrelevement(exploitation.point)
 
-    exploitation.point = point
+    return {...exploitation, point}
   }))
 
   return (
@@ -52,7 +54,7 @@ const Page = async ({params}) => {
             {preleveur.usages && preleveur.usages.length > 0 ? (
               preleveur.usages.map(u => (
                 <Chip
-                  key={`${u}`}
+                  key={u}
                   label={u}
                   sx={{
                     ml: 1,
@@ -67,7 +69,7 @@ const Page = async ({params}) => {
           </LabelValue>
         </div>
         {preleveur.exploitations && preleveur.exploitations.length > 0 ? (
-          <ExploitationsList exploitations={exploitations} />
+          <ExploitationsList exploitations={exploitationsWithPoints} />
         ) : (
           <Alert severity='info' description='Aucune exploitation' />
         )}
