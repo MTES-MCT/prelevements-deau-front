@@ -163,14 +163,6 @@ export async function getStats() {
   return response.json()
 }
 
-export async function getVolumesExploitation(exploitationId) {
-  const response = await executeRequest(
-    `api/exploitations/${exploitationId}/volumes-preleves`,
-    {headers: {Authorization: await getAuthorization()}}
-  )
-  return response.json()
-}
-
 export async function getBnpe() {
   const response = await executeRequest(
     'api/referentiels/bnpe',
