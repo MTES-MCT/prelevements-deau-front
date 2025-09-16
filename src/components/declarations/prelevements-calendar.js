@@ -1,212 +1,278 @@
 'use client'
 
-import {useState} from 'react'
+import {useCallback, useMemo} from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
-import {
-  Box, Modal, Tab, Tabs, Typography
-} from '@mui/material'
-import {LineChart} from '@mui/x-charts'
+import {Divider, Typography} from '@mui/material'
 import {parseISO, format} from 'date-fns'
-import {fr as locale} from 'date-fns/locale'
+import {
+  isEqual, keyBy, union, some as _some
+} from 'lodash-es'
 
 import CalendarGrid from '@/components/calendar-grid.js'
 import {formatNumber} from '@/utils/number.js'
 
-function determineColors(values, fifteenMinutesValues, dailyParameters) {
-  const hasNegativeValue = values.some(v => v < 0)
-  if (hasNegativeValue) {
-    return {colorA: fr.colors.decisions.background.flat.error.default, colorB: null}
-  }
-
-  const volumePreleveParam = dailyParameters?.find(p => p.nom_parametre === 'volume prélevé')
-  const volumePreleveIndex = volumePreleveParam ? dailyParameters.indexOf(volumePreleveParam) : -1
-
-  const hasAnyData = values.some(v => Number.isNaN(v)) || (fifteenMinutesValues?.length > 0)
-
-  if (volumePreleveIndex > -1 && !Number.isNaN(values[volumePreleveIndex])) {
-    // Bleu si la donnée journalière pour le volume prélevé est présente
-    return {colorA: fr.colors.decisions.text.actionHigh.blueFrance.default, colorB: null}
-  }
-
-  if (hasAnyData) {
-    // Orange s'il y a d'autres données mais pas le volume prélevé journalier
-    return {colorA: fr.colors.decisions.background.flat.warning.default, colorB: null}
-  }
-
-  // Gris si aucune donnée
-  return {colorA: 'grey', colorB: null}
+/** Retourne vrai si la valeur représente une déclaration (0 accepté). */
+function isDeclared(value) {
+  return value !== null && value !== undefined && !Number.isNaN(value)
 }
 
-export function transformOutJsonToCalendarData(outJson) {
-  const daily = outJson.dailyValues || []
-  return daily.map(({date, values, fifteenMinutesValues}) => {
-    // Reformattage de la date pour dd-MM-yyyy
-    const dateKey = format(parseISO(date), 'dd-MM-yyyy')
-    const {colorA, colorB} = determineColors(values, fifteenMinutesValues, outJson.dailyParameters)
+/** Indique si une entrée contient au moins une valeur (journalière ou 15min). */
+function hasValues(entry) {
+  return (
+    entry
+    && (_some(entry.values, isDeclared)
+      || (entry.fifteenMinutesValues || []).length > 0)
+  )
+}
+
+/** Détermine la couleur d’un jour donné selon la présence / égalité des données. */
+function determineColor(currentEntry, previousEntry) {
+  const hasCurrent = hasValues(currentEntry)
+  const hasPrevious = hasValues(previousEntry)
+
+  if (!hasCurrent && !hasPrevious) {
+    return 'grey' // Aucune déclaration
+  }
+
+  if (hasCurrent && !hasPrevious) {
+    return fr.colors.decisions.text.actionHigh.blueFrance.default // Nouvelle
+  }
+
+  if (!hasCurrent && hasPrevious) {
+    return fr.colors.decisions.background.flat.success.default // Existante
+  }
+
+  // Les deux jeux existent : identiques ?
+  const identical
+    = isEqual(currentEntry.values, previousEntry.values)
+    && isEqual(
+      currentEntry.fifteenMinutesValues,
+      previousEntry.fifteenMinutesValues
+    )
+
+  return identical
+    ? fr.colors.decisions.background.flat.success.default // Identique
+    : fr.colors.decisions.background.flat.warning.default // Conflit
+}
+
+/* ---------- Tooltip helpers to keep render function simple ---------- */
+
+/**
+ * Construit deux listes <li> :
+ *  - journalier : valeurs « à afficher » (priorité à data courante, sinon précédente)
+ *  - previousJournalier : valeurs issues de previousData, avec delta vis‑à‑vis de la valeur courante
+ *
+ * @param {Array} params   Tableau des paramètres {nom_parametre, unite, …}
+ * @param {Array} current  Tableau des valeurs courantes (data)
+ * @param {Array} previous Tableau des valeurs précédentes (previousData)
+ * @returns {{journalier: ReactNode[], previousJournalier: ReactNode[]}}
+ */
+function buildJournalierItems(params, current, previous) {
+  const journalier = []
+  const previousJournalier = []
+
+  for (const [idx, param] of params.entries()) {
+    // Choisit la valeur à afficher : priorité aux données courantes
+    const val = isDeclared(current[idx]) ? current[idx] : previous[idx]
+    if (isDeclared(val)) {
+      journalier.push(
+        <li key={`day-${idx}`}>
+          • {param.nom_parametre} : {formatNumber(val)} {param.unite ?? ''}
+        </li>
+      )
+    }
+
+    // Calcule le delta lorsque les deux jeux de données possèdent une valeur
+    const delta
+      = isDeclared(current[idx]) && isDeclared(previous[idx])
+        ? current[idx] - previous[idx]
+        : null
+
+    previousJournalier.push(
+      <li key={`prev-day-${idx}`}>
+        • {param.nom_parametre} : {formatNumber(previous[idx])} {param.unite ?? ''}
+        {delta !== null && delta !== 0 && (
+          <> (Δ {delta > 0 ? '+' : ''}{formatNumber(delta)} {param.unite ?? ''})</>
+        )}
+      </li>
+    )
+  }
+
+  return {journalier, previousJournalier}
+}
+
+/**
+ * Retourne la liste <li> des paramètres ayant au moins une valeur 15min
+ * (courante ou précédente). Les vraies valeurs ne sont pas affichées,
+ * seul le nom du paramètre + unité est indiqué.
+ */
+function buildMinuteItems(params, curr15, prev15) {
+  const items = []
+  for (const [idx, param] of params.entries()) {
+    // Vérifie la présence d'au moins une valeur déclarée à la maille 15min
+    const currSeg = curr15.map(seg => seg?.values?.[idx])
+    const prevSeg = prev15.map(seg => seg?.values?.[idx])
+    const hasMinute
+      = currSeg.some(v => isDeclared(v)) || prevSeg.some(v => isDeclared(v))
+    if (hasMinute) {
+      items.push(
+        <li key={`min-${idx}`}>
+          • {param.nom_parametre} en {param.unite ?? ''}
+        </li>
+      )
+    }
+  }
+
+  return items
+}
+
+/**
+ * Détermine s’il existe :
+ *  - un conflit « journalière » (différence de valeurs)
+ *  - un conflit « 15min » (différence de séries)
+ *
+ * @returns {{daily: boolean, minute: boolean}}
+ */
+function detectConflicts(current, previous, curr15, prev15) {
+  // Conflit journalier : deux valeurs déclarées différentes
+  const daily = current.some(
+    (v, i) => isDeclared(v) && isDeclared(previous[i]) && v !== previous[i]
+  )
+
+  const minute = current.some((_, idx) => {
+    const cSeries = curr15.map(seg => seg?.values?.[idx])
+    const pSeries = prev15.map(seg => seg?.values?.[idx])
+
+    const cHas = cSeries.some(val => isDeclared(val))
+    const pHas = pSeries.some(val => isDeclared(val))
+
+    if (!(cHas && pHas)) {
+      return false // Pas de données de part et d'autre => pas de conflit
+    }
+
+    return !isEqual(cSeries, pSeries)
+  })
+
+  return {daily, minute}
+}
+
+export function transformDataToCalendarData(data = {}, previousData = {}) {
+  const currentByDate = keyBy(data.dailyValues || [], 'date')
+  const previousByDate = keyBy(previousData.dailyValues || [], 'date')
+  const allDates = union(Object.keys(currentByDate), Object.keys(previousByDate))
+
+  return allDates.map(isoDate => {
+    const current = currentByDate[isoDate]
+    const previous = previousByDate[isoDate]
+    const color = determineColor(current, previous)
+
     return {
-      date: dateKey,
-      values,
-      fifteenMinutesValues,
-      colorA,
-      colorB
+      date: format(parseISO(isoDate), 'dd-MM-yyyy'),
+      currentValues: current?.values ?? [],
+      previousValues: previous?.values ?? [],
+      currentFifteenMinutesValues: current?.fifteenMinutesValues ?? [],
+      previousFifteenMinutesValues: previous?.fifteenMinutesValues ?? [],
+      values: current?.values ?? previous?.values ?? [],
+      fifteenMinutesValues:
+        current?.fifteenMinutesValues ?? previous?.fifteenMinutesValues ?? [],
+      color
     }
   })
 }
 
-const PrelevementsCalendar = ({data}) => {
-  // États pour la modal et le paramètre sélectionné
-  const [open, setOpen] = useState(false)
-  const [selectedDayInfo, setSelectedDayInfo] = useState(null)
-  const [tabIndex, setTabIndex] = useState(0)
+const PrelevementsCalendar = ({data, previousData}) => {
+  const calendarData = useMemo(() => {
+    const hasAny
+      = (data?.dailyValues?.length ?? 0) > 0
+      || (previousData?.dailyValues?.length ?? 0) > 0
+    return hasAny ? transformDataToCalendarData(data, previousData) : null
+  }, [data, previousData])
 
-  const fifteenParams = data.fifteenMinutesParameters || []
+  const renderCustomTooltipContent = useCallback(({date, dayStyleEntry}) => {
+    if (!dayStyleEntry) {
+      return (
+        <div className='flex flex-col gap-2'>
+          <Typography>{date.toLocaleDateString('fr-FR')}</Typography>
+          <Typography>Aucune donnée</Typography>
+        </div>
+      )
+    }
 
-  // Support for optional fifteenMinutesValues: fallback to empty array if null
-  const fifteenValues = selectedDayInfo?.dayStyleEntry?.fifteenMinutesValues || []
+    const {currentValues, previousValues} = dayStyleEntry
+    const curr15 = dayStyleEntry.currentFifteenMinutesValues
+    const prev15 = dayStyleEntry.previousFifteenMinutesValues
 
-  // Handlers
-  const handleDayClick = dayInfo => {
-    setSelectedDayInfo(dayInfo)
-    setTabIndex(0)
-    setOpen(true)
-  }
+    const params
+      = data?.dailyParameters?.length > 0
+        ? data.dailyParameters
+        : previousData?.dailyParameters ?? []
 
-  const handleClose = () => setOpen(false)
+    const {journalier, previousJournalier} = buildJournalierItems(
+      params,
+      currentValues,
+      previousValues
+    )
+    const minuteItems = buildMinuteItems(params, curr15, prev15)
+    const {daily: dailyConflict, minute: minuteConflict} = detectConflicts(
+      currentValues,
+      previousValues,
+      curr15,
+      prev15
+    )
 
-  if (data.dailyValues && data.dailyValues.length === 0) {
     return (
-      <Alert severity='warning' description='Aucune donnée de prélèvement n’a été trouvée.' />
+      <div className='flex flex-col gap-2'>
+        <Typography>{date.toLocaleDateString('fr-FR')}</Typography>
+
+        {journalier.length > 0 && (
+          <>
+            <div>Prélèvement journalier :</div>
+            <ul>{journalier}</ul>
+          </>
+        )}
+        {(dailyConflict) && (
+          <div>
+            <span className='fr-icon-warning-fill' /> Cette déclaration est en conflit avec la précédente
+          </div>
+        )}
+        {dailyConflict && previousJournalier.length > 0 && (
+          <ul>{previousJournalier}</ul>
+        )}
+
+        <Divider component='div' />
+
+        {minuteItems.length > 0 && (
+          <>
+            <div>Prélèvement 15minutes :</div>
+            <ul>{minuteItems}</ul>
+          </>
+        )}
+
+        {(minuteConflict) && (
+          <div>
+            <span className='fr-icon-warning-fill' /> Au moins un des paramètres de cette déclaration est en conflit avec la précédente.
+          </div>
+        )}
+      </div>
+    )
+  }, [data, previousData])
+
+  if (!calendarData) {
+    return (
+      <Alert
+        severity='warning'
+        description='Aucune donnée de prélèvement n’a été trouvée.'
+      />
     )
   }
 
   return (
-    <>
-      <CalendarGrid
-        data={transformOutJsonToCalendarData(data)}
-        renderCustomTooltipContent={({date, dayStyleEntry}) => {
-          if (!dayStyleEntry) {
-            return (
-              <>
-                <strong>{date.toLocaleDateString('fr-FR')}</strong>
-                <Typography>
-                  <Box component='span' className='fr-icon-warning-fill' /> Aucun donnée
-                </Typography>
-              </>
-            )
-          }
-
-          const {values} = dayStyleEntry
-          const warnings = values.map(v => v === null || v === undefined || v < 0)
-
-          return (
-            <>
-              <strong>{date.toLocaleDateString('fr-FR')}</strong>
-              {Object.keys(data.dailyParameters).map(paramIndex => (
-                <Typography key={paramIndex}>
-                  {data.dailyParameters[paramIndex].nom_parametre} : {Number.isNaN(values[paramIndex])
-                    ? '—'
-                    : formatNumber(values[paramIndex], values[paramIndex] < 1 && values[paramIndex] !== 0 ? {maximumFractionDigits: 2, minimumFractionDigits: 2} : {})} m³
-                  {warnings[0] && <Box component='span' className='fr-icon-warning-fill' />}
-                </Typography>
-              ))}
-            </>
-          )
-        }}
-        onDayClick={fifteenValues.length > 0 ? handleDayClick : undefined}
-      />
-
-      <Modal open={open} onClose={handleClose}>
-        <Box sx={{
-          width: '80%', maxWidth: 600, bgcolor: 'background.paper', p: 2, mx: 'auto', mt: '10%'
-        }}
-        >
-          {selectedDayInfo && (
-            <>
-              <Typography gutterBottom variant='h6' component='h2'>
-                {selectedDayInfo.date.toLocaleDateString('fr-FR', {
-                  weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-                })}
-              </Typography>
-
-              <Box className='flex gap-2'>
-                {data.dailyParameters.map((param, idx) => (
-                  <Typography key={param.paramIndex}>
-                    {param.nom_parametre}: {
-                      Number.isNaN(selectedDayInfo.dayStyleEntry.values[idx])
-                        ? '—'
-                        : formatNumber(selectedDayInfo.dayStyleEntry.values[idx], {maximumFractionDigits: 2})
-                    } {param.unite}
-                  </Typography>
-                ))}
-              </Box>
-
-              {fifteenParams.length > 0 ? (
-                <Tabs
-                  variant='scrollable'
-                  value={tabIndex}
-                  onChange={(e, v) => setTabIndex(v)}
-                >
-                  {fifteenParams.map((param, idx) => {
-                    const missing = selectedDayInfo.dayStyleEntry.values[idx] === null
-                      || fifteenValues.some(slot => slot.values[idx] === null)
-                    return (
-                      <Tab
-                        key={param.paramIndex}
-                        label={
-                          <Box className='flex items-center gap-2'>
-                            {missing && <Box component='span' className='fr-icon-warning-fill' sx={{color: fr.colors.decisions.background.flat.warning.default}} />}
-                            {param.nom_parametre}
-                          </Box>
-                        }
-                      />
-                    )
-                  })}
-                </Tabs>
-              ) : (
-                <Alert severity='warning' description='Les données de prélèvement à 15 minutes ne sont pas disponibles.' />
-              )}
-              {fifteenParams.length > 0 ? (
-                <Box sx={{height: 300, mt: 2}}>
-                  <LineChart
-                    series={[{
-                      id: fifteenParams[tabIndex].nom_parametre,
-                      data: fifteenValues.map(slot =>
-                        slot.values[tabIndex]
-                      ),
-                      color: fr.colors.decisions.text.actionHigh.blueFrance.default,
-                      valueFormatter: value =>
-                        value === null
-                          ? 'Aucune donnée'
-                          : `${value} ${fifteenParams[tabIndex].unite}`
-                    }]}
-                    xAxis={[{
-                      scaleType: 'time',
-                      data: fifteenValues.map(slot =>
-                        parseISO(`${format(selectedDayInfo.date, 'yyyy-MM-dd')}T${slot.heure}`)
-                      ),
-                      valueFormatter(value) {
-                        const dateObj = value
-                        const hours = dateObj.getHours()
-                        const minutes = dateObj.getMinutes()
-                        // Major tick at midnight: show full date
-                        if (hours === 0 && minutes === 0) {
-                          return format(dateObj, 'EEEE d MMM', {locale})
-                        }
-
-                        // Otherwise show hour and minute
-                        return format(dateObj, 'HH:mm', {locale})
-                      }
-                    }]}
-                  />
-                </Box>
-              ) : null}
-            </>
-          )}
-        </Box>
-      </Modal>
-    </>
+    <CalendarGrid
+      data={calendarData}
+      renderCustomTooltipContent={renderCustomTooltipContent}
+    />
   )
 }
 
