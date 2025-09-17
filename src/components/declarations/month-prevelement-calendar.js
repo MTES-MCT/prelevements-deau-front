@@ -2,12 +2,12 @@
 
 import {useMemo} from 'react'
 
+import {fr as dsfr} from '@codegouvfr/react-dsfr'
 import Tooltip from '@mui/material/Tooltip'
 import {
   format, addDays, startOfWeek, isSameMonth, parse
 } from 'date-fns'
 import {fr} from 'date-fns/locale'
-import {fr as dsfr} from '@codegouvfr/react-dsfr'
 
 const locale = fr
 
