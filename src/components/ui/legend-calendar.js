@@ -13,7 +13,7 @@ const LegendItem = ({color, label}) => (
 )
 
 const LegendCalendar = ({labels}) => (
-  <div className='flex items-center gap-4'>
+  <div className='flex flex-col sm:flex-row items-center gap-4'>
     {labels.map(item => (
       <LegendItem
         key={item.label}
