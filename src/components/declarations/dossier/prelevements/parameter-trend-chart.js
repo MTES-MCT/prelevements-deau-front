@@ -5,7 +5,7 @@ import {
 } from 'react'
 
 import {
-  Box, Divider, ToggleButton, ToggleButtonGroup, Slider
+  Box, ToggleButton, ToggleButtonGroup, Slider
 } from '@mui/material'
 import {LineChart} from '@mui/x-charts'
 import {
@@ -18,7 +18,7 @@ import {uniqBy} from 'lodash-es'
 import {buildSeries} from '@/utils/chart.js'
 import {formatNumber} from '@/utils/number.js'
 
-const ParameterTrendChart = ({data}) => {
+const ParameterTrendChart = ({data, connectNulls}) => {
   // ---------- Données brutes ----------
   const {
     dailyValues = [], dailyParameters = [],
@@ -137,8 +137,10 @@ const ParameterTrendChart = ({data}) => {
     parameters: visibleParameters,
     allParameters: parameters,
     values: slicedValues,
-    unitToAxisId
-  }), [visibleParameters, parameters, slicedValues, unitToAxisId])
+    unitToAxisId,
+    showMark: slicedValues.length <= 31,
+    connectNulls
+  }), [visibleParameters, parameters, slicedValues, unitToAxisId, connectNulls])
 
   const series = useMemo(
     () => rawSeries.map(s => {
@@ -158,7 +160,7 @@ const ParameterTrendChart = ({data}) => {
       label: u,
       position: i === 0 ? 'left' : 'right',
       min: 0,
-      valueFormatter: v => formatNumber(v, {maximumFractionDigits: v > 10 ? 0 : 1})
+      valueFormatter: v => formatNumber(v, v < 1 ? {maximumFractionDigits: 2, minimumFractionDigits: 2} : {})
     })),
   [axisUnits])
 
@@ -241,8 +243,6 @@ const ParameterTrendChart = ({data}) => {
 
   return (
     <Box className='flex flex-col gap-4 mt-4'>
-      <Divider textAlign='left'>Graphique de tendance des paramètres</Divider>
-
       {/* Sélecteur de granularité ----------------------------------------- */}
       <ToggleButtonGroup
         exclusive size='small'

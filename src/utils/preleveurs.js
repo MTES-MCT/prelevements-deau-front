@@ -3,15 +3,15 @@ export function displayPreleveur(preleveur) {
     return
   }
 
-  if (preleveur.nom) {
-    return `${preleveur.civilite || ''} ${preleveur.nom} ${preleveur.prenom}`
-  }
-
   if (preleveur.sigle) {
     return preleveur.sigle
   }
 
   if (preleveur.raison_sociale) {
     return preleveur.raison_sociale
+  }
+
+  if (preleveur.nom) {
+    return [preleveur.civilite, preleveur.nom, preleveur.prenom].filter(Boolean).join(' ')
   }
 }

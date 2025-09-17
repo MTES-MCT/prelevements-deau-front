@@ -8,8 +8,7 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
-  Typography
+  DialogTitle
 } from '@mui/material'
 import {useRouter} from 'next/navigation'
 
@@ -20,6 +19,7 @@ import {emptyStringToNull} from '@/utils/string.js'
 
 const PointEditionForm = ({
   pointPrelevement,
+  bssList,
   bnpeList,
   bvBdCarthageList,
   mesoList,
@@ -30,15 +30,20 @@ const PointEditionForm = ({
   const point = {...pointPrelevement}
   const [validationErrors, setValidationErrors] = useState([])
   const [error, setError] = useState(null)
-  const [isDialogOpen, setIsDialogOpen] = useState()
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   const handleSubmit = async () => {
     setError(null)
     setValidationErrors([])
 
+    if (Object.keys(payload).length === 0) {
+      router.push(`/points-prelevement/${point.id_point}`)
+      return
+    }
+
     try {
       const cleanedPayload = emptyStringToNull(payload)
-      const response = await editPointPrelevement(point.id_point, cleanedPayload)
+      const response = await editPointPrelevement(point._id, cleanedPayload)
 
       if (response.code === 400) {
         if (response.validationErrors) {
@@ -47,7 +52,7 @@ const PointEditionForm = ({
           setError(response.message)
         }
       } else {
-        router.push(`/prelevements?point-prelevement=${response.id_point}`)
+        router.push(`/points-prelevement/${response.id_point}`)
       }
     } catch (error) {
       setError(error.message)
@@ -58,8 +63,15 @@ const PointEditionForm = ({
     setError(null)
 
     try {
-      await deletePointPrelevement(point.id_point)
-      router.push('/prelevements')
+      const response = await deletePointPrelevement(point._id)
+
+      if (response.code) {
+        setIsDialogOpen(false)
+        setError(response.message)
+        return
+      }
+
+      router.push('/points-prelevement')
     } catch (error) {
       setError(error.message)
     }
@@ -86,15 +98,13 @@ const PointEditionForm = ({
   }
 
   return (
-    <div className='fr-container'>
-      <Typography variant='h3' sx={{pb: 5}}>
-        Édition du point de prélèvement {point.nom}
-      </Typography>
+    <div>
       <PointForm
         point={point}
         setPoint={setPayload}
         handleSetGeom={handleSetGeom}
         bnpeList={bnpeList}
+        bssList={bssList}
         bvBdCarthageList={bvBdCarthageList}
         meContinentalesBvList={meContinentalesBvList}
         mesoList={mesoList}

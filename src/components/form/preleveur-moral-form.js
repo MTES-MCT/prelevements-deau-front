@@ -4,6 +4,7 @@
 import {useEffect, useState} from 'react'
 
 import {Input} from '@codegouvfr/react-dsfr/Input'
+import {Select} from '@codegouvfr/react-dsfr/SelectNext'
 import {Typography} from '@mui/material'
 
 import OptionalPreleveurFieldsForm from '@/components/form/optional-preleveur-fields-form.js'
@@ -47,9 +48,22 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
           onChange: e => setPreleveur(prev => ({...prev, raison_sociale: e.target.value}))
         }}
       />
-      <div className='grid grid-cols-2 gap-4 pb-5'>
+      <div className='w-full grid grid-cols-[1fr_2fr_2fr] gap-4 pb-5'>
+        <Select
+          label='Civilité du contact'
+          placeholder='Choisir la civilité'
+          nativeSelectProps={{
+            defaultValue: preleveur?.civilite || '',
+            onChange: e => setPreleveur(prev => ({...prev, civilite: e.target.value}))
+          }}
+          options={[
+            {value: 'M.', label: 'M. '},
+            {value: 'Mme', label: 'Mme'},
+            {value: '', label: 'Non indiqué'}
+          ]}
+        />
         <Input
-          label='Nom du contact'
+          label='Nom du contact *'
           nativeInputProps={{
             placeholder: 'Entrer le nom',
             defaultValue: preleveur?.nom || '',
@@ -57,7 +71,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
           }}
         />
         <Input
-          label='Prénom du contact'
+          label='Prénom du contact *'
           nativeInputProps={{
             placeholder: 'Entrer le prénom',
             defaultValue: preleveur?.prenom || '',
@@ -66,7 +80,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
         />
       </div>
       <Input
-        label='Adresse email du contact'
+        label='Adresse email du contact *'
         nativeInputProps={{
           placeholder: 'Entrer l’adresse email de contact',
           defaultValue: preleveur?.email || '',

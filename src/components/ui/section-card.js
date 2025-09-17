@@ -12,7 +12,7 @@ const SectionCard = ({title, icon, buttonProps, children}) => (
   >
     <Box className='mt-2'>
       <Box className='flex justify-between items-center mb-2'>
-        <Typography gutterBottom variant='h6' className='flex items-center gap-1'>
+        <Typography variant='h6' className='flex items-center gap-1'>
           <Box className='flex items-center gap-2'>
             <div className={icon} />
             {title}
