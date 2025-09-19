@@ -25,7 +25,7 @@ export default storyMeta
 
 export const Info = args => <CompactAlert {...args} />
 
-export const Alerte = args => (
+export const Avertissement = args => (
   <CompactAlert {...args} alertType='warning' label='Ceci est une alerte de type "warning"' />
 )
 
