@@ -1,7 +1,7 @@
 import {useState, useId} from 'react'
 
 import {Popover, Typography, Box} from '@mui/material'
-import {uniqueId} from 'lodash-es'
+import {uniqBy} from 'lodash-es'
 
 import CompactAlert from '@/components/ui/CompactAlert/index.js'
 import MetasList from '@/components/ui/MetasList/index.js'
@@ -42,13 +42,13 @@ const PeriodTooltip = ({periodLabel, parameters, alerts, children}) => {
         >
           <Typography sx={{fontWeight: 'bold'}}>{periodLabel}</Typography>
           <Box sx={{display: 'flex', flexDirection: 'column', gap: 2}}>
-            {parameters?.length > 0 && <MetasList metas={parameters} />}
+            {parameters?.length && <MetasList metas={parameters} />}
 
-            {alerts?.length > 0 && (
+            {alerts?.length && (
               <Box>
-                {alerts.map(alert => (
+                {uniqBy(alerts, 'alertLabel').map(alert => (
                   <CompactAlert
-                    key={uniqueId()}
+                    key={alert.alertLabel}
                     label={alert.alertLabel}
                     alertType={alert.alertType}
                   />
