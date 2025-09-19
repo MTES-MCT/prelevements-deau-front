@@ -17,7 +17,7 @@ const storyMeta = {
   \`\`\`json
    [
       {
-        "icon": <Icône>,
+        "icon": <Icon>,
         "content": <string>
       }
     ]
