@@ -19,11 +19,7 @@ const CompactAlert = ({label, alertType = 'info'}) => {
   const type = icons[alertType] ? alertType : 'info'
 
   return (
-    <Box
-      className='flex items-center gap-1'
-      role='alert'
-      sx={{borderColor: colors[type]}}
-    >
+    <Box className='flex items-center gap-1' role='alert'>
       <span
         className={icons[type]}
         aria-hidden='true'
