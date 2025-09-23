@@ -67,8 +67,12 @@ const PrelevementsCalendar = ({data}) => {
   const fifteenValues = selectedDayInfo?.dayStyleEntry?.fifteenMinutesValues || []
 
   // Handlers
-  const handleDayClick = dayInfo => {
-    setSelectedDayInfo(dayInfo)
+  const handleCellClick = cellInfo => {
+    if (cellInfo.mode !== 'month' || !cellInfo.dayStyleEntry) {
+      return
+    }
+
+    setSelectedDayInfo(cellInfo)
     setTabIndex(0)
     setOpen(true)
   }
@@ -85,13 +89,29 @@ const PrelevementsCalendar = ({data}) => {
     <>
       <CalendarGrid
         data={transformOutJsonToCalendarData(data)}
-        renderCustomTooltipContent={({date, dayStyleEntry}) => {
+        renderCustomTooltipContent={cellInfo => {
+          if (cellInfo.mode !== 'month') {
+            const entries = cellInfo.entries ?? []
+            const hasEntries = entries.length > 0
+            const rangeLabel = `${format(cellInfo.periodStart, 'd MMM yyyy', {locale})} – ${format(cellInfo.periodEnd, 'd MMM yyyy', {locale})}`
+
+            return (
+              <>
+                <strong>{cellInfo.label}</strong>
+                <Typography>{rangeLabel}</Typography>
+                <Typography>{hasEntries ? `${new Set(entries.map(entry => format(entry.dateObj, 'dd/MM/yyyy'))).size} jour(s) renseigné(s)` : 'Aucune donnée'}</Typography>
+              </>
+            )
+          }
+
+          const {date, dayStyleEntry} = cellInfo
+
           if (!dayStyleEntry) {
             return (
               <>
                 <strong>{date.toLocaleDateString('fr-FR')}</strong>
                 <Typography>
-                  <Box component='span' className='fr-icon-warning-fill' /> Aucun donnée
+                  <Box component='span' className='fr-icon-warning-fill' /> Aucune donnée
                 </Typography>
               </>
             )
@@ -114,7 +134,7 @@ const PrelevementsCalendar = ({data}) => {
             </>
           )
         }}
-        onDayClick={fifteenValues.length > 0 ? handleDayClick : undefined}
+        onCellClick={fifteenValues.length > 0 ? handleCellClick : undefined}
       />
 
       <Modal open={open} onClose={handleClose}>

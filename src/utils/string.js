@@ -26,3 +26,9 @@ export function emptyStringToNull(obj) {
   )
 }
 
+/**
+ * Capitalise la première lettre d'une chaîne
+ * @param {string} value - La chaîne à capitaliser
+ * @returns {string} La chaîne capitalisée
+ */
+export const capitalize = value => value.charAt(0).toUpperCase() + value.slice(1)

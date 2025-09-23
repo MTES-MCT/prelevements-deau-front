@@ -1,57 +1,78 @@
+/**
+ * @fileoverview Composant CalendarGrid refactorisé
+ * Composant principal pour l'affichage des calendriers de données
+ * Gère automatiquement la granularité d'affichage selon la plage de dates
+ */
+
 import {fr} from '@codegouvfr/react-dsfr'
-import {parse} from 'date-fns'
 
-import MonthPrelevementCalendar from '@/components/declarations/month-prevelement-calendar.js'
+import CalendarGridDisplay from '@/components/ui/calendar-grid-display.js'
 import LegendCalendar from '@/components/ui/legend-calendar.js'
+import {useCalendarData} from '@/hook/use-calendar-data.js'
 
-const legendLabels = [
-  {color: fr.colors.decisions.text.actionHigh.blueFrance.default, label: 'Données présentes'},
-  {color: fr.colors.decisions.background.flat.warning.default, label: 'Données présentes mais anomalies'},
-  {color: fr.colors.decisions.background.actionHigh.info.default, label: 'Pas de prélèvement'},
-  {color: fr.colors.decisions.text.disabled.grey.default, label: 'Non déclaré / pas de déclaration'}
+/**
+ * Configuration de la légende du calendrier
+ */
+const LEGEND_LABELS = [
+  {
+    color: fr.colors.decisions.text.actionHigh.blueFrance.default,
+    label: 'Données présentes'
+  },
+  {
+    color: fr.colors.decisions.background.flat.warning.default,
+    label: 'Données présentes mais anomalies'
+  },
+  {
+    color: fr.colors.decisions.background.actionHigh.info.default,
+    label: 'Pas de prélèvement'
+  },
+  {
+    color: fr.colors.decisions.text.disabled.grey.default,
+    label: 'Non déclaré / pas de déclaration'
+  }
 ]
 
-// Get year and months from display
-function extractMonthsAndYearFromData(data) {
-  const monthSet = new Set()
-  for (const item of data) {
-    try {
-      const parsedDate = parse(item.date, 'dd-MM-yyyy', new Date())
-      const year = parsedDate.getFullYear()
-      const monthIndex = parsedDate.getMonth()
-      monthSet.add(`${year}-${monthIndex}`)
-    } catch {
-      console.warn(`Invalid date format in data: ${item.date}. Expected dd-MM-yyyy.`)
-    }
+/**
+ * Composant CalendarGrid principal
+ *
+ * Affiche automatiquement les données sous forme de calendriers avec la granularité optimale :
+ * - Mode mois : pour les plages <= 6 mois (grille 7 colonnes avec jours)
+ * - Mode année : pour les plages 6-72 mois (grille 4 colonnes avec mois)
+ * - Mode multi-années : pour les plages > 72 mois (grille 4 colonnes avec années)
+ *
+ * @param {Object} props - Propriétés du composant
+ * @param {Object[]} props.data - Données du calendrier [{date: 'dd-MM-yyyy', colorA: 'string', ...}]
+ * @param {Function} [props.renderCustomTooltipContent] - Fonction personnalisée de rendu des tooltips
+ * @param {Function} [props.onCellClick] - Gestionnaire de clic sur une cellule interactive
+ * @returns {JSX.Element} Le composant CalendarGrid
+ *
+ * @example
+ * <CalendarGrid
+ *   data={[{date: '01-01-2024', colorA: '#1f2937'}]}
+ *   onCellClick={(cellInfo) => console.log('Clicked:', cellInfo)}
+ * />
+ */
+const CalendarGrid = ({
+  data,
+  renderCustomTooltipContent,
+  onCellClick
+}) => {
+  // Utilisation du hook personnalisé pour traiter les données
+  const {calendars, hasData} = useCalendarData(data)
+
+  // Affichage de la légende seule si aucune donnée
+  if (!hasData) {
+    return <LegendCalendar labels={LEGEND_LABELS} />
   }
 
-  const monthsArray = [...monthSet].map(key => {
-    const [year, monthIndex] = key.split('-').map(Number)
-    return {year, monthIndex}
-  })
-  monthsArray.sort((a, b) => a.year - b.year || a.monthIndex - b.monthIndex)
-  return monthsArray
-}
-
-const CalendarGrid = ({data, renderCustomTooltipContent, onDayClick}) => {
-  const monthsToDisplay = extractMonthsAndYearFromData(data)
+  // Affichage de la grille de calendriers avec leurs données
   return (
-    <>
-      <div className='grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full'>
-        {monthsToDisplay.map(monthInfo => (
-          <div key={`${monthInfo.year}-${monthInfo.monthIndex}`} className='flex flex-col items-center max-w-xs sm:max-w-sm md:max-w-3xl'>
-            <MonthPrelevementCalendar
-              year={monthInfo.year}
-              month={monthInfo.monthIndex}
-              data={data}
-              renderTooltipContent={renderCustomTooltipContent}
-              onDayClick={onDayClick}
-            />
-          </div>
-        ))}
-      </div>
-      <LegendCalendar labels={legendLabels} />
-    </>
+    <CalendarGridDisplay
+      calendars={calendars}
+      legendLabels={LEGEND_LABELS}
+      renderTooltipContent={renderCustomTooltipContent}
+      onCellClick={onCellClick}
+    />
   )
 }
 
