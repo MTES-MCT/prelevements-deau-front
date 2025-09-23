@@ -15,7 +15,7 @@ import {useRouter} from 'next/navigation'
 
 import SimpleLoading from '../ui/simple-loading.js'
 
-import {createDocument, uploadDocument} from '@/app/api/points-prelevement.js'
+import {createDocument} from '@/app/api/points-prelevement.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
 const naturesDocument = [
