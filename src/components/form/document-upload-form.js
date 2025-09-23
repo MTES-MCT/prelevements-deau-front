@@ -47,7 +47,7 @@ const DocumentUploadForm = ({idPreleveur}) => {
 
     try {
       const cleanedDocument = emptyStringToNull(document)
-      const response = await createDocument(idPreleveur, cleanedDocument)
+      const response = await createDocument(idPreleveur, cleanedDocument, filesList[0])
 
       if (response.code === 400) {
         if (response.validationErrors) {
@@ -55,13 +55,10 @@ const DocumentUploadForm = ({idPreleveur}) => {
         } else {
           setError(response.message)
         }
+      } else if (response.code === 409) {
+        setError(response.message)
       } else {
-        const uploadResponse = await uploadDocument(idPreleveur, filesList[0])
-        if (uploadResponse.nom) {
-          router.push(`/preleveurs/${idPreleveur}`)
-        } else {
-          setError(uploadResponse.message)
-        }
+        router.push(`/preleveurs/${idPreleveur}`)
       }
     } catch (error) {
       setError(error.message)

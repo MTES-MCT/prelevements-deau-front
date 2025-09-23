@@ -1,4 +1,4 @@
-import {executeRequest, getAuthorization} from './util/request.js'
+import {executeRequest, getAuthorization, API_URL} from './util/request.js'
 
 export async function getPointsPrelevement() {
   const response = await executeRequest(
@@ -113,13 +113,21 @@ export async function deletePreleveur(idPreleveur) {
   return response.json()
 }
 
-export async function createDocument(idPreleveur, payload) {
-  const response = await executeRequest(
-    `api/preleveurs/${idPreleveur}/documents`,
+export async function createDocument(idPreleveur, payload, document) {
+  const formData = new FormData()
+  for (const [key, value] of Object.entries(payload)) {
+    formData.append(key, value)
+  }
+
+  formData.append('document', document)
+
+  // On utilise fetch directement car executeRequest ne gère pas FormData
+  const response = await fetch(
+    `${API_URL}/api/preleveurs/${idPreleveur}/documents`,
     {
       headers: {Authorization: await getAuthorization()},
       method: 'POST',
-      body: payload
+      body: formData
     }
   )
 
@@ -151,7 +159,7 @@ export async function deleteDocument(idPreleveur, idDocument) {
     }
   )
 
-  return response.json()
+  return response
 }
 
 export async function createExploitation(payload) {

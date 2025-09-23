@@ -28,18 +28,19 @@ const DocumentsListForm = ({documents, idPreleveur}) => {
   const handleDeleteDocument = async () => {
     const response = await deleteDocument(idPreleveur, documentToDelete)
 
-    if (response.code) {
-      setError(response.message)
+    if (response.ok) {
+      const newDocumentsList = documentsList.filter(d => d._id !== documentToDelete)
+
+      setDocumentsList(newDocumentsList)
       setIsDialogOpen(false)
     } else {
-      const newDocumentsList = documentsList.filter(d => d.id_preleveur !== idPreleveur)
-      setDocumentsList(newDocumentsList)
+      setError(response.message)
       setIsDialogOpen(false)
     }
   }
 
   return (
-    documentsList.length > 0 ? (
+    documentsList?.length > 0 ? (
       <>
         <div className='border m-3 bg-white'>
           {documentsList.map(d => (
@@ -53,7 +54,7 @@ const DocumentsListForm = ({documents, idPreleveur}) => {
                   priority='secondary'
                   iconId='fr-icon-delete-line'
                   size='small'
-                  onClick={() => handleDialog(d.id_document)}
+                  onClick={() => handleDialog(d._id)}
                 />
               </div>
             </div>

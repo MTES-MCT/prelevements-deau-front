@@ -76,33 +76,31 @@ const Page = async ({params}) => {
           </LabelValue>
         </div>
 
-        {documents.length > 0 ? (
-          <>
-            <div className='flex justify-between'>
-              <Typography variant='h6' className='fr-mt-1w'>
-                Documents :
-              </Typography>
-              <Button
-                size='small'
-                priority='secondary'
-                linkProps={{
-                  href: `/preleveurs/${id}/documents`
-                }}
+        <div className='flex justify-between'>
+          <Typography variant='h6' className='fr-mt-1w'>
+            Documents :
+          </Typography>
+          <Button
+            size='small'
+            priority='secondary'
+            linkProps={{
+              href: `/preleveurs/${id}/documents`
+            }}
+          >
+            Gestion des documents
+          </Button>
+        </div>
+        {documents?.length > 0 ? (
+          <div className='border m-3 bg-white'>
+            {documents.map(document => (
+              <div
+                key={document.id_document}
+                className='flex w-full even:bg-[#f5f5fe]'
               >
-                Gestion des documents
-              </Button>
-            </div>
-            <div className='border m-3 bg-white'>
-              {documents.map(document => (
-                <div
-                  key={document.id_document}
-                  className='flex w-full even:bg-[#f5f5fe]'
-                >
-                  <Document document={document} className='w-full' />
-                </div>
-              ))}
-            </div>
-          </>
+                <Document document={document} className='w-full' />
+              </div>
+            ))}
+          </div>
         ) : (
           <p><i>Pas de documents</i></p>
         )}
