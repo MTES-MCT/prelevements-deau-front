@@ -19,7 +19,7 @@ import {
  * Structure d'une entrée de données du calendrier
  * @typedef {Object} CalendarEntry
  * @property {string} date - Date au format dd-MM-yyyy
- * @property {string} [colorA] - Couleur primaire pour l'affichage
+ * @property {string} [color] - Couleur pour l'affichage
  * @property {Date} [dateObj] - Objet Date parsé (ajouté pendant le traitement)
  */
 
@@ -50,7 +50,7 @@ const addToCollectionMap = (map, key, value) => {
 
 /**
  * Résout la couleur agrégée d'un ensemble d'entrées
- * Privilégie les entrées avec une couleur primaire (colorA)
+ * Privilégie les entrées avec une couleur
  * @param {CalendarEntry[]} entries - Les entrées à traiter
  * @returns {string|null} La couleur résolue ou null
  */
@@ -59,9 +59,9 @@ export const resolveAggregatedColor = entries => {
     return null
   }
 
-  const entryWithPrimaryColor = entries.find(entry => entry.colorA)
-  if (entryWithPrimaryColor) {
-    return entryWithPrimaryColor.colorA
+  const entryWithColor = entries.find(entry => entry.color)
+  if (entryWithColor) {
+    return entryWithColor.color
   }
 
   return null

@@ -17,7 +17,7 @@ import {formatNumber} from '@/utils/number.js'
 function determineColors(values, fifteenMinutesValues, dailyParameters) {
   const hasNegativeValue = values.some(v => v < 0)
   if (hasNegativeValue) {
-    return {colorA: fr.colors.decisions.background.flat.error.default, colorB: null}
+    return fr.colors.decisions.background.flat.error.default
   }
 
   const volumePreleveParam = dailyParameters?.find(p => p.nom_parametre === 'volume prélevé')
@@ -27,16 +27,16 @@ function determineColors(values, fifteenMinutesValues, dailyParameters) {
 
   if (volumePreleveIndex > -1 && !Number.isNaN(values[volumePreleveIndex])) {
     // Bleu si la donnée journalière pour le volume prélevé est présente
-    return {colorA: fr.colors.decisions.text.actionHigh.blueFrance.default, colorB: null}
+    return fr.colors.decisions.text.actionHigh.blueFrance.default
   }
 
   if (hasAnyData) {
     // Orange s'il y a d'autres données mais pas le volume prélevé journalier
-    return {colorA: fr.colors.decisions.background.flat.warning.default, colorB: null}
+    return fr.colors.decisions.background.flat.warning.default
   }
 
   // Gris si aucune donnée
-  return {colorA: 'grey', colorB: null}
+  return 'grey'
 }
 
 export function transformOutJsonToCalendarData(outJson) {
@@ -44,13 +44,12 @@ export function transformOutJsonToCalendarData(outJson) {
   return daily.map(({date, values, fifteenMinutesValues}) => {
     // Reformattage de la date pour dd-MM-yyyy
     const dateKey = format(parseISO(date), 'dd-MM-yyyy')
-    const {colorA, colorB} = determineColors(values, fifteenMinutesValues, outJson.dailyParameters)
+    const color = determineColors(values, fifteenMinutesValues, outJson.dailyParameters)
     return {
       date: dateKey,
       values,
       fifteenMinutesValues,
-      colorA,
-      colorB
+      color
     }
   })
 }
