@@ -5,7 +5,7 @@ export function normalizeString(string) {
     return string
   }
 
-  return deburr(string.toLowerCase())
+  return deburr(string.toLowerCase()).trim()
 }
 
 export function emptyStringToNull(obj) {
