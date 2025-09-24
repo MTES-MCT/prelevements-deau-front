@@ -23,6 +23,7 @@ import {processCalendarData, determineCalendarMode} from '@/utils/calendar.js'
  * @returns {boolean} returns.hasData - Indique si des données sont présentes
  * @returns {Date|null} returns.minDate - Date minimale des données
  * @returns {Date|null} returns.maxDate - Date maximale des données
+ * @returns {boolean} returns.hasErrors - Indique si des erreurs ont été rencontrées
  */
 export const useCalendarData = data => useMemo(() => {
   // Traitement initial des données
@@ -32,8 +33,21 @@ export const useCalendarData = data => useMemo(() => {
     entriesByMonth,
     entriesByYear,
     minDate,
-    maxDate
+    maxDate,
+    hasErrors
   } = processedData
+
+  // Si des erreurs sont détectées, retour d'un état d'erreur
+  if (hasErrors) {
+    return {
+      calendars: [],
+      mode: 'month',
+      hasData: false,
+      minDate: null,
+      maxDate: null,
+      hasErrors: true
+    }
+  }
 
   // Si aucune donnée valide, retour d'un état vide
   if (!minDate || !maxDate) {
@@ -42,7 +56,8 @@ export const useCalendarData = data => useMemo(() => {
       mode: 'month',
       hasData: false,
       minDate: null,
-      maxDate: null
+      maxDate: null,
+      hasErrors: false
     }
   }
 
@@ -73,6 +88,7 @@ export const useCalendarData = data => useMemo(() => {
     mode,
     hasData: true,
     minDate,
-    maxDate
+    maxDate,
+    hasErrors: false
   }
 }, [data])

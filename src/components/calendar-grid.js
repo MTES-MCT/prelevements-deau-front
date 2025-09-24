@@ -5,6 +5,7 @@
  */
 
 import {fr} from '@codegouvfr/react-dsfr'
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
 
 import CalendarGridDisplay from '@/components/ui/calendar-grid-display.js'
 import LegendCalendar from '@/components/ui/legend-calendar.js'
@@ -58,11 +59,28 @@ const CalendarGrid = ({
   onCellClick
 }) => {
   // Utilisation du hook personnalisé pour traiter les données
-  const {calendars, hasData} = useCalendarData(data)
+  const {calendars, hasData, hasErrors} = useCalendarData(data)
+
+  // Affichage d'une erreur si des données n'ont pu être traitées
+  if (hasErrors) {
+    return (
+      <Alert
+        severity='error'
+        title='Erreur de traitement des données'
+        description='Les données du calendrier contiennent des erreurs et ne peuvent pas être affichées.'
+      />
+    )
+  }
 
   // Affichage de la légende seule si aucune donnée
   if (!hasData) {
-    return <LegendCalendar labels={LEGEND_LABELS} />
+    return (
+      <Alert
+        severity='info'
+        title='Aucune donnée disponible'
+        description='Aucune donnée de prélèvement n’a été trouvée pour la période sélectionnée.'
+      />
+    )
   }
 
   // Affichage de la grille de calendriers avec leurs données

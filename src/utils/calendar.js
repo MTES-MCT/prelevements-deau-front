@@ -31,6 +31,7 @@ import {
  * @property {Map<string, CalendarEntry[]>} entriesByYear - Entrées groupées par année (yyyy)
  * @property {Date|null} minDate - Date minimale trouvée
  * @property {Date|null} maxDate - Date maximale trouvée
+ * @property {boolean} hasErrors - Indique si des erreurs ont été rencontrées
  */
 
 /**
@@ -106,36 +107,39 @@ export const processCalendarData = data => {
 
   // Traitement et validation des données
   for (const item of data ?? []) {
-    try {
-      const parsedDate = parse(item.date, 'dd-MM-yyyy', new Date())
+    const parsedDate = parse(item.date, 'dd-MM-yyyy', new Date())
 
-      if (!isValid(parsedDate)) {
-        console.warn(`Format de date invalide : ${item.date}. Format attendu : dd-MM-yyyy.`)
-        continue
+    if (!isValid(parsedDate)) {
+      // Arrêt à la première erreur
+      return {
+        entriesByDay: new Map(),
+        entriesByMonth: new Map(),
+        entriesByYear: new Map(),
+        minDate: null,
+        maxDate: null,
+        hasErrors: true
       }
+    }
 
-      const enhancedEntry = {...item, dateObj: parsedDate}
+    const enhancedEntry = {...item, dateObj: parsedDate}
 
-      // Génération des clés pour chaque niveau de granularité
-      const dayKey = format(parsedDate, 'yyyy-MM-dd')
-      const monthKey = format(parsedDate, 'yyyy-MM')
-      const yearKey = format(parsedDate, 'yyyy')
+    // Génération des clés pour chaque niveau de granularité
+    const dayKey = format(parsedDate, 'yyyy-MM-dd')
+    const monthKey = format(parsedDate, 'yyyy-MM')
+    const yearKey = format(parsedDate, 'yyyy')
 
-      // Ajout aux collections correspondantes
-      addToCollectionMap(entriesByDay, dayKey, enhancedEntry)
-      addToCollectionMap(entriesByMonth, monthKey, enhancedEntry)
-      addToCollectionMap(entriesByYear, yearKey, enhancedEntry)
+    // Ajout aux collections correspondantes
+    addToCollectionMap(entriesByDay, dayKey, enhancedEntry)
+    addToCollectionMap(entriesByMonth, monthKey, enhancedEntry)
+    addToCollectionMap(entriesByYear, yearKey, enhancedEntry)
 
-      // Mise à jour des bornes de dates
-      if (!minDate || parsedDate < minDate) {
-        minDate = parsedDate
-      }
+    // Mise à jour des bornes de dates
+    if (!minDate || parsedDate < minDate) {
+      minDate = parsedDate
+    }
 
-      if (!maxDate || parsedDate > maxDate) {
-        maxDate = parsedDate
-      }
-    } catch {
-      console.warn(`Erreur lors du traitement de la date : ${item.date}. Format attendu : dd-MM-yyyy.`)
+    if (!maxDate || parsedDate > maxDate) {
+      maxDate = parsedDate
     }
   }
 
@@ -144,6 +148,7 @@ export const processCalendarData = data => {
     entriesByMonth,
     entriesByYear,
     minDate,
-    maxDate
+    maxDate,
+    hasErrors: false
   }
 }
