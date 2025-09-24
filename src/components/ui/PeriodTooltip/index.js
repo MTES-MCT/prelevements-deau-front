@@ -42,9 +42,9 @@ const PeriodTooltip = ({periodLabel, parameters, alerts, children}) => {
         >
           <Typography sx={{fontWeight: 'bold'}}>{periodLabel}</Typography>
           <Box sx={{display: 'flex', flexDirection: 'column', gap: 2}}>
-            {parameters?.length && <MetasList metas={parameters} />}
+            {(parameters?.length > 0) && <MetasList metas={parameters} />}
 
-            {alerts?.length && (
+            {(alerts?.length > 0) && (
               <Box>
                 {uniqBy(alerts, 'alertLabel').map(alert => (
                   <CompactAlert
