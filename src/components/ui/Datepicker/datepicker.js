@@ -8,7 +8,7 @@ import MonthView from './month-view.js'
 import YearsView from './years-view.js'
 
 import CompactAlert from '@/components/ui/CompactAlert/index.js'
-import {getMonthsRange} from '@/lib/format-date.js'
+import {getMonthPeriodRange} from '@/lib/format-date.js'
 
 // Utilitaire pour obtenir les périodes disponibles
 function getAvailablePeriodsForView(viewType, selectablePeriods) {
@@ -82,7 +82,7 @@ const Datepicker = ({
         setSelectedPeriods([{type: 'year', value: period}])
       }
     } else if (isSelecting && rangeStart) {
-      const months = getMonthsRange(rangeStart, period, maxSelectablePeriods)
+      const months = getMonthPeriodRange(rangeStart, period, maxSelectablePeriods)
       setSelectedPeriods(months)
       setIsSelecting(false)
       setRangeStart(null)

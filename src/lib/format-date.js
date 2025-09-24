@@ -88,7 +88,7 @@ export function firstDayOfMonth(year, month) {
   return new Date(year, month, 1).getDay()
 }
 
-export function getMonthsRange(start, end, maxSelections) {
+export function getMonthPeriodRange(start, end, maxSelections) {
   const startValue = (start.year * 12) + start.month
   const endValue = (end.year * 12) + end.month
   const monthsCount = Math.abs(endValue - startValue) + 1
