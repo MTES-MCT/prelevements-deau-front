@@ -5,17 +5,7 @@ export function normalizeString(string) {
     return string
   }
 
-  return deburr(string.toLowerCase())
-}
-
-export function normalizeName(string) {
-  if (!string) {
-    return string
-  }
-
-  return string.split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ')
+  return deburr(string.toLowerCase()).trim()
 }
 
 export function emptyStringToNull(obj) {
