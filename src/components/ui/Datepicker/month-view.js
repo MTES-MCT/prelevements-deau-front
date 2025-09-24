@@ -1,3 +1,5 @@
+import {useMemo} from 'react'
+
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import Tooltip from '@codegouvfr/react-dsfr/Tooltip'
 import {Box, Typography} from '@mui/material'
@@ -28,12 +30,11 @@ const MonthView = ({
 }) => {
   const periodsGroupedByYear = groupBy(periods, 'year')
 
-  // Fonction pour déterminer les périodes sélectionnées
-  const getSelectedPeriods = () => periods.filter(period => isPeriodSelected(period))
+  // Memoize selected periods to avoid recalculating on every render
+  const selectedPeriods = useMemo(() => periods.filter(period => isPeriodSelected(period)), [periods, isPeriodSelected])
 
   // Fonction pour vérifier si un jour spécifique est le premier ou le dernier de la sélection
   const isDayBoundaryOfSelection = (year, month, day) => {
-    const selectedPeriods = getSelectedPeriods()
     if (selectedPeriods.length === 0) {
       return {isFirstDay: false, isLastDay: false}
     }
