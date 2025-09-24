@@ -8,7 +8,6 @@ import {fr} from '@codegouvfr/react-dsfr'
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 
 import CalendarGridDisplay from '@/components/ui/calendar-grid-display.js'
-import LegendCalendar from '@/components/ui/legend-calendar.js'
 import {useCalendarData} from '@/hook/use-calendar-data.js'
 
 /**
