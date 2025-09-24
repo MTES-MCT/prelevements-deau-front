@@ -104,7 +104,7 @@ const Datepicker = ({
   return (
     <Box className='bg-white border rounded-sm shadow-md p-4'>
       <Box className='flex flex-col gap-3'>
-        {maxSelectablePeriods !== null && (
+        {typeof maxSelectablePeriods === 'number' && maxSelectablePeriods > 0 && (
           <CompactAlert
             label={
               maxSelectablePeriods === 1
