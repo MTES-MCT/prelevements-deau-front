@@ -45,13 +45,13 @@ const CalendarCell = ({cellInfo, cellSize, renderTooltipContent, onClick}) => {
   }
 
   let style = {width: cellSize, height: cellSize}
-  let classes = 'rounded flex items-center justify-center text-xs sm:text-sm font-medium text-center transition-colors duration-150 ease-in-out border border-slate-200 dark:border-slate-700'
+  let classes = 'rounded flex items-center justify-center text-xs sm:text-sm font-medium text-center transition-colors duration-150 ease-in-out'
 
   if (color) {
     style = {...style, backgroundColor: color}
     classes += ' text-white'
   } else {
-    classes += ' bg-slate-50 text-slate-500 dark:bg-slate-900 dark:text-slate-400'
+    classes += ' bg-slate-50 text-slate-500 dark:bg-slate-900 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
   }
 
   const hasInteraction = Boolean(onClick && isInteractive)

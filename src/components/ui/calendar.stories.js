@@ -1,19 +1,36 @@
+import {fr} from '@codegouvfr/react-dsfr'
+
 import Calendar from './calendar.js'
 
 const meta = {
-  title: 'UI/Calendar',
+  title: 'Components/Calendar',
   component: Calendar,
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component: 'Composant Calendar affichant une grille de cellules avec titre et support de l\'interaction.'
+      }
+    }
+  },
   args: {}
 }
 
 export default meta
 
-const blue = '#000091'
-const orange = '#ff9940'
-const lightBlue = '#6e9bff'
+const blue = fr.colors.decisions.artwork.major.blueFrance.default
+const orange = fr.colors.decisions.background.actionHigh.warning.hover
+const lightBlue = fr.colors.decisions.background.actionHigh.info.hover
+const gray = fr.colors.decisions.background.actionHigh.grey.active
 
-export const YearExample = {
+export const ExempleAnnée = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'Affichage d\'une année complète en mode compact (4 colonnes). Les cases bleues représentent des mois avec données complètes, et les oranges des mois avec données comportant une anomalie.'
+      }
+    }
+  },
   args: {
     title: '2024',
     compactMode: true,
@@ -29,42 +46,76 @@ export const YearExample = {
       {key: 'sept', label: 'Sept', color: blue},
       {key: 'oct', label: 'Oct', color: blue},
       {key: 'nov', label: 'Nov', color: blue},
-      {key: 'dec', label: 'Dec', color: blue}
+      {key: 'dec', label: 'Déc', color: blue}
     ]
   }
 }
 
-const julyDays = Array.from({length: 31}).map((_, index) => {
-  const day = index + 1
-  const key = `2024-07-${String(day).padStart(2, '0')}`
-  let color = blue
-
-  if (day === 9 || day === 10) {
-    color = lightBlue
-  }
-
-  return {
-    key,
-    label: `${day}`,
-    color,
-    isInteractive: day === 9 || day === 10
-  }
-})
-
-const julyPlaceholders = Array.from({length: 1}).map((_, index) => ({
-  key: `placeholder-${index}`,
-  isPlaceholder: true
-}))
-
-export const MonthExample = {
+export const ExempleMois = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'Illustration d\'un cas concret pour les prélèvements sur un mois. Les couleurs représentent différents statuts : prélèvement effectué (bleu), alerte (orange), pas de prélèvement (bleu clair), prélèvement manquant (gris).'
+      }
+    }
+  },
   args: {
     title: 'Juillet',
     compactMode: false,
-    cells: [...julyPlaceholders, ...julyDays]
+    cells: [
+      {key: '1', label: '1', color: blue},
+      {key: '2', label: '2', color: blue},
+      {key: '3', label: '3', color: blue},
+      {key: '4', label: '4', color: blue},
+      {key: '5', label: '5', color: blue},
+      {key: '6', label: '6', color: blue},
+      {key: '7', label: '7', color: gray},
+      {key: '8', label: '8', color: blue},
+      {
+        key: '9',
+        label: '9',
+        color: lightBlue,
+        isInteractive: true
+      },
+      {
+        key: '10',
+        label: '10',
+        color: lightBlue,
+        isInteractive: true
+      },
+      {key: '11', label: '11', color: blue},
+      {key: '12', label: '12', color: lightBlue},
+      {key: '13', label: '13', color: blue},
+      {key: '14', label: '14', color: gray},
+      {key: '15', label: '15', color: orange},
+      {key: '16', label: '16', color: orange},
+      {key: '17', label: '17', color: orange},
+      {key: '18', label: '18', color: orange},
+      {key: '19', label: '19', color: blue},
+      {key: '20', label: '20', color: blue},
+      {key: '21', label: '21', color: gray},
+      {key: '22', label: '22', color: blue},
+      {key: '23', label: '23', color: blue},
+      {key: '24', label: '24', color: blue},
+      {key: '25', label: '25', color: lightBlue},
+      {key: '26', label: '26', color: blue},
+      {key: '27', label: '27', color: blue},
+      {key: '28', label: '28', color: blue},
+      {key: '29', label: '29', color: blue},
+      {key: '30', label: '30', color: blue},
+      {key: '31', label: '31', color: blue}
+    ]
   }
 }
 
-export const MultiYearExample = {
+export const ExemplePlusieursAnnées = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'Affichage de plusieurs années en mode compact. Les cases bleues indiquent des années avec données complètes, les oranges des années avec données comportant une anomalie.'
+      }
+    }
+  },
   args: {
     title: '2018 - 2024',
     compactMode: true,
@@ -80,7 +131,14 @@ export const MultiYearExample = {
   }
 }
 
-export const InteractiveExample = {
+export const ExempleInteractif = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'Exemple de calendrier interactif avec tooltips et gestion de clics. Survolez et cliquez sur les cases pour voir les interactions. Un icône de recherche apparaît au survol des cases interactives.'
+      }
+    }
+  },
   args: {
     title: 'Interactions',
     compactMode: true,
