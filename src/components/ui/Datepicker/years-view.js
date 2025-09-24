@@ -6,6 +6,20 @@ const getSelectedYearIndices = (years, isPeriodSelected) =>
     .map((year, idx) => isPeriodSelected(year) ? idx : null)
     .filter(idx => idx !== null)
 
+// Helper pour arrondir les extrémités de chaque ligne
+const getRowBoundaryClasses = idx => {
+  let classes = ''
+  if (idx % 5 === 0) {
+    classes += ' rounded-l-full'
+  }
+
+  if (idx % 5 === 4) {
+    classes += ' rounded-r-full'
+  }
+
+  return classes
+}
+
 const YearsView = ({years, isPeriodSelected, handlePeriodClick}) => {
   const selectedIndices = getSelectedYearIndices(years, isPeriodSelected)
   const firstSelected = selectedIndices[0]
@@ -23,10 +37,6 @@ const YearsView = ({years, isPeriodSelected, handlePeriodClick}) => {
           const isFirstSelected = idx === firstSelected
           const isLastSelected = idx === lastSelected
 
-          // Pour arrondir les extrémités de chaque ligne
-          const isFirstOfRow = idx % 5 === 0
-          const isLastOfRow = idx % 5 === 4
-
           let yearClass = 'text-center p-3 text-xs mt-1 transition-colors'
 
           if (isSelected) {
@@ -34,25 +44,11 @@ const YearsView = ({years, isPeriodSelected, handlePeriodClick}) => {
               yearClass += ' bg-[#000091] text-white rounded-full'
             } else {
               yearClass += ' bg-[#DBE9F4]'
-              // Arrondir les extrémités de la ligne sauf si début/fin sélection
-              if (isFirstOfRow) {
-                yearClass += ' rounded-l-full'
-              }
-
-              if (isLastOfRow) {
-                yearClass += ' rounded-r-full'
-              }
+              yearClass += getRowBoundaryClasses(idx)
             }
           } else {
             yearClass += ' text-gray-600 hover:bg-gray-100 rounded'
-            // Arrondir les extrémités de la ligne
-            if (isFirstOfRow) {
-              yearClass += ' rounded-l-full'
-            }
-
-            if (isLastOfRow) {
-              yearClass += ' rounded-r-full'
-            }
+            yearClass += getRowBoundaryClasses(idx)
           }
 
           return (
