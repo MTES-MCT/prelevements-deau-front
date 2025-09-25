@@ -30,7 +30,8 @@ const BaseCell = ({label, ariaLabel, interactive, color, size, onActivate, toolt
     style = {...style, backgroundColor: color}
     classes += ' text-white'
   } else {
-    classes += ' bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'
+    style = {...style, backgroundColor: dsfr.colors.decisions.background.actionHigh.grey.active}
+    classes += ' text-white'
   }
 
   if (interactive) {
