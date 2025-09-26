@@ -16,6 +16,8 @@ import {useMemo} from 'react'
 import {fr} from '@codegouvfr/react-dsfr'
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 
+import {computeCalendarKey} from './util.js'
+
 import Calendar from '@/components/ui/Calendar/index.js'
 import LegendCalendar from '@/components/ui/legend-calendar.js'
 
@@ -26,21 +28,6 @@ const defaultLegendLabels = [
   {color: fr.colors.decisions.background.actionHigh.info.default, label: 'Pas de prélèvement'},
   {color: fr.colors.decisions.text.disabled.grey.default, label: 'Non déclaré / pas de déclaration'}
 ]
-
-/**
- * Compute a stable unique key for a calendar dataset without relying on its index.
- * Strategy: collect date (or id fallback) fields, sort, join and hash with a simple 31-based hash.
- */
-function computeCalendarKey(values) {
-  // Simplified key strategy: concatenate the ordered list of dates
-  // Assumption (per project domain): each object has a unique 'date' string inside the calendar dataset.
-  if (!Array.isArray(values) || values.length === 0) {
-    return 'cal-empty'
-  }
-
-  // Keep original order; if order is not guaranteed you could add .sort() before join.
-  return values.map(v => v.date).join('|')
-}
 
 const CalendarGrid = ({calendars, onClick, hoverComponent: HoverComponent, legendLabels = defaultLegendLabels}) => {
   // Sort sub-arrays by the earliest date of each calendar
