@@ -86,7 +86,7 @@ const MonthView = ({
                   <Typography sx={{fontWeight: 700}}>{monthLabels[period.month]} {period.year}</Typography>
                   <Box onClick={() => handlePeriodClick(period)}>
                     <Box className='grid grid-cols-7 text-xs'>
-                      {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map(day => (
+                      {['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'].map(day => (
                         <Box key={uniqueId()} className='text-center p-1'>
                           {day}
                         </Box>
