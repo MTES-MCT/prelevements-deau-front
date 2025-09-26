@@ -11,9 +11,9 @@ import {
   getDocumentsFromPreleveur,
   getPointPrelevement
 } from '@/app/api/points-prelevement.js'
-import Document from '@/components/document.js'
 import ExploitationsList from '@/components/exploitations/exploitations-list.js'
 import {getUsagesColors} from '@/components/map/legend-colors.js'
+import DocumentsList from '@/components/ui/documents/documents-list.js'
 import LabelValue from '@/components/ui/label-value.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 
@@ -91,16 +91,9 @@ const Page = async ({params}) => {
           </Button>
         </div>
         {documents?.length > 0 ? (
-          <div className='border m-3 bg-white'>
-            {documents.map(document => (
-              <div
-                key={document.id_document}
-                className='flex w-full even:bg-[#f5f5fe]'
-              >
-                <Document document={document} className='w-full' />
-              </div>
-            ))}
-          </div>
+          <DocumentsList
+            documents={documents}
+          />
         ) : (
           <p><i>Pas de documents</i></p>
         )}

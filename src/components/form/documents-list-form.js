@@ -12,7 +12,7 @@ import {
 } from '@mui/material'
 
 import {deleteDocument} from '@/app/api/points-prelevement.js'
-import Document from '@/components/document.js'
+import DocumentsList from '@/components/ui/documents/documents-list.js'
 
 const DocumentsListForm = ({documents, idPreleveur}) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -42,24 +42,10 @@ const DocumentsListForm = ({documents, idPreleveur}) => {
   return (
     documentsList?.length > 0 ? (
       <>
-        <div className='border m-3 bg-white'>
-          {documentsList.map(d => (
-            <div
-              key={d.id_document}
-              className='flex w-full even:bg-[#f5f5fe]'
-            >
-              <Document document={d} className='w-full' />
-              <div className='flex justify-end m-auto pr-3'>
-                <Button
-                  priority='secondary'
-                  iconId='fr-icon-delete-line'
-                  size='small'
-                  onClick={() => handleDialog(d._id)}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
+        <DocumentsList
+          documents={documentsList}
+          handleDelete={handleDialog}
+        />
         {error && (
           <div className='text-center p-5 text-red-500'>
             <p><b>Un problème est survenu :</b></p>
