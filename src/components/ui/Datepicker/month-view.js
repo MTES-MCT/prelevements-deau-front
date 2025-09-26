@@ -1,4 +1,4 @@
-import {useMemo} from 'react'
+import {useMemo, useState} from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
 import {Button} from '@codegouvfr/react-dsfr/Button'
@@ -29,6 +29,7 @@ const MonthView = ({
   isPeriodSelected,
   handlePeriodClick
 }) => {
+  const [hoveredMonth, setHoveredMonth] = useState(null)
   const periodsGroupedByYear = groupBy(periods, 'year')
 
   // Memoize selected periods to avoid recalculating on every render
@@ -81,9 +82,18 @@ const MonthView = ({
               const isSelected = isPeriodSelected(period)
               const totalDays = daysInMonth(period.year, period.month)
               const startOffset = (firstDayOfMonth(period.year, period.month) + 6) % 7
+              const isHovered = hoveredMonth && hoveredMonth.year === period.year && hoveredMonth.month === period.month
 
               return (
-                <Box key={`${period.year}-${period.month}`}>
+                <Box
+                  key={`${period.year}-${period.month}`}
+                  onMouseEnter={() => {
+                    if (!isSelected) {
+                      setHoveredMonth({year: period.year, month: period.month})
+                    }
+                  }}
+                  onMouseLeave={() => setHoveredMonth(null)}
+                >
                   <Typography sx={{fontWeight: 700}}>{monthLabels[period.month]} {period.year}</Typography>
                   <Box onClick={() => handlePeriodClick(period)}>
                     <Box className='grid grid-cols-7 text-xs'>
@@ -131,6 +141,21 @@ const MonthView = ({
                             } else if (isLastOfWeek) {
                               dayClass += ' rounded-r-full'
                             }
+                          }
+                        } else if (isHovered) {
+                          dayStyle = {
+                            background: fr.colors.decisions.background.alt.blueFrance.default
+                          }
+                          if (isFirstOfWeek) {
+                            dayClass += ' rounded-l-full'
+                          } else if (isLastOfWeek) {
+                            dayClass += ' rounded-r-full'
+                          }
+
+                          if (dayNumber === 1) {
+                            dayClass += ' rounded-l-full'
+                          } else if (dayNumber === totalDays) {
+                            dayClass += ' rounded-r-full'
                           }
                         } else {
                           dayClass += ' rounded'
