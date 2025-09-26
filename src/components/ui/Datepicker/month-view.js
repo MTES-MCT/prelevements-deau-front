@@ -4,7 +4,7 @@ import {fr} from '@codegouvfr/react-dsfr'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import Tooltip from '@codegouvfr/react-dsfr/Tooltip'
 import {Box, Typography} from '@mui/material'
-import {groupBy, uniqueId} from 'lodash-es'
+import {groupBy} from 'lodash-es'
 
 import {daysInMonth, firstDayOfMonth} from '@/lib/format-date.js'
 
@@ -88,13 +88,20 @@ const MonthView = ({
                   <Box onClick={() => handlePeriodClick(period)}>
                     <Box className='grid grid-cols-7 text-xs'>
                       {['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'].map(day => (
-                        <Box key={uniqueId()} className='text-center p-1'>
+                        <Box key={day} className='text-center p-1'>
                           {day}
                         </Box>
                       ))}
-                      {Array.from({length: startOffset}).map(() => (
-                        <Box key={uniqueId()} className='p-1' />
-                      ))}
+                      {Array.from({length: startOffset}).map((_, offset) => {
+                        // Calcul du jour de la semaine attendu pour la case vide
+                        const weekDay = (offset + 1) % 7 // 0 = lundi, 6 = dimanche
+                        return (
+                          <Box
+                            key={weekDay}
+                            className='p-1'
+                          />
+                        )
+                      })}
                       {Array.from({length: totalDays}).map((_, day) => {
                         const dayNumber = day + 1
                         const dayPosition = (startOffset + day) % 7 // Position dans la semaine (0=lundi, 6=dimanche)
