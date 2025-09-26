@@ -1,5 +1,6 @@
 import {useMemo} from 'react'
 
+import {fr} from '@codegouvfr/react-dsfr'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import Tooltip from '@codegouvfr/react-dsfr/Tooltip'
 import {Box, Typography} from '@mui/material'
@@ -103,13 +104,21 @@ const MonthView = ({
                         // Vérifier si ce jour est le premier ou le dernier de la sélection globale
                         const {isFirstDay, isLastDay} = isDayBoundaryOfSelection(period.year, period.month, dayNumber)
 
-                        let dayClass = 'text-center p-1 text-xs mt-1'
+                        let dayClass = 'text-center p-1 text-xs mt-1 cursor-pointer'
+                        let dayStyle = {}
 
                         if (isSelected) {
                           if (isFirstDay || isLastDay) {
-                            dayClass += ' bg-[#000091] text-white rounded-full'
+                            dayClass += ' rounded-full'
+                            dayStyle = {
+                              background: fr.colors.decisions.background.active.blueFrance.default,
+                              color: fr.colors.decisions.background.default.grey.default
+                            }
                           } else {
-                            dayClass += ' bg-[#DBE9F4] text-[#000091]'
+                            dayStyle = {
+                              background: fr.colors.decisions.background.contrast.blueEcume.default,
+                              color: fr.colors.decisions.background.active.blueFrance.default
+                            }
                             if (isFirstOfWeek) {
                               dayClass += ' rounded-l-full'
                             } else if (isLastOfWeek) {
@@ -117,11 +126,15 @@ const MonthView = ({
                             }
                           }
                         } else {
-                          dayClass += ' text-gray-600 hover:bg-gray-100 rounded'
+                          dayClass += ' rounded'
                         }
 
                         return (
-                          <Box key={`${period.year}-${period.month}-${dayNumber}`} className={dayClass}>
+                          <Box
+                            key={`${period.year}-${period.month}-${dayNumber}`}
+                            className={dayClass}
+                            style={dayStyle}
+                          >
                             {dayNumber}
                           </Box>
                         )

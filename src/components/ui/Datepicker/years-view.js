@@ -1,3 +1,4 @@
+import {fr} from '@codegouvfr/react-dsfr'
 import {Box, Typography} from '@mui/material'
 
 // Trouve les indices des années sélectionnées
@@ -5,20 +6,6 @@ const getSelectedYearIndices = (years, isPeriodSelected) =>
   years
     .map((year, idx) => isPeriodSelected(year) ? idx : null)
     .filter(idx => idx !== null)
-
-// Helper pour arrondir les extrémités de chaque ligne
-const getRowBoundaryClasses = idx => {
-  let classes = ''
-  if (idx % 5 === 0) {
-    classes += ' rounded-l-full'
-  }
-
-  if (idx % 5 === 4) {
-    classes += ' rounded-r-full'
-  }
-
-  return classes
-}
 
 const YearsView = ({years, isPeriodSelected, handlePeriodClick}) => {
   const selectedIndices = getSelectedYearIndices(years, isPeriodSelected)
@@ -37,22 +24,39 @@ const YearsView = ({years, isPeriodSelected, handlePeriodClick}) => {
           const isFirstSelected = idx === firstSelected
           const isLastSelected = idx === lastSelected
 
-          let yearClass = 'text-center p-3 text-xs mt-1 transition-colors'
+          let yearClass = 'text-center p-3 text-xs mt-1 cursor-pointer'
+          let yearStyle = {}
+
+          if (idx % 5 === 0) {
+            yearClass += ' rounded-l-full'
+          }
+
+          if (idx % 5 === 4) {
+            yearClass += ' rounded-r-full'
+          }
 
           if (isSelected) {
             if (isFirstSelected || isLastSelected) {
-              yearClass += ' bg-[#000091] text-white rounded-full'
+              yearClass += ' rounded-full'
+              yearStyle = {
+                background: fr.colors.decisions.background.active.blueFrance.default,
+                color: fr.colors.decisions.background.default.grey.default
+              }
             } else {
-              yearClass += ' bg-[#DBE9F4]'
-              yearClass += getRowBoundaryClasses(idx)
+              yearStyle = {
+                background: fr.colors.decisions.background.contrast.blueEcume.default,
+                color: fr.colors.decisions.background.active.blueFrance.default
+              }
             }
-          } else {
-            yearClass += ' text-gray-600 hover:bg-gray-100 rounded'
-            yearClass += getRowBoundaryClasses(idx)
           }
 
           return (
-            <Box key={year} className={yearClass} onClick={() => handlePeriodClick(year)}>
+            <Box
+              key={year}
+              className={yearClass}
+              style={yearStyle}
+              onClick={() => handlePeriodClick(year)}
+            >
               <Typography>{year}</Typography>
             </Box>
           )
