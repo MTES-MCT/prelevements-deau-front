@@ -3,7 +3,7 @@ import {useMemo} from 'react'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import Tooltip from '@codegouvfr/react-dsfr/Tooltip'
 import {Box, Typography} from '@mui/material'
-import {groupBy, uniqueId} from 'lodash'
+import {groupBy, uniqueId} from 'lodash-es'
 
 import {daysInMonth, firstDayOfMonth} from '@/lib/format-date.js'
 

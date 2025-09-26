@@ -2,7 +2,7 @@ import {useState} from 'react'
 
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Box} from '@mui/system'
-import {map, range} from 'lodash'
+import {map, range} from 'lodash-es'
 
 import MonthView from './month-view.js'
 import YearsView from './years-view.js'
