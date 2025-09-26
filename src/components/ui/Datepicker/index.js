@@ -66,6 +66,7 @@ const DatepickerTrigger = ({
   const [isDatepickerOpen, setIsDatepickerOpen] = useState(false)
   const [selectedPeriods, setSelectedPeriods] = useState(initialSelectedPeriodsRef.current)
   const [viewType, setViewType] = useState(currentViewType)
+  const [dropdownStyle, setDropdownStyle] = useState({})
   const containerRef = useRef(null)
 
   useEffect(() => {
@@ -79,9 +80,81 @@ const DatepickerTrigger = ({
       }
     }
 
+    // Calculer la position optimale du dropdown
+    function calculateDropdownPosition() {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect()
+        const viewportWidth = window.innerWidth
+        const viewportHeight = window.innerHeight
+
+        // Largeurs possibles du datepicker selon les breakpoints
+        let dropdownWidth = 300 // MinWidth par défaut
+        if (viewportWidth >= 900) { // Md breakpoint
+          dropdownWidth = 700
+        } else if (viewportWidth >= 600) { // Sm breakpoint
+          dropdownWidth = 400
+        } else {
+          dropdownWidth = Math.min(viewportWidth * 0.95, 300)
+        }
+
+        const spaceRight = viewportWidth - rect.left
+        const spaceLeft = rect.right
+        const spaceBelow = viewportHeight - rect.bottom
+
+        const style = {
+          minWidth: '300px',
+          maxWidth: '95vw',
+          top: '100%',
+          marginTop: '4px',
+          left: 'auto',
+          right: 'auto',
+          transform: 'none'
+        }
+
+        // Largeur responsive
+        if (viewportWidth >= 900) {
+          style.width = '700px'
+        } else if (viewportWidth >= 600) {
+          style.width = '450px'
+        } else {
+          style.width = '100%'
+        }
+
+        // Position horizontale
+        if (spaceRight >= dropdownWidth) {
+          // Assez de place à droite, aligner à gauche
+          style.left = '0'
+        } else if (spaceLeft >= dropdownWidth) {
+          // Pas assez de place à droite mais assez à gauche, aligner à droite
+          style.right = '0'
+        } else {
+          // Pas assez de place des deux côtés, centrer
+          style.left = '50%'
+          style.transform = 'translateX(-50%)'
+          style.width = '95vw'
+        }
+
+        // Position verticale (si pas assez de place en bas)
+        if (spaceBelow < 400 && rect.top > 400) {
+          style.top = 'auto'
+          style.bottom = '100%'
+          style.marginTop = '0'
+          style.marginBottom = '4px'
+        }
+
+        setDropdownStyle(style)
+      }
+    }
+
+    calculateDropdownPosition()
+    window.addEventListener('resize', calculateDropdownPosition)
+    window.addEventListener('scroll', calculateDropdownPosition)
     document.addEventListener('mousedown', handleClickOutside)
+
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
+      window.removeEventListener('resize', calculateDropdownPosition)
+      window.removeEventListener('scroll', calculateDropdownPosition)
     }
   }, [isDatepickerOpen])
 
@@ -125,14 +198,16 @@ const DatepickerTrigger = ({
       </Box>
 
       {isDatepickerOpen && (
-        <Datepicker
-          currentViewType={viewType}
-          defaultInitialViewType={defaultInitialViewType}
-          defaultSelectedPeriods={selectedPeriods}
-          selectablePeriods={selectablePeriods}
-          maxSelectablePeriods={maxSelectablePeriods}
-          onValidateSelection={handleValidateSelection}
-        />
+        <Box className='absolute z-1' sx={dropdownStyle}>
+          <Datepicker
+            currentViewType={viewType}
+            defaultInitialViewType={defaultInitialViewType}
+            defaultSelectedPeriods={selectedPeriods}
+            selectablePeriods={selectablePeriods}
+            maxSelectablePeriods={maxSelectablePeriods}
+            onValidateSelection={handleValidateSelection}
+          />
+        </Box>
       )}
     </Box>
   )

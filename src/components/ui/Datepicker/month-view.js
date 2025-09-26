@@ -60,7 +60,7 @@ const MonthView = ({
   }
 
   return (
-    <Box className='flex flex-col gap-4'>
+    <Box>
       {Object.entries(periodsGroupedByYear).map(([year, monthPeriods]) => (
         <Box key={year} className='space-y-4'>
           <Box className='flex items-center gap-1'>
@@ -77,7 +77,18 @@ const MonthView = ({
             <Typography sx={{fontWeight: 700}}>{year}</Typography>
           </Box>
 
-          <Box className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6'>
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 24,
+              gridTemplateColumns: {
+                xs: '1fr',
+                sm: '1fr',
+                md: '1fr 1fr',
+                lg: '1fr 1fr 1fr'
+              }
+            }}
+          >
             {monthPeriods.map(period => {
               const isSelected = isPeriodSelected(period)
               const totalDays = daysInMonth(period.year, period.month)
@@ -103,22 +114,15 @@ const MonthView = ({
                         </Box>
                       ))}
                       {Array.from({length: startOffset}).map((_, offset) => {
-                        // Calcul du jour de la semaine attendu pour la case vide
-                        const weekDay = (offset + 1) % 7 // 0 = lundi, 6 = dimanche
-                        return (
-                          <Box
-                            key={weekDay}
-                            className='p-1'
-                          />
-                        )
+                        const weekDay = (offset + 1) % 7
+                        return <Box key={weekDay} className='p-1' />
                       })}
                       {Array.from({length: totalDays}).map((_, day) => {
                         const dayNumber = day + 1
-                        const dayPosition = (startOffset + day) % 7 // Position dans la semaine (0=lundi, 6=dimanche)
+                        const dayPosition = (startOffset + day) % 7
                         const isFirstOfWeek = dayPosition === 0
                         const isLastOfWeek = dayPosition === 6
 
-                        // Vérifier si ce jour est le premier ou le dernier de la sélection globale
                         const {isFirstDay, isLastDay} = isDayBoundaryOfSelection(period.year, period.month, dayNumber)
 
                         let dayClass = 'text-center p-1 text-xs mt-1 cursor-pointer'
