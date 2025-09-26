@@ -16,6 +16,12 @@ const meta = {
     )
   ],
   argTypes: {
+    buttonLabel: {
+      control: {type: 'text'},
+      description: `Label affiché au-dessus du bouton du sélecteur (optionnel).
+
+**Type**: \`string\``
+    },
     defaultInitialViewType: {
       description: `Vue initiale du sélecteur.
 
@@ -78,6 +84,7 @@ const meta = {
 const Wrapper = ({
   defaultInitialViewType,
   currentViewType,
+  buttonLabel = 'Modifier la période d\'observation',
   defaultSelectedPeriods: defaultPeriodsFromArgs,
   ...props
 }) => {
@@ -91,6 +98,7 @@ const Wrapper = ({
     <div>
       <DatepickerTrigger
         {...props}
+        buttonLabel={buttonLabel}
         defaultInitialViewType={defaultInitialViewType}
         currentViewType={currentViewType}
         defaultSelectedPeriods={defaultPeriods}

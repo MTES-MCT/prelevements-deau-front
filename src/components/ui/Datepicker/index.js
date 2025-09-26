@@ -5,6 +5,7 @@ import Tooltip from '@codegouvfr/react-dsfr/Tooltip.js'
 import {Box} from '@mui/system'
 
 import Datepicker from './datepicker.js'
+import { Typography } from '@mui/material'
 
 function getLabelForSelectedPeriods(selectedPeriods) {
   if (!selectedPeriods || selectedPeriods.length === 0) {
@@ -52,6 +53,7 @@ function getLabelForSelectedPeriods(selectedPeriods) {
 }
 
 const DatepickerTrigger = ({
+  buttonLabel,
   defaultInitialViewType,
   currentViewType,
   defaultSelectedPeriods,
@@ -104,9 +106,12 @@ const DatepickerTrigger = ({
   return (
     <Box ref={containerRef} className='relative inline-block'>
       <Box className='flex gap-1'>
-        <Button className='fr-input w-fit' onClick={() => setIsDatepickerOpen(open => !open)}>
-          {getLabelForSelectedPeriods(selectedPeriods)}
-        </Button>
+        <Box>
+          {buttonLabel && <Typography className='pb-1'>{buttonLabel}</Typography>}
+          <Button className='fr-input w-fit' onClick={() => setIsDatepickerOpen(open => !open)}>
+            {getLabelForSelectedPeriods(selectedPeriods)}
+          </Button>
+        </Box>
 
         {(!isDatepickerOpen && selectedPeriods.length > 0) && (
           <Tooltip title='Réinitialiser la sélection'>
