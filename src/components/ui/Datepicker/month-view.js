@@ -74,7 +74,7 @@ const MonthView = ({
                 />
               </Tooltip>
             )}
-            <Typography sx={{fontWeight: 700}}>{year}</Typography>
+            <Typography variant='h6'>{year}</Typography>
           </Box>
 
           <Box
@@ -105,7 +105,7 @@ const MonthView = ({
                   }}
                   onMouseLeave={() => setHoveredMonth(null)}
                 >
-                  <Typography sx={{fontWeight: 700}}>{monthLabels[period.month]} {period.year}</Typography>
+                  <Typography variant='subtitle1' sx={{fontWeight: 500}}>{monthLabels[period.month]} {period.year}</Typography>
                   <Box onClick={() => handlePeriodClick(period)}>
                     <Box className='grid grid-cols-7 text-xs'>
                       {['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'].map(day => (

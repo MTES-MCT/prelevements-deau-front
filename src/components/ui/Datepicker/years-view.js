@@ -14,7 +14,7 @@ const YearsView = ({years, isPeriodSelected, handlePeriodClick}) => {
 
   return (
     <Box className='flex flex-col gap-1'>
-      <Typography sx={{fontWeight: 700}}>
+      <Typography variant='h6'>
         {years.length > 1 ? `${years[0]} - ${years.at(-1)}` : years[0]}
       </Typography>
 
