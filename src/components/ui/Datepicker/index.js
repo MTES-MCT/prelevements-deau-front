@@ -2,10 +2,10 @@ import {useState, useRef, useEffect} from 'react'
 
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import Tooltip from '@codegouvfr/react-dsfr/Tooltip.js'
+import {Typography} from '@mui/material'
 import {Box} from '@mui/system'
 
 import Datepicker from './datepicker.js'
-import { Typography } from '@mui/material'
 
 function getLabelForSelectedPeriods(selectedPeriods) {
   if (!selectedPeriods || selectedPeriods.length === 0) {
