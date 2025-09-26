@@ -1,4 +1,4 @@
-import {useState} from 'react'
+import {useState, useEffect} from 'react'
 
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Box} from '@mui/system'
@@ -50,6 +50,14 @@ const Datepicker = ({
   const [rangeStart, setRangeStart] = useState(null)
   const [isSelecting, setIsSelecting] = useState(false)
 
+  // Synchronise la vue et la sélection à chaque ouverture ou reset
+  useEffect(() => {
+    setZoomLevel(currentViewType)
+    setSelectedPeriods(defaultSelectedPeriods)
+    setIsSelecting(false)
+    setRangeStart(null)
+  }, [defaultSelectedPeriods, currentViewType])
+
   // Zoom out vers la vue années
   const handleZoomOutToYears = () => {
     if (defaultInitialViewType !== zoomLevel) {
@@ -94,6 +102,7 @@ const Datepicker = ({
   }
 
   const handleReset = () => {
+    setZoomLevel(currentViewType)
     setSelectedPeriods(defaultSelectedPeriods || [])
     setIsSelecting(false)
     setRangeStart(null)

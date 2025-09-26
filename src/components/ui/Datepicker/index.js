@@ -63,6 +63,7 @@ const DatepickerTrigger = ({
 
   const [isDatepickerOpen, setIsDatepickerOpen] = useState(false)
   const [selectedPeriods, setSelectedPeriods] = useState(initialSelectedPeriodsRef.current)
+  const [viewType, setViewType] = useState(currentViewType)
   const containerRef = useRef(null)
 
   useEffect(() => {
@@ -86,10 +87,17 @@ const DatepickerTrigger = ({
     setSelectedPeriods(periods)
     setIsDatepickerOpen(false)
     onSelectionChange(periods)
+    // Détecte la vue à la validation
+    if (periods.length > 0 && periods[0].type === 'year') {
+      setViewType('years')
+    } else if (periods.length > 0 && periods[0].type === 'month') {
+      setViewType('months')
+    }
   }
 
   const handleResetSelection = () => {
     setSelectedPeriods(defaultSelectedPeriods || [])
+    setViewType(currentViewType)
     onSelectionChange(defaultSelectedPeriods || [])
   }
 
@@ -113,7 +121,7 @@ const DatepickerTrigger = ({
 
       {isDatepickerOpen && (
         <Datepicker
-          currentViewType={currentViewType}
+          currentViewType={viewType}
           defaultInitialViewType={defaultInitialViewType}
           defaultSelectedPeriods={selectedPeriods}
           selectablePeriods={selectablePeriods}
