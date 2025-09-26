@@ -105,23 +105,23 @@ const DatepickerTrigger = ({
 
   return (
     <Box ref={containerRef} className='relative inline-block'>
-      <Box className='flex gap-1'>
-        <Box>
-          {buttonLabel && <Typography className='pb-1'>{buttonLabel}</Typography>}
-          <Button className='fr-input w-fit' onClick={() => setIsDatepickerOpen(open => !open)}>
+      <Box className='flex flex-col gap-1'>
+        {buttonLabel && <Typography className='pb-1'>{buttonLabel}</Typography>}
+        <Box className='flex items-center'>
+          <Button className='fr-input w-full text-left' onClick={() => setIsDatepickerOpen(open => !open)}>
             {getLabelForSelectedPeriods(selectedPeriods)}
           </Button>
-        </Box>
 
-        {(!isDatepickerOpen && selectedPeriods.length > 0) && (
-          <Tooltip title='Réinitialiser la sélection'>
-            <Button
-              priority='tertiary no outline'
-              iconId='fr-icon-close-circle-line'
-              onClick={handleResetSelection}
-            />
-          </Tooltip>
-        )}
+          {(!isDatepickerOpen && selectedPeriods.length > 0) && (
+            <Tooltip title='Réinitialiser la sélection'>
+              <Button
+                priority='tertiary no outline'
+                iconId='fr-icon-close-circle-line'
+                onClick={handleResetSelection}
+              />
+            </Tooltip>
+          )}
+        </Box>
       </Box>
 
       {isDatepickerOpen && (
