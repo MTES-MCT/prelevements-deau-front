@@ -70,6 +70,11 @@ const DatepickerTrigger = ({
   const containerRef = useRef(null)
 
   useEffect(() => {
+    setSelectedPeriods(defaultSelectedPeriods || [])
+    setViewType(currentViewType)
+  }, [defaultSelectedPeriods, currentViewType])
+
+  useEffect(() => {
     if (!isDatepickerOpen) {
       return
     }
@@ -120,26 +125,38 @@ const DatepickerTrigger = ({
           style.width = '100%'
         }
 
-        // Position horizontale
+        // Position horizontale - Vérifier l'espace disponible
         if (spaceRight >= dropdownWidth) {
-          // Assez de place à droite, aligner à gauche
+          // Assez de place à droite, aligner à gauche du trigger
           style.left = '0'
+          style.right = 'auto'
         } else if (spaceLeft >= dropdownWidth) {
-          // Pas assez de place à droite mais assez à gauche, aligner à droite
+          // Pas assez de place à droite mais assez à gauche, aligner à droite du trigger
+          style.left = 'auto'
           style.right = '0'
         } else {
-          // Pas assez de place des deux côtés, centrer
+          // Pas assez de place des deux côtés, centrer sur l'écran
           style.left = '50%'
+          style.right = 'auto'
           style.transform = 'translateX(-50%)'
           style.width = '95vw'
+          // Repositionner par rapport au viewport plutôt qu'au container
+          style.position = 'fixed'
+          style.top = `${rect.bottom + 4}px`
+          style.marginTop = '0'
         }
 
         // Position verticale (si pas assez de place en bas)
         if (spaceBelow < 400 && rect.top > 400) {
-          style.top = 'auto'
-          style.bottom = '100%'
-          style.marginTop = '0'
-          style.marginBottom = '4px'
+          if (style.position === 'fixed') {
+            style.top = `${rect.top - 4}px`
+            style.transform += ' translateY(-100%)'
+          } else {
+            style.top = 'auto'
+            style.bottom = '100%'
+            style.marginTop = '0'
+            style.marginBottom = '4px'
+          }
         }
 
         setDropdownStyle(style)
@@ -181,7 +198,7 @@ const DatepickerTrigger = ({
       <Box className='flex flex-col gap-1'>
         {buttonLabel && <Typography className='pb-1'>{buttonLabel}</Typography>}
         <Box className='flex items-center'>
-          <Button className='fr-input w-full text-left' onClick={() => setIsDatepickerOpen(open => !open)}>
+          <Button className='fr-input w-full h-fit text-left whitespace-normal break-words' onClick={() => setIsDatepickerOpen(open => !open)}>
             {getLabelForSelectedPeriods(selectedPeriods)}
           </Button>
 
