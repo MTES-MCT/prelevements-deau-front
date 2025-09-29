@@ -132,3 +132,22 @@ export const Interaction = {
     }
   }
 }
+
+export const ErreurDonnees = {
+  parameters: {
+    docs: {description: {story: 'Exemple de données mal formées (éléments sans date). Montre le comportement attendu du composant.'}}
+  },
+  args: {
+    // Un sous-tableau correct, un sous-tableau avec un objet sans date
+    calendars: [
+      [
+        {date: '2025-01-01', color: blue, label: 'OK'}
+      ],
+      [
+        {foo: 'manque date'},
+        {date: ''},
+        {date: 'not-a-date'}
+      ]
+    ]
+  }
+}

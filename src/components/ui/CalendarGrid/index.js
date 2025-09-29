@@ -16,7 +16,7 @@ import {useMemo} from 'react'
 import {fr} from '@codegouvfr/react-dsfr'
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 
-import {computeCalendarKey} from './util.js'
+import {computeCalendarKey, getMinDate} from './util.js'
 
 import Calendar from '@/components/ui/Calendar/index.js'
 import LegendCalendar from '@/components/ui/legend-calendar.js'
@@ -37,23 +37,22 @@ const CalendarGrid = ({calendars, onClick, hoverComponent: HoverComponent, legen
     }
 
     return [...calendars].sort((a, b) => {
-      const getMinDate = arr => {
-        if (!Array.isArray(arr) || arr.length === 0) {
-          return ''
-        }
+      const da = getMinDate(a)
+      const db = getMinDate(b)
 
-        let min = arr[0].date
-
-        for (const v of arr) {
-          if (v.date < min) {
-            min = v.date
-          }
-        }
-
-        return min
+      if (da === null && db === null) {
+        return 0
       }
 
-      return getMinDate(a).localeCompare(getMinDate(b))
+      if (da === null) {
+        return 1
+      }
+
+      if (db === null) {
+        return -1
+      }
+
+      return da.localeCompare(db)
     })
   }, [calendars])
 
