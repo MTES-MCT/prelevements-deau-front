@@ -2,6 +2,9 @@ import {fr} from '@codegouvfr/react-dsfr'
 
 import CalendarGrid from './index.js'
 
+const blue = fr.colors.decisions.artwork.major.blueFrance.default
+const orange = fr.colors.decisions.background.actionHigh.warning.hover
+
 // Build a full year: one calendar ("month" mode) per month with a single colored day
 const buildYearCalendars = (year, color1, color2) => {
   const calendars = []
@@ -33,14 +36,11 @@ const meta = {
     }
   },
   args: {
-    calendars: buildYearCalendars(2025, fr.colors.decisions.text.actionHigh.blueFrance.default, fr.colors.decisions.background.flat.warning.default)
+    calendars: buildYearCalendars(2025, blue, orange)
   }
 }
 
 export default meta
-
-const blue = fr.colors.decisions.text.actionHigh.blueFrance.default
-const orange = fr.colors.decisions.background.flat.warning.default
 
 // Hover component example
 const Hover = ({value}) => (

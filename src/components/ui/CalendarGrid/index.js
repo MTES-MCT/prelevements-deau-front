@@ -23,10 +23,10 @@ import LegendCalendar from '@/components/ui/legend-calendar.js'
 
 // Default legend labels (reused pattern from previous calendar grid implementation)
 const defaultLegendLabels = [
-  {color: fr.colors.decisions.text.actionHigh.blueFrance.default, label: 'Données présentes'},
-  {color: fr.colors.decisions.background.flat.warning.default, label: 'Données présentes mais anomalies'},
-  {color: fr.colors.decisions.background.actionHigh.info.default, label: 'Pas de prélèvement'},
-  {color: fr.colors.decisions.text.disabled.grey.default, label: 'Non déclaré / pas de déclaration'}
+  {color: fr.colors.decisions.artwork.major.blueFrance.default, label: 'Données présentes'},
+  {color: fr.colors.decisions.background.actionHigh.warning.hover, label: 'Données présentes mais anomalies'},
+  {color: fr.colors.decisions.background.actionHigh.info.hover, label: 'Pas de prélèvement'},
+  {color: fr.colors.decisions.background.actionHigh.grey.active, label: 'Non déclaré / pas de déclaration'}
 ]
 
 const CalendarGrid = ({calendars, onClick, hoverComponent: HoverComponent, legendLabels = defaultLegendLabels}) => {
