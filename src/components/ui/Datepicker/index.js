@@ -4,6 +4,7 @@ import {Button} from '@codegouvfr/react-dsfr/Button'
 import Tooltip from '@codegouvfr/react-dsfr/Tooltip.js'
 import {Typography} from '@mui/material'
 import {Box} from '@mui/system'
+import {isEqual} from 'lodash-es'
 
 import Datepicker from './datepicker.js'
 
@@ -70,8 +71,14 @@ const DatepickerTrigger = ({
   const containerRef = useRef(null)
 
   useEffect(() => {
-    setSelectedPeriods(defaultSelectedPeriods || [])
-    setViewType(currentViewType)
+    if (
+      !isEqual(selectedPeriods, defaultSelectedPeriods || [])
+      || viewType !== currentViewType
+    ) {
+      setSelectedPeriods(defaultSelectedPeriods || [])
+      setViewType(currentViewType)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultSelectedPeriods, currentViewType])
 
   useEffect(() => {
