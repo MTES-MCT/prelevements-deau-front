@@ -7,6 +7,7 @@ import {
 } from 'lodash-es'
 import './index.css'
 
+// Normalise les options pour gérer les deux formats possibles
 const normalizeOptions = options => {
   if (isArray(options) && isString(options[0])) {
     return [{label: null, options}]
@@ -30,6 +31,7 @@ const GroupedMultiselect = ({
   const ref = useRef(null)
   const selectRef = useRef(null)
 
+  // Ferme la liste si clic en dehors du composant
   useEffect(() => {
     const handleClickOutside = e => {
       if (ref.current && !ref.current.contains(e.target)) {
@@ -41,37 +43,41 @@ const GroupedMultiselect = ({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  // Calcule combien d’éléments sélectionnés peuvent être affichés sans dépasser la largeur du composant
   useEffect(() => {
-    // Si le select existe et qu'il y a plus d'un élément sélectionné
     if (selectRef.current && value.length > 1) {
-      // On récupère la largeur disponible dans le composant (moins 24px pour le padding/icône)
+      // Largeur disponible dans le composant (on enlève un peu de marge)
       const containerWidth = selectRef.current.offsetWidth - 24
-      // On récupère la police utilisée pour avoir une mesure fidèle
+      // Récupère la police utilisée pour mesurer le texte
       const computedStyle = window.getComputedStyle(selectRef.current)
       const font = computedStyle.font || `${computedStyle.fontSize} ${computedStyle.fontFamily}`
-      // On crée un canvas pour mesurer la largeur du texte sans manipuler le DOM
+      // Utilise un canvas pour mesurer la largeur du texte
       const canvas = document.createElement('canvas')
       const ctx = canvas.getContext('2d')
       ctx.font = font
 
+      // Recherche dichotomique pour trouver le nombre max d’éléments affichables
+      let left = 0
+      let right = value.length
       let visibleCount = value.length
-      // On cherche combien d'éléments on peut afficher avant de dépasser la largeur
-      for (let i = value.length; i > 0; i--) {
-        let text = value.slice(0, i).join(', ')
-        const hidden = value.length - i
 
+      while (left < right) {
+        const mid = Math.ceil((left + right) / 2)
+        let text = value.slice(0, mid).join(', ')
+        const hidden = value.length - mid
         if (hidden > 0) {
           text += ` + ${hidden} autre${hidden > 1 ? 's' : ''}`
         }
 
-        // Si le texte tient dans la largeur, on s'arrête
+        // Si le texte tient, on essaie d’en afficher plus
         if (ctx.measureText(text).width <= containerWidth) {
-          visibleCount = i
-          break
+          left = mid
+        } else {
+          right = mid - 1
         }
       }
 
-      // On met à jour le nombre d'éléments cachés et l'affichage du "+ n autres"
+      visibleCount = left
       const hidden = value.length - visibleCount
       setHiddenCount(hidden)
       setShowMore(hidden > 0)
@@ -81,11 +87,13 @@ const GroupedMultiselect = ({
     }
   }, [value])
 
+  // Ajoute ou retire une option de la sélection
   const toggleOption = option => {
     const newValue = xor(value, [option])
     onChange?.(newValue)
   }
 
+  // Affiche le texte des éléments sélectionnés, avec "+ n autres" si besoin
   const renderSelectedText = () => {
     if (isEmpty(value)) {
       return <span>{placeholder}</span>
