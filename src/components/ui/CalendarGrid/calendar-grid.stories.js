@@ -2,6 +2,8 @@ import {fr} from '@codegouvfr/react-dsfr'
 
 import CalendarGrid from './index.js'
 
+import PeriodTooltip from '@/components/ui/PeriodTooltip/index.js'
+
 const blue = fr.colors.decisions.artwork.major.blueFrance.default
 const orange = fr.colors.decisions.background.actionHigh.warning.hover
 
@@ -42,12 +44,14 @@ const meta = {
 
 export default meta
 
-// Hover component example
-const Hover = ({value}) => (
-  <div style={{padding: 4}}>
-    <strong>{value.date}</strong><br />
-    {value.label || value.volume || ''}
-  </div>
+// Hover component example using PeriodTooltip
+const Hover = ({value, children}) => (
+  <PeriodTooltip
+    periodLabel={value.date}
+    parameters={[{content: value.label || (value.volume ? `Volume: ${value.volume}` : 'Données présentes')}]}
+  >
+    {children}
+  </PeriodTooltip>
 )
 
 // Default story: full year (current year) – explicit story export for clarity

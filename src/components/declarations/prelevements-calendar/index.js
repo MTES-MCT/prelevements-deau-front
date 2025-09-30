@@ -4,6 +4,15 @@ import {useState, useMemo, useCallback} from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
+import BloodtypeOutlinedIcon from '@mui/icons-material/BloodtypeOutlined'
+import DeviceThermostatOutlinedIcon from '@mui/icons-material/DeviceThermostatOutlined'
+import HeightOutlinedIcon from '@mui/icons-material/HeightOutlined'
+import LocalDrinkOutlinedIcon from '@mui/icons-material/LocalDrinkOutlined'
+import OfflineBoltOutlinedIcon from '@mui/icons-material/OfflineBoltOutlined'
+import OilBarrelOutlinedIcon from '@mui/icons-material/OilBarrelOutlined'
+import OpacityOutlinedIcon from '@mui/icons-material/OpacityOutlined'
+import ScienceOutlinedIcon from '@mui/icons-material/ScienceOutlined'
+import WaterOutlinedIcon from '@mui/icons-material/WaterOutlined'
 import {
   Box,
   Modal,
@@ -18,7 +27,9 @@ import {fr as locale} from 'date-fns/locale'
 import {buildCalendars} from './util.js'
 
 import CalendarGrid from '@/components/ui/CalendarGrid/index.js'
+import PeriodTooltip from '@/components/ui/PeriodTooltip/index.js'
 import {formatNumber} from '@/utils/number.js'
+import {normalizeString} from '@/utils/string.js'
 
 // Legend labels
 const PALETTE = {
@@ -28,28 +39,111 @@ const PALETTE = {
   grey: fr.colors.decisions.text.disabled.grey.default
 }
 
+// Map parameter names to Material-UI icons
+const getParameterIcon = parameterName => {
+  const normalized = normalizeString(parameterName)
+
+  // Volume
+  if (normalized.includes('volume')) {
+    return OpacityOutlinedIcon
+  }
+
+  // Debit (flow rate)
+  if (normalized.includes('debit')) {
+    if (normalized.includes('reserve')) {
+      return WaterOutlinedIcon
+    }
+
+    return OilBarrelOutlinedIcon
+  }
+
+  // Level / Height
+  if (normalized.includes('niveau') || normalized.includes('piezometrique')) {
+    return HeightOutlinedIcon
+  }
+
+  // Temperature
+  if (normalized.includes('temperature')) {
+    return DeviceThermostatOutlinedIcon
+  }
+
+  // Electrical conductivity
+  if (normalized.includes('conductivite')) {
+    return OfflineBoltOutlinedIcon
+  }
+
+  // Chemical compounds (chlorides, nitrates, sulfates)
+  if (normalized.includes('chlorure') || normalized.includes('nitrate') || normalized.includes('sulfate')) {
+    return ScienceOutlinedIcon
+  }
+
+  // PH level
+  if (normalized.includes('ph')) {
+    return BloodtypeOutlinedIcon
+  }
+
+  // Turbidity / Clarity
+  if (normalized.includes('turbidite')) {
+    return LocalDrinkOutlinedIcon
+  }
+
+  // Default: water icon
+  return OpacityOutlinedIcon
+}
+
 // ---------------------- Tooltip hover component ---------------------- //
-const DayHover = ({value, dailyParameters}) => {
+const DayHover = ({value, dailyParameters, children}) => {
   if (!value) {
-    return (
-      <div className='flex flex-col gap-1'>
-        <strong>Aucune donnée</strong>
-      </div>
-    )
+    return children
   }
 
   const dateObj = parseISO(value.date)
-  const warnings = value.values?.some(v => v === null || v === undefined || v < 0)
+  const periodLabel = dateObj.toLocaleDateString('fr-FR')
+
+  // Build parameters array for PeriodTooltip
+  const parameters = dailyParameters.map((param, idx) => {
+    const formattedValue = Number.isNaN(value.values[idx])
+      ? '—'
+      : formatNumber(
+        value.values[idx],
+        value.values[idx] < 1 && value.values[idx] !== 0
+          ? {maximumFractionDigits: 2, minimumFractionDigits: 2}
+          : {}
+      )
+
+    return {
+      icon: getParameterIcon(param.nom_parametre),
+      content: `${param.nom_parametre}: ${formattedValue} ${param.unite}`
+    }
+  })
+
+  // Build alerts array for PeriodTooltip
+  const alerts = []
+  const hasMissingValues = value.values?.some(v => v === null || v === undefined)
+  const hasNegativeValues = value.values?.some(v => v < 0)
+
+  if (hasMissingValues) {
+    alerts.push({
+      alertLabel: 'Données manquantes',
+      alertType: 'missing'
+    })
+  }
+
+  if (hasNegativeValues) {
+    alerts.push({
+      alertLabel: 'Valeurs négatives détectées',
+      alertType: 'warning'
+    })
+  }
+
   return (
-    <div className='flex flex-col gap-1'>
-      <strong>{dateObj.toLocaleDateString('fr-FR')}</strong>
-      {dailyParameters.map((param, idx) => (
-        <span key={param.paramIndex || idx}>
-          {param.nom_parametre}: {Number.isNaN(value.values[idx]) ? '—' : formatNumber(value.values[idx], value.values[idx] < 1 && value.values[idx] !== 0 ? {maximumFractionDigits: 2, minimumFractionDigits: 2} : {})} {param.unite}
-          {warnings && <Box component='span' className='fr-icon-warning-fill ml-1' />}
-        </span>
-      ))}
-    </div>
+    <PeriodTooltip
+      periodLabel={periodLabel}
+      parameters={parameters}
+      alerts={alerts}
+    >
+      {children}
+    </PeriodTooltip>
   )
 }
 
@@ -61,6 +155,11 @@ const PrelevementsCalendar = ({data}) => {
   const fifteenParams = data.fifteenMinutesParameters || []
 
   const calendars = useMemo(() => buildCalendars(data, PALETTE), [data])
+
+  const DayHoverWrapper = useCallback(
+    props => <DayHover {...props} dailyParameters={data.dailyParameters} />,
+    [data.dailyParameters]
+  )
 
   const handleClick = useCallback(value => {
     if (!value?.fifteenMinutesValues || value.fifteenMinutesValues.length === 0) {
@@ -75,7 +174,7 @@ const PrelevementsCalendar = ({data}) => {
   const handleClose = () => setOpen(false)
 
   if (data.dailyValues && data.dailyValues.length === 0) {
-    return <Alert severity='warning' description='Aucune donnée de prélèvement n’a été trouvée.' />
+    return <Alert severity='warning' description="Aucune donnée de prélèvement n'a été trouvée." />
   }
 
   const fifteenValues = selectedDay?.fifteenMinutesValues || []
@@ -84,7 +183,7 @@ const PrelevementsCalendar = ({data}) => {
     <>
       <CalendarGrid
         calendars={calendars}
-        hoverComponent={props => <DayHover {...props} dailyParameters={data.dailyParameters} />}
+        hoverComponent={DayHoverWrapper}
         onClick={handleClick}
       />
 
