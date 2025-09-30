@@ -117,6 +117,7 @@ const GroupedMultiselect = ({
 
       <Box
         ref={selectRef}
+        id='selector'
         className='fr-select mt-2'
         onClick={() => setOpen(prev => !prev)}
       >
