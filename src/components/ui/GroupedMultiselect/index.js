@@ -4,19 +4,10 @@ import {
 
 import {fr} from '@codegouvfr/react-dsfr'
 import {Box, List, ListItem} from '@mui/material'
-import {
-  xor, isEmpty, isArray, isString
-} from 'lodash-es'
+import {xor} from 'lodash-es'
+
 import './index.css'
-
-// Normalise les options pour gérer les deux formats possibles
-const normalizeOptions = options => {
-  if (isArray(options) && isString(options[0])) {
-    return [{label: null, options}]
-  }
-
-  return options
-}
+import {normalizeOptions, renderSelectedText} from './utils.js'
 
 const GroupedMultiselect = ({
   value = [],
@@ -92,21 +83,6 @@ const GroupedMultiselect = ({
     const newValue = xor(value, [option])
     onChange?.(newValue)
   }, [value, onChange])
-
-  // Affiche le texte des éléments sélectionnés, avec "+ n autres" si besoin
-  const renderSelectedText = () => {
-    if (isEmpty(value)) {
-      return <span>{placeholder}</span>
-    }
-
-    if (value.length === 1 || !showMore) {
-      return value.join(', ')
-    }
-
-    const visibleCount = value.length - hiddenCount
-    const visibleItems = value.slice(0, visibleCount)
-    return `${visibleItems.join(', ')} + ${hiddenCount} autre${hiddenCount > 1 ? 's' : ''}`
-  }
 
   const normalizedOptions = normalizeOptions(options)
   // Liste plate des options pour navigation clavier
@@ -191,7 +167,7 @@ const GroupedMultiselect = ({
         onKeyDown={handleKeyDown}
       >
         <Box sx={{overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
-          {renderSelectedText()}
+          {renderSelectedText(value, placeholder, showMore, hiddenCount)}
         </Box>
       </Box>
 
@@ -233,10 +209,6 @@ const GroupedMultiselect = ({
                     tabIndex={-1}
                     role='option'
                     aria-selected={value.includes(option)}
-                    style={{
-                      outline: focusedIndex === flatIdx ? '2px solid #000' : undefined,
-                      background: focusedIndex === flatIdx ? fr.colors.decisions.background.default.grey.hover : undefined
-                    }}
                     onClick={() => toggleOption(option)}
                     onKeyDown={handleKeyDown}
                   >
