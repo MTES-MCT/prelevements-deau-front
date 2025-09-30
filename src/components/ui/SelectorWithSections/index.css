@@ -1,0 +1,8 @@
+
+.selector-option:hover {
+  background: var(--background-action-low-blue-france);
+}
+
+.selector-option.selected {
+  background: var(--background-alt-blue-france);
+}
