@@ -118,55 +118,53 @@ const GroupedMultiselect = ({
   )
 
   // Gestion du focus clavier
-  const handleKeyDown = useCallback(
-    e => {
-      if (!open) {
-        if (e.key === 'Enter' || e.key === ' ') {
-          setOpen(true)
-          setFocusedIndex(0)
-          e.preventDefault()
-        }
-
-        return
+  const handleKeyDown = useCallback(e => {
+    if (!open) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        setOpen(true)
+        setFocusedIndex(0)
+        e.preventDefault()
       }
 
-      switch (e.key) {
-        case 'ArrowDown': {
-          setFocusedIndex(i => Math.min(i + 1, flatOptions.length - 1))
-          e.preventDefault()
+      return
+    }
 
-          break
-        }
-
-        case 'ArrowUp': {
-          setFocusedIndex(i => Math.max(i - 1, 0))
-          e.preventDefault()
-
-          break
-        }
-
-        case 'Enter':
-        case ' ': {
-          if (focusedIndex >= 0 && flatOptions[focusedIndex]) {
-            toggleOption(flatOptions[focusedIndex].option)
-          }
-
-          e.preventDefault()
-
-          break
-        }
-
-        case 'Escape': {
-          setOpen(false)
-          setFocusedIndex(-1)
-          e.preventDefault()
-
-          break
-        }
-      // No default
+    switch (e.key) {
+      case 'ArrowDown': {
+        setFocusedIndex(i => Math.min(i + 1, flatOptions.length - 1))
+        e.preventDefault()
+        break
       }
-    },
-    [open, toggleOption, flatOptions, focusedIndex]
+
+      case 'ArrowUp': {
+        setFocusedIndex(i => Math.max(i - 1, 0))
+        e.preventDefault()
+        break
+      }
+
+      case 'Enter':
+      case ' ': {
+        if (focusedIndex >= 0 && flatOptions[focusedIndex]) {
+          toggleOption(flatOptions[focusedIndex].option)
+        }
+
+        e.preventDefault()
+        break
+      }
+
+      case 'Escape': {
+        setOpen(false)
+        setFocusedIndex(-1)
+        e.preventDefault()
+        break
+      }
+
+      default: {
+        break
+      }
+    }
+  },
+  [open, toggleOption, flatOptions, focusedIndex]
   )
 
   // Focus sur l'option sélectionnée
