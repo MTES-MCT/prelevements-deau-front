@@ -157,7 +157,7 @@ const DatepickerTrigger = ({
         if (spaceBelow < 400 && rect.top > 400) {
           if (style.position === 'fixed') {
             style.top = `${rect.top - 4}px`
-            style.transform += ' translateY(-100%)'
+            style.transform = (style.transform && style.transform !== 'none' ? style.transform + ' ' : '') + 'translateY(-100%)'
           } else {
             style.top = 'auto'
             style.bottom = '100%'
