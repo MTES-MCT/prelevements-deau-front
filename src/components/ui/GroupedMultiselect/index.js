@@ -2,11 +2,13 @@ import {useState, useRef, useEffect} from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
 import {Box, List, ListItem} from '@mui/material'
+import {
+  xor, isEmpty, isArray, isString
+} from 'lodash-es'
 import './index.css'
 
 const normalizeOptions = options => {
-  // Si les options sont un tableau de chaînes, les regrouper sous un groupe sans label
-  if (Array.isArray(options) && typeof options[0] === 'string') {
+  if (isArray(options) && isString(options[0])) {
     return [{label: null, options}]
   }
 
@@ -40,31 +42,36 @@ const GroupedMultiselect = ({
   }, [])
 
   useEffect(() => {
+    // Si le select existe et qu'il y a plus d'un élément sélectionné
     if (selectRef.current && value.length > 1) {
+      // On récupère la largeur disponible dans le composant (moins 24px pour le padding/icône)
       const containerWidth = selectRef.current.offsetWidth - 24
-      const tempSpan = document.createElement('span')
-      tempSpan.style.visibility = 'hidden'
-      tempSpan.style.position = 'fixed'
-      tempSpan.style.whiteSpace = 'nowrap'
-      tempSpan.style.font = window.getComputedStyle(selectRef.current).font
-      document.body.append(tempSpan)
+      // On récupère la police utilisée pour avoir une mesure fidèle
+      const computedStyle = window.getComputedStyle(selectRef.current)
+      const font = computedStyle.font || `${computedStyle.fontSize} ${computedStyle.fontFamily}`
+      // On crée un canvas pour mesurer la largeur du texte sans manipuler le DOM
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      ctx.font = font
 
       let visibleCount = value.length
+      // On cherche combien d'éléments on peut afficher avant de dépasser la largeur
       for (let i = value.length; i > 0; i--) {
         let text = value.slice(0, i).join(', ')
         const hidden = value.length - i
+
         if (hidden > 0) {
           text += ` + ${hidden} autre${hidden > 1 ? 's' : ''}`
         }
 
-        tempSpan.textContent = text
-        if (tempSpan.offsetWidth <= containerWidth) {
+        // Si le texte tient dans la largeur, on s'arrête
+        if (ctx.measureText(text).width <= containerWidth) {
           visibleCount = i
           break
         }
       }
 
-      tempSpan.remove()
+      // On met à jour le nombre d'éléments cachés et l'affichage du "+ n autres"
       const hidden = value.length - visibleCount
       setHiddenCount(hidden)
       setShowMore(hidden > 0)
@@ -75,15 +82,12 @@ const GroupedMultiselect = ({
   }, [value])
 
   const toggleOption = option => {
-    const newValue = value.includes(option)
-      ? value.filter(o => o !== option)
-      : [...value, option]
-
+    const newValue = xor(value, [option])
     onChange?.(newValue)
   }
 
   const renderSelectedText = () => {
-    if (value.length === 0) {
+    if (isEmpty(value)) {
       return <span>{placeholder}</span>
     }
 
@@ -134,7 +138,6 @@ const GroupedMultiselect = ({
                   {group.label}
                 </ListItem>
               )}
-
               {group.options.map(option => (
                 <ListItem
                   key={option}
