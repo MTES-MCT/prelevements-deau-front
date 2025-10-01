@@ -30,7 +30,7 @@ export function determineColors(values, fifteenMinutesValues, dailyParameters, p
   const volumePreleveParam = dailyParameters?.find(p => p.nom_parametre === 'volume prélevé')
   const volumePreleveIndex = volumePreleveParam ? dailyParameters.indexOf(volumePreleveParam) : -1
 
-  const hasAnyData = values?.some(v => Number.isNaN(v)) || (fifteenMinutesValues?.length > 0)
+  const hasAnyData = values?.some(v => !Number.isNaN(v)) || (fifteenMinutesValues?.length > 0)
 
   if (volumePreleveIndex > -1 && !Number.isNaN(values?.[volumePreleveIndex])) {
     return {color: palette.blue}

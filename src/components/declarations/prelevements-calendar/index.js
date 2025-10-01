@@ -31,6 +31,9 @@ import PeriodTooltip from '@/components/ui/PeriodTooltip/index.js'
 import {formatNumber} from '@/utils/number.js'
 import {normalizeString} from '@/utils/string.js'
 
+// Check if a value is missing (null or undefined)
+const isMissingValue = value => value === null || value === undefined
+
 // Legend labels
 const PALETTE = {
   error: fr.colors.decisions.background.flat.error.default,
@@ -119,7 +122,7 @@ const DayHover = ({value, dailyParameters, children}) => {
 
   // Build alerts array for PeriodTooltip
   const alerts = []
-  const hasMissingValues = value.values?.some(v => v === null || v === undefined)
+  const hasMissingValues = value.values?.some(isMissingValue)
   const hasNegativeValues = value.values?.some(v => v < 0)
 
   if (hasMissingValues) {
@@ -214,7 +217,7 @@ const PrelevementsCalendar = ({data}) => {
               {fifteenParams.length > 0 ? (
                 <Tabs variant='scrollable' value={tabIndex} onChange={(e, v) => setTabIndex(v)}>
                   {fifteenParams.map((param, idx) => {
-                    const hasMissingValues = selectedDay.values[idx] === null || fifteenValues.some(slot => slot.values[idx] === null)
+                    const hasMissingValues = isMissingValue(selectedDay.values[idx]) || fifteenValues.some(slot => isMissingValue(slot.values[idx]))
                     return (
                       <Tab
                         key={param.paramIndex || idx}
