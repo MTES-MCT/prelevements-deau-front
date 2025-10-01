@@ -143,10 +143,12 @@ const GroupedMultiselect = ({
   [open, toggleOption, flatOptions, focusedIndex]
   )
 
-  // Focus sur l'option sélectionnée
+  // Focus sur l'option sélectionnée + scrollIntoView
   useEffect(() => {
     if (open && focusedIndex >= 0 && optionRefs.current[focusedIndex]) {
-      optionRefs.current[focusedIndex].focus()
+      optionRefs.current[focusedIndex].scrollIntoView({block: 'nearest'})
+    } else if (!open && selectRef.current) {
+      selectRef.current.focus()
     }
   }, [open, focusedIndex])
 
@@ -205,7 +207,7 @@ const GroupedMultiselect = ({
                     ref={el => {
                       optionRefs.current[flatIdx] = el
                     }}
-                    className={`selector-option${value.includes(option) ? ' selected' : ''} p-2 radius-4`}
+                    className={`selector-option${value.includes(option) ? ' selected' : ''}${focusedIndex === flatIdx ? ' focused' : ''} p-2 radius-4`}
                     tabIndex={-1}
                     role='option'
                     aria-selected={value.includes(option)}
