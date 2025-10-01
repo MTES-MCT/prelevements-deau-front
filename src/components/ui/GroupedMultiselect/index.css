@@ -1,0 +1,9 @@
+.selector-option:hover,
+.selector-option.focused
+ {
+  background: var(--background-action-low-blue-france);
+}
+
+.selector-option.selected {
+  background: var(--background-alt-blue-france);
+}
