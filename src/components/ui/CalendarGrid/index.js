@@ -62,7 +62,7 @@ const CalendarGrid = ({calendars, onClick, hoverComponent: HoverComponent, legen
         <Alert severity='info' description='Aucun calendrier à afficher' />
       ) : (
         <div
-          className='grid justify-center'
+          className='grid justify-between'
           style={{
             gridTemplateColumns: 'repeat(auto-fill, 270px)',
             gap: '1.5rem'
