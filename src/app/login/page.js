@@ -8,7 +8,7 @@ import SelfTraining from '@codegouvfr/react-dsfr/picto/SelfTraining'
 import {Typography, Box} from '@mui/material'
 import {signIn} from 'next-auth/react'
 
-import Pictogram from '@/components/ui/pictogram.js'
+import Pictogram from '@/components/ui/Pictogram/index.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 
 const LoginPage = ({searchParams}) => {
