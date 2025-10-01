@@ -1,8 +1,8 @@
-import {useState, useEffect} from 'react'
+import {useState, useEffect, useRef} from 'react'
 
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Box} from '@mui/system'
-import {map, range} from 'lodash-es'
+import {map, range, isEqual} from 'lodash-es'
 
 import MonthView from './month-view.js'
 import YearsView from './years-view.js'
@@ -50,13 +50,35 @@ const Datepicker = ({
   const [rangeStart, setRangeStart] = useState(null)
   const [isSelecting, setIsSelecting] = useState(false)
 
+  // Add refs to track previous values
+  const prevDefaultPeriodsRef = useRef(defaultSelectedPeriods || [])
+  const prevViewTypeRef = useRef(currentViewType)
+
   // Synchronise la vue et la sélection à chaque ouverture ou reset
   useEffect(() => {
-    setZoomLevel(currentViewType)
-    setSelectedPeriods(defaultSelectedPeriods)
-    setIsSelecting(false)
-    setRangeStart(null)
-  }, [defaultSelectedPeriods, currentViewType])
+    const defaultPeriods = defaultSelectedPeriods || []
+    const hasPeriodsChanged = !isEqual(defaultPeriods, prevDefaultPeriodsRef.current)
+    const hasViewTypeChanged = currentViewType !== prevViewTypeRef.current
+
+    if (hasPeriodsChanged || hasViewTypeChanged) {
+      if (hasPeriodsChanged && !isEqual(selectedPeriods, defaultPeriods)) {
+        setSelectedPeriods(defaultPeriods)
+      }
+
+      if (hasViewTypeChanged) {
+        setZoomLevel(currentViewType)
+      }
+
+      // Always reset these states when either changes
+      if (hasPeriodsChanged || hasViewTypeChanged) {
+        setIsSelecting(false)
+        setRangeStart(null)
+      }
+
+      prevDefaultPeriodsRef.current = defaultPeriods
+      prevViewTypeRef.current = currentViewType
+    }
+  }, [defaultSelectedPeriods, currentViewType, selectedPeriods])
 
   // Zoom out vers la vue années
   const handleZoomOutToYears = () => {
