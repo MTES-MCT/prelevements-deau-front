@@ -193,7 +193,6 @@ const DatepickerTrigger = ({
 
     calculateDropdownPosition()
     window.addEventListener('resize', calculateDropdownPosition)
-    // Ne plus recalculer la position au scroll pour que le dropdown reste fixe à l'ouverture
     document.addEventListener('mousedown', handleClickOutside)
 
     return () => {
