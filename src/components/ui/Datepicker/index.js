@@ -63,6 +63,8 @@ const DatepickerTrigger = ({
   onSelectionChange
 }) => {
   const initialSelectedPeriodsRef = useRef(defaultSelectedPeriods || [])
+  const previousDefaultPeriodsRef = useRef(defaultSelectedPeriods || [])
+  const previousViewTypeRef = useRef(currentViewType)
 
   const [isDatepickerOpen, setIsDatepickerOpen] = useState(false)
   const [selectedPeriods, setSelectedPeriods] = useState(initialSelectedPeriodsRef.current)
@@ -70,15 +72,25 @@ const DatepickerTrigger = ({
   const [dropdownStyle, setDropdownStyle] = useState({})
   const containerRef = useRef(null)
 
+  // Update state only when content actually changes, not on reference change
   useEffect(() => {
-    if (
-      !isEqual(selectedPeriods, defaultSelectedPeriods || [])
-      || viewType !== currentViewType
-    ) {
-      setSelectedPeriods(defaultSelectedPeriods || [])
-      setViewType(currentViewType)
+    const defaultPeriods = defaultSelectedPeriods || []
+    const hasPeriodsChanged = !isEqual(defaultPeriods, previousDefaultPeriodsRef.current)
+    const hasViewTypeChanged = currentViewType !== previousViewTypeRef.current
+
+    if (hasPeriodsChanged || hasViewTypeChanged) {
+      if (hasPeriodsChanged) {
+        setSelectedPeriods(defaultPeriods)
+      }
+
+      if (hasViewTypeChanged) {
+        setViewType(currentViewType)
+      }
+
+      // Update refs to track current values
+      previousDefaultPeriodsRef.current = defaultPeriods
+      previousViewTypeRef.current = currentViewType
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultSelectedPeriods, currentViewType])
 
   useEffect(() => {
@@ -172,13 +184,12 @@ const DatepickerTrigger = ({
 
     calculateDropdownPosition()
     window.addEventListener('resize', calculateDropdownPosition)
-    window.addEventListener('scroll', calculateDropdownPosition)
+    // Ne plus recalculer la position au scroll pour que le dropdown reste fixe à l'ouverture
     document.addEventListener('mousedown', handleClickOutside)
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
       window.removeEventListener('resize', calculateDropdownPosition)
-      window.removeEventListener('scroll', calculateDropdownPosition)
     }
   }, [isDatepickerOpen])
 
