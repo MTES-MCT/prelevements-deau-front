@@ -1,5 +1,5 @@
 import {
-  useState, useRef, useEffect, useCallback
+  useState, useRef, useEffect, useCallback, useMemo
 } from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
@@ -86,12 +86,13 @@ const GroupedMultiselect = ({
 
   const normalizedOptions = normalizeOptions(options)
   // Liste plate des options pour navigation clavier
-  const flatOptions = normalizedOptions.flatMap(group =>
-    group.options.map(option => ({
-      label: group.label,
-      option
-    }))
-  )
+  const flatOptions = useMemo(() =>
+    normalizedOptions.flatMap(group =>
+      group.options.map(option => ({
+        label: group.label,
+        option
+      }))
+    ), [normalizedOptions])
 
   // Gestion du focus clavier
   const handleKeyDown = useCallback(e => {
