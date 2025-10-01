@@ -6,7 +6,7 @@ import {Input} from '@codegouvfr/react-dsfr/Input'
 import {Select} from '@codegouvfr/react-dsfr/SelectNext'
 import {Typography} from '@mui/material'
 
-import AccordionCentered from '../ui/accordion-centered.js'
+import AccordionCentered from '../ui/AccordionCentered/index.js'
 
 import OptionalPreleveurFieldsForm from './optional-preleveur-fields-form.js'
 

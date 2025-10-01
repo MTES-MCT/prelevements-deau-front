@@ -8,7 +8,7 @@ import {Typography} from '@mui/material'
 
 import MiniMapForm from '@/components/form/mini-map-form.js'
 import OptionalPointFieldsForm from '@/components/form/optional-point-fields-form.js'
-import AccordionCentered from '@/components/ui/accordion-centered.js'
+import AccordionCentered from '@/components/ui/AccordionCentered/index.js'
 
 const PointForm = ({
   point,

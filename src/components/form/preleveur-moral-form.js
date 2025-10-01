@@ -9,7 +9,7 @@ import {Typography} from '@mui/material'
 
 import OptionalPreleveurFieldsForm from '@/components/form/optional-preleveur-fields-form.js'
 import SearchByCompany from '@/components/form/search-by-company.js'
-import AccordionCentered from '@/components/ui/accordion-centered.js'
+import AccordionCentered from '@/components/ui/AccordionCentered/index.js'
 
 const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
   const [isExpanded, setIsExpanded] = useState(false)
