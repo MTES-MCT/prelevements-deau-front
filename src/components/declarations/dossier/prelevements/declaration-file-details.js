@@ -7,7 +7,7 @@ import Tag from '@codegouvfr/react-dsfr/Tag'
 import {Box, Divider} from '@mui/material'
 
 import ParameterTrendChart from '@/components/declarations/dossier/prelevements/parameter-trend-chart.js'
-import PrelevementsCalendar from '@/components/declarations/prelevements-calendar.js'
+import PrelevementsCalendar from '@/components/declarations/prelevements-calendar/index.js'
 
 const DeclarationFileDetails = ({
   moisDeclaration,

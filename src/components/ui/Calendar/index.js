@@ -10,7 +10,6 @@
 
 import {fr as dsfr} from '@codegouvfr/react-dsfr'
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
-import Tooltip from '@mui/material/Tooltip'
 
 // ===================== Imported utilities ===================== //
 import {
@@ -22,7 +21,7 @@ import {
 } from './util.js'
 
 // ===================== Generic cell ===================== //
-const BaseCell = ({label, ariaLabel, interactive, color, size, onActivate, tooltipContent}) => {
+const BaseCell = ({label, ariaLabel, interactive, color, size, onActivate, tooltipComponent: TooltipComponent}) => {
   let style = {width: size, height: size}
   let classes = 'rounded flex items-center justify-center text-xs sm:text-sm font-medium text-center transition-colors duration-150 ease-in-out relative overflow-hidden select-none'
 
@@ -73,12 +72,8 @@ const BaseCell = ({label, ariaLabel, interactive, color, size, onActivate, toolt
     </div>
   )
 
-  if (interactive && tooltipContent) {
-    return (
-      <Tooltip arrow enterNextDelay={300} title={tooltipContent}>
-        {cell}
-      </Tooltip>
-    )
+  if (interactive && TooltipComponent) {
+    return <TooltipComponent>{cell}</TooltipComponent>
   }
 
   return cell
@@ -106,7 +101,7 @@ const buildMonthCalendar = ({valuesMap, sampleDate, onClick, HoverComponent}) =>
     const value = valuesMap.get(dateKey)
     const interactive = Boolean(value)
     const color = value?.color
-    const tooltipContent = value && HoverComponent ? <HoverComponent value={value} /> : undefined
+    const tooltipComponent = value && HoverComponent ? props => <HoverComponent value={value} {...props} /> : undefined
     cells.push(
       <BaseCell
         key={dateKey}
@@ -115,7 +110,7 @@ const buildMonthCalendar = ({valuesMap, sampleDate, onClick, HoverComponent}) =>
         interactive={interactive}
         color={color}
         size={35}
-        tooltipContent={tooltipContent}
+        tooltipComponent={tooltipComponent}
         onActivate={() => interactive && onClick?.(value)}
       />
     )
@@ -148,7 +143,7 @@ const buildYearCalendar = ({valuesMap, sampleMonth, onClick, HoverComponent}) =>
     const monthDate = new Date(Number(year), m, 1)
     const label = capitalize(monthShortFormatter.format(monthDate))
     const fullLabel = capitalize(monthFormatter.format(monthDate))
-    const tooltipContent = value && HoverComponent ? <HoverComponent value={value} /> : undefined
+    const tooltipComponent = value && HoverComponent ? props => <HoverComponent value={value} {...props} /> : undefined
     cells.push(
       <BaseCell
         key={dateKey}
@@ -157,7 +152,7 @@ const buildYearCalendar = ({valuesMap, sampleMonth, onClick, HoverComponent}) =>
         interactive={interactive}
         color={color}
         size={60}
-        tooltipContent={tooltipContent}
+        tooltipComponent={tooltipComponent}
         onActivate={() => interactive && onClick?.(value)}
       />
     )
@@ -192,7 +187,7 @@ const buildYearsCalendar = ({valuesMap, years, onClick, HoverComponent}) => {
     const value = valuesMap.get(dateKey)
     const interactive = Boolean(value)
     const color = value?.color
-    const tooltipContent = value && HoverComponent ? <HoverComponent value={value} /> : undefined
+    const tooltipComponent = value && HoverComponent ? props => <HoverComponent value={value} {...props} /> : undefined
     return (
       <BaseCell
         key={dateKey}
@@ -201,7 +196,7 @@ const buildYearsCalendar = ({valuesMap, years, onClick, HoverComponent}) => {
         interactive={interactive}
         color={color}
         size={60}
-        tooltipContent={tooltipContent}
+        tooltipComponent={tooltipComponent}
         onActivate={() => interactive && onClick?.(value)}
       />
     )

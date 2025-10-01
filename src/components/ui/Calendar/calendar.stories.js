@@ -2,6 +2,8 @@ import {fr} from '@codegouvfr/react-dsfr'
 
 import Calendar from './index.js'
 
+import PeriodTooltip from '@/components/ui/PeriodTooltip/index.js'
+
 const meta = {
   title: 'Components/Calendar',
   component: Calendar,
@@ -9,7 +11,7 @@ const meta = {
   parameters: {
     docs: {
       description: {
-        component: 'Calendar component with automatic mode detection (month / year / years) based on date formats in the values prop. API: values[{date, color, ...}], onClick(value), hoverComponent.'
+        component: 'Calendar component with automatic mode detection (month / year / years) based on date formats in the values prop. API: values[{date, color, ...}], onClick(value), hoverComponent. The hoverComponent should wrap children with a tooltip component (e.g., PeriodTooltip).'
       }
     }
   },
@@ -55,11 +57,14 @@ export const Annee2024 = {
       {date: '2024-11', color: blue, volume: 190},
       {date: '2024-12', color: blue, volume: 200}
     ],
-    hoverComponent: ({value}) => (
-      <div style={{padding: 4}}>
-        <strong>{value.date}</strong><br />
-        Volume: {value.volume} m³ {value.anomalie ? '(anomalie)' : ''}
-      </div>
+    hoverComponent: ({value, children}) => (
+      <PeriodTooltip
+        periodLabel={value.date}
+        parameters={[{content: `Volume: ${value.volume} m³`}]}
+        alerts={value.anomalie ? [{alertLabel: 'Anomalie détectée', alertType: 'warning'}] : []}
+      >
+        {children}
+      </PeriodTooltip>
     )
   }
 }
@@ -102,11 +107,14 @@ export const MoisJuillet = {
       {date: '2025-07-30', color: blue, statut: 'ok'},
       {date: '2025-07-31', color: blue, statut: 'ok'}
     ],
-    hoverComponent: ({value}) => (
-      <div style={{padding: 4}}>
-        <strong>{value.date}</strong><br />
-        Status: {value.statut}
-      </div>
+    hoverComponent: ({value, children}) => (
+      <PeriodTooltip
+        periodLabel={value.date}
+        parameters={[{content: `Statut: ${value.statut}`}]}
+        alerts={value.statut === 'alert' ? [{alertLabel: 'État d\'alerte', alertType: 'warning'}] : []}
+      >
+        {children}
+      </PeriodTooltip>
     )
   }
 }
@@ -149,7 +157,14 @@ export const Interactif = {
       {date: '2026-03', color: blue, label: 'March'},
       {date: '2026-04', color: orange, label: 'April'}
     ],
-    hoverComponent: ({value}) => <span style={{display: 'block', padding: 4}}>Hover: {value.label}</span>,
+    hoverComponent: ({value, children}) => (
+      <PeriodTooltip
+        periodLabel={value.date}
+        parameters={[{content: value.label}]}
+      >
+        {children}
+      </PeriodTooltip>
+    ),
     onClick(value) {
       // Display in Storybook console (console usage accepted in stories)
 
