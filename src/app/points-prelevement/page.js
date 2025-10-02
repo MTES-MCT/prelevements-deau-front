@@ -17,7 +17,7 @@ import {useRouter, useSearchParams} from 'next/navigation'
 
 import {getPointsPrelevement} from '@/app/api/points-prelevement.js'
 import SidePanelLayout from '@/components/layout/side-panel.js'
-import LoadingOverlay from '@/components/loading-overlay.js'
+import LoadingOverlay from '@/components/ui/LoadingOverlay/index.js'
 import Map from '@/components/map/index.js'
 import Legend from '@/components/map/legend.js'
 import PointsListHeader from '@/components/map/points-list-header.js'
