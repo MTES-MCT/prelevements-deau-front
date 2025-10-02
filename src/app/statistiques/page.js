@@ -1,11 +1,11 @@
 import {Box, Typography} from '@mui/material'
 
 import {getStats} from '@/app/api/points-prelevement.js'
-import Counter from '@/components/counter.js'
 import Pie from '@/components/pie.js'
 import DebitsReservesChart from '@/components/points-prelevement/debits-reserves-chart.js'
 import DocumentChart from '@/components/points-prelevement/documents-chart.js'
 import RegularisationsCharts from '@/components/points-prelevement/regularisations-chart.js'
+import Counter from '@/components/ui/Counter/index.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 
 const Page = async () => {
