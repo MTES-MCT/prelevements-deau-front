@@ -5,7 +5,7 @@ import Link from 'next/link'
 
 import {getStats} from '@/app/api/points-prelevement.js'
 import Counter from '@/components/ui/Counter/index.js'
-import Pie from '@/components/pie.js'
+import Pie from '@/components/ui/Pie/index.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getPointsPrelevementURL} from '@/lib/urls.js'
 
