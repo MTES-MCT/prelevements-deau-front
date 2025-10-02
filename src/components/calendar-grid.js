@@ -2,7 +2,7 @@ import {fr} from '@codegouvfr/react-dsfr'
 import {parse} from 'date-fns'
 
 import MonthPrelevementCalendar from '@/components/declarations/month-prevelement-calendar.js'
-import LegendCalendar from '@/components/ui/legend-calendar.js'
+import LegendCalendar from '@/components/ui/LegendCalendar/index.js'
 
 const legendLabels = [
   {color: fr.colors.decisions.text.actionHigh.blueFrance.default, label: 'Données présentes'},
