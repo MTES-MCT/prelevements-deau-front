@@ -9,7 +9,7 @@ import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Box, Skeleton} from '@mui/material'
 import {flatMap, sumBy} from 'lodash'
 
-import SectionCard from '../ui/section-card.js'
+import SectionCard from '../ui/SectionCard/index.js'
 
 import PrelevementsAccordion from './dossier/prelevements/prelevements-accordion.js'
 import VolumesPompes from './dossier/prelevements/volumes-pompes.js'
