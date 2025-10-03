@@ -1,9 +1,10 @@
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import Tag from '@codegouvfr/react-dsfr/Tag'
-import {Box, Divider, Typography} from '@mui/material'
+import {Box, Typography} from '@mui/material'
 
 import ParameterTrendChart from '@/components/declarations/dossier/prelevements/parameter-trend-chart.js'
 import PrelevementsCalendar from '@/components/declarations/prelevements-calendar/index.js'
+import DividerSection from '@/components/ui/DividerSection/index.js'
 
 const PrelevementsHistory = ({
   dailyItems,
@@ -19,37 +20,32 @@ const PrelevementsHistory = ({
       Historique des prélèvements
     </Typography>
 
-    <Box className='flex flex-col gap-4'>
-      <Divider textAlign='left'>Données par pas de temps</Divider>
+    <DividerSection title='Données par pas de temps'>
+      {dailyItems && (
+        <Box className='flex flex-wrap gap-1 items-center'>
+          Journalier : {dailyItems.map(param => (
+            <Tag key={param.paramIndex} sx={{m: 1}}>
+              {param.nom_parametre} ({param.unite})
+            </Tag>
+          ))}
+        </Box>
+      )}
 
-      <Box className='flex flex-col gap-2'>
-        {dailyItems && (
-          <Box className='flex flex-wrap gap-1 items-center'>
-            Journalier : {dailyItems.map(param => (
-              <Tag key={param.paramIndex} sx={{m: 1}}>
-                {param.nom_parametre} ({param.unite})
-              </Tag>
-            ))}
-          </Box>
-        )}
+      {dailyAlert && <Alert severity='warning' description={dailyAlert} />}
 
-        {dailyAlert && <Alert severity='warning' description={dailyAlert} />}
-
-        {intervalItems?.length > 0 && (
-          <Box className='flex flex-wrap gap-1 items-center'>
-            Quinze minutes : {intervalItems.map(param => (
-              <Tag key={param.paramIndex} sx={{m: 1}}>
-                {param.nom_parametre} ({param.unite})
-              </Tag>
-            ))}
-          </Box>
-        )}
-      </Box>
-    </Box>
+      {intervalItems?.length > 0 && (
+        <Box className='flex flex-wrap gap-1 items-center'>
+          Quinze minutes : {intervalItems.map(param => (
+            <Tag key={param.paramIndex} sx={{m: 1}}>
+              {param.nom_parametre} ({param.unite})
+            </Tag>
+          ))}
+        </Box>
+      )}
+    </DividerSection>
 
     {calendarData && (
-      <Box className='flex flex-col gap-4'>
-        <Divider textAlign='left'>Calendrier des prélèvements</Divider>
+      <DividerSection title='Calendrier des prélèvements'>
         {dateAlert && (
           <Alert
             severity='warning'
@@ -58,14 +54,13 @@ const PrelevementsHistory = ({
           />
         )}
         <PrelevementsCalendar data={calendarData} />
-      </Box>
+      </DividerSection>
     )}
 
     {chartData && (
-      <Box className='flex flex-col gap-4'>
-        <Divider textAlign='left'>Graphique de tendance des paramètres</Divider>
+      <DividerSection title='Graphique de tendance des paramètres'>
         <ParameterTrendChart data={chartData} connectNulls={connectNulls} />
-      </Box>
+      </DividerSection>
     )}
   </Box>
 )
