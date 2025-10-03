@@ -55,7 +55,7 @@ const Home = async () => {
       <SidedSection
         firstContent={(
           <Counter
-            label='Nombre de point de prélèvement en activité : '
+            label='Nombre de points de prélèvement en activité : '
             number={stats.activPointsPrelevementCount}
           />
         )}
