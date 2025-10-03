@@ -59,7 +59,9 @@ const Page = async () => {
         title='Régularisation des exploitations'
         subtitle='Avancement de la régularisation administrative des exploitations en activité à ce jour. Pour chaque régime, il est indiqué le nombre d’exploitations autorisées et le nombre d’exploitations relevant de ce régime mais ne disposant pas d’autorisation à ce jour au titre de ce régime. Pour les IOTA, les chiffres doivent encore être affinés pour tenir compte des volumes effectivement prélevés par rapport aux seuils de la nomenclature IOTA. A noter qu’une exploitation peut relever de différents régimes.'
       >
-        <RegularisationsCharts data={regularisations} />
+        <Box className='fr-container pt-4'>
+          <RegularisationsCharts data={regularisations} />
+        </Box>
       </SidedSection>
 
       <SidedSection
@@ -67,7 +69,7 @@ const Page = async () => {
         title='Définition d’un débit réservé'
         subtitle='Le graphique représente le pourcentage d’exploitations dont les autorisations définissent une valeur de débit réservé. Seuls les prélèvements de surface sont pris en compte, hors sources.'
       >
-        <Box className='fr-container pt-4' >
+        <Box className='fr-container pt-4'>
           <DebitsReservesChart data={debitsReserves} />
         </Box>
       </SidedSection>
