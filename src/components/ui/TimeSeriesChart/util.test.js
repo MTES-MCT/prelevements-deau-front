@@ -361,7 +361,7 @@ test('buildSeriesModel segments data and exposes metadata', t => {
       color: '#16a34a',
       data: [
         {x: new Date(start.getTime() + (hour * 0)), y: 50},
-        {x: new Date(start.getTime() + hour), y: 58, meta: {alert: true}}
+        {x: new Date(start.getTime() + hour), y: 58, meta: {alert: 'Alert detected'}}
       ],
       threshold: [
         {x: new Date(start.getTime() + (hour * 0)), y: 52},
@@ -625,7 +625,7 @@ test('decimatePoints preserves points with meta', t => {
     {x: 1, y: 10},
     {x: 2, y: 20, meta: {comment: 'important'}},
     {x: 3, y: 30},
-    {x: 4, y: 40, meta: {alert: true}},
+    {x: 4, y: 40, meta: {alert: 'Alert message'}},
     {x: 5, y: 50}
   ]
   const {indices, didDecimate} = decimatePoints(points, 3)
@@ -675,7 +675,7 @@ test('buildAnnotations assigns correct axis ID', t => {
 test('buildAnnotations uses info color for all metadata points', t => {
   const start = new Date('2024-01-01T00:00:00Z')
   const pointBySeries = new Map([
-    ['alert', [{x: start.getTime(), y: 10, meta: {alert: true}}]]
+    ['alert', [{x: start.getTime(), y: 10, meta: {alert: 'Alert message'}}]]
   ])
   const annotations = buildAnnotations({
     pointBySeries,

@@ -25,7 +25,7 @@ const buildSerie = ({id, label, axis, color, base, amplitude, threshold, withMet
     const meta = withMeta && index % 6 === 0 ? {
       comment: `Observation n°${((index / 6) + 1)}`,
       tags: index % 12 === 0 ? ['alerte'] : ['info'],
-      alert: index % 12 === 0
+      alert: index % 12 === 0 ? 'Critical threshold exceeded' : undefined
     } : undefined
 
     return {
@@ -206,8 +206,7 @@ export const WithMetadataAndAlerts = {
             case 6: {
               meta = {
                 comment: 'Pic matinal observé',
-                tags: ['mesuré', 'validé'],
-                alert: false
+                tags: ['mesuré', 'validé']
               }
 
               break
@@ -217,7 +216,7 @@ export const WithMetadataAndAlerts = {
               meta = {
                 comment: 'Température anormalement élevée',
                 tags: ['alerte', 'anomalie'],
-                alert: true
+                alert: 'Abnormally high temperature detected'
               }
 
               break
@@ -226,8 +225,7 @@ export const WithMetadataAndAlerts = {
             case 18: {
               meta = {
                 comment: 'Retour à la normale',
-                tags: ['mesuré'],
-                alert: false
+                tags: ['mesuré']
               }
 
               break
@@ -274,7 +272,7 @@ export const InteractiveDemo = {
           meta: index % 4 === 0 ? {
             comment: `Point ${index} : ${(50 + (Math.sin(index / 3) * 10)).toFixed(1)} unités`,
             tags: ['mesure', index % 8 === 0 ? 'important' : 'normal'],
-            alert: index % 8 === 0
+            alert: index % 8 === 0 ? 'Important threshold reached' : undefined
           } : undefined
         })),
         threshold: 52
@@ -475,7 +473,7 @@ export const WaterMonitoringExample = {
             meta: hourOfDay === 16 && Math.floor(index / 24) === 1 ? {
               comment: 'Température maximale atteinte',
               tags: ['mesuré'],
-              alert: true
+              alert: 'Maximum temperature threshold reached'
             } : undefined
           }
         }),
@@ -513,7 +511,7 @@ export const ComplexScenario = {
             }
 
             case 24: {
-              meta = {comment: 'Pic journalier dépassé', tags: ['alerte'], alert: true}
+              meta = {comment: 'Pic journalier dépassé', tags: ['alerte'], alert: 'Daily peak threshold exceeded'}
 
               break
             }

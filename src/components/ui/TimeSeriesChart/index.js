@@ -35,7 +35,7 @@ import MetasList from '@/components/ui/MetasList/index.js'
  * @property {Object} [meta] - Optional metadata for this point
  * @property {string} [meta.comment] - Comment or note about this data point
  * @property {string[]} [meta.tags] - Tags associated with this point
- * @property {boolean} [meta.alert] - Whether this point triggers an alert
+ * @property {string} [meta.alert] - Alert message for this point if an alert is triggered
  */
 
 /**
@@ -146,7 +146,7 @@ const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, g
 
       if (meta.alert) {
         alerts.push({
-          alertLabel: 'Alerte détectée',
+          alertLabel: meta.alert,
           alertType: 'error'
         })
       }
