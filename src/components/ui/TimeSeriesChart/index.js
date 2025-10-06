@@ -80,9 +80,10 @@ const useChartModel = (series, locale, theme, exposeAllMarks) => useMemo(
  * @param {Object} props.axis - Axis configuration
  * @param {Function} props.getPointMeta - Function to retrieve metadata for a point
  * @param {Function} props.getSegmentOrigin - Function to retrieve segment origin data
+ * @param {Object} props.translations - Translation strings
  * @returns {JSX.Element|null} Tooltip content or null if no data
  */
-const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, getSegmentOrigin}) => {
+const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, getSegmentOrigin, translations: t}) => {
   if (dataIndex === null || dataIndex === undefined) {
     return null
   }
@@ -146,7 +147,7 @@ const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, g
     // Add synthetic point indicator
     if (origin?.synthetic) {
       parameters.push({
-        content: 'Point interpolé'
+        content: t.interpolatedPoint
       })
     }
   }
@@ -306,6 +307,17 @@ const ChartAnnotations = ({annotations, onPointClick}) => {
 const getInitialVisibility = series => Object.fromEntries(series.map(item => [item.id, true]))
 
 /**
+ * Default translation strings (French)
+ * @constant
+ */
+const DEFAULT_TRANSLATIONS = {
+  interpolatedPoint: 'Point interpolé',
+  noDataAvailable: 'Aucune donnée disponible.',
+  decimationWarning: 'Les données ont été décimées pour préserver les performances d\'affichage.',
+  chartAriaLabel: 'Graphique séries temporelles'
+}
+
+/**
  * TimeSeriesChart Component
  *
  * Displays multiple time series on a single chart with support for:
@@ -351,6 +363,12 @@ const getInitialVisibility = series => Object.fromEntries(series.map(item => [it
  *   onPointClick={(seriesId, point) => {
  *     console.log(`Clicked ${seriesId}:`, point)
  *   }}
+ *   translations={{
+ *     interpolatedPoint: 'Interpolated point',
+ *     noDataAvailable: 'No data available.',
+ *     decimationWarning: 'Data has been decimated to preserve display performance.',
+ *     chartAriaLabel: 'Time series chart'
+ *   }}
  * />
  * ```
  *
@@ -358,10 +376,16 @@ const getInitialVisibility = series => Object.fromEntries(series.map(item => [it
  * @param {Series[]} props.series - Array of series to display. Each series must have id, label, axis, color, and data
  * @param {string} [props.locale='fr-FR'] - Locale for date/number formatting (e.g., 'fr-FR', 'en-US')
  * @param {Function} [props.onPointClick] - Callback when a data point with metadata is clicked: (seriesId, point) => void
+ * @param {Object} [props.translations] - Translation strings for UI text
+ * @param {string} [props.translations.interpolatedPoint='Point interpolé'] - Label for interpolated points
+ * @param {string} [props.translations.noDataAvailable='Aucune donnée disponible.'] - Message when no data is available
+ * @param {string} [props.translations.decimationWarning='Les données ont été décimées...'] - Warning message for decimated data
+ * @param {string} [props.translations.chartAriaLabel='Graphique séries temporelles'] - ARIA label for the chart
  *
  * @returns {JSX.Element} Rendered time series chart
  */
-const TimeSeriesChart = ({series, locale, onPointClick}) => {
+const TimeSeriesChart = ({series, locale, onPointClick, translations = DEFAULT_TRANSLATIONS}) => {
+  const t = {...DEFAULT_TRANSLATIONS, ...translations}
   const theme = useTheme()
   const [visibility, setVisibility] = useState(() => getInitialVisibility(series))
 
@@ -456,7 +480,7 @@ const TimeSeriesChart = ({series, locale, onPointClick}) => {
 
   if (chartModel.xAxisDates.length === 0) {
     return (
-      <div className='p-6 border rounded-md bg-gray-50 text-gray-700 text-sm'>Aucune donnée disponible.</div>
+      <div className='p-6 border rounded-md bg-gray-50 text-gray-700 text-sm'>{t.noDataAvailable}</div>
     )
   }
 
@@ -464,10 +488,10 @@ const TimeSeriesChart = ({series, locale, onPointClick}) => {
     <div className='flex flex-col gap-3'>
       {chartModel.didDecimate && (
         <div className='text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2'>
-          Les données ont été décimées pour préserver les performances d&apos;affichage.
+          {t.decimationWarning}
         </div>
       )}
-      <div role='figure' aria-label='Graphique séries temporelles'>
+      <div role='figure' aria-label={t.chartAriaLabel}>
         <LineChart
           height={360}
           series={composedSeries}
@@ -498,6 +522,7 @@ const TimeSeriesChart = ({series, locale, onPointClick}) => {
                 {...props}
                 getPointMeta={getPointMeta}
                 getSegmentOrigin={getSegmentOrigin}
+                translations={t}
               />
             )
           }}
@@ -518,4 +543,5 @@ const TimeSeriesChart = ({series, locale, onPointClick}) => {
   )
 }
 
+export {DEFAULT_TRANSLATIONS}
 export default TimeSeriesChart
