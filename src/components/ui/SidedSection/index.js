@@ -39,7 +39,7 @@ const SidedSection = ({
           </Grid>
         )}
 
-        <Box className='flex justify-center fr-container'>{children}</Box>
+        <Box className='flex justify-center'>{children}</Box>
       </Box>
     </Box>
   )
