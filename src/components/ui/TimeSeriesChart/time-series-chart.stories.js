@@ -590,7 +590,7 @@ export const EnglishLocale = {
   parameters: {
     docs: {
       description: {
-        story: 'Formatage anglais des dates et des nombres.'
+        story: 'Formatage anglais des dates, des nombres et des textes.'
       }
     }
   },
@@ -599,13 +599,19 @@ export const EnglishLocale = {
     series: [
       buildSerie({
         id: 'data',
-        label: 'Données (unité)',
+        label: 'Data (unit)',
         axis: 'left',
         color: '#0891b2',
         base: 1234.567,
         amplitude: 123.456,
         threshold: 1300
       })
-    ]
+    ],
+    translations: {
+      interpolatedPoint: 'Interpolated point',
+      noDataAvailable: 'No data available.',
+      decimationWarning: 'Data has been decimated to preserve display performance.',
+      chartAriaLabel: 'Time series chart'
+    }
   }
 }
