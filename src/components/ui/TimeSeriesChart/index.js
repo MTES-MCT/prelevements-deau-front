@@ -129,18 +129,19 @@ const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, g
 
     // Add meta information if present
     if (meta) {
-      if (meta.comment) {
-        parameters.push({
-          content: meta.comment
-        })
-      }
-
       if (meta.tags?.length > 0) {
         for (const tag of meta.tags) {
           parameters.push({
             content: tag
           })
         }
+      }
+
+      if (meta.comment) {
+        alerts.push({
+          alertLabel: meta.comment,
+          alertType: 'info'
+        })
       }
 
       if (meta.alert) {
@@ -197,6 +198,10 @@ const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, g
  * SVG overlay component to render metadata annotations on the chart
  * Displays interactive circles for data points with metadata
  * Annotations are pre-filtered to only include those for configured axes
+ * Point colors indicate metadata type:
+ * - Red for alerts
+ * - Blue for comments
+ * - Gray for other metadata
  * @param {Object} props - Component props
  * @param {Array} props.annotations - Array of annotation objects with position and metadata
  * @param {Function} [props.onPointClick] - Callback when an annotation is clicked
@@ -218,6 +223,23 @@ const ChartAnnotations = ({annotations, onPointClick}) => {
 
   if (annotations.length === 0 || !drawingArea || !xScale) {
     return null
+  }
+
+  /**
+   * Determines the fill color of the annotation point based on metadata
+   * @param {Object} meta - Metadata object
+   * @returns {string} Color code for the point fill
+   */
+  const getPointFillColor = meta => {
+    if (meta?.alert) {
+      return '#dc2626' // Red for alerts
+    }
+
+    if (meta?.comment) {
+      return '#2563eb' // Blue for comments
+    }
+
+    return '#6b7280' // Gray for other metadata
   }
 
   return (
@@ -255,6 +277,8 @@ const ChartAnnotations = ({annotations, onPointClick}) => {
           }
         }
 
+        const pointFillColor = getPointFillColor(annotation.originalPoint.meta)
+
         return (
           <g
             key={`${annotation.seriesId}-${annotation.index}`}
@@ -275,7 +299,7 @@ const ChartAnnotations = ({annotations, onPointClick}) => {
             }}
           >
             <circle r={6} fill='white' stroke={annotation.color} strokeWidth={2} />
-            <circle r={2.5} fill={annotation.color} />
+            <circle r={2.5} fill={pointFillColor} />
           </g>
         )
       })}
