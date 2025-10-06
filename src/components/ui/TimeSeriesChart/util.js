@@ -102,7 +102,7 @@ export const decimatePoints = (dataPoints, threshold) => {
       index,
       x: point.x,
       y: point.y,
-      preserve: Boolean(point.meta && (point.meta.comment || point.meta.tags?.length || point.meta.alert))
+      preserve: Boolean(point.meta && (point.meta.comment || point.meta.alert))
     })
   }
 

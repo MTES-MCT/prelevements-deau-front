@@ -24,7 +24,6 @@ const buildSerie = ({id, label, axis, color, base, amplitude, threshold, withMet
     const timestamp = start + (index * hour)
     const meta = withMeta && index % 6 === 0 ? {
       comment: `Observation n°${((index / 6) + 1)}`,
-      tags: index % 12 === 0 ? ['alerte'] : ['info'],
       alert: index % 12 === 0 ? 'Critical threshold exceeded' : undefined
     } : undefined
 
@@ -205,8 +204,7 @@ export const WithMetadataAndAlerts = {
           switch (index) {
             case 6: {
               meta = {
-                comment: 'Pic matinal observé',
-                tags: ['mesuré', 'validé']
+                comment: 'Pic matinal observé'
               }
 
               break
@@ -215,7 +213,6 @@ export const WithMetadataAndAlerts = {
             case 12: {
               meta = {
                 comment: 'Température anormalement élevée',
-                tags: ['alerte', 'anomalie'],
                 alert: 'Abnormally high temperature detected'
               }
 
@@ -224,8 +221,7 @@ export const WithMetadataAndAlerts = {
 
             case 18: {
               meta = {
-                comment: 'Retour à la normale',
-                tags: ['mesuré']
+                comment: 'Retour à la normale'
               }
 
               break
@@ -271,7 +267,6 @@ export const InteractiveDemo = {
           y: 50 + (Math.sin(index / 3) * 10),
           meta: index % 4 === 0 ? {
             comment: `Point ${index} : ${(50 + (Math.sin(index / 3) * 10)).toFixed(1)} unités`,
-            tags: ['mesure', index % 8 === 0 ? 'important' : 'normal'],
             alert: index % 8 === 0 ? 'Important threshold reached' : undefined
           } : undefined
         })),
@@ -472,7 +467,6 @@ export const WaterMonitoringExample = {
             y: baseTemp + (Math.sin(index / 6) * 2),
             meta: hourOfDay === 16 && Math.floor(index / 24) === 1 ? {
               comment: 'Température maximale atteinte',
-              tags: ['mesuré'],
               alert: 'Maximum temperature threshold reached'
             } : undefined
           }
@@ -505,19 +499,19 @@ export const ComplexScenario = {
 
           switch (index) {
             case 8: {
-              meta = {comment: 'Début de journée', tags: ['contrôle']}
+              meta = {comment: 'Début de journée'}
 
               break
             }
 
             case 24: {
-              meta = {comment: 'Pic journalier dépassé', tags: ['alerte'], alert: 'Daily peak threshold exceeded'}
+              meta = {comment: 'Pic journalier dépassé', alert: 'Daily peak threshold exceeded'}
 
               break
             }
 
             case 36: {
-              meta = {comment: 'Retour à la normale', tags: ['info']}
+              meta = {comment: 'Retour à la normale'}
 
               break
             }
@@ -544,8 +538,7 @@ export const ComplexScenario = {
           x: new Date(start + (index * hour / 2)),
           y: 14 + (Math.sin(index / 8) * 4) + (index % 10 === 0 ? 1 : 0),
           meta: index === 20 ? {
-            comment: 'Température maximale',
-            tags: ['mesuré', 'validé']
+            comment: 'Température maximale'
           } : undefined
         })),
         threshold: 17
