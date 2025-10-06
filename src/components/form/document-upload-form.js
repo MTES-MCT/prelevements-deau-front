@@ -29,7 +29,7 @@ const naturesDocument = [
   'Rapport hydrogéologue agréé'
 ]
 
-const DocumentUploadForm = ({idPreleveur}) => {
+const DocumentUploadForm = ({preleveur}) => {
   const router = useRouter()
 
   const [isLoading, setIsLoading] = useState(false)
@@ -47,7 +47,7 @@ const DocumentUploadForm = ({idPreleveur}) => {
 
     try {
       const cleanedDocument = emptyStringToNull(document)
-      const response = await createDocument(idPreleveur, cleanedDocument, filesList[0])
+      const response = await createDocument(preleveur._id, cleanedDocument, filesList[0])
 
       if (response.code === 400) {
         if (response.validationErrors) {
@@ -58,7 +58,7 @@ const DocumentUploadForm = ({idPreleveur}) => {
       } else if (response.code === 409) {
         setError(response.message)
       } else {
-        router.push(`/preleveurs/${idPreleveur}`)
+        router.push(`/preleveurs/${preleveur.preleveur_id}`)
       }
     } catch (error) {
       setError(error.message)
@@ -81,7 +81,7 @@ const DocumentUploadForm = ({idPreleveur}) => {
     setIsDisabled(
       !(document?.date_signature
         && document?.nature
-        && filesList.length > 0)
+        && filesList?.length > 0)
     )
   }, [document, filesList])
 

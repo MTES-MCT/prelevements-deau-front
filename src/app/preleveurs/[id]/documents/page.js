@@ -47,7 +47,7 @@ const Page = async ({params}) => {
           Gestion des documents
         </Typography>
         <DocumentsListForm documents={documents} idPreleveur={preleveur._id} />
-        <DocumentUploadForm idPreleveur={preleveur.id_preleveur} />
+        <DocumentUploadForm preleveur={preleveur} />
       </div>
     </>
   )

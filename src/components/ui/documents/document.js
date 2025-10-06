@@ -70,7 +70,7 @@ const Document = ({document, handleDelete, handleEdit, ...props}) => (
             iconId='fr-icon-external-link-line'
             size='small'
             linkProps={{
-              href: document.downloadUrl || null
+              href: document.downloadUrl
             }}
           />
         )}

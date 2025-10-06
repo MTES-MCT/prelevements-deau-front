@@ -139,7 +139,7 @@ export async function uploadDocument(idPreleveur, document) {
   formData.append('document', document)
 
   const response = await fetch(
-    `http://localhost:5000/api/preleveurs/${idPreleveur}/documents/upload`,
+    `${API_URL}/api/preleveurs/${idPreleveur}/documents/upload`,
     {
       headers: {Authorization: await getAuthorization()},
       method: 'POST',
