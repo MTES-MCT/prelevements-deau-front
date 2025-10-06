@@ -8,7 +8,7 @@ const meta = {
   parameters: {
     docs: {
       description: {
-        component: 'Multi-series line chart based on MUI X LineChart with static/dynamic threshold management, conditional coloring, and annotations.'
+        component: 'Graphique de lignes multi-séries basé sur MUI X LineChart avec gestion des seuils statiques/dynamiques, coloration conditionnelle et annotations.'
       }
     }
   }
@@ -19,12 +19,12 @@ export default meta
 const start = new Date('2024-01-01T00:00:00Z').getTime()
 const hour = 1000 * 60 * 60
 
-// Helper function to build a serie with synthetic data
+// Fonction utilitaire pour construire une série avec des données synthétiques
 const buildSerie = ({id, label, axis, color, base, amplitude, threshold, withMeta = false}) => {
   const data = Array.from({length: 24}, (_, index) => {
     const timestamp = start + index * hour
     const meta = withMeta && index % 6 === 0 ? {
-      comment: `Observation #${index / 6 + 1}`,
+      comment: `Observation n°${index / 6 + 1}`,
       tags: index % 12 === 0 ? ['alerte'] : ['info'],
       alert: index % 12 === 0
     } : undefined
@@ -83,7 +83,7 @@ export const DualAxes = {
   parameters: {
     docs: {
       description: {
-        story: 'Two series illustrating joint use of left (°C) and right (m³/h) axes with distinct thresholds.'
+        story: 'Deux séries illustrant l’utilisation conjointe des axes gauche (°C) et droit (m³/h) avec des seuils distincts.'
       }
     }
   },
@@ -94,7 +94,7 @@ export const DualAxes = {
         id: 'left-axis',
         label: 'Température moyenne (°C)',
         axis: 'left',
-        color: '#e11d48',
+        color: '#f97316',
         base: 17,
         amplitude: 4,
         threshold: 19,
@@ -117,7 +117,7 @@ export const EmptyState = {
   parameters: {
     docs: {
       description: {
-        story: 'Display of "no data" state when series are empty.'
+        story: 'Affichage de l’état "aucune donnée" lorsque les séries sont vides.'
       }
     }
   },
@@ -127,12 +127,12 @@ export const EmptyState = {
   }
 }
 
-// Threshold variations
+// Variations de seuil
 export const StaticThreshold = {
   parameters: {
     docs: {
       description: {
-        story: 'Single series with static threshold. Segments above threshold are colored differently.'
+        story: 'Série unique avec seuil statique. Les segments au-dessus du seuil sont mis en évidence différemment.'
       }
     }
   },
@@ -157,7 +157,7 @@ export const DynamicThreshold = {
   parameters: {
     docs: {
       description: {
-        story: 'Dynamic threshold varying over time. The threshold adapts at each moment.'
+        story: 'Seuil dynamique variant dans le temps. Le seuil s’adapte à chaque instant.'
       }
     }
   },
@@ -182,12 +182,12 @@ export const DynamicThreshold = {
   }
 }
 
-// Metadata and interactions
+// Métadonnées et interactions
 export const WithMetadataAndAlerts = {
   parameters: {
     docs: {
       description: {
-        story: 'Points with metadata (comments, tags) and alerts. Click on annotated points to see details.'
+        story: 'Points avec métadonnées (commentaires, étiquettes) et alertes. Cliquez sur les points annotés pour voir les détails.'
       }
     }
   },
@@ -198,7 +198,7 @@ export const WithMetadataAndAlerts = {
         id: 'temperature',
         label: 'Température eau (°C)',
         axis: 'left',
-        color: '#dc2626',
+        color: '#f59e0b',
         data: Array.from({length: 24}, (_, index) => {
           const y = 15 + Math.sin(index / 4) * 5
           let meta
@@ -246,7 +246,7 @@ export const WithMetadataAndAlerts = {
       }
     ],
     onPointClick(seriesId, point) {
-      console.log('Point clicked:', {
+      console.log('Point cliqué :', {
         seriesId, date: point.x, value: point.y, meta: point.meta
       })
     }
@@ -257,7 +257,7 @@ export const InteractiveDemo = {
   parameters: {
     docs: {
       description: {
-        story: 'Interactive demo: click on annotated points to display details (see console).'
+        story: 'Démo interactive : cliquez sur les points annotés pour afficher les détails (voir console).'
       }
     }
   },
@@ -273,7 +273,7 @@ export const InteractiveDemo = {
           x: new Date(start + (index * hour)),
           y: 50 + Math.sin(index / 3) * 10,
           meta: index % 4 === 0 ? {
-            comment: `Point ${index}: ${(50 + Math.sin(index / 3) * 10).toFixed(1)} unités`,
+            comment: `Point ${index} : ${(50 + Math.sin(index / 3) * 10).toFixed(1)} unités`,
             tags: ['mesure', index % 8 === 0 ? 'important' : 'normal'],
             alert: index % 8 === 0
           } : undefined
@@ -282,19 +282,19 @@ export const InteractiveDemo = {
       }
     ],
     onPointClick(seriesId, point) {
-      console.log('Point clicked:', {
+      console.log('Point cliqué :', {
         seriesId, date: point.x, value: point.y, meta: point.meta
       })
     }
   }
 }
 
-// Multiple series configurations
+// Configurations multi-séries
 export const MultipleSeriesSameAxis = {
   parameters: {
     docs: {
       description: {
-        story: 'Multiple series sharing the same Y axis (sensor comparison).'
+        story: 'Plusieurs séries partageant le même axe Y (comparaison de capteurs).'
       }
     }
   },
@@ -327,7 +327,7 @@ export const MultipleSeriesSameAxis = {
         id: 'capteur3',
         label: 'Capteur C (m³/h)',
         axis: 'left',
-        color: '#dc2626',
+        color: '#7c3aed',
         data: Array.from({length: 24}, (_, index) => ({
           x: new Date(start + (index * hour)),
           y: 48 + Math.sin(index / 2) * 7
@@ -338,12 +338,12 @@ export const MultipleSeriesSameAxis = {
   }
 }
 
-// Edge cases
+// Cas limites
 export const WithMissingData = {
   parameters: {
     docs: {
       description: {
-        story: 'Data with missing values (null). The chart visually interpolates between points.'
+        story: 'Données avec valeurs manquantes (null). Le graphique interpole visuellement entre les points.'
       }
     }
   },
@@ -369,7 +369,7 @@ export const HighFrequencyData = {
   parameters: {
     docs: {
       description: {
-        story: 'High frequency data (1 point every 5 minutes). The chart automatically decimates for performance optimization.'
+        story: 'Données haute fréquence (1 point toutes les 5 minutes). Le graphique décime automatiquement pour optimiser les performances.'
       }
     }
   },
@@ -395,7 +395,7 @@ export const ExtremeValues = {
   parameters: {
     docs: {
       description: {
-        story: 'Handling of extreme values and wide value ranges.'
+        story: 'Gestion de valeurs extrêmes et d’intervalles très larges.'
       }
     }
   },
@@ -417,7 +417,7 @@ export const ExtremeValues = {
         id: 'large',
         label: 'Grandes valeurs (1000-2000)',
         axis: 'right',
-        color: '#dc2626',
+        color: '#0f766e',
         data: Array.from({length: 24}, (_, index) => ({
           x: new Date(start + (index * hour)),
           y: 1500 + Math.cos(index / 4) * 300
@@ -428,12 +428,12 @@ export const ExtremeValues = {
   }
 }
 
-// Real-world examples
+// Exemples réalistes
 export const WaterMonitoringExample = {
   parameters: {
     docs: {
       description: {
-        story: 'Realistic example: water abstraction monitoring with flow and temperature.'
+        story: 'Exemple réaliste : suivi des prélèvements d’eau avec débit et température.'
       }
     }
   },
@@ -465,7 +465,7 @@ export const WaterMonitoringExample = {
         id: 'temperature',
         label: 'Température eau (°C)',
         axis: 'right',
-        color: '#dc2626',
+        color: '#f97316',
         data: Array.from({length: 48}, (_, index) => {
           const hourOfDay = index % 24
           const baseTemp = 12 + (hourOfDay >= 12 && hourOfDay <= 18 ? 3 : 0)
@@ -490,7 +490,7 @@ export const ComplexScenario = {
   parameters: {
     docs: {
       description: {
-        story: 'Complex scenario combining all features: dual axes, dynamic thresholds, metadata, alerts, missing data.'
+        story: 'Scénario complexe combinant toutes les fonctionnalités : axes doublés, seuils dynamiques, métadonnées, alertes, données manquantes.'
       }
     }
   },
@@ -542,7 +542,7 @@ export const ComplexScenario = {
         id: 'temperature',
         label: 'Température (°C)',
         axis: 'right',
-        color: '#dc2626',
+        color: '#f97316',
         data: Array.from({length: 48}, (_, index) => ({
           x: new Date(start + (index * hour / 2)),
           y: 14 + Math.sin(index / 8) * 4 + (index % 10 === 0 ? 1 : 0),
@@ -566,17 +566,17 @@ export const ComplexScenario = {
       }
     ],
     onPointClick(seriesId, point) {
-      console.log('Clicked:', seriesId, point)
+      console.log('Point cliqué :', seriesId, point)
     }
   }
 }
 
-// Locales
+// Paramètres régionaux
 export const FrenchLocale = {
   parameters: {
     docs: {
       description: {
-        story: 'French formatting for dates and numbers.'
+        story: 'Formatage français des dates et des nombres.'
       }
     }
   },
@@ -600,7 +600,7 @@ export const EnglishLocale = {
   parameters: {
     docs: {
       description: {
-        story: 'English formatting for dates and numbers.'
+        story: 'Formatage anglais des dates et des nombres.'
       }
     }
   },
@@ -609,7 +609,7 @@ export const EnglishLocale = {
     series: [
       buildSerie({
         id: 'data',
-        label: 'Data (unit)',
+        label: 'Données (unité)',
         axis: 'left',
         color: '#0891b2',
         base: 1234.567,
