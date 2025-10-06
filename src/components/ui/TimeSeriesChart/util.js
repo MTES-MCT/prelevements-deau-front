@@ -396,16 +396,54 @@ export const buildSegments = (alignedData, xValues, options) => {
     const {values, thresholds, pointsWithMeta, metas} = data
     let currentSegment = null
     const segments = []
+    let previousSegmentLastIndex = null
 
-    const flushSegment = () => {
+    const flushSegment = (nextIndex = null) => {
       if (!currentSegment) {
         return
       }
 
       const segmentData = Array.from({length: xValues.length}).fill(null)
+      // Helper function to include synthetic points in a segment
+      const includeSyntheticPoint = (index, pointsWithMeta, values, segmentData) => {
+        if (index === null || index === undefined) {
+          return
+        }
+
+        const point = pointsWithMeta[index]
+        if (!point?.synthetic) {
+          return
+        }
+
+        const value = values[index]
+        if (value === null || value === undefined) {
+          return
+        }
+
+        segmentData[index] = value
+      }
+
+      includeSyntheticPoint(previousSegmentLastIndex, pointsWithMeta, values, segmentData)
+
+      // Fill in current segment's points
       for (const index of currentSegment.indices) {
         segmentData[index] = values[index]
       }
+
+      includeSyntheticPoint(nextIndex, pointsWithMeta, values, segmentData)
+      const getLastIndexForNextSegment = (nextIndex, pointsWithMeta, currentSegment) => {
+        if (nextIndex !== null && pointsWithMeta[nextIndex]?.synthetic) {
+          return nextIndex
+        }
+
+        if (currentSegment.indices.length > 0) {
+          return currentSegment.indices.at(-1)
+        }
+
+        return null
+      }
+
+      const lastIndexForNextSegment = getLastIndexForNextSegment(nextIndex, pointsWithMeta, currentSegment)
 
       const segmentId = `${data.id}__segment-${segments.length}`
       segments.push({
@@ -441,17 +479,19 @@ export const buildSegments = (alignedData, xValues, options) => {
       })
       segmentToOriginal.set(segmentId, data.id)
       currentSegment = null
+      previousSegmentLastIndex = lastIndexForNextSegment
     }
 
     for (const [index, value] of values.entries()) {
       const classification = classifyPoint(value, thresholds[index])
       if (!classification) {
         flushSegment()
+        previousSegmentLastIndex = null
         continue
       }
 
       if (!currentSegment || currentSegment.classification !== classification) {
-        flushSegment()
+        flushSegment(index)
         currentSegment = {
           classification,
           indices: []
