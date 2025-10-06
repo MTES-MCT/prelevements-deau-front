@@ -1,4 +1,3 @@
-/* eslint-disable no-mixed-operators */
 import TimeSeriesChart from './index.js'
 
 const meta = {
@@ -22,16 +21,16 @@ const hour = 1000 * 60 * 60
 // Fonction utilitaire pour construire une série avec des données synthétiques
 const buildSerie = ({id, label, axis, color, base, amplitude, threshold, withMeta = false}) => {
   const data = Array.from({length: 24}, (_, index) => {
-    const timestamp = start + index * hour
+    const timestamp = start + (index * hour)
     const meta = withMeta && index % 6 === 0 ? {
-      comment: `Observation n°${index / 6 + 1}`,
+      comment: `Observation n°${((index / 6) + 1)}`,
       tags: index % 12 === 0 ? ['alerte'] : ['info'],
       alert: index % 12 === 0
     } : undefined
 
     return {
       x: new Date(timestamp),
-      y: base + Math.sin(index / 3) * amplitude + (index % 5 === 0 ? amplitude * 0.4 : 0),
+      y: base + (Math.sin(index / 3) * amplitude) + (index % 5 === 0 ? (amplitude * 0.4) : 0),
       meta
     }
   })
@@ -47,8 +46,8 @@ const buildSerie = ({id, label, axis, color, base, amplitude, threshold, withMet
 }
 
 const dynamicThreshold = Array.from({length: 24}, (_, index) => ({
-  x: new Date(start + index * hour),
-  y: 55 + (index % 8) * 1.5
+  x: new Date(start + (index * hour)),
+  y: 55 + ((index % 8) * 1.5)
 }))
 
 export const MultiSeries = {
@@ -171,11 +170,11 @@ export const DynamicThreshold = {
         color: '#0078f3',
         data: Array.from({length: 48}, (_, index) => ({
           x: new Date(start + (index * hour / 2)),
-          y: 50 + Math.sin(index / 6) * 8 + Math.random() * 3
+          y: 50 + (Math.sin(index / 6) * 8) + (Math.random() * 3)
         })),
         threshold: Array.from({length: 48}, (_, index) => ({
           x: new Date(start + (index * hour / 2)),
-          y: 52 + Math.cos(index / 8) * 5
+          y: 52 + (Math.cos(index / 8) * 5)
         }))
       }
     ]
@@ -200,7 +199,7 @@ export const WithMetadataAndAlerts = {
         axis: 'left',
         color: '#f59e0b',
         data: Array.from({length: 24}, (_, index) => {
-          const y = 15 + Math.sin(index / 4) * 5
+          const y = 15 + (Math.sin(index / 4) * 5)
           let meta
 
           switch (index) {
@@ -271,9 +270,9 @@ export const InteractiveDemo = {
         color: '#8b5cf6',
         data: Array.from({length: 24}, (_, index) => ({
           x: new Date(start + (index * hour)),
-          y: 50 + Math.sin(index / 3) * 10,
+          y: 50 + (Math.sin(index / 3) * 10),
           meta: index % 4 === 0 ? {
-            comment: `Point ${index} : ${(50 + Math.sin(index / 3) * 10).toFixed(1)} unités`,
+            comment: `Point ${index} : ${(50 + (Math.sin(index / 3) * 10)).toFixed(1)} unités`,
             tags: ['mesure', index % 8 === 0 ? 'important' : 'normal'],
             alert: index % 8 === 0
           } : undefined
@@ -308,7 +307,7 @@ export const MultipleSeriesSameAxis = {
         color: '#2563eb',
         data: Array.from({length: 24}, (_, index) => ({
           x: new Date(start + (index * hour)),
-          y: 50 + Math.sin(index / 3) * 8
+          y: 50 + (Math.sin(index / 3) * 8)
         })),
         threshold: 55
       },
@@ -319,7 +318,7 @@ export const MultipleSeriesSameAxis = {
         color: '#16a34a',
         data: Array.from({length: 24}, (_, index) => ({
           x: new Date(start + (index * hour)),
-          y: 52 + Math.cos(index / 4) * 6
+          y: 52 + (Math.cos(index / 4) * 6)
         })),
         threshold: 55
       },
@@ -330,7 +329,7 @@ export const MultipleSeriesSameAxis = {
         color: '#7c3aed',
         data: Array.from({length: 24}, (_, index) => ({
           x: new Date(start + (index * hour)),
-          y: 48 + Math.sin(index / 2) * 7
+          y: 48 + (Math.sin(index / 2) * 7)
         })),
         threshold: 55
       }
@@ -357,7 +356,7 @@ export const WithMissingData = {
         color: '#8b5cf6',
         data: Array.from({length: 24}, (_, index) => ({
           x: new Date(start + (index * hour)),
-          y: [5, 6, 7, 15, 16].includes(index) ? null : 50 + Math.sin(index / 3) * 10
+          y: [5, 6, 7, 15, 16].includes(index) ? null : 50 + (Math.sin(index / 3) * 10)
         })),
         threshold: 52
       }
@@ -383,7 +382,7 @@ export const HighFrequencyData = {
         color: '#0891b2',
         data: Array.from({length: 288}, (_, index) => ({
           x: new Date(start + (index * 5 * 60 * 1000)),
-          y: 30 + Math.sin(index / 20) * 5 + Math.random() * 2
+          y: 30 + (Math.sin(index / 20) * 5) + (Math.random() * 2)
         })),
         threshold: 32
       }
@@ -409,7 +408,7 @@ export const ExtremeValues = {
         color: '#2563eb',
         data: Array.from({length: 24}, (_, index) => ({
           x: new Date(start + (index * hour)),
-          y: 5 + Math.sin(index / 3) * 3
+          y: 5 + (Math.sin(index / 3) * 3)
         })),
         threshold: 6
       },
@@ -420,7 +419,7 @@ export const ExtremeValues = {
         color: '#0f766e',
         data: Array.from({length: 24}, (_, index) => ({
           x: new Date(start + (index * hour)),
-          y: 1500 + Math.cos(index / 4) * 300
+          y: 1500 + (Math.cos(index / 4) * 300)
         })),
         threshold: 1600
       }
@@ -448,11 +447,11 @@ export const WaterMonitoringExample = {
         data: Array.from({length: 48}, (_, index) => {
           const hourOfDay = index % 24
           const baseFlow = hourOfDay >= 6 && hourOfDay <= 22 ? 45 : 15
-          const variation = Math.sin(index / 4) * 8
+          const variation = (Math.sin(index / 4) * 8)
 
           return {
             x: new Date(start + (index * hour)),
-            y: baseFlow + variation + Math.random() * 3,
+            y: baseFlow + variation + (Math.random() * 3),
             meta: hourOfDay === 14 && index < 24 ? {
               comment: 'Pic de consommation journalier',
               tags: ['normal']
@@ -472,7 +471,7 @@ export const WaterMonitoringExample = {
 
           return {
             x: new Date(start + (index * hour)),
-            y: baseTemp + Math.sin(index / 6) * 2,
+            y: baseTemp + (Math.sin(index / 6) * 2),
             meta: hourOfDay === 16 && Math.floor(index / 24) === 1 ? {
               comment: 'Température maximale atteinte',
               tags: ['mesuré'],
@@ -503,7 +502,7 @@ export const ComplexScenario = {
         axis: 'left',
         color: '#0078f3',
         data: Array.from({length: 48}, (_, index) => {
-          const value = index === 12 || index === 30 ? null : 45 + Math.sin(index / 5) * 12
+          const value = index === 12 || index === 30 ? null : 45 + (Math.sin(index / 5) * 12)
           let meta
 
           switch (index) {
@@ -535,7 +534,7 @@ export const ComplexScenario = {
         }),
         threshold: Array.from({length: 48}, (_, index) => ({
           x: new Date(start + (index * hour / 2)),
-          y: 48 + Math.cos(index / 10) * 6
+          y: 48 + (Math.cos(index / 10) * 6)
         }))
       },
       {
@@ -545,7 +544,7 @@ export const ComplexScenario = {
         color: '#f97316',
         data: Array.from({length: 48}, (_, index) => ({
           x: new Date(start + (index * hour / 2)),
-          y: 14 + Math.sin(index / 8) * 4 + (index % 10 === 0 ? 1 : 0),
+          y: 14 + (Math.sin(index / 8) * 4) + (index % 10 === 0 ? 1 : 0),
           meta: index === 20 ? {
             comment: 'Température maximale',
             tags: ['mesuré', 'validé']
@@ -560,7 +559,7 @@ export const ComplexScenario = {
         color: '#6e445a',
         data: Array.from({length: 48}, (_, index) => ({
           x: new Date(start + (index * hour / 2)),
-          y: 42 + Math.cos(index / 6) * 3
+          y: 42 + (Math.cos(index / 6) * 3)
         })),
         threshold: 43
       }
