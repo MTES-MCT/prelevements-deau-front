@@ -11,9 +11,9 @@ import {
   getDocumentsFromPreleveur,
   getPointPrelevement
 } from '@/app/api/points-prelevement.js'
+import DocumentsList from '@/components/documents/documents-list.js'
 import ExploitationsList from '@/components/exploitations/exploitations-list.js'
 import {getUsagesColors} from '@/components/map/legend-colors.js'
-import DocumentsList from '@/components/ui/documents/documents-list.js'
 import LabelValue from '@/components/ui/label-value.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 

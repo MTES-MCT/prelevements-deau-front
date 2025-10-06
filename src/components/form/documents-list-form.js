@@ -12,7 +12,7 @@ import {
 } from '@mui/material'
 
 import {deleteDocument} from '@/app/api/points-prelevement.js'
-import DocumentsList from '@/components/ui/documents/documents-list.js'
+import DocumentsList from '@/components/documents/documents-list.js'
 
 const DocumentsListForm = ({documents, idPreleveur}) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false)

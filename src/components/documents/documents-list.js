@@ -1,6 +1,6 @@
 import {fr} from '@codegouvfr/react-dsfr'
 
-import Document from '@/components/ui/documents/document.js'
+import Document from '@/components/documents/document.js'
 
 const DocumentsList = ({documents, handleEdit, handleDelete}) => (
   <div className='border m-3'>
