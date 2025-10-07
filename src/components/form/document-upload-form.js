@@ -98,7 +98,7 @@ const DocumentUploadForm = ({preleveur}) => {
         ) : (
           <div className='flex p-5 my-5 justify-between'>
             <Upload
-              hint='Format PDF, max 50MB, plusieurs fichiers possible'
+              hint='Format PDF, max 50MB, plusieurs fichiers possibles'
               label='Ajout de fichiers'
               nativeInputProps={{
                 onChange: e => setFilesList(e.target.files)
