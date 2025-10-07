@@ -10,9 +10,9 @@ const SidedSection = ({
   secondContent,
   children
 }) => {
-  const backgroundColor = background === 'secondary'
-    ? fr.colors.decisions.background.alt.blueFrance.default
-    : fr.colors.decisions.background.default.grey.default
+  const backgroundColor = background === 'primary'
+    ? fr.colors.decisions.background.default.grey.default
+    : fr.colors.decisions.background.alt.blueFrance.default
 
   return (
     <Box sx={{backgroundColor, paddingY: 6}}>
