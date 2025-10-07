@@ -178,6 +178,7 @@ const GroupedMultiselect = ({
         <List
           style={{
             position: 'absolute',
+            backgroundColor: fr.colors.decisions.background.default.grey.default,
             top: '100%',
             left: 0,
             right: 0,

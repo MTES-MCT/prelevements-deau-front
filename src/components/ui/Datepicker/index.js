@@ -132,7 +132,8 @@ const DatepickerTrigger = ({
           marginTop: '4px',
           left: 'auto',
           right: 'auto',
-          transform: 'none'
+          transform: 'none',
+          zIndex: 9999
         }
 
         // Largeur responsive
