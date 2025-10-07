@@ -49,6 +49,34 @@ export async function getFile(dossierId, storageHash) {
   return response.json()
 }
 
+export async function getFileSeries(dossierId, storageHash, {withPoint = false} = {}) {
+  const search = withPoint ? '?withPoint=1' : ''
+  const response = await executeRequest(
+    `api/dossiers/${dossierId}/files/${storageHash}/series${search}`,
+    {headers: {Authorization: await getAuthorization()}}
+  )
+
+  if (response.ok === false) {
+    return null
+  }
+
+  return response.json()
+}
+
+export async function getFileIntegrations(dossierId, storageHash, {withPoint = false} = {}) {
+  const search = withPoint ? '?withPoint=1' : ''
+  const response = await executeRequest(
+    `api/dossiers/${dossierId}/files/${storageHash}/integrations${search}`,
+    {headers: {Authorization: await getAuthorization()}}
+  )
+
+  if (response.ok === false) {
+    return null
+  }
+
+  return response.json()
+}
+
 export async function getFileBlob(dossierId, storageHash) {
   const response = await executeRequest(
     `api/dossiers/${dossierId}/files/${storageHash}/download`,
