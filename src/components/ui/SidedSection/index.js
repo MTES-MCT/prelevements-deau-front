@@ -15,7 +15,7 @@ const SidedSection = ({
     : fr.colors.decisions.background.default.grey.default
 
   return (
-    <Box sx={{backgroundColor, padding: 5}}>
+    <Box sx={{backgroundColor, paddingY: 6}}>
       {(title || subtitle) && (
         <Box className='fr-container text-center pt-12'>
           {title && <Typography variant='h6'>{title}</Typography>}
