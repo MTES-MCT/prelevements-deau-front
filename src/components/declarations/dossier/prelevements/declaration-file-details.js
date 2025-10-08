@@ -4,10 +4,11 @@ import {useMemo} from 'react'
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import Tag from '@codegouvfr/react-dsfr/Tag'
-import {Box, Divider} from '@mui/material'
+import {Box} from '@mui/material'
 
 import ParameterTrendChart from '@/components/declarations/dossier/prelevements/parameter-trend-chart.js'
 import PrelevementsCalendar from '@/components/declarations/prelevements-calendar/index.js'
+import DividerSection from '@/components/ui/DividerSection/index.js'
 
 const DeclarationFileDetails = ({
   moisDeclaration,
@@ -52,11 +53,8 @@ const DeclarationFileDetails = ({
           Consulter la fiche
         </Button>
       </div>
-      <Box className='flex flex-col gap-4'>
-        <Divider textAlign='left'>
-          Paramètres par pas de temps
-        </Divider>
 
+      <DividerSection title='Paramètres par pas de temps'>
         <Box className='flex flex-col gap-2'>
           {data.dailyParameters ? (
             <Box className='flex flex-wrap gap-1 items-center'>
@@ -80,14 +78,10 @@ const DeclarationFileDetails = ({
             </Box>
           )}
         </Box>
-      </Box>
+      </DividerSection>
 
       {Object.keys(data).length > 0 && (
-        <Box className='flex flex-col gap-4'>
-          <Divider textAlign='left'>
-            Calendrier des prélèvements
-          </Divider>
-
+        <DividerSection title='Calendrier des prélèvements'>
           {hasDatesOutsideDeclMonth && (
             <Alert
               severity='warning'
@@ -102,7 +96,7 @@ const DeclarationFileDetails = ({
 
           <PrelevementsCalendar data={dataWithDatesOnly} />
           <ParameterTrendChart data={dataWithDatesOnly} connectNulls={typePrelevement === 'camion-citerne'} />
-        </Box>
+        </DividerSection>
       )}
     </Box>
   )

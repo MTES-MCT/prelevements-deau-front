@@ -19,7 +19,7 @@ import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {computeCalendarKey, getMinDate} from './util.js'
 
 import Calendar from '@/components/ui/Calendar/index.js'
-import LegendCalendar from '@/components/ui/legend-calendar.js'
+import LegendCalendar from '@/components/ui/LegendCalendar/index.js'
 
 // Default legend labels (reused pattern from previous calendar grid implementation)
 const defaultLegendLabels = [

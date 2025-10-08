@@ -6,9 +6,9 @@ import {Input} from '@codegouvfr/react-dsfr/Input'
 import {Select} from '@codegouvfr/react-dsfr/SelectNext'
 import {Typography} from '@mui/material'
 
-import AccordionCentered from '../ui/accordion-centered.js'
-
 import OptionalPreleveurFieldsForm from './optional-preleveur-fields-form.js'
+
+import AccordionCentered from '@/components/ui/AccordionCentered/index.js'
 
 const PreleveurPhysiqueForm = ({preleveur, setPreleveur}) => {
   const [isExpanded, setIsExpanded] = useState(false)

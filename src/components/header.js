@@ -6,7 +6,7 @@ import {Header as DSFRHeader} from '@codegouvfr/react-dsfr/Header'
 import {usePathname} from 'next/navigation'
 import {useSession} from 'next-auth/react'
 
-import LoginHeaderItem from '@/components/ui/login-header-item.js'
+import LoginHeaderItem from '@/components/ui/LoginHeaderItem/index.js'
 
 const defaultNavigation = [
   {
