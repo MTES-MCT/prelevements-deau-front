@@ -14,7 +14,7 @@ import {
 import DocumentsList from '@/components/documents/documents-list.js'
 import ExploitationsList from '@/components/exploitations/exploitations-list.js'
 import {getUsagesColors} from '@/components/map/legend-colors.js'
-import LabelValue from '@/components/ui/label-value.js'
+import LabelValue from '@/components/ui/LabelValue/index.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 
 const Page = async ({params}) => {

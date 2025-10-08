@@ -9,8 +9,6 @@ import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Box, Skeleton} from '@mui/material'
 import {flatMap, sumBy} from 'lodash'
 
-import SectionCard from '../ui/section-card.js'
-
 import PrelevementsAccordion from './dossier/prelevements/prelevements-accordion.js'
 import VolumesPompes from './dossier/prelevements/volumes-pompes.js'
 
@@ -23,6 +21,7 @@ import PointsPrelevementDetails from '@/components/declarations/dossier/points-p
 import Compteur from '@/components/declarations/dossier/prelevements/compteur.js'
 import PreleveurDetails from '@/components/declarations/dossier/preleveur-details.js'
 import FileValidationResult from '@/components/declarations/validateur/file-validation-result.js'
+import SectionCard from '@/components/ui/SectionCard/index.js'
 import {getFileNameFromStorageKey} from '@/lib/dossier.js'
 import {computePointsStatus} from '@/lib/points-prelevement.js'
 import {formatNumber} from '@/utils/number.js'

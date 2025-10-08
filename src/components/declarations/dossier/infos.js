@@ -4,7 +4,7 @@ import {Box} from '@mui/material'
 
 import PrelevementTypeBadge from '@/components/declarations/prelevement-type-badge.js'
 import TypeSaisieBadge from '@/components/declarations/type-saisie-badge.js'
-import LabelValue from '@/components/ui/label-value.js'
+import LabelValue from '@/components/ui/LabelValue/index.js'
 
 const DossierInfos = ({numeroArreteAot, typePrelevement, typeDonnees, commentaires}) => (
   <Box className='flex flex-col gap-2 my-4'>

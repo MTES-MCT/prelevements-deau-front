@@ -16,7 +16,8 @@ const LoginHeaderItem = ({user}) => (
               aria-expanded='false'
               aria-controls='collapse-menu-01'
               type='menu'
-              className='fr-nav__btn fr-mb-0 gap-1'
+              priority='tertiary no outline'
+              className='gap-1'
             >
               <span className='fr-icon-account-circle-fill fr-icon--sm' />
               {user.prenom} {user.nom}
@@ -38,6 +39,7 @@ const LoginHeaderItem = ({user}) => (
           <Button
             iconId='fr-icon-logout-box-r-line'
             className='fr-text--sm fr-m-0'
+            priority='tertiary no outline'
             onClick={() => signOut({callbackUrl: '/login', redirect: true})}
           >
             Se déconnecter

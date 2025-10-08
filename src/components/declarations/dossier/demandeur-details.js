@@ -1,8 +1,8 @@
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Box, Typography} from '@mui/material'
 
-import LabelWithIcon from '@/components/ui/label-with-icon.js'
-import SectionCard from '@/components/ui/section-card.js'
+import LabelWithIcon from '@/components/ui/LabelWithIcon/index.js'
+import SectionCard from '@/components/ui/SectionCard/index.js'
 import {getPersonnePhysiqueFullName} from '@/lib/dossier.js'
 import {getNewPreleveurURL} from '@/lib/urls.js'
 

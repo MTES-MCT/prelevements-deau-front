@@ -6,7 +6,7 @@ import {deburr, toLower} from 'lodash-es'
 
 import {getDossiersByStatus} from '@/app/api/dossiers.js'
 import DossierCard from '@/components/declarations/dossier/dossier-card.js'
-import SimpleLoading from '@/components/ui/simple-loading.js'
+import SimpleLoading from '@/components/ui/SimpleLoading/index.js'
 import {getDossierURL} from '@/lib/urls.js'
 
 const DossiersList = ({status, filters}) => {

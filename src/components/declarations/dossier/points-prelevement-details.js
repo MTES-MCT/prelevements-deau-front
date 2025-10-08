@@ -3,7 +3,7 @@ import {Skeleton} from '@mui/material'
 import {Box} from '@mui/system'
 
 import PointsPrelevementsMap from '@/components/map/points-prelevements-map.js'
-import SectionCard from '@/components/ui/section-card.js'
+import SectionCard from '@/components/ui/SectionCard/index.js'
 
 const PointsPrelevementDetails = ({pointsPrelevementId, pointsPrelevement, handleClick, disabledPointIds, pointsStatus}) => {
   const pointsWithoutData = pointsPrelevementId.filter(id => !pointsPrelevement?.some(point => point.id_point === id))
