@@ -19,4 +19,4 @@ const meta = {
 
 export default meta
 
-export const Defaut = {}
+export const Défaut = {}
