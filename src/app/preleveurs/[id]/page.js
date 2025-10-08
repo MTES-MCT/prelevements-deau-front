@@ -5,7 +5,13 @@ import {
 } from '@mui/material'
 import {notFound} from 'next/navigation'
 
-import {getPreleveur, getExploitationFromPreleveur, getPointPrelevement} from '@/app/api/points-prelevement.js'
+import {
+  getPreleveur,
+  getExploitationFromPreleveur,
+  getDocumentsFromPreleveur,
+  getPointPrelevement
+} from '@/app/api/points-prelevement.js'
+import DocumentsList from '@/components/documents/documents-list.js'
 import ExploitationsList from '@/components/exploitations/exploitations-list.js'
 import {getUsagesColors} from '@/components/map/legend-colors.js'
 import LabelValue from '@/components/ui/label-value.js'
@@ -20,6 +26,7 @@ const Page = async ({params}) => {
     notFound()
   }
 
+  const documents = await getDocumentsFromPreleveur(id)
   const exploitations = await getExploitationFromPreleveur(id)
 
   const exploitationsWithPoints = await Promise.all(exploitations.map(async exploitation => {
@@ -68,6 +75,29 @@ const Page = async ({params}) => {
             )}
           </LabelValue>
         </div>
+
+        <div className='flex justify-between'>
+          <Typography variant='h6' className='fr-mt-1w'>
+            Documents :
+          </Typography>
+          <Button
+            size='small'
+            priority='secondary'
+            linkProps={{
+              href: `/preleveurs/${id}/documents`
+            }}
+          >
+            Gestion des documents
+          </Button>
+        </div>
+        {documents?.length > 0 ? (
+          <DocumentsList
+            documents={documents}
+          />
+        ) : (
+          <p><i>Pas de documents</i></p>
+        )}
+
         {preleveur.exploitations && preleveur.exploitations.length > 0 ? (
           <ExploitationsList exploitations={exploitationsWithPoints} />
         ) : (
