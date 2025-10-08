@@ -17,15 +17,17 @@ Schéma :
     value: number,     // Valeur numérique du secteur
     label: string      // Libellé affiché pour le secteur
   }
-]`
+]
+\`\`\`
+`
     },
     width: {
       control: 'number',
-      description: 'Largeur du graphique en pixels. Type : number. (optionnel, défaut : 500)'
+      description: 'Largeur du graphique en pixels. Type : number. (optionnel, défaut : 500)'
     },
     height: {
       control: 'number',
-      description: 'Hauteur du graphique en pixels. Type : number. (optionnel, défaut : 300)'
+      description: 'Hauteur du graphique en pixels. Type : number. (optionnel, défaut : 300)'
     }
   },
   args: {
