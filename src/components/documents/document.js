@@ -52,7 +52,7 @@ const Document = ({document, handleDelete, handleEdit, ...props}) => (
             priority='tertiary no outline'
             iconId='fr-icon-edit-line'
             size='small'
-            onClick={() => handleEdit()}
+            onClick={() => handleEdit(document._id)}
           />
         )}
         {handleDelete && (
