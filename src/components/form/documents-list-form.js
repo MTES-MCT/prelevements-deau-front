@@ -125,7 +125,7 @@ const DocumentsListForm = ({documents, idPreleveur}) => {
           <DialogActions className='m-3'>
             <Button
               priority='secondary'
-              onClick={() => setIsEditDialogOpen(!isEditDialogOpen)}
+              onClick={() => setIsEditDialogOpen(false)}
             >
               Annuler
             </Button>
