@@ -150,6 +150,19 @@ export async function uploadDocument(idPreleveur, document) {
   return response.json()
 }
 
+export async function updateDocument(idDocument, idPreleveur, payload) {
+  const response = await executeRequest(
+    `api/preleveurs/${idPreleveur}/documents/${idDocument}`,
+    {
+      headers: {Authorization: await getAuthorization()},
+      method: 'PUT',
+      body: payload
+    }
+  )
+
+  return response.json()
+}
+
 export async function deleteDocument(idPreleveur, idDocument) {
   const response = await executeRequest(
     `api/preleveurs/${idPreleveur}/documents/${idDocument}`,
