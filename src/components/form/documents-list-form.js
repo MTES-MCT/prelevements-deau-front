@@ -11,17 +11,62 @@ import {
   DialogTitle
 } from '@mui/material'
 
-import {deleteDocument} from '@/app/api/points-prelevement.js'
+import {deleteDocument, updateDocument} from '@/app/api/points-prelevement.js'
 import DocumentsList from '@/components/documents/documents-list.js'
+import DocumentForm from '@/components/form/document-form.js'
+import {emptyStringToNull} from '@/utils/string.js'
 
 const DocumentsListForm = ({documents, idPreleveur}) => {
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [payload, setPayload] = useState({})
+  const [document, setDocument] = useState()
   const [documentsList, setDocumentsList] = useState(documents)
   const [documentToDelete, setDocumentToDelete] = useState()
   const [error, setError] = useState(null)
+  const [validationErrors, setValidationErrors] = useState([])
 
-  const handleDialog = idDocument => {
-    setIsDialogOpen(true)
+  const handlePayload = async () => {
+    setError(null)
+    setValidationErrors([])
+
+    if (Object.keys(payload).length === 0) {
+      setIsEditDialogOpen(false)
+      return
+    }
+
+    try {
+      const cleanedPayload = emptyStringToNull(payload)
+      const response = await updateDocument(document._id, idPreleveur, cleanedPayload)
+
+      if (response.code === 400) {
+        if (response.validationErrors) {
+          setValidationErrors(response.validationErrors)
+        } else {
+          setError(response.message)
+        }
+      } else {
+        const newDocumentsList = documentsList.map(d => (
+          d._id === document._id ? response : d
+        ))
+
+        setDocumentsList(newDocumentsList)
+        setIsEditDialogOpen(false)
+      }
+    } catch (error) {
+      setError(error.message)
+    }
+  }
+
+  const handleEdit = idDocument => {
+    const documentToEdit = documentsList.find(d => d._id === idDocument)
+    setDocument(documentToEdit)
+    setIsEditDialogOpen(true)
+  }
+
+  const handleDeleteDialog = idDocument => {
+    setError(null)
+    setIsDeleteDialogOpen(true)
     setDocumentToDelete(idDocument)
   }
 
@@ -32,10 +77,10 @@ const DocumentsListForm = ({documents, idPreleveur}) => {
       const newDocumentsList = documentsList.filter(d => d._id !== documentToDelete)
 
       setDocumentsList(newDocumentsList)
-      setIsDialogOpen(false)
+      setIsDeleteDialogOpen(false)
     } else {
       setError(response.message)
-      setIsDialogOpen(false)
+      setIsDeleteDialogOpen(false)
     }
   }
 
@@ -44,7 +89,8 @@ const DocumentsListForm = ({documents, idPreleveur}) => {
       <>
         <DocumentsList
           documents={documentsList}
-          handleDelete={handleDialog}
+          handleDelete={handleDeleteDialog}
+          handleEdit={handleEdit}
         />
         {error && (
           <div className='text-center p-5 text-red-500'>
@@ -53,9 +99,48 @@ const DocumentsListForm = ({documents, idPreleveur}) => {
           </div>
         )}
         <Dialog
-          open={isDialogOpen}
+          open={isEditDialogOpen}
           maxWidth='md'
-          onClose={() => setIsDialogOpen(false)}
+          onClose={() => setIsEditDialogOpen(false)}
+        >
+          <DialogTitle>
+            <InfoOutlined className='mr-3' />
+            Édition du document : {document?.nom_fichier}
+          </DialogTitle>
+          <DialogContent>
+            <DocumentForm
+              document={document}
+              setDocument={setPayload}
+            />
+            {validationErrors?.length > 0 && (
+              <div className='text-center p-5 text-red-500'>
+                <p><b>{validationErrors.length === 1 ? 'Problème de validation :' : 'Problèmes de validation :'}</b></p>
+                {validationErrors.map(err => (
+                  <p key={err.message}>{err.message}</p>
+                )
+                )}
+              </div>
+            )}
+          </DialogContent>
+          <DialogActions className='m-3'>
+            <Button
+              priority='secondary'
+              onClick={() => setIsEditDialogOpen(!isEditDialogOpen)}
+            >
+              Annuler
+            </Button>
+            <Button
+              className='my-5'
+              onClick={handlePayload}
+            >
+              Valider les modifications
+            </Button>
+          </DialogActions>
+        </Dialog>
+        <Dialog
+          open={isDeleteDialogOpen}
+          maxWidth='md'
+          onClose={() => setIsDeleteDialogOpen(false)}
         >
           <DialogTitle>
             <InfoOutlined className='mr-3' />
@@ -67,7 +152,7 @@ const DocumentsListForm = ({documents, idPreleveur}) => {
           <DialogActions className='m-3'>
             <Button
               priority='secondary'
-              onClick={() => setIsDialogOpen(!isDialogOpen)}
+              onClick={() => setIsDeleteDialogOpen(!isDeleteDialogOpen)}
             >
               Annuler
             </Button>

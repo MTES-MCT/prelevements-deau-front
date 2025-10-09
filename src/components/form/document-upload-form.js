@@ -6,8 +6,6 @@ import {useEffect, useState} from 'react'
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Button} from '@codegouvfr/react-dsfr/Button'
-import {Input} from '@codegouvfr/react-dsfr/Input'
-import {Select} from '@codegouvfr/react-dsfr/SelectNext'
 import {Upload} from '@codegouvfr/react-dsfr/Upload'
 import {Typography} from '@mui/material'
 import {format} from 'date-fns'
@@ -16,18 +14,8 @@ import {useRouter} from 'next/navigation'
 import SimpleLoading from '../ui/simple-loading.js'
 
 import {createDocument} from '@/app/api/points-prelevement.js'
+import DocumentForm from '@/components/form/document-form.js'
 import {emptyStringToNull} from '@/utils/string.js'
-
-const naturesDocument = [
-  'Autorisation AOT',
-  'Autorisation CSP',
-  'Autorisation CSP - IOTA',
-  'Autorisation hydroélectricité',
-  'Autorisation ICPE',
-  'Autorisation IOTA',
-  'Délibération abandon',
-  'Rapport hydrogéologue agréé'
-]
 
 const DocumentUploadForm = ({preleveur}) => {
   const router = useRouter()
@@ -58,7 +46,7 @@ const DocumentUploadForm = ({preleveur}) => {
       } else if (response.code === 409) {
         setError(response.message)
       } else {
-        router.push(`/preleveurs/${preleveur.preleveur_id}`)
+        router.push(`/preleveurs/${preleveur.id_preleveur}`)
       }
     } catch (error) {
       setError(error.message)
@@ -116,47 +104,9 @@ const DocumentUploadForm = ({preleveur}) => {
           onClose={() => setUploadMessage(null)}
         />
       )}
-      <div className='grid grid-cols-2 gap-4'>
-        <Input
-          label='Référence'
-          nativeInputProps={{
-            onChange: e => setDocument(prev => ({...prev, reference: e.target.value}))
-          }}
-        />
-        <Select
-          label='Nature'
-          placeholder='Sélectionner la nature du document'
-          nativeSelectProps={{
-            onChange: e => setDocument(prev => ({...prev, nature: e.target.value}))
-          }}
-          options={naturesDocument.map(nature => ({
-            value: nature,
-            label: nature
-          }))}
-        />
-      </div>
-      <div className='grid grid-cols-2 gap-4'>
-        <Input
-          label='Date de signature'
-          nativeInputProps={{
-            type: 'date',
-            onChange: e => setDocument(prev => ({...prev, date_signature: e.target.value}))
-          }}
-        />
-        <Input
-          label='Date de fin de validité'
-          nativeInputProps={{
-            type: 'date',
-            onChange: e => setDocument(prev => ({...prev, date_fin_validite: e.target.value}))
-          }}
-        />
-      </div>
-      <Input
-        textArea
-        label='Remarque'
-        nativeTextAreaProps={{
-          onChange: e => setDocument(prev => ({...prev, remarque: e.target.value}))
-        }}
+      <DocumentForm
+        document={document}
+        setDocument={setDocument}
       />
       {error && (
         <div className='text-center p-5 text-red-500'>
