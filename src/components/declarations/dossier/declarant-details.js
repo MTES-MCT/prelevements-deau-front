@@ -1,8 +1,8 @@
 import {Tag} from '@codegouvfr/react-dsfr/Tag'
 import {Box, Typography} from '@mui/material'
 
-import LabelWithIcon from '@/components/ui/label-with-icon.js'
-import SectionCard from '@/components/ui/section-card.js'
+import LabelWithIcon from '@/components/ui/LabelWithIcon/index.js'
+import SectionCard from '@/components/ui/SectionCard/index.js'
 import {getPersonnePhysiqueFullName} from '@/lib/dossier.js'
 
 const DeclarantDetails = ({declarant, isMandataire = false}) => (

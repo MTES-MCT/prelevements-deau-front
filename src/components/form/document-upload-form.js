@@ -11,10 +11,9 @@ import {Typography} from '@mui/material'
 import {format} from 'date-fns'
 import {useRouter} from 'next/navigation'
 
-import SimpleLoading from '../ui/simple-loading.js'
-
 import {createDocument} from '@/app/api/points-prelevement.js'
 import DocumentForm from '@/components/form/document-form.js'
+import SimpleLoading from '@/components/ui/SimpleLoading/index.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
 const DocumentUploadForm = ({preleveur}) => {
