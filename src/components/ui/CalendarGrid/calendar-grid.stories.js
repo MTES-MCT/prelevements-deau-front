@@ -5,7 +5,7 @@ import CalendarGrid from './index.js'
 import PeriodTooltip from '@/components/ui/PeriodTooltip/index.js'
 
 const blue = fr.colors.decisions.artwork.major.blueFrance.default
-const orange = fr.colors.decisions.background.actionHigh.warning.hover
+const lightBlue = fr.colors.decisions.background.actionHigh.info.hover
 
 // Build a full year: one calendar ("month" mode) per month with a single colored day
 const buildYearCalendars = (year, color1, color2) => {
@@ -38,7 +38,7 @@ const meta = {
     }
   },
   args: {
-    calendars: buildYearCalendars(2025, blue, orange)
+    calendars: buildYearCalendars(2025, blue, lightBlue)
   }
 }
 
@@ -72,23 +72,23 @@ export const PlusieursCalendriersMemeMode = {
     calendars: [
       [
         {date: '2026-01', color: blue, label: 'Jan'},
-        {date: '2026-04', color: orange, label: 'Avril'},
+        {date: '2026-04', color: lightBlue, label: 'Avril'},
         {date: '2026-07', color: blue, label: 'Juil'}
       ],
       [
         {date: '2025-02', color: blue},
-        {date: '2025-05', color: orange},
+        {date: '2025-05', color: lightBlue},
         {date: '2025-08', color: blue}
       ],
       [
-        {date: '2024-03', color: orange},
+        {date: '2024-03', color: lightBlue},
         {date: '2024-06', color: blue},
         {date: '2024-09', color: blue},
-        {date: '2024-12', color: orange}
+        {date: '2024-12', color: lightBlue}
       ],
       [
         {date: '2023-01', color: blue},
-        {date: '2023-05', color: orange},
+        {date: '2023-05', color: lightBlue},
         {date: '2023-11', color: blue}
       ]
     ],
@@ -104,12 +104,12 @@ export const CustomLegend = {
     calendars: [
       [
         {date: '2025-07-01', color: blue, volume: 10},
-        {date: '2025-07-02', color: orange, volume: 12}
+        {date: '2025-07-02', color: lightBlue, volume: 12}
       ]
     ],
     legendLabels: [
       {color: blue, label: 'OK'},
-      {color: orange, label: 'Alerte'}
+      {color: lightBlue, label: 'Alerte'}
     ],
     hoverComponent: Hover
   }
@@ -123,11 +123,11 @@ export const Interaction = {
     calendars: [
       [
         {date: '2026-07-01', color: blue, label: 'Jour 1'},
-        {date: '2026-07-05', color: orange, label: 'Jour 5'}
+        {date: '2026-07-05', color: lightBlue, label: 'Jour 5'}
       ],
       [
         {date: '2026-01', color: blue, label: 'Janvier'},
-        {date: '2026-02', color: orange, label: 'Février'}
+        {date: '2026-02', color: lightBlue, label: 'Février'}
       ]
     ],
     hoverComponent: Hover,
