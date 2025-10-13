@@ -1,5 +1,5 @@
 /**
- * PeriodDataExplorer Component
+ * PrelevementsSeriesExplorer Component
  *
  * Composite component that orchestrates period selection, calendar display,
  * parameter selection, and time-series visualization with range refinement.
@@ -20,7 +20,7 @@
  *   return response.json() // Returns { series: {...}, values: [...] }
  * }
  *
- * <PeriodDataExplorer
+ * <PrelevementsSeriesExplorer
  *   series={[
  *     {
  *       _id: '507f1f77bcf86cd799439011',

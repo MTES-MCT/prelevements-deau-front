@@ -1,5 +1,5 @@
 /**
- * Formatting helpers for PeriodDataExplorer
+ * Formatting helpers for PrelevementsSeriesExplorer
  */
 
 import {format} from 'date-fns'

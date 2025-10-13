@@ -1,5 +1,5 @@
 /**
- * Utility functions for PeriodDataExplorer component
+ * Utility functions for PrelevementsSeriesExplorer component
  */
 
 import {

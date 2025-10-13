@@ -1,5 +1,5 @@
 /**
- * Constants used across PeriodDataExplorer components
+ * Constants used across PrelevementsSeriesExplorer components
  */
 
 /**
