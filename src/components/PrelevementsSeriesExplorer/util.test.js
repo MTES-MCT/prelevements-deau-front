@@ -420,7 +420,7 @@ test('transformSeriesToData handles multiple series', t => {
   t.is(result.dailyValues[0].values[1], 50)
 })
 
-test('transformSeriesToData handles null values', t => {
+test('transformSeriesToData handles null values by treating them as zero', t => {
   const series = [{
     series: {
       parameter: 'Temp',
@@ -440,7 +440,63 @@ test('transformSeriesToData handles null values', t => {
 
   const result = transformSeriesToData(series)
 
+  // The reduce logic (b || 0) treats null values as 0
+  // Average of [null, null] → average of [0, 0] → 0
+  t.is(result.dailyValues[0].values[0], 0)
+})
+
+test('transformSeriesToData handles empty sub-daily values array without division by zero', t => {
+  const series = [{
+    series: {
+      parameter: 'Temperature',
+      unit: '°C',
+      color: '#ff0000',
+      frequency: 'hourly',
+      valueType: 'instantaneous',
+      hasSubDaily: true
+    },
+    values: [
+      {
+        date: '2024-01-01',
+        values: [] // Empty array - protected by length check
+      }
+    ]
+  }]
+
+  const result = transformSeriesToData(series)
+
+  t.is(result.dailyValues.length, 1)
+  t.is(result.dailyValues[0].date, '2024-01-01')
+  // Empty array returns null (not NaN) thanks to: dailyValues.length > 0 ? ... : null
   t.is(result.dailyValues[0].values[0], null)
+  t.true(result.hasSubDaily)
+})
+
+test('transformSeriesToData preserves zero values correctly', t => {
+  const series = [{
+    series: {
+      parameter: 'Flow',
+      unit: 'm³/h',
+      color: '#0078f3',
+      frequency: 'hourly',
+      hasSubDaily: true
+    },
+    values: [
+      {
+        date: '2024-01-01',
+        values: [
+          {time: '00:00:00', value: 0, remark: null},
+          {time: '06:00:00', value: 0, remark: null}
+        ]
+      }
+    ]
+  }]
+
+  const result = transformSeriesToData(series)
+
+  t.is(result.dailyValues.length, 1)
+  // Average of [0, 0] → 0 (real zero measurement, not null)
+  t.is(result.dailyValues[0].values[0], 0)
 })
 
 /* eslint-enable capitalized-comments */

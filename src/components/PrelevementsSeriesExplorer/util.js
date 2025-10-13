@@ -571,8 +571,11 @@ export function transformSeriesToData(seriesList) {
       if (Array.isArray(dayEntry.values)) {
         const dailyValues = dayEntry.values.map(v => v.value)
         // Use average for daily aggregation
-        const average = dailyValues.reduce((a, b) => a + (b || 0), 0) / dailyValues.length
-        entry.values[seriesIndex] = average || null
+        // Prevent division by zero - if array is empty, set to null
+        const average = dailyValues.length > 0
+          ? dailyValues.reduce((a, b) => a + (b || 0), 0) / dailyValues.length
+          : null
+        entry.values[seriesIndex] = average
 
         // Store sub-daily data
         entry.subDailyValues[seriesIndex] = dayEntry.values.map(v => ({
