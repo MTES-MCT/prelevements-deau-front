@@ -31,6 +31,23 @@ function getLabelForSelectedPeriods(selectedPeriods) {
   const selectedMonths = selectedPeriods.filter(period => period.type === 'month')
   const selectedYears = selectedPeriods.filter(period => period.type === 'year')
 
+  // Check if we have multiple years (from year-type or month-type periods)
+  const allYears = new Set()
+  for (const period of selectedPeriods) {
+    if (period.type === 'year') {
+      allYears.add(period.value)
+    } else if (period.type === 'month') {
+      allYears.add(period.year)
+    }
+  }
+
+  // If multiple years involved, show year range
+  if (allYears.size > 1) {
+    const sortedYears = [...allYears].sort((a, b) => a - b)
+    return `${sortedYears[0]} - ${sortedYears.at(-1)}`
+  }
+
+  // Single year with months
   if (selectedMonths.length > 0) {
     if (selectedMonths.length === 1) {
       const period = selectedMonths[0]
@@ -42,6 +59,7 @@ function getLabelForSelectedPeriods(selectedPeriods) {
     return `${monthNames[firstMonth.month]} ${firstMonth.year} - ${monthNames[lastMonth.month]} ${lastMonth.year}`
   }
 
+  // Single year
   if (selectedYears.length > 0) {
     if (selectedYears.length === 1) {
       return `${selectedYears[0].value}`
@@ -215,9 +233,9 @@ const DatepickerTrigger = ({
   }
 
   const handleResetSelection = () => {
-    setSelectedPeriods(defaultSelectedPeriods || [])
-    setViewType(currentViewType)
-    onSelectionChange(defaultSelectedPeriods || [])
+    setSelectedPeriods(initialSelectedPeriodsRef.current)
+    setViewType(defaultInitialViewType)
+    onSelectionChange(initialSelectedPeriodsRef.current)
   }
 
   return (

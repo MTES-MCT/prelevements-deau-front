@@ -233,3 +233,31 @@ export const ListeCourteAnnées = {
   },
   render: args => <Wrapper {...args} />
 }
+
+export const ListeLongueAnnees = {
+  args: {
+    defaultInitialViewType: 'years',
+    currentViewType: 'years',
+    // Provide a long list of years to demonstrate scrolling/selection
+    selectablePeriods: {
+      years: Array.from({length: 31}, (_, i) => 1995 + i) // 1995..2025
+    },
+    // Pre-select several non-contiguous years as an example
+    defaultSelectedPeriods: [
+      {type: 'year', value: 1998},
+      {type: 'year', value: 2005},
+      {type: 'year', value: 2012},
+      {type: 'year', value: 2019},
+      {type: 'year', value: 2025}
+    ],
+    maxSelectablePeriods: 10
+  },
+  parameters: {
+    docs: {
+      description: {
+        story: 'Liste longue d\'années : permet de tester la navigation et la sélection sur une plage longue (1995-2025) avec plusieurs années pré-sélectionnées.'
+      }
+    }
+  },
+  render: args => <Wrapper {...args} />
+}
