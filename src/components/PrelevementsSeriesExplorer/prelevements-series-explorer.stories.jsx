@@ -153,11 +153,11 @@ const toIsoDate = date => date.toISOString().split('T')[0]
 
 function generateDateSequence(start, end) {
   const dates = []
-  const cursor = new Date(start.getTime())
 
-  while (cursor <= end) {
-    dates.push(toIsoDate(cursor))
-    cursor.setDate(cursor.getDate() + 1)
+  // Iterate using numeric timestamps to ensure the loop condition
+  const dayMs = 24 * 60 * 60 * 1000
+  for (let t = start.getTime(); t <= end.getTime(); t += dayMs) {
+    dates.push(toIsoDate(new Date(t)))
   }
 
   return dates
@@ -171,12 +171,16 @@ function formatDay(year, monthIndex, day) {
 
 function createLegendCoverage(dates, start, end) {
   const statusByDate = new Map(dates.map(date => [date, 'present']))
-  const monthlyCursor = new Date(start.getFullYear(), start.getMonth(), 1)
-  const lastMonth = new Date(end.getFullYear(), end.getMonth(), 1)
   const firstDate = dates[0]
   const lastDate = dates.at(-1)
 
-  while (monthlyCursor <= lastMonth) {
+  // Use a numeric month pointer (timestamp of first day of the month)
+  // so the loop condition variable is clearly modified.
+  let monthlyTime = new Date(start.getFullYear(), start.getMonth(), 1).getTime()
+  const lastMonthTime = new Date(end.getFullYear(), end.getMonth(), 1).getTime()
+
+  while (monthlyTime <= lastMonthTime) {
+    const monthlyCursor = new Date(monthlyTime)
     const year = monthlyCursor.getFullYear()
     const monthIndex = monthlyCursor.getMonth()
     const daysInMonth = new Date(year, monthIndex + 1, 0).getDate()
@@ -192,7 +196,8 @@ function createLegendCoverage(dates, start, end) {
       statusByDate.set(notDeclaredDate, 'notDeclared')
     }
 
-    monthlyCursor.setMonth(monthIndex + 1)
+    // Move to first day of next month
+    monthlyTime = new Date(year, monthIndex + 1, 1).getTime()
   }
 
   const availability = dates.map(date => ({
@@ -334,13 +339,18 @@ const SERIES_METADATA = SERIES_CONFIGS.map(config => {
   const values = ALL_DATES.map((date, index) => buildSeriesEntry(date, index, config))
   SERIES_VALUES_BY_ID.set(config.id, values)
 
-  const numberOfValues = values.reduce((count, entry) => {
+  let numberOfValues = 0
+  for (const entry of values) {
     if (Array.isArray(entry.values)) {
-      return count + entry.values.filter(point => point.value !== null && point.value !== undefined).length
+      for (const point of entry.values) {
+        if (point && point.value !== null && point.value !== undefined) {
+          numberOfValues += 1
+        }
+      }
+    } else if (entry.value !== null && entry.value !== undefined) {
+      numberOfValues += 1
     }
-
-    return count + (entry.value !== null && entry.value !== undefined ? 1 : 0)
-  }, 0)
+  }
 
   return {
     _id: config.id,
