@@ -227,8 +227,8 @@ const GroupedMultiselect = ({
                     ref={el => {
                       optionRefs.current[flatIdx] = el
                     }}
-                    sx={{borderTop: `1px solid ${fr.colors.decisions.background.contrast.grey.default}`}}
                     className={[
+                      'list-item',
                       'selector-option',
                       isSelected && 'selected',
                       focusedIndex === flatIdx && 'focused',
