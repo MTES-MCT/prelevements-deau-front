@@ -44,7 +44,13 @@ const GroupedMultiselect = ({
 
   // Calcule combien d’éléments sélectionnés peuvent être affichés sans dépasser la largeur du composant
   useEffect(() => {
-    if (!selectRef.current || value.length <= 1) {
+    if (!selectRef.current) {
+      setHiddenCount(0)
+      setShowMore(false)
+      return
+    }
+
+    if (value.length <= 1) {
       setHiddenCount(0)
       setShowMore(false)
       return
