@@ -241,7 +241,7 @@ const GroupedMultiselect = ({
                     onClick={() => toggleOption(option)}
                     onKeyDown={handleKeyDown}
                   >
-                    {isSelected && <span style={{marginRight: 8}}>✓</span>}
+                    {isSelected && <span className='mr-1'>✓</span>}
                     {getOptionContent(option)}
                   </ListItem>
                 )
