@@ -7,7 +7,9 @@ import {Box, List, ListItem} from '@mui/material'
 import {xor} from 'lodash-es'
 
 import './index.css'
-import {normalizeOptions, renderSelectedText} from './utils.js'
+import {
+  normalizeOptions, renderSelectedText, getOptionValue, getOptionContent
+} from './utils.js'
 
 const GroupedMultiselect = ({
   value = [],
@@ -15,7 +17,8 @@ const GroupedMultiselect = ({
   hint,
   placeholder,
   options = [],
-  onChange
+  onChange,
+  disabled
 }) => {
   const [open, setOpen] = useState(false)
   const [showMore, setShowMore] = useState(false)
@@ -41,50 +44,51 @@ const GroupedMultiselect = ({
 
   // Calcule combien d’éléments sélectionnés peuvent être affichés sans dépasser la largeur du composant
   useEffect(() => {
-    if (selectRef.current && value.length > 1) {
-      const containerWidth = selectRef.current.offsetWidth - 24
-      const computedStyle = window.getComputedStyle(selectRef.current)
-      const font = computedStyle.font || `${computedStyle.fontSize} ${computedStyle.fontFamily}`
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')
-      ctx.font = font
-
-      let left = 0
-      let right = value.length
-      let visibleCount = value.length
-
-      while (left < right) {
-        const mid = Math.ceil((left + right) / 2)
-        let text = value.slice(0, mid).join(', ')
-        const hidden = value.length - mid
-        if (hidden > 0) {
-          text += ` + ${hidden} autre${hidden > 1 ? 's' : ''}`
-        }
-
-        if (ctx.measureText(text).width <= containerWidth) {
-          left = mid
-        } else {
-          right = mid - 1
-        }
-      }
-
-      visibleCount = left
-      const hidden = value.length - visibleCount
-      setHiddenCount(hidden)
-      setShowMore(hidden > 0)
-    } else {
+    if (!selectRef.current || value.length <= 1) {
       setHiddenCount(0)
       setShowMore(false)
+      return
     }
+
+    const containerWidth = selectRef.current.offsetWidth - 24
+    const computedStyle = window.getComputedStyle(selectRef.current)
+    const font = computedStyle.font || `${computedStyle.fontSize} ${computedStyle.fontFamily}`
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    ctx.font = font
+
+    let left = 0
+    let right = value.length
+    while (left < right) {
+      const mid = Math.ceil((left + right) / 2)
+      let text = value.slice(0, mid).join(', ')
+      const hidden = value.length - mid
+      if (hidden > 0) {
+        text += ` + ${hidden} autre${hidden > 1 ? 's' : ''}`
+      }
+
+      if (ctx.measureText(text).width <= containerWidth) {
+        left = mid
+      } else {
+        right = mid - 1
+      }
+    }
+
+    const visibleCount = left
+    const hidden = value.length - visibleCount
+    setHiddenCount(hidden)
+    setShowMore(hidden > 0)
   }, [value])
 
   // Ajoute ou retire une option de la sélection
   const toggleOption = useCallback(option => {
-    const newValue = xor(value, [option])
+    const optionValue = getOptionValue(option)
+    const newValue = xor(value, [optionValue])
     onChange?.(newValue)
   }, [value, onChange])
 
-  const normalizedOptions = normalizeOptions(options)
+  const normalizedOptions = useMemo(() => normalizeOptions(options), [options])
+
   // Liste plate des options pour navigation clavier
   const flatOptions = useMemo(() =>
     normalizedOptions.flatMap(group =>
@@ -140,9 +144,7 @@ const GroupedMultiselect = ({
         break
       }
     }
-  },
-  [open, toggleOption, flatOptions, focusedIndex]
-  )
+  }, [open, toggleOption, flatOptions, focusedIndex])
 
   // Focus sur l'option sélectionnée + scrollIntoView
   useEffect(() => {
@@ -153,21 +155,33 @@ const GroupedMultiselect = ({
     }
   }, [open, focusedIndex])
 
+  const totalOptionsCount = useMemo(() => normalizedOptions.reduce((acc, group) => acc + group.options.length, 0), [normalizedOptions])
+
   return (
-    <div ref={ref} style={{position: 'relative'}}>
+    <div
+      ref={ref}
+      style={{position: 'relative'}}
+      className={disabled ? 'fr-select-group--disabled' : ''}
+    >
       <label className='fr-label' htmlFor='selector'>{label}</label>
       {hint && <span className='fr-hint-text'>{hint}</span>}
 
       <Box
         ref={selectRef}
         id='selector'
-        className='fr-select mt-2'
-        tabIndex={0}
+        className={`fr-select mt-2${disabled ? ' fr-bg-disabled-grey' : ''}`}
+        aria-disabled={disabled}
         aria-haspopup='listbox'
         aria-expanded={open}
         role='button'
-        onClick={() => setOpen(prev => !prev)}
-        onKeyDown={handleKeyDown}
+        tabIndex={disabled || totalOptionsCount === 0 ? -1 : 0}
+        onClick={disabled || totalOptionsCount === 0
+          ? undefined
+          : () => {
+            setOpen(prev => !prev)
+            selectRef.current?.focus()
+          }}
+        onKeyDown={disabled || totalOptionsCount === 0 ? undefined : handleKeyDown}
       >
         <Box sx={{overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
           {renderSelectedText(value, placeholder, showMore, hiddenCount)}
@@ -176,7 +190,7 @@ const GroupedMultiselect = ({
 
       {open && (
         <List
-          style={{
+          sx={{
             position: 'absolute',
             backgroundColor: fr.colors.decisions.background.default.grey.default,
             top: '100%',
@@ -194,29 +208,46 @@ const GroupedMultiselect = ({
           {normalizedOptions.map((group, groupIdx) => (
             <Box key={group.label || 'no-label'}>
               {group?.label && (
-                <ListItem sx={{background: fr.colors.decisions.background.default.grey.hover, fontWeight: '500'}} tabIndex={-1}>
+                <ListItem
+                  sx={{
+                    background: fr.colors.decisions.artwork.major.blueFrance.default,
+                    fontWeight: 500,
+                    color: fr.colors.decisions.background.default.grey.default
+                  }}
+                  tabIndex={-1}
+                >
                   {group.label}
                 </ListItem>
               )}
               {group.options.map((option, optIdx) => {
-                // Calcul de l'index plat pour le focus
                 const flatIdx = normalizedOptions
                   .slice(0, groupIdx)
                   .reduce((acc, g) => acc + g.options.length, 0) + optIdx
+                const optionValue = getOptionValue(option)
+                const isSelected = value.includes(optionValue)
+
                 return (
                   <ListItem
-                    key={option}
+                    key={optionValue}
                     ref={el => {
                       optionRefs.current[flatIdx] = el
                     }}
-                    className={`selector-option${value.includes(option) ? ' selected' : ''}${focusedIndex === flatIdx ? ' focused' : ''} p-2 radius-4`}
+                    sx={{borderTop: `1px solid ${fr.colors.decisions.background.contrast.grey.default}`}}
+                    className={[
+                      'selector-option',
+                      isSelected && 'selected',
+                      focusedIndex === flatIdx && 'focused',
+                      'p-2',
+                      'radius-4'
+                    ].filter(Boolean).join(' ')}
                     tabIndex={-1}
                     role='option'
-                    aria-selected={value.includes(option)}
+                    aria-selected={isSelected}
                     onClick={() => toggleOption(option)}
                     onKeyDown={handleKeyDown}
                   >
-                    {option}
+                    {isSelected && <span style={{marginRight: 8}}>✓</span>}
+                    {getOptionContent(option)}
                   </ListItem>
                 )
               })}

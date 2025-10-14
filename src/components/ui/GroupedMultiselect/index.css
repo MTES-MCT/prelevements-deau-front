@@ -1,9 +1,9 @@
 .selector-option:hover,
 .selector-option.focused
  {
-  background: var(--background-action-low-blue-france);
+  background: var(--background-alt-blue-france-hover);
 }
 
-.selector-option.selected {
-  background: var(--background-alt-blue-france);
+.fr-bg-disabled-grey {
+  color: var(--text-disabled-grey);
 }

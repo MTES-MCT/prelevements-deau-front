@@ -66,6 +66,12 @@ const meta = {
 \`\`\`js
 (newValue: string[]) => void
 \`\`\``
+    },
+    disabled: {
+      control: {type: 'boolean'},
+      description: `Désactive le composant.
+
+**Type**: \`boolean\``
     }
   }
 }
@@ -77,7 +83,11 @@ const defaultOptions = [
   },
   {
     label: 'Groupe B',
-    options: ['Ralph Hubbard', 'Omar Alexander', 'Carlos Abbott']
+    options: [
+      {value: 'Ralph Hubbard', content: <div>Ralph Hubbard</div>},
+      {value: 'Omar Alexander', content: <div>Omar Alexander</div>},
+      {value: 'Carlos Abbott', content: <div>Carlos Abbott</div>}
+    ]
   }
 ]
 
@@ -200,6 +210,54 @@ export const ListeVide = {
     docs: {
       description: {
         story: 'Test du composant avec une liste d\'options vide.'
+      }
+    }
+  },
+  render: args => <Wrapper {...args} />
+}
+
+export const Désactivé = {
+  args: {
+    label: 'Sélecteur désactivé',
+    hint: 'Le sélecteur est désactivé',
+    disabled: true
+  },
+  parameters: {
+    docs: {
+      description: {
+        story: 'Le sélecteur est dans un état désactivé et n\'accepte pas d\'interactions.'
+      }
+    }
+  },
+  render: args => <Wrapper {...args} />
+}
+
+export const AvecÉlémentsPersonnalisés = {
+  args: {
+    label: 'Options personnalisées',
+    hint: 'Chaque option utilise un rendu personnalisé',
+    placeholder: 'Choisissez...',
+    options: [
+      {
+        label: 'Groupe A',
+        options: [
+          {value: 'Alice', content: <div style={{color: 'red'}}>Alice</div>},
+          {value: 'Bob', content: <div style={{fontWeight: 'bold'}}>Bob</div>}
+        ]
+      },
+      {
+        label: 'Groupe B',
+        options: [
+          {value: 'Charlie', content: <div style={{fontStyle: 'italic'}}>Charlie</div>},
+          {value: 'David', content: <div style={{textDecoration: 'underline'}}>David</div>}
+        ]
+      }
+    ]
+  },
+  parameters: {
+    docs: {
+      description: {
+        story: 'Utilisation d\'options avec un rendu personnalisé via la propriété `content`.'
       }
     }
   },
