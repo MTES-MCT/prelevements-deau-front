@@ -361,7 +361,6 @@ const SERIES_VALUES_BY_ID = new Map()
 const SERIES_METADATA = SERIES_CONFIGS.map(config => {
   // Generate values for this series (simulates backend data)
   const values = ALL_DATES.map((date, index) => buildSeriesEntry(date, index, config))
-  console.log("🚀 ~ values:", values)
   SERIES_VALUES_BY_ID.set(config.id, values)
 
   // Count non-null values (API format: {date, value})
