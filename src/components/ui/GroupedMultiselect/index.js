@@ -227,14 +227,7 @@ const GroupedMultiselect = ({
                     ref={el => {
                       optionRefs.current[flatIdx] = el
                     }}
-                    className={[
-                      'list-item',
-                      'selector-option',
-                      isSelected && 'selected',
-                      focusedIndex === flatIdx && 'focused',
-                      'p-2',
-                      'radius-4'
-                    ].filter(Boolean).join(' ')}
+                    className={`list-item selector-option${isSelected ? ' selected' : ''}${focusedIndex === flatIdx ? ' focused' : ''} p-2 radius-4`}
                     tabIndex={-1}
                     role='option'
                     aria-selected={isSelected}
