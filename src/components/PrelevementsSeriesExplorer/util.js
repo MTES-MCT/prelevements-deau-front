@@ -527,6 +527,7 @@ export function computeSliderMarks(dates, maxMarks = 5) {
 
 /**
  * Transforms series data structure to component-compatible format
+ * Handles both sub-daily (array of time-value objects) and daily (single value) formats
  * @param {Array<Object>} seriesList - Array of series with metadata and values
  * @returns {Object} Transformed data with dailyValues and parameters
  */
@@ -540,7 +541,7 @@ export function transformSeriesToData(seriesList) {
   const parameters = []
   let hasSubDaily = false
 
-  for (const {series, values} of seriesList) {
+  for (const [seriesIdx, {series, values}] of seriesList.entries()) {
     if (!series || !values) {
       continue
     }
@@ -567,9 +568,24 @@ export function transformSeriesToData(seriesList) {
       }
 
       const entry = dateMap.get(dayEntry.date)
-      const seriesIndex = seriesList.indexOf(seriesList.find(s => s.series === series))
 
-      entry.values[seriesIndex] = dayEntry.value ?? null
+      // Handle sub-daily values (array of {time, value, remark})
+      if (Array.isArray(dayEntry.values)) {
+        if (dayEntry.values.length === 0) {
+          // Empty sub-daily array → null
+          entry.values[seriesIdx] = null
+        } else {
+          // Calculate average of sub-daily values
+          // Treat null values as 0 as per test requirements
+          const validValues = dayEntry.values.map(v => v.value ?? 0)
+          const sum = validValues.reduce((acc, val) => acc + val, 0)
+          const average = sum / validValues.length
+          entry.values[seriesIdx] = average
+        }
+      } else {
+        // Single daily value
+        entry.values[seriesIdx] = dayEntry.values ?? null
+      }
     }
   }
 

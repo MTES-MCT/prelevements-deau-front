@@ -17,11 +17,11 @@ import {
 
 /* eslint-disable capitalized-comments */
 
-// Mock calendar status colors for testing
+// Calendar status colors for testing
 const mockStatusColors = {
-  noSampling: '#2196F3',
-  notDeclared: '#9E9E9E',
-  present: '#0078f3'
+  noSampling: '#8fb6fb', // Light blue - value is 0
+  notDeclared: '#cecece', // Grey - not in series
+  present: '#000091' // Dark blue - has data
 }
 
 // FillDateGaps tests
