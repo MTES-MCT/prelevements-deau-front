@@ -175,12 +175,7 @@ const GroupedMultiselect = ({
         aria-expanded={open}
         role='button'
         tabIndex={disabled || totalOptionsCount === 0 ? -1 : 0}
-        onClick={disabled || totalOptionsCount === 0
-          ? undefined
-          : () => {
-            setOpen(prev => !prev)
-            selectRef.current?.focus()
-          }}
+        onClick={disabled || totalOptionsCount === 0 ? undefined : () => setOpen(prev => !prev)}
         onKeyDown={disabled || totalOptionsCount === 0 ? undefined : handleKeyDown}
       >
         <Box sx={{overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
