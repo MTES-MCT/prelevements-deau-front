@@ -55,7 +55,7 @@ export function useChartSeries({
       unitToAxis.set(uniqueUnits[1], 'right')
     }
 
-    return selectedParams.map(paramName => {
+    return selectedParams.map((paramName, paramIndex) => {
       const param = parameterMap.get(paramName)
       if (!param) {
         return null
@@ -63,7 +63,7 @@ export function useChartSeries({
 
       const data = []
       for (const value of visibleValues) {
-        const y = value.values[paramName] ?? null
+        const y = value.values[paramIndex] ?? null
         if (y !== null) {
           data.push({
             x: new Date(value.date),

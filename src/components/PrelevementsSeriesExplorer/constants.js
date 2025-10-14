@@ -23,11 +23,16 @@ export const DEFAULT_COLOR_PALETTE = [
  * Calendar status colors based on DSFR design system
  * Used to indicate data availability on calendar views
  * Colors are hardcoded to avoid import issues in tests
+ *
+ * Status definitions:
+ * - present: Data has values (dark blue)
+ * - noSampling: Value is 0 (light blue - no sampling occurred)
+ * - notDeclared: Date not in series range (grey - data not declared)
  */
 export const CALENDAR_STATUS_COLORS = {
-  noSampling: '#8fb6fb', // Info.hover (light blue)
-  notDeclared: '#cecece', // Grey.active
-  present: '#000091' // BlueFrance.default
+  noSampling: '#8fb6fb', // Info.hover (light blue) - value is 0
+  notDeclared: '#cecece', // Grey.active (grey) - not in series
+  present: '#000091' // BlueFrance.default (dark blue) - has data
 }
 
 /**

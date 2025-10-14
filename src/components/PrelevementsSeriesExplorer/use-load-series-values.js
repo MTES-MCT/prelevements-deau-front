@@ -82,6 +82,7 @@ export function useLoadSeriesValues({seriesList, selectedPeriods, selectedParams
   }, [selectedPeriods, selectedParams, dateRange, seriesList, getSeriesValues])
 
   // Build daily values from loaded data
+  // Format: {date, values: [v1, v2, ...]} where array index matches parameter order
   const dailyValues = useMemo(() => {
     if (Object.keys(loadedValues).length === 0) {
       return []
@@ -89,30 +90,23 @@ export function useLoadSeriesValues({seriesList, selectedPeriods, selectedParams
 
     // Get all unique dates from all loaded series
     const dateMap = new Map()
+    const parametersList = Object.keys(loadedValues)
 
     for (const [parameter, values] of Object.entries(loadedValues)) {
       for (const dayEntry of values) {
         if (!dateMap.has(dayEntry.date)) {
           dateMap.set(dayEntry.date, {
             date: dayEntry.date,
-            values: {}
+            values: Array.from({length: parametersList.length}, () => null)
           })
         }
 
         const entry = dateMap.get(dayEntry.date)
+        const paramIndex = parametersList.indexOf(parameter)
 
-        // Handle sub-daily values (object with time keys like "00:00", "00:15")
-        if (dayEntry.values && typeof dayEntry.values === 'object' && !Array.isArray(dayEntry.values)) {
-          const dailyValuesList = Object.values(dayEntry.values).filter(v => v !== null && v !== undefined && typeof v === 'number')
-          // Use average for daily aggregation
-          const average = dailyValuesList.length > 0
-            ? dailyValuesList.reduce((a, b) => a + b, 0) / dailyValuesList.length
-            : null
-          entry.values[parameter] = average
-        } else if (typeof dayEntry.value === 'number') {
-          // Direct daily value
-          entry.values[parameter] = dayEntry.value
-        }
+        // API format: {date, value, remark?}
+        // Value can be a number, 0, or null
+        entry.values[paramIndex] = dayEntry.value ?? null
       }
     }
 

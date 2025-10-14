@@ -9,42 +9,41 @@
  * @component
  * @example
  * ```jsx
- * // Define API fetch function
- * async function getSeriesValues(seriesId, {start, end}) {
- *   const response = await fetch(
- *     `/api/series/${seriesId}/values?start=${start}&end=${end}&withPoint=1`
- *   )
- *   if (!response.ok) {
- *     throw new Error('Failed to load series values')
- *   }
- *   return response.json() // Returns { series: {...}, values: [...] }
- * }
  *
  * <PrelevementsSeriesExplorer
- *   series={[
- *     {
- *       _id: '507f1f77bcf86cd799439011',
- *       parameter: 'debit',
- *       unit: 'm³/h',
- *       frequency: '1 hour',
- *       hasSubDaily: true,
- *       minDate: '2024-01-01',
- *       maxDate: '2024-12-31',
- *       numberOfValues: 8760,
- *       pointPrelevement: '507f1f77bcf86cd799439012',
- *       pointInfo: {
- *         id_point: 123,
- *         nom: 'Point A'
- *       }
- *     }
- *   ]}
+ *   series={seriesList}
  *   getSeriesValues={getSeriesValues}
  *   defaultPeriods={[{type: 'year', value: 2024}]}
  *   onPeriodChange={(periods) => console.log(periods)}
  *   onParameterChange={(params) => console.log(params)}
- *   showPeriodSelector={false}
  * />
  * ```
+ *
+ * @param {Object} props - Component props
+ * @param {Array<Object>} props.series - Array of series metadata
+ * @param {string} props.series[]._id - Series unique identifier
+ * @param {string} props.series[].parameter - Parameter name
+ * @param {string} props.series[].unit - Unit of measurement
+ * @param {string} props.series[].frequency - Sampling frequency
+ * @param {string} props.series[].valueType - Type of value (mean, max, cumulative, etc.)
+ * @param {string} props.series[].minDate - Earliest date with data (YYYY-MM-DD)
+ * @param {string} props.series[].maxDate - Latest date with data (YYYY-MM-DD)
+ * @param {boolean} props.series[].hasSubDaily - Whether series has sub-daily data
+ * @param {number} props.series[].numberOfValues - Total number of values
+ * @param {Function} props.getSeriesValues - Function to fetch series values
+ *   Signature: async (seriesId: string, {start: string, end: string}) => Promise<{series: Object, values: Array}>
+ *   Returns: {series: {...}, values: [{date, value, remark?}, ...]}
+ * @param {Array<Object>} [props.defaultPeriods=[]] - Initial selected periods
+ * @param {Object} [props.selectablePeriods] - Available periods for selection
+ * @param {string} [props.defaultInitialViewType='years'] - Initial view type ('years' or 'months')
+ * @param {Function} [props.onPeriodChange] - Callback when period selection changes
+ * @param {Function} [props.onParameterChange] - Callback when parameter selection changes
+ * @param {Object} [props.translations] - Custom UI text translations
+ * @param {boolean} [props.showPeriodSelector=true] - Show/hide period selector
+ * @param {boolean} [props.showCalendar=true] - Show/hide calendar grid
+ * @param {boolean} [props.showChart=true] - Show/hide time series chart
+ * @param {boolean} [props.showRangeSlider=true] - Show/hide range refinement slider
+ * @param {string} [props.locale='fr-FR'] - Locale for date/number formatting
  */
 
 'use client'
@@ -59,7 +58,6 @@ import {DEFAULT_TRANSLATIONS} from './constants.js'
 import {formatPeriodLabel, getViewTypeLabel} from './formatters.js'
 import LoadingState from './loading-state.js'
 import ParameterSelector from './parameter-selector.js'
-import {useCalendarData} from './use-calendar-data.js'
 import {useChartSeries} from './use-chart-series.js'
 import {useLoadSeriesValues} from './use-load-series-values.js'
 import {
@@ -68,6 +66,7 @@ import {
 } from './use-parameter-selection.js'
 import {useTimeline} from './use-timeline.js'
 import {
+  buildCalendarData,
   calculateSelectablePeriodsFromSeries,
   periodsToDateRange
 } from './util.js'
@@ -158,9 +157,6 @@ const PrelevementsSeriesExplorer = ({
     handleCalendarDayClick
   } = useTimeline(dailyValues, showRangeSlider)
 
-  // Build calendar data from series
-  const calendarData = useCalendarData(showCalendar, dateRange, seriesList)
-
   // Prepare chart series from loaded values
   const chartSeries = useChartSeries({
     showChart,
@@ -170,6 +166,16 @@ const PrelevementsSeriesExplorer = ({
     selectedParams,
     parameterMap
   })
+
+  // Build calendar data from loaded values
+  const calendarData = useMemo(() => {
+    if (!showCalendar || !dailyValues || dailyValues.length === 0) {
+      return []
+    }
+
+    // Function buildCalendarData will determine colors based on value presence
+    return buildCalendarData(dailyValues)
+  }, [showCalendar, dailyValues])
 
   // Format labels for display
   const periodLabel = useMemo(

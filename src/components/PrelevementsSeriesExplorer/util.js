@@ -71,46 +71,8 @@ export function buildSeriesMetadataMap(seriesList) {
 }
 
 /**
- * Process calendar availability entries for a series
- * @param {Array} availability - Calendar availability entries
- * @param {Object} dateRange - Date range with start and end
- * @param {Object} serie - Series metadata
- * @param {Object} statusColors - Color mapping for calendar statuses
- * @returns {Array} Processed calendar entries
- */
-function processCalendarAvailability(availability, dateRange, serie, statusColors) {
-  const entries = []
-
-  for (const item of availability) {
-    if (!item?.date) {
-      continue
-    }
-
-    const availabilityDate = new Date(item.date)
-    if (Number.isNaN(availabilityDate.getTime())) {
-      continue
-    }
-
-    if (availabilityDate < dateRange.start || availabilityDate > dateRange.end) {
-      continue
-    }
-
-    const statusColor = item.status ? statusColors[item.status] : undefined
-    const color = item.color ?? statusColor ?? serie.color ?? '#0078f3'
-
-    entries.push({
-      ...item,
-      date: item.date,
-      color
-    })
-  }
-
-  return entries
-}
-
-/**
  * Builds calendar data entries from series metadata and date range
- * Only processes series with explicit calendarAvailability data
+ * Generates monthly calendar entries based on series minDate/maxDate
  * @param {Array} seriesList - Array of series with minDate/maxDate
  * @param {Object} dateRange - Date range with start and end
  * @param {Function} _formatFn - Function to format dates (unused, kept for API compatibility)
@@ -125,18 +87,35 @@ export function buildCalendarEntriesFromMetadata(seriesList, dateRange, _formatF
       continue
     }
 
-    // Use calendarAvailability if provided
-    if (Array.isArray(serie.calendarAvailability) && serie.calendarAvailability.length > 0) {
-      const entries = processCalendarAvailability(serie.calendarAvailability, dateRange, serie, statusColors)
-      calendars.push(...entries)
+    // Generate calendar entries based on series date range
+    const serieStart = new Date(serie.minDate)
+    const serieEnd = new Date(serie.maxDate)
+
+    // Skip series completely outside requested date range
+    if (serieEnd < dateRange.start || serieStart > dateRange.end) {
       continue
     }
 
-    // Only generate calendar entries for series without calendarAvailability
-    // if explicitly requested (for backward compatibility)
-    // Skip series that don't have explicit calendar data
-    // This prevents all series from generating overlapping calendars
-    continue
+    // Calculate intersection of serie range and requested range
+    const start = new Date(Math.max(serieStart.getTime(), dateRange.start.getTime()))
+    const end = new Date(Math.min(serieEnd.getTime(), dateRange.end.getTime()))
+
+    // Generate monthly calendar entries
+    let current = new Date(start.getFullYear(), start.getMonth(), 1)
+
+    while (current <= end) {
+      const monthIsoDate = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-01`
+
+      calendars.push({
+        date: monthIsoDate,
+        color: serie.color ?? statusColors.present,
+        status: 'present',
+        parameter: serie.parameter
+      })
+
+      // Move to first day of next month
+      current = new Date(current.getFullYear(), current.getMonth() + 1, 1)
+    }
   }
 
   return calendars
@@ -271,8 +250,13 @@ export function formatDateRange(start, end, locale = 'fr-FR') {
 
 /**
  * Determines color for calendar entry based on data presence
- * @param {Object} entry - Calendar entry
- * @returns {string} Color hex code
+ * Color logic matches CalendarGrid legend:
+ * - Dark blue (#000091): has data values (present)
+ * - Light blue (#8fb6fb): all values are 0 (no sampling)
+ * - Grey (#cecece): no values or all null/undefined (not declared)
+ *
+ * @param {Object} entry - Calendar entry with values array: {date, values: [v1, v2, ...]}
+ * @returns {string} Color hex code matching CALENDAR_STATUS_COLORS
  */
 function determineEntryColor(entry) {
   const {color: entryColor} = entry
@@ -281,13 +265,31 @@ function determineEntryColor(entry) {
     return entryColor
   }
 
-  if (entry.values) {
-    const hasData = entry.values.some(v => v !== null && v !== undefined)
-    const allNull = entry.values.every(v => v === null || v === undefined)
-    return hasData ? '#0078f3' : (allNull ? '#e5e5e5' : '#fee2e2')
+  // Internal format: {date, values: [v1, v2, ...]}
+  if (entry.values && Array.isArray(entry.values)) {
+    // Check if there are any non-null values
+    const hasValues = entry.values.some(v => v !== null && v !== undefined)
+
+    if (!hasValues) {
+      // All null/undefined → grey (not declared)
+      return CALENDAR_STATUS_COLORS.notDeclared
+    }
+
+    // Check if all non-null values are 0
+    const nonNullValues = entry.values.filter(v => v !== null && v !== undefined)
+    const allZero = nonNullValues.every(v => v === 0)
+
+    if (allZero) {
+      // All zeros → light blue (no sampling)
+      return CALENDAR_STATUS_COLORS.noSampling
+    }
+
+    // Has non-zero values → dark blue (present)
+    return CALENDAR_STATUS_COLORS.present
   }
 
-  return '#0078f3'
+  // Fallback to not declared
+  return CALENDAR_STATUS_COLORS.notDeclared
 }
 
 /**
@@ -567,26 +569,7 @@ export function transformSeriesToData(seriesList) {
       const entry = dateMap.get(dayEntry.date)
       const seriesIndex = seriesList.indexOf(seriesList.find(s => s.series === series))
 
-      // Handle sub-daily values (with time)
-      if (Array.isArray(dayEntry.values)) {
-        const dailyValues = dayEntry.values.map(v => v.value)
-        // Use average for daily aggregation
-        // Prevent division by zero - if array is empty, set to null
-        const average = dailyValues.length > 0
-          ? dailyValues.reduce((a, b) => a + (b || 0), 0) / dailyValues.length
-          : null
-        entry.values[seriesIndex] = average
-
-        // Store sub-daily data
-        entry.subDailyValues[seriesIndex] = dayEntry.values.map(v => ({
-          time: v.time,
-          value: v.value,
-          remark: v.remark
-        }))
-      } else if (typeof dayEntry.values === 'number') {
-        // Direct daily value
-        entry.values[seriesIndex] = dayEntry.values
-      }
+      entry.values[seriesIndex] = dayEntry.value ?? null
     }
   }
 

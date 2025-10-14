@@ -12,37 +12,80 @@ const meta = {
     )
   ],
   argTypes: {
-    data: {
+    series: {
       control: 'object',
-      description: `Time series data with daily and/or 15-minute granularity.
+      description: `Array of series metadata from API.
 
-**Type**: \`Object\`
+**Type**: \`Array<SeriesSummary>\`
 
 **Schema**:
 \`\`\`typescript
 {
-  dailyValues?: Array<{
-    date: string          // ISO date string (YYYY-MM-DD)
-    values: Array<number|null>
-  }>
-  dailyParameters?: Array<{
-    nom_parametre: string  // Parameter name
-    unite: string          // Unit (e.g., 'm³/h', '°C')
-    color?: string         // Hex color for visualization
-  }>
-  fifteenMinutesValues?: Array<{
-    date: string          // ISO datetime string
-    values: Array<number|null>
-  }>
-  fifteenMinutesParameters?: Array<{
-    nom_parametre: string
-    unite: string
-    color?: string
+  _id: string              // Series unique identifier (MongoDB ObjectId)
+  parameter: string        // Parameter name (e.g., 'temperature', 'debit')
+  unit: string             // Unit of measurement (e.g., '°C', 'm³/h')
+  frequency: string        // Sampling frequency (e.g., '1 day', '15 minutes')
+  valueType: string        // Type of value ('mean', 'maximum', 'cumulative', etc.)
+  minDate: string          // Earliest date with data (YYYY-MM-DD)
+  maxDate: string          // Latest date with data (YYYY-MM-DD)
+  hasSubDaily: boolean     // Whether series has sub-daily data
+  numberOfValues: number   // Total number of values in series
+  pointPrelevement?: string // Reference to sampling point
+  pointInfo?: {            // Optional sampling point info
+    id_point: number
+    nom: string
+  }
+  extras?: object          // Optional additional metadata
+}
+\`\`\`
+
+**Example**:
+\`\`\`javascript
+[{
+  _id: '507f1f77bcf86cd799439011',
+  parameter: 'temperature',
+  unit: '°C',
+  frequency: '1 day',
+  valueType: 'mean',
+  minDate: '2024-01-01',
+  maxDate: '2024-12-31',
+  hasSubDaily: false,
+  numberOfValues: 365
+}]
+\`\`\``
+    },
+    getSeriesValues: {
+      control: false,
+      description: `Function to fetch series values from API.
+
+**Signature**: \`async (seriesId: string, {start: string, end: string}) => Promise<{series: Object, values: Array}>\`
+
+**Parameters**:
+- \`seriesId\`: Series unique identifier
+- \`start\`: Start date (YYYY-MM-DD, inclusive)
+- \`end\`: End date (YYYY-MM-DD, inclusive)
+
+**Returns**:
+\`\`\`typescript
+{
+  series: SeriesSummary,  // Series metadata
+  values: Array<{         // Array of values
+    date: string,         // Date (YYYY-MM-DD)
+    value: number | null, // Value (can be null for missing data)
+    remark?: string       // Optional remark
   }>
 }
 \`\`\`
 
-**Note**: Component prefers dailyValues when both are provided.`
+**Example**:
+\`\`\`javascript
+async function getSeriesValues(seriesId, {start, end}) {
+  const response = await fetch(
+    \`/api/series/\${seriesId}/values?start=\${start}&end=\${end}\`
+  )
+  return response.json()
+}
+\`\`\``
     },
     defaultPeriods: {
       control: 'object',
@@ -140,7 +183,6 @@ Defaults to 'years'.`
 
 export default meta
 
-const SUB_DAILY_TIMES = ['00:00:00', '06:00:00', '12:00:00', '18:00:00']
 const START_DATE = new Date('2023-01-01')
 const END_DATE = new Date('2025-09-30')
 const STATUS_LABELS = {
@@ -210,9 +252,10 @@ function createLegendCoverage(dates, start, end) {
 }
 
 const ALL_DATES = generateDateSequence(START_DATE, END_DATE)
-const {statusByDate: STATUS_BY_DATE, availability: CALENDAR_AVAILABILITY}
+const {statusByDate: STATUS_BY_DATE}
   = createLegendCoverage(ALL_DATES, START_DATE, END_DATE)
 
+// Generator config (not part of API, only for storybook data generation)
 const SERIES_CONFIGS = [
   {
     id: 'series-volume-cumulatif',
@@ -226,7 +269,6 @@ const SERIES_CONFIGS = [
     period: 45,
     trend: 0.12,
     min: 10,
-    color: '#1d4ed8',
     attachCalendar: true
   },
   {
@@ -240,8 +282,7 @@ const SERIES_CONFIGS = [
     amplitude: 14,
     period: 18,
     min: 5,
-    timeVariance: 4,
-    color: '#f97316'
+    timeVariance: 4
   },
   {
     id: 'series-debit-moyen',
@@ -254,8 +295,7 @@ const SERIES_CONFIGS = [
     amplitude: 10,
     period: 22,
     min: 4,
-    timeVariance: 3,
-    color: '#0ea5e9'
+    timeVariance: 3
   },
   {
     id: 'series-temperature',
@@ -269,7 +309,6 @@ const SERIES_CONFIGS = [
     period: 30,
     min: -2,
     trend: 0.02,
-    color: '#ef4444',
     extras: {commentaire: 'Station recalibree en juin 2024'}
   },
   {
@@ -279,15 +318,18 @@ const SERIES_CONFIGS = [
     frequency: 'daily',
     valueType: 'maximum',
     hasSubDaily: false,
-    base: 320,
-    amplitude: 45,
-    period: 40,
-    min: 120,
-    trend: 0.05,
-    color: '#6366f1'
+    base: 230,
+    amplitude: 80,
+    period: 60,
+    min: 50,
+    trend: -0.3
   }
 ]
 
+/**
+ * Builds a single value entry in API format: {date, value, remark?}
+ * Note: Sub-daily series would have multiple entries per day in real API
+ */
 function buildSeriesEntry(date, dayIndex, config) {
   const status = STATUS_BY_DATE.get(date) ?? 'present'
   const seasonalPart = Math.sin((2 * Math.PI * dayIndex) / config.period) * config.amplitude
@@ -295,63 +337,37 @@ function buildSeriesEntry(date, dayIndex, config) {
   const baseValue = config.base + seasonalPart + trendPart
   const clampedValue = Math.max(config.min ?? 0, baseValue)
 
-  if (config.frequency === 'sub-daily' && config.hasSubDaily) {
-    const values = SUB_DAILY_TIMES.map((time, slotIndex) => {
-      if (status === 'noSampling' || status === 'notDeclared') {
-        return {
-          time,
-          value: null,
-          remark: slotIndex === 0 && status === 'notDeclared' ? 'Non declare' : null
-        }
-      }
-
-      const slotPhase = Math.sin(((slotIndex + 1) / SUB_DAILY_TIMES.length) * Math.PI)
-      const timeVariance = config.timeVariance ?? 3
-      const slotValue = Math.max(
-        config.min ?? 0,
-        clampedValue + (slotPhase * timeVariance) - slotIndex
-      )
-
-      return {
-        time,
-        value: Number(slotValue.toFixed(2)),
-        remark: null
-      }
-    })
-
-    return {date, values}
-  }
-
+  // API format: {date, value, remark?}
   if (status === 'noSampling') {
-    return {date, value: null}
+    return {date, value: 0} // Zero = no sampling
   }
 
   if (status === 'notDeclared') {
     return {date, value: null, remark: 'Non declare'}
   }
 
-  return {date, value: Number(clampedValue.toFixed(2))}
+  return {date, value: clampedValue}
 }
 
+// ==============================================================================
+// MOCK DATA GENERATION
+// ==============================================================================
+
+// Storage for generated values (simulates backend database)
 const SERIES_VALUES_BY_ID = new Map()
 
+// Build series METADATA (simulates GET /api/points-prelevement/{id}/series response)
+// This is what you pass to the `series` prop
 const SERIES_METADATA = SERIES_CONFIGS.map(config => {
+  // Generate values for this series (simulates backend data)
   const values = ALL_DATES.map((date, index) => buildSeriesEntry(date, index, config))
+  console.log("🚀 ~ values:", values)
   SERIES_VALUES_BY_ID.set(config.id, values)
 
-  let numberOfValues = 0
-  for (const entry of values) {
-    if (Array.isArray(entry.values)) {
-      for (const point of entry.values) {
-        if (point && point.value !== null && point.value !== undefined) {
-          numberOfValues += 1
-        }
-      }
-    } else if (entry.value !== null && entry.value !== undefined) {
-      numberOfValues += 1
-    }
-  }
+  // Count non-null values (API format: {date, value})
+  const numberOfValues = values.filter(entry => entry.value !== null && entry.value !== undefined).length
 
+  // Return series metadata (matches API SeriesSummary schema)
   return {
     _id: config.id,
     parameter: config.parameter,
@@ -362,18 +378,34 @@ const SERIES_METADATA = SERIES_CONFIGS.map(config => {
     maxDate: ALL_DATES.at(-1),
     hasSubDaily: config.hasSubDaily,
     numberOfValues,
-    color: config.color,
-    ...(config.attachCalendar ? {calendarAvailability: CALENDAR_AVAILABILITY} : {}),
     ...(config.extras ? {extras: config.extras} : {})
   }
 })
 
+/**
+ * Mock implementation of getSeriesValues
+ * Simulates GET /api/series/{seriesId}/values?start={start}&end={end}
+ *
+ * In production, this would be:
+ * async function getSeriesValues(seriesId, {start, end}) {
+ *   const response = await fetch(`/api/series/${seriesId}/values?start=${start}&end=${end}`)
+ *   return response.json()
+ * }
+ */
 const mockGetSeriesValues = async (seriesId, {start, end}) => {
-  const values = SERIES_VALUES_BY_ID.get(seriesId) ?? []
+  // Simulate API response delay
+  await new Promise(resolve => {
+    setTimeout(resolve, 100)
+  })
 
+  const values = SERIES_VALUES_BY_ID.get(seriesId) ?? []
   const filtered = values.filter(entry => entry.date >= start && entry.date <= end)
 
-  return {values: filtered}
+  // API response format: {series: {...}, values: [...]}
+  return {
+    series: SERIES_METADATA.find(s => s._id === seriesId),
+    values: filtered
+  }
 }
 
 export const ScenarioComplet = {

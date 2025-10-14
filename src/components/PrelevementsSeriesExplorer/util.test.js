@@ -140,34 +140,37 @@ test('buildCalendarData groups values by month', t => {
 
 test('buildCalendarData assigns colors based on data presence', t => {
   const values = [
-    {date: '2024-01-01', values: [10]},
-    {date: '2024-01-02', values: [null]},
-    {date: '2024-01-03', values: [undefined]}
+    {date: '2024-01-01', values: [10]}, // Has data → dark blue
+    {date: '2024-01-02', values: [0]}, // Zero → light blue
+    {date: '2024-01-03', values: [null]}, // No data → grey
+    {date: '2024-01-04', values: [undefined]}, // No data → grey
+    {date: '2024-01-05', values: [10, 0, null]}, // Mixed: has non-zero → dark blue
+    {date: '2024-01-06', values: [0, 0, 0]} // All zeros → light blue
   ]
 
   const result = buildCalendarData(values)
 
-  t.is(result[0][0].color, '#0078f3') // Has data
-  t.is(result[0][1].color, '#e5e5e5') // All null
-  t.is(result[0][2].color, '#e5e5e5') // All undefined
+  t.is(result[0][0].color, mockStatusColors.present) // Has data (dark blue)
+  t.is(result[0][1].color, mockStatusColors.noSampling) // Zero (light blue)
+  t.is(result[0][2].color, mockStatusColors.notDeclared) // Null (grey)
+  t.is(result[0][3].color, mockStatusColors.notDeclared) // Undefined (grey)
+  t.is(result[0][4].color, mockStatusColors.present) // Mixed with non-zero (dark blue)
+  t.is(result[0][5].color, mockStatusColors.noSampling) // All zeros (light blue)
 })
 
-test('buildCalendarEntriesFromMetadata honors explicit calendar availability with legend colors', t => {
+test('buildCalendarEntriesFromMetadata generates monthly entries from minDate/maxDate', t => {
   const seriesList = [
     {
-      minDate: '2023-01-01',
-      maxDate: '2023-12-31',
-      calendarAvailability: [
-        {date: '2023-01-15', status: 'noSampling'},
-        {date: '2023-01-20', status: 'notDeclared'},
-        {date: '2023-02-01', status: 'present'} // Outside range should be ignored in filtered result
-      ]
+      parameter: 'temperature',
+      minDate: '2023-01-15',
+      maxDate: '2023-03-20',
+      color: '#ff0000'
     }
   ]
 
   const dateRange = {
     start: new Date('2023-01-01'),
-    end: new Date('2023-01-31')
+    end: new Date('2023-12-31')
   }
 
   const result = buildCalendarEntriesFromMetadata(
@@ -177,16 +180,73 @@ test('buildCalendarEntriesFromMetadata honors explicit calendar availability wit
     mockStatusColors
   )
 
-  t.is(result.length, 2)
+  // Should generate entries for January, February, March
+  t.is(result.length, 3)
 
-  const noSamplingEntry = result.find(entry => entry.date === '2023-01-15')
-  const notDeclaredEntry = result.find(entry => entry.date === '2023-01-20')
+  const janEntry = result.find(entry => entry.date === '2023-01-01')
+  const febEntry = result.find(entry => entry.date === '2023-02-01')
+  const marEntry = result.find(entry => entry.date === '2023-03-01')
 
-  t.truthy(noSamplingEntry)
-  t.truthy(notDeclaredEntry)
+  t.truthy(janEntry)
+  t.truthy(febEntry)
+  t.truthy(marEntry)
 
-  t.is(noSamplingEntry.color, mockStatusColors.noSampling)
-  t.is(notDeclaredEntry.color, mockStatusColors.notDeclared)
+  // Should use series color
+  t.is(janEntry.color, '#ff0000')
+  t.is(janEntry.status, 'present')
+  t.is(janEntry.parameter, 'temperature')
+})
+
+test('buildCalendarEntriesFromMetadata skips series outside date range', t => {
+  const seriesList = [
+    {
+      parameter: 'temperature',
+      minDate: '2022-01-01',
+      maxDate: '2022-12-31',
+      color: '#ff0000'
+    }
+  ]
+
+  const dateRange = {
+    start: new Date('2023-01-01'),
+    end: new Date('2023-12-31')
+  }
+
+  const result = buildCalendarEntriesFromMetadata(
+    seriesList,
+    dateRange,
+    date => date.toISOString().split('T')[0],
+    mockStatusColors
+  )
+
+  // Series completely outside range should be skipped
+  t.is(result.length, 0)
+})
+
+test('buildCalendarEntriesFromMetadata uses default color when series has no color', t => {
+  const seriesList = [
+    {
+      parameter: 'flow',
+      minDate: '2023-01-01',
+      maxDate: '2023-01-31'
+      // No color specified
+    }
+  ]
+
+  const dateRange = {
+    start: new Date('2023-01-01'),
+    end: new Date('2023-12-31')
+  }
+
+  const result = buildCalendarEntriesFromMetadata(
+    seriesList,
+    dateRange,
+    date => date.toISOString().split('T')[0],
+    mockStatusColors
+  )
+
+  t.is(result.length, 1)
+  t.is(result[0].color, mockStatusColors.present) // Default color
 })
 
 // filterSeriesByParameters tests
