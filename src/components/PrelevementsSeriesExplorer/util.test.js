@@ -12,7 +12,8 @@ import {
   validateParameterSelection,
   clamp,
   computeSliderMarks,
-  transformSeriesToData
+  transformSeriesToData,
+  extractDefaultPeriodsFromSeries
 } from './util.js'
 
 /* eslint-disable capitalized-comments */
@@ -557,6 +558,146 @@ test('transformSeriesToData preserves zero values correctly', t => {
   t.is(result.dailyValues.length, 1)
   // Average of [0, 0] → 0 (real zero measurement, not null)
   t.is(result.dailyValues[0].values[0], 0)
+})
+
+// extractDefaultPeriodsFromSeries tests
+test('extractDefaultPeriodsFromSeries returns empty array for empty series list', t => {
+  t.deepEqual(extractDefaultPeriodsFromSeries([]), [])
+  t.deepEqual(extractDefaultPeriodsFromSeries(null), [])
+  t.deepEqual(extractDefaultPeriodsFromSeries(undefined), [])
+})
+
+test('extractDefaultPeriodsFromSeries returns empty array when no dates present', t => {
+  const seriesList = [
+    {parameter: 'temp', unit: '°C'},
+    {parameter: 'flow', unit: 'm³/h'}
+  ]
+
+  const result = extractDefaultPeriodsFromSeries(seriesList)
+  t.deepEqual(result, [])
+})
+
+test('extractDefaultPeriodsFromSeries returns year periods for multiple years', t => {
+  const seriesList = [
+    {
+      parameter: 'temperature',
+      minDate: '2023-01-15',
+      maxDate: '2023-12-20'
+    },
+    {
+      parameter: 'flow',
+      minDate: '2024-03-10',
+      maxDate: '2024-11-15'
+    }
+  ]
+
+  const result = extractDefaultPeriodsFromSeries(seriesList)
+
+  t.is(result.length, 2)
+  t.deepEqual(result[0], {type: 'year', value: 2023})
+  t.deepEqual(result[1], {type: 'year', value: 2024})
+})
+
+test('extractDefaultPeriodsFromSeries returns month periods for single year', t => {
+  const seriesList = [
+    {
+      parameter: 'temperature',
+      minDate: '2024-01-15',
+      maxDate: '2024-03-20'
+    }
+  ]
+
+  const result = extractDefaultPeriodsFromSeries(seriesList)
+
+  t.is(result.length, 3) // January, February, March
+  t.deepEqual(result[0], {type: 'month', year: 2024, month: 0}) // January
+  t.deepEqual(result[1], {type: 'month', year: 2024, month: 1}) // February
+  t.deepEqual(result[2], {type: 'month', year: 2024, month: 2}) // March
+})
+
+test('extractDefaultPeriodsFromSeries handles single month in single year', t => {
+  const seriesList = [
+    {
+      parameter: 'flow',
+      minDate: '2024-05-01',
+      maxDate: '2024-05-31'
+    }
+  ]
+
+  const result = extractDefaultPeriodsFromSeries(seriesList)
+
+  t.is(result.length, 1)
+  t.deepEqual(result[0], {type: 'month', year: 2024, month: 4}) // May (0-indexed)
+})
+
+test('extractDefaultPeriodsFromSeries uses global min/max across all series', t => {
+  const seriesList = [
+    {
+      parameter: 'temp',
+      minDate: '2023-06-01',
+      maxDate: '2023-08-31'
+    },
+    {
+      parameter: 'pressure',
+      minDate: '2023-01-01',
+      maxDate: '2023-12-31'
+    },
+    {
+      parameter: 'flow',
+      minDate: '2023-03-15',
+      maxDate: '2023-09-20'
+    }
+  ]
+
+  const result = extractDefaultPeriodsFromSeries(seriesList)
+
+  // Should span from January (earliest minDate) to December (latest maxDate)
+  t.is(result.length, 12) // All 12 months of 2023
+  t.deepEqual(result[0], {type: 'month', year: 2023, month: 0}) // January
+  t.deepEqual(result[11], {type: 'month', year: 2023, month: 11}) // December
+})
+
+test('extractDefaultPeriodsFromSeries handles year boundary correctly', t => {
+  const seriesList = [
+    {
+      parameter: 'temperature',
+      minDate: '2023-12-15',
+      maxDate: '2024-01-15'
+    }
+  ]
+
+  const result = extractDefaultPeriodsFromSeries(seriesList)
+
+  // Should return two year periods
+  t.is(result.length, 2)
+  t.deepEqual(result[0], {type: 'year', value: 2023})
+  t.deepEqual(result[1], {type: 'year', value: 2024})
+})
+
+test('extractDefaultPeriodsFromSeries ignores series without dates', t => {
+  const seriesList = [
+    {
+      parameter: 'temp',
+      minDate: '2024-01-01',
+      maxDate: '2024-02-28'
+    },
+    {
+      parameter: 'flow'
+      // No dates
+    },
+    {
+      parameter: 'pressure',
+      minDate: null,
+      maxDate: null
+    }
+  ]
+
+  const result = extractDefaultPeriodsFromSeries(seriesList)
+
+  // Should only consider series with valid dates
+  t.is(result.length, 2) // January and February
+  t.deepEqual(result[0], {type: 'month', year: 2024, month: 0})
+  t.deepEqual(result[1], {type: 'month', year: 2024, month: 1})
 })
 
 /* eslint-enable capitalized-comments */

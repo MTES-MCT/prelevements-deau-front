@@ -23,6 +23,38 @@ const COLOR_PRIORITY = {
 }
 
 /**
+ * Extract global min/max dates from series list
+ * @param {Array} seriesList
+ * @returns {{minDate: Date, maxDate: Date}|null}
+ */
+function getGlobalDateBounds(seriesList) {
+  if (!seriesList || seriesList.length === 0) {
+    return null
+  }
+
+  const dates = []
+
+  for (const serie of seriesList) {
+    if (serie?.minDate) {
+      dates.push(new Date(serie.minDate))
+    }
+
+    if (serie?.maxDate) {
+      dates.push(new Date(serie.maxDate))
+    }
+  }
+
+  if (dates.length === 0) {
+    return null
+  }
+
+  return {
+    minDate: new Date(Math.min(...dates)),
+    maxDate: new Date(Math.max(...dates))
+  }
+}
+
+/**
  * Determines which color should take precedence based on priority
  * @param {Array<string>} colors - Array of color hex codes
  * @returns {string} The color with highest priority
@@ -127,23 +159,13 @@ export function buildCalendarEntriesFromMetadata(seriesList, dateRange, _formatF
  * @returns {Object} Selectable periods with years and months ranges
  */
 export function calculateSelectablePeriodsFromSeries(seriesList) {
-  const allDates = []
-  for (const serie of seriesList) {
-    if (serie.minDate) {
-      allDates.push(new Date(serie.minDate))
-    }
+  const bounds = getGlobalDateBounds(seriesList)
 
-    if (serie.maxDate) {
-      allDates.push(new Date(serie.maxDate))
-    }
-  }
-
-  if (allDates.length === 0) {
+  if (!bounds) {
     return {years: []}
   }
 
-  const minDate = new Date(Math.min(...allDates))
-  const maxDate = new Date(Math.max(...allDates))
+  const {minDate, maxDate} = bounds
   const minYear = minDate.getFullYear()
   const maxYear = maxDate.getFullYear()
 
@@ -156,6 +178,50 @@ export function calculateSelectablePeriodsFromSeries(seriesList) {
     years,
     months: {start: minDate, end: maxDate}
   }
+}
+
+/**
+ * Extracts default periods from series metadata when no default periods are provided
+ * Returns period objects based on the min/max date range of all series
+ * Logic:
+ * - If date range spans multiple years: returns year periods for each year
+ * - If date range is within a single year: returns month periods for each month
+ * @param {Array} seriesList - Array of series with minDate/maxDate properties
+ * @returns {Array<Object>} Array of period objects [{type: 'year', value: 2024}, ...] or [{type: 'month', year: 2024, month: 0}, ...]
+ */
+export function extractDefaultPeriodsFromSeries(seriesList) {
+  const bounds = getGlobalDateBounds(seriesList)
+
+  if (!bounds) {
+    return []
+  }
+
+  const {minDate, maxDate} = bounds
+  const minYear = minDate.getFullYear()
+  const maxYear = maxDate.getFullYear()
+
+  if (maxYear > minYear) {
+    const periods = []
+    for (let year = minYear; year <= maxYear; year++) {
+      periods.push({type: 'year', value: year})
+    }
+
+    return periods
+  }
+
+  const periods = []
+  const minMonth = minDate.getMonth()
+  const maxMonth = maxDate.getMonth()
+
+  for (let month = minMonth; month <= maxMonth; month++) {
+    periods.push({
+      type: 'month',
+      year: minYear,
+      month
+    })
+  }
+
+  return periods
 }
 
 /**

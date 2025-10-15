@@ -68,6 +68,7 @@ import {useTimeline} from './use-timeline.js'
 import {
   buildCalendarData,
   calculateSelectablePeriodsFromSeries,
+  extractDefaultPeriodsFromSeries,
   periodsToDateRange
 } from './util.js'
 
@@ -90,7 +91,7 @@ function useSelectablePeriods(seriesList, providedSelectablePeriods) {
 const PrelevementsSeriesExplorer = ({
   series: seriesList,
   getSeriesValues,
-  defaultPeriods = [],
+  defaultPeriods,
   selectablePeriods: providedSelectablePeriods,
   defaultInitialViewType = 'years',
   onPeriodChange,
@@ -114,8 +115,17 @@ const PrelevementsSeriesExplorer = ({
   // Calculate or use provided selectable periods
   const selectablePeriods = useSelectablePeriods(seriesList, providedSelectablePeriods)
 
+  // Extract default periods from series if not provided
+  const initialPeriods = useMemo(() => {
+    if (defaultPeriods && defaultPeriods.length > 0) {
+      return defaultPeriods
+    }
+
+    return extractDefaultPeriodsFromSeries(seriesList)
+  }, [defaultPeriods, seriesList])
+
   // Manage period selection state
-  const [selectedPeriods, setSelectedPeriods] = useState(defaultPeriods)
+  const [selectedPeriods, setSelectedPeriods] = useState(initialPeriods)
 
   // Manage parameter selection with validation
   const {
