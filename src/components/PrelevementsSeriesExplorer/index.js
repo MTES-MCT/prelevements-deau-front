@@ -44,6 +44,7 @@
  * @param {boolean} [props.showChart=true] - Show/hide time series chart
  * @param {boolean} [props.showRangeSlider=true] - Show/hide range refinement slider
  * @param {string} [props.locale='fr-FR'] - Locale for date/number formatting
+ * @param {Object} [props.timeSeriesChartProps] - Additional props passed through to `TimeSeriesChart`
  */
 
 'use client'
@@ -68,6 +69,7 @@ import {useTimeline} from './use-timeline.js'
 import {
   buildCalendarData,
   calculateSelectablePeriodsFromSeries,
+  extractDefaultPeriodsFromSeries,
   periodsToDateRange
 } from './util.js'
 
@@ -90,7 +92,7 @@ function useSelectablePeriods(seriesList, providedSelectablePeriods) {
 const PrelevementsSeriesExplorer = ({
   series: seriesList,
   getSeriesValues,
-  defaultPeriods = [],
+  defaultPeriods,
   selectablePeriods: providedSelectablePeriods,
   defaultInitialViewType = 'years',
   onPeriodChange,
@@ -100,7 +102,8 @@ const PrelevementsSeriesExplorer = ({
   showCalendar = true,
   showChart = true,
   showRangeSlider = true,
-  locale = 'fr-FR'
+  locale = 'fr-FR',
+  timeSeriesChartProps
 }) => {
   const t = {...DEFAULT_TRANSLATIONS, ...customTranslations}
 
@@ -114,8 +117,17 @@ const PrelevementsSeriesExplorer = ({
   // Calculate or use provided selectable periods
   const selectablePeriods = useSelectablePeriods(seriesList, providedSelectablePeriods)
 
+  // Extract default periods from series if not provided
+  const initialPeriods = useMemo(() => {
+    if (defaultPeriods && defaultPeriods.length > 0) {
+      return defaultPeriods
+    }
+
+    return extractDefaultPeriodsFromSeries(seriesList)
+  }, [defaultPeriods, seriesList])
+
   // Manage period selection state
-  const [selectedPeriods, setSelectedPeriods] = useState(defaultPeriods)
+  const [selectedPeriods, setSelectedPeriods] = useState(initialPeriods)
 
   // Manage parameter selection with validation
   const {
@@ -129,10 +141,10 @@ const PrelevementsSeriesExplorer = ({
 
   // Load series values via API
   const {
-    loadedValues,
     isLoadingValues,
     loadError,
-    dailyValues
+    dailyValues,
+    timelineSamples
   } = useLoadSeriesValues({
     seriesList,
     selectedPeriods,
@@ -151,18 +163,17 @@ const PrelevementsSeriesExplorer = ({
   const {
     allDates,
     rangeIndices,
-    visibleDateRange,
+    visibleSamples,
     sliderMarks,
     handleRangeChange,
     handleCalendarDayClick
-  } = useTimeline(dailyValues, showRangeSlider)
+  } = useTimeline(timelineSamples, showRangeSlider)
 
   // Prepare chart series from loaded values
   const chartSeries = useChartSeries({
     showChart,
-    loadedValues,
-    visibleDateRange,
-    dailyValues,
+    timelineSamples,
+    visibleSamples,
     selectedParams,
     parameterMap
   })
@@ -280,6 +291,7 @@ const PrelevementsSeriesExplorer = ({
           series={chartSeries}
           showRangeSlider={showRangeSlider}
           sliderMarks={sliderMarks}
+          timeSeriesChartProps={timeSeriesChartProps}
           onRangeChange={handleRangeChange}
         />
       )}

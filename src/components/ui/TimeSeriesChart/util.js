@@ -195,9 +195,15 @@ export const classifyPoint = (y, threshold) => {
  * Process and prepare raw input series data
  * Sorts points, applies decimation, and normalizes data structure
  */
-export const processInputSeries = inputSeries => {
+export const processInputSeries = (inputSeries, options = {}) => {
+  const {
+    enableThresholds = true,
+    enableDecimation = true,
+    decimationTarget = DECIMATION_TARGET
+  } = options
   const axisId = inputSeries.axis === 'right' ? AXIS_RIGHT_ID : AXIS_LEFT_ID
-  const thresholdEvaluator = buildThresholdEvaluator(inputSeries.threshold)
+  const thresholdConfig = enableThresholds ? inputSeries.threshold : undefined
+  const thresholdEvaluator = enableThresholds ? buildThresholdEvaluator(thresholdConfig) : () => null
 
   const sortedPoints = [...inputSeries.data]
     .map(point => ({
@@ -207,7 +213,10 @@ export const processInputSeries = inputSeries => {
     }))
     .sort((a, b) => a.x - b.x)
 
-  const {indices, didDecimate} = decimatePoints(sortedPoints, DECIMATION_TARGET)
+  const decimationResult = enableDecimation
+    ? decimatePoints(sortedPoints, decimationTarget)
+    : {indices: sortedPoints.map((_, index) => index), didDecimate: false}
+  const {indices, didDecimate} = decimationResult
   const filteredPoints = indices.map(index => sortedPoints[index])
 
   return {
@@ -219,7 +228,7 @@ export const processInputSeries = inputSeries => {
     id: inputSeries.id,
     label: inputSeries.label,
     color: inputSeries.color,
-    threshold: inputSeries.threshold
+    threshold: thresholdConfig
   }
 }
 
@@ -509,6 +518,49 @@ export const buildSegments = (alignedData, xValues, options) => {
 }
 
 /**
+ * Build simplified series when thresholds are disabled.
+ */
+export const buildPlainSeries = (alignedData, options) => {
+  const {numberFormatter, exposeAllMarks} = options
+  const plainSeries = []
+  const plainToOriginal = new Map()
+
+  for (const data of alignedData) {
+    const seriesId = `${data.id}__plain`
+
+    plainSeries.push({
+      id: seriesId,
+      originalId: data.id,
+      originalLabel: data.label,
+      data: data.values,
+      xAxisId: X_AXIS_ID,
+      yAxisId: data.axisId,
+      color: data.color,
+      label: undefined,
+      connectNulls: false,
+      showMark({index}) {
+        if (data.metas[index]) {
+          return true
+        }
+
+        return exposeAllMarks
+      },
+      valueFormatter(value) {
+        if (value === null || Number.isNaN(value)) {
+          return null
+        }
+
+        return numberFormatter.format(value)
+      }
+    })
+
+    plainToOriginal.set(seriesId, data.id)
+  }
+
+  return {plainSeries, plainToOriginal}
+}
+
+/**
  * Build stub series for legend display
  */
 export const buildStubSeries = (processedSeries, xValuesLength) => processedSeries.map(processed => ({
@@ -602,7 +654,16 @@ export const extractStaticThresholds = processedSeries => {
  * Main orchestrator function that builds complete series model
  * Coordinates all sub-functions to transform raw series into chart-ready data
  */
-export const buildSeriesModel = ({series, locale, theme, exposeAllMarks}) => {
+export const buildSeriesModel = ({
+  series,
+  locale,
+  theme,
+  exposeAllMarks,
+  enableThresholds = true,
+  enableDecimation = true,
+  decimationTarget = DECIMATION_TARGET,
+  maxPointsBeforeDecimation = MAX_POINTS_BEFORE_DECIMATION
+}) => {
   const numberFormatter = getNumberFormatter(locale)
   const xValuesSet = new Set()
   const processedSeries = []
@@ -615,14 +676,21 @@ export const buildSeriesModel = ({series, locale, theme, exposeAllMarks}) => {
 
   // Step 1: Process each input series
   for (const inputSeries of series) {
-    const processed = processInputSeries(inputSeries)
+    const processed = processInputSeries(inputSeries, {
+      enableThresholds,
+      enableDecimation,
+      decimationTarget
+    })
 
-    if (processed.didDecimate || processed.sortedPoints.length > MAX_POINTS_BEFORE_DECIMATION) {
+    if (enableDecimation
+        && (processed.didDecimate || processed.sortedPoints.length > maxPointsBeforeDecimation)) {
       didDecimate = true
     }
 
     // Calculate threshold crossings
-    const crossings = computeThresholdCrossings(processed.filteredPoints, processed.thresholdEvaluator)
+    const crossings = enableThresholds
+      ? computeThresholdCrossings(processed.filteredPoints, processed.thresholdEvaluator)
+      : []
 
     // Build unified point map
     const pointMap = buildPointMap(processed.filteredPoints, crossings, xValuesSet)
@@ -652,20 +720,35 @@ export const buildSeriesModel = ({series, locale, theme, exposeAllMarks}) => {
   )
 
   // Step 4: Build dynamic threshold series
-  const dynamicThresholdSeries = buildDynamicThresholdSeries(alignedData, theme)
+  const dynamicThresholdSeries = enableThresholds
+    ? buildDynamicThresholdSeries(alignedData, theme)
+    : []
 
-  // Step 5: Build segments
-  const {segmentSeries, segmentToOriginal} = buildSegments(alignedData, xValues, {
-    numberFormatter,
-    exposeAllMarks,
-    theme
-  })
+  // Step 5: Build segments or plain series
+  let segmentSeries
+  let segmentToOriginal
+  if (enableThresholds) {
+    const segments = buildSegments(alignedData, xValues, {
+      numberFormatter,
+      exposeAllMarks,
+      theme
+    })
+    segmentSeries = segments.segmentSeries
+    segmentToOriginal = segments.segmentToOriginal
+  } else {
+    const plain = buildPlainSeries(alignedData, {
+      numberFormatter,
+      exposeAllMarks
+    })
+    segmentSeries = plain.plainSeries
+    segmentToOriginal = plain.plainToOriginal
+  }
 
   // Step 6: Build stub series for legend
   const stubSeries = buildStubSeries(processedSeries, xValues.length)
 
   // Step 7: Extract static thresholds
-  const staticThresholds = extractStaticThresholds(processedSeries)
+  const staticThresholds = enableThresholds ? extractStaticThresholds(processedSeries) : []
 
   // Step 8: Build y-axis configurations
   const yAxis = buildYAxisConfigurations(axisStats, numberFormatter)

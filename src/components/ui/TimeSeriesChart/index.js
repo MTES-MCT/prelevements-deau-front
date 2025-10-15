@@ -20,6 +20,8 @@ import {useDrawingArea, useXScale, useYScale} from '@mui/x-charts/hooks'
 import {
   AXIS_LEFT_ID,
   AXIS_RIGHT_ID,
+  DECIMATION_TARGET,
+  MAX_POINTS_BEFORE_DECIMATION,
   X_AXIS_ID,
   axisFormatterFactory,
   buildAnnotations,
@@ -63,11 +65,15 @@ import MetasList from '@/components/ui/MetasList/index.js'
  * @returns {Object} Chart model with processed series, axes, and annotations
  */
 
-const useChartModel = (series, locale, theme, exposeAllMarks) => useMemo(
+const useChartModel = (series, locale, theme, exposeAllMarks, options) => useMemo(
   () => buildSeriesModel({
-    series, locale, theme, exposeAllMarks
+    series,
+    locale,
+    theme,
+    exposeAllMarks,
+    ...options
   }),
-  [series, locale, theme, exposeAllMarks]
+  [series, locale, theme, exposeAllMarks, options]
 )
 
 /**
@@ -382,10 +388,25 @@ const DEFAULT_TRANSLATIONS = {
  * @param {string} [props.translations.noDataAvailable='Aucune donnée disponible.'] - Message when no data is available
  * @param {string} [props.translations.decimationWarning='Les données ont été décimées...'] - Warning message for decimated data
  * @param {string} [props.translations.chartAriaLabel='Graphique séries temporelles'] - ARIA label for the chart
+ * @param {boolean} [props.enableThresholds=true] - Enable threshold processing (segmentation, threshold lines)
+ * @param {boolean} [props.enableAnnotations=true] - Enable metadata annotations overlay
+ * @param {boolean} [props.enableDecimation=true] - Enable automatic data decimation for large datasets
+ * @param {number} [props.decimationTarget=DECIMATION_TARGET] - Target number of points after decimation
+ * @param {number} [props.maxPointsBeforeDecimation=MAX_POINTS_BEFORE_DECIMATION] - Point count that triggers decimation warning
  *
  * @returns {JSX.Element} Rendered time series chart
  */
-const TimeSeriesChart = ({series, locale, onPointClick, translations = DEFAULT_TRANSLATIONS}) => {
+const TimeSeriesChart = ({
+  series,
+  locale,
+  onPointClick,
+  translations = DEFAULT_TRANSLATIONS,
+  enableThresholds = true,
+  enableAnnotations = true,
+  enableDecimation = true,
+  decimationTarget = DECIMATION_TARGET,
+  maxPointsBeforeDecimation = MAX_POINTS_BEFORE_DECIMATION
+}) => {
   const t = {...DEFAULT_TRANSLATIONS, ...translations}
   const theme = useTheme()
   const [visibility, setVisibility] = useState(() => getInitialVisibility(series))
@@ -397,7 +418,14 @@ const TimeSeriesChart = ({series, locale, onPointClick, translations = DEFAULT_T
     }))
   }, [series])
 
-  const chartModel = useChartModel(series, locale, theme, Boolean(onPointClick))
+  const chartOptions = useMemo(() => ({
+    enableThresholds,
+    enableDecimation,
+    decimationTarget,
+    maxPointsBeforeDecimation
+  }), [enableThresholds, enableDecimation, decimationTarget, maxPointsBeforeDecimation])
+
+  const chartModel = useChartModel(series, locale, theme, Boolean(onPointClick), chartOptions)
 
   const xAxis = useMemo(() => [{
     id: X_AXIS_ID,
@@ -436,6 +464,10 @@ const TimeSeriesChart = ({series, locale, onPointClick, translations = DEFAULT_T
   }, [chartModel.stubSeries, filteredSegments, filteredThresholds, visibility, theme.palette.grey])
 
   const annotations = useMemo(() => {
+    if (!enableAnnotations) {
+      return []
+    }
+
     const allAnnotations = buildAnnotations({
       pointBySeries: chartModel.pointBySeries,
       visibility,
@@ -446,7 +478,7 @@ const TimeSeriesChart = ({series, locale, onPointClick, translations = DEFAULT_T
     // This prevents errors when rendering annotations for non-existent axes
     const configuredAxisIds = new Set(yAxis.map(axis => axis.id))
     return allAnnotations.filter(annotation => configuredAxisIds.has(annotation.axisId))
-  }, [chartModel.pointBySeries, visibility, theme, yAxis])
+  }, [chartModel.pointBySeries, visibility, theme, yAxis, enableAnnotations])
 
   const dashedStyles = useMemo(() => {
     const styles = {}
