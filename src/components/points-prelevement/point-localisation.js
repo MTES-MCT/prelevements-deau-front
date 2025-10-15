@@ -15,7 +15,7 @@ const LabelValue = ({label, value}) => {
 
 const PointLocalisation = ({pointPrelevement}) =>
   (
-    <div className='grid gap-4 lg:grid-cols-2'>
+    <>
       <div>
         <Typography
           gutterBottom
@@ -58,14 +58,14 @@ const PointLocalisation = ({pointPrelevement}) =>
           </>
         )}
       </div>
-      <div className='max-w-[600px] h-[300px] lg:h-[450px]'>
+      <div className='h-[360px]'>
         <Map
           points={[pointPrelevement]}
           filteredPoints={[pointPrelevement]}
           selectedPoint={pointPrelevement}
         />
       </div>
-    </div>
+    </>
   )
 
 export default PointLocalisation
