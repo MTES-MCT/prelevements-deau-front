@@ -12,6 +12,111 @@ import {useEffect, useState, useMemo} from 'react'
 
 import {format} from 'date-fns'
 
+const toFiniteNumber = value => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null
+  }
+
+  if (value === null || value === undefined) {
+    return null
+  }
+
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+const getOrCreateDailyEntry = (context, date) => {
+  const {dailyMap, parametersCount} = context
+  if (!dailyMap.has(date)) {
+    dailyMap.set(date, {
+      date,
+      values: Array.from({length: parametersCount}, () => null)
+    })
+  }
+
+  return dailyMap.get(date)
+}
+
+const registerTimelineEntry = (context, date, sample) => {
+  const {timelineEntriesByDate} = context
+  if (!timelineEntriesByDate.has(date)) {
+    timelineEntriesByDate.set(date, [])
+  }
+
+  timelineEntriesByDate.get(date).push(sample)
+}
+
+const getOrCreateTimelineEntry = (context, {date, time = null}) => {
+  const {timelineMap, parametersCount} = context
+  const key = `${date}::${time ?? ''}`
+  if (!timelineMap.has(key)) {
+    const timestamp = time ? new Date(`${date}T${time}:00`) : new Date(date)
+    const sample = {
+      date,
+      time,
+      timestamp,
+      values: Array.from({length: parametersCount}, () => null)
+    }
+
+    timelineMap.set(key, sample)
+    registerTimelineEntry(context, date, sample)
+  }
+
+  return timelineMap.get(key)
+}
+
+const assignSubDailyFromObject = ({context, date, subValues, paramIndex}) => {
+  if (!subValues || typeof subValues !== 'object') {
+    return
+  }
+
+  let sum = 0
+  let count = 0
+
+  for (const [time, value] of Object.entries(subValues)) {
+    const numericValue = toFiniteNumber(value)
+    if (numericValue === null) {
+      continue
+    }
+
+    const sample = getOrCreateTimelineEntry(context, {date, time})
+    sample.values[paramIndex] = numericValue
+    sum += numericValue
+    count++
+  }
+
+  if (count > 0) {
+    const dailyEntry = getOrCreateDailyEntry(context, date)
+    dailyEntry.values[paramIndex] = sum / count
+  }
+}
+
+const assignSubDailyValues = ({context, date, subValues, paramIndex}) => {
+  if (!Array.isArray(subValues)) {
+    return assignSubDailyFromObject({context, date, subValues, paramIndex})
+  }
+
+  let sum = 0
+  let count = 0
+
+  for (const entry of subValues) {
+    const numericValue = toFiniteNumber(entry?.value)
+    if (numericValue === null) {
+      continue
+    }
+
+    const sample = getOrCreateTimelineEntry(context, {date, time: entry.time ?? null})
+    sample.values[paramIndex] = numericValue
+    sum += numericValue
+    count++
+  }
+
+  if (count > 0) {
+    const dailyEntry = getOrCreateDailyEntry(context, date)
+    dailyEntry.values[paramIndex] = sum / count
+  }
+}
+
 /**
  * Loads series values for selected parameters and periods
  * @param {Object} params - Parameters object
@@ -95,110 +200,11 @@ export function useLoadSeriesValues({seriesList, selectedPeriods, selectedParams
     const dailyMap = new Map()
     const timelineMap = new Map()
     const timelineEntriesByDate = new Map()
-
-    const ensureDailyEntry = date => {
-      if (!dailyMap.has(date)) {
-        dailyMap.set(date, {
-          date,
-          values: Array.from({length: parametersCount}, () => null)
-        })
-      }
-
-      return dailyMap.get(date)
-    }
-
-    const registerTimelineEntry = (date, sample) => {
-      if (!timelineEntriesByDate.has(date)) {
-        timelineEntriesByDate.set(date, [])
-      }
-
-      timelineEntriesByDate.get(date).push(sample)
-    }
-
-    const ensureTimelineEntry = (date, time) => {
-      const key = `${date}::${time ?? ''}`
-      if (!timelineMap.has(key)) {
-        const timestamp = time
-          ? new Date(`${date}T${time}:00`)
-          : new Date(date)
-
-        const sample = {
-          date,
-          time: time ?? null,
-          timestamp,
-          values: Array.from({length: parametersCount}, () => null)
-        }
-
-        timelineMap.set(key, sample)
-        registerTimelineEntry(date, sample)
-      }
-
-      return timelineMap.get(key)
-    }
-
-    const toFiniteNumber = value => {
-      if (typeof value === 'number') {
-        return Number.isFinite(value) ? value : null
-      }
-
-      if (value === null || value === undefined) {
-        return null
-      }
-
-      const parsed = Number(value)
-      return Number.isFinite(parsed) ? parsed : null
-    }
-
-    const assignSubDailyFromObject = (date, subValues, paramIndex) => {
-      if (!subValues || typeof subValues !== 'object') {
-        return
-      }
-
-      let sum = 0
-      let count = 0
-
-      for (const [time, value] of Object.entries(subValues)) {
-        const numericValue = toFiniteNumber(value)
-        if (numericValue === null) {
-          continue
-        }
-
-        const sample = ensureTimelineEntry(date, time)
-        sample.values[paramIndex] = numericValue
-        sum += numericValue
-        count++
-      }
-
-      if (count > 0) {
-        const dailyEntry = ensureDailyEntry(date)
-        dailyEntry.values[paramIndex] = sum / count
-      }
-    }
-
-    const assignSubDailyValues = (date, subValues, paramIndex) => {
-      if (!Array.isArray(subValues)) {
-        return assignSubDailyFromObject(date, subValues, paramIndex)
-      }
-
-      let sum = 0
-      let count = 0
-
-      for (const entry of subValues) {
-        const numericValue = toFiniteNumber(entry?.value)
-        if (numericValue === null) {
-          continue
-        }
-
-        const sample = ensureTimelineEntry(date, entry.time ?? null)
-        sample.values[paramIndex] = numericValue
-        sum += numericValue
-        count++
-      }
-
-      if (count > 0) {
-        const dailyEntry = ensureDailyEntry(date)
-        dailyEntry.values[paramIndex] = sum / count
-      }
+    const aggregationContext = {
+      parametersCount,
+      dailyMap,
+      timelineMap,
+      timelineEntriesByDate
     }
 
     for (const [paramIndex, parameter] of selectedParams.entries()) {
@@ -212,16 +218,21 @@ export function useLoadSeriesValues({seriesList, selectedPeriods, selectedParams
         const directValue = toFiniteNumber(dayEntry.value)
 
         if (directValue !== null) {
-          const dailyEntry = ensureDailyEntry(dayEntry.date)
+          const dailyEntry = getOrCreateDailyEntry(aggregationContext, dayEntry.date)
           dailyEntry.values[paramIndex] = directValue
 
-          const sample = ensureTimelineEntry(dayEntry.date, null)
+          const sample = getOrCreateTimelineEntry(aggregationContext, {date: dayEntry.date, time: null})
           sample.values[paramIndex] = directValue
           continue
         }
 
         if (dayEntry.values) {
-          assignSubDailyValues(dayEntry.date, dayEntry.values, paramIndex)
+          assignSubDailyValues({
+            context: aggregationContext,
+            date: dayEntry.date,
+            subValues: dayEntry.values,
+            paramIndex
+          })
         }
       }
     }
