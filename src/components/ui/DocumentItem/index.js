@@ -29,6 +29,7 @@ const DocumentItem = ({title, subtitle, info, background = 'primary', onDelete, 
         <Button
           iconId='fr-icon-edit-line'
           priority='tertiary no outline'
+          aria-label='Éditer le document'
           size='small'
           onClick={onEdit}
         />
@@ -37,6 +38,7 @@ const DocumentItem = ({title, subtitle, info, background = 'primary', onDelete, 
         <Button
           iconId='fr-icon-delete-bin-line'
           priority='tertiary no outline'
+          aria-label='Supprimer le document'
           size='small'
           style={{color: fr.colors.decisions.text.default.error.default}}
           onClick={onDelete}
@@ -46,6 +48,7 @@ const DocumentItem = ({title, subtitle, info, background = 'primary', onDelete, 
         <Button
           iconId='fr-icon-external-link-line'
           priority='tertiary no outline'
+          aria-label='Voir le document'
           linkProps={{href: viewUrl, target: '_blank', rel: 'noopener noreferrer'}}
           size='small'
         />
