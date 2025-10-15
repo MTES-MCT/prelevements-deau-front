@@ -177,6 +177,9 @@ const GroupedMultiselect = ({
         id='selector'
         className={`fr-select mt-2${disabled ? ' fr-bg-disabled-grey' : ''}`}
         aria-disabled={disabled}
+        sx={{
+          cursor: disabled ? 'not-allowed' : 'pointer'
+        }}
         aria-haspopup='listbox'
         aria-expanded={open}
         role='button'
