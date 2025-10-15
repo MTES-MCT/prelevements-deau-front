@@ -93,7 +93,9 @@ const assignSubDailyFromObject = ({context, date, subValues, paramIndex}) => {
 
 const assignSubDailyValues = ({context, date, subValues, paramIndex}) => {
   if (!Array.isArray(subValues)) {
-    return assignSubDailyFromObject({context, date, subValues, paramIndex})
+    return assignSubDailyFromObject({
+      context, date, subValues, paramIndex
+    })
   }
 
   let sum = 0
