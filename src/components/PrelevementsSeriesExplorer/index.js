@@ -139,10 +139,10 @@ const PrelevementsSeriesExplorer = ({
 
   // Load series values via API
   const {
-    loadedValues,
     isLoadingValues,
     loadError,
-    dailyValues
+    dailyValues,
+    timelineSamples
   } = useLoadSeriesValues({
     seriesList,
     selectedPeriods,
@@ -161,18 +161,17 @@ const PrelevementsSeriesExplorer = ({
   const {
     allDates,
     rangeIndices,
-    visibleDateRange,
+    visibleSamples,
     sliderMarks,
     handleRangeChange,
     handleCalendarDayClick
-  } = useTimeline(dailyValues, showRangeSlider)
+  } = useTimeline(timelineSamples, showRangeSlider)
 
   // Prepare chart series from loaded values
   const chartSeries = useChartSeries({
     showChart,
-    loadedValues,
-    visibleDateRange,
-    dailyValues,
+    timelineSamples,
+    visibleSamples,
     selectedParams,
     parameterMap
   })

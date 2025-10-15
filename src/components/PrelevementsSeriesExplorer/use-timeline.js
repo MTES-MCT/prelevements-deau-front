@@ -17,20 +17,35 @@ import {
 /**
  * Hook for managing timeline display and range selection
  *
- * @param {Array} dailyValues - Daily aggregated values
+ * @param {Array} timelineSamples - Timeline samples with timestamp precision
  * @param {boolean} showRangeSlider - Whether slider is enabled
  * @returns {Object} Timeline state and handlers
  */
-export function useTimeline(dailyValues, showRangeSlider) {
-  const dates = useMemo(() => dailyValues.map(v => new Date(v.date)), [dailyValues])
+export function useTimeline(timelineSamples, showRangeSlider) {
+  const baseDates = useMemo(() => {
+    if (!Array.isArray(timelineSamples) || timelineSamples.length === 0) {
+      return []
+    }
+
+    const uniqueDates = new Set()
+    for (const sample of timelineSamples) {
+      if (sample?.date) {
+        uniqueDates.add(sample.date)
+      }
+    }
+
+    return [...uniqueDates]
+      .sort()
+      .map(date => new Date(date))
+  }, [timelineSamples])
 
   const {allDates} = useMemo(() => {
-    if (dates.length === 0) {
+    if (baseDates.length === 0) {
       return {allDates: []}
     }
 
-    return fillDateGaps(dates)
-  }, [dates])
+    return fillDateGaps(baseDates)
+  }, [baseDates])
 
   const [rangeIndices, setRangeIndices] = useState(() => [
     0,
@@ -53,6 +68,30 @@ export function useTimeline(dailyValues, showRangeSlider) {
   }, [allDates, rangeIndices])
 
   const sliderMarks = useMemo(() => computeSliderMarks(allDates), [allDates])
+
+  const visibleSamples = useMemo(() => {
+    if (allDates.length === 0 || !Array.isArray(timelineSamples)) {
+      return []
+    }
+
+    const startDate = allDates[rangeIndices[0]]
+    const endDate = allDates[rangeIndices[1]]
+
+    if (!startDate || !endDate) {
+      return []
+    }
+
+    const startKey = format(startDate, 'yyyy-MM-dd')
+    const endKey = format(endDate, 'yyyy-MM-dd')
+
+    return timelineSamples.filter(sample => {
+      if (!sample?.date) {
+        return false
+      }
+
+      return sample.date >= startKey && sample.date <= endKey
+    })
+  }, [allDates, rangeIndices, timelineSamples])
 
   const handleRangeChange = useCallback((event, newValue) => {
     if (!Array.isArray(newValue)) {
@@ -152,6 +191,7 @@ export function useTimeline(dailyValues, showRangeSlider) {
     allDates,
     rangeIndices,
     visibleDateRange,
+    visibleSamples,
     sliderMarks,
     handleRangeChange,
     handleCalendarDayClick
