@@ -10,27 +10,13 @@ import {
 } from '@mui/material'
 
 import {formatNumber} from '@/utils/number.js'
+import {getPointPrelevementLabel} from '@/utils/point-prelevement.js'
 
 const PrelevementsAccordion = ({idPoint, pointPrelevement, volumePreleveTotal = null, status, isOpen, handleSelect, children}) => {
-  const pointName = pointPrelevement?.nom || pointPrelevement?.name || pointPrelevement?.label
   const isVolumeDefined = typeof volumePreleveTotal === 'number' && !Number.isNaN(volumePreleveTotal)
   const hasPointId = idPoint !== null && idPoint !== undefined && idPoint !== ''
 
-  const pointLabel = (() => {
-    if (pointName && hasPointId) {
-      return `${idPoint} - ${pointName}`
-    }
-
-    if (pointName) {
-      return pointName
-    }
-
-    if (hasPointId) {
-      return `Point ${idPoint}`
-    }
-
-    return 'Point de prélèvement'
-  })()
+  const pointLabel = getPointPrelevementLabel({idPoint, pointPrelevement})
 
   return (
     <Accordion

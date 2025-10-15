@@ -4,6 +4,7 @@ import Launch from '@mui/icons-material/Launch'
 import {Box, Chip, Typography} from '@mui/material'
 
 import {getTypeMilieuColor} from '@/lib/points-prelevement.js'
+import {getPointPrelevementLabel} from '@/utils/point-prelevement.js'
 
 const LinkWithIcon = ({label, href}) => (
   <Box className='flex flex-wrap gap-1'>
@@ -17,14 +18,15 @@ const LinkWithIcon = ({label, href}) => (
 )
 
 const PointIdentification = ({pointPrelevement, lienBss, lienBnpe}) => {
-  const {id_point: idPoint, nom} = pointPrelevement
+  const {id_point: idPoint} = pointPrelevement
+  const pointLabel = getPointPrelevementLabel({idPoint, pointPrelevement})
 
   return (
     <div className='flex flex-col gap-4'>
       <div className='flex justify-between md:items-center sm:items-start gap-4 pb-2'>
         <Typography variant='h3'>
           <div className='flex flex-wrap items-center gap-4'>
-            {idPoint} - {nom} {pointPrelevement.exploitationsStatus && (
+            {pointLabel} {pointPrelevement.exploitationsStatus && (
               <small className='fr-badge fr-badge--success fr-badge--no-icon'>{pointPrelevement.exploitationsStatus}</small>
             )}
           </div>
