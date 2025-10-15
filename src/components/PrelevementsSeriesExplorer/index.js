@@ -44,6 +44,7 @@
  * @param {boolean} [props.showChart=true] - Show/hide time series chart
  * @param {boolean} [props.showRangeSlider=true] - Show/hide range refinement slider
  * @param {string} [props.locale='fr-FR'] - Locale for date/number formatting
+ * @param {Object} [props.timeSeriesChartProps] - Additional props passed through to `TimeSeriesChart`
  */
 
 'use client'
@@ -101,7 +102,8 @@ const PrelevementsSeriesExplorer = ({
   showCalendar = true,
   showChart = true,
   showRangeSlider = true,
-  locale = 'fr-FR'
+  locale = 'fr-FR',
+  timeSeriesChartProps
 }) => {
   const t = {...DEFAULT_TRANSLATIONS, ...customTranslations}
 
@@ -289,6 +291,7 @@ const PrelevementsSeriesExplorer = ({
           series={chartSeries}
           showRangeSlider={showRangeSlider}
           sliderMarks={sliderMarks}
+          timeSeriesChartProps={timeSeriesChartProps}
           onRangeChange={handleRangeChange}
         />
       )}
