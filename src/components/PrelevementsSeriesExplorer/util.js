@@ -27,7 +27,7 @@ const COLOR_PRIORITY = {
  * @param {Array} seriesList
  * @returns {{minDate: Date, maxDate: Date}|null}
  */
-function getGlobalDateBounds(seriesList) {
+export function getGlobalDateBounds(seriesList) {
   if (!seriesList || seriesList.length === 0) {
     return null
   }

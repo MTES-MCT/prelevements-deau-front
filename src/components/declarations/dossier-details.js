@@ -27,17 +27,19 @@ import {computePointsStatus} from '@/lib/points-prelevement.js'
 import {formatNumber} from '@/utils/number.js'
 
 function getVolumePrelevementTotal(dossier, files) {
-  const {relevesIndex, volumesPompes, typePrelevement} = dossier
+  const {relevesIndex, volumesPompes} = dossier
 
   // 1. Priorité aux fichiers si présents
   if (files?.length) {
-    if (typePrelevement === 'camion-citerne') {
-      return sumBy(flatMap(files, file => file.result?.data),
-        'volumePreleveTotal'
-      )
-    }
+    // Get volume series from all files
+    const volumeSeries = flatMap(files, file =>
+      file.series?.filter(serie => serie.parameter === 'volume prélevé' && serie.unit === 'm³') || []
+    )
 
-    return sumBy(files, f => f.result?.data?.volumePreleveTotal ?? 0)
+    if (volumeSeries.length > 0) {
+      // Sum up the valueTotal from all volume series
+      return sumBy(volumeSeries, serie => serie.valueTotal || 0)
+    }
   }
 
   // 2. Sinon, on regarde les relevés index
@@ -171,9 +173,10 @@ const DossierDetails = ({dossier, preleveur, files, idPoints}) => {
                   storageKey={file.storageKey}
                   typePrelevement={dossier.typePrelevement}
                   pointsPrelevement={pointsPrelevement}
-                  data={file.processingError ? null : (dossier.typePrelevement === 'aep-zre' ? [file?.result?.data] : file?.result?.data)}
-                  errors={file.processingError ? [{severity: 'error', message: file.processingError}] : file.result?.errors}
-                  processingError={file.processingError}
+                  series={file.series || []}
+                  integrations={file.integrations || []}
+                  validationStatus={file.validationStatus}
+                  errors={file.result?.errors || []}
                   downloadFile={downloadFile}
                 />
               ))}
