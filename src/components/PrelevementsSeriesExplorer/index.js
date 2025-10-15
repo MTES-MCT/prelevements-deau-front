@@ -256,16 +256,18 @@ const PrelevementsSeriesExplorer = ({
       )}
 
       {/* Parameter Selector */}
-      <ParameterSelector
-        label={t.parameterLabel}
-        hint={t.parameterHint}
-        placeholder={t.parameterPlaceholder}
-        value={selectedParams}
-        options={parameterOptions}
-        validationError={validationError}
-        validationErrorTitle={t.validationError}
-        onChange={handleParameterChange}
-      />
+      <Box sx={{display: 'inline-block', maxWidth: 480}}>
+        <ParameterSelector
+          label={t.parameterLabel}
+          hint={t.parameterHint}
+          placeholder={t.parameterPlaceholder}
+          value={selectedParams}
+          options={parameterOptions}
+          validationError={validationError}
+          validationErrorTitle={t.validationError}
+          onChange={handleParameterChange}
+        />
+      </Box>
 
       {/* Loading state */}
       {showChart && isLoadingValues && (
