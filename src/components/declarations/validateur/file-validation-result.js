@@ -17,8 +17,8 @@ const normalizePointId = pointId => {
     return null
   }
 
-  const numericId = Number(pointId)
-  return Number.isNaN(numericId) ? pointId : numericId
+  // Always return a string (or null)
+  return String(pointId)
 }
 
 const findPointById = (points = [], pointId) => {
