@@ -35,7 +35,7 @@ const Modalite = ({modalite}) => (
       <InfoBox label='Nitrates' description={modalite.freq_nitrates} icon={<ScienceOutlinedIcon />} />
       <InfoBox label='PH' description={modalite.freq_ph} icon={<BloodtypeOutlinedIcon />} />
       <InfoBox label='Sulfates' description={modalite.freq_sulfates} icon={<ScienceOutlinedIcon />} />
-      <InfoBox label='Temperature' description={modalite.freq_temperature} icon={<DeviceThermostatOutlinedIcon />} />
+      <InfoBox label='Température' description={modalite.freq_temperature} icon={<DeviceThermostatOutlinedIcon />} />
       <InfoBox label='Turbidité' description={modalite.freq_turbidite} icon={<LocalDrinkOutlinedIcon />} />
     </Box>
 
