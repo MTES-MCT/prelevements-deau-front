@@ -18,7 +18,7 @@ const Page = async () => {
 
       <Box className='flex flex-col fr-container h-full w-full'>
         <div className='flex justify-between items-end'>
-          <Typography variant='h4' className='fr-pt-3w'>Liste des préleveurs :</Typography>
+          <Typography variant='h4' className='fr-pt-3w'>Préleveurs</Typography>
           <div>
             <Button
               priority='secondary'
@@ -27,6 +27,7 @@ const Page = async () => {
               linkProps={{
                 href: '/preleveurs/new'
               }}
+              title='Ajouter un nouveau préleveur'
             >
               Ajouter un nouveau préleveur
             </Button>

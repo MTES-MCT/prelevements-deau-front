@@ -2,12 +2,8 @@
 
 import {useEffect, useRef, useState} from 'react'
 
-import SearchIcon from '@mui/icons-material/Search'
-import {
-  Box,
-  InputAdornment,
-  TextField
-} from '@mui/material'
+import SearchBar from '@codegouvfr/react-dsfr/SearchBar'
+import {Box} from '@mui/material'
 
 import FlexSearch from '../../../node_modules/flexsearch/dist/flexsearch.bundle.module.min.js'
 
@@ -48,6 +44,12 @@ const PreleveursList = ({preleveurs}) => {
 
   const handleFilter = e => {
     const query = normalizeString(e.target.value)
+
+    if (query.length === 0) {
+      setFilteredPreleveurs(preleveurs)
+      return
+    }
+
     const results = index.current.search(query, {
       suggest: true,
       limit: 10,
@@ -55,11 +57,6 @@ const PreleveursList = ({preleveurs}) => {
       bool: 'or',
       threshold: 5
     })
-
-    if (query.length === 0) {
-      setFilteredPreleveurs(preleveurs)
-      return
-    }
 
     if (results.length === 0) {
       setFilteredPreleveurs([])
@@ -84,26 +81,28 @@ const PreleveursList = ({preleveurs}) => {
   }
 
   return (
-    <Box className='flex flex-col gap-2 mt-8 w-full'>
-      <TextField
-        label='Chercher un préleveur'
-        slotProps={{
-          input: {
-            startAdornment: (
-              <InputAdornment position='start'>
-                <SearchIcon />
-              </InputAdornment>
-            )
-          }
-        }}
-        onChange={handleFilter}
+    <Box className='flex flex-col gap-2 my-8 w-full'>
+      <SearchBar
+        allowEmptySearch
+        label='Rechercher par nom, prénom ou raison sociale'
+        renderInput={({className, id, placeholder, type}) => (
+          <input
+            className={className}
+            id={id}
+            placeholder={placeholder}
+            type={type}
+            onChange={handleFilter}
+          />
+        )}
       />
-      {filteredPreleveurs.length > 0 && filteredPreleveurs.map((preleveur, index) => (
-        <Preleveur key={preleveur.id_preleveur} preleveur={preleveur} index={index} />
-      ))}
-      {filteredPreleveurs.length === 0 && (
-        <Box className='p-3'>Aucun résultat</Box>
-      )}
+      <div>
+        {filteredPreleveurs.length > 0 && filteredPreleveurs.map((preleveur, index) => (
+          <Preleveur key={preleveur.id_preleveur} preleveur={preleveur} index={index} />
+        ))}
+        {filteredPreleveurs.length === 0 && (
+          <Box className='p-3'>Aucun résultat</Box>
+        )}
+      </div>
     </Box>
   )
 }

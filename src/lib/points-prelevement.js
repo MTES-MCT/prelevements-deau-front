@@ -1,3 +1,10 @@
+import {
+  AgricultureOutlined, BoltOutlined, DeviceThermostatOutlined, EditOffOutlined, FactoryOutlined,
+  InterestsOutlined,
+  LiquorOutlined,
+  LocalDrinkOutlined,
+  LocalShippingOutlined
+} from '@mui/icons-material'
 import {some, uniq, mapValues} from 'lodash-es'
 
 import {legendColors} from '@/components/map/legend-colors.js'
@@ -88,6 +95,18 @@ export const usageColors = {
   'Eau embouteillée': '#ffa6c9',
   Industrie: '#ff6347',
   'Non renseigné': '#ccc'
+}
+
+export const usageIcons = {
+  'Eau potable': LocalDrinkOutlined,
+  Agriculture: AgricultureOutlined,
+  Autre: InterestsOutlined,
+  'Camion citerne': LocalShippingOutlined,
+  'Eau embouteillée': LiquorOutlined,
+  Hydroélectricité: BoltOutlined,
+  Industrie: FactoryOutlined,
+  'non-renseignée': EditOffOutlined,
+  Thermalisme: DeviceThermostatOutlined
 }
 
 /**
