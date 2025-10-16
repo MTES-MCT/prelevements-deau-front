@@ -22,6 +22,8 @@ import {
 import Badge from '@mui/material/Badge'
 import debounce from 'lodash-es/debounce'
 
+import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
+
 const MapFilters = ({filters, usagesOptions, typeMilieuOptions, statusOptions, communesOptions, onFilterChange, onClearFilters}) => {
   const [expanded, setExpanded] = useState(false)
   const [searchTerm, setSearchTerm] = useState(filters.name || '')
@@ -130,23 +132,16 @@ const MapFilters = ({filters, usagesOptions, typeMilieuOptions, statusOptions, c
               ))}
             </Select>
           </FormControl>
-          <FormControl size='small' className='w-full'>
-            <InputLabel id='filter-commune-label'>Commune</InputLabel>
-            <Select
-              labelId='filter-commune-label'
-              label='Commune'
-              value={filters.commune}
-              onChange={e =>
-                onFilterChange({commune: e.target.value})}
-            >
-              <MenuItem value=''>Toutes</MenuItem>
-              {communesOptions.map(commune => (
-                <MenuItem key={commune} value={commune}>
-                  {commune}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Box sx={{width: '100%', position: 'relative', zIndex: 1}}>
+            <GroupedMultiselect
+              label='Communes'
+              placeholder='Toutes les communes'
+              value={filters.communes}
+              options={communesOptions}
+              disabled={communesOptions.length === 0}
+              onChange={value => onFilterChange({communes: value})}
+            />
+          </Box>
           <FormGroup row>
             {usagesOptions.map(option => (
               <FormControlLabel

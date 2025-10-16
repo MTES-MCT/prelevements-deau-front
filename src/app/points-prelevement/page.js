@@ -48,7 +48,7 @@ const Page = () => {
     name: '',
     typeMilieu: '',
     status: '',
-    commune: '',
+    communes: [],
     usages: []
   })
   const [filteredPoints, setFilteredPoints] = useState([])
@@ -137,9 +137,11 @@ const Page = () => {
         matches &&= filters.usages.some(usage => point.usages.includes(usage))
       }
 
-      if (filters.commune && filters.commune.length > 0) {
-        const communeStr = `${point.commune.nom} - ${point.commune.code}`
-        matches &&= communeStr === filters.commune
+      if (filters.communes && filters.communes.length > 0) {
+        const communeStr = point.commune && point.commune.nom && point.commune.code
+          ? `${point.commune.nom} - ${point.commune.code}`
+          : null
+        matches &&= communeStr ? filters.communes.includes(communeStr) : false
       }
 
       return matches
