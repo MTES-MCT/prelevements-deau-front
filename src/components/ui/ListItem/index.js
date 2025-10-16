@@ -3,6 +3,7 @@ import {Card} from '@codegouvfr/react-dsfr/Card'
 import {Tooltip} from '@codegouvfr/react-dsfr/Tooltip'
 import {Typography, Box} from '@mui/material'
 
+import Icon from '@/components/ui/Icon/index.js'
 import MetasList from '@/components/ui/MetasList/index.js'
 import TagsList from '@/components/ui/TagsList/index.js'
 
@@ -15,10 +16,10 @@ const CardTitle = ({title, subtitle, subtitleIcon: SubtitleIcon, rightIcons}) =>
       <Typography variant='h6' fontWeight='bold'>{title || ''}</Typography>
       {Array.isArray(rightIcons) && rightIcons.length > 0 && (
         <Box sx={{display: 'flex', gap: 1}}>
-          {rightIcons.map(({label, icon: Icon}, index) =>
-            Icon && (
+          {rightIcons.map(({label, icon, iconId}, index) =>
+            (icon || iconId) && (
               <Tooltip key={label || index} title={label || ''}>
-                <Icon />
+                <Icon iconId={iconId} iconElement={icon} />
               </Tooltip>
             )
           )}

@@ -33,11 +33,21 @@ const meta = {
     },
     metas: {
       control: 'object',
-      description: 'Liste de métadonnées affichées sous le contenu. Format: [{iconKey, content}].'
+      description: `
+Liste de métadonnées affichées sous le contenu. Format: [{iconId, icon, content}]. 
+
+Si "iconId" est fourni, il sera prioritaire sur "icon" et une icone du DSFR sera importée avec cette className.
+
+Si "icon" est fourni, il doit s'agir d'un composant React (ex: une icône MUI).`
     },
     rightIcons: {
       control: 'object',
-      description: 'Icônes à droite du titre avec tooltip. Format: [{iconKey, label}].'
+      description: `
+Icônes à droite du titre avec tooltip. Format: [{iconId, icon, label}].
+
+Si "iconId" est fourni, il sera prioritaire sur "icon" et une icone du DSFR sera importée avec cette className.
+
+Si "icon" est fourni, il doit s'agir d'un composant React (ex: une icône MUI).`
     },
     background: {
       control: {type: 'radio'},
@@ -54,13 +64,13 @@ const meta = {
       {label: 'accepté', severity: 'success'}
     ],
     metas: [
-      {iconKey: 'CalendarMonthOutlined', content: 'Transmission du mois de mai'},
-      {iconKey: 'CalendarTodayOutlined', content: 'Déposé le 12/08/2025'},
-      {iconKey: 'EventAvailableOutlined', content: 'Validé le 20/08/2025'},
-      {iconKey: 'TableRowsOutlined', content: 'Saisie par tableur'}
+      {icon: CalendarMonthOutlined, content: 'Transmission du mois de mai'},
+      {icon: CalendarTodayOutlined, content: 'Déposé le 12/08/2025'},
+      {icon: EventAvailableOutlined, content: 'Validé le 20/08/2025'},
+      {icon: TableRowsOutlined, content: 'Saisie par tableur'}
     ],
     rightIcons: [
-      {iconKey: 'LocalShippingOutlined', label: 'Camion citerne'}
+      {icon: LocalShippingOutlined, label: 'Camion citerne'}
     ],
     background: 'primary'
   }
@@ -69,29 +79,12 @@ const meta = {
 const renderListItem = args => {
   const {subtitleIcon, metas, rightIcons, ...rest} = args
 
-  const mappedMetas = (metas || []).map(m => ({
-    icon: {
-      CalendarMonthOutlined,
-      CalendarTodayOutlined,
-      EventAvailableOutlined,
-      TableRowsOutlined
-    }[m.iconKey] || null,
-    content: m.content
-  }))
-
-  const mappedRightIcons = (rightIcons || []).map(r => ({
-    icon: {
-      LocalShippingOutlined
-    }[r.iconKey] || null,
-    label: r.label
-  }))
-
   return (
     <ListItem
       {...rest}
       subtitleIcon={subtitleIcon}
-      metas={mappedMetas}
-      rightIcons={mappedRightIcons}
+      metas={metas}
+      rightIcons={rightIcons}
     />
   )
 }

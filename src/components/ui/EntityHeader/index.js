@@ -4,6 +4,7 @@ import Tag from '@codegouvfr/react-dsfr/Tag'
 import {Typography, Box} from '@mui/material'
 import {uniqBy} from 'lodash-es'
 
+import Icon from '@/components/ui/Icon/index.js'
 import MetasList from '@/components/ui/MetasList/index.js'
 import TagsList from '@/components/ui/TagsList/index.js'
 
@@ -43,7 +44,7 @@ const EntityHeader = ({
             <Box className='flex items-start sm:items-center content-between sm:w-fill gap-4'>
               {uniqRightBadges.length > 0 && (
                 <Box className='flex items-center w-fit gap-1 flex-wrap'>
-                  {uniqRightBadges.map(({icon: Icon, label}) => (
+                  {uniqRightBadges.map(({icon, iconId, label}) => (
                     <Tag
                       key={label}
                       className='flex items-center w-fit gap-1'
@@ -52,7 +53,7 @@ const EntityHeader = ({
                         color: fr.colors.decisions.text.actionHigh.blueFrance.default
                       }}
                     >
-                      {Icon && <Icon />}
+                      {(icon || iconId) && <Icon iconId={iconId} iconElement={icon} />}
                       <Typography component='span'>{label}</Typography>
                     </Tag>
                   ))}
