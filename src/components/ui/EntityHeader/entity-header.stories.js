@@ -1,5 +1,4 @@
 import {
-  AccountBoxOutlined,
   CalendarMonthOutlined,
   LocalShippingOutlined,
   AgricultureOutlined
@@ -15,9 +14,6 @@ const storyMeta = {
     title: {
       control: 'text',
       description: 'Titre principal de l’entité.'
-    },
-    titleIcon: {
-      description: 'Icône affichée à côté du titre.'
     },
     metas: {
       control: 'object',
@@ -38,7 +34,6 @@ const storyMeta = {
   },
   args: {
     title: '100 - Exploitation',
-    titleIcon: AccountBoxOutlined,
     metas: [
       {icon: CalendarMonthOutlined, content: 'Dernier prélèvement le 10 août 2025'}
     ],
