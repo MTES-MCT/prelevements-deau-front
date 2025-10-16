@@ -11,7 +11,7 @@ const InfoBox = ({icon, label, description}) => {
       sx={{
         display: 'inline-flex',
         alignItems: 'center',
-        padding: '5px',
+        padding: '5px 15px 5px 10px',
         gap: '5px',
         border: `1px solid ${fr.colors.decisions.border.default.grey.default}`,
         backgroundColor: fr.colors.decisions.background.default.grey.default
