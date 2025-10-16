@@ -9,7 +9,7 @@ const meta = {
   argTypes: {
     icon: {
       control: 'object',
-      description: 'Icône affichée avant le label. Type: Object. Obligatoire.'
+      description: 'Icône affichée avant le label. Type: Object. Optionnel.'
     },
     label: {
       control: 'text',
