@@ -18,9 +18,11 @@ const InfoBox = ({icon, label, description}) => {
       }}
     >
 
-      <span style={{color: fr.colors.decisions.text.label.blueFrance.default}}>
-        {icon}
-      </span>
+      {icon && (
+        <span style={{color: fr.colors.decisions.text.label.blueFrance.default}}>
+          {icon}
+        </span>
+      )}
 
       <Box className='flex items-center gap-1'>
         <Typography fontWeight='bold' variant='body1'>{label} :</Typography>
