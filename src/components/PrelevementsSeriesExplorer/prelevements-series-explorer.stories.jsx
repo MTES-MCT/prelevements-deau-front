@@ -258,8 +258,8 @@ const {statusByDate: STATUS_BY_DATE}
 // Generator config (not part of API, only for storybook data generation)
 const SERIES_CONFIGS = [
   {
-    id: 'series-volume-cumulatif',
-    parameter: 'Volume preleve cumulatif',
+    id: 'series-volume',
+    parameter: 'Volume prélevé',
     unit: 'm³',
     frequency: 'daily',
     valueType: 'cumulative',
@@ -272,8 +272,22 @@ const SERIES_CONFIGS = [
     attachCalendar: true
   },
   {
+    id: 'series-volume-2',
+    parameter: 'Volume prélevé',
+    unit: 'm³',
+    frequency: 'daily',
+    valueType: 'cumulative',
+    hasSubDaily: false,
+    base: 120,
+    amplitude: 30,
+    period: 60,
+    trend: 0.08,
+    min: 15,
+    attachCalendar: false
+  },
+  {
     id: 'series-debit-max',
-    parameter: 'Debit instantane maximal',
+    parameter: 'Debit instantané',
     unit: 'm³/h',
     frequency: 'sub-daily',
     valueType: 'maximum',
@@ -285,21 +299,8 @@ const SERIES_CONFIGS = [
     timeVariance: 4
   },
   {
-    id: 'series-debit-moyen',
-    parameter: 'Debit instantane moyen',
-    unit: 'm³/h',
-    frequency: 'sub-daily',
-    valueType: 'cumulative',
-    hasSubDaily: true,
-    base: 42,
-    amplitude: 10,
-    period: 22,
-    min: 4,
-    timeVariance: 3
-  },
-  {
     id: 'series-temperature',
-    parameter: 'Temperature de leau',
+    parameter: 'Température',
     unit: '°C',
     frequency: 'daily',
     valueType: 'maximum',
@@ -313,7 +314,7 @@ const SERIES_CONFIGS = [
   },
   {
     id: 'series-conductivite',
-    parameter: 'Conductivite electrique',
+    parameter: 'Conductivité',
     unit: 'µS/cm',
     frequency: 'daily',
     valueType: 'maximum',
@@ -428,9 +429,8 @@ export const ScenarioComplet = {
   parameters: {
     docs: {
       description: {
-        story: 'Scénario unique couvrant janvier 2023 à septembre 2025 avec 5 paramètres, toutes les unités et fréquences requises, deux valueType différents, un commentaire de série et un calendrier illustrant chaque cas de légende chaque mois.'
+        story: 'Scénario unique couvrant janvier 2023 à septembre 2025 avec 6 paramètres (dont un en double : "Volume preleve cumulatif #1" et "#2"), toutes les unités et fréquences requises, deux valueType différents, un commentaire de série et un calendrier illustrant chaque cas de légende chaque mois. Ce scénario teste également l\'indexation automatique des paramètres dupliqués.'
       }
     }
   }
 }
-
