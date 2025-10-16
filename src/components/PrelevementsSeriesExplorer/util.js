@@ -665,3 +665,47 @@ export function transformSeriesToData(seriesList) {
     hasSubDaily
   }
 }
+
+/**
+ * Utility function for adding display index to duplicate parameters
+ *
+ * When multiple series have the same parameter name, this function
+ * adds an index suffix (e.g., "volume prélevé #1", "volume prélevé #2")
+ * to distinguish them in the UI.
+ *
+ * @param {Array} seriesList - List of series with metadata
+ * @returns {Array} Series with indexed parameter labels
+ */
+export function indexDuplicateParameters(seriesList) {
+  const parameterCounts = new Map()
+  const parameterIndices = new Map()
+
+  // Count occurrences of each parameter
+  for (const series of seriesList) {
+    const count = parameterCounts.get(series.parameter) || 0
+    parameterCounts.set(series.parameter, count + 1)
+  }
+
+  // Add indices to duplicates
+  return seriesList.map(series => {
+    const count = parameterCounts.get(series.parameter)
+
+    // No duplicates - use parameter name as-is
+    if (count === 1) {
+      return {
+        ...series,
+        parameterLabel: series.parameter
+      }
+    }
+
+    // Duplicates found - add index
+    const currentIndex = parameterIndices.get(series.parameter) || 0
+    const nextIndex = currentIndex + 1
+    parameterIndices.set(series.parameter, nextIndex)
+
+    return {
+      ...series,
+      parameterLabel: `${series.parameter} #${nextIndex}`
+    }
+  })
+}
