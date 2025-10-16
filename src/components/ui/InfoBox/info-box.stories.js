@@ -8,7 +8,7 @@ const meta = {
   tags: ['autodocs'],
   argTypes: {
     icon: {
-      control: 'object',
+      control: false,
       description: 'Icône affichée avant le label. Type: Object. Optionnel.'
     },
     label: {
