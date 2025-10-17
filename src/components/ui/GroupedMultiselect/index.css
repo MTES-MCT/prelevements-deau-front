@@ -8,6 +8,16 @@
   background: var(--background-alt-blue-france-hover);
 }
 
+.selector-option.disabled {
+  color: var(--text-disabled-grey);
+  cursor: not-allowed;
+}
+
+.selector-option.disabled:hover,
+.selector-option.disabled.focused {
+  background: transparent;
+}
+
 .fr-bg-disabled-grey {
   color: var(--text-disabled-grey);
 }
