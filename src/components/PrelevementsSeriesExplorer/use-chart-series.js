@@ -4,6 +4,8 @@
 
 import {useMemo} from 'react'
 
+import {FALLBACK_PARAMETER_COLOR} from './constants.js'
+
 /**
  * Transforms loaded values into chart-ready series format
  *
@@ -11,8 +13,8 @@ import {useMemo} from 'react'
  * @param {boolean} config.showChart - Whether chart is visible
  * @param {Array} config.timelineSamples - All timeline samples
  * @param {Array} config.visibleSamples - Timeline samples within range
- * @param {Array<string>} config.selectedParams - Selected parameter names
- * @param {Map} config.parameterMap - Parameter metadata map
+ * @param {Array<string>} config.selectedParams - Selected parameterLabels
+ * @param {Map} config.parameterMap - Parameter metadata map (keyed by parameterLabel)
  * @returns {Array} Chart series data
  */
 export function useChartSeries({
@@ -35,7 +37,7 @@ export function useChartSeries({
     }
 
     const selectedParamsData = selectedParams
-      .map(paramName => parameterMap.get(paramName))
+      .map(paramLabel => parameterMap.get(paramLabel))
       .filter(Boolean)
 
     if (selectedParamsData.length === 0) {
@@ -52,8 +54,8 @@ export function useChartSeries({
       unitToAxis.set(uniqueUnits[1], 'right')
     }
 
-    return selectedParams.map((paramName, paramIndex) => {
-      const param = parameterMap.get(paramName)
+    return selectedParams.map((paramLabel, paramIndex) => {
+      const param = parameterMap.get(paramLabel)
       if (!param) {
         return null
       }
@@ -78,11 +80,14 @@ export function useChartSeries({
         ? unitToAxis.get(param.unit)
         : 'left'
 
+      const color = param.color ?? FALLBACK_PARAMETER_COLOR
+      const label = param.unit ? `${param.parameterLabel} (${param.unit})` : param.parameterLabel
+
       return {
-        id: paramName,
-        label: `${param.parameter} (${param.unit})`,
+        id: param.parameterLabel,
+        label,
         axis,
-        color: param.color,
+        color,
         data
       }
     }).filter(Boolean)

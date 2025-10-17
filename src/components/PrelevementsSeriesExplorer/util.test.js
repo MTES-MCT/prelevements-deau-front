@@ -1,6 +1,9 @@
+/* eslint-disable capitalized-comments */
+
 import test from 'ava'
 import {addDays, startOfDay} from 'date-fns'
 
+import {normalizeParameterKey} from './constants.js'
 import {
   buildCalendarEntriesFromMetadata,
   fillDateGaps,
@@ -13,10 +16,9 @@ import {
   clamp,
   computeSliderMarks,
   transformSeriesToData,
-  extractDefaultPeriodsFromSeries
+  extractDefaultPeriodsFromSeries,
+  indexDuplicateParameters
 } from './util.js'
-
-/* eslint-disable capitalized-comments */
 
 // Calendar status colors for testing
 const mockStatusColors = {
@@ -413,6 +415,27 @@ test('computeSliderMarks formats labels correctly', t => {
   t.true(result[1].label.includes('janv') || result[1].label.includes('15'))
 })
 
+// normalizeParameterKey tests
+test('normalizeParameterKey normalizes accents, case and spacing', t => {
+  const input = '  Volume   Prélevé  '
+  const result = normalizeParameterKey(input)
+
+  t.is(result, 'volume preleve')
+})
+
+test('normalizeParameterKey removes apostrophes and diacritics', t => {
+  const input = 'Relevé d’index de Compteur'
+  const result = normalizeParameterKey(input)
+
+  t.is(result, 'releve dindex de compteur')
+})
+
+test('normalizeParameterKey returns empty string for falsy values', t => {
+  t.is(normalizeParameterKey(undefined), '')
+  t.is(normalizeParameterKey(null), '')
+  t.is(normalizeParameterKey(''), '')
+})
+
 // TransformSeriesToData tests
 test('transformSeriesToData returns empty for no series', t => {
   const result = transformSeriesToData([])
@@ -700,4 +723,38 @@ test('extractDefaultPeriodsFromSeries ignores series without dates', t => {
   t.deepEqual(result[1], {type: 'month', year: 2024, month: 1})
 })
 
-/* eslint-enable capitalized-comments */
+// indexDuplicateParameters tests
+test('indexDuplicateParameters returns empty array for empty input', t => {
+  const result = indexDuplicateParameters([])
+  t.deepEqual(result, [])
+})
+
+test('indexDuplicateParameters preserves parameter name when no duplicates', t => {
+  const seriesList = [
+    {id: 'series-1', parameter: 'Débit', unit: 'm³/h'},
+    {id: 'series-2', parameter: 'Température', unit: '°C'},
+    {id: 'series-3', parameter: 'Pression', unit: 'bar'}
+  ]
+
+  const result = indexDuplicateParameters(seriesList)
+
+  t.is(result.length, 3)
+  t.is(result[0].parameterLabel, 'Débit')
+  t.is(result[1].parameterLabel, 'Température')
+  t.is(result[2].parameterLabel, 'Pression')
+})
+
+test('indexDuplicateParameters adds index to duplicate parameters', t => {
+  const seriesList = [
+    {id: 'series-1', parameter: 'Volume prélevé', unit: 'm³'},
+    {id: 'series-2', parameter: 'Température', unit: '°C'},
+    {id: 'series-3', parameter: 'Volume prélevé', unit: 'm³'}
+  ]
+
+  const result = indexDuplicateParameters(seriesList)
+
+  t.is(result.length, 3)
+  t.is(result[0].parameterLabel, 'Volume prélevé #1')
+  t.is(result[1].parameterLabel, 'Température')
+  t.is(result[2].parameterLabel, 'Volume prélevé #2')
+})

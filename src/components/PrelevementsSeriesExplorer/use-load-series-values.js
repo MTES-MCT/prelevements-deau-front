@@ -12,6 +12,8 @@ import {useEffect, useState, useMemo} from 'react'
 
 import {format} from 'date-fns'
 
+import {indexDuplicateParameters} from './util.js'
+
 const toFiniteNumber = value => {
   if (typeof value === 'number') {
     return Number.isFinite(value) ? value : null
@@ -124,7 +126,7 @@ const assignSubDailyValues = ({context, date, subValues, paramIndex}) => {
  * @param {Object} params - Parameters object
  * @param {Array} params.seriesList - Array of series metadata
  * @param {Array} params.selectedPeriods - Selected time periods
- * @param {Array<string>} params.selectedParams - Selected parameter names
+ * @param {Array<string>} params.selectedParams - Selected parameterLabels
  * @param {Object} params.dateRange - Date range with start and end dates
  * @param {Function} params.getSeriesValues - Function to fetch series values from API
  *   Expected signature: (seriesId: string, {start: string, end: string}) => Promise<{values: Array}>
@@ -148,9 +150,12 @@ export function useLoadSeriesValues({seriesList, selectedPeriods, selectedParams
       setLoadError(null)
 
       try {
-        // Find series IDs for selected parameters
+        // Build index of series by parameterLabel (handling duplicates)
+        const indexedSeries = indexDuplicateParameters(seriesList)
+
+        // Find series by parameterLabel
         const seriesToLoad = selectedParams
-          .map(paramName => seriesList.find(s => s.parameter === paramName))
+          .map(paramLabel => indexedSeries.find(s => s.parameterLabel === paramLabel))
           .filter(Boolean)
 
         // Load values for each series in parallel
@@ -159,7 +164,7 @@ export function useLoadSeriesValues({seriesList, selectedPeriods, selectedParams
             start: format(dateRange.start, 'yyyy-MM-dd'),
             end: format(dateRange.end, 'yyyy-MM-dd')
           })
-          return {seriesId: serie._id, parameter: serie.parameter, values: result?.values ?? []}
+          return {parameterLabel: serie.parameterLabel, values: result?.values ?? []}
         })
 
         const results = await Promise.all(valuesPromises)
@@ -167,7 +172,7 @@ export function useLoadSeriesValues({seriesList, selectedPeriods, selectedParams
         if (!cancelled) {
           const valuesMap = {}
           for (const result of results) {
-            valuesMap[result.parameter] = result.values
+            valuesMap[result.parameterLabel] = result.values
           }
 
           setLoadedValues(valuesMap)
@@ -209,8 +214,8 @@ export function useLoadSeriesValues({seriesList, selectedPeriods, selectedParams
       timelineEntriesByDate
     }
 
-    for (const [paramIndex, parameter] of selectedParams.entries()) {
-      const values = loadedValues[parameter] ?? []
+    for (const [paramIndex, paramLabel] of selectedParams.entries()) {
+      const values = loadedValues[paramLabel] ?? []
 
       for (const dayEntry of values) {
         if (!dayEntry || !dayEntry.date) {

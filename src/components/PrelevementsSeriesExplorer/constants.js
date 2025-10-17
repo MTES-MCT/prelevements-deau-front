@@ -3,21 +3,56 @@
  */
 
 /**
- * Default color palette for series
- * Distinct colors for better visual differentiation
+ * Normalizes parameter names for consistent color mapping lookups
+ * - Trims surrounding whitespace
+ * - Converts to lowercase
+ * - Removes diacritic marks and apostrophes
+ * - Collapses repeated spaces
+ *
+ * @param {string} value - Raw parameter label
+ * @returns {string} Normalized parameter key
  */
-export const DEFAULT_COLOR_PALETTE = [
-  '#0078f3', // Blue
-  '#e63946', // Red
-  '#06a77d', // Green
-  '#f77f00', // Orange
-  '#9d4edd', // Purple
-  '#e63995', // Pink
-  '#06d6a0', // Teal
-  '#f4a261', // Light orange
-  '#457b9d', // Steel blue
-  '#e76f51' // Terra cotta
+export const normalizeParameterKey = value => {
+  if (!value) {
+    return ''
+  }
+
+  return value
+    .toString()
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replaceAll(/[\u0300-\u036F]/g, '')
+    .replaceAll(/['\u2019]/g, '') // Remove both straight (') and curly (') apostrophes
+    .replaceAll(/\s+/g, ' ')
+}
+
+/**
+ * Color configuration ensuring a deterministic color per known parameter
+ */
+const PARAMETER_COLOR_ENTRIES = [
+  ['volume preleve', '#000091'],
+  ['debit preleve', '#0063CB'],
+  ['debit reserve', '#CE70CC'],
+  ['debit restitue', '#009099'],
+  ['volume restitue', '#465F9D'],
+  ['temperature', '#B34000'],
+  ['turbidite', '#CCB078'],
+  ['niveau deau', '#D8C634'],
+  ['conductivite', '#CE614A'],
+  ['ph', '#FFCA00'],
+  ['nitrates', '#21AB82'],
+  ['sulfates', '#99C221'],
+  ['chlorures', '#34B1B5'],
+  ['releve dindex de compteur', '#3B87FF'],
+  ['autre', '#AEA397']
 ]
+
+export const PARAMETER_COLOR_MAP = new Map(
+  PARAMETER_COLOR_ENTRIES.map(([name, color]) => [normalizeParameterKey(name), color])
+)
+
+export const FALLBACK_PARAMETER_COLOR = PARAMETER_COLOR_MAP.get('autre')
 
 /**
  * Calendar status colors based on DSFR design system

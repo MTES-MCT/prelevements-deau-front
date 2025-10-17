@@ -9,7 +9,6 @@ import TagsList from '@/components/ui/TagsList/index.js'
 
 const EntityHeader = ({
   title,
-  titleIcon: TitleIcon,
   metas,
   rightBadges,
   tags,
@@ -34,7 +33,6 @@ const EntityHeader = ({
                   fontWeight: 500
                 }}
               >
-                {TitleIcon && <TitleIcon sx={{fontSize: 38}} />}
                 {title}
               </Box>
             </Box>
@@ -81,12 +79,12 @@ const EntityHeader = ({
             </Box>
           )}
         </Box>
-        <Box sx={{paddingLeft: `${TitleIcon ? 4 : 0}px`}}>
+        <Box>
           <MetasList metas={metas} />
         </Box>
       </Box>
 
-      <Box sx={{paddingLeft: `${TitleIcon ? 4 : 0}px`}}>
+      <Box>
         {children}
       </Box>
     </Box>
