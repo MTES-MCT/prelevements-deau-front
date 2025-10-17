@@ -98,19 +98,45 @@ const defaultOptions = [
   }
 ]
 
+const formatOptionContent = (label, frequency, valueType) => (
+  <div className='selector-option-content'>
+    <div className='selector-option-header'>
+      <span className='selector-option-label'>{label}</span>
+      {valueType && (
+        <span className='selector-option-value-type'>{valueType}</span>
+      )}
+    </div>
+    {frequency && (
+      <span className='selector-option-frequency'>{frequency}</span>
+    )}
+  </div>
+)
+
 const restrictedOptions = [
   {
     label: 'Volume (m3)',
     options: [
-      {value: 'volume-2023', content: 'Volume prélevé 2023'},
-      {value: 'volume-2024', content: 'Volume prélevé 2024'}
+      {
+        value: 'volume-2023',
+        content: formatOptionContent('Volume prélevé 2023', 'jours', 'cumulée')
+      },
+      {
+        value: 'volume-2024',
+        content: formatOptionContent('Volume prélevé 2024', 'jours', 'cumulée')
+      }
     ]
   },
   {
     label: 'Débit (L/s)',
     options: [
-      {value: 'debit-2023', content: 'Débit prélevé 2023'},
-      {value: 'debit-2024', content: 'Débit prélevé 2024'}
+      {
+        value: 'debit-2023',
+        content: formatOptionContent('Débit prélevé 2023', 'jours', 'maximum')
+      },
+      {
+        value: 'debit-2024',
+        content: formatOptionContent('Débit prélevé 2024', '15 minutes', 'moyenne')
+      }
     ]
   },
   {
@@ -118,13 +144,13 @@ const restrictedOptions = [
     options: [
       {
         value: 'conductivite',
-        content: 'Conductivité',
+        content: formatOptionContent('Conductivité', 'jours', 'maximum'),
         disabled: true,
         disabledReason: 'Deux unités différentes sont déjà sélectionnées.'
       },
       {
         value: 'ph',
-        content: 'pH',
+        content: formatOptionContent('pH', 'jours', 'moyenne'),
         disabled: true,
         disabledReason: 'Deux unités différentes sont déjà sélectionnées.'
       }

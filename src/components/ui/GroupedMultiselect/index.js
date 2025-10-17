@@ -247,16 +247,20 @@ const GroupedMultiselect = ({
                     ref={el => {
                       optionRefs.current[flatIdx] = el
                     }}
-                    className={`list-item selector-option${isSelected ? ' selected' : ''}${focusedIndex === flatIdx ? ' focused' : ''}${isDisabled ? ' disabled' : ''} p-2 radius-4`}
-                    tabIndex={-1}
-                    role='option'
-                    aria-selected={isSelected}
                     aria-disabled={isDisabled}
+                    aria-selected={isSelected}
+                    className={`list-item selector-option${isSelected ? ' selected' : ''}${focusedIndex === flatIdx ? ' focused' : ''}${isDisabled ? ' disabled' : ''} p-2 radius-4`}
+                    role='option'
+                    tabIndex={-1}
                     title={tooltip}
                     onClick={isDisabled ? undefined : () => toggleOption(option)}
                     onKeyDown={handleKeyDown}
                   >
-                    {isSelected && <span className='mr-1'>✓</span>}
+                    {isSelected && (
+                      <span aria-hidden className='selector-option-check mr-1'>
+                        ✓
+                      </span>
+                    )}
                     {getOptionContent(option)}
                   </ListItem>
                 )
