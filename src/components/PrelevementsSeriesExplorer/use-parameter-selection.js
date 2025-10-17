@@ -6,10 +6,12 @@ import {
   useMemo, useState, useCallback, useEffect
 } from 'react'
 
-import {uniqBy} from 'lodash-es'
-
-import {DEFAULT_COLOR_PALETTE} from './constants.js'
-import {getColorForIndex} from './formatters.js'
+import {
+  FALLBACK_PARAMETER_COLOR,
+  PARAMETER_COLOR_MAP,
+  normalizeParameterKey
+} from './constants.js'
+import {indexDuplicateParameters} from './util.js'
 
 /**
  * Extracts and organizes parameter metadata from series list
@@ -19,42 +21,53 @@ import {getColorForIndex} from './formatters.js'
  */
 export function useParameterMetadata(seriesList) {
   return useMemo(() => {
-    const uniqueParams = uniqBy(
-      seriesList.map(s => ({parameter: s.parameter, color: s.color})),
-      'parameter'
-    )
+    // Index duplicate parameters to add display labels
+    const indexedSeries = indexDuplicateParameters(seriesList)
 
+    // Assign colors based on unique parameter names
     const colorMap = new Map()
-    for (const [index, param] of uniqueParams.entries()) {
-      colorMap.set(param.parameter, param.color || getColorForIndex(index, DEFAULT_COLOR_PALETTE))
+    for (const series of indexedSeries) {
+      if (!series?.parameter || colorMap.has(series.parameter)) {
+        continue
+      }
+
+      const normalized = normalizeParameterKey(series.parameter)
+      const resolvedColor = series.color
+        ?? PARAMETER_COLOR_MAP.get(normalized)
+        ?? FALLBACK_PARAMETER_COLOR
+
+      colorMap.set(series.parameter, resolvedColor)
     }
 
-    const parameters = seriesList.map(s => ({
+    // Build parameter metadata with parameterLabel as unique identifier
+    const parameters = indexedSeries.map(s => ({
       parameter: s.parameter,
+      parameterLabel: s.parameterLabel,
       unit: s.unit,
       color: colorMap.get(s.parameter),
       frequency: s.frequency,
       seriesId: s._id
     }))
 
-    const uniqueParameterEntries = uniqBy(parameters.filter(Boolean), 'parameter')
+    // Group parameters by unit for dropdown display (using simple strings)
     const groupedByUnit = new Map()
 
-    for (const param of uniqueParameterEntries) {
+    for (const param of parameters) {
       const unit = param.unit || 'Sans unité'
       if (!groupedByUnit.has(unit)) {
         groupedByUnit.set(unit, [])
       }
 
-      groupedByUnit.get(unit).push(param.parameter)
+      groupedByUnit.get(unit).push(param.parameterLabel)
     }
 
-    const parameterOptions = [...groupedByUnit.entries()].map(([unit, params]) => ({
+    const parameterOptions = [...groupedByUnit.entries()].map(([unit, labels]) => ({
       label: unit,
-      options: params
+      options: labels
     }))
 
-    const parameterMap = new Map(parameters.map(param => [param.parameter, param]))
+    // Use parameterLabel as key for direct lookup
+    const parameterMap = new Map(parameters.map(param => [param.parameterLabel, param]))
 
     return {parameters, parameterOptions, parameterMap}
   }, [seriesList])
@@ -64,7 +77,7 @@ export function useParameterMetadata(seriesList) {
  * Finds default parameters to select (prefers "Volume prélevé")
  *
  * @param {Array} parameters - Available parameters
- * @returns {Array<string>} Default selected parameter names
+ * @returns {Array<string>} Default selected parameterLabel
  */
 function findDefaultSelectedParams(parameters) {
   if (!parameters || parameters.length === 0) {
@@ -77,19 +90,19 @@ function findDefaultSelectedParams(parameters) {
   )
 
   if (volumeParam) {
-    return [volumeParam.parameter]
+    return [volumeParam.parameterLabel]
   }
 
-  return [parameters[0].parameter]
+  return [parameters[0].parameterLabel]
 }
 
 /**
  * Hook for managing parameter selection state
  *
  * @param {Array} parameters - Available parameters
- * @param {Map} parameterMap - Map of parameter names to metadata
+ * @param {Map} parameterMap - Map of parameterLabel to metadata
  * @param {Function} onParameterChange - Callback when selection changes
- * @returns {Object} Selected params, handlers, and validation state
+ * @returns {Object} Selected params (parameterLabels), handlers, and validation state
  */
 export function useParameterSelection(parameters, parameterMap, onParameterChange) {
   const defaultSelectedParam = useMemo(
@@ -111,15 +124,15 @@ export function useParameterSelection(parameters, parameterMap, onParameterChang
         return defaultSelectedParam
       }
 
-      const stillValid = prev.every(name => parameterMap.has(name))
+      const stillValid = prev.every(paramLabel => parameterMap.has(paramLabel))
       return stillValid ? prev : defaultSelectedParam
     })
   }, [defaultSelectedParam, parameterMap])
 
-  const handleParameterChange = useCallback(params => {
+  const handleParameterChange = useCallback(paramLabels => {
     // Validate selection - moved from util to avoid circular dependency
-    const selectedParamsData = params
-      .map(paramName => parameterMap.get(paramName))
+    const selectedParamsData = paramLabels
+      .map(paramLabel => parameterMap.get(paramLabel))
       .filter(Boolean)
 
     const uniqueUnits = [...new Set(selectedParamsData.map(p => p.unit).filter(Boolean))]
@@ -130,8 +143,8 @@ export function useParameterSelection(parameters, parameterMap, onParameterChang
     }
 
     setValidationError(null)
-    setSelectedParams(params)
-    onParameterChange?.(params)
+    setSelectedParams(paramLabels)
+    onParameterChange?.(paramLabels)
   }, [parameterMap, onParameterChange])
 
   return {
