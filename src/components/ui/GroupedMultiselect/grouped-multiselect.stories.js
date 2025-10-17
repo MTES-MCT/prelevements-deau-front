@@ -45,12 +45,19 @@ const meta = {
   },
   {
     label: 'Groupe B',
-    options: ['Option 3']
+    options: [
+      {
+        value: 'Option 3',
+        content: <div>Option 3</div>,
+        disabled: true,
+        disabledReason: 'Raison facultative affichée en info-bulle'
+      }
+    ]
   }
 ]
 \`\`\`
 - \`label\` : nom du groupe (\`string\`)
-- \`options\` : tableau de chaînes (\`string[]\`)`
+- \`options\` : tableau de chaînes (\`string[]\`) ou d'objets {value, content, disabled?, disabledReason?}`
     },
     value: {
       control: false,
@@ -87,6 +94,40 @@ const defaultOptions = [
       {value: 'Ralph Hubbard', content: <div>Ralph Hubbard</div>},
       {value: 'Omar Alexander', content: <div>Omar Alexander</div>},
       {value: 'Carlos Abbott', content: <div>Carlos Abbott</div>}
+    ]
+  }
+]
+
+const restrictedOptions = [
+  {
+    label: 'Volume (m3)',
+    options: [
+      {value: 'volume-2023', content: 'Volume prélevé 2023'},
+      {value: 'volume-2024', content: 'Volume prélevé 2024'}
+    ]
+  },
+  {
+    label: 'Débit (L/s)',
+    options: [
+      {value: 'debit-2023', content: 'Débit prélevé 2023'},
+      {value: 'debit-2024', content: 'Débit prélevé 2024'}
+    ]
+  },
+  {
+    label: 'Autres unités',
+    options: [
+      {
+        value: 'conductivite',
+        content: 'Conductivité',
+        disabled: true,
+        disabledReason: 'Deux unités différentes sont déjà sélectionnées.'
+      },
+      {
+        value: 'ph',
+        content: 'pH',
+        disabled: true,
+        disabledReason: 'Deux unités différentes sont déjà sélectionnées.'
+      }
     ]
   }
 ]
@@ -258,6 +299,24 @@ export const AvecÉlémentsPersonnalisés = {
     docs: {
       description: {
         story: 'Utilisation d\'options avec un rendu personnalisé via la propriété `content`.'
+      }
+    }
+  },
+  render: args => <Wrapper {...args} />
+}
+
+export const AvecOptionsDésactivées = {
+  args: {
+    label: 'Paramètres (max 2 unités)',
+    hint: 'Les options incompatibles sont grisées et expliquées au survol.',
+    placeholder: 'Sélectionnez des paramètres...',
+    options: restrictedOptions,
+    value: ['volume-2023', 'debit-2023']
+  },
+  parameters: {
+    docs: {
+      description: {
+        story: 'Illustre l\'utilisation d\'options désactivées avec une info-bulle pour expliquer la restriction d\'unités.'
       }
     }
   },
