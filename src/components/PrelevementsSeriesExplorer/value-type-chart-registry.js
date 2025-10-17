@@ -3,18 +3,19 @@
  * Initially all value types resolve to TimeSeriesChart for isofunctional rollout.
  */
 
+import TimeSeriesBarChart from '@/components/ui/TimeSeriesBarChart/index.js'
 import TimeSeriesChart from '@/components/ui/TimeSeriesChart/index.js'
 
 export const DEFAULT_CHART_COMPONENT = TimeSeriesChart
 
 const VALUE_TYPE_CHART_COMPONENTS = new Map([
-  ['cumulative', TimeSeriesChart],
+  ['cumulative', TimeSeriesBarChart],
   ['instantaneous', TimeSeriesChart],
   ['average', TimeSeriesChart],
   ['minimum', TimeSeriesChart],
   ['maximum', TimeSeriesChart],
   ['median', TimeSeriesChart],
-  ['delta-index', TimeSeriesChart],
+  ['delta-index', TimeSeriesBarChart],
   ['raw', TimeSeriesChart]
 ])
 
