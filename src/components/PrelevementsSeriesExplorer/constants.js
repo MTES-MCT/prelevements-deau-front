@@ -28,23 +28,6 @@ export const normalizeParameterKey = value => {
 }
 
 /**
- * Default color palette for series
- * Distinct colors for better visual differentiation
- */
-export const DEFAULT_COLOR_PALETTE = [
-  '#0078f3', // Blue
-  '#e63946', // Red
-  '#06a77d', // Green
-  '#f77f00', // Orange
-  '#9d4edd', // Purple
-  '#e63995', // Pink
-  '#06d6a0', // Teal
-  '#f4a261', // Light orange
-  '#457b9d', // Steel blue
-  '#e76f51' // Terra cotta
-]
-
-/**
  * Color configuration ensuring a deterministic color per known parameter
  */
 const PARAMETER_COLOR_ENTRIES = [
