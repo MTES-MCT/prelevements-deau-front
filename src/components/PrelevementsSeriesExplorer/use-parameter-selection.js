@@ -6,10 +6,11 @@ import {
   useMemo, useState, useCallback, useEffect
 } from 'react'
 
-import {uniqBy} from 'lodash-es'
-
-import {DEFAULT_COLOR_PALETTE} from './constants.js'
-import {getColorForIndex} from './formatters.js'
+import {
+  FALLBACK_PARAMETER_COLOR,
+  PARAMETER_COLOR_MAP,
+  normalizeParameterKey
+} from './constants.js'
 import {indexDuplicateParameters} from './util.js'
 
 /**
@@ -24,14 +25,18 @@ export function useParameterMetadata(seriesList) {
     const indexedSeries = indexDuplicateParameters(seriesList)
 
     // Assign colors based on unique parameter names
-    const uniqueParams = uniqBy(
-      indexedSeries.map(s => ({parameter: s.parameter, color: s.color})),
-      'parameter'
-    )
-
     const colorMap = new Map()
-    for (const [index, param] of uniqueParams.entries()) {
-      colorMap.set(param.parameter, param.color || getColorForIndex(index, DEFAULT_COLOR_PALETTE))
+    for (const series of indexedSeries) {
+      if (!series?.parameter || colorMap.has(series.parameter)) {
+        continue
+      }
+
+      const normalized = normalizeParameterKey(series.parameter)
+      const resolvedColor = series.color
+        ?? PARAMETER_COLOR_MAP.get(normalized)
+        ?? FALLBACK_PARAMETER_COLOR
+
+      colorMap.set(series.parameter, resolvedColor)
     }
 
     // Build parameter metadata with parameterLabel as unique identifier

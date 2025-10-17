@@ -4,6 +4,8 @@
 
 import {useMemo} from 'react'
 
+import {FALLBACK_PARAMETER_COLOR} from './constants.js'
+
 /**
  * Transforms loaded values into chart-ready series format
  *
@@ -78,11 +80,14 @@ export function useChartSeries({
         ? unitToAxis.get(param.unit)
         : 'left'
 
+      const color = param.color ?? FALLBACK_PARAMETER_COLOR
+      const label = param.unit ? `${param.parameterLabel} (${param.unit})` : param.parameterLabel
+
       return {
         id: param.parameterLabel,
-        label: `${param.parameterLabel} (${param.unit})`,
+        label,
         axis,
-        color: param.color,
+        color,
         data
       }
     }).filter(Boolean)
