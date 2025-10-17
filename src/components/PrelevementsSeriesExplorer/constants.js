@@ -23,7 +23,7 @@ export const normalizeParameterKey = value => {
     .toLowerCase()
     .normalize('NFD')
     .replaceAll(/[\u0300-\u036F]/g, '')
-    .replaceAll('\'', '')
+    .replaceAll(/['\u2019]/g, '') // Remove both straight (') and curly (') apostrophes
     .replaceAll(/\s+/g, ' ')
 }
 
