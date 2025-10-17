@@ -30,8 +30,8 @@ const MetasList = ({metas = []}) => {
             (icon || iconId)
             && <Icon iconId={iconId} iconElement={icon}
               sx={{fontSize: 18, color: fr.colors.decisions.text.default.grey.default}}
-              title={icon.displayName || icon.name}
-              aria-label={icon.displayName || icon.name}
+              title={icon?.displayName || icon?.name}
+              aria-label={icon?.displayName || icon?.name}
             />
           }
 
