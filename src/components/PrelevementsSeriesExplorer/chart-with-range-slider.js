@@ -28,6 +28,7 @@ const DEFAULT_MIN_CHART_HEIGHT = 360
  * @param {string} props.rangeLabel - Label displayed above the slider
  * @param {Function} props.onRangeChange - Callback triggered when slider range updates
  * @param {number} [props.minChartHeight=DEFAULT_MIN_CHART_HEIGHT] - Minimum height for the chart container
+ * @param {React.ComponentType} [props.chartComponent=TimeSeriesChart] - Chart component to render
  * @param {Object} [props.timeSeriesChartProps] - Additional props forwarded to `TimeSeriesChart`
  */
 const ChartWithRangeSlider = ({
@@ -40,6 +41,7 @@ const ChartWithRangeSlider = ({
   rangeLabel,
   onRangeChange,
   minChartHeight = DEFAULT_MIN_CHART_HEIGHT,
+  chartComponent: ChartComponent = TimeSeriesChart,
   timeSeriesChartProps
 }) => {
   const resolvedChartProps = useMemo(() => {
@@ -61,7 +63,7 @@ const ChartWithRangeSlider = ({
   return (
     <Box className='flex flex-col gap-4'>
       <Box sx={{minHeight: minChartHeight}}>
-        <TimeSeriesChart
+        <ChartComponent
           series={series}
           {...resolvedChartProps}
         />

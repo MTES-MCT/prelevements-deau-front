@@ -72,6 +72,7 @@ import {
   extractDefaultPeriodsFromSeries,
   periodsToDateRange
 } from './util.js'
+import {resolveChartComponentForValueTypes} from './value-type-chart-registry.js'
 
 import CalendarGrid from '@/components/ui/CalendarGrid/index.js'
 import PeriodSelectorHeader from '@/components/ui/PeriodSelectorHeader/index.js'
@@ -177,6 +178,18 @@ const PrelevementsSeriesExplorer = ({
     selectedParams,
     parameterMap
   })
+
+  const chartComponent = useMemo(() => {
+    if (selectedParams.length === 0) {
+      return resolveChartComponentForValueTypes()
+    }
+
+    const valueTypes = selectedParams
+      .map(paramLabel => parameterMap.get(paramLabel)?.valueType)
+      .filter(Boolean)
+
+    return resolveChartComponentForValueTypes(valueTypes)
+  }, [selectedParams, parameterMap])
 
   // Build calendar data from loaded values
   const calendarData = useMemo(() => {
@@ -285,6 +298,7 @@ const PrelevementsSeriesExplorer = ({
       {showChart && !isLoadingValues && !loadError && selectedParams.length > 0 && (
         <ChartWithRangeSlider
           allDates={allDates}
+          chartComponent={chartComponent}
           locale={locale}
           rangeIndices={rangeIndices}
           rangeLabel={t.rangeLabel}

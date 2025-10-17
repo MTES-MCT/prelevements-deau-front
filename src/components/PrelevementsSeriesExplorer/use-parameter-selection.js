@@ -46,7 +46,8 @@ export function useParameterMetadata(seriesList) {
       unit: s.unit,
       color: colorMap.get(s.parameter),
       frequency: s.frequency,
-      seriesId: s._id
+      seriesId: s._id,
+      valueType: s.valueType
     }))
 
     // Group parameters by unit for dropdown display (using simple strings)
