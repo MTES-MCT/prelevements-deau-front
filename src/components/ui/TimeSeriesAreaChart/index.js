@@ -3,7 +3,7 @@
 import {useMemo} from 'react'
 
 import {Typography} from '@mui/material'
-import {BarChart} from '@mui/x-charts/BarChart'
+import {LineChart} from '@mui/x-charts/LineChart'
 
 import {
   alignSeriesData,
@@ -13,11 +13,11 @@ import {
 } from '@/components/ui/time-series-shared.js'
 
 const DEFAULT_TRANSLATIONS = {
-  chartAriaLabel: 'Histogramme séries temporelles',
+  chartAriaLabel: 'Courbe moyenne',
   noDataAvailable: 'Aucune donnée disponible.'
 }
 
-const TimeSeriesBarChart = ({
+const TimeSeriesAreaChart = ({
   series,
   locale = 'fr-FR',
   translations,
@@ -25,6 +25,9 @@ const TimeSeriesBarChart = ({
   slots,
   slotProps,
   margin,
+  curve = 'monotoneX',
+  showMarks = false,
+  connectNulls = false,
   ..._unusedProps
 }) => {
   const t = {...DEFAULT_TRANSLATIONS, ...translations}
@@ -36,14 +39,18 @@ const TimeSeriesBarChart = ({
     [series]
   )
 
-  const barSeries = useMemo(() => alignedSeries.map(item => ({
+  const areaSeries = useMemo(() => alignedSeries.map(item => ({
     id: item.id,
     label: item.label,
     color: item.color,
     data: item.data,
     yAxisKey: item.axisKey,
+    area: true,
+    curve,
+    showMark: showMarks,
+    connectNulls,
     valueFormatter: value => (value === null ? null : numberFormatter.format(value))
-  })), [alignedSeries, numberFormatter])
+  })), [alignedSeries, numberFormatter, curve, showMarks, connectNulls])
 
   const defaultTooltip = useMemo(
     () => createDefaultAxisTooltip(dateFormatter, numberFormatter),
@@ -53,7 +60,7 @@ const TimeSeriesBarChart = ({
   const resolvedXAxis = useMemo(() => [{
     id: 'time',
     data: xValues,
-    scaleType: 'band',
+    scaleType: 'time',
     valueFormatter: value => dateFormatter.format(new Date(value))
   }], [xValues, dateFormatter])
 
@@ -67,7 +74,7 @@ const TimeSeriesBarChart = ({
     axisContent: slots?.axisContent ?? defaultTooltip
   }), [slots, defaultTooltip])
 
-  if (barSeries.length === 0 || xValues.length === 0) {
+  if (areaSeries.length === 0 || xValues.length === 0) {
     return (
       <Typography variant='body2'>
         {t.noDataAvailable}
@@ -76,11 +83,11 @@ const TimeSeriesBarChart = ({
   }
 
   return (
-    <BarChart
+    <LineChart
       aria-label={t.chartAriaLabel}
       height={height}
       margin={margin}
-      series={barSeries}
+      series={areaSeries}
       slots={resolvedSlots}
       slotProps={slotProps}
       xAxis={resolvedXAxis}
@@ -89,4 +96,4 @@ const TimeSeriesBarChart = ({
   )
 }
 
-export default TimeSeriesBarChart
+export default TimeSeriesAreaChart

@@ -1,8 +1,9 @@
 /**
  * Registry mapping value types to chart components.
- * Initially all value types resolve to TimeSeriesChart for isofunctional rollout.
  */
 
+import TimeSeriesAreaChart from '@/components/ui/TimeSeriesAreaChart/index.js'
+import TimeSeriesBandChart from '@/components/ui/TimeSeriesBandChart/index.js'
 import TimeSeriesBarChart from '@/components/ui/TimeSeriesBarChart/index.js'
 import TimeSeriesChart from '@/components/ui/TimeSeriesChart/index.js'
 
@@ -11,7 +12,7 @@ export const DEFAULT_CHART_COMPONENT = TimeSeriesChart
 const VALUE_TYPE_CHART_COMPONENTS = new Map([
   ['cumulative', TimeSeriesBarChart],
   ['instantaneous', TimeSeriesChart],
-  ['average', TimeSeriesChart],
+  ['average', TimeSeriesAreaChart],
   ['minimum', TimeSeriesChart],
   ['maximum', TimeSeriesChart],
   ['median', TimeSeriesChart],
@@ -42,7 +43,29 @@ export function getChartComponentForValueType(valueType) {
  * @returns {React.ComponentType} Chart component to render
  */
 export function resolveChartComponentForValueTypes(valueTypes = []) {
-  for (const valueType of valueTypes) {
+  const uniqueTypes = [...new Set(valueTypes.filter(Boolean))]
+
+  if (uniqueTypes.length === 0) {
+    return DEFAULT_CHART_COMPONENT
+  }
+
+  if (uniqueTypes.includes('minimum') && uniqueTypes.includes('maximum')) {
+    return TimeSeriesBandChart
+  }
+
+  if (uniqueTypes.includes('cumulative')) {
+    return TimeSeriesBarChart
+  }
+
+  if (uniqueTypes.includes('delta-index')) {
+    return TimeSeriesBarChart
+  }
+
+  if (uniqueTypes.includes('average')) {
+    return TimeSeriesAreaChart
+  }
+
+  for (const valueType of uniqueTypes) {
     const component = VALUE_TYPE_CHART_COMPONENTS.get(valueType)
     if (component) {
       return component

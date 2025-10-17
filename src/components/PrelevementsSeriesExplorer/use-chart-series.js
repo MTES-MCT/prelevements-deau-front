@@ -88,7 +88,8 @@ export function useChartSeries({
         label,
         axis,
         color,
-        data
+        data,
+        valueType: param.valueType
       }
     }).filter(Boolean)
   }, [
