@@ -9,7 +9,12 @@ const meta = {
   argTypes: {
     metas: {
       control: 'object',
-      description: 'Liste de métadonnées à afficher. Format: [{icon?, content}]. La propriété "icon" est optionnelle.'
+      description: `
+Liste de métadonnées à afficher. Format: [{iconId?, icon?, content}]. Les propriétés "iconId" et "icon" sont optionnelles.
+
+Si "iconId" est fourni, il sera prioritaire sur "icon" et une icone du DSFR sera importée avec cette className.
+
+Si "icon" est fourni, il doit s'agir d'un composant React (ex: une icône MUI).`
     }
   },
   args: {

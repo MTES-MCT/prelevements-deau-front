@@ -17,11 +17,16 @@ const storyMeta = {
     },
     metas: {
       control: 'object',
-      description: 'Liste de métadonnées [{icon, content}].'
+      description: 'Liste de métadonnées. C.f. [MetasList](..?path=/docs/components-metaslist--docs)'
     },
     rightBadges: {
       control: 'object',
-      description: 'Badges affichés à droite [{icon, label}].'
+      description: `
+Badges affichés à droite [{iconid, icon, label}].
+
+Si "iconId" est fourni, il sera prioritaire sur "icon" et une icone du DSFR sera importée avec cette className.
+
+Si "icon" est fourni, il doit s'agir d'un composant React (ex: une icône MUI).`
     },
     tags: {
       control: 'object',
