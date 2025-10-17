@@ -177,6 +177,7 @@ const DossierDetails = ({dossier, preleveur, files, idPoints}) => {
                   integrations={file.integrations || []}
                   validationStatus={file.validationStatus}
                   errors={file.result?.errors || []}
+                  totalVolumePreleve={file.result?.totalVolumePreleve}
                   downloadFile={downloadFile}
                 />
               ))}

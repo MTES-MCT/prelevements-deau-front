@@ -41,6 +41,7 @@ const FileValidationResult = ({
   integrations = [],
   validationStatus,
   errors = [],
+  totalVolumePreleve,
   scrollIntoView,
   downloadFile
 }) => {
@@ -73,7 +74,6 @@ const FileValidationResult = ({
           pointId: normalizedId,
           rawPointId,
           series: [],
-          volumePreleveTotal: null,
           pointPrelevement: undefined
         })
         sectionsOrder.push(normalizedId)
@@ -92,10 +92,6 @@ const FileValidationResult = ({
     for (const serie of series) {
       const section = ensureSection(serie.pointPrelevement)
       section.series.push(serie)
-
-      if (serie.parameter === 'volume prélevé' && section.volumePreleveTotal === null) {
-        section.volumePreleveTotal = serie.valueTotal ?? null
-      }
     }
 
     return sectionsOrder.map((sectionKey, index) => {
@@ -165,7 +161,7 @@ const FileValidationResult = ({
                   isOpen={selectedAccordionId === section.accordionId}
                   idPoint={section.pointId}
                   pointPrelevement={section.pointPrelevement}
-                  volumePreleveTotal={section.volumePreleveTotal}
+                  volumePreleveTotal={totalVolumePreleve}
                   status={status}
                   handleSelect={() => handleSelectAccordion(section.accordionId)}
                 >
