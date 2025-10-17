@@ -33,19 +33,19 @@ export const normalizeParameterKey = value => {
 const PARAMETER_COLOR_ENTRIES = [
   ['volume preleve', '#000091'],
   ['debit preleve', '#0063CB'],
-  ['debit reserve', '#3A3A3A'],
+  ['debit reserve', '#CE70CC'],
   ['debit restitue', '#009099'],
   ['volume restitue', '#465F9D'],
   ['temperature', '#B34000'],
-  ['turbidite', '#CE0500'],
-  ['niveau deau', '#009099'],
-  ['conductivite', '#6E445A'],
-  ['ph', '#A55800'],
-  ['nitrates', '#18753C'],
-  ['sulfates', '#007D8A'],
-  ['chlorures', '#465F9D'],
-  ['releve dindex de compteur', '#3A3A3A'],
-  ['autre', '#666666']
+  ['turbidite', '#CCB078'],
+  ['niveau deau', '#D8C634'],
+  ['conductivite', '#CE614A'],
+  ['ph', '#FFCA00'],
+  ['nitrates', '#21AB82'],
+  ['sulfates', '#99C221'],
+  ['chlorures', '#34B1B5'],
+  ['releve dindex de compteur', '#3B87FF'],
+  ['autre', '#AEA397']
 ]
 
 export const PARAMETER_COLOR_MAP = new Map(
