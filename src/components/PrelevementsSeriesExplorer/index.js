@@ -110,7 +110,6 @@ const PrelevementsSeriesExplorer = ({
   // Extract metadata from series
   const {
     parameters,
-    parameterOptions,
     parameterMap
   } = useParameterMetadata(seriesList)
 
@@ -132,6 +131,7 @@ const PrelevementsSeriesExplorer = ({
   // Manage parameter selection with validation
   const {
     selectedParams,
+    parameterOptions,
     handleParameterChange
   } = useParameterSelection(parameters, parameterMap, onParameterChange)
 

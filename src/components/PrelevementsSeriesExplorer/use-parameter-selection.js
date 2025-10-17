@@ -49,27 +49,10 @@ export function useParameterMetadata(seriesList) {
       seriesId: s._id
     }))
 
-    // Group parameters by unit for dropdown display (using simple strings)
-    const groupedByUnit = new Map()
-
-    for (const param of parameters) {
-      const unit = param.unit || 'Sans unité'
-      if (!groupedByUnit.has(unit)) {
-        groupedByUnit.set(unit, [])
-      }
-
-      groupedByUnit.get(unit).push(param.parameterLabel)
-    }
-
-    const parameterOptions = [...groupedByUnit.entries()].map(([unit, labels]) => ({
-      label: unit,
-      options: labels
-    }))
-
     // Use parameterLabel as key for direct lookup
     const parameterMap = new Map(parameters.map(param => [param.parameterLabel, param]))
 
-    return {parameters, parameterOptions, parameterMap}
+    return {parameters, parameterMap}
   }, [seriesList])
 }
 
@@ -96,13 +79,23 @@ function findDefaultSelectedParams(parameters) {
   return [parameters[0].parameterLabel]
 }
 
+const FALLBACK_UNIT_LABEL = 'Sans unité'
+
+const normalizeUnitLabel = unit => {
+  if (typeof unit === 'string' && unit.trim()) {
+    return unit.trim()
+  }
+
+  return FALLBACK_UNIT_LABEL
+}
+
 /**
  * Hook for managing parameter selection state
  *
  * @param {Array} parameters - Available parameters
  * @param {Map} parameterMap - Map of parameterLabel to metadata
  * @param {Function} onParameterChange - Callback when selection changes
- * @returns {Object} Selected params (parameterLabels), handlers, and validation state
+ * @returns {Object} Selected params (parameterLabels), computed options, and change handler
  */
 export function useParameterSelection(parameters, parameterMap, onParameterChange) {
   const defaultSelectedParam = useMemo(
@@ -128,26 +121,78 @@ export function useParameterSelection(parameters, parameterMap, onParameterChang
     })
   }, [defaultSelectedParam, parameterMap])
 
+  const selectedUnits = useMemo(() => {
+    const units = new Set()
+    for (const label of selectedParams) {
+      const param = parameterMap.get(label)
+      if (!param) {
+        continue
+      }
+
+      units.add(normalizeUnitLabel(param.unit))
+    }
+
+    return units
+  }, [selectedParams, parameterMap])
+
+  const parameterOptions = useMemo(() => {
+    const groups = new Map()
+    const maxUnitsReached = selectedUnits.size >= 2
+    const selectedUnitsList = [...selectedUnits]
+    const selectedUnitsLabel = selectedUnitsList.join(' / ')
+
+    for (const param of parameters ?? []) {
+      const unitLabel = normalizeUnitLabel(param.unit)
+      const isSelected = selectedParams.includes(param.parameterLabel)
+      const isDisabled = !isSelected && maxUnitsReached && !selectedUnits.has(unitLabel)
+      const option = {
+        value: param.parameterLabel,
+        content: param.parameterLabel,
+        disabled: isDisabled,
+        disabledReason: isDisabled
+          ? `Vous avez déjà sélectionné des paramètres avec deux unités différentes (${selectedUnitsLabel}).`
+          : undefined
+      }
+
+      if (!groups.has(unitLabel)) {
+        groups.set(unitLabel, [])
+      }
+
+      groups.get(unitLabel).push(option)
+    }
+
+    return [...groups.entries()].map(([unit, options]) => ({
+      label: unit,
+      options
+    }))
+  }, [parameters, selectedParams, selectedUnits])
+
   const handleParameterChange = useCallback(paramLabels => {
-    // Validate selection - moved from util to avoid circular dependency
-    const selectedParamsData = paramLabels
-      .map(paramLabel => parameterMap.get(paramLabel))
-      .filter(Boolean)
-
-    const uniqueUnits = [...new Set(selectedParamsData.map(p => p.unit).filter(Boolean))]
-
-    if (uniqueUnits.length > 2) {
-      setValidationError('Vous ne pouvez sélectionner que 2 unités différentes maximum')
+    if (paramLabels.length === 0) {
       return
     }
 
-    setValidationError(null)
+    const uniqueUnits = new Set()
+    for (const label of paramLabels) {
+      const param = parameterMap.get(label)
+      if (!param) {
+        continue
+      }
+
+      uniqueUnits.add(normalizeUnitLabel(param.unit))
+    }
+
+    if (uniqueUnits.size > 2) {
+      return
+    }
+
     setSelectedParams(paramLabels)
     onParameterChange?.(paramLabels)
   }, [parameterMap, onParameterChange])
 
   return {
     selectedParams,
+    parameterOptions,
     handleParameterChange
   }
 }

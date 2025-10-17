@@ -150,7 +150,7 @@ Defaults to 'years'.`
 {
   periodLabel: 'Période d'observation',
   parameterLabel: 'Paramètres à afficher',
-  parameterHint: 'Sélectionnez jusqu'à 2 unités différentes',
+  parameterHint: 'Vous pouvez sélectionner jusqu’à deux unités différentes. Les options incompatibles sont grisées.',
   parameterPlaceholder: 'Choisir des paramètres...',
   noDataMessage: 'Aucune donnée disponible pour la période sélectionnée',
   rangeLabel: 'Affiner la plage temporelle'
