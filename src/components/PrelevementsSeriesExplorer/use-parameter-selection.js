@@ -13,6 +13,162 @@ import {
 } from './constants.js'
 import {indexDuplicateParameters} from './util.js'
 
+// Basic localization dictionaries for parameter metadata
+const FREQUENCY_TRANSLATIONS = new Map([
+  ['daily', 'jours'],
+  ['sub-daily', 'infra-journalier'],
+  ['subdaily', 'infra-journalier'],
+  ['hourly', 'heures'],
+  ['weekly', 'semaines'],
+  ['monthly', 'mois'],
+  ['yearly', 'années'],
+  ['annual', 'années'],
+  ['annually', 'années'],
+  ['quarterly', 'trimestres'],
+  ['biweekly', 'toutes les 2 semaines'],
+  ['fortnightly', 'toutes les 2 semaines']
+])
+
+const VALUE_TYPE_TRANSLATIONS = new Map([
+  ['cumulative', 'cumulée'],
+  ['cumul', 'cumulée'],
+  ['cumulatif', 'cumulée'],
+  ['maximum', 'maximum'],
+  ['minimum', 'minimum'],
+  ['mean', 'moyenne'],
+  ['average', 'moyenne'],
+  ['avg', 'moyenne'],
+  ['median', 'médiane'],
+  ['instantaneous', 'instantané'],
+  ['instant', 'instantané'],
+  ['max', 'maximum'],
+  ['min', 'minimum'],
+  ['sum', 'somme'],
+  ['total', 'total'],
+  ['count', 'nombre'],
+  ['unknown', 'non renseigné']
+])
+
+// Attempt to localize simple "number + unit" patterns (e.g., "15 min")
+function formatNumericFrequencyLabel(normalized) {
+  const durationMatch = normalized.match(
+    /^(\d+(?:[.,]\d+)?)\s*(minute|minutes|min|hour|hours|h|day|days|d|week|weeks|month|months|year|years|yr|yrs)$/
+  )
+
+  if (!durationMatch) {
+    return null
+  }
+
+  const [, rawValue, unit] = durationMatch
+  const value = Number(rawValue.replace(',', '.'))
+  if (Number.isNaN(value)) {
+    return null
+  }
+
+  let unitRoot
+  if (unit.startsWith('min')) {
+    unitRoot = 'minute'
+  } else if (unit.startsWith('h')) {
+    unitRoot = 'hour'
+  } else if (unit.startsWith('d')) {
+    unitRoot = 'day'
+  } else if (unit.startsWith('week')) {
+    unitRoot = 'week'
+  } else if (unit.startsWith('month')) {
+    unitRoot = 'month'
+  } else {
+    unitRoot = 'year'
+  }
+
+  const isPlural = value > 1
+  switch (unitRoot) {
+    case 'minute': {
+      return `${value} ${isPlural ? 'minutes' : 'minute'}`
+    }
+
+    case 'hour': {
+      return `${value} ${isPlural ? 'heures' : 'heure'}`
+    }
+
+    case 'day': {
+      return `${value} ${isPlural ? 'jours' : 'jour'}`
+    }
+
+    case 'week': {
+      return `${value} ${isPlural ? 'semaines' : 'semaine'}`
+    }
+
+    case 'month': {
+      // "mois" is invariant in plural form
+      return `${value} mois`
+    }
+
+    default: {
+      return `${value} ${isPlural ? 'ans' : 'an'}`
+    }
+  }
+}
+
+function formatFrequencyLabel(frequency) {
+  const trimmed = frequency?.toString().trim()
+  if (!trimmed) {
+    return null
+  }
+
+  const normalized = trimmed.toLowerCase()
+  if (FREQUENCY_TRANSLATIONS.has(normalized)) {
+    return FREQUENCY_TRANSLATIONS.get(normalized)
+  }
+
+  const numericLabel = formatNumericFrequencyLabel(normalized)
+  if (numericLabel) {
+    return numericLabel
+  }
+
+  if (normalized.includes('per day')) {
+    return 'par jour'
+  }
+
+  if (normalized.includes('per hour')) {
+    return 'par heure'
+  }
+
+  if (normalized.includes('per minute')) {
+    return 'par minute'
+  }
+
+  return trimmed
+}
+
+function formatValueTypeLabel(valueType) {
+  const trimmed = valueType?.toString().trim()
+  if (!trimmed) {
+    return null
+  }
+
+  const normalized = trimmed.toLowerCase()
+  if (VALUE_TYPE_TRANSLATIONS.has(normalized)) {
+    return VALUE_TYPE_TRANSLATIONS.get(normalized)
+  }
+
+  return trimmed
+}
+
+// Shared presentation for parameter entries inside the multiselect
+const ParameterOptionContent = ({label, frequencyLabel, valueTypeLabel}) => (
+  <div className='selector-option-content'>
+    <div className='selector-option-header'>
+      <span className='selector-option-label'>{label}</span>
+      {valueTypeLabel && (
+        <span className='selector-option-value-type'>{valueTypeLabel}</span>
+      )}
+    </div>
+    {frequencyLabel && (
+      <span className='selector-option-frequency'>{frequencyLabel}</span>
+    )}
+  </div>
+)
+
 /**
  * Extracts and organizes parameter metadata from series list
  *
@@ -46,6 +202,7 @@ export function useParameterMetadata(seriesList) {
       unit: s.unit,
       color: colorMap.get(s.parameter),
       frequency: s.frequency,
+      valueType: s.valueType,
       seriesId: s._id
     }))
 
@@ -145,9 +302,17 @@ export function useParameterSelection(parameters, parameterMap, onParameterChang
       const unitLabel = normalizeUnitLabel(param.unit)
       const isSelected = selectedParams.includes(param.parameterLabel)
       const isDisabled = !isSelected && maxUnitsReached && !selectedUnits.has(unitLabel)
+      const frequencyLabel = formatFrequencyLabel(param.frequency)
+      const valueTypeLabel = formatValueTypeLabel(param.valueType)
       const option = {
         value: param.parameterLabel,
-        content: param.parameterLabel,
+        content: (
+          <ParameterOptionContent
+            label={param.parameterLabel}
+            frequencyLabel={frequencyLabel}
+            valueTypeLabel={valueTypeLabel}
+          />
+        ),
         disabled: isDisabled,
         disabledReason: isDisabled
           ? `Vous avez déjà sélectionné des paramètres avec deux unités différentes (${selectedUnitsLabel}).`
