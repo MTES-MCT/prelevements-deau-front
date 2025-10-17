@@ -429,7 +429,7 @@ export const ScenarioComplet = {
   parameters: {
     docs: {
       description: {
-        story: 'Scénario unique couvrant janvier 2023 à septembre 2025 avec 6 paramètres (dont un en double : "Volume preleve cumulatif #1" et "#2"), toutes les unités et fréquences requises, deux valueType différents, un commentaire de série et un calendrier illustrant chaque cas de légende chaque mois. Ce scénario teste également l\'indexation automatique des paramètres dupliqués.'
+        story: 'Scénario unique couvrant janvier 2023 à septembre 2025 avec 6 paramètres (dont un en double : "Volume prélevé #1" et "#2"), toutes les unités et fréquences requises, deux valueType différents, un commentaire de série et un calendrier illustrant chaque cas de légende chaque mois. Ce scénario teste également l\'indexation automatique des paramètres dupliqués.'
       }
     }
   }
