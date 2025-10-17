@@ -1,20 +1,23 @@
 'use client'
-import {useMemo} from 'react'
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import Tag from '@codegouvfr/react-dsfr/Tag'
 import {Box} from '@mui/material'
 
-import ParameterTrendChart from '@/components/declarations/dossier/prelevements/parameter-trend-chart.js'
-import PrelevementsCalendar from '@/components/declarations/prelevements-calendar/index.js'
+import {getSeriesValues} from '@/app/api/series.js'
+import PrelevementsSeriesExplorer from '@/components/PrelevementsSeriesExplorer/index.js'
+import {getGlobalDateBounds} from '@/components/PrelevementsSeriesExplorer/util.js'
 import DividerSection from '@/components/ui/DividerSection/index.js'
 
 const DeclarationFileDetails = ({
+  pointId,
   moisDeclaration,
-  data = {},
-  typePrelevement = 'aep-zre'
+  series = []
 }) => {
+  const hasPointLink = pointId !== null && pointId !== undefined && pointId !== ''
+  const dailySeries = series.filter(s => s.frequency === '1 day')
+  const fifteenMinSeries = series.filter(s => s.frequency === '15 minutes')
   // Vérifie si les dates de prélèvement (minDate / maxDate) se situent dans le mois déclaré
   const isInDeclarationMonth = date => {
     const declarationDate = new Date(moisDeclaration)
@@ -23,7 +26,7 @@ const DeclarationFileDetails = ({
            && d.getFullYear() === declarationDate.getFullYear()
   }
 
-  const {minDate, maxDate} = data
+  const {minDate, maxDate} = getGlobalDateBounds(series)
 
   const hasDatesOutsideDeclMonth = (() => {
     if (!minDate || !maxDate || !moisDeclaration) {
@@ -33,34 +36,30 @@ const DeclarationFileDetails = ({
     return !isInDeclarationMonth(minDate) || !isInDeclarationMonth(maxDate)
   })()
 
-  const dataWithDatesOnly = useMemo(() => ({
-    ...data,
-    dailyValues: data.dailyValues.filter(({date}) => Boolean(date)),
-    fifteenMinutesValues: data?.fifteenMinutesValues?.filter(({date}) => Boolean(date)) || undefined
-  }), [data])
-
   return (
     <Box className='flex flex-col gap-6'>
-      <div className='flex justify-end p-3'>
-        <Button
-          priority='secondary'
-          size='small'
-          iconId='fr-icon-external-link-line'
-          linkProps={{
-            href: `/points-prelevement/${data.pointPrelevement}`
-          }}
-        >
-          Consulter la fiche
-        </Button>
-      </div>
+      {hasPointLink && (
+        <div className='flex justify-end p-3'>
+          <Button
+            priority='secondary'
+            size='small'
+            iconId='fr-icon-external-link-line'
+            linkProps={{
+              href: `/points-prelevement/${pointId}`
+            }}
+          >
+            Consulter la fiche
+          </Button>
+        </div>
+      )}
 
       <DividerSection title='Paramètres par pas de temps'>
         <Box className='flex flex-col gap-2'>
-          {data.dailyParameters ? (
+          {dailySeries.length > 0 ? (
             <Box className='flex flex-wrap gap-1 items-center'>
-              Journalier : {data.dailyParameters.map(param => (
-                <Tag key={param.paramIndex} sx={{m: 1}}>
-                  {param.nom_parametre} ({param.unite})
+              Journalier : {dailySeries.map(serie => (
+                <Tag key={serie._id} sx={{m: 1}}>
+                  {serie.parameter} ({serie.unit})
                 </Tag>
               ))}
             </Box>
@@ -68,11 +67,11 @@ const DeclarationFileDetails = ({
             <Alert severity='warning' description='Aucun paramètre journalier renseigné.' />
           )}
 
-          {data.fifteenMinutesParameters && (
+          {fifteenMinSeries.length > 0 && (
             <Box className='flex flex-wrap gap-1 items-center'>
-              Quinze minutes : {data.fifteenMinutesParameters.map(param => (
-                <Tag key={param.paramIndex} sx={{m: 1}}>
-                  {param.nom_parametre} ({param.unite})
+              Quinze minutes : {fifteenMinSeries.map(serie => (
+                <Tag key={serie._id} sx={{m: 1}}>
+                  {serie.parameter} ({serie.unit})
                 </Tag>
               ))}
             </Box>
@@ -80,7 +79,7 @@ const DeclarationFileDetails = ({
         </Box>
       </DividerSection>
 
-      {Object.keys(data).length > 0 && (
+      {series.length > 0 && (
         <DividerSection title='Calendrier des prélèvements'>
           {hasDatesOutsideDeclMonth && (
             <Alert
@@ -94,8 +93,15 @@ const DeclarationFileDetails = ({
             />
           )}
 
-          <PrelevementsCalendar data={dataWithDatesOnly} />
-          <ParameterTrendChart data={dataWithDatesOnly} connectNulls={typePrelevement === 'camion-citerne'} />
+          <PrelevementsSeriesExplorer
+            series={series}
+            showPeriodSelector={false}
+            timeSeriesChartProps={{
+              enableThresholds: false,
+              enableDecimation: false
+            }}
+            getSeriesValues={getSeriesValues}
+          />
         </DividerSection>
       )}
     </Box>
