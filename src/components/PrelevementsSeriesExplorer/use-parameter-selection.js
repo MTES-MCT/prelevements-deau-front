@@ -111,7 +111,6 @@ export function useParameterSelection(parameters, parameterMap, onParameterChang
   )
 
   const [selectedParams, setSelectedParams] = useState(defaultSelectedParam)
-  const [validationError, setValidationError] = useState(null)
 
   // Sync default selection when parameters change
   useEffect(() => {
@@ -149,7 +148,6 @@ export function useParameterSelection(parameters, parameterMap, onParameterChang
 
   return {
     selectedParams,
-    validationError,
     handleParameterChange
   }
 }

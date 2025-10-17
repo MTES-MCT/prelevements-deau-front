@@ -132,7 +132,6 @@ const PrelevementsSeriesExplorer = ({
   // Manage parameter selection with validation
   const {
     selectedParams,
-    validationError,
     handleParameterChange
   } = useParameterSelection(parameters, parameterMap, onParameterChange)
 
@@ -263,8 +262,6 @@ const PrelevementsSeriesExplorer = ({
           placeholder={t.parameterPlaceholder}
           value={selectedParams}
           options={parameterOptions}
-          validationError={validationError}
-          validationErrorTitle={t.validationError}
           onChange={handleParameterChange}
         />
       </Box>

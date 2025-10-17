@@ -1,12 +1,11 @@
 /**
  * ParameterSelector Component
  *
- * Handles parameter selection with validation
+ * Wrapper around the grouped multiselect widget for choosing parameters.
  */
 
 'use client'
 
-import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Box} from '@mui/material'
 
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
@@ -17,8 +16,6 @@ const ParameterSelector = ({
   placeholder,
   value,
   options,
-  validationError,
-  validationErrorTitle,
   onChange
 }) => {
   if (options.length === 0) {
@@ -35,14 +32,6 @@ const ParameterSelector = ({
         options={options}
         onChange={onChange}
       />
-      {validationError && (
-        <Alert
-          severity='error'
-          title={validationErrorTitle}
-          description={validationError}
-          className='mt-2'
-        />
-      )}
     </Box>
   )
 }

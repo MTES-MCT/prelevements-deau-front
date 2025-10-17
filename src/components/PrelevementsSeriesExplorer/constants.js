@@ -97,7 +97,6 @@ export const DEFAULT_TRANSLATIONS = {
   parameterHint: 'Sélectionnez jusqu\'à 2 unités différentes',
   parameterPlaceholder: 'Choisir des paramètres...',
   noDataMessage: 'Aucune donnée disponible pour la période sélectionnée',
-  validationError: 'Erreur de validation',
   rangeLabel: 'Affiner la plage temporelle',
   loadingData: 'Chargement des données...',
   loadError: 'Erreur de chargement',
