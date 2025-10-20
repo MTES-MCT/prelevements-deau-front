@@ -1,0 +1,6 @@
+/* Supprime le margin automatique du DSFR sur les cartes */
+.fr-card__end {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
