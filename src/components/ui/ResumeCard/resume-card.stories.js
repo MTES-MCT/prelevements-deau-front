@@ -42,7 +42,7 @@ const meta = {
     },
     handleClick: {
       control: false,
-      description: 'Callback appelé lors du clic sur le bouton d’action.',
+      description: 'Callback appelé lors du clic sur le bouton d’action.'
     }
   },
   args: {
