@@ -85,7 +85,7 @@ const ChartWithRangeSlider = ({
             }}
             step={1}
             value={rangeIndices}
-            valueLabelDisplay='auto'
+            valueLabelDisplay='on'
             valueLabelFormat={idx => formatSliderMark(allDates[idx])}
             onChange={(event, value, activeThumb) => {
               onRangeChange?.(event, value, activeThumb)
