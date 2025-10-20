@@ -6,6 +6,7 @@ import {Typography, Box} from '@mui/material'
 import Icon from '@/components/ui/Icon/index.js'
 import MetasList from '@/components/ui/MetasList/index.js'
 import TagsList from '@/components/ui/TagsList/index.js'
+import './style.css'
 
 const CardTitle = ({title, subtitle, subtitleIcon: SubtitleIcon, rightIcons}) => (
   <Box>
@@ -66,7 +67,7 @@ const ListItem = ({
     <Card
       start={<TagsList tags={tags} />}
       title={<CardTitle title={title} subtitle={subtitle} subtitleIcon={subtitleIcon} rightIcons={rightIcons} />}
-      end={<MetasList metas={metas} />}
+      end={metas?.length > 0 ? <Box className='mt-2'><MetasList metas={metas} /></Box> : null}
       border={border || false}
       size='small'
       style={background === 'primary' ? primaryBackgroundStyle : secondaryBackgroundStyle}
