@@ -31,7 +31,7 @@ const DossierPage = async ({params}) => {
       <StartDsfrOnHydration />
 
       <DossierHeader
-        numero={dossier.number}
+        numero={dossier.ds.dossierNumber}
         status={dossier.status}
         moisDeclaration={dossier.moisDeclaration}
         dateDepot={dossier.dateDepot}
