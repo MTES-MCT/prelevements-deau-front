@@ -1,3 +1,5 @@
+import {action} from 'storybook/actions'
+
 import ResumeCard from './index.js'
 
 const meta = {
@@ -53,7 +55,7 @@ const meta = {
     value: '12',
     hint: 'exploitations arrivent à expiration',
     actionLabel: 'Consulter la page',
-    handleClick: () => console.log('Redirection vers...')
+    handleClick: action('handleClick')
   }
 }
 
