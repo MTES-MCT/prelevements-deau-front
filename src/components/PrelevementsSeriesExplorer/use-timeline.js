@@ -102,7 +102,7 @@ export function useTimeline(timelineSamples, showRangeSlider) {
       return
     }
 
-    setRangeIndices(() => {
+    setRangeIndices(previous => {
       let [start, end] = newValue.map(value => clamp(Math.round(value), 0, maxIndex))
 
       // Only enforce minimum step if minSteps is 1 (i.e., totalDates > 1)
@@ -115,6 +115,11 @@ export function useTimeline(timelineSamples, showRangeSlider) {
           const adjustedEnd = Math.min(Math.max(end, 1), maxIndex)
           end = adjustedEnd
           start = adjustedEnd - 1
+        } else {
+          // Fallback when activeThumb is undefined: expand end to maintain minimum range
+          const adjustedStart = Math.min(previous[0], maxIndex - 1)
+          start = adjustedStart
+          end = adjustedStart + 1
         }
       }
 
