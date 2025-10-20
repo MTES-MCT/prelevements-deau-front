@@ -3,7 +3,7 @@ import Button from '@codegouvfr/react-dsfr/Button'
 import {Box, Typography} from '@mui/material'
 
 const ALERTES_STYLE = {
-  info: {icon: 'fr-icon-checkbox-fill', color: fr.colors.decisions.text.active.blueFrance.default},
+  info: {icon: 'fr-icon-info-fill', color: fr.colors.decisions.text.active.blueFrance.default},
   success: {icon: 'fr-icon-success-fill', color: fr.colors.decisions.text.default.success.default},
   warning: {icon: 'fr-icon-warning-fill', color: fr.colors.decisions.text.default.warning.default},
   error: {icon: 'fr-icon-error-fill', color: fr.colors.decisions.text.default.error.default}
