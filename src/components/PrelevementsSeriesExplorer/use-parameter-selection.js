@@ -13,20 +13,13 @@ import {
 } from './constants.js'
 import {indexDuplicateParameters} from './util.js'
 
-// Basic localization dictionaries for parameter metadata
-const FREQUENCY_TRANSLATIONS = new Map([
-  ['daily', 'jours'],
-  ['sub-daily', 'infra-journalier'],
-  ['subdaily', 'infra-journalier'],
-  ['hourly', 'heures'],
-  ['weekly', 'semaines'],
-  ['monthly', 'mois'],
-  ['yearly', 'années'],
-  ['annual', 'années'],
-  ['annually', 'années'],
-  ['quarterly', 'trimestres'],
-  ['biweekly', 'toutes les 2 semaines'],
-  ['fortnightly', 'toutes les 2 semaines']
+// Possible frequencies (specification) => French labels
+const FREQUENCY_LABELS = new Map([
+  ['1 second', '1 seconde'],
+  ['1 minute', '1 minute'],
+  ['15 minutes', '15 minutes'],
+  ['1 hour', '1 heure'],
+  ['1 day', '1 jour']
 ])
 
 const VALUE_TYPE_TRANSLATIONS = new Map([
@@ -49,95 +42,14 @@ const VALUE_TYPE_TRANSLATIONS = new Map([
   ['unknown', 'non renseigné']
 ])
 
-// Attempt to localize simple "number + unit" patterns (e.g., "15 min")
-function formatNumericFrequencyLabel(normalized) {
-  const durationMatch = normalized.match(
-    /^(\d+(?:[.,]\d+)?)\s*(minute|minutes|min|hour|hours|h|day|days|d|week|weeks|month|months|year|years|yr|yrs)$/
-  )
-
-  if (!durationMatch) {
-    return null
-  }
-
-  const [, rawValue, unit] = durationMatch
-  const value = Number(rawValue.replace(',', '.'))
-  if (Number.isNaN(value)) {
-    return null
-  }
-
-  let unitRoot
-  if (unit.startsWith('min')) {
-    unitRoot = 'minute'
-  } else if (unit.startsWith('h')) {
-    unitRoot = 'hour'
-  } else if (unit.startsWith('d')) {
-    unitRoot = 'day'
-  } else if (unit.startsWith('week')) {
-    unitRoot = 'week'
-  } else if (unit.startsWith('month')) {
-    unitRoot = 'month'
-  } else {
-    unitRoot = 'year'
-  }
-
-  const isPlural = value > 1
-  switch (unitRoot) {
-    case 'minute': {
-      return `${value} ${isPlural ? 'minutes' : 'minute'}`
-    }
-
-    case 'hour': {
-      return `${value} ${isPlural ? 'heures' : 'heure'}`
-    }
-
-    case 'day': {
-      return `${value} ${isPlural ? 'jours' : 'jour'}`
-    }
-
-    case 'week': {
-      return `${value} ${isPlural ? 'semaines' : 'semaine'}`
-    }
-
-    case 'month': {
-      // "mois" is invariant in plural form
-      return `${value} mois`
-    }
-
-    default: {
-      return `${value} ${isPlural ? 'ans' : 'an'}`
-    }
-  }
-}
-
 function formatFrequencyLabel(frequency) {
   const trimmed = frequency?.toString().trim()
   if (!trimmed) {
     return null
   }
 
-  const normalized = trimmed.toLowerCase()
-  if (FREQUENCY_TRANSLATIONS.has(normalized)) {
-    return FREQUENCY_TRANSLATIONS.get(normalized)
-  }
-
-  const numericLabel = formatNumericFrequencyLabel(normalized)
-  if (numericLabel) {
-    return numericLabel
-  }
-
-  if (normalized.includes('per day')) {
-    return 'par jour'
-  }
-
-  if (normalized.includes('per hour')) {
-    return 'par heure'
-  }
-
-  if (normalized.includes('per minute')) {
-    return 'par minute'
-  }
-
-  return trimmed
+  const label = FREQUENCY_LABELS.get(trimmed.toLowerCase())
+  return label ?? trimmed
 }
 
 function formatValueTypeLabel(valueType) {
