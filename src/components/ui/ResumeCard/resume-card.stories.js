@@ -16,8 +16,7 @@ const meta = {
       control: 'text',
       description: 'Titre ou label principal de la carte.',
       table: {
-        type: {summary: 'string'},
-        defaultValue: {summary: 'info'}
+        type: {summary: 'string'}
       }
     },
     value: {
