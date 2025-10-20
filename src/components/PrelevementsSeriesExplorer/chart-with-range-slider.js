@@ -6,7 +6,7 @@
 
 'use client'
 
-import {useMemo} from 'react'
+import {useMemo, useCallback} from 'react'
 
 import {Box, Slider, Typography} from '@mui/material'
 import {fr} from 'date-fns/locale'
@@ -54,6 +54,10 @@ const ChartWithRangeSlider = ({
     }
   }, [locale, timeSeriesChartProps])
 
+  const handleSliderChange = useCallback((event, value, activeThumb) => {
+    onRangeChange?.(event, value, activeThumb)
+  }, [onRangeChange])
+
   if (series.length === 0) {
     return null
   }
@@ -87,9 +91,7 @@ const ChartWithRangeSlider = ({
             value={rangeIndices}
             valueLabelDisplay='on'
             valueLabelFormat={idx => formatSliderMark(allDates[idx])}
-            onChange={(event, value, activeThumb) => {
-              onRangeChange?.(event, value, activeThumb)
-            }}
+            onChange={handleSliderChange}
           />
         </Box>
       )}
