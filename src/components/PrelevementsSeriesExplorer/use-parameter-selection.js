@@ -22,24 +22,16 @@ const FREQUENCY_LABELS = new Map([
   ['1 day', '1 jour']
 ])
 
-const VALUE_TYPE_TRANSLATIONS = new Map([
-  ['cumulative', 'cumulée'],
-  ['cumul', 'cumulée'],
-  ['cumulatif', 'cumulée'],
-  ['maximum', 'maximum'],
-  ['minimum', 'minimum'],
-  ['mean', 'moyenne'],
-  ['average', 'moyenne'],
-  ['avg', 'moyenne'],
-  ['median', 'médiane'],
+// Possible value types (specification) => French labels
+const VALUE_TYPE_LABELS = new Map([
   ['instantaneous', 'instantané'],
-  ['instant', 'instantané'],
-  ['max', 'maximum'],
-  ['min', 'minimum'],
-  ['sum', 'somme'],
-  ['total', 'total'],
-  ['count', 'nombre'],
-  ['unknown', 'non renseigné']
+  ['average', 'moyenne'],
+  ['minimum', 'minimum'],
+  ['maximum', 'maximum'],
+  ['median', 'médiane'],
+  ['delta-index', 'delta-index'],
+  ['cumulative', 'cumulé'],
+  ['raw', 'brut']
 ])
 
 function formatFrequencyLabel(frequency) {
@@ -58,12 +50,8 @@ function formatValueTypeLabel(valueType) {
     return null
   }
 
-  const normalized = trimmed.toLowerCase()
-  if (VALUE_TYPE_TRANSLATIONS.has(normalized)) {
-    return VALUE_TYPE_TRANSLATIONS.get(normalized)
-  }
-
-  return trimmed
+  const label = VALUE_TYPE_LABELS.get(trimmed.toLowerCase())
+  return label ?? VALUE_TYPE_LABELS.get('raw')
 }
 
 // Shared presentation for parameter entries inside the multiselect
