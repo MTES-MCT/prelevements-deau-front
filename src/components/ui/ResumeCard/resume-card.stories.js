@@ -41,11 +41,8 @@ const meta = {
       }
     },
     handleClick: {
-      control: 'function',
+      control: false,
       description: 'Callback appelé lors du clic sur le bouton d’action.',
-      table: {
-        type: {summary: 'function'}
-      }
     }
   },
   args: {
