@@ -253,7 +253,7 @@ const GroupedMultiselect = ({
                     role='option'
                     tabIndex={-1}
                     title={tooltip}
-                    onClick={isDisabled ? undefined : () => toggleOption(option)}
+                    onClick={isDisabled ? () => {} : () => toggleOption(option)}
                     onKeyDown={handleKeyDown}
                   >
                     {isSelected && (
