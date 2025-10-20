@@ -49,20 +49,30 @@ Si vous utilisez les deux en même temps, seul le iconId sera pris en compte.
         `
       }
     }
+  },
+  args: {
+    iconElement: OilBarrelOutlinedIcon,
   }
 }
 
 export default storyMeta
 
-export const Default = args => <Icon {...args} />
-export const WithCssClass = Default.bind({})
-WithCssClass.args = {
-  iconId: 'fr-icon-edit-line',
-  className: 'text-blue-500'
+const renderIcon = ({iconId, iconElement, ...args}) => {
+  return <Icon iconId={iconId} iconElement={iconElement} {...args} />
 }
 
-export const WithReactComponent = Default.bind({})
-WithReactComponent.args = {
-  iconElement: OilBarrelOutlinedIcon,
-  style: {color: fr.colors.decisions.background.actionHigh.blueFrance.hover}
+export const Default = {render: renderIcon}
+export const WithCssClass = {
+  args: {
+    iconId: 'fr-icon-edit-line',
+    className: 'text-blue-500'
+  },
+  render: renderIcon
+}
+
+export const WithReactComponent = {
+  args: {
+    iconElement: OilBarrelOutlinedIcon,
+    style: {color: fr.colors.decisions.background.actionHigh.blueFrance.hover}
+  }, render: renderIcon
 }
