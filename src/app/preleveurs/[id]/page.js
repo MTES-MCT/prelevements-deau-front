@@ -1,7 +1,6 @@
-import {Alert} from '@codegouvfr/react-dsfr/Alert'
-import {Button} from '@codegouvfr/react-dsfr/Button'
+import {fr} from '@codegouvfr/react-dsfr'
 import {
-  Box, Chip, Typography
+  Box
 } from '@mui/material'
 import {notFound} from 'next/navigation'
 
@@ -13,9 +12,30 @@ import {
 } from '@/app/api/points-prelevement.js'
 import DocumentsList from '@/components/documents/documents-list.js'
 import ExploitationsList from '@/components/exploitations/exploitations-list.js'
-import {getUsagesColors} from '@/components/map/legend-colors.js'
-import LabelValue from '@/components/ui/LabelValue/index.js'
+import EntityHeader from '@/components/ui/EntityHeader/index.js'
+import Icon from '@/components/ui/Icon/index.js'
+import SectionCard from '@/components/ui/SectionCard/index.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
+import {usageIcons} from '@/lib/points-prelevement.js'
+
+const iconColorStyle = {color: fr.colors.decisions.text.label.blueFrance.default}
+
+const InfoCard = ({preleveur}) => {
+  if (!preleveur.email && !preleveur.numero_telephone && !preleveur.adresse_1) {
+    return null
+  }
+
+  return (
+    <SectionCard>
+      <ul className='[&>li]:flex [&>li]:gap-1'>
+        {preleveur.email ? <li><Icon iconId='ri-at-line' style={iconColorStyle} /><span>{preleveur.email}</span></li> : null}
+        {preleveur.numero_telephone
+          ? <li><Icon iconId='ri-phone-line' style={iconColorStyle} /><span>{preleveur.numero_telephone}</span></li> : null}
+        {preleveur.adresse_1 ? <li><Icon iconId='ri-home-4-line' style={iconColorStyle} /><span>{preleveur.adresse_1}</span></li> : null}
+      </ul>
+    </SectionCard>
+  )
+}
 
 const Page = async ({params}) => {
   const {id} = await params
@@ -40,69 +60,31 @@ const Page = async ({params}) => {
       <StartDsfrOnHydration />
 
       <Box className='fr-container h-full w-full flex flex-col gap-5 mb-5'>
-        <Typography variant='h4' className='fr-mt-3w'>
-          <div className='flex justify-between pb-2'>
-            {preleveur.civilite} {preleveur.nom} {preleveur.prenom} {preleveur.sigle} {preleveur.raison_sociale}
-            <div>
-              <Button
-                priority='secondary'
-                iconId='fr-icon-edit-line'
-                linkProps={{
-                  href: `/preleveurs/${preleveur.id_preleveur}/edit`
-                }}
-              >
-                Éditer
-              </Button>
-            </div>
-          </div>
-        </Typography>
-        <div className='italic'>
-          <LabelValue label='Usages'>
-            {preleveur.usages && preleveur.usages.length > 0 ? (
-              preleveur.usages.map(u => (
-                <Chip
-                  key={u}
-                  label={u}
-                  sx={{
-                    ml: 1,
-                    backgroundColor: getUsagesColors(u)?.color,
-                    color: getUsagesColors(u)?.textColor
-                  }}
-                />
-              ))
-            ) : (
-              <Alert severity='info' description='Aucun usage' />
-            )}
-          </LabelValue>
-        </div>
-
-        <div className='flex justify-between'>
-          <Typography variant='h6' className='fr-mt-1w'>
-            Documents :
-          </Typography>
-          <Button
-            size='small'
-            priority='secondary'
-            linkProps={{
-              href: `/preleveurs/${id}/documents`
-            }}
-          >
-            Gestion des documents
-          </Button>
-        </div>
-        {documents?.length > 0 ? (
-          <DocumentsList
-            documents={documents}
-          />
-        ) : (
-          <p><i>Pas de documents</i></p>
-        )}
-
-        {preleveur.exploitations && preleveur.exploitations.length > 0 ? (
-          <ExploitationsList exploitations={exploitationsWithPoints} />
-        ) : (
-          <Alert severity='info' description='Aucune exploitation' />
-        )}
+        <EntityHeader
+          title={<><span
+            className='fr-icon-user-line' />{preleveur.civilite} {preleveur.nom} {preleveur.prenom} {preleveur.sigle} {preleveur.raison_sociale}</>}
+          rightBadges={preleveur.usages.map(usage => (
+            {label: usage, icon: usageIcons[usage]}
+          ))}
+          hrefButtons={[
+            {
+              label: 'Éditer le préleveur',
+              icon: 'fr-icon-edit-line',
+              alt: '',
+              priority: 'secondary',
+              href: `/preleveurs/${preleveur.id_preleveur}/edit`
+            }
+          ]}
+          metas={[
+            {
+              iconId: 'ri-map-pin-user-line',
+              content: <>{preleveur.exploitations.length} exploitation{preleveur.exploitations.length > 0 ? 's' : ''}</>
+            }
+          ]}
+        />
+        <InfoCard preleveur={preleveur} />
+        <ExploitationsList hidePreleveur exploitations={exploitationsWithPoints} preleveurs={[preleveur]} />
+        <DocumentsList idPreleveur={id} documents={documents} />
       </Box>
     </>
   )

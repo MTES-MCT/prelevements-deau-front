@@ -89,6 +89,7 @@ const DocumentsListForm = ({documents, idPreleveur}) => {
       <>
         <DocumentsList
           documents={documentsList}
+          idPreleveur={idPreleveur}
           handleDelete={handleDeleteDialog}
           handleEdit={handleEdit}
         />

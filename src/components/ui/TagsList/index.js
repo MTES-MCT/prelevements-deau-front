@@ -6,9 +6,9 @@ const TagsList = ({tags = []}) => {
 
   return (
     <ul className='fr-badges-group'>
-      {uniqueMetas.map(({label, severity}) => (
+      {uniqueMetas.map(({label, severity, hasIcon = true}) => (
         <li key={label}>
-          <Badge style={{marginBottom: 0}} severity={severity || ''}>{label}</Badge>
+          <Badge noIcon={!hasIcon} style={{marginBottom: 0}} severity={severity || ''}>{label}</Badge>
         </li>
       ))}
     </ul>
