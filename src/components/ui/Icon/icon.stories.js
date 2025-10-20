@@ -51,15 +51,13 @@ Si vous utilisez les deux en même temps, seul le iconId sera pris en compte.
     }
   },
   args: {
-    iconElement: OilBarrelOutlinedIcon,
+    iconElement: OilBarrelOutlinedIcon
   }
 }
 
 export default storyMeta
 
-const renderIcon = ({iconId, iconElement, ...args}) => {
-  return <Icon iconId={iconId} iconElement={iconElement} {...args} />
-}
+const renderIcon = ({iconId, iconElement, ...args}) => <Icon iconId={iconId} iconElement={iconElement} {...args} />
 
 export const Default = {render: renderIcon}
 export const WithCssClass = {
