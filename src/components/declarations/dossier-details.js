@@ -7,7 +7,7 @@ import {
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Box, Skeleton} from '@mui/material'
-import {flatMap, sumBy} from 'lodash'
+import {flatMap, sumBy} from 'lodash-es'
 
 import PrelevementsAccordion from './dossier/prelevements/prelevements-accordion.js'
 import VolumesPompes from './dossier/prelevements/volumes-pompes.js'
