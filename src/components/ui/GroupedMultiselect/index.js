@@ -23,7 +23,8 @@ const GroupedMultiselect = ({
   placeholder,
   options = [],
   onChange,
-  disabled
+  disabled,
+  className
 }) => {
   const [open, setOpen] = useState(false)
   const [showMore, setShowMore] = useState(false)
@@ -175,16 +176,17 @@ const GroupedMultiselect = ({
   return (
     <div
       ref={ref}
-      style={{position: 'relative'}}
-      className={disabled ? 'fr-select-group--disabled' : ''}
+      className={`relative gap-2${disabled ? ' fr-select-group--disabled' : ''}${className ? ` ${className}` : ''}`}
     >
-      <label className='fr-label' htmlFor='selector'>{label}</label>
-      {hint && <span className='fr-hint-text'>{hint}</span>}
+      <div>
+        {label && (<label className='fr-label' htmlFor='selector'>{label}</label>)}
+        {hint && <span className='fr-hint-text'>{hint}</span>}
+      </div>
 
       <Box
         ref={selectRef}
         id='selector'
-        className={`fr-select mt-2${disabled ? ' fr-bg-disabled-grey' : ''}`}
+        className={`fr-select${disabled ? ' fr-bg-disabled-grey' : ''}`}
         aria-disabled={disabled}
         sx={{
           cursor: disabled ? 'not-allowed' : 'pointer'
