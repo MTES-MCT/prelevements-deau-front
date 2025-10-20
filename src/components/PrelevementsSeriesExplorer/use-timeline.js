@@ -93,21 +93,42 @@ export function useTimeline(timelineSamples, showRangeSlider) {
     })
   }, [allDates, rangeIndices, timelineSamples])
 
-  const handleRangeChange = useCallback((event, newValue) => {
-    if (!Array.isArray(newValue)) {
+  const totalDates = allDates.length
+  const maxIndex = Math.max(totalDates - 1, 0)
+  const minSteps = totalDates > 1 ? 1 : 0
+
+  const handleRangeChange = useCallback((event, newValue, activeThumb) => {
+    if (!Array.isArray(newValue) || totalDates <= 1) {
       return
     }
 
-    const [start, end] = newValue
-    if (end - start < 1) {
-      return
-    }
+    setRangeIndices(previous => {
+      let [start, end] = newValue.map(value => clamp(Math.round(value), 0, maxIndex))
 
-    setRangeIndices([
-      clamp(start, 0, allDates.length - 1),
-      clamp(end, 0, allDates.length - 1)
-    ])
-  }, [allDates.length])
+      // Only enforce minimum step if minSteps is 1 (i.e., totalDates > 1)
+      if (minSteps === 1 && end - start < 1) {
+        if (activeThumb === 0) {
+          const adjustedStart = Math.min(start, maxIndex - 1)
+          start = adjustedStart
+          end = adjustedStart + 1
+        } else if (activeThumb === 1) {
+          const adjustedEnd = Math.min(Math.max(end, 1), maxIndex)
+          end = adjustedEnd
+          start = adjustedEnd - 1
+        } else {
+          // Fallback when activeThumb is undefined: expand end to maintain minimum range
+          const adjustedStart = Math.min(previous[0], maxIndex - 1)
+          start = adjustedStart
+          end = adjustedStart + 1
+        }
+      }
+
+      return [
+        clamp(start, 0, maxIndex),
+        clamp(end, 0, maxIndex)
+      ]
+    })
+  }, [maxIndex, minSteps, totalDates])
 
   const handleCalendarDayClick = useCallback(value => {
     if (!value?.date || !showRangeSlider || allDates.length <= 1) {

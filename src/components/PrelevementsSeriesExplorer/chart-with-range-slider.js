@@ -6,7 +6,7 @@
 
 'use client'
 
-import {useMemo} from 'react'
+import {useMemo, useCallback} from 'react'
 
 import {Box, Slider, Typography} from '@mui/material'
 import {fr} from 'date-fns/locale'
@@ -26,7 +26,7 @@ const DEFAULT_MIN_CHART_HEIGHT = 360
  * @param {[number, number]} props.rangeIndices - Current range boundaries
  * @param {Array<Object>} props.sliderMarks - Slider marks configuration
  * @param {string} props.rangeLabel - Label displayed above the slider
- * @param {Function} props.onRangeChange - Callback triggered when slider range updates
+ * @param {Function} props.onRangeChange - Slider change handler, receives same args as MUI `Slider` onChange
  * @param {number} [props.minChartHeight=DEFAULT_MIN_CHART_HEIGHT] - Minimum height for the chart container
  * @param {Object} [props.timeSeriesChartProps] - Additional props forwarded to `TimeSeriesChart`
  */
@@ -53,6 +53,10 @@ const ChartWithRangeSlider = ({
       ...otherProps
     }
   }, [locale, timeSeriesChartProps])
+
+  const handleSliderChange = useCallback((event, value, activeThumb) => {
+    onRangeChange?.(event, value, activeThumb)
+  }, [onRangeChange])
 
   if (series.length === 0) {
     return null
@@ -85,9 +89,9 @@ const ChartWithRangeSlider = ({
             }}
             step={1}
             value={rangeIndices}
-            valueLabelDisplay='auto'
+            valueLabelDisplay='on'
             valueLabelFormat={idx => formatSliderMark(allDates[idx])}
-            onChange={onRangeChange}
+            onChange={handleSliderChange}
           />
         </Box>
       )}
