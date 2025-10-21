@@ -23,6 +23,7 @@ import {
  * @returns {Object} Timeline state and handlers
  */
 export function useTimeline(timelineSamples, showRangeSlider) {
+  // Collect unique day strings from samples to figure out the continuous day range.
   const baseDates = useMemo(() => {
     if (!Array.isArray(timelineSamples) || timelineSamples.length === 0) {
       return []
@@ -41,6 +42,7 @@ export function useTimeline(timelineSamples, showRangeSlider) {
       .filter(Boolean)
   }, [timelineSamples])
 
+  // Fill any potential gaps to get a complete array of consecutive days.
   const {allDates: dayDates} = useMemo(() => {
     if (baseDates.length === 0) {
       return {allDates: []}
@@ -49,6 +51,7 @@ export function useTimeline(timelineSamples, showRangeSlider) {
     return fillDateGaps(baseDates)
   }, [baseDates])
 
+  // Slider works on boundaries: [start, exclusive end]. We duplicate the last day + 1 midnight to allow minuit→minuit ranges.
   const sliderDates = useMemo(() => {
     if (dayDates.length === 0) {
       return []
@@ -61,6 +64,7 @@ export function useTimeline(timelineSamples, showRangeSlider) {
     return expanded
   }, [dayDates])
 
+  // Range indices refer to positions within sliderDates, not the raw timelineSamples.
   const [rangeIndices, setRangeIndices] = useState([0, 0])
 
   // Reset range when dates change
@@ -71,6 +75,7 @@ export function useTimeline(timelineSamples, showRangeSlider) {
     }
   }, [sliderDates.length])
 
+  // Visible date range is inclusive of start and exclusive of end, but expressed in day precision.
   const visibleDateRange = useMemo(() => {
     if (sliderDates.length === 0 || dayDates.length === 0) {
       return []
@@ -86,6 +91,7 @@ export function useTimeline(timelineSamples, showRangeSlider) {
     return dayDates.filter(date => date >= rangeStart && date < rangeEnd)
   }, [dayDates, sliderDates, rangeIndices])
 
+  // Marks are built on whole days, we map them back to slider indices after expanding.
   const sliderMarks = useMemo(() => {
     if (sliderDates.length === 0) {
       return []
@@ -112,6 +118,7 @@ export function useTimeline(timelineSamples, showRangeSlider) {
       .filter(Boolean)
   }, [dayDates, sliderDates])
 
+  // Filter samples by the currently selected window using their timestamp boundaries.
   const visibleSamples = useMemo(() => {
     if (sliderDates.length === 0 || !Array.isArray(timelineSamples)) {
       return []
@@ -135,6 +142,7 @@ export function useTimeline(timelineSamples, showRangeSlider) {
 
   const totalDates = sliderDates.length
   const maxIndex = Math.max(totalDates - 1, 0)
+  // Minimum width of the window: 1 step → a full day when sliderDates include the +1 day boundary.
   const minSteps = totalDates > 1 ? 1 : 0
   const handleRangeChange = useCallback((event, newValue, activeThumb) => {
     if (!Array.isArray(newValue) || totalDates <= 1) {
