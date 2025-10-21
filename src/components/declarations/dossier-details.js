@@ -31,15 +31,10 @@ function getVolumePrelevementTotal(dossier, files) {
 
   // 1. Priorité aux fichiers si présents
   if (files?.length) {
-    // Get volume series from all files
-    const volumeSeries = flatMap(files, file =>
-      file.series?.filter(serie => serie.parameter === 'volume prélevé' && serie.unit === 'm³') || []
+    return sumBy(
+      flatMap(files, file => file.result ? (file.result.totalVolumePreleve ? [file.result.totalVolumePreleve] : []) : []),
+      v => v ?? 0
     )
-
-    if (volumeSeries.length > 0) {
-      // Sum up the valueTotal from all volume series
-      return sumBy(volumeSeries, serie => serie.valueTotal || 0)
-    }
   }
 
   // 2. Sinon, on regarde les relevés index
