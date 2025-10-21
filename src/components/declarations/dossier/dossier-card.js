@@ -86,7 +86,7 @@ const DossierCard = ({dossier, background, url}) => (
       border
       title={dossier?.declarant?.raisonSociale
         ?? `${dossier.demandeur?.nom} ${dossier.demandeur?.prenom}`}
-      subtitle={dossier.number}
+      subtitle={dossier.ds.dossierNumber}
       subtitleIcon={ArticleOutlined}
       background={background}
       tags={tags[dossier.validationStatus]
