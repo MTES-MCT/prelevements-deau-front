@@ -260,6 +260,7 @@ export function useLoadSeriesValues({seriesList, selectedPeriods, selectedParams
             // Mirror the daily value onto the timeline to ensure the chart renders when no sub-daily data exist.
             sample.values[paramIndex] = directValue
           }
+
           continue
         }
 
