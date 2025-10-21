@@ -4,11 +4,11 @@ import {
 } from '@mui/icons-material'
 import {Box, Typography} from '@mui/material'
 
-import ExpendableListItem from './index.js'
+import ExpandableListItem from './index.js'
 
 const meta = {
-  title: 'Components/ExpendableListItem',
-  component: ExpendableListItem,
+  title: 'Components/ExpandableListItem',
+  component: ExpandableListItem,
   tags: ['autodocs'],
   argTypes: {
     icon: {

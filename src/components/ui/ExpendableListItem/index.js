@@ -7,7 +7,7 @@ import LabelWithIcon from '@/components/ui/LabelWithIcon/index.js'
 import MetasList from '@/components/ui/MetasList/index.js'
 import TagsList from '@/components/ui/TagsList/index.js'
 
-const ExpendableListItem = ({icon, iconId, label, tags, metas, background = 'primary', children}) => {
+const ExpandableListItem = ({icon, iconId, label, tags, metas, background = 'primary', children}) => {
   const [isOpen, setIsOpen] = useState(false)
 
   return (
@@ -39,4 +39,4 @@ const ExpendableListItem = ({icon, iconId, label, tags, metas, background = 'pri
   )
 }
 
-export default ExpendableListItem
+export default ExpandableListItem
