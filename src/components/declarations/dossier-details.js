@@ -72,11 +72,12 @@ const DossierDetails = ({dossier, preleveur, files, idPoints}) => {
     fetchPointsPrelevement()
   }, [idPoints])
 
-  const downloadFile = async storageKey => {
-    const [hash, ...filenameParts] = storageKey.split('-')
+  const downloadFile = async attachmentId => {
+    const {storageKey} = files.find(f => f._id === attachmentId) || {}
+    const [, ...filenameParts] = storageKey.split('-')
     const filename = filenameParts.join('-')
     try {
-      const file = await getFileBlob(dossier._id, hash)
+      const file = await getFileBlob(dossier._id, attachmentId)
       const url = URL.createObjectURL(file)
       const a = document.createElement('a')
       a.href = url
@@ -167,10 +168,10 @@ const DossierDetails = ({dossier, preleveur, files, idPoints}) => {
             <div className='flex flex-col gap-4'>
               {files.map(file => (
                 <FileValidationResult
-                  key={file.storageKey}
+                  key={file._id}
                   scrollIntoView={focusedPointId}
                   fileName={getFileNameFromStorageKey(file.storageKey)}
-                  storageKey={file.storageKey}
+                  attachmentId={file._id}
                   typePrelevement={dossier.typePrelevement}
                   pointsPrelevement={pointsPrelevement}
                   series={file.series || []}

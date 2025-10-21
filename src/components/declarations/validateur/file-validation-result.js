@@ -33,7 +33,7 @@ const findPointById = (points = [], pointId) => {
 }
 
 const FileValidationResult = ({
-  storageKey,
+  attachmentId,
   fileName,
   typePrelevement,
   pointsPrelevement = [],
@@ -135,11 +135,11 @@ const FileValidationResult = ({
             <p>{subtitle}</p>
           </div>
 
-          {downloadFile && storageKey && (
+          {downloadFile && attachmentId && (
             <Button
               priority='tertiary no outline'
               iconId='fr-icon-download-line'
-              onClick={() => downloadFile(storageKey)}
+              onClick={() => downloadFile(attachmentId)}
             />
           )}
         </div>
