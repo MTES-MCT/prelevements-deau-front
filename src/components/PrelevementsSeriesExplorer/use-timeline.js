@@ -51,7 +51,7 @@ export function useTimeline(timelineSamples, showRangeSlider) {
     return fillDateGaps(baseDates)
   }, [baseDates])
 
-  // Slider works on boundaries: [start, exclusive end]. We duplicate the last day + 1 midnight to allow minuit→minuit ranges.
+  // Slider works on boundaries: [start, exclusive end]. We duplicate the last day + 1 midnight to allow midnight→midnight ranges.
   const sliderDates = useMemo(() => {
     if (dayDates.length === 0) {
       return []
