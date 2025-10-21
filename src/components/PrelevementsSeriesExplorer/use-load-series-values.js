@@ -12,7 +12,10 @@ import {useEffect, useState, useMemo} from 'react'
 
 import {format} from 'date-fns'
 
-import {indexDuplicateParameters} from './util.js'
+import {
+  indexDuplicateParameters,
+  parseLocalDateTime
+} from './util.js'
 
 const toFiniteNumber = value => {
   if (typeof value === 'number') {
@@ -52,7 +55,7 @@ const getOrCreateTimelineEntry = (context, {date, time = null}) => {
   const {timelineMap, parametersCount} = context
   const key = `${date}::${time ?? ''}`
   if (!timelineMap.has(key)) {
-    const timestamp = time ? new Date(`${date}T${time}:00`) : new Date(date)
+    const timestamp = parseLocalDateTime(date, time ?? null) ?? new Date(date)
     const sample = {
       date,
       time,
