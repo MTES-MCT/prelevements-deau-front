@@ -1,6 +1,63 @@
 import test from 'ava'
+import {parseISO} from 'date-fns'
 
-import {determineColors, buildCalendars, DEFAULT_PALETTE} from './util.js'
+import {determineColors, buildCalendars, normalizeTimestamps, DEFAULT_PALETTE} from './util.js'
+
+// NormalizeTimestamps tests
+
+test('normalizeTimestamps corrects 4-hour offset', t => {
+  const timeSlots = [
+    {heure: '04:00:00'},
+    {heure: '04:15:00'},
+    {heure: '04:30:00'}
+  ]
+  const normalized = normalizeTimestamps(timeSlots, '2025-09-11', parseISO)
+  
+  t.is(normalized.length, 3)
+  t.is(normalized[0].getHours(), 0)
+  t.is(normalized[0].getMinutes(), 0)
+  t.is(normalized[1].getHours(), 0)
+  t.is(normalized[1].getMinutes(), 15)
+  t.is(normalized[2].getHours(), 0)
+  t.is(normalized[2].getMinutes(), 30)
+})
+
+test('normalizeTimestamps handles midnight start time', t => {
+  const timeSlots = [
+    {heure: '00:00:00'},
+    {heure: '00:15:00'}
+  ]
+  const normalized = normalizeTimestamps(timeSlots, '2025-09-11', parseISO)
+  
+  t.is(normalized[0].getHours(), 0)
+  t.is(normalized[0].getMinutes(), 0)
+  t.is(normalized[1].getHours(), 0)
+  t.is(normalized[1].getMinutes(), 15)
+})
+
+test('normalizeTimestamps handles empty array', t => {
+  const normalized = normalizeTimestamps([], '2025-09-11', parseISO)
+  t.deepEqual(normalized, [])
+})
+
+test('normalizeTimestamps preserves same day', t => {
+  const timeSlots = [
+    {heure: '04:00:00'},
+    {heure: '23:45:00'}
+  ]
+  const normalized = normalizeTimestamps(timeSlots, '2025-09-11', parseISO)
+  
+  // First entry at midnight
+  t.is(normalized[0].getHours(), 0)
+  t.is(normalized[0].getMinutes(), 0)
+  
+  // Last entry at 19:45 (23:45 - 4 hours)
+  t.is(normalized[1].getHours(), 19)
+  t.is(normalized[1].getMinutes(), 45)
+  
+  // Both should be on the same day
+  t.is(normalized[0].getDate(), normalized[1].getDate())
+})
 
 // DetermineColors tests
 

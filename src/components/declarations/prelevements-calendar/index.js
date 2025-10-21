@@ -24,7 +24,7 @@ import {LineChart} from '@mui/x-charts'
 import {parseISO, format} from 'date-fns'
 import {fr as locale} from 'date-fns/locale'
 
-import {buildCalendars} from './util.js'
+import {buildCalendars, normalizeTimestamps} from './util.js'
 
 import CalendarGrid from '@/components/ui/CalendarGrid/index.js'
 import PeriodTooltip from '@/components/ui/PeriodTooltip/index.js'
@@ -251,22 +251,7 @@ const PrelevementsCalendar = ({data}) => {
                     }]}
                     xAxis={[{
                       scaleType: 'time',
-                      data: (() => {
-                        // Calculate timezone offset from the first time value
-                        // This handles the case where times start at 04:00 instead of 00:00
-                        const firstDatetime = parseISO(`${selectedDay.date}T${fifteenValues[0].heure}`)
-                        const offsetMs = firstDatetime.getHours() * 3600000 
-                          + firstDatetime.getMinutes() * 60000 
-                          + firstDatetime.getSeconds() * 1000
-                        
-                        // Apply offset correction to all values
-                        return fifteenValues.map(slot => {
-                          const datetime = parseISO(`${selectedDay.date}T${slot.heure}`)
-                          return offsetMs > 0 
-                            ? new Date(datetime.getTime() - offsetMs)
-                            : datetime
-                        })
-                      })(),
+                      data: normalizeTimestamps(fifteenValues, selectedDay.date, parseISO),
                       valueFormatter(value) {
                         const dateObj = value
                         const hours = dateObj.getHours()

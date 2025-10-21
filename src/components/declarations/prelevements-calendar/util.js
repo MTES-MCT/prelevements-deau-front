@@ -9,6 +9,34 @@ export const DEFAULT_PALETTE = {
 }
 
 /**
+ * Normalize timestamps to start from midnight (00:00) local time.
+ * This handles cases where time data has a timezone offset (e.g., starts at 04:00 instead of 00:00).
+ * @param {Array<{heure: string}>} timeSlots Array of time slots with heure property
+ * @param {string} baseDate Base date string (YYYY-MM-DD format)
+ * @param {Function} parseFunction Function to parse ISO date strings (e.g., parseISO from date-fns)
+ * @returns {Array<Date>} Array of normalized Date objects
+ */
+export function normalizeTimestamps(timeSlots, baseDate, parseFunction) {
+  if (!timeSlots || timeSlots.length === 0) {
+    return []
+  }
+
+  // Calculate timezone offset from the first time value
+  const firstDatetime = parseFunction(`${baseDate}T${timeSlots[0].heure}`)
+  const offsetMs = firstDatetime.getHours() * 3600000
+    + firstDatetime.getMinutes() * 60000
+    + firstDatetime.getSeconds() * 1000
+
+  // Apply offset correction to all values
+  return timeSlots.map(slot => {
+    const datetime = parseFunction(`${baseDate}T${slot.heure}`)
+    return offsetMs > 0
+      ? new Date(datetime.getTime() - offsetMs)
+      : datetime
+  })
+}
+
+/**
  * Determine the display color for a given day based on values and anomalies.
  * Rules (priority order):
  * 1. Any negative value -> palette.error
