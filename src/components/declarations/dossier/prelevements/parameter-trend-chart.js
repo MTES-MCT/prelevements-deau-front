@@ -32,13 +32,32 @@ const ParameterTrendChart = ({data, connectNulls}) => {
       return root15m
     }
 
-    return dailyValues.flatMap(d =>
+    const flatData = dailyValues.flatMap(d =>
       (d.fifteenMinutesValues ?? []).map(step => ({
         // On concatène date + heure pour obtenir un timestamp ISO valable
         date: `${d.date}T${step.heure}`,
         values: step.values
       }))
     )
+
+    // If data exists, check if there's a timezone offset issue and normalize
+    if (flatData.length > 0) {
+      const firstDate = parseISO(flatData[0].date)
+      const firstHour = firstDate.getHours()
+      
+      // If the first entry is not at midnight, there's likely a timezone offset issue
+      // Normalize all times by subtracting the offset
+      if (firstHour !== 0) {
+        const offsetMs = firstHour * 3600000 + firstDate.getMinutes() * 60000 + firstDate.getSeconds() * 1000
+        return flatData.map(item => ({
+          ...item,
+          // Adjust the date string to compensate for timezone offset
+          date: new Date(parseISO(item.date).getTime() - offsetMs).toISOString()
+        }))
+      }
+    }
+
+    return flatData
   }, [root15m, dailyValues])
 
   // ---------- Fallback paramètres 15 min ----------
