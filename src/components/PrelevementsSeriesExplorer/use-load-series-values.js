@@ -54,20 +54,27 @@ const registerTimelineEntry = (context, date, sample) => {
 const getOrCreateTimelineEntry = (context, {date, time = null}) => {
   const {timelineMap, parametersCount} = context
   const key = `${date}::${time ?? ''}`
-  if (!timelineMap.has(key)) {
-    const timestamp = parseLocalDateTime(date, time ?? null) ?? new Date(date)
-    const sample = {
-      date,
-      time,
-      timestamp,
-      values: Array.from({length: parametersCount}, () => null)
-    }
-
-    timelineMap.set(key, sample)
-    registerTimelineEntry(context, date, sample)
+  const existingSample = timelineMap.get(key)
+  if (existingSample) {
+    return existingSample
   }
 
-  return timelineMap.get(key)
+  const timestamp = parseLocalDateTime(date, time ?? null)
+  if (!timestamp) {
+    return null
+  }
+
+  const sample = {
+    date,
+    time,
+    timestamp,
+    values: Array.from({length: parametersCount}, () => null)
+  }
+
+  timelineMap.set(key, sample)
+  registerTimelineEntry(context, date, sample)
+
+  return sample
 }
 
 const assignSubDailyFromObject = ({context, date, subValues, paramIndex}) => {
@@ -85,6 +92,10 @@ const assignSubDailyFromObject = ({context, date, subValues, paramIndex}) => {
     }
 
     const sample = getOrCreateTimelineEntry(context, {date, time})
+    if (!sample) {
+      continue
+    }
+
     sample.values[paramIndex] = numericValue
     sum += numericValue
     count++
@@ -113,6 +124,10 @@ const assignSubDailyValues = ({context, date, subValues, paramIndex}) => {
     }
 
     const sample = getOrCreateTimelineEntry(context, {date, time: entry.time ?? null})
+    if (!sample) {
+      continue
+    }
+
     sample.values[paramIndex] = numericValue
     sum += numericValue
     count++
@@ -232,7 +247,9 @@ export function useLoadSeriesValues({seriesList, selectedPeriods, selectedParams
           dailyEntry.values[paramIndex] = directValue
 
           const sample = getOrCreateTimelineEntry(aggregationContext, {date: dayEntry.date, time: null})
-          sample.values[paramIndex] = directValue
+          if (sample) {
+            sample.values[paramIndex] = directValue
+          }
           continue
         }
 
