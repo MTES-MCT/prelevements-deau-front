@@ -22,7 +22,7 @@ const ExpendableListItem = ({icon, iconId, label, tags, metas, background = 'pri
       <Box onClick={() => setIsOpen(!isOpen)}>
         <Box className='w-full flex items-center justify-between gap-2'>
           <Box className='w-full flex flex-wrap justify-between items-center gap-2'>
-            <LabelWithIcon icon={icon && icon} iconId={iconId && iconId}>
+            <LabelWithIcon icon={icon} iconId={iconId}>
               {label}
             </LabelWithIcon>
 
