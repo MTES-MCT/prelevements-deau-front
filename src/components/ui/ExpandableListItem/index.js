@@ -19,7 +19,17 @@ const ExpandableListItem = ({icon, iconId, label, tags, metas, background = 'pri
         backgroundColor: background === 'primary' ? fr.colors.decisions.background.default.grey.default : fr.colors.decisions.background.alt.blueFrance.default
       }}
     >
-      <Box onClick={() => setIsOpen(!isOpen)}>
+      <Box
+        role='button'
+        tabIndex={0}
+        onClick={() => setIsOpen(!isOpen)}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setIsOpen(!isOpen)
+          }
+        }}
+      >
         <Box className='w-full flex items-center justify-between gap-2'>
           <Box className='w-full flex flex-wrap justify-between items-center gap-2'>
             <LabelWithIcon icon={icon} iconId={iconId}>
