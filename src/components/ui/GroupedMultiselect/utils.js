@@ -21,6 +21,17 @@ export const getOptionValue = opt =>
 export const getOptionContent = opt =>
   isOptionObject(opt) ? opt.content : opt
 
+export const getOptionDisabled = opt =>
+  isOptionObject(opt) ? Boolean(opt.disabled) : false
+
+export const getOptionTitle = opt => {
+  if (!isOptionObject(opt)) {
+    return undefined
+  }
+
+  return opt.disabledReason ?? opt.title ?? opt.tooltip
+}
+
 // Affiche le texte des éléments sélectionnés, avec "+ n autres" si besoin
 export const renderSelectedText = (value, placeholder, showMore, hiddenCount) => {
   if (isEmpty(value)) {

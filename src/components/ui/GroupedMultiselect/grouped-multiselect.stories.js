@@ -45,12 +45,19 @@ const meta = {
   },
   {
     label: 'Groupe B',
-    options: ['Option 3']
+    options: [
+      {
+        value: 'Option 3',
+        content: <div>Option 3</div>,
+        disabled: true,
+        disabledReason: 'Raison facultative affichée en info-bulle'
+      }
+    ]
   }
 ]
 \`\`\`
 - \`label\` : nom du groupe (\`string\`)
-- \`options\` : tableau de chaînes (\`string[]\`)`
+- \`options\` : tableau de chaînes (\`string[]\`) ou d'objets {value, content, disabled?, disabledReason?}`
     },
     value: {
       control: false,
@@ -87,6 +94,66 @@ const defaultOptions = [
       {value: 'Ralph Hubbard', content: <div>Ralph Hubbard</div>},
       {value: 'Omar Alexander', content: <div>Omar Alexander</div>},
       {value: 'Carlos Abbott', content: <div>Carlos Abbott</div>}
+    ]
+  }
+]
+
+const formatOptionContent = (label, frequency, valueType) => (
+  <div className='selector-option-content'>
+    <div className='selector-option-header'>
+      <span className='selector-option-label'>{label}</span>
+      {valueType && (
+        <span className='selector-option-value-type'>{valueType}</span>
+      )}
+    </div>
+    {frequency && (
+      <span className='selector-option-frequency'>{frequency}</span>
+    )}
+  </div>
+)
+
+const restrictedOptions = [
+  {
+    label: 'Volume (m3)',
+    options: [
+      {
+        value: 'volume-2023',
+        content: formatOptionContent('Volume prélevé 2023', 'jours', 'cumulée')
+      },
+      {
+        value: 'volume-2024',
+        content: formatOptionContent('Volume prélevé 2024', 'jours', 'cumulée')
+      }
+    ]
+  },
+  {
+    label: 'Débit (L/s)',
+    options: [
+      {
+        value: 'debit-2023',
+        content: formatOptionContent('Débit prélevé 2023', 'jours', 'maximum')
+      },
+      {
+        value: 'debit-2024',
+        content: formatOptionContent('Débit prélevé 2024', '15 minutes', 'moyenne')
+      }
+    ]
+  },
+  {
+    label: 'Autres unités',
+    options: [
+      {
+        value: 'conductivite',
+        content: formatOptionContent('Conductivité', 'jours', 'maximum'),
+        disabled: true,
+        disabledReason: 'Deux unités différentes sont déjà sélectionnées.'
+      },
+      {
+        value: 'ph',
+        content: formatOptionContent('pH', 'jours', 'moyenne'),
+        disabled: true,
+        disabledReason: 'Deux unités différentes sont déjà sélectionnées.'
+      }
     ]
   }
 ]
@@ -258,6 +325,24 @@ export const AvecÉlémentsPersonnalisés = {
     docs: {
       description: {
         story: 'Utilisation d\'options avec un rendu personnalisé via la propriété `content`.'
+      }
+    }
+  },
+  render: args => <Wrapper {...args} />
+}
+
+export const AvecOptionsDésactivées = {
+  args: {
+    label: 'Paramètres (max 2 unités)',
+    hint: 'Les options incompatibles sont grisées et expliquées au survol.',
+    placeholder: 'Sélectionnez des paramètres...',
+    options: restrictedOptions,
+    value: ['volume-2023', 'debit-2023']
+  },
+  parameters: {
+    docs: {
+      description: {
+        story: 'Illustre l\'utilisation d\'options désactivées avec une info-bulle pour expliquer la restriction d\'unités.'
       }
     }
   },
