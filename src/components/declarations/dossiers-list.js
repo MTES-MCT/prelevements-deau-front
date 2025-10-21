@@ -31,9 +31,9 @@ const DossiersList = ({status, filters}) => {
   useEffect(() => {
     let filtered = dossiers || []
 
-    if (filters.numeroDossier) {
+    if (filters.dossierNumber) {
       filtered = filtered.filter(d =>
-        d.number?.toString().includes(filters.numeroDossier)
+        d.ds.dossierNumber?.toString().includes(filters.dossierNumber)
       )
     }
 

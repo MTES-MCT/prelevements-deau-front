@@ -30,7 +30,7 @@ const DossiersTabs = () => {
 
   const getFiltersFromURL = () => {
     const filters = {}
-    for (const key of ['declarant', 'numeroDossier', 'periode', 'typePrelevement']) {
+    for (const key of ['declarant', 'dossierNumber', 'periode', 'typePrelevement']) {
       const value = searchParams.get(key)
       if (value) {
         filters[key] = value
