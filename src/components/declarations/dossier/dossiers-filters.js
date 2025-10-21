@@ -36,8 +36,8 @@ const DossiersFilters = ({filters, setFilters}) => (
       <Input
         label='Numéro de dossier'
         nativeInputProps={{
-          defaultValue: filters.numeroDossier || '',
-          onChange: debounce(e => setFilters(prev => ({...prev, numeroDossier: e.target.value})), 300)
+          defaultValue: filters.dossierNumber || '',
+          onChange: debounce(e => setFilters(prev => ({...prev, dossierNumber: e.target.value})), 300)
         }}
       />
     </div>
