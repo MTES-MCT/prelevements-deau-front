@@ -22,6 +22,8 @@ const ExpandableListItem = ({icon, iconId, label, tags, metas, background = 'pri
       <Box
         role='button'
         tabIndex={0}
+        aria-expanded={isOpen}
+        aria-label={isOpen ? 'Réduire' : 'Développer'}
         onClick={() => setIsOpen(!isOpen)}
         onKeyDown={e => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -38,7 +40,7 @@ const ExpandableListItem = ({icon, iconId, label, tags, metas, background = 'pri
 
             {tags?.length > 0 && <TagsList tags={tags} />}
           </Box>
-          <span className={isOpen ? 'fr-icon-arrow-down-s-line' : 'fr-icon-arrow-right-s-line'} />
+          <span aria-hidden='true' className={isOpen ? 'fr-icon-arrow-down-s-line' : 'fr-icon-arrow-right-s-line'} />
         </Box>
 
         {metas?.length > 0 && <MetasList metas={metas} />}
