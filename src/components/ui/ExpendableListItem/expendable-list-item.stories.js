@@ -82,7 +82,7 @@ Exemple:
     tags: [
       {
         label: (
-          <div className='flex align-items-center gap-1'>
+          <div className='flex items-center gap-1'>
             <DynamicFeedOutlined sx={{fontSize: 16}} />
             2 exploitations
           </div>

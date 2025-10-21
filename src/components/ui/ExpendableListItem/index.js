@@ -9,7 +9,7 @@ import TagsList from '@/components/ui/TagsList/index.js'
 
 const ExpendableListItem = ({icon, iconId, label, tags, metas, background = 'primary', children}) => {
   const [isOpen, setIsOpen] = useState(false)
-
+console.log(tags)
   return (
     <Box
       sx={{
