@@ -29,17 +29,17 @@ const DemandeurDetails = ({demandeur}) => (
     </Typography>
 
     <Box className='flex flex-col gap-1 my-2'>
-      <LabelWithIcon icon='ri-at-line'>
+      <LabelWithIcon iconId='ri-at-line'>
         {demandeur.email && (
           <a href={`mailto:${demandeur.email}`}>{demandeur.email}</a>
         )}
       </LabelWithIcon>
-      <LabelWithIcon icon='fr-icon-phone-line'>
+      <LabelWithIcon iconId='fr-icon-phone-line'>
         {demandeur.telephone && (
           <a href={`tel:${demandeur.telephone}`}>{demandeur.telephone}</a>
         )}
       </LabelWithIcon>
-      <LabelWithIcon icon='fr-icon-home-4-line'>
+      <LabelWithIcon iconId='fr-icon-home-4-line'>
         {demandeur.adresse}
       </LabelWithIcon>
     </Box>

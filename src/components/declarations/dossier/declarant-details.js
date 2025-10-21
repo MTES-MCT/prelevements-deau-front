@@ -27,24 +27,24 @@ const DeclarantDetails = ({declarant, isMandataire = false}) => (
     </Typography>
 
     <Box className='flex flex-col gap-1 my-2'>
-      <LabelWithIcon icon='fr-icon-user-fill'>
+      <LabelWithIcon iconId='fr-icon-user-fill'>
         {declarant.type ? (
           <Tag className='inline-block lowercase first-letter:uppercase'>
             {declarant.type.split('-').join(' ')}
           </Tag>
         ) : 'Non renseigné'}
       </LabelWithIcon>
-      <LabelWithIcon icon='ri-at-line'>
+      <LabelWithIcon iconId='ri-at-line'>
         {declarant.email && (
           <a href={`mailto:${declarant.email}`}>{declarant.email}</a>
         )}
       </LabelWithIcon>
-      <LabelWithIcon icon='fr-icon-phone-line'>
+      <LabelWithIcon iconId='fr-icon-phone-line'>
         {declarant.telephone && (
           <a href={`tel:${declarant.telephone}`}>{declarant.telephone}</a>
         )}
       </LabelWithIcon>
-      <LabelWithIcon icon='fr-icon-home-4-line'>
+      <LabelWithIcon iconId='fr-icon-home-4-line'>
         {declarant.adresse}
       </LabelWithIcon>
     </Box>

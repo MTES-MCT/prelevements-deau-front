@@ -29,17 +29,17 @@ const PreleveurDetails = ({preleveur}) => (
     </Typography>
 
     <Box className='flex flex-col gap-1 my-2'>
-      <LabelWithIcon icon='ri-at-line'>
+      <LabelWithIcon iconId='ri-at-line'>
         {preleveur.email && (
           <a href={`mailto:${preleveur.email}`}>{preleveur.email}</a>
         )}
       </LabelWithIcon>
-      <LabelWithIcon icon='fr-icon-phone-line'>
+      <LabelWithIcon iconId='fr-icon-phone-line'>
         {preleveur.telephone && (
           <a href={`tel:${preleveur.telephone}`}>{preleveur.telephone}</a>
         )}
       </LabelWithIcon>
-      <LabelWithIcon icon='fr-icon-home-4-line'>
+      <LabelWithIcon iconId='fr-icon-home-4-line'>
         {preleveur.adresse}
       </LabelWithIcon>
     </Box>
