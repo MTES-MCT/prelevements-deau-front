@@ -101,6 +101,15 @@ const PointForm = ({
         }}
         onChange={e => setPoint(prev => ({...prev, remarque: e.target.value}))}
       />
+      <Input
+        textArea
+        label='Remarque interne (Visible uniquement par les instructeurs)'
+        nativeTextAreaProps={{
+          placeholder: 'Entrer une remarque interne',
+          defaultValue: point?.remarque_interne
+        }}
+        onChange={e => setPoint(prev => ({...prev, remarque_interne: e.target.value}))}
+      />
       <AccordionCentered
         isExpanded={isExpanded}
         setIsExpanded={setIsExpanded}
