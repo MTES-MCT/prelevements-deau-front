@@ -41,6 +41,8 @@ const ParameterTrendChart = ({data, connectNulls}) => {
     )
 
     // If data exists, check if there's a timezone offset issue and normalize
+    // This fixes the issue where daily data spans 2 calendar days due to timezone offset
+    // (e.g., La Réunion is GMT+4, so UTC midnight becomes 04:00 local time)
     if (flatData.length > 0) {
       const firstDate = parseISO(flatData[0].date)
       const firstHour = firstDate.getHours()
