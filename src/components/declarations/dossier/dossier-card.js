@@ -1,5 +1,6 @@
 import {
   ArticleOutlined,
+  EventOutlined,
   CalendarTodayOutlined,
   InterestsOutlined,
   LocalDrinkOutlined,
@@ -73,6 +74,10 @@ const metas = dossier => ([
     content: dossier.moisDeclaration
       ? `Déclaration du mois : ${format(new Date(dossier.moisDeclaration), 'MMMM yyyy', {locale: fr})}`
       : 'Régularisation'
+  },
+  {
+    icon: EventOutlined,
+    content: `Date de dépôt : ${format(new Date(dossier.dateDepot), 'dd/MM/yyyy', {locale: fr})}`
   },
   {
     icon: TableRowsOutlined,
