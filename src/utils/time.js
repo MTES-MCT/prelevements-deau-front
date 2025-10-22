@@ -13,7 +13,12 @@ export const normalizeTime = time => {
   }
 
   const [hours = '00', minutes = '00'] = trimmed.split(':')
+  const hasOnlyDigits = value => /^\d+$/.test(value)
   const pad = value => value.toString().padStart(2, '0')
+
+  if (!hasOnlyDigits(hours) || !hasOnlyDigits(minutes)) {
+    return null
+  }
 
   // Validate hours and minutes
   const hoursNum = Number(hours)
