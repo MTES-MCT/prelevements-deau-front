@@ -11,15 +11,7 @@ import DeclarationFileDetails from '../dossier/prelevements/declaration-file-det
 
 import PrelevementsAccordion from '@/components/declarations/dossier/prelevements/prelevements-accordion.js'
 import FileValidationErrors from '@/components/declarations/file-validation-errors.js'
-
-const normalizePointId = pointId => {
-  if (pointId === null || pointId === undefined || pointId === '') {
-    return null
-  }
-
-  // Always return a string (or null)
-  return String(pointId)
-}
+import {normalizePointId} from '@/utils/point-prelevement.js'
 
 const findPointById = (points = [], pointId) => {
   if (pointId === null || pointId === undefined) {
