@@ -17,19 +17,7 @@ import {
   parseLocalDateTime
 } from './util.js'
 
-// Coerce any input to a finite number; invalid or infinite values become null.
-const toFiniteNumber = value => {
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : null
-  }
-
-  if (value === null || value === undefined) {
-    return null
-  }
-
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : null
-}
+import {coerceNumericValue} from '@/utils/number.js'
 
 // Create or return the daily aggregation entry backing the calendar view.
 const getOrCreateDailyEntry = (context, date) => {
@@ -91,7 +79,7 @@ const assignSubDailyFromObject = ({context, date, subValues, paramIndex}) => {
   let count = 0
 
   for (const [time, value] of Object.entries(subValues)) {
-    const numericValue = toFiniteNumber(value)
+    const numericValue = coerceNumericValue(value)
     if (numericValue === null) {
       continue
     }
@@ -125,7 +113,7 @@ const assignSubDailyValues = ({context, date, subValues, paramIndex}) => {
   let count = 0
 
   for (const entry of subValues) {
-    const numericValue = toFiniteNumber(entry?.value)
+    const numericValue = coerceNumericValue(entry?.value)
     if (numericValue === null) {
       continue
     }
@@ -249,7 +237,7 @@ export function useLoadSeriesValues({seriesList, selectedPeriods, selectedParams
           continue
         }
 
-        const directValue = toFiniteNumber(dayEntry.value)
+        const directValue = coerceNumericValue(dayEntry.value)
 
         if (directValue !== null) {
           const dailyEntry = getOrCreateDailyEntry(aggregationContext, dayEntry.date)

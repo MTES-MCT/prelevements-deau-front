@@ -17,3 +17,11 @@ export function getPointPrelevementLabel({idPoint, pointPrelevement, fallback = 
   return fallback
 }
 
+export function normalizePointId(pointId) {
+  if (pointId === null || pointId === undefined || pointId === '') {
+    return null
+  }
+
+  // Always return a string (or null)
+  return String(pointId)
+}
