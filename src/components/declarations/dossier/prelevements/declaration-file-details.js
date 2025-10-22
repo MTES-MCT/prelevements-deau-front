@@ -5,7 +5,7 @@ import {Button} from '@codegouvfr/react-dsfr/Button'
 import Tag from '@codegouvfr/react-dsfr/Tag'
 import {Box} from '@mui/material'
 
-import {getSeriesValues} from '@/app/api/series.js'
+import {getSeriesValues as fetchSeriesValues} from '@/app/api/series.js'
 import PrelevementsSeriesExplorer from '@/components/PrelevementsSeriesExplorer/index.js'
 import {getGlobalDateBounds} from '@/components/PrelevementsSeriesExplorer/util.js'
 import DividerSection from '@/components/ui/DividerSection/index.js'
@@ -13,7 +13,8 @@ import DividerSection from '@/components/ui/DividerSection/index.js'
 const DeclarationFileDetails = ({
   pointId,
   moisDeclaration,
-  series = []
+  series = [],
+  getSeriesValues = fetchSeriesValues
 }) => {
   const hasPointLink = pointId !== null && pointId !== undefined && pointId !== ''
   const dailySeries = series.filter(s => s.frequency === '1 day')

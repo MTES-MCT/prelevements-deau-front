@@ -43,7 +43,8 @@ const FileValidationResult = ({
   errors = [],
   totalVolumePreleve,
   scrollIntoView,
-  downloadFile
+  downloadFile,
+  getSeriesValues
 }) => {
   const [selectedAccordionId, setSelectedAccordionId] = useState(null)
   const pointRefs = useRef({})
@@ -169,6 +170,7 @@ const FileValidationResult = ({
                     pointId={section.pointId}
                     series={section.series}
                     typePrelevement={typePrelevement}
+                    getSeriesValues={getSeriesValues}
                   />
 
                   {errors.length > 0 && (
