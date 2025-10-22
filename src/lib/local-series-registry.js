@@ -39,6 +39,7 @@ export function createLocalSeriesRegistry() {
         continue
       }
 
+      // Clone on registration to isolate the registry from caller-side mutations.
       const safeValues = Array.isArray(entry.values)
         ? entry.values.map(item => deepCloneEntry(item))
         : []
@@ -76,6 +77,8 @@ export function createLocalSeriesRegistry() {
 
       return true
     }).map(item => deepCloneEntry(item))
+
+    // Clone again so consumers cannot mutate the stored registry state through the returned reference.
 
     return {values: filtered}
   }
