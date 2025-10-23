@@ -61,7 +61,7 @@ const typeDonnees = typeDonnees => {
   }
 
   if (typeDonnees === 'vide') {
-    return 'Déclaration vide'
+    return 'Aucun fichier transmis'
   }
 
   return typeDonnees
