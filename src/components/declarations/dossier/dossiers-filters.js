@@ -7,67 +7,59 @@ const DynamicSelect = dynamic(
   {ssr: false}
 )
 
-const monthOptions = [
-  {value: 'all', label: 'Tout'},
-  ...Array.from({length: 12}, (_, i) => {
-    const date = new Date()
-    date.setMonth(date.getMonth() - i)
-    const month = date.toLocaleString('default', {month: 'long'})
-    const year = date.getFullYear()
-    return {
-      value: `month-${year}-${date.getMonth() + 1}`,
-      label: `${month} ${year}`
-    }
-  })
-]
+const DEFAULT_PERIOD_OPTIONS = [{value: 'all', label: 'Tout'}]
 
-const DossiersFilters = ({filters, setFilters}) => (
-  <div className='fr-mb-4w fr-grid-row'>
-    <div className='fr-col-6 fr-p-2w'>
-      <Input
-        label='Préleveur'
-        nativeInputProps={{
-          defaultValue: filters.declarant || '',
-          onChange: debounce(e => setFilters(prev => ({...prev, declarant: e.target.value})), 300)
-        }}
-      />
+const DossiersFilters = ({filters, setFilters, periodOptions}) => {
+  const options = periodOptions?.length ? periodOptions : DEFAULT_PERIOD_OPTIONS
+
+  return (
+    <div className='fr-mb-4w fr-grid-row'>
+      <div className='fr-col-6 fr-p-2w'>
+        <Input
+          label='Préleveur'
+          nativeInputProps={{
+            defaultValue: filters.declarant || '',
+            onChange: debounce(e => setFilters(prev => ({...prev, declarant: e.target.value})), 300)
+          }}
+        />
+      </div>
+      <div className='fr-col-6 fr-p-2w'>
+        <Input
+          label='Numéro de dossier'
+          nativeInputProps={{
+            defaultValue: filters.dossierNumber || '',
+            onChange: debounce(e => setFilters(prev => ({...prev, dossierNumber: e.target.value})), 300)
+          }}
+        />
+      </div>
+      <div className='fr-col-12 fr-grid-row'>
+        <DynamicSelect
+          label='Période concernée'
+          options={options}
+          className='fr-col-6 fr-p-2w'
+          nativeSelectProps={{
+            value: filters.periode || 'all',
+            onChange: e => setFilters(prev => ({...prev, periode: e.target.value}))
+          }}
+        />
+        <DynamicSelect
+          label='Type de prélèvement'
+          options={[
+            {value: 'all', label: 'Tous les types'},
+            {value: 'aep-zre', label: 'Prélèvement AEP ou en ZRE'},
+            {value: 'camion-citerne', label: 'Camion-citerne'},
+            {value: 'icpe-hors-zre', label: 'ICPE hors ZRE'},
+            {value: 'autre', label: 'Autre'}
+          ]}
+          className='fr-col-6 fr-p-2w'
+          nativeSelectProps={{
+            value: filters.typePrelevement || 'all',
+            onChange: e => setFilters(prev => ({...prev, typePrelevement: e.target.value}))
+          }}
+        />
+      </div>
     </div>
-    <div className='fr-col-6 fr-p-2w'>
-      <Input
-        label='Numéro de dossier'
-        nativeInputProps={{
-          defaultValue: filters.dossierNumber || '',
-          onChange: debounce(e => setFilters(prev => ({...prev, dossierNumber: e.target.value})), 300)
-        }}
-      />
-    </div>
-    <div className='fr-col-12 fr-grid-row'>
-      <DynamicSelect
-        label='Mois déclaré'
-        options={monthOptions}
-        className='fr-col-6 fr-p-2w'
-        nativeSelectProps={{
-          defaultValue: filters.periode || 'all',
-          onChange: e => setFilters(prev => ({...prev, periode: e.target.value}))
-        }}
-      />
-      <DynamicSelect
-        label='Type de prélèvement'
-        options={[
-          {value: 'all', label: 'Tous les types'},
-          {value: 'aep-zre', label: 'Prélèvement AEP ou en ZRE'},
-          {value: 'camion-citerne', label: 'Camion-citerne'},
-          {value: 'icpe-hors-zre', label: 'ICPE hors ZRE'},
-          {value: 'autre', label: 'Autre'}
-        ]}
-        className='fr-col-6 fr-p-2w'
-        nativeSelectProps={{
-          defaultValue: filters.typePrelevement || 'all',
-          onChange: e => setFilters(prev => ({...prev, typePrelevement: e.target.value}))
-        }}
-      />
-    </div>
-  </div>
-)
+  )
+}
 
 export default DossiersFilters
