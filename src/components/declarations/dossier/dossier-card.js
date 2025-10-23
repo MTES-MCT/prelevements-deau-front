@@ -7,11 +7,10 @@ import {
   TableRowsOutlined,
   FactoryOutlined
 } from '@mui/icons-material'
-import {format} from 'date-fns'
-import {fr} from 'date-fns/locale'
 import Link from 'next/link'
 
 import ListItem from '@/components/ui/ListItem/index.js'
+import {getDossierPeriodLabel} from '@/lib/dossier.js'
 
 const rightIcons = {
   'camion-citerne': {
@@ -67,18 +66,20 @@ const typeDonnees = typeDonnees => {
   return typeDonnees
 }
 
-const metas = dossier => ([
-  {
-    icon: CalendarTodayOutlined,
-    content: dossier.moisDeclaration
-      ? `Déclaration du mois : ${format(new Date(dossier.moisDeclaration), 'MMMM yyyy', {locale: fr})}`
-      : 'Régularisation'
-  },
-  {
-    icon: TableRowsOutlined,
-    content: typeDonnees(dossier.typeDonnees)
-  }
-])
+const metas = dossier => {
+  const periodLabel = getDossierPeriodLabel(dossier)
+
+  return [
+    {
+      icon: CalendarTodayOutlined,
+      content: `Période concernée : ${periodLabel ?? 'Non renseignée'}`
+    },
+    {
+      icon: TableRowsOutlined,
+      content: typeDonnees(dossier.typeDonnees)
+    }
+  ]
+}
 
 const DossierCard = ({dossier, background, url}) => (
   <Link href={url || ''} style={{textDecoration: 'none'}}>
