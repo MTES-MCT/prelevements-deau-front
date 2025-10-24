@@ -1,15 +1,16 @@
 'use client'
 
-import {useEffect, useState} from 'react'
+import {useEffect, useMemo, useState} from 'react'
 
 import {deburr, toLower} from 'lodash-es'
 
 import {getDossiersByStatus} from '@/app/api/dossiers.js'
 import DossierCard from '@/components/declarations/dossier/dossier-card.js'
 import SimpleLoading from '@/components/ui/SimpleLoading/index.js'
+import {getDossierPeriod, getDossierPeriodLabel} from '@/lib/dossier.js'
 import {getDossierURL} from '@/lib/urls.js'
 
-const DossiersList = ({status, filters}) => {
+const DossiersList = ({status, filters, onAvailablePeriodsChange}) => {
   const [mounted, setMounted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [dossiers, setDossiers] = useState()
@@ -52,20 +53,11 @@ const DossiersList = ({status, filters}) => {
       })
     }
 
-    if (filters.periode) {
-      const monthMatch = filters.periode.match(/^month-(\d{4})-(\d{1,2})$/)
-      if (monthMatch) {
-        const year = Number.parseInt(monthMatch[1], 10)
-        const month = Number.parseInt(monthMatch[2], 10) // 1-based month from value
-        filtered = filtered.filter(d => {
-          if (!d.moisDeclaration) {
-            return false
-          }
-
-          const date = new Date(d.moisDeclaration)
-          return date.getFullYear() === year && (date.getMonth() + 1) === month
-        })
-      }
+    if (filters.periode && filters.periode !== 'all') {
+      filtered = filtered.filter(d => {
+        const label = getDossierPeriodLabel(d) ?? 'Non renseignée'
+        return label === filters.periode
+      })
     }
 
     if (filters.typePrelevement && filters.typePrelevement !== 'all') {
@@ -92,6 +84,36 @@ const DossiersList = ({status, filters}) => {
 
     setFilteredDossiers(filtered)
   }, [filters, dossiers])
+
+  const periodOptions = useMemo(() => {
+    if (!Array.isArray(dossiers) || dossiers.length === 0) {
+      return [{value: 'all', label: 'Tout'}]
+    }
+
+    const results = []
+    const periods = new Set()
+
+    for (const dossier of dossiers) {
+      const label = getDossierPeriodLabel(dossier) ?? 'Non renseignée'
+      if (periods.has(label)) {
+        continue
+      }
+
+      periods.add(label)
+      const {start, end} = getDossierPeriod(dossier)
+      const sortKey = start?.getTime() ?? end?.getTime() ?? Number.POSITIVE_INFINITY
+      results.push({value: label, label, sortKey})
+    }
+
+    results.sort((a, b) => a.sortKey - b.sortKey)
+    return [{value: 'all', label: 'Tout'}, ...results.map(({value, label}) => ({value, label}))]
+  }, [dossiers])
+
+  useEffect(() => {
+    if (onAvailablePeriodsChange) {
+      onAvailablePeriodsChange(periodOptions)
+    }
+  }, [onAvailablePeriodsChange, periodOptions])
 
   useEffect(() => {
     setMounted(true)

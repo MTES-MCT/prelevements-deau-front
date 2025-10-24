@@ -5,7 +5,7 @@ import {getPreleveur} from '@/app/api/points-prelevement.js'
 import DossierHeader from '@/components/declarations/dossier/dossier-header.js'
 import DossierDetails from '@/components/declarations/dossier-details.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {getDossierFiles, getPointsPrelementIdFromDossier} from '@/lib/dossier.js'
+import {getDossierFiles, getPointsPrelementIdFromDossier, getDossierPeriodLabel} from '@/lib/dossier.js'
 import {getDossierDSURL} from '@/lib/urls.js'
 
 const DossierPage = async ({params}) => {
@@ -18,6 +18,7 @@ const DossierPage = async ({params}) => {
 
   const files = await getDossierFiles(dossier)
   const idPoints = getPointsPrelementIdFromDossier(dossier, files)
+  const periodLabel = getDossierPeriodLabel(dossier)
 
   let preleveur = dossier?.demandeur
   if (dossier?.result?.preleveur) {
@@ -33,8 +34,8 @@ const DossierPage = async ({params}) => {
       <DossierHeader
         numero={dossier.ds.dossierNumber}
         status={dossier.status}
-        moisDeclaration={dossier.moisDeclaration}
         dateDepot={dossier.dateDepot}
+        periodLabel={periodLabel}
         dsUrl={getDossierDSURL(dossier)}
       />
 

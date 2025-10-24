@@ -4,7 +4,7 @@ import {Box} from '@mui/system'
 
 import DossierStateBadge from '@/components/declarations/dossier-state-badge.js'
 
-const DossierHeader = ({numero, status, dateDepot, moisDeclaration, dsUrl}) => (
+const DossierHeader = ({numero, status, dateDepot, periodLabel, dsUrl}) => (
   <Box className='flex flex-col gap-2'>
     <Box className='flex justify-between gap-4 flex-wrap'>
       <Box className='flex gap-4 items-center flex-wrap'>
@@ -34,7 +34,7 @@ const DossierHeader = ({numero, status, dateDepot, moisDeclaration, dsUrl}) => (
       <Box className='flex flex-wrap gap-2'>
         <Box component='span' className='fr-icon-calendar-event-fill' />
         <Typography variant='body1'>
-          Mois déclaré : {moisDeclaration ? new Intl.DateTimeFormat('fr-FR', {month: 'long', year: 'numeric'}).format(new Date(moisDeclaration)) : 'Non renseigné'}
+          Période concernée : {periodLabel ?? 'Non renseignée'}
         </Typography>
       </Box>
     </Box>
