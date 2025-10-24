@@ -7,9 +7,16 @@ const meta = {
   component: LabelWithIcon,
   tags: ['autodocs'],
   argTypes: {
-    icon: {
+    iconId: {
       control: 'text',
-      description: 'Nom de la classe CSS de l\'icône à afficher (string).'
+      description: 'Class CSS pour les icônes tirées du DSFR ou de Remix Icons (ex: "fr-icon-edit-line")'
+    },
+    icon: {
+      control: false, // Pas de contrôle direct, utiliser des stories dédiées
+      description: 'Composant React pour les icônes SVG venant de MUI (ex: &lt;OilBarrelOutlinedIcon /&gt;)',
+      table: {
+        type: {summary: 'React.ComponentType'}
+      }
     },
     children: {
       control: 'text',
@@ -17,7 +24,7 @@ const meta = {
     }
   },
   args: {
-    icon: 'fr-icon-user-fill',
+    iconId: 'fr-icon-user-fill',
     children: (
       <Typography variant='body1'>
         Valeur affichée.
