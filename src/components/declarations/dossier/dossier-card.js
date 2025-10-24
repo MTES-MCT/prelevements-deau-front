@@ -1,5 +1,6 @@
 import {
   ArticleOutlined,
+  EventOutlined,
   CalendarTodayOutlined,
   InterestsOutlined,
   LocalDrinkOutlined,
@@ -7,6 +8,8 @@ import {
   TableRowsOutlined,
   FactoryOutlined
 } from '@mui/icons-material'
+import {format} from 'date-fns'
+import {fr} from 'date-fns/locale'
 import Link from 'next/link'
 
 import ListItem from '@/components/ui/ListItem/index.js'
@@ -68,8 +71,15 @@ const typeDonnees = typeDonnees => {
 
 const metas = dossier => {
   const periodLabel = getDossierPeriodLabel(dossier)
+  const dateDepot = dossier.dateDepot
+    ? format(new Date(dossier.dateDepot), 'dd/MM/yyyy', {locale: fr})
+    : 'Non renseignée'
 
   return [
+    {
+      icon: EventOutlined,
+      content: `Date de dépôt : ${dateDepot}`
+    },
     {
       icon: CalendarTodayOutlined,
       content: `Période concernée : ${periodLabel ?? 'Non renseignée'}`
