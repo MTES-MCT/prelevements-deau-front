@@ -36,11 +36,17 @@ export function getGlobalDateBounds(seriesList) {
 
   for (const serie of seriesList) {
     if (serie?.minDate) {
-      dates.push(new Date(serie.minDate))
+      const parsedMin = parseLocalDate(serie.minDate)
+      if (parsedMin) {
+        dates.push(parsedMin)
+      }
     }
 
     if (serie?.maxDate) {
-      dates.push(new Date(serie.maxDate))
+      const parsedMax = parseLocalDate(serie.maxDate)
+      if (parsedMax) {
+        dates.push(parsedMax)
+      }
     }
   }
 
@@ -103,6 +109,66 @@ export function buildSeriesMetadataMap(seriesList) {
 }
 
 /**
+ * Parses a date string (YYYY-MM-DD) into a Date at local midnight.
+ * Returns null if the input cannot be parsed.
+ * @param {string} dateString
+ * @returns {Date|null}
+ */
+export function parseLocalDate(dateString) {
+  if (typeof dateString !== 'string') {
+    return null
+  }
+
+  const [yearStr, monthStr, dayStr] = dateString.split('-')
+  const year = Number(yearStr)
+  const month = Number(monthStr)
+  const day = Number(dayStr)
+
+  if ([year, month, day].some(value => Number.isNaN(value))) {
+    return null
+  }
+
+  return new Date(year, month - 1, day, 0, 0, 0, 0)
+}
+
+/**
+ * Parses combined date and time strings into a Date in local time.
+ * Time string is optional and defaults to 00:00 if omitted.
+ * @param {string} dateString - YYYY-MM-DD
+ * @param {string|null} [timeString] - HH:mm or HH:mm:ss
+ * @returns {Date|null}
+ */
+export function parseLocalDateTime(dateString, timeString) {
+  const dateOnly = parseLocalDate(dateString)
+  if (!dateOnly) {
+    return null
+  }
+
+  if (typeof timeString !== 'string' || timeString.trim() === '') {
+    return dateOnly
+  }
+
+  const [hoursStr, minutesStr = '0', secondsStr = '0'] = timeString.split(':')
+  const hours = Number(hoursStr)
+  const minutes = Number(minutesStr)
+  const seconds = Number(secondsStr)
+
+  const safeHours = Number.isNaN(hours) ? 0 : hours
+  const safeMinutes = Number.isNaN(minutes) ? 0 : minutes
+  const safeSeconds = Number.isNaN(seconds) ? 0 : seconds
+
+  return new Date(
+    dateOnly.getFullYear(),
+    dateOnly.getMonth(),
+    dateOnly.getDate(),
+    safeHours,
+    safeMinutes,
+    safeSeconds,
+    0
+  )
+}
+
+/**
  * Builds calendar data entries from series metadata and date range
  * Generates monthly calendar entries based on series minDate/maxDate
  * @param {Array} seriesList - Array of series with minDate/maxDate
@@ -120,8 +186,12 @@ export function buildCalendarEntriesFromMetadata(seriesList, dateRange, _formatF
     }
 
     // Generate calendar entries based on series date range
-    const serieStart = new Date(serie.minDate)
-    const serieEnd = new Date(serie.maxDate)
+    const serieStart = parseLocalDate(serie.minDate)
+    const serieEnd = parseLocalDate(serie.maxDate)
+
+    if (!serieStart || !serieEnd) {
+      continue
+    }
 
     // Skip series completely outside requested date range
     if (serieEnd < dateRange.start || serieStart > dateRange.end) {

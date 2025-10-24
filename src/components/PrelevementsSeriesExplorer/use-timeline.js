@@ -6,12 +6,13 @@ import {
   useMemo, useState, useEffect, useCallback
 } from 'react'
 
-import {format} from 'date-fns'
+import {format, addDays} from 'date-fns'
 
 import {
   fillDateGaps,
   computeSliderMarks,
-  clamp
+  clamp,
+  parseLocalDate
 } from './util.js'
 
 /**
@@ -22,6 +23,7 @@ import {
  * @returns {Object} Timeline state and handlers
  */
 export function useTimeline(timelineSamples, showRangeSlider) {
+  // Collect unique day strings from samples to figure out the continuous day range.
   const baseDates = useMemo(() => {
     if (!Array.isArray(timelineSamples) || timelineSamples.length === 0) {
       return []
@@ -36,10 +38,12 @@ export function useTimeline(timelineSamples, showRangeSlider) {
 
     return [...uniqueDates]
       .sort()
-      .map(date => new Date(date))
+      .map(date => parseLocalDate(date))
+      .filter(Boolean)
   }, [timelineSamples])
 
-  const {allDates} = useMemo(() => {
+  // Fill any potential gaps to get a complete array of consecutive days.
+  const {allDates: dayDates} = useMemo(() => {
     if (baseDates.length === 0) {
       return {allDates: []}
     }
@@ -47,56 +51,99 @@ export function useTimeline(timelineSamples, showRangeSlider) {
     return fillDateGaps(baseDates)
   }, [baseDates])
 
-  const [rangeIndices, setRangeIndices] = useState(() => [
-    0,
-    Math.max(0, allDates.length - 1)
-  ])
+  // Slider works on boundaries: [start, exclusive end]. We duplicate the last day + 1 midnight to allow midnight→midnight ranges.
+  const sliderDates = useMemo(() => {
+    if (dayDates.length === 0) {
+      return []
+    }
+
+    const expanded = [...dayDates]
+    const lastDay = dayDates.at(-1)
+    expanded.push(addDays(lastDay, 1))
+
+    return expanded
+  }, [dayDates])
+
+  // Range indices refer to positions within sliderDates, not the raw timelineSamples.
+  const [rangeIndices, setRangeIndices] = useState([0, 0])
 
   // Reset range when dates change
   useEffect(() => {
-    if (allDates.length > 0) {
-      setRangeIndices([0, allDates.length - 1])
+    if (sliderDates.length > 0) {
+      const defaultEnd = Math.max(1, sliderDates.length - 1)
+      setRangeIndices([0, defaultEnd])
     }
-  }, [allDates.length])
+  }, [sliderDates.length])
 
+  // Visible date range is inclusive of start and exclusive of end, but expressed in day precision.
   const visibleDateRange = useMemo(() => {
-    if (allDates.length === 0) {
+    if (sliderDates.length === 0 || dayDates.length === 0) {
       return []
     }
 
-    return allDates.slice(rangeIndices[0], rangeIndices[1] + 1)
-  }, [allDates, rangeIndices])
+    const rangeStart = sliderDates[rangeIndices[0]]
+    const rangeEnd = sliderDates[rangeIndices[1]]
 
-  const sliderMarks = useMemo(() => computeSliderMarks(allDates), [allDates])
+    if (!rangeStart || !rangeEnd || rangeEnd <= rangeStart) {
+      return []
+    }
 
+    return dayDates.filter(date => date >= rangeStart && date < rangeEnd)
+  }, [dayDates, sliderDates, rangeIndices])
+
+  // Marks are built on whole days, we map them back to slider indices after expanding.
+  const sliderMarks = useMemo(() => {
+    if (sliderDates.length === 0) {
+      return []
+    }
+
+    const dayMarks = computeSliderMarks(dayDates)
+    return dayMarks
+      .map(mark => {
+        const dayDate = dayDates[mark.value]
+        if (!dayDate) {
+          return null
+        }
+
+        const sliderIndex = sliderDates.findIndex(date => date.getTime() === dayDate.getTime())
+        if (sliderIndex === -1) {
+          return null
+        }
+
+        return {
+          value: sliderIndex,
+          label: mark.label
+        }
+      })
+      .filter(Boolean)
+  }, [dayDates, sliderDates])
+
+  // Filter samples by the currently selected window using their timestamp boundaries.
   const visibleSamples = useMemo(() => {
-    if (allDates.length === 0 || !Array.isArray(timelineSamples)) {
+    if (sliderDates.length === 0 || !Array.isArray(timelineSamples)) {
       return []
     }
 
-    const startDate = allDates[rangeIndices[0]]
-    const endDate = allDates[rangeIndices[1]]
+    const startDate = sliderDates[rangeIndices[0]]
+    const endDate = sliderDates[rangeIndices[1]]
 
     if (!startDate || !endDate) {
       return []
     }
 
-    const startKey = format(startDate, 'yyyy-MM-dd')
-    const endKey = format(endDate, 'yyyy-MM-dd')
-
     return timelineSamples.filter(sample => {
-      if (!sample?.date) {
+      if (!sample?.timestamp) {
         return false
       }
 
-      return sample.date >= startKey && sample.date <= endKey
+      return sample.timestamp >= startDate && sample.timestamp < endDate
     })
-  }, [allDates, rangeIndices, timelineSamples])
+  }, [sliderDates, rangeIndices, timelineSamples])
 
-  const totalDates = allDates.length
+  const totalDates = sliderDates.length
   const maxIndex = Math.max(totalDates - 1, 0)
+  // Minimum width of the window: 1 step → a full day when sliderDates include the +1 day boundary.
   const minSteps = totalDates > 1 ? 1 : 0
-
   const handleRangeChange = useCallback((event, newValue, activeThumb) => {
     if (!Array.isArray(newValue) || totalDates <= 1) {
       return
@@ -105,21 +152,30 @@ export function useTimeline(timelineSamples, showRangeSlider) {
     setRangeIndices(previous => {
       let [start, end] = newValue.map(value => clamp(Math.round(value), 0, maxIndex))
 
-      // Only enforce minimum step if minSteps is 1 (i.e., totalDates > 1)
-      if (minSteps === 1 && end - start < 1) {
+      if (start > end) {
         if (activeThumb === 0) {
-          const adjustedStart = Math.min(start, maxIndex - 1)
-          start = adjustedStart
-          end = adjustedStart + 1
+          start = end
         } else if (activeThumb === 1) {
-          const adjustedEnd = Math.min(Math.max(end, 1), maxIndex)
-          end = adjustedEnd
-          start = adjustedEnd - 1
+          end = start
         } else {
-          // Fallback when activeThumb is undefined: expand end to maintain minimum range
-          const adjustedStart = Math.min(previous[0], maxIndex - 1)
+          start = Math.min(start, end)
+          end = Math.max(start, end)
+        }
+      }
+
+      if (minSteps > 0 && end - start < minSteps) {
+        if (activeThumb === 0) {
+          const adjustedStart = clamp(start, 0, maxIndex - minSteps)
           start = adjustedStart
-          end = adjustedStart + 1
+          end = Math.min(maxIndex, adjustedStart + minSteps)
+        } else if (activeThumb === 1) {
+          const adjustedEnd = clamp(end, minSteps, maxIndex)
+          end = adjustedEnd
+          start = clamp(adjustedEnd - minSteps, 0, maxIndex - minSteps)
+        } else {
+          const adjustedStart = clamp(previous[0], 0, maxIndex - minSteps)
+          start = adjustedStart
+          end = Math.min(maxIndex, adjustedStart + minSteps)
         }
       }
 
@@ -131,7 +187,7 @@ export function useTimeline(timelineSamples, showRangeSlider) {
   }, [maxIndex, minSteps, totalDates])
 
   const handleCalendarDayClick = useCallback(value => {
-    if (!value?.date || !showRangeSlider || allDates.length <= 1) {
+    if (!value?.date || !showRangeSlider || dayDates.length === 0 || sliderDates.length <= 1) {
       return
     }
 
@@ -139,14 +195,14 @@ export function useTimeline(timelineSamples, showRangeSlider) {
 
     // Detect the date format based on length and content
     // YYYY-MM-DD (day), YYYY-MM (month), or YYYY (year)
-    let startIndex = -1
-    let endIndex = -1
+    let dayStartIndex = -1
+    let dayEndIndex = -1
 
     switch (clickedDate.length) {
       case 10: {
         // Day format: YYYY-MM-DD
-        startIndex = allDates.findIndex(d => format(d, 'yyyy-MM-dd') === clickedDate)
-        endIndex = startIndex === -1 ? -1 : Math.min(allDates.length - 1, startIndex + 1)
+        dayStartIndex = dayDates.findIndex(d => format(d, 'yyyy-MM-dd') === clickedDate)
+        dayEndIndex = dayStartIndex
         break
       }
 
@@ -154,22 +210,22 @@ export function useTimeline(timelineSamples, showRangeSlider) {
         // Month format: YYYY-MM
         // Find all dates within this month
         const [year, month] = clickedDate.split('-').map(Number)
-        startIndex = allDates.findIndex(d =>
+        dayStartIndex = dayDates.findIndex(d =>
           d.getFullYear() === year && d.getMonth() === month - 1
         )
 
-        if (startIndex !== -1) {
+        if (dayStartIndex !== -1) {
           // Find the last date of this month in allDates
-          let lastIndex = startIndex
+          let lastIndex = dayStartIndex
           while (
-            lastIndex + 1 < allDates.length
-            && allDates[lastIndex + 1].getFullYear() === year
-            && allDates[lastIndex + 1].getMonth() === month - 1
+            lastIndex + 1 < dayDates.length
+            && dayDates[lastIndex + 1].getFullYear() === year
+            && dayDates[lastIndex + 1].getMonth() === month - 1
           ) {
             lastIndex++
           }
 
-          endIndex = lastIndex
+          dayEndIndex = lastIndex
         }
 
         break
@@ -178,19 +234,19 @@ export function useTimeline(timelineSamples, showRangeSlider) {
       case 4: {
         // Year format: YYYY
         const year = Number(clickedDate)
-        startIndex = allDates.findIndex(d => d.getFullYear() === year)
+        dayStartIndex = dayDates.findIndex(d => d.getFullYear() === year)
 
-        if (startIndex !== -1) {
+        if (dayStartIndex !== -1) {
           // Find the last date of this year in allDates
-          let lastIndex = startIndex
+          let lastIndex = dayStartIndex
           while (
-            lastIndex + 1 < allDates.length
-            && allDates[lastIndex + 1].getFullYear() === year
+            lastIndex + 1 < dayDates.length
+            && dayDates[lastIndex + 1].getFullYear() === year
           ) {
             lastIndex++
           }
 
-          endIndex = lastIndex
+          dayEndIndex = lastIndex
         }
 
         break
@@ -201,15 +257,22 @@ export function useTimeline(timelineSamples, showRangeSlider) {
       }
     }
 
-    if (startIndex === -1 || endIndex === -1) {
+    if (dayStartIndex === -1 || dayEndIndex === -1) {
       return
     }
 
-    setRangeIndices([startIndex, endIndex])
-  }, [allDates, showRangeSlider])
+    const sliderStartIndex = dayStartIndex
+    const sliderEndIndex = Math.min(sliderDates.length - 1, dayEndIndex + 1)
+
+    if (sliderStartIndex === sliderEndIndex) {
+      return
+    }
+
+    setRangeIndices([sliderStartIndex, sliderEndIndex])
+  }, [dayDates, showRangeSlider, sliderDates])
 
   return {
-    allDates,
+    allDates: sliderDates,
     rangeIndices,
     visibleDateRange,
     visibleSamples,

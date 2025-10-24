@@ -16,7 +16,7 @@ const DossierPage = async ({params, children}) => {
       <StartDsfrOnHydration />
       <div className='fr-container mt-4'>
 
-        <DossiersBreadcrumb numero={dossier.number} />
+        <DossiersBreadcrumb numero={dossier.ds.dossierNumber} />
         {children}
       </div>
     </>

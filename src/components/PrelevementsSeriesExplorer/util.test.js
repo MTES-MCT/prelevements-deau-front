@@ -17,7 +17,9 @@ import {
   computeSliderMarks,
   transformSeriesToData,
   extractDefaultPeriodsFromSeries,
-  indexDuplicateParameters
+  indexDuplicateParameters,
+  parseLocalDate,
+  parseLocalDateTime
 } from './util.js'
 
 // Calendar status colors for testing
@@ -60,6 +62,29 @@ test('fillDateGaps handles consecutive dates', t => {
 
   t.is(result.allDates.length, 3)
   t.is(result.indexMap.size, 3)
+})
+
+test('parseLocalDate returns a local midnight Date instance', t => {
+  const date = parseLocalDate('2024-09-28')
+  t.truthy(date)
+  t.deepEqual(date, new Date(2024, 8, 28, 0, 0, 0, 0))
+})
+
+test('parseLocalDateTime parses time components safely', t => {
+  const date = parseLocalDateTime('2024-09-28', '15:30:45')
+  t.truthy(date)
+  t.deepEqual(date, new Date(2024, 8, 28, 15, 30, 45, 0))
+})
+
+test('parseLocalDateTime falls back to midnight when time missing', t => {
+  const date = parseLocalDateTime('2024-09-28')
+  t.truthy(date)
+  t.deepEqual(date, new Date(2024, 8, 28, 0, 0, 0, 0))
+})
+
+test('parseLocalDateTime returns null for invalid dates', t => {
+  const date = parseLocalDateTime('invalid')
+  t.is(date, null)
 })
 
 // periodsToDateRange tests

@@ -1,6 +1,6 @@
 'use client'
 
-import {useState} from 'react'
+import {useCallback, useState} from 'react'
 
 import dynamic from 'next/dynamic.js'
 import {useRouter, usePathname, useSearchParams} from 'next/navigation'
@@ -27,10 +27,11 @@ const DossiersTabs = () => {
   const searchParams = useSearchParams()
   const tabFromURL = searchParams.get('statut')
   const [activeTab, setActiveTab] = useState(tabFromURL || 'en-instruction')
+  const [periodOptions, setPeriodOptions] = useState([{value: 'all', label: 'Tout'}])
 
   const getFiltersFromURL = () => {
     const filters = {}
-    for (const key of ['declarant', 'numeroDossier', 'periode', 'typePrelevement']) {
+    for (const key of ['declarant', 'dossierNumber', 'periode', 'typePrelevement']) {
       const value = searchParams.get(key)
       if (value) {
         filters[key] = value
@@ -63,6 +64,10 @@ const DossiersTabs = () => {
     router.replace(`${pathname}?${params.toString()}`)
   }
 
+  const handleAvailablePeriodsChange = useCallback(options => {
+    setPeriodOptions(options?.length ? options : [{value: 'all', label: 'Tout'}])
+  }, [])
+
   return (
     <DynamicTabs
       className='fr-mt-4w'
@@ -73,8 +78,16 @@ const DossiersTabs = () => {
       }))}
       onTabChange={handleTabChange}
     >
-      <DossiersFilters filters={filters} setFilters={handleSetFilters} />
-      <DossiersList status={activeTab} filters={filters} />
+      <DossiersFilters
+        filters={filters}
+        setFilters={handleSetFilters}
+        periodOptions={periodOptions}
+      />
+      <DossiersList
+        status={activeTab}
+        filters={filters}
+        onAvailablePeriodsChange={handleAvailablePeriodsChange}
+      />
     </DynamicTabs>
   )
 }

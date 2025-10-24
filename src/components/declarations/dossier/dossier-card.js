@@ -13,6 +13,7 @@ import {fr} from 'date-fns/locale'
 import Link from 'next/link'
 
 import ListItem from '@/components/ui/ListItem/index.js'
+import {getDossierPeriodLabel} from '@/lib/dossier.js'
 
 const rightIcons = {
   'camion-citerne': {
@@ -62,28 +63,31 @@ const typeDonnees = typeDonnees => {
   }
 
   if (typeDonnees === 'vide') {
-    return 'Déclaration vide'
+    return 'Aucun fichier transmis'
   }
 
   return typeDonnees
 }
 
-const metas = dossier => ([
-  {
-    icon: CalendarTodayOutlined,
-    content: dossier.moisDeclaration
-      ? `Déclaration du mois : ${format(new Date(dossier.moisDeclaration), 'MMMM yyyy', {locale: fr})}`
-      : 'Régularisation'
-  },
-  {
-    icon: EventOutlined,
-    content: `Date de dépôt : ${format(new Date(dossier.dateDepot), 'dd/MM/yyyy', {locale: fr})}`
-  },
-  {
-    icon: TableRowsOutlined,
-    content: typeDonnees(dossier.typeDonnees)
-  }
-])
+const metas = dossier => {
+  console.log('🚀 ~ metas ~ dossier:', dossier.dateDerniereModification)
+  const periodLabel = getDossierPeriodLabel(dossier)
+
+  return [
+    {
+      icon: EventOutlined,
+      content: `Date de dépôt : ${format(new Date(dossier.dateDepot), 'dd/MM/yyyy', {locale: fr})}`
+    },
+    {
+      icon: CalendarTodayOutlined,
+      content: `Période concernée : ${periodLabel ?? 'Non renseignée'}`
+    },
+    {
+      icon: TableRowsOutlined,
+      content: typeDonnees(dossier.typeDonnees)
+    }
+  ]
+}
 
 const DossierCard = ({dossier, background, url}) => (
   <Link href={url || ''} style={{textDecoration: 'none'}}>
@@ -91,7 +95,7 @@ const DossierCard = ({dossier, background, url}) => (
       border
       title={dossier?.declarant?.raisonSociale
         ?? `${dossier.demandeur?.nom} ${dossier.demandeur?.prenom}`}
-      subtitle={dossier.number}
+      subtitle={dossier.ds.dossierNumber}
       subtitleIcon={ArticleOutlined}
       background={background}
       tags={tags[dossier.validationStatus]

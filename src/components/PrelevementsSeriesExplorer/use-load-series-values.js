@@ -12,21 +12,14 @@ import {useEffect, useState, useMemo} from 'react'
 
 import {format} from 'date-fns'
 
-import {indexDuplicateParameters} from './util.js'
+import {
+  indexDuplicateParameters,
+  parseLocalDateTime
+} from './util.js'
 
-const toFiniteNumber = value => {
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : null
-  }
+import {coerceNumericValue} from '@/utils/number.js'
 
-  if (value === null || value === undefined) {
-    return null
-  }
-
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : null
-}
-
+// Create or return the daily aggregation entry backing the calendar view.
 const getOrCreateDailyEntry = (context, date) => {
   const {dailyMap, parametersCount} = context
   if (!dailyMap.has(date)) {
@@ -39,6 +32,7 @@ const getOrCreateDailyEntry = (context, date) => {
   return dailyMap.get(date)
 }
 
+// Keep a list of timeline samples for each day so we can backfill sub-daily entries.
 const registerTimelineEntry = (context, date, sample) => {
   const {timelineEntriesByDate} = context
   if (!timelineEntriesByDate.has(date)) {
@@ -48,25 +42,34 @@ const registerTimelineEntry = (context, date, sample) => {
   timelineEntriesByDate.get(date).push(sample)
 }
 
+// Lazily build a timestamped sample (potentially sub-daily) and register it in the context.
 const getOrCreateTimelineEntry = (context, {date, time = null}) => {
   const {timelineMap, parametersCount} = context
   const key = `${date}::${time ?? ''}`
-  if (!timelineMap.has(key)) {
-    const timestamp = time ? new Date(`${date}T${time}:00`) : new Date(date)
-    const sample = {
-      date,
-      time,
-      timestamp,
-      values: Array.from({length: parametersCount}, () => null)
-    }
-
-    timelineMap.set(key, sample)
-    registerTimelineEntry(context, date, sample)
+  const existingSample = timelineMap.get(key)
+  if (existingSample) {
+    return existingSample
   }
 
-  return timelineMap.get(key)
+  const timestamp = parseLocalDateTime(date, time ?? null)
+  if (!timestamp) {
+    return null
+  }
+
+  const sample = {
+    date,
+    time,
+    timestamp,
+    values: Array.from({length: parametersCount}, () => null)
+  }
+
+  timelineMap.set(key, sample)
+  registerTimelineEntry(context, date, sample)
+
+  return sample
 }
 
+// Assign sub-daily values when the API returns an object keyed by HH:mm.
 const assignSubDailyFromObject = ({context, date, subValues, paramIndex}) => {
   if (!subValues || typeof subValues !== 'object') {
     return
@@ -76,23 +79,29 @@ const assignSubDailyFromObject = ({context, date, subValues, paramIndex}) => {
   let count = 0
 
   for (const [time, value] of Object.entries(subValues)) {
-    const numericValue = toFiniteNumber(value)
+    const numericValue = coerceNumericValue(value)
     if (numericValue === null) {
       continue
     }
 
     const sample = getOrCreateTimelineEntry(context, {date, time})
+    if (!sample) {
+      continue
+    }
+
     sample.values[paramIndex] = numericValue
     sum += numericValue
     count++
   }
 
   if (count > 0) {
+    // Average sub-daily points to produce the daily aggregate.
     const dailyEntry = getOrCreateDailyEntry(context, date)
     dailyEntry.values[paramIndex] = sum / count
   }
 }
 
+// Assign sub-daily values when the API returns an array of {time, value}.
 const assignSubDailyValues = ({context, date, subValues, paramIndex}) => {
   if (!Array.isArray(subValues)) {
     return assignSubDailyFromObject({
@@ -104,18 +113,23 @@ const assignSubDailyValues = ({context, date, subValues, paramIndex}) => {
   let count = 0
 
   for (const entry of subValues) {
-    const numericValue = toFiniteNumber(entry?.value)
+    const numericValue = coerceNumericValue(entry?.value)
     if (numericValue === null) {
       continue
     }
 
     const sample = getOrCreateTimelineEntry(context, {date, time: entry.time ?? null})
+    if (!sample) {
+      continue
+    }
+
     sample.values[paramIndex] = numericValue
     sum += numericValue
     count++
   }
 
   if (count > 0) {
+    // Average sub-daily points to produce the daily aggregate.
     const dailyEntry = getOrCreateDailyEntry(context, date)
     dailyEntry.values[paramIndex] = sum / count
   }
@@ -217,19 +231,24 @@ export function useLoadSeriesValues({seriesList, selectedPeriods, selectedParams
     for (const [paramIndex, paramLabel] of selectedParams.entries()) {
       const values = loadedValues[paramLabel] ?? []
 
+      // Iterate over daily API entries, handling both direct daily and sub-daily values.
       for (const dayEntry of values) {
         if (!dayEntry || !dayEntry.date) {
           continue
         }
 
-        const directValue = toFiniteNumber(dayEntry.value)
+        const directValue = coerceNumericValue(dayEntry.value)
 
         if (directValue !== null) {
           const dailyEntry = getOrCreateDailyEntry(aggregationContext, dayEntry.date)
           dailyEntry.values[paramIndex] = directValue
 
           const sample = getOrCreateTimelineEntry(aggregationContext, {date: dayEntry.date, time: null})
-          sample.values[paramIndex] = directValue
+          if (sample) {
+            // Mirror the daily value onto the timeline to ensure the chart renders when no sub-daily data exist.
+            sample.values[paramIndex] = directValue
+          }
+
           continue
         }
 
@@ -246,6 +265,7 @@ export function useLoadSeriesValues({seriesList, selectedPeriods, selectedParams
 
     for (const dailyEntry of dailyMap.values()) {
       const timelineEntries = timelineEntriesByDate.get(dailyEntry.date)
+      // Backfill missing sub-daily samples with the averaged daily value to keep each parameter populated.
       if (!timelineEntries) {
         continue
       }

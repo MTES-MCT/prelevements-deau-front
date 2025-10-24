@@ -8,7 +8,12 @@ import {xor} from 'lodash-es'
 
 import './index.css'
 import {
-  normalizeOptions, renderSelectedText, getOptionValue, getOptionContent
+  normalizeOptions,
+  renderSelectedText,
+  getOptionValue,
+  getOptionContent,
+  getOptionDisabled,
+  getOptionTitle
 } from './utils.js'
 
 const GroupedMultiselect = ({
@@ -88,6 +93,10 @@ const GroupedMultiselect = ({
 
   // Ajoute ou retire une option de la sélection
   const toggleOption = useCallback(option => {
+    if (getOptionDisabled(option)) {
+      return
+    }
+
     const optionValue = getOptionValue(option)
     const newValue = xor(value, [optionValue])
     onChange?.(newValue)
@@ -229,6 +238,8 @@ const GroupedMultiselect = ({
                   .reduce((acc, g) => acc + g.options.length, 0) + optIdx
                 const optionValue = getOptionValue(option)
                 const isSelected = value.includes(optionValue)
+                const isDisabled = getOptionDisabled(option)
+                const tooltip = getOptionTitle(option)
 
                 return (
                   <ListItem
@@ -236,14 +247,20 @@ const GroupedMultiselect = ({
                     ref={el => {
                       optionRefs.current[flatIdx] = el
                     }}
-                    className={`list-item selector-option${isSelected ? ' selected' : ''}${focusedIndex === flatIdx ? ' focused' : ''} p-2 radius-4`}
-                    tabIndex={-1}
-                    role='option'
+                    aria-disabled={isDisabled}
                     aria-selected={isSelected}
-                    onClick={() => toggleOption(option)}
+                    className={`list-item selector-option${isSelected ? ' selected' : ''}${focusedIndex === flatIdx ? ' focused' : ''}${isDisabled ? ' disabled' : ''} p-2 radius-4`}
+                    role='option'
+                    tabIndex={-1}
+                    title={tooltip}
+                    onClick={isDisabled ? () => {} : () => toggleOption(option)}
                     onKeyDown={handleKeyDown}
                   >
-                    {isSelected && <span className='mr-1'>✓</span>}
+                    {isSelected && (
+                      <span aria-hidden className='selector-option-check mr-1'>
+                        ✓
+                      </span>
+                    )}
                     {getOptionContent(option)}
                   </ListItem>
                 )
