@@ -13,20 +13,16 @@
 
 import {useMemo} from 'react'
 
-import {fr} from '@codegouvfr/react-dsfr'
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 
 import {computeCalendarKey, getMinDate} from './util.js'
 
 import Calendar from '@/components/ui/Calendar/index.js'
 import LegendCalendar from '@/components/ui/LegendCalendar/index.js'
+import {getCalendarLegendLabels} from '@/lib/calendar-colors.js'
 
-// Default legend labels (reused pattern from previous calendar grid implementation)
-const defaultLegendLabels = [
-  {color: fr.colors.decisions.artwork.major.blueFrance.default, label: 'Données présentes'},
-  {color: fr.colors.decisions.background.actionHigh.info.hover, label: 'Pas de prélèvement'},
-  {color: fr.colors.decisions.background.actionHigh.grey.active, label: 'Non déclaré / pas de déclaration'}
-]
+// Default legend labels using centralized calendar colors
+const defaultLegendLabels = getCalendarLegendLabels()
 
 const CalendarGrid = ({calendars, onClick, hoverComponent: HoverComponent, legendLabels = defaultLegendLabels}) => {
   // Sort sub-arrays by the earliest date of each calendar
