@@ -233,7 +233,8 @@ export async function deleteExploitation(exploitationId) {
 }
 
 export async function getStats(territoire) {
-  const response = await executeRequest(`api/stats/${territoire || ''}`)
+  const path = territoire ? `api/stats/${territoire}` : 'api/stats'
+  const response = await executeRequest(path)
   return response.json()
 }
 
