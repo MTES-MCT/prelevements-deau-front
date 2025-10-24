@@ -5,7 +5,7 @@ import {
   LocalDrinkOutlined,
   LocalShippingOutlined
 } from '@mui/icons-material'
-import {some, uniq, mapValues} from 'lodash-es'
+import {some, mapValues} from 'lodash-es'
 
 import {legendColors} from '@/components/map/legend-colors.js'
 
@@ -278,11 +278,13 @@ const buildBaseStatus = pointsPrelevement => {
 const statusesFromAepZreFiles = files => {
   const groupedErrors = {}
 
-  for (const file of files.filter(f => !f.processingError && f.result?.data?.pointPrelevement)) {
-    const pointId = file.result.data.pointPrelevement
-    groupedErrors[pointId] ||= []
-    if (file.result.errors) {
-      groupedErrors[pointId].push(...file.result.errors)
+  for (const file of files.filter(f => !f.processingError && Array.isArray(f.series) && f.series.length > 0)) {
+    const points = [...new Set(file.series.map(s => s.pointPrelevement).filter(Boolean))]
+    for (const pointId of points) {
+      groupedErrors[pointId] ||= []
+      if (file.result.errors) {
+        groupedErrors[pointId].push(...file.result.errors)
+      }
     }
   }
 
@@ -297,11 +299,10 @@ const statusesFromCamionFiles = files => {
   const statusPerPoint = {}
 
   for (const file of files
-    .filter(f => !f.processingError && f.result?.data?.length)) {
-    const points = uniq(file.result.data
-      .map(r => r.pointPrelevement)
-      .filter(Boolean))
-
+    .filter(f => !f.processingError && Array.isArray(f.series) && f.series.length > 0)) {
+    const points = [...new Set(file.series
+      .map(s => s.pointPrelevement)
+      .filter(Boolean))]
     const fileStatus = statusFromErrors(file.result.errors)
     for (const id of points) {
       statusPerPoint[id] = fileStatus
@@ -321,7 +322,10 @@ const statusesFromManualEntries = (dossier, pointsPrelevement) => {
     return {}
   }
 
-  return {[pointsPrelevement[0].id_point]: 'success'}
+  return Object.fromEntries(
+    pointsPrelevement
+      .map(pt => [pt.id_point, 'success'])
+  )
 }
 
 /* ---------- Fonction principale appelée par le composant ---------- */
