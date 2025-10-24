@@ -13,8 +13,8 @@ import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {authOptions} from '@/server/auth.js'
 
 const Page = async () => {
-  const {user} = await getServerSession(authOptions)
-  const stats = await getStats(user.territoire)
+  const session = await getServerSession(authOptions)
+  const {territoire} = session?.user || {}
   const {
     pointsCount,
     documents,
@@ -24,7 +24,7 @@ const Page = async () => {
     termineePoints,
     abandoneePoints,
     nonRenseignePoints
-  } = stats
+  } = await getStats(territoire)
 
   const pieData = []
 

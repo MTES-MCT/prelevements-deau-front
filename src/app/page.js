@@ -12,13 +12,14 @@ import {getPointsPrelevementURL} from '@/lib/urls.js'
 import {authOptions} from '@/server/auth.js'
 
 const Home = async () => {
-  const {user} = await getServerSession(authOptions)
+  const session = await getServerSession(authOptions)
+  const {territoire} = session?.user || {}
   const {
     activPointsPrelevementCount,
     activPointsSurfaceCount,
     activPointsSouterrainCount,
     activPreleveursCount
-  } = await getStats(user.territoire)
+  } = await getStats(territoire)
 
   return (
     <>
