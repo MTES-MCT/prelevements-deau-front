@@ -27,13 +27,12 @@ export const FREQUENCY_ORDER = {
  * @returns {string|null} French label or original value if not found
  */
 export function formatFrequencyLabel(frequency) {
-  const trimmed = frequency?.toString().trim()
-  if (!trimmed) {
+  if (!frequency) {
     return null
   }
 
-  const label = FREQUENCY_LABELS.get(trimmed.toLowerCase())
-  return label ?? trimmed
+  const label = FREQUENCY_LABELS.get(frequency)
+  return label ?? frequency
 }
 
 /**
