@@ -9,6 +9,7 @@ import {getSeriesValues as fetchSeriesValues} from '@/app/api/series.js'
 import PrelevementsSeriesExplorer from '@/components/PrelevementsSeriesExplorer/index.js'
 import {getGlobalDateBounds} from '@/components/PrelevementsSeriesExplorer/util.js'
 import DividerSection from '@/components/ui/DividerSection/index.js'
+import {formatFrequencyLabel, sortFrequencies} from '@/utils/frequency.js'
 
 const DeclarationFileDetails = ({
   pointId,
@@ -17,8 +18,19 @@ const DeclarationFileDetails = ({
   getSeriesValues = fetchSeriesValues
 }) => {
   const hasPointLink = pointId !== null && pointId !== undefined && pointId !== ''
-  const dailySeries = series.filter(s => s.frequency === '1 day')
-  const fifteenMinSeries = series.filter(s => s.frequency === '15 minutes')
+
+  // Group series by frequency
+  const seriesByFrequency = {}
+  for (const serie of series) {
+    const freq = serie.frequency || 'Unknown'
+    seriesByFrequency[freq] ||= []
+
+    seriesByFrequency[freq].push(serie)
+  }
+
+  // Sort frequencies in logical order using utility function
+  const sortedFrequencies = sortFrequencies(Object.keys(seriesByFrequency))
+
   // Vérifie si les dates de prélèvement (minDate / maxDate) se situent dans le mois déclaré
   const isInDeclarationMonth = date => {
     const declarationDate = new Date(moisDeclaration)
@@ -56,26 +68,23 @@ const DeclarationFileDetails = ({
 
       <DividerSection title='Paramètres par pas de temps'>
         <Box className='flex flex-col gap-2'>
-          {dailySeries.length > 0 ? (
-            <Box className='flex flex-wrap gap-1 items-center'>
-              Journalier : {dailySeries.map(serie => (
-                <Tag key={serie._id} sx={{m: 1}}>
-                  {serie.parameter} ({serie.unit})
-                </Tag>
-              ))}
-            </Box>
-          ) : (
-            <Alert severity='warning' description='Aucun paramètre journalier renseigné.' />
-          )}
+          {sortedFrequencies.length > 0 ? (
+            sortedFrequencies.map(frequency => {
+              const seriesForFreq = seriesByFrequency[frequency]
+              const label = formatFrequencyLabel(frequency)
 
-          {fifteenMinSeries.length > 0 && (
-            <Box className='flex flex-wrap gap-1 items-center'>
-              Quinze minutes : {fifteenMinSeries.map(serie => (
-                <Tag key={serie._id} sx={{m: 1}}>
-                  {serie.parameter} ({serie.unit})
-                </Tag>
-              ))}
-            </Box>
+              return (
+                <Box key={frequency} className='flex flex-wrap gap-1 items-center'>
+                  {label} : {seriesForFreq.map(serie => (
+                    <Tag key={serie._id} sx={{m: 1}}>
+                      {serie.parameter} ({serie.unit})
+                    </Tag>
+                  ))}
+                </Box>
+              )
+            })
+          ) : (
+            <Alert severity='warning' description='Aucun paramètre renseigné.' />
           )}
         </Box>
       </DividerSection>

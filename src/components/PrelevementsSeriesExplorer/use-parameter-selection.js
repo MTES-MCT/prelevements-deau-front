@@ -13,14 +13,7 @@ import {
 } from './constants.js'
 import {indexDuplicateParameters} from './util.js'
 
-// Possible frequencies (specification) => French labels
-const FREQUENCY_LABELS = new Map([
-  ['1 second', '1 seconde'],
-  ['1 minute', '1 minute'],
-  ['15 minutes', '15 minutes'],
-  ['1 hour', '1 heure'],
-  ['1 day', '1 jour']
-])
+import {formatFrequencyLabel} from '@/utils/frequency.js'
 
 // Possible value types (specification) => French labels
 const VALUE_TYPE_LABELS = new Map([
@@ -33,16 +26,6 @@ const VALUE_TYPE_LABELS = new Map([
   ['cumulative', 'cumulé'],
   ['raw', 'brut']
 ])
-
-function formatFrequencyLabel(frequency) {
-  const trimmed = frequency?.toString().trim()
-  if (!trimmed) {
-    return null
-  }
-
-  const label = FREQUENCY_LABELS.get(trimmed.toLowerCase())
-  return label ?? trimmed
-}
 
 function formatValueTypeLabel(valueType) {
   const trimmed = valueType?.toString().trim()
