@@ -23,7 +23,7 @@ const DeclarationFileDetails = ({
   const seriesByFrequency = {}
   for (const serie of series) {
     const freq = serie.frequency || 'Unknown'
-    seriesByFrequency[freq] ||= []
+    seriesByFrequency[freq] = seriesByFrequency[freq] || []
 
     seriesByFrequency[freq].push(serie)
   }
