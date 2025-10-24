@@ -3,6 +3,7 @@ import {fr} from '@codegouvfr/react-dsfr'
 import Calendar from './index.js'
 
 import PeriodTooltip from '@/components/ui/PeriodTooltip/index.js'
+import {CALENDAR_STATUS_COLORS} from '@/lib/calendar-colors.js'
 
 const meta = {
   title: 'Components/Calendar',
@@ -20,9 +21,10 @@ const meta = {
 
 export default meta
 
-const blue = fr.colors.decisions.artwork.major.blueFrance.default
+// Using CALENDAR_STATUS_COLORS for consistency with legend
+const blue = CALENDAR_STATUS_COLORS.present
 const orange = fr.colors.decisions.background.actionHigh.warning.hover
-const lightBlue = fr.colors.decisions.background.actionHigh.info.hover
+const lightBlue = CALENDAR_STATUS_COLORS.noSampling
 
 // ===== Story: Year (format YYYY-MM) =====
 export const Annee2024 = {

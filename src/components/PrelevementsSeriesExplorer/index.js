@@ -45,6 +45,7 @@
  * @param {boolean} [props.showRangeSlider=true] - Show/hide range refinement slider
  * @param {string} [props.locale='fr-FR'] - Locale for date/number formatting
  * @param {Object} [props.timeSeriesChartProps] - Additional props passed through to `TimeSeriesChart`
+ * @param {Array<{color: string, label: string}>} [props.legendLabels] - Custom legend labels for calendar status colors
  */
 
 'use client'
@@ -103,7 +104,8 @@ const PrelevementsSeriesExplorer = ({
   showChart = true,
   showRangeSlider = true,
   locale = 'fr-FR',
-  timeSeriesChartProps
+  timeSeriesChartProps,
+  legendLabels
 }) => {
   const t = {...DEFAULT_TRANSLATIONS, ...customTranslations}
 
@@ -250,7 +252,11 @@ const PrelevementsSeriesExplorer = ({
       {/* Calendar Grid */}
       {showCalendar && calendarData.length > 0 && (
         <Box>
-          <CalendarGrid calendars={calendarData} onClick={handleCalendarDayClick} />
+          <CalendarGrid
+            calendars={calendarData}
+            legendLabels={legendLabels}
+            onClick={handleCalendarDayClick}
+          />
         </Box>
       )}
 

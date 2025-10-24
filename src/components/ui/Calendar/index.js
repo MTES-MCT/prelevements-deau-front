@@ -8,7 +8,6 @@
  * Displays an error if mixed formats or incoherent ranges are provided.
  */
 
-import {fr as dsfr} from '@codegouvfr/react-dsfr'
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 
 // ===================== Imported utilities ===================== //
@@ -20,6 +19,8 @@ import {
   buildValueMap
 } from './util.js'
 
+import {CALENDAR_STATUS_COLORS} from '@/lib/calendar-colors.js'
+
 // ===================== Generic cell ===================== //
 const BaseCell = ({label, ariaLabel, interactive, color, size, onActivate, tooltipComponent: TooltipComponent}) => {
   let style = {width: size, height: size}
@@ -29,7 +30,7 @@ const BaseCell = ({label, ariaLabel, interactive, color, size, onActivate, toolt
     style = {...style, backgroundColor: color}
     classes += ' text-white'
   } else {
-    style = {...style, backgroundColor: dsfr.colors.decisions.background.actionHigh.grey.active}
+    style = {...style, backgroundColor: CALENDAR_STATUS_COLORS.notDeclared}
     classes += ' text-white'
   }
 
@@ -266,7 +267,7 @@ const Calendar = ({values, onClick, hoverComponent: HoverComponent}) => {
   const titleId = sub?.title ? `calendar-title-${sub.title.replaceAll(/\s+/g, '-').toLowerCase()}` : undefined
 
   return (
-    <div style={{backgroundColor: dsfr.colors.decisions.background.default}} role='region' aria-label='Calendrier'>
+    <div role='region' aria-label='Calendrier'>
       {sub?.title && (
         <h3 id={titleId} className='text-center mb-3 text-lg font-semibold'>
           {sub.title}
