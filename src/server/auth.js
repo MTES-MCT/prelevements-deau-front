@@ -30,6 +30,7 @@ export const authOptions = {
     async jwt({token, user}) {
       if (user) {
         token.token = user.token
+        token.territoire = user.territoire
         token.role = user.isAdmin ? 'administrateur' : null
       }
 
@@ -37,7 +38,9 @@ export const authOptions = {
     },
     async session({session, token}) {
       session.user.token = token.token
+      session.user.territoire = token.territoire
       session.user.role = token.role
+
       return session
     }
   },

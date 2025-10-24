@@ -1,6 +1,7 @@
 import {Box, Typography} from '@mui/material'
 import Image from 'next/image'
 import Link from 'next/link'
+import {getServerSession} from 'next-auth'
 
 import {getStats} from '@/app/api/points-prelevement.js'
 import Counter from '@/components/ui/Counter/index.js'
@@ -8,9 +9,17 @@ import Pie from '@/components/ui/Pie/index.js'
 import SidedSection from '@/components/ui/SidedSection/index.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getPointsPrelevementURL} from '@/lib/urls.js'
+import {authOptions} from '@/server/auth.js'
 
 const Home = async () => {
-  const stats = await getStats()
+  const session = await getServerSession(authOptions)
+  const {territoire} = session?.user || {}
+  const {
+    activPointsPrelevementCount,
+    activPointsSurfaceCount,
+    activPointsSouterrainCount,
+    activPreleveursCount
+  } = await getStats(territoire)
 
   return (
     <>
@@ -55,15 +64,15 @@ const Home = async () => {
       <SidedSection
         firstContent={(
           <Counter
-            label='Nombre de points de prélèvement en activité : '
-            number={stats.activPointsPrelevementCount}
+            label='Nombre de point de prélèvement en activité : '
+            number={activPointsPrelevementCount}
           />
         )}
         secondContent={(
           <Pie
             data={[
-              {id: 'surface', value: stats.activPointsSurfaceCount, label: 'Surface'},
-              {id: 'souterrain', value: stats.activPointsSouterrainCount, label: 'Souterrain'}
+              {id: 'surface', value: activPointsSurfaceCount, label: 'Surface'},
+              {id: 'souterrain', value: activPointsSouterrainCount, label: 'Souterrain'}
             ]}
           />
         )}
@@ -89,7 +98,7 @@ const Home = async () => {
         firstContent={(
           <Counter
             label='Nombre de préleveurs actifs : '
-            number={stats.activPreleveursCount}
+            number={activPreleveursCount}
           />
         )}
         secondContent={(

@@ -1,4 +1,6 @@
+import {fr} from '@codegouvfr/react-dsfr'
 import {Box, Typography} from '@mui/material'
+import {getServerSession} from 'next-auth'
 
 import {getStats} from '@/app/api/points-prelevement.js'
 import DebitsReservesChart from '@/components/points-prelevement/debits-reserves-chart.js'
@@ -8,11 +10,59 @@ import Counter from '@/components/ui/Counter/index.js'
 import Pie from '@/components/ui/Pie/index.js'
 import SidedSection from '@/components/ui/SidedSection/index.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
+import {authOptions} from '@/server/auth.js'
 
 const Page = async () => {
-  const stats = await getStats()
-  const {activPointsPrelevementCount, pointsCount, documents, regularisations, debitsReserves} = stats
-  const unactivPoints = pointsCount - activPointsPrelevementCount
+  const session = await getServerSession(authOptions)
+  const {territoire} = session?.user || {}
+  const {
+    pointsCount,
+    documents,
+    regularisations,
+    debitsReserves,
+    enActivitePoints,
+    termineePoints,
+    abandoneePoints,
+    nonRenseignePoints
+  } = await getStats(territoire)
+
+  const pieData = []
+
+  if (enActivitePoints > 0) {
+    pieData.push({
+      id: 'enActivitePoints',
+      value: enActivitePoints,
+      label: 'En activité',
+      color: fr.colors.decisions.artwork.major.blueCumulus.active
+    })
+  }
+
+  if (termineePoints > 0) {
+    pieData.push({
+      id: 'termineePoints',
+      value: termineePoints,
+      label: 'Terminé',
+      color: fr.colors.decisions.artwork.major.yellowMoutarde.active
+    })
+  }
+
+  if (abandoneePoints > 0) {
+    pieData.push({
+      id: 'abandoneePoints',
+      value: abandoneePoints,
+      label: 'Abandonné',
+      color: fr.colors.decisions.artwork.major.purpleGlycine.active
+    })
+  }
+
+  if (nonRenseignePoints > 0) {
+    pieData.push({
+      id: 'nonRenseignePoints',
+      value: nonRenseignePoints,
+      label: 'Non renseigné',
+      color: fr.colors.decisions.artwork.major.greenArchipel.active
+    })
+  }
 
   return (
     <>
@@ -31,18 +81,7 @@ const Page = async () => {
         )}
         secondContent={(
           <Pie
-            data={[
-              {
-                id: 'unactivPoints',
-                value: unactivPoints,
-                label: 'Terminés'
-              },
-              {
-                id: 'activPoints',
-                value: activPointsPrelevementCount,
-                label: 'En activité'
-              }
-            ]}
+            data={pieData}
           />
         )}
       />
