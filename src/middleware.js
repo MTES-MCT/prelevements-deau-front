@@ -9,9 +9,8 @@ export default withAuth({
 export const config = {
   matcher: [
     '/dossiers/:path*',
-    '/prelevements/:path*',
+    '/points-prelevement/:path*',
     '/preleveurs/:path*',
-    '/validateur',
     '/statistiques'
   ]
 }

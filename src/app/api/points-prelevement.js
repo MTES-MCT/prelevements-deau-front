@@ -1,4 +1,4 @@
-import {executeRequest, getAuthorization} from './util/request.js'
+import {executeRequest, getAuthorization, API_URL} from './util/request.js'
 
 export async function getPointsPrelevement() {
   const response = await executeRequest(
@@ -45,6 +45,18 @@ export async function deletePointPrelevement(id) {
 
 export async function getPreleveur(id) {
   const response = await executeRequest(`api/preleveurs/${id}`, {headers: {Authorization: await getAuthorization()}})
+  if (response.ok === false) {
+    return null
+  }
+
+  return response.json()
+}
+
+export async function getDocumentsFromPreleveur(id) {
+  const response = await executeRequest(`api/preleveurs/${id}/documents`, {
+    headers: {Authorization: await getAuthorization()}
+  })
+
   if (response.ok === false) {
     return null
   }
@@ -101,6 +113,68 @@ export async function deletePreleveur(idPreleveur) {
   return response.json()
 }
 
+export async function createDocument(idPreleveur, payload, document) {
+  const formData = new FormData()
+  for (const [key, value] of Object.entries(payload)) {
+    formData.append(key, value)
+  }
+
+  formData.append('document', document)
+
+  // On utilise fetch directement car executeRequest ne gère pas FormData
+  const response = await fetch(
+    `${API_URL}/api/preleveurs/${idPreleveur}/documents`,
+    {
+      headers: {Authorization: await getAuthorization()},
+      method: 'POST',
+      body: formData
+    }
+  )
+
+  return response.json()
+}
+
+export async function uploadDocument(idPreleveur, document) {
+  const formData = new FormData()
+  formData.append('document', document)
+
+  const response = await fetch(
+    `${API_URL}/api/preleveurs/${idPreleveur}/documents/upload`,
+    {
+      headers: {Authorization: await getAuthorization()},
+      method: 'POST',
+      body: formData
+    }
+  )
+
+  return response.json()
+}
+
+export async function updateDocument(idDocument, idPreleveur, payload) {
+  const response = await executeRequest(
+    `api/preleveurs/${idPreleveur}/documents/${idDocument}`,
+    {
+      headers: {Authorization: await getAuthorization()},
+      method: 'PUT',
+      body: payload
+    }
+  )
+
+  return response.json()
+}
+
+export async function deleteDocument(idPreleveur, idDocument) {
+  const response = await executeRequest(
+    `api/preleveurs/${idPreleveur}/documents/${idDocument}`,
+    {
+      headers: {Authorization: await getAuthorization()},
+      method: 'DELETE'
+    }
+  )
+
+  return response
+}
+
 export async function createExploitation(payload) {
   const response = await executeRequest('api/exploitations', {
     headers: {Authorization: await getAuthorization()},
@@ -142,6 +216,14 @@ export async function getExploitationsByPointId(pointId) {
   return response.json()
 }
 
+export async function getExploitationFromPreleveur(idPreleveur) {
+  const response = await executeRequest(
+    `api/preleveurs/${idPreleveur}/exploitations`,
+    {headers: {Authorization: await getAuthorization()}}
+  )
+  return response.json()
+}
+
 export async function deleteExploitation(exploitationId) {
   const response = await executeRequest(`api/exploitations/${exploitationId}`, {
     headers: {Authorization: await getAuthorization()},
@@ -155,18 +237,19 @@ export async function getStats(territoire) {
   return response.json()
 }
 
-export async function getVolumesExploitation(exploitationId) {
-  const response = await executeRequest(
-    `api/exploitations/${exploitationId}/volumes-preleves`,
-    {headers: {Authorization: await getAuthorization()}}
-  )
-  return response.json()
-}
-
 export async function getBnpe() {
   const response = await executeRequest(
     'api/referentiels/bnpe',
     {headers: {Authorization: await getAuthorization()}})
+  return response.json()
+}
+
+export async function getBss() {
+  const response = await executeRequest(
+    'api/referentiels/bss',
+    {headers: {Authorization: await getAuthorization()}}
+  )
+
   return response.json()
 }
 

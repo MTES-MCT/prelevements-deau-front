@@ -164,7 +164,7 @@ function loadMap(map, points) {
   }
 }
 
-const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, style}) => {
+const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, style = 'plan-ign'}) => {
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
   const popupRef = useRef(null)
@@ -240,9 +240,9 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, style}
     }
 
     const onMarkerClick = e => {
-      if (e.features && e.features.length > 0) {
+      if (e.features && e.features.length > 0 && handleSelectedPoint) {
         const feature = e.features[0]
-        handleSelectedPoint(feature.properties.id_point)
+        handleSelectedPoint(feature.properties)
         if (popupRef.current) {
           popupRef.current.remove()
         }

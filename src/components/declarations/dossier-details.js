@@ -5,23 +5,36 @@ import {
   useMemo
 } from 'react'
 
-import {Box} from '@mui/material'
-import {sumBy} from 'lodash'
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
+import {Box, Skeleton} from '@mui/material'
+import {flatMap, sumBy} from 'lodash-es'
+
+import PrelevementsAccordion from './dossier/prelevements/prelevements-accordion.js'
+import VolumesPompes from './dossier/prelevements/volumes-pompes.js'
 
 import {getFileBlob} from '@/app/api/dossiers.js'
 import {getPointPrelevement} from '@/app/api/points-prelevement.js'
+import DeclarantDetails from '@/components/declarations/dossier/declarant-details.js'
+import DemandeurDetails from '@/components/declarations/dossier/demandeur-details.js'
 import DossierInfos from '@/components/declarations/dossier/infos.js'
-import MandataireDetails from '@/components/declarations/dossier/mandataire-details.js'
 import PointsPrelevementDetails from '@/components/declarations/dossier/points-prelevement-details.js'
-import PrelevementsDetails from '@/components/declarations/dossier/prelevements-details.js'
+import Compteur from '@/components/declarations/dossier/prelevements/compteur.js'
 import PreleveurDetails from '@/components/declarations/dossier/preleveur-details.js'
+import FileValidationResult from '@/components/declarations/validateur/file-validation-result.js'
+import SectionCard from '@/components/ui/SectionCard/index.js'
+import {getFileNameFromStorageKey} from '@/lib/dossier.js'
+import {computePointsStatus} from '@/lib/points-prelevement.js'
+import {formatNumber} from '@/utils/number.js'
 
 function getVolumePrelevementTotal(dossier, files) {
   const {relevesIndex, volumesPompes} = dossier
 
   // 1. Priorité aux fichiers si présents
   if (files?.length) {
-    return sumBy(files, f => f.result?.data?.volumePreleveTotal ?? 0)
+    return sumBy(
+      flatMap(files, file => file.result ? (file.result.totalVolumePreleve ? [file.result.totalVolumePreleve] : []) : []),
+      v => v ?? 0
+    )
   }
 
   // 2. Sinon, on regarde les relevés index
@@ -40,28 +53,26 @@ function getVolumePrelevementTotal(dossier, files) {
 
 const DossierDetails = ({dossier, preleveur, files, idPoints}) => {
   const [pointsPrelevement, setPointsPrelevement] = useState(null)
-  const [selectedPointId, setSelectedPointId] = useState(idPoints.length === 1 ? idPoints[0] : null)
+  const [focusedPointId, setFocusedPointId] = useState(null)
 
   const listRefs = useRef({})
 
+  // Récupération des points de prélèvement
   useEffect(() => {
     const fetchPointsPrelevement = async () => {
       const points = await Promise.all(idPoints.map(idPoint => getPointPrelevement(idPoint)))
       setPointsPrelevement(points.filter(Boolean)) // Filtre 404 not found
     }
 
-    if (idPoints.length > 0) {
-      fetchPointsPrelevement()
-    } else {
-      setPointsPrelevement([])
-    }
+    fetchPointsPrelevement()
   }, [idPoints])
 
-  const downloadFile = async storageKey => {
-    const [hash, ...filenameParts] = storageKey.split('-')
+  const downloadFile = async attachmentId => {
+    const {storageKey} = files.find(f => f._id === attachmentId) || {}
+    const [, ...filenameParts] = storageKey.split('-')
     const filename = filenameParts.join('-')
     try {
-      const file = await getFileBlob(dossier._id, hash)
+      const file = await getFileBlob(dossier._id, attachmentId)
       const url = URL.createObjectURL(file)
       const a = document.createElement('a')
       a.href = url
@@ -74,7 +85,7 @@ const DossierDetails = ({dossier, preleveur, files, idPoints}) => {
   }
 
   const onClickPointPrelevementMarker = useCallback(id => {
-    setSelectedPointId(id)
+    setFocusedPointId(id)
     const ref = listRefs.current[id]
     if (ref) {
       ref.scrollIntoView({behavior: 'smooth', block: 'start'})
@@ -83,18 +94,19 @@ const DossierDetails = ({dossier, preleveur, files, idPoints}) => {
 
   // Compute disabled points (no available prélèvement)
   const pointIdsWithNoPrelevement = useMemo(() => {
-    if (files && files.length > 0) {
-      // Compute disabled points (no available prélèvement)
-      const filePointIds = files?.flatMap(file => file.pointsPrelevements) || []
-      const uniqueFilePointIds = new Set(new Set(filePointIds))
-      return idPoints.filter(id => !uniqueFilePointIds.has(id))
+    if (pointsPrelevement) {
+      const pointIdsWithData = new Set(pointsPrelevement.map(point => point.id_point))
+      return idPoints.filter(id => !pointIdsWithData.has(id))
     }
 
-    return []
-  }, [files, idPoints])
+    return idPoints
+  }, [pointsPrelevement, idPoints])
 
   const volumePrelevementTotal = useMemo(() => getVolumePrelevementTotal(dossier, files), [dossier, files])
 
+  const pointsStatus = useMemo(() => computePointsStatus({dossier, files, pointsPrelevement}),
+    [dossier, files, pointsPrelevement]
+  )
   return (
     <Box className='flex flex-col gap-2 mb-4'>
       <DossierInfos
@@ -105,37 +117,93 @@ const DossierDetails = ({dossier, preleveur, files, idPoints}) => {
       />
 
       <div className='flex flex-wrap gap-2'>
-        {(dossier.demandeur || preleveur) && (
-          <PreleveurDetails preleveur={preleveur || dossier.demandeur} />
+        {preleveur && (
+          <PreleveurDetails preleveur={preleveur} />
         )}
-        {dossier.declarant && dossier.declarant.type !== 'particulier' && (
-          <MandataireDetails mandataire={dossier.declarant} />
+
+        {!preleveur && dossier.demandeur && (
+          <DemandeurDetails demandeur={dossier.demandeur} />
+        )}
+
+        {dossier.declarant && (
+          <DeclarantDetails
+            declarant={dossier.declarant}
+            isMandataire={dossier.deposeParUnTiers}
+          />
         )}
       </div>
 
       <PointsPrelevementDetails
         pointsPrelevementId={idPoints}
         pointsPrelevement={pointsPrelevement}
-        volumePrelevementTotal={volumePrelevementTotal}
         handleClick={onClickPointPrelevementMarker}
         disabledPointIds={pointIdsWithNoPrelevement}
+        pointsStatus={pointsStatus}
       />
 
-      <PrelevementsDetails
-        volumePrelevementTotal={volumePrelevementTotal}
-        moisDeclaration={dossier.moisDeclaration}
-        tableauSuiviPrelevements={dossier.tableauSuiviPrelevements}
-        pointsPrelevementId={idPoints}
-        pointsPrelevement={pointsPrelevement}
-        selectedPointId={selectedPointId}
-        relevesIndex={dossier.relevesIndex}
-        volumesPompes={dossier.volumesPompes}
-        files={files}
-        compteur={dossier.compteur}
-        selectedPoint={idPoint => setSelectedPointId(prev => prev === idPoint ? null : idPoint)}
-        listRefs={listRefs}
-        handleDownload={downloadFile}
-      />
+      {pointsPrelevement && (
+        <SectionCard title='Prélèvements' icon='fr-icon-drop-line'>
+          {volumePrelevementTotal !== null && (
+            <Alert
+              severity='info'
+              className='mb-4'
+              description={
+                <>
+                  Volume total prélevé : <b>{formatNumber(volumePrelevementTotal)} m³</b>
+                </>
+              }
+            />
+          )}
+
+          {(!files || !pointsPrelevement) && (
+            <Skeleton variant='rectangular' height={200} />
+          )}
+
+          {['camion-citerne', 'aep-zre'].includes(dossier.typePrelevement) && (
+            <div className='flex flex-col gap-4'>
+              {files.map(file => (
+                <FileValidationResult
+                  key={file._id}
+                  scrollIntoView={focusedPointId}
+                  fileName={getFileNameFromStorageKey(file.storageKey)}
+                  attachmentId={file._id}
+                  typePrelevement={dossier.typePrelevement}
+                  pointsPrelevement={pointsPrelevement}
+                  series={file.series || []}
+                  integrations={file.integrations || []}
+                  validationStatus={file.validationStatus}
+                  errors={file.result?.errors || []}
+                  totalVolumePreleve={file.result?.totalVolumePreleve}
+                  downloadFile={downloadFile}
+                />
+              ))}
+            </div>
+          )}
+
+          {(dossier.volumesPompes || dossier.compteur) && (
+            (
+              <PrelevementsAccordion
+                isOpen
+                idPoint={pointsPrelevement[0]?.id_point}
+                pointPrelevement={pointsPrelevement[0]}
+                volumePreleveTotal={volumePrelevementTotal}
+                status={volumePrelevementTotal ? 'success' : 'error'}
+              >
+                {dossier.compteur && (
+                  <Compteur
+                    compteur={dossier.compteur}
+                    relevesIndex={dossier.relevesIndex}
+                    moisDeclaration={dossier.moisDeclaration}
+                  />
+                )}
+                {dossier.volumesPompes && (
+                  <VolumesPompes volumesPompes={dossier.volumesPompes} />
+                )}
+              </PrelevementsAccordion>
+            )
+          )}
+        </SectionCard>
+      )}
     </Box>
   )
 }

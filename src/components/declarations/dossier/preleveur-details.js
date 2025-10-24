@@ -1,7 +1,8 @@
-import {Box, Typography, Alert} from '@mui/material'
+import {Box, Typography} from '@mui/material'
 
-import LabelWithIcon from '@/components/ui/label-with-icon.js'
-import SectionCard from '@/components/ui/section-card.js'
+import LabelWithIcon from '@/components/ui/LabelWithIcon/index.js'
+import SectionCard from '@/components/ui/SectionCard/index.js'
+import {getPersonnePhysiqueFullName} from '@/lib/dossier.js'
 import {getPreleveurURL} from '@/lib/urls.js'
 
 const PreleveurDetails = ({preleveur}) => (
@@ -10,11 +11,10 @@ const PreleveurDetails = ({preleveur}) => (
     icon='fr-icon-user-line'
     buttonProps={{
       priority: 'secondary',
-      disabled: !preleveur.id_preleveur,
-      linkProps: preleveur.id_preleveur ? {
+      linkProps: {
         href: getPreleveurURL(preleveur),
         target: '_blank'
-      } : undefined,
+      },
       children: 'Consulter la fiche'
     }}
   >
@@ -23,32 +23,26 @@ const PreleveurDetails = ({preleveur}) => (
       color='primary'
       variant='h4'
     >
-      {preleveur.nom} {preleveur.prenom}
+      {preleveur.__typename === 'PersonnePhysique'
+        ? getPersonnePhysiqueFullName(preleveur)
+        : preleveur.raison_sociale}
     </Typography>
 
     <Box className='flex flex-col gap-1 my-2'>
-      <LabelWithIcon icon='ri-at-line'>
+      <LabelWithIcon iconId='ri-at-line'>
         {preleveur.email && (
           <a href={`mailto:${preleveur.email}`}>{preleveur.email}</a>
         )}
       </LabelWithIcon>
-      <LabelWithIcon icon='fr-icon-phone-line'>
+      <LabelWithIcon iconId='fr-icon-phone-line'>
         {preleveur.telephone && (
           <a href={`tel:${preleveur.telephone}`}>{preleveur.telephone}</a>
         )}
       </LabelWithIcon>
-      <LabelWithIcon icon='fr-icon-home-4-line'>
+      <LabelWithIcon iconId='fr-icon-home-4-line'>
         {preleveur.adresse}
       </LabelWithIcon>
     </Box>
-
-    {!preleveur.id_preleveur && (
-      <Alert
-        severity='warning'
-      >
-        Ce préleveur n’a pas pu être identifié.
-      </Alert>
-    )}
   </SectionCard>
 )
 

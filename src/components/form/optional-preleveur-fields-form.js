@@ -35,8 +35,7 @@ const OptionalPreleveurFieldsForm = ({preleveur, setPreleveur}) => (
       <Input
         label='Boite postale'
         nativeInputProps={{
-          type: 'number',
-          placeholder: 'Entrer le numéro de boite postale',
+          placeholder: 'Entrer la boite postale',
           defaultValue: preleveur?.bp || '',
           onChange: e => setPreleveur(prev => ({...prev, bp: e.target.value}))
         }}

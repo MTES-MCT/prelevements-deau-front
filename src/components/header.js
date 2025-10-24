@@ -1,15 +1,14 @@
 'use client'
 
-import {useEffect, useState} from 'react'
+import {useMemo} from 'react'
 
-import {headerFooterDisplayItem} from '@codegouvfr/react-dsfr/Display'
 import {Header as DSFRHeader} from '@codegouvfr/react-dsfr/Header'
 import {usePathname} from 'next/navigation'
-import {getSession} from 'next-auth/react'
+import {useSession} from 'next-auth/react'
 
-import LoginHeaderItem from '@/components/ui/login-header-item.js'
+import LoginHeaderItem from '@/components/ui/LoginHeaderItem/index.js'
 
-const navigationItems = [
+const defaultNavigation = [
   {
     linkProps: {
       href: '/',
@@ -19,10 +18,27 @@ const navigationItems = [
   },
   {
     linkProps: {
-      href: '/prelevements',
+      href: '/validateur',
       target: '_self'
     },
-    text: 'Prélèvements'
+    text: 'Validateur'
+  }
+]
+
+const adminNavigation = [
+  {
+    linkProps: {
+      href: '/',
+      target: '_self'
+    },
+    text: 'Accueil'
+  },
+  {
+    linkProps: {
+      href: '/points-prelevement',
+      target: '_self'
+    },
+    text: 'Points de prélèvement'
   },
   {
     linkProps: {
@@ -58,32 +74,35 @@ const navigationItems = [
 ]
 
 const HeaderComponent = () => {
-  const [user, setUser] = useState(null)
-  const [isLoadingUser, setIsLoadingUser] = useState(true)
+  const {data: session, status} = useSession()
+  const user = session?.user
+  const isLoadingUser = status === 'loading'
 
   const pathname = usePathname()
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      const session = await getSession()
-      setUser(session?.user)
-      setIsLoadingUser(false)
+  const navigation = useMemo(() => {
+    if (isLoadingUser) {
+      return null
     }
 
-    fetchUser()
-  }, [])
+    const isActive = href => {
+      if (href === '/') {
+        return pathname === '/'
+      }
 
-  const isActive = href => {
-    if (href === '/') {
-      return pathname === '/'
+      if (href === '/dossiers') {
+        return pathname === '/dossiers' || pathname === '/validateur'
+      }
+
+      return pathname.startsWith(href) // Correspondance partielle pour les autres chemins
     }
 
-    if (href === '/dossiers') {
-      return pathname === '/dossiers' || pathname === '/validateur'
-    }
-
-    return pathname.startsWith(href) // Correspondance partielle pour les autres chemins
-  }
+    const navigation = user ? adminNavigation : defaultNavigation
+    return navigation.map(item => ({
+      ...item,
+      isActive: isActive(item.linkProps?.href || item.menuLinks?.[0].linkProps.href)
+    }))
+  }, [user, isLoadingUser, pathname])
 
   return (
     <DSFRHeader
@@ -94,15 +113,9 @@ const HeaderComponent = () => {
         title: 'Accueil - Suivi des prélèvements d’eau'
       }}
       quickAccessItems={isLoadingUser ? [] : [
-        headerFooterDisplayItem,
         <LoginHeaderItem key='login' user={user} />
       ]}
-      navigation={!isLoadingUser && user && (
-        navigationItems.map(item => ({
-          ...item,
-          isActive: isActive(item.linkProps?.href || item.menuLinks[0].linkProps.href)
-        }))
-      )}
+      navigation={navigation}
     />
   )
 }

@@ -14,6 +14,7 @@ import {emptyStringToNull} from '@/utils/string.js'
 
 const PointCreationForm = ({
   bnpeList,
+  bssList,
   bvBdCarthageList,
   mesoList,
   meContinentalesBvList
@@ -43,7 +44,7 @@ const PointCreationForm = ({
           setError(response.message)
         }
       } else {
-        router.push(`/prelevements?point-prelevement=${response.id_point}`)
+        router.push(`/points-prelevement/${response.id_point}`)
       }
     } catch (error) {
       setError(error.message)
@@ -51,6 +52,8 @@ const PointCreationForm = ({
   }
 
   const handleSetGeom = async geom => {
+    setError(null)
+
     try {
       const commune = await getCommuneFromCoords(
         {
@@ -71,7 +74,7 @@ const PointCreationForm = ({
   }
 
   useEffect(() => {
-    setIsDisabled(!(point.nom && point.type_milieu && point.precision_geom && point.geom))
+    setIsDisabled(!(point.nom && point.type_milieu && point.geom))
   }, [point])
 
   return (
@@ -84,6 +87,7 @@ const PointCreationForm = ({
         setPoint={setPoint}
         handleSetGeom={handleSetGeom}
         bnpeList={bnpeList}
+        bssList={bssList}
         bvBdCarthageList={bvBdCarthageList}
         meContinentalesBvList={meContinentalesBvList}
         mesoList={mesoList}

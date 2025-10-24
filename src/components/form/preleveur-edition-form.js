@@ -33,6 +33,28 @@ const PreleveurEditionForm = ({preleveur}) => {
     setError(null)
     setValidationErrors(null)
 
+    if (Object.keys(payload).length === 0) {
+      router.push(`/preleveurs/${preleveur.id_preleveur}`)
+
+      return
+    }
+
+    if (payload.numero_telephone && !/^\d{10}$/.test(payload.numero_telephone)) {
+      setValidationErrors([
+        {message: 'Le numéro de téléphone doit être composé de dix chiffres'}
+      ])
+
+      return
+    }
+
+    if (payload.code_postal && !/^\d{5}$/.test(payload.code_postal)) {
+      setValidationErrors([
+        {message: 'Le code postal doit être composé de 5 chiffres.'}
+      ])
+
+      return
+    }
+
     try {
       const cleanedPreleveur = emptyStringToNull(payload)
       const response = await updatePreleveur(preleveur.id_preleveur, cleanedPreleveur)
@@ -55,7 +77,14 @@ const PreleveurEditionForm = ({preleveur}) => {
     setError(null)
 
     try {
-      await deletePreleveur(preleveur.id_preleveur)
+      const response = await deletePreleveur(preleveur._id)
+
+      if (response.code) {
+        setIsDialogOpen(false)
+        setError(response.message)
+        return
+      }
+
       router.push('/preleveurs')
     } catch (error) {
       setError(error.message)
@@ -106,6 +135,9 @@ const PreleveurEditionForm = ({preleveur}) => {
           <DialogTitle><InfoOutlined className='mr-3' />Confirmer la suppression de ce préleveur</DialogTitle>
           <DialogContent>
             Êtes-vous sûr de vouloir supprimer ce préleveur ? Cette action est irréversible.
+            <p>
+              <small>Vous ne pourrez pas le supprimer s’il dispose d’exploitations en activité.</small>
+            </p>
           </DialogContent>
           <DialogActions className='m-3'>
             <Button

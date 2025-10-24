@@ -1,9 +1,10 @@
 'use client'
 
+import {headerFooterDisplayItem} from '@codegouvfr/react-dsfr/Display'
 import {Footer as DSFRFooter} from '@codegouvfr/react-dsfr/Footer'
 import {usePathname} from 'next/navigation'
 
-const noFooterPages = new Set(['/prelevements'])
+const noFooterPages = new Set(['/points-prelevement'])
 
 const FooterComponent = () => {
   const pathname = usePathname() // Récupère l'URL actuelle
@@ -14,6 +15,7 @@ const FooterComponent = () => {
 
   return (
     <DSFRFooter
+      bottomItems={[headerFooterDisplayItem]}
       accessibility='fully compliant'
       contentDescription=''
     />

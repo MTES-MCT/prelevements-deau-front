@@ -1,0 +1,138 @@
+/* eslint-disable camelcase */
+
+'use client'
+
+import {useEffect, useState} from 'react'
+
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
+import {Button} from '@codegouvfr/react-dsfr/Button'
+import {Upload} from '@codegouvfr/react-dsfr/Upload'
+import {Typography} from '@mui/material'
+import {format} from 'date-fns'
+import {useRouter} from 'next/navigation'
+
+import {createDocument} from '@/app/api/points-prelevement.js'
+import DocumentForm from '@/components/form/document-form.js'
+import SimpleLoading from '@/components/ui/SimpleLoading/index.js'
+import {emptyStringToNull} from '@/utils/string.js'
+
+const DocumentUploadForm = ({preleveur}) => {
+  const router = useRouter()
+
+  const [isLoading, setIsLoading] = useState(false)
+  const [isDisabled, setIsDisabled] = useState(true)
+  const [filesList, setFilesList] = useState()
+  const [document, setDocument] = useState()
+  const [uploadMessage, setUploadMessage] = useState()
+  const [error, setError] = useState(null)
+  const [validationErrors, setValidationErrors] = useState([])
+
+  const handleDocument = async () => {
+    setError(null)
+    setValidationErrors([])
+    setIsLoading(true)
+
+    try {
+      const cleanedDocument = emptyStringToNull(document)
+      const response = await createDocument(preleveur._id, cleanedDocument, filesList[0])
+
+      if (response.code === 400) {
+        if (response.validationErrors) {
+          setValidationErrors(response.validationErrors)
+        } else {
+          setError(response.message)
+        }
+      } else if (response.code === 409) {
+        setError(response.message)
+      } else {
+        router.push(`/preleveurs/${preleveur.id_preleveur}`)
+      }
+    } catch (error) {
+      setError(error.message)
+    }
+
+    setIsLoading(false)
+  }
+
+  useEffect(() => {
+    if (filesList && filesList.length > 0) {
+      setDocument(prev => ({
+        ...prev,
+        nom_fichier: filesList[0].name,
+        date_ajout: format(new Date(), 'yyyy-MM-dd')
+      }))
+    }
+  }, [filesList])
+
+  useEffect(() => {
+    setIsDisabled(
+      !(document?.date_signature
+        && document?.nature
+        && filesList?.length > 0)
+    )
+  }, [document, filesList])
+
+  return (
+    <div className='p-3 m-3 border'>
+      <Typography variant='h5'>
+        Associer un document
+      </Typography>
+      <div>
+        {isLoading ? (
+          <div className='flex p-5 my-5 justify-center'>
+            <SimpleLoading />
+          </div>
+        ) : (
+          <div className='flex p-5 my-5 justify-between'>
+            <Upload
+              hint='Format PDF, max 50MB, plusieurs fichiers possibles'
+              label='Ajout de fichiers'
+              nativeInputProps={{
+                onChange: e => setFilesList(e.target.files)
+              }}
+            />
+          </div>
+        )}
+      </div>
+      {uploadMessage && (
+        <Alert
+          closable
+          className='my-5'
+          severity={uploadMessage.type}
+          description={uploadMessage.message}
+          onClose={() => setUploadMessage(null)}
+        />
+      )}
+      <DocumentForm
+        document={document}
+        setDocument={setDocument}
+      />
+      {error && (
+        <div className='text-center p-5 text-red-500'>
+          <p><b>Un problème est survenu :</b></p>
+          {error}
+        </div>
+      )}
+      {validationErrors?.length > 0 && (
+        <div className='text-center p-5 text-red-500'>
+          <p><b>{validationErrors.length === 1 ? 'Problème de validation :' : 'Problèmes de validation :'}</b></p>
+          {validationErrors.map(err => (
+            <p key={err.message}>{err.message}</p>
+          )
+          )}
+        </div>
+      )}
+      <div className='flex justify-end'>
+        <Button
+          className='my-5'
+          disabled={isDisabled}
+          onClick={handleDocument}
+        >
+          Associer au préleveur
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+export default DocumentUploadForm

@@ -31,6 +31,7 @@ export const authOptions = {
       if (user) {
         token.token = user.token
         token.territoire = user.territoire
+        token.role = user.isAdmin ? 'administrateur' : null
       }
 
       return token
@@ -38,6 +39,7 @@ export const authOptions = {
     async session({session, token}) {
       session.user.token = token.token
       session.user.territoire = token.territoire
+      session.user.role = token.role
 
       return session
     }

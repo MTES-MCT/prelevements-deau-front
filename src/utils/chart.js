@@ -16,7 +16,9 @@ export function buildSeries({
   parameters, // Paramètres visibles (sélectionnés)
   allParameters, // Liste complète des paramètres pour la granularité courante
   values,
-  unitToAxisId // { 'm³/h': 'left', 'µS/cm': 'right' }
+  unitToAxisId, // { 'm³/h': 'left', 'µS/cm': 'right' }
+  connectNulls = false,
+  showMark = false
 }) {
   // Retirer les entrées nulles et dédupliquer par nom_parametre
   const dedupedParams = uniqBy(parameters.filter(Boolean), 'nom_parametre')
@@ -32,7 +34,8 @@ export function buildSeries({
         label: `${p.nom_parametre} (${p.unite})`,
         yAxisKey: unitToAxisId[p.unite],
         data: values.map(v => v.values[realIdx]),
-        showMark: false,
+        showMark,
+        connectNulls,
         curve: 'linear',
         valueFormatter: v => v === null || v === undefined ? 'Aucune donnée' : formatNumber(v)
       }

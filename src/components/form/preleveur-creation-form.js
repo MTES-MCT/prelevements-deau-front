@@ -2,12 +2,13 @@
 
 'use client'
 
-import {useState} from 'react'
+import {useEffect, useState} from 'react'
 
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Typography} from '@mui/material'
+import {omit} from 'lodash-es'
 import dynamic from 'next/dynamic'
-import {useRouter} from 'next/navigation'
+import {useRouter, useSearchParams} from 'next/navigation'
 
 import PreleveurMoralForm from './preleveur-moral-form.js'
 import PreleveurPhysiqueForm from './preleveur-physique-form.js'
@@ -22,10 +23,14 @@ const DynamicCheckbox = dynamic(
 
 const PreleveurCreationForm = () => {
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  const [isDisabled, setIsDisabled] = useState(true)
   const [isPreleveurPhysique, setIsPreleveurPhysique] = useState(true)
   const [error, setError] = useState(null)
   const [validationErrors, setValidationErrors] = useState([])
   const [preleveur, setPreleveur] = useState({
+    civilite: '',
     raison_sociale: '',
     sigle: '',
     nom: '',
@@ -40,9 +45,35 @@ const PreleveurCreationForm = () => {
     code_siren: ''
   })
 
+  useEffect(() => {
+    const preleveur = {}
+    for (const [key, value] of searchParams.entries()) {
+      preleveur[key] = value
+    }
+
+    setIsPreleveurPhysique(preleveur.__typename === 'PersonnePhysique')
+    setPreleveur(omit(preleveur, '__typename'))
+  }, [searchParams])
+
   const handleSubmit = async () => {
     setError(null)
     setValidationErrors([])
+
+    if (preleveur.numero_telephone && !/^\d{10}$/.test(preleveur.numero_telephone)) {
+      setValidationErrors([
+        {message: 'Le numéro de téléphone doit être composé de dix chiffres.'}
+      ])
+
+      return
+    }
+
+    if (preleveur.code_postal && !/^\d{5}$/.test(preleveur.code_postal)) {
+      setValidationErrors([
+        {message: 'Le code postal doit être composé de 5 chiffres.'}
+      ])
+
+      return
+    }
 
     try {
       const cleanedPreleveur = emptyStringToNull(preleveur)
@@ -61,6 +92,10 @@ const PreleveurCreationForm = () => {
       setError(error.message)
     }
   }
+
+  useEffect(() => {
+    setIsDisabled(!(preleveur.nom && preleveur.prenom && preleveur.email))
+  }, [preleveur])
 
   return (
     <div className='fr-container'>
@@ -116,7 +151,7 @@ const PreleveurCreationForm = () => {
         </div>
       )}
       <div className='w-full flex justify-center p-5 mb-8'>
-        <Button onClick={handleSubmit}>
+        <Button disabled={isDisabled} onClick={handleSubmit}>
           Valider la création du préleveur
         </Button>
       </div>

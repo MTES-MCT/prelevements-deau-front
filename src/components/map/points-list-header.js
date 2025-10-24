@@ -3,7 +3,7 @@ import {Typography} from '@mui/material'
 
 import MapFilters from '@/components/map/map-filters.js'
 
-const PointsListHeader = ({filters, resultsCount, typeMilieuOptions, usagesOptions, statusOptions, onFilter, exportList}) => (
+const PointsListHeader = ({filters, resultsCount, typeMilieuOptions, usagesOptions, statusOptions, communesOptions, onFilter, exportList}) => (
   <div className='flex flex-col gap-2'>
     <Typography variant='h6'>Liste des points de prélèvement</Typography>
     <div className='inline-flex justify-end w-full'>
@@ -12,7 +12,7 @@ const PointsListHeader = ({filters, resultsCount, typeMilieuOptions, usagesOptio
         iconId='fr-icon-add-line'
         size='small'
         linkProps={{
-          href: '/prelevements/new'
+          href: '/points-prelevement/new'
         }}
       >
         Création d’un point
@@ -24,12 +24,14 @@ const PointsListHeader = ({filters, resultsCount, typeMilieuOptions, usagesOptio
       typeMilieuOptions={typeMilieuOptions}
       usagesOptions={usagesOptions}
       statusOptions={statusOptions}
+      communesOptions={communesOptions}
       onFilterChange={onFilter}
       onClearFilters={() =>
         onFilter({
           name: '',
           typeMilieu: '',
           status: '',
+          communes: [],
           usages: []
         })}
     />

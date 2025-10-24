@@ -8,13 +8,14 @@ import {Typography} from '@mui/material'
 
 import MiniMapForm from '@/components/form/mini-map-form.js'
 import OptionalPointFieldsForm from '@/components/form/optional-point-fields-form.js'
-import AccordionCentered from '@/components/ui/accordion-centered.js'
+import AccordionCentered from '@/components/ui/AccordionCentered/index.js'
 
 const PointForm = ({
   point,
   setPoint,
   handleSetGeom,
   bnpeList,
+  bssList,
   bvBdCarthageList,
   meContinentalesBvList,
   mesoList
@@ -22,20 +23,20 @@ const PointForm = ({
   const [isExpanded, setIsExpanded] = useState(false)
   const typesDeMilieu = ['Eau de surface', 'Eau souterraine', 'Eau de transition']
   const precisionsGeom = [
-    'Repérage carte',
     'Coordonnées précises',
-    'Coordonnées précises (ARS)',
+    'Coordonnées estimées (précision du kilomètre)',
     'Coordonnées du centroïde de la commune',
-    'Coordonnées précises (rapport HGA)',
-    'Coordonnées précises (ARS 2013)',
     'Coordonnées précises (AP)',
+    'Coordonnées précises (ARS)',
+    'Coordonnées précises (ARS 2013)',
     'Coordonnées précises (BSS)',
     'Coordonnées précises (BNPE – accès restreint)',
-    'Précision inconnue',
-    'Coordonnées estimées (précision du kilomètre)',
     'Coordonnées précises (BNPE)',
     'Coordonnées précises (DEAL)',
-    'Coordonnées précises (DLE)'
+    'Coordonnées précises (DLE)',
+    'Coordonnées précises (rapport HGA)',
+    'Précision inconnue',
+    'Repérage carte'
   ]
 
   return (
@@ -66,10 +67,19 @@ const PointForm = ({
           Localisation
         </Typography>
         <p>Sélectionner l&apos;emplacement du point sur la carte <small><i>(Cliquer ou déplacer le point)</i></small></p>
+        <p>Ou renseigner les coordonnées manuellement sous la carte</p>
       </div>
       <div style={{height: '600px', marginBottom: '2rem'}}>
         <MiniMapForm geom={point.geom} setGeom={handleSetGeom} />
       </div>
+      <Input
+        label='Détails sur la localisation'
+        nativeInputProps={{
+          placeholder: 'Entrer les détails sur la localisation',
+          defaultValue: point.detail_localisation,
+          onChange: e => setPoint(prev => ({...prev, detail_localisation: e.target.value}))
+        }}
+      />
       <Select
         label='Précision géométrique'
         placeholder='Sélectionner une précision géométrique'
@@ -82,6 +92,24 @@ const PointForm = ({
           label: precision
         }))}
       />
+      <Input
+        textArea
+        label='Remarque'
+        nativeTextAreaProps={{
+          placeholder: 'Entrer une remarque',
+          defaultValue: point?.remarque
+        }}
+        onChange={e => setPoint(prev => ({...prev, remarque: e.target.value}))}
+      />
+      <Input
+        textArea
+        label='Remarque interne (Visible uniquement par les instructeurs)'
+        nativeTextAreaProps={{
+          placeholder: 'Entrer une remarque interne',
+          defaultValue: point?.remarque_interne
+        }}
+        onChange={e => setPoint(prev => ({...prev, remarque_interne: e.target.value}))}
+      />
       <AccordionCentered
         isExpanded={isExpanded}
         setIsExpanded={setIsExpanded}
@@ -91,6 +119,7 @@ const PointForm = ({
           point={point}
           setPoint={setPoint}
           bnpeList={bnpeList}
+          bssList={bssList}
           bvBdCarthageList={bvBdCarthageList}
           mesoList={mesoList}
           meContinentalesBvList={meContinentalesBvList}

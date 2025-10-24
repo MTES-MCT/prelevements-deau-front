@@ -1,3 +1,26 @@
+import {
+  AgricultureOutlined, BoltOutlined, DeviceThermostatOutlined, EditOffOutlined, FactoryOutlined,
+  InterestsOutlined,
+  LiquorOutlined,
+  LocalDrinkOutlined,
+  LocalShippingOutlined
+} from '@mui/icons-material'
+import {some, uniq, mapValues} from 'lodash-es'
+
+import {legendColors} from '@/components/map/legend-colors.js'
+
+// Fonction utilitaire pour récupérer la couleur associée à un usage
+export const getUsageColor = usage => {
+  const {color: background, textColor} = legendColors.usages.find(u => u.text === usage) || {}
+  return {background, textColor}
+}
+
+// Fonction utilitaire pour récupérer la couleur associée au type de milieu
+export const getTypeMilieuColor = typeMilieu => {
+  const {color: background, textColor} = legendColors.typesMilieu.find(u => u.text === typeMilieu) || {}
+  return {background, textColor}
+}
+
 export function extractUsages(points) {
   const usagesSet = new Set()
   for (const point of points) {
@@ -11,6 +34,17 @@ export function extractUsages(points) {
   }
 
   return [...usagesSet]
+}
+
+export function extractCommunes(points) {
+  const communesSet = new Set()
+  for (const point of points) {
+    if (point.commune && point.commune.nom && point.commune.code) {
+      communesSet.add(`${point.commune.nom} - ${point.commune.code}`)
+    }
+  }
+
+  return [...communesSet].sort((a, b) => a.localeCompare(b, 'fr', {sensitivity: 'base'}))
 }
 
 export function extractStatus(points) {
@@ -61,6 +95,18 @@ export const usageColors = {
   'Eau embouteillée': '#ffa6c9',
   Industrie: '#ff6347',
   'Non renseigné': '#ccc'
+}
+
+export const usageIcons = {
+  'Eau potable': LocalDrinkOutlined,
+  Agriculture: AgricultureOutlined,
+  Autre: InterestsOutlined,
+  'Camion citerne': LocalShippingOutlined,
+  'Eau embouteillée': LiquorOutlined,
+  Hydroélectricité: BoltOutlined,
+  Industrie: FactoryOutlined,
+  'non-renseignée': EditOffOutlined,
+  Thermalisme: DeviceThermostatOutlined
 }
 
 /**
@@ -193,4 +239,111 @@ export function createSVGDataURL(container) {
   const svgMarkup = svgElement.outerHTML
   const encoded = encodeURIComponent(svgMarkup)
   return `data:image/svg+xml;charset=utf8,${encoded}`
+}
+
+/**
+ * Détermine un statut ('success' | 'warning' | 'error' | 'unknown')
+ * à partir d'un tableau d'erreurs éventuellement vide.
+ */
+const statusFromErrors = (errors = []) => {
+  if (some(errors, {severity: 'error'})) {
+    return 'error'
+  }
+
+  if (some(errors, {severity: 'warning'})) {
+    return 'warning'
+  }
+
+  return 'success'
+}
+
+/**
+ * Initialise tous les points à 'unknown'.
+ */
+const buildBaseStatus = pointsPrelevement => {
+  const statuses = {}
+  for (const pointPrelevement of pointsPrelevement) {
+    statuses[pointPrelevement.id_point] = 'unknown'
+  }
+
+  return statuses
+}
+
+/* ---------- 1. Soumissions avec fichiers ---------- */
+
+/**
+ * Cas typePrelevement === 'aep-zre'
+ * Un fichier ⇢ un point ⇢ potentiellement plusieurs erreurs.
+ */
+const statusesFromAepZreFiles = files => {
+  const groupedErrors = {}
+
+  for (const file of files.filter(f => !f.processingError && f.result?.data?.pointPrelevement)) {
+    const pointId = file.result.data.pointPrelevement
+    groupedErrors[pointId] ||= []
+    if (file.result.errors) {
+      groupedErrors[pointId].push(...file.result.errors)
+    }
+  }
+
+  return mapValues(groupedErrors, statusFromErrors)
+}
+
+/**
+ * Cas typePrelevement === 'camion-citerne'
+ * Un fichier ⇢ plusieurs points.
+ */
+const statusesFromCamionFiles = files => {
+  const statusPerPoint = {}
+
+  for (const file of files
+    .filter(f => !f.processingError && f.result?.data?.length)) {
+    const points = uniq(file.result.data
+      .map(r => r.pointPrelevement)
+      .filter(Boolean))
+
+    const fileStatus = statusFromErrors(file.result.errors)
+    for (const id of points) {
+      statusPerPoint[id] = fileStatus
+    }
+  }
+
+  return statusPerPoint
+}
+
+/* ---------- 2. Soumissions sans fichier ---------- */
+
+const statusesFromManualEntries = (dossier, pointsPrelevement) => {
+  const hasData = (dossier.relevesIndex?.length ?? 0) > 0
+                  || (dossier.volumesPompes?.length ?? 0) > 0
+
+  if (!hasData || pointsPrelevement.length === 0) {
+    return {}
+  }
+
+  return {[pointsPrelevement[0].id_point]: 'success'}
+}
+
+/* ---------- Fonction principale appelée par le composant ---------- */
+
+export const computePointsStatus = ({dossier, files = [], pointsPrelevement}) => {
+  if (!pointsPrelevement) {
+    return {}
+  }
+
+  const statuses = buildBaseStatus(pointsPrelevement)
+
+  if (files.length > 0) {
+    Object.assign(statuses,
+      dossier.typePrelevement === 'aep-zre'
+        ? statusesFromAepZreFiles(files)
+        : (dossier.typePrelevement === 'camion-citerne'
+          ? statusesFromCamionFiles(files)
+          : {})
+    )
+  } else {
+    Object.assign(statuses, statusesFromManualEntries(dossier, pointsPrelevement))
+  }
+
+  return statuses
 }
