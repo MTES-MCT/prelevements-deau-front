@@ -9,14 +9,29 @@
  * - notDeclared: Date not in series range (grey - data not declared)
  */
 
-import {fr} from '@codegouvfr/react-dsfr'
+/**
+ * Static color values for testing and SSR compatibility
+ * These values match the DSFR light theme
+ */
+export const STATIC_CALENDAR_STATUS_COLORS = {
+  present: '#000091', // BlueFrance.default (dark blue) - has data
+  noSampling: '#e8edff', // Info.hover (light blue) - value is 0
+  notDeclared: '#e5e5e5' // Grey.active (grey) - not in series
+}
 
 /**
- * Get calendar status colors from DSFR theme
+ * Get calendar status colors from DSFR theme (client-side only)
  * @param {boolean} [isDark=false] - Whether to use dark theme colors
  * @returns {Object} Calendar status colors
  */
-export function getCalendarStatusColors(isDark = false) {
+export async function getCalendarStatusColors(isDark = false) {
+  // Use static values if running in Node.js (tests/SSR)
+  if (typeof window === 'undefined') {
+    return STATIC_CALENDAR_STATUS_COLORS
+  }
+
+  // Dynamic import for client-side only
+  const {fr} = await import('@codegouvfr/react-dsfr')
   const colors = fr.colors.getHex({isDark})
 
   return {
@@ -30,7 +45,7 @@ export function getCalendarStatusColors(isDark = false) {
  * Default calendar status colors (light theme)
  * Used for consistency across components that don't need theme switching
  */
-export const CALENDAR_STATUS_COLORS = getCalendarStatusColors(false)
+export const CALENDAR_STATUS_COLORS = STATIC_CALENDAR_STATUS_COLORS
 
 /**
  * Default legend labels for calendar status colors

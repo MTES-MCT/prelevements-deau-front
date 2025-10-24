@@ -22,12 +22,10 @@ import {
   parseLocalDateTime
 } from './util.js'
 
-// Calendar status colors for testing
-const mockStatusColors = {
-  noSampling: '#8fb6fb', // Light blue - value is 0
-  notDeclared: '#cecece', // Grey - not in series
-  present: '#000091' // Dark blue - has data
-}
+import {STATIC_CALENDAR_STATUS_COLORS} from '@/lib/calendar-colors.js'
+
+// Calendar status colors for testing (use centralized values)
+const mockStatusColors = STATIC_CALENDAR_STATUS_COLORS
 
 // FillDateGaps tests
 test('fillDateGaps returns empty arrays for empty input', t => {
