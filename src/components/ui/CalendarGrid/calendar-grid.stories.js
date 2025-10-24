@@ -1,11 +1,11 @@
-import {fr} from '@codegouvfr/react-dsfr'
-
 import CalendarGrid from './index.js'
 
 import PeriodTooltip from '@/components/ui/PeriodTooltip/index.js'
+import {CALENDAR_STATUS_COLORS} from '@/lib/calendar-colors.js'
 
-const blue = fr.colors.decisions.artwork.major.blueFrance.default
-const lightBlue = fr.colors.decisions.background.actionHigh.info.hover
+// Using CALENDAR_STATUS_COLORS for consistency with legend
+const blue = CALENDAR_STATUS_COLORS.present
+const lightBlue = CALENDAR_STATUS_COLORS.noSampling
 
 // Build a full year: one calendar ("month" mode) per month with a single colored day
 const buildYearCalendars = (year, color1, color2) => {
