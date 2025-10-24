@@ -70,13 +70,15 @@ const typeDonnees = typeDonnees => {
 }
 
 const metas = dossier => {
-  console.log('🚀 ~ metas ~ dossier:', dossier.dateDerniereModification)
   const periodLabel = getDossierPeriodLabel(dossier)
+  const dateDepot = dossier.dateDepot
+    ? format(new Date(dossier.dateDepot), 'dd/MM/yyyy', {locale: fr})
+    : 'Non renseignée'
 
   return [
     {
       icon: EventOutlined,
-      content: `Date de dépôt : ${format(new Date(dossier.dateDepot), 'dd/MM/yyyy', {locale: fr})}`
+      content: `Date de dépôt : ${dateDepot}`
     },
     {
       icon: CalendarTodayOutlined,
