@@ -4,7 +4,7 @@ import uniqBy from 'lodash-es/uniqBy'
 
 import Icon from '@/components/ui/Icon/index.js'
 
-const MetasList = ({metas = []}) => {
+const MetasList = ({metas = [], size = 'md'}) => {
   const uniqueMetas = uniqBy(metas, 'content')
 
   return (
@@ -29,7 +29,7 @@ const MetasList = ({metas = []}) => {
           {
             (icon || iconId)
             && <Icon iconId={iconId} iconElement={icon}
-              sx={{fontSize: 18, color: fr.colors.decisions.text.default.grey.default}}
+              sx={{fontSize: size === 'sm' ? 16 : 18, color: fr.colors.decisions.text.default.grey.default}}
               title={icon?.displayName || icon?.name}
               aria-label={icon?.displayName || icon?.name}
             />

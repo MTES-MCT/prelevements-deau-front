@@ -15,6 +15,15 @@ Liste de métadonnées à afficher. Format: [{iconId?, icon?, content}]. Les pro
 Si "iconId" est fourni, il sera prioritaire sur "icon" et une icone du DSFR sera importée avec cette className.
 
 Si "icon" est fourni, il doit s'agir d'un composant React (ex: une icône MUI).`
+    },
+    size: {
+      control: {type: 'radio'},
+      options: ['sm', 'md'],
+      description: 'Taille des icônes (sm: 16px, md: 18px)',
+      table: {
+        type: {summary: 'string'},
+        defaultValue: {summary: 'md'}
+      }
     }
   },
   args: {
@@ -23,25 +32,44 @@ Si "icon" est fourni, il doit s'agir d'un composant React (ex: une icône MUI).`
       {icon: AccessTimeOutlined, content: 'Horodatage'},
       {icon: CalendarTodayOutlined, content: 'Date'},
       {content: 'Sans icône'}
-    ]
+    ],
+    size: 'md'
   }
 }
 
 const renderMetasList = args => {
-  const {metas} = args
+  const {metas, size} = args
 
-  return <MetasList metas={metas} />
+  return <MetasList metas={metas} size={size} />
 }
 
 export default meta
 
 export const Default = {render: renderMetasList}
 
+export const Small = {
+  args: {
+    size: 'sm'
+  },
+  render: renderMetasList
+}
+
 export const SansIcones = {
   args: {
     metas: [
       {content: 'Aucune icône 1'},
       {content: 'Aucune icône 2'}
+    ]
+  },
+  render: renderMetasList
+}
+
+export const AvecIconeDSFR = {
+  args: {
+    metas: [
+      {iconId: 'fr-icon-calendar-line', content: 'Avec icône DSFR'},
+      {iconId: 'fr-icon-time-line', content: 'Horodatage'},
+      {icon: InfoOutlined, content: 'Avec icône MUI'}
     ]
   },
   render: renderMetasList
