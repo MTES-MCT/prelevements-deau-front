@@ -47,7 +47,7 @@ const CompactListItem = ({label, metas, tags, hint, icon, iconId, actions, backg
             size='small'
             title={title}
             style={{color: type === 'danger' ? fr.colors.decisions.text.default.error.default : ''}}
-            onClick={onClick()}
+            onClick={onClick}
           />
         ))
       )}
