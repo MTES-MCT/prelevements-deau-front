@@ -1,15 +1,20 @@
-import Tag from '@codegouvfr/react-dsfr/Tag'
+import Badge from '@codegouvfr/react-dsfr/Badge'
 import {
-  Box,
+  Box, Chip,
   useTheme
 } from '@mui/material'
 
 import {severityMap} from '@/components/exploitations/exploitations-list-item.js'
 import Icon from '@/components/ui/Icon/index.js'
 import MetasList from '@/components/ui/MetasList/index.js'
-import TagsList from '@/components/ui/TagsList/index.js'
 import {formatFullDateFr} from '@/lib/format-date.js'
 import {usageIcons} from '@/lib/points-prelevement.js'
+
+const chipStyle = {
+  backgroundColor: 'var(--background-action-low-blue-france)',
+  color: 'var(--text-action-high-blue-france)',
+  fontFamily: 'Marianne'
+}
 
 const Popup = ({point}) => {
   const theme = useTheme()
@@ -36,26 +41,27 @@ const Popup = ({point}) => {
         {point.id_point} - {nom || 'Pas de nom renseigné'}
       </h6>
 
-      <MetasList metas={metas} />
+      <MetasList metas={metas} size='sm' />
 
       <ul className='border p-4'>
         <li className='flex items-center gap-1'>
           <span className='fr-text--bold'>Statut :</span>
-          <TagsList
-            tags={[{label: exploitationsStatus, severity: severityMap[exploitationsStatus]}]}
-          />
+          <Badge small severity={severityMap[exploitationsStatus]}>{exploitationsStatus}</Badge>
         </li>
         <li className='flex items-center gap-1'>
           <span className='fr-text--bold'>Type d&apos;environnement :</span>
-          <Tag small>
-            {typeMilieu}
-          </Tag>
+          <Chip
+            label={typeMilieu}
+            sx={chipStyle}
+          />
         </li>
         <li className='flex items-center gap-1'>
           <span className='fr-text--bold'>Usages :</span><span>{usages.map(usage => (
-            <Tag key={usage} small>
-              <Icon iconElement={usageIcons[usage]} width='12px' /> {usage}
-            </Tag>
+            <Chip
+              key={usage}
+              label={<><Icon iconElement={usageIcons[usage]} style={{height: '0.7em'}} /> {usage}</>}
+              sx={chipStyle}
+            />
           ))}</span>
         </li>
       </ul>
