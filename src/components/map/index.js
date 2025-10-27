@@ -225,6 +225,7 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, style 
           closeOnClick: false,
           anchor: computeBestPopupAnchor(map, coords)
         })
+          .setMaxWidth('500px')
           .setLngLat(coords)
           .setDOMContent(popupContainer)
           .addTo(map)
