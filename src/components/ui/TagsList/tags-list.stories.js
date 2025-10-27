@@ -7,7 +7,16 @@ const meta = {
   argTypes: {
     tags: {
       control: 'object',
-      description: 'List of displayed tags. Each tag accepts {label, severity}.'
+      description: 'List of displayed tags. Each tag accepts {label, severity, hasIcon}.'
+    },
+    size: {
+      control: 'radio',
+      options: ['sm', 'md'],
+      description: 'Size of the badges',
+      table: {
+        type: {summary: 'string'},
+        defaultValue: {summary: 'md'}
+      }
     }
   },
   args: {
@@ -16,7 +25,8 @@ const meta = {
       {label: 'succès', severity: 'success'},
       {label: 'alerte', severity: 'warning'},
       {label: 'erreur', severity: 'error'}
-    ]
+    ],
+    size: 'md'
   }
 }
 
@@ -24,6 +34,12 @@ export default meta
 
 export const Default = {
   args: {}
+}
+
+export const Small = {
+  args: {
+    size: 'sm'
+  }
 }
 
 export const WithoutSeverity = {
