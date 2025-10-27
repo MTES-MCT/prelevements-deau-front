@@ -23,7 +23,8 @@ const MetasList = ({metas = [], size = 'md'}) => {
             color: fr.colors.decisions.text.disabled.grey.default,
             display: 'flex',
             alignItems: 'center',
-            gap: '3px'
+            gap: '3px',
+            fontSize: size === 'sm' ? 14 : 16
           }}
         >
           {
