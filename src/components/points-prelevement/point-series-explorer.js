@@ -23,7 +23,13 @@ const OPERATOR_LABELS = {
   max: 'Maximum'
 }
 
-const PointSeriesExplorer = ({pointId, series}) => {
+const PointSeriesExplorer = ({pointId, series = []}) => {
+  console.log('series in PointSeriesExplorer:', series)
+
+  // If no series are provided or the array is empty, show only an info alert
+  // as requested: do not render the rest of the UI. We must NOT return early
+  // before calling hooks to preserve hook order.
+  const isSeriesEmpty = !series || (Array.isArray(series) && series.length === 0)
   const availableParameters = useMemo(
     () => getAvailableParametersFromSeries(series),
     [series]
@@ -187,7 +193,18 @@ const PointSeriesExplorer = ({pointId, series}) => {
     setSelectedOperator(newOperator)
   }, [selectedOperator, operatorOptions])
 
-  return (
+  return isSeriesEmpty ? (
+    <Box className='flex flex-col gap-4'>
+      <Typography variant='h5' component='h2'>
+        Historique des prélèvements
+      </Typography>
+
+      <Alert
+        severity='info'
+        description='Aucun prélèvement connu pour ce point.'
+      />
+    </Box>
+  ) : (
     <Box className='flex flex-col gap-4'>
       <Typography variant='h5' component='h2'>
         Historique des prélèvements
