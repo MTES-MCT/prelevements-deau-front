@@ -3,7 +3,7 @@
 import test from 'ava'
 import {addDays, startOfDay} from 'date-fns'
 
-import {normalizeParameterKey} from './constants.js'
+import {normalizeParameterKey} from './constants/colors.js'
 import {
   buildCalendarEntriesFromMetadata,
   fillDateGaps,
@@ -19,7 +19,7 @@ import {
   extractDefaultPeriodsFromSeries,
   indexDuplicateParameters,
   parseLocalDate
-} from './util.js'
+} from './utils/index.js'
 
 import {STATIC_CALENDAR_STATUS_COLORS} from '@/lib/calendar-colors.js'
 import {parseLocalDateTime} from '@/utils/time.js'

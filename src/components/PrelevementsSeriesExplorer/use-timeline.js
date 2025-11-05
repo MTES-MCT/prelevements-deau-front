@@ -9,11 +9,11 @@ import {
 import {format, addDays} from 'date-fns'
 
 import {
-  fillDateGaps,
-  computeSliderMarks,
   clamp,
+  computeSliderMarks,
+  fillDateGaps,
   parseLocalDate
-} from './util.js'
+} from './utils/index.js'
 
 /**
  * Hook for managing timeline display and range selection

@@ -5,7 +5,7 @@
 import {format} from 'date-fns'
 import {fr} from 'date-fns/locale'
 
-import {MONTH_NAMES} from './constants.js'
+import {MONTH_NAMES} from './constants/colors.js'
 
 /**
  * Get color for a parameter based on its index

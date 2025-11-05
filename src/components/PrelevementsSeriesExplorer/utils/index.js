@@ -6,7 +6,7 @@ import {
   addDays, differenceInCalendarDays, isSameDay, startOfDay, parseISO
 } from 'date-fns'
 
-import {CALENDAR_STATUS_COLORS} from './constants.js'
+import {CALENDAR_STATUS_COLORS} from '../constants/colors.js'
 
 /**
  * Color priority map for calendar aggregation

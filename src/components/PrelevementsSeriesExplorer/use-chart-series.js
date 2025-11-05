@@ -4,7 +4,7 @@
 
 import {useMemo} from 'react'
 
-import {FALLBACK_PARAMETER_COLOR} from './constants.js'
+import {FALLBACK_PARAMETER_COLOR} from './constants/colors.js'
 
 /**
  * Transforms loaded values into chart-ready series format
