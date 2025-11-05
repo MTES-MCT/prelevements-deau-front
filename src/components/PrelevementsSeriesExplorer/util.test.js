@@ -18,11 +18,11 @@ import {
   transformSeriesToData,
   extractDefaultPeriodsFromSeries,
   indexDuplicateParameters,
-  parseLocalDate,
-  parseLocalDateTime
+  parseLocalDate
 } from './util.js'
 
 import {STATIC_CALENDAR_STATUS_COLORS} from '@/lib/calendar-colors.js'
+import {parseLocalDateTime} from '@/utils/time.js'
 
 // Calendar status colors for testing (use centralized values)
 const mockStatusColors = STATIC_CALENDAR_STATUS_COLORS
