@@ -7,7 +7,7 @@ import {Box} from '@mui/material'
 
 import {getSeriesValues as fetchSeriesValues} from '@/app/api/series.js'
 import PrelevementsSeriesExplorer from '@/components/PrelevementsSeriesExplorer/index.js'
-import {getGlobalDateBounds} from '@/components/PrelevementsSeriesExplorer/util.js'
+import {getGlobalDateBounds} from '@/components/PrelevementsSeriesExplorer/utils/index.js'
 import DividerSection from '@/components/ui/DividerSection/index.js'
 import {formatFrequencyLabel, sortFrequencies} from '@/utils/frequency.js'
 
