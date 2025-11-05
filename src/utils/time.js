@@ -38,6 +38,23 @@ export const normalizeTime = time => {
 }
 
 /**
+ * Normalize a date parameter. Accepts string or Date.
+ * @param {string|Date|undefined|null} date
+ * @returns {string|undefined}
+ */
+export function normalizeDate(date) {
+  if (date === undefined || date === null || date === '') {
+    return undefined
+  }
+
+  if (date instanceof Date) {
+    return date.toISOString().slice(0, 10)
+  }
+
+  return String(date)
+}
+
+/**
  * Parses combined date and time strings into a Date in local time.
  * Time string is optional and defaults to 00:00 if omitted.
  * @param {string} dateString - YYYY-MM-DD
