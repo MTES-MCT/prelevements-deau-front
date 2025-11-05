@@ -36,3 +36,55 @@ export const normalizeTime = time => {
 
   return `${pad(hoursNum)}:${pad(minutesNum)}`
 }
+
+/**
+ * Parses combined date and time strings into a Date in local time.
+ * Time string is optional and defaults to 00:00 if omitted.
+ * @param {string} dateString - YYYY-MM-DD
+ * @param {string|null} [timeString] - HH:mm or HH:mm:ss
+ * @returns {Date|null}
+ */
+export const parseLocalDateTime = (dateString, timeString) => {
+  if (typeof dateString !== 'string') {
+    return null
+  }
+
+  const trimmedDate = dateString.trim()
+  if (!trimmedDate) {
+    return null
+  }
+
+  const [yearStr, monthStr, dayStr] = trimmedDate.split('-')
+  const year = Number(yearStr)
+  const month = Number(monthStr)
+  const day = Number(dayStr)
+
+  if (
+    Number.isNaN(year)
+    || Number.isNaN(month)
+    || Number.isNaN(day)
+  ) {
+    return null
+  }
+
+  const baseDate = new Date(year, month - 1, day, 0, 0, 0, 0)
+  if (Number.isNaN(baseDate.getTime())) {
+    return null
+  }
+
+  if (typeof timeString !== 'string' || timeString.trim() === '') {
+    return baseDate
+  }
+
+  const [hoursStr, minutesStr = '0', secondsStr = '0'] = timeString.split(':')
+  const hours = Number(hoursStr)
+  const minutes = Number(minutesStr)
+  const seconds = Number(secondsStr)
+
+  const safeHours = Number.isNaN(hours) ? 0 : hours
+  const safeMinutes = Number.isNaN(minutes) ? 0 : minutes
+  const safeSeconds = Number.isNaN(seconds) ? 0 : seconds
+
+  baseDate.setHours(safeHours, safeMinutes, safeSeconds, 0)
+  return baseDate
+}

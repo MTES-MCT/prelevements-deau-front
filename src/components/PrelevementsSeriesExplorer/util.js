@@ -132,43 +132,6 @@ export function parseLocalDate(dateString) {
 }
 
 /**
- * Parses combined date and time strings into a Date in local time.
- * Time string is optional and defaults to 00:00 if omitted.
- * @param {string} dateString - YYYY-MM-DD
- * @param {string|null} [timeString] - HH:mm or HH:mm:ss
- * @returns {Date|null}
- */
-export function parseLocalDateTime(dateString, timeString) {
-  const dateOnly = parseLocalDate(dateString)
-  if (!dateOnly) {
-    return null
-  }
-
-  if (typeof timeString !== 'string' || timeString.trim() === '') {
-    return dateOnly
-  }
-
-  const [hoursStr, minutesStr = '0', secondsStr = '0'] = timeString.split(':')
-  const hours = Number(hoursStr)
-  const minutes = Number(minutesStr)
-  const seconds = Number(secondsStr)
-
-  const safeHours = Number.isNaN(hours) ? 0 : hours
-  const safeMinutes = Number.isNaN(minutes) ? 0 : minutes
-  const safeSeconds = Number.isNaN(seconds) ? 0 : seconds
-
-  return new Date(
-    dateOnly.getFullYear(),
-    dateOnly.getMonth(),
-    dateOnly.getDate(),
-    safeHours,
-    safeMinutes,
-    safeSeconds,
-    0
-  )
-}
-
-/**
  * Builds calendar data entries from series metadata and date range
  * Generates monthly calendar entries based on series minDate/maxDate
  * @param {Array} seriesList - Array of series with minDate/maxDate
