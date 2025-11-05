@@ -76,3 +76,38 @@ export async function searchSeries({preleveurId, pointId, from, to, onlyIntegrat
 
   return response.json()
 }
+
+/**
+ * Get aggregated series options (available parameters and date ranges)
+ * @param {Object} params
+ * @param {string|number|Array<string|number>} [params.pointIds] - Point IDs
+ * @param {string|number} [params.preleveurId] - Preleveur ID
+ * @returns {Promise<Object>} Object with parameters and points arrays
+ */
+export async function getAggregatedSeriesOptions({pointIds, preleveurId} = {}) {
+  const params = new URLSearchParams()
+
+  // Normalize pointIds to comma-separated string
+  if (pointIds !== undefined && pointIds !== null) {
+    const normalizedPointIds = Array.isArray(pointIds)
+      ? pointIds.join(',')
+      : String(pointIds)
+    params.set('pointIds', normalizedPointIds)
+  }
+
+  if (preleveurId !== undefined && preleveurId !== null) {
+    params.set('preleveurId', String(preleveurId))
+  }
+
+  const query = params.toString() ? `?${params.toString()}` : ''
+  const response = await executeRequest(
+    `api/aggregated-series/options${query}`,
+    {headers: {Authorization: await getAuthorization()}}
+  )
+
+  if (!response.ok) {
+    return null
+  }
+
+  return response.json()
+}
