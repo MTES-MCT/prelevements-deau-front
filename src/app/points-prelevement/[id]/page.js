@@ -1,7 +1,7 @@
 import {notFound} from 'next/navigation'
 
 import {getExploitationsByPointId, getPointPrelevement} from '@/app/api/points-prelevement.js'
-import {searchSeries} from '@/app/api/series.js'
+import {getAggregatedSeriesOptions} from '@/app/api/series.js'
 import ExploitationsList from '@/components/exploitations/exploitations-list.js'
 import PointIdentification from '@/components/points-prelevement/point-identification.js'
 import PointLocalisation from '@/components/points-prelevement/point-localisation.js'
@@ -16,7 +16,7 @@ const Page = async ({params}) => {
     notFound()
   }
 
-  const {series} = await searchSeries({pointId: pointPrelevement._id, onlyIntegratedDays: true})
+  const seriesOptions = await getAggregatedSeriesOptions({pointIds: [pointPrelevement._id]})
   const exploitations = await getExploitationsByPointId(id)
 
   return (
@@ -35,7 +35,7 @@ const Page = async ({params}) => {
         <ExploitationsList exploitations={exploitations} preleveurs={pointPrelevement.preleveurs} />
         <PointSeriesExplorer
           pointId={pointPrelevement.id_point}
-          series={series}
+          seriesOptions={seriesOptions}
         />
       </div>
     </>

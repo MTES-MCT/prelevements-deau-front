@@ -7,12 +7,9 @@ import {
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Box, Typography} from '@mui/material'
 
-import {getAggregatedSeries} from '@/app/api/aggregated-series.js'
+import {getAggregatedSeries} from '@/app/api/series.js'
 import AggregatedSeriesExplorer from '@/components/PrelevementsSeriesExplorer/aggregated-series-explorer.js'
-import {
-  getAvailableParametersFromSeries,
-  getParameterMetadata
-} from '@/components/PrelevementsSeriesExplorer/constants/parameters.js'
+import {getParameterMetadata} from '@/components/PrelevementsSeriesExplorer/constants/parameters.js'
 
 const DEFAULT_FREQUENCY = '1 day'
 
@@ -23,30 +20,35 @@ const OPERATOR_LABELS = {
   max: 'Maximum'
 }
 
-const PointSeriesExplorer = ({pointId, series = []}) => {
-  console.log('series in PointSeriesExplorer:', series)
+const PointSeriesExplorer = ({pointId, seriesOptions = null}) => {
+  // Check if we have any parameters available from the API
+  const hasParameters = seriesOptions?.parameters?.length > 0
 
-  // If no series are provided or the array is empty, show only an info alert
-  // as requested: do not render the rest of the UI. We must NOT return early
-  // before calling hooks to preserve hook order.
-  const isSeriesEmpty = !series || (Array.isArray(series) && series.length === 0)
-  const availableParameters = useMemo(
-    () => getAvailableParametersFromSeries(series),
-    [series]
-  )
-
+  // Build parameter options from API response
   const parameterOptions = useMemo(
-    () => availableParameters.map(entry => ({
-      value: entry.parameter,
-      label: entry.parameter
+    () => (seriesOptions?.parameters ?? []).map(param => ({
+      value: param.name,
+      label: param.name
     })),
-    [availableParameters]
+    [seriesOptions]
   )
 
-  const parameterDefinitionMap = useMemo(
-    () => new Map(availableParameters.map(entry => [entry.parameter, entry])),
-    [availableParameters]
-  )
+  const parameterDefinitionMap = useMemo(() => {
+    if (!seriesOptions?.parameters) {
+      return new Map()
+    }
+
+    return new Map(
+      seriesOptions.parameters.map(param => {
+        const metadata = getParameterMetadata(param.name)
+        return [param.name, {
+          ...metadata,
+          ...param,
+          parameter: param.name
+        }]
+      })
+    )
+  }, [seriesOptions])
 
   const derivedDefaultParameter = parameterOptions[0]?.value ?? null
 
@@ -106,7 +108,6 @@ const PointSeriesExplorer = ({pointId, series = []}) => {
   })), [operatorOptions])
 
   const resolvedOperator = selectedOperator ?? resolvedDefaultOperator ?? null
-  const hasParameters = parameterOptions.length > 0
 
   const fetchAggregatedSeries = useCallback(async (parameter, operator) => {
     const params = {
@@ -193,33 +194,17 @@ const PointSeriesExplorer = ({pointId, series = []}) => {
     setSelectedOperator(newOperator)
   }, [selectedOperator, operatorOptions])
 
-  return isSeriesEmpty ? (
+  return hasParameters ? (
     <Box className='flex flex-col gap-4'>
       <Typography variant='h5' component='h2'>
         Historique des prélèvements
       </Typography>
 
-      <Alert
-        severity='info'
-        description='Aucun prélèvement connu pour ce point.'
-      />
-    </Box>
-  ) : (
-    <Box className='flex flex-col gap-4'>
-      <Typography variant='h5' component='h2'>
-        Historique des prélèvements
-      </Typography>
-
-      {!hasParameters && (
-        <Alert
-          severity='info'
-          description='Aucun paramètre compatible n’est disponible pour ce point.'
-        />
-      )}
-
-      {hasParameters && selectedParameter && (
+      {selectedParameter && (
         <AggregatedSeriesExplorer
           showRangeSlider
+          showPeriodSelector={false}
+          showCalendar={false}
           series={aggregatedSeries}
           parameters={parameterOptions}
           selectedParameter={selectedParameter}
@@ -233,6 +218,17 @@ const PointSeriesExplorer = ({pointId, series = []}) => {
           onOperatorChange={handleOperatorChange}
         />
       )}
+    </Box>
+  ) : (
+    <Box className='flex flex-col gap-4'>
+      <Typography variant='h5' component='h2'>
+        Historique des prélèvements
+      </Typography>
+
+      <Alert
+        severity='info'
+        description='Aucun prélèvement connu pour ce point.'
+      />
     </Box>
   )
 }
