@@ -151,7 +151,7 @@ export function buildAggregatedSeriesQuery(params = {}) {
   const normalizedPreleveurId = normalizeIdentifier(preleveurId)
 
   if (!normalizedPointIds && !normalizedPreleveurId) {
-    throw new Error('Le helper agrégé requiert au moins un pointIds ou un preleveurId.')
+    throw new Error('La récupération de séries agrégées nécessite au moins un identifiant de point (pointIds) ou un identifiant de préleveur (preleveurId).')
   }
 
   if (!parameter) {
