@@ -10,8 +10,8 @@ import {
   FALLBACK_PARAMETER_COLOR,
   PARAMETER_COLOR_MAP,
   normalizeParameterKey
-} from './constants.js'
-import {indexDuplicateParameters} from './util.js'
+} from './constants/colors.js'
+import {indexDuplicateParameters} from './utils/index.js'
 
 import {formatFrequencyLabel} from '@/utils/frequency.js'
 

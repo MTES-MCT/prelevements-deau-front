@@ -56,7 +56,7 @@ import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Box} from '@mui/material'
 
 import ChartWithRangeSlider from './chart-with-range-slider.js'
-import {DEFAULT_TRANSLATIONS} from './constants.js'
+import {DEFAULT_TRANSLATIONS} from './constants/colors.js'
 import {formatPeriodLabel, getViewTypeLabel} from './formatters.js'
 import LoadingState from './loading-state.js'
 import ParameterSelector from './parameter-selector.js'
@@ -72,7 +72,7 @@ import {
   calculateSelectablePeriodsFromSeries,
   extractDefaultPeriodsFromSeries,
   periodsToDateRange
-} from './util.js'
+} from './utils/index.js'
 
 import CalendarGrid from '@/components/ui/CalendarGrid/index.js'
 import PeriodSelectorHeader from '@/components/ui/PeriodSelectorHeader/index.js'

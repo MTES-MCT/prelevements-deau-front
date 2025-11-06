@@ -1,9 +1,11 @@
 import {notFound} from 'next/navigation'
 
 import {getExploitationsByPointId, getPointPrelevement} from '@/app/api/points-prelevement.js'
+import {getAggregatedSeriesOptions} from '@/app/api/series.js'
 import ExploitationsList from '@/components/exploitations/exploitations-list.js'
 import PointIdentification from '@/components/points-prelevement/point-identification.js'
 import PointLocalisation from '@/components/points-prelevement/point-localisation.js'
+import PointSeriesExplorer from '@/components/points-prelevement/point-series-explorer.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 
 const Page = async ({params}) => {
@@ -14,6 +16,7 @@ const Page = async ({params}) => {
     notFound()
   }
 
+  const seriesOptions = await getAggregatedSeriesOptions({pointIds: [pointPrelevement._id]})
   const exploitations = await getExploitationsByPointId(id)
 
   return (
@@ -30,6 +33,10 @@ const Page = async ({params}) => {
           pointPrelevement={pointPrelevement}
         />
         <ExploitationsList exploitations={exploitations} preleveurs={pointPrelevement.preleveurs} />
+        <PointSeriesExplorer
+          pointId={pointPrelevement.id_point}
+          seriesOptions={seriesOptions}
+        />
       </div>
     </>
   )

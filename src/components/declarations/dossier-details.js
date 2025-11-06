@@ -51,7 +51,7 @@ function getVolumePrelevementTotal(dossier, files) {
   return null
 }
 
-const DossierDetails = ({dossier, preleveur, files, idPoints}) => {
+const DossierDetails = ({dossier, preleveur, files = [], idPoints}) => {
   const [pointsPrelevement, setPointsPrelevement] = useState(null)
   const [focusedPointId, setFocusedPointId] = useState(null)
 
