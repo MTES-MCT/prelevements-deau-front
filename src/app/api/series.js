@@ -243,10 +243,8 @@ export async function getAggregatedSeriesOptions({pointIds, preleveurId} = {}) {
   const params = new URLSearchParams()
 
   // Normalize pointIds to comma-separated string
-  if (pointIds !== undefined && pointIds !== null) {
-    const normalizedPointIds = Array.isArray(pointIds)
-      ? pointIds.join(',')
-      : String(pointIds)
+  const normalizedPointIds = normalizeIdentifierList(pointIds)
+  if (normalizedPointIds) {
     params.set('pointIds', normalizedPointIds)
   }
 
