@@ -87,8 +87,8 @@ const Page = async ({params}) => {
   const title = preleveur.raison_sociale
     ? `${preleveur.sigle ? preleveur.sigle + ' ' : ''}${preleveur.raison_sociale}`
     : (preleveur.civilite && preleveur.nom && preleveur.prenom
-        ? `${preleveur.civilite} ${preleveur.nom} ${preleveur.prenom}`
-        : 'Non renseigné')
+      ? `${preleveur.civilite} ${preleveur.nom} ${preleveur.prenom}`
+      : 'Non renseigné')
 
   return (
     <>
