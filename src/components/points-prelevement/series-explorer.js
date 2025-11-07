@@ -10,6 +10,10 @@ import {Box, Typography} from '@mui/material'
 import {getAggregatedSeries} from '@/app/api/series.js'
 import AggregatedSeriesExplorer from '@/components/PrelevementsSeriesExplorer/aggregated-series-explorer.js'
 import {getParameterMetadata} from '@/components/PrelevementsSeriesExplorer/constants/parameters.js'
+import {
+  calculateSelectablePeriodsFromDateRange,
+  extractDefaultPeriodsFromDateRange
+} from '@/components/PrelevementsSeriesExplorer/utils/date-range-periods.js'
 
 const DEFAULT_FREQUENCY = '1 day'
 
@@ -20,9 +24,21 @@ const OPERATOR_LABELS = {
   max: 'Maximum'
 }
 
-const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = null}) => {
+const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = null, startDate = null, endDate = null}) => {
   // Vérifie si des paramètres sont disponibles depuis l'API
   const hasParameters = seriesOptions?.parameters?.length > 0
+
+  // Calcule les périodes sélectionnables en tenant compte de startDate/endDate
+  const selectablePeriods = useMemo(
+    () => calculateSelectablePeriodsFromDateRange(startDate, endDate),
+    [startDate, endDate]
+  )
+
+  // Calcule les périodes par défaut en tenant compte de startDate/endDate
+  const defaultPeriods = useMemo(
+    () => extractDefaultPeriodsFromDateRange(startDate, endDate),
+    [startDate, endDate]
+  )
 
   // Construit les options de paramètres depuis la réponse API
   const parameterOptions = useMemo(
@@ -124,8 +140,16 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
       params.preleveurId = preleveurId
     }
 
+    if (startDate) {
+      params.startDate = startDate
+    }
+
+    if (endDate) {
+      params.endDate = endDate
+    }
+
     return getAggregatedSeries(params)
-  }, [pointIds, preleveurId])
+  }, [pointIds, preleveurId, startDate, endDate])
 
   useEffect(() => {
     if (!selectedParameter || !resolvedOperator) {
@@ -219,6 +243,8 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
           operatorOptions={operatorSelectOptions}
           selectedOperator={resolvedOperator ?? undefined}
           defaultOperator={resolvedDefaultOperator ?? undefined}
+          selectablePeriods={selectablePeriods}
+          defaultPeriods={defaultPeriods}
           error={loadError}
           isLoading={isLoading}
           onParameterChange={handleParameterChange}
