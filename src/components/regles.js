@@ -3,7 +3,6 @@
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Box} from '@mui/material'
 import {Grid} from '@mui/system'
-import {uniqueId} from 'lodash-es'
 
 import Regle from '@/components/regle.js'
 import {downloadCsv} from '@/lib/export-csv.js'
@@ -38,7 +37,7 @@ const Regles = ({regles, documents}) => {
 
           return (
             <Regle
-              key={uniqueId()}
+              key={`regle-${regle.debut_validite}-${regle.valeur}-${regle.unite}`}
               regle={regle}
               document={document}
             />
