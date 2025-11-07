@@ -22,6 +22,14 @@ import {usageIcons} from '@/lib/points-prelevement.js'
 
 const iconColorStyle = {color: fr.colors.decisions.text.label.blueFrance.default}
 
+function formatAdresse(preleveur) {
+  if (!preleveur.adresse_1 && !preleveur.adresse_2 && !preleveur.bp && !preleveur.code_postal && !preleveur.commune) {
+    return null
+  }
+
+  return `${preleveur.adresse_1 || ''}${preleveur.adresse_2 ? ', ' + preleveur.adresse_2 : ''} - ${preleveur.bp || ''}${preleveur.code_postal ? ', ' + preleveur.code_postal : ''}${preleveur.commune ? ' ' + preleveur.commune : ''}`
+}
+
 const InfoCard = ({preleveur}) => {
   if (!preleveur.email && !preleveur.numero_telephone && !preleveur.adresse_1) {
     return null
@@ -30,10 +38,28 @@ const InfoCard = ({preleveur}) => {
   return (
     <SectionCard>
       <ul className='[&>li]:flex [&>li]:gap-1'>
-        {preleveur.email ? <li><Icon iconId='ri-at-line' style={iconColorStyle} /><span>{preleveur.email}</span></li> : null}
-        {preleveur.numero_telephone
-          ? <li><Icon iconId='ri-phone-line' style={iconColorStyle} /><span>{preleveur.numero_telephone}</span></li> : null}
-        {preleveur.adresse_1 ? <li><Icon iconId='ri-home-4-line' style={iconColorStyle} /><span>{preleveur.adresse_1}</span></li> : null}
+        <li>
+          <Icon iconId='ri-user-line' style={iconColorStyle} />
+          <span>
+            {preleveur.civilite && preleveur.nom && preleveur.prenom
+              ? `${preleveur.civilite} ${preleveur.nom} ${preleveur.prenom}`
+              : 'Non renseigné'}
+          </span>
+        </li>
+        <li>
+          <Icon iconId='ri-at-line' style={iconColorStyle} />
+          <span>{preleveur.email || 'Non renseigné'}</span>
+        </li>
+        <li>
+          <Icon iconId='ri-phone-line' style={iconColorStyle} />
+          <span>{preleveur.numero_telephone || 'Non renseigné'}</span>
+        </li>
+        <li>
+          <Icon iconId='ri-home-4-line' style={iconColorStyle} />
+          <span>
+            {formatAdresse(preleveur) || 'Non renseignée'}
+          </span>
+        </li>
       </ul>
     </SectionCard>
   )
