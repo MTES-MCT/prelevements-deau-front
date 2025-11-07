@@ -58,14 +58,22 @@ const Page = async ({params}) => {
     return {...exploitation, point}
   }))
 
+  const title = preleveur.raison_sociale
+    ? `${preleveur.sigle ? preleveur.sigle + ' ' : ''}${preleveur.raison_sociale}`
+    : `${preleveur.civilite} ${preleveur.nom} ${preleveur.prenom}`
+
   return (
     <>
       <StartDsfrOnHydration />
 
       <Box className='fr-container h-full w-full flex flex-col gap-5 mb-5'>
         <EntityHeader
-          title={<><span
-            className='fr-icon-user-line' />{preleveur.civilite} {preleveur.nom} {preleveur.prenom} {preleveur.sigle} {preleveur.raison_sociale}</>}
+          title={
+            <>
+              <span className='fr-icon-user-line' />
+              {' '}{title}
+            </>
+          }
           rightBadges={preleveur.usages.map(usage => (
             {label: usage, icon: usageIcons[usage]}
           ))}
