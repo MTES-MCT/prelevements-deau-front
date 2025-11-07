@@ -20,11 +20,11 @@ const OPERATOR_LABELS = {
   max: 'Maximum'
 }
 
-const PointSeriesExplorer = ({pointId, seriesOptions = null}) => {
-  // Check if we have any parameters available from the API
+const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = null}) => {
+  // Vérifie si des paramètres sont disponibles depuis l'API
   const hasParameters = seriesOptions?.parameters?.length > 0
 
-  // Build parameter options from API response
+  // Construit les options de paramètres depuis la réponse API
   const parameterOptions = useMemo(
     () => (seriesOptions?.parameters ?? []).map(param => ({
       value: param.name,
@@ -111,14 +111,21 @@ const PointSeriesExplorer = ({pointId, seriesOptions = null}) => {
 
   const fetchAggregatedSeries = useCallback(async (parameter, operator) => {
     const params = {
-      pointIds: [pointId],
+      aggregationFrequency: DEFAULT_FREQUENCY,
       parameter,
-      operator,
-      aggregationFrequency: DEFAULT_FREQUENCY
+      operator
+    }
+
+    if (pointIds) {
+      params.pointIds = pointIds
+    }
+
+    if (preleveurId) {
+      params.preleveurId = preleveurId
     }
 
     return getAggregatedSeries(params)
-  }, [pointId])
+  }, [pointIds, preleveurId])
 
   useEffect(() => {
     if (!selectedParameter || !resolvedOperator) {
@@ -227,10 +234,10 @@ const PointSeriesExplorer = ({pointId, seriesOptions = null}) => {
 
       <Alert
         severity='info'
-        description='Aucun prélèvement connu pour ce point.'
+        description='Aucun prélèvement connu pour cette entité.'
       />
     </Box>
   )
 }
 
-export default PointSeriesExplorer
+export default SeriesExplorer

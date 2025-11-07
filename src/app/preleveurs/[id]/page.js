@@ -10,8 +10,10 @@ import {
   getDocumentsFromPreleveur,
   getPointPrelevement
 } from '@/app/api/points-prelevement.js'
+import {getAggregatedSeriesOptions} from '@/app/api/series.js'
 import DocumentsList from '@/components/documents/documents-list.js'
 import ExploitationsList from '@/components/exploitations/exploitations-list.js'
+import SeriesExplorer from '@/components/points-prelevement/series-explorer.js'
 import EntityHeader from '@/components/ui/EntityHeader/index.js'
 import Icon from '@/components/ui/Icon/index.js'
 import SectionCard from '@/components/ui/SectionCard/index.js'
@@ -48,6 +50,7 @@ const Page = async ({params}) => {
 
   const documents = await getDocumentsFromPreleveur(id)
   const exploitations = await getExploitationFromPreleveur(id)
+  const seriesOptions = await getAggregatedSeriesOptions({preleveurId: id})
 
   const exploitationsWithPoints = await Promise.all(exploitations.map(async exploitation => {
     const point = await getPointPrelevement(exploitation.point)
@@ -83,6 +86,7 @@ const Page = async ({params}) => {
           ]}
         />
         <InfoCard preleveur={preleveur} />
+        <SeriesExplorer preleveurId={preleveur.id_preleveur} seriesOptions={seriesOptions} />
         <ExploitationsList hidePreleveur exploitations={exploitationsWithPoints} preleveurs={[preleveur]} />
         <DocumentsList idPreleveur={id} documents={documents} />
       </Box>
