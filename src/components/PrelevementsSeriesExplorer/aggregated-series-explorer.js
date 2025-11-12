@@ -16,6 +16,7 @@ import {
   PARAMETER_COLOR_MAP,
   normalizeParameterKey
 } from './constants/colors.js'
+import {FREQUENCY_OPTIONS} from './constants/parameters.js'
 import {formatPeriodLabel, getViewTypeLabel} from './formatters.js'
 import LoadingState from './loading-state.js'
 import {useChartSeries} from './use-chart-series.js'
@@ -38,7 +39,10 @@ const TRANSLATIONS = {
   parameterHint: 'Sélectionnez un paramètre à afficher.',
   operatorLabel: 'Opérateur',
   operatorHint: 'Choisissez la fonction appliquée aux valeurs agrégées.',
-  operatorPlaceholder: 'Sélectionner un opérateur'
+  operatorPlaceholder: 'Sélectionner un opérateur',
+  frequencyLabel: 'Pas de temps',
+  frequencyHint: 'Choisissez la fréquence d\'agrégation des données.',
+  frequencyPlaceholder: 'Sélectionner un pas de temps'
 }
 
 const normalizeParameterOptions = options => {
@@ -304,6 +308,70 @@ function useManagedOperatorSelection({
   }
 }
 
+function useManagedFrequencySelection({
+  defaultFrequency,
+  selectedFrequency,
+  onFrequencyChange,
+  metadataFrequency
+}) {
+  const resolvedDefault = useMemo(
+    () => resolvePreferredOption(FREQUENCY_OPTIONS, defaultFrequency),
+    [defaultFrequency]
+  )
+
+  const isControlled = selectedFrequency !== undefined && selectedFrequency !== null
+  const [internalValue, setInternalValue] = useState(resolvedDefault)
+
+  useEffect(() => {
+    if (isControlled) {
+      return
+    }
+
+    setInternalValue(previous => {
+      const matched = matchOptionValue(FREQUENCY_OPTIONS, previous)
+      return matched ?? resolvedDefault
+    })
+  }, [isControlled, resolvedDefault])
+
+  useEffect(() => {
+    if (isControlled || !metadataFrequency) {
+      return
+    }
+
+    setInternalValue(previous => {
+      const matched = matchOptionValue(FREQUENCY_OPTIONS, metadataFrequency)
+      if (matched && matched !== previous) {
+        return matched
+      }
+
+      return previous
+    })
+  }, [isControlled, metadataFrequency])
+
+  const currentValue = isControlled
+    ? matchOptionValue(FREQUENCY_OPTIONS, selectedFrequency) || resolvedDefault
+    : internalValue
+
+  const handleChange = useCallback(value => {
+    const matched = matchOptionValue(FREQUENCY_OPTIONS, value)
+    if (!matched) {
+      return
+    }
+
+    if (!isControlled) {
+      setInternalValue(matched)
+    }
+
+    onFrequencyChange?.(matched)
+  }, [isControlled, onFrequencyChange])
+
+  return {
+    currentValue,
+    handleChange,
+    resolvedDefault
+  }
+}
+
 const AggregatedSeriesExplorer = ({
   series,
   parameters,
@@ -314,6 +382,10 @@ const AggregatedSeriesExplorer = ({
   selectedOperator: selectedOperatorProp,
   defaultOperator,
   onOperatorChange,
+  enableFrequencySelect = true,
+  selectedFrequency: selectedFrequencyProp,
+  defaultFrequency,
+  onFrequencyChange,
   onPeriodChange,
   defaultPeriods,
   selectablePeriods: providedSelectablePeriods,
@@ -353,6 +425,16 @@ const AggregatedSeriesExplorer = ({
     selectedOperator: selectedOperatorProp,
     onOperatorChange,
     metadataOperator: series?.metadata?.operator
+  })
+
+  const {
+    currentValue: currentFrequency,
+    handleChange: handleFrequencySelection
+  } = useManagedFrequencySelection({
+    defaultFrequency,
+    selectedFrequency: selectedFrequencyProp,
+    onFrequencyChange,
+    metadataFrequency: series?.metadata?.frequency
   })
 
   const metadataList = useMemo(
@@ -519,6 +601,8 @@ const AggregatedSeriesExplorer = ({
     return hasYearType ? 'years' : 'months'
   }, [selectedPeriods, defaultInitialViewType])
 
+  const noDataMessage = 'Aucune donnée disponible avec les critères choisis.'
+
   if (!series && !isLoading) {
     return (
       <Box className='flex flex-col gap-4'>
@@ -615,6 +699,39 @@ const AggregatedSeriesExplorer = ({
             </Select>
           </Box>
         )}
+
+        {enableFrequencySelect && (
+          <Box
+            sx={{
+              flex: '1 1 220px',
+              minWidth: 220,
+              maxWidth: 360
+            }}
+          >
+            <Select
+              label={t.frequencyLabel}
+              hintText={t.frequencyHint}
+              nativeSelectProps={{
+                value: currentFrequency ?? '',
+                disabled: FREQUENCY_OPTIONS.length <= 1,
+                onChange: event => handleFrequencySelection(event.target.value)
+              }}
+            >
+              <option disabled hidden value=''>
+                {t.frequencyPlaceholder}
+              </option>
+              {FREQUENCY_OPTIONS.map(option => (
+                <option
+                  key={option.value}
+                  disabled={option.disabled}
+                  value={option.value}
+                >
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+          </Box>
+        )}
       </Box>
 
       {showChart && (
@@ -648,7 +765,7 @@ const AggregatedSeriesExplorer = ({
               )}
 
               {!isLoading && !error && chartSeries.length === 0 && (
-                <Alert severity='info' description={t.noDataMessage} />
+                <Alert severity='info' description={noDataMessage} />
               )}
             </Box>
           )}

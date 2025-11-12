@@ -3,6 +3,13 @@ import {normalizeParameterKey} from './colors.js'
 const VOLUME_OPERATORS = Object.freeze(['sum', 'mean', 'min', 'max'])
 const STANDARD_OPERATORS = Object.freeze(['mean', 'min', 'max'])
 
+export const OPERATOR_LABELS = {
+  sum: 'Somme',
+  mean: 'Moyenne',
+  min: 'Minimum',
+  max: 'Maximum'
+}
+
 export const AGGREGATED_PARAMETERS = [
   {
     parameter: 'volume prélevé',
@@ -100,11 +107,13 @@ export const AGGREGATED_PARAMETERS = [
   operators: [...entry.operators]
 }))
 
-export const AGGREGATION_FREQUENCIES = [
-  {value: '1 hour', label: '1 heure'},
-  {value: '1 day', label: '1 jour'},
-  {value: '1 week', label: '1 semaine'},
-  {value: '1 month', label: '1 mois'}
+export const FREQUENCY_OPTIONS = [
+  {value: '15 minutes', label: 'Tranches de 15 minutes'},
+  {value: '1 hour', label: 'Horaire'},
+  {value: '6 hours', label: 'Tranches de 6 heures'},
+  {value: '1 day', label: 'Quotidien'},
+  {value: '1 month', label: 'Mensuel'},
+  {value: '1 year', label: 'Annuel'}
 ]
 
 export const DEFAULT_AGGREGATION_FREQUENCY = '1 day'
