@@ -179,53 +179,39 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
     }
   }, [selectedParameter, resolvedOperator, selectedFrequency, fetchAggregatedSeries])
 
-  const handleParameterChange = useCallback(newParameter => {
-    if (!newParameter || newParameter === selectedParameter) {
-      return
+  const handleFiltersChange = useCallback(({parameter, operator, frequency}) => {
+    // Handle parameter change
+    if (parameter !== undefined && parameter !== selectedParameter) {
+      const nextDefinition = parameterDefinitionMap.get(parameter)
+        ?? getParameterMetadata(parameter)
+      const nextDefaultOperator = nextDefinition?.defaultOperator
+        ?? nextDefinition?.operators?.[0]
+        ?? null
+
+      setSelectedParameter(parameter)
+
+      if (nextDefinition) {
+        const availableOperators = nextDefinition.operators ?? []
+        const isCurrentOperatorValid = selectedOperator && availableOperators.includes(selectedOperator)
+
+        if (!isCurrentOperatorValid) {
+          setSelectedOperator(nextDefaultOperator)
+        }
+      } else {
+        setSelectedOperator(null)
+      }
     }
 
-    const nextDefinition = parameterDefinitionMap.get(newParameter)
-      ?? getParameterMetadata(newParameter)
-    const nextDefaultOperator = nextDefinition?.defaultOperator
-      ?? nextDefinition?.operators?.[0]
-      ?? null
-
-    setSelectedParameter(newParameter)
-
-    if (!nextDefinition) {
-      setSelectedOperator(null)
-      return
+    // Handle operator change
+    if (operator !== undefined && operator !== selectedOperator && operatorOptions.includes(operator)) {
+      setSelectedOperator(operator)
     }
 
-    const availableOperators = nextDefinition.operators ?? []
-    const isCurrentOperatorValid = selectedOperator && availableOperators.includes(selectedOperator)
-
-    if (isCurrentOperatorValid) {
-      return
+    // Handle frequency change
+    if (frequency !== undefined && frequency !== selectedFrequency) {
+      setSelectedFrequency(frequency)
     }
-
-    setSelectedOperator(nextDefaultOperator)
-  }, [parameterDefinitionMap, selectedParameter, selectedOperator])
-
-  const handleOperatorChange = useCallback(newOperator => {
-    if (!newOperator || newOperator === selectedOperator) {
-      return
-    }
-
-    if (!operatorOptions.includes(newOperator)) {
-      return
-    }
-
-    setSelectedOperator(newOperator)
-  }, [selectedOperator, operatorOptions])
-
-  const handleFrequencyChange = useCallback(newFrequency => {
-    if (!newFrequency || newFrequency === selectedFrequency) {
-      return
-    }
-
-    setSelectedFrequency(newFrequency)
-  }, [selectedFrequency])
+  }, [parameterDefinitionMap, selectedParameter, selectedOperator, operatorOptions, selectedFrequency])
 
   return hasParameters ? (
     <Box className='flex flex-col gap-4'>
@@ -252,9 +238,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
           defaultPeriods={defaultPeriods}
           error={loadError}
           isLoading={isLoading}
-          onParameterChange={handleParameterChange}
-          onOperatorChange={handleOperatorChange}
-          onFrequencyChange={handleFrequencyChange}
+          onFiltersChange={handleFiltersChange}
         />
       )}
     </Box>

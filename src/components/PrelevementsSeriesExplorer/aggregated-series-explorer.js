@@ -146,16 +146,13 @@ const AggregatedSeriesExplorer = ({
   parameters,
   selectedParameter: selectedParameterProp,
   defaultParameter = DEFAULT_PARAMETER,
-  onParameterChange,
   operatorOptions,
   selectedOperator: selectedOperatorProp,
   defaultOperator,
-  onOperatorChange,
   enableFrequencySelect = true,
   selectedFrequency: selectedFrequencyProp,
   defaultFrequency,
-  onFrequencyChange,
-  onPeriodChange,
+  onFiltersChange,
   defaultPeriods,
   selectablePeriods: providedSelectablePeriods,
   defaultInitialViewType = 'years',
@@ -177,15 +174,27 @@ const AggregatedSeriesExplorer = ({
     [parameters]
   )
 
+  const handleParameterChange = useCallback(parameter => {
+    onFiltersChange?.({parameter})
+  }, [onFiltersChange])
+
+  const handleOperatorChange = useCallback(operator => {
+    onFiltersChange?.({operator})
+  }, [onFiltersChange])
+
+  const handleFrequencyChange = useCallback(frequency => {
+    onFiltersChange?.({frequency})
+  }, [onFiltersChange])
+
   const {
     options: parameterOptions,
     currentValue: currentParameter,
-    handleChange: handleParameterChange
+    handleChange: handleParameterSelection
   } = useManagedSelection({
     options: parameterOptionsNormalized,
     defaultValue: defaultParameter,
     selectedValue: selectedParameterProp,
-    onChange: onParameterChange,
+    onChange: handleParameterChange,
     metadataValue: series?.metadata?.parameter,
     fallbackDefault: DEFAULT_PARAMETER
   })
@@ -203,7 +212,7 @@ const AggregatedSeriesExplorer = ({
     options: operatorOptionsNormalized,
     defaultValue: defaultOperator,
     selectedValue: selectedOperatorProp,
-    onChange: onOperatorChange,
+    onChange: handleOperatorChange,
     metadataValue: series?.metadata?.operator
   })
 
@@ -214,7 +223,7 @@ const AggregatedSeriesExplorer = ({
     options: FREQUENCY_OPTIONS,
     defaultValue: defaultFrequency,
     selectedValue: selectedFrequencyProp,
-    onChange: onFrequencyChange,
+    onChange: handleFrequencyChange,
     metadataValue: series?.metadata?.frequency
   })
 
@@ -251,10 +260,10 @@ const AggregatedSeriesExplorer = ({
     }
   }, [initialPeriodsKey])
 
-  const handlePeriodChange = useCallback(periods => {
+  const handlePeriodChangeInternal = useCallback(periods => {
     setSelectedPeriods(periods)
-    onPeriodChange?.(periods)
-  }, [onPeriodChange])
+    onFiltersChange?.({periods})
+  }, [onFiltersChange])
 
   const dateRange = useMemo(
     () => periodsToDateRange(selectedPeriods),
@@ -402,7 +411,7 @@ const AggregatedSeriesExplorer = ({
           currentViewType={currentViewType}
           defaultSelectedPeriods={selectedPeriods}
           selectablePeriods={selectablePeriods}
-          onSelectionChange={handlePeriodChange}
+          onSelectionChange={handlePeriodChangeInternal}
         />
       )}
 
@@ -430,7 +439,7 @@ const AggregatedSeriesExplorer = ({
             nativeSelectProps={{
               value: currentParameter ?? '',
               disabled: parameterOptions.length <= 1,
-              onChange: event => handleParameterChange(event.target.value)
+              onChange: event => handleParameterSelection(event.target.value)
             }}
           >
             <option disabled hidden value=''>
