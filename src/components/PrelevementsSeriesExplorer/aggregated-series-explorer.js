@@ -16,6 +16,7 @@ import {
   PARAMETER_COLOR_MAP,
   normalizeParameterKey
 } from './constants/colors.js'
+import {FREQUENCY_OPTIONS} from './constants/parameters.js'
 import {formatPeriodLabel, getViewTypeLabel} from './formatters.js'
 import LoadingState from './loading-state.js'
 import {useChartSeries} from './use-chart-series.js'
@@ -180,7 +181,7 @@ const AggregatedSeriesExplorer = ({
   selectedOperator: selectedOperatorProp,
   defaultOperator,
   enableFrequencySelect = true,
-  frequencyOptions,
+  frequencyOptions = FREQUENCY_OPTIONS,
   selectedFrequency: selectedFrequencyProp,
   defaultFrequency,
   onFiltersChange,
@@ -402,7 +403,7 @@ const AggregatedSeriesExplorer = ({
 
   const currentViewType = useMemo(() => determineCurrentViewType(selectedPeriods, defaultInitialViewType), [selectedPeriods, defaultInitialViewType])
 
-  const noDataMessage = 'Aucune donnée disponible avec les critères choisis.'
+  const {noDataMessage} = t
 
   // Render chart content based on loading/error/data state
   const renderChartSection = () => {

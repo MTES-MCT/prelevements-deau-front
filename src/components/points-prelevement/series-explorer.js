@@ -208,7 +208,11 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
     }
 
     // Handle frequency change
-    if (frequency !== undefined && frequency !== selectedFrequency) {
+    if (
+      frequency !== undefined
+      && frequency !== selectedFrequency
+      && FREQUENCY_OPTIONS.some(opt => opt.value === frequency)
+    ) {
       setSelectedFrequency(frequency)
     }
   }, [parameterDefinitionMap, selectedParameter, selectedOperator, operatorOptions, selectedFrequency])
@@ -231,9 +235,9 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
           operatorOptions={operatorSelectOptions}
           selectedOperator={resolvedOperator ?? undefined}
           defaultOperator={resolvedDefaultOperator ?? undefined}
+          frequencyOptions={FREQUENCY_OPTIONS}
           selectedFrequency={selectedFrequency}
           defaultFrequency={DEFAULT_FREQUENCY}
-          frequencyOptions={FREQUENCY_OPTIONS}
           selectablePeriods={selectablePeriods}
           defaultPeriods={defaultPeriods}
           error={loadError}

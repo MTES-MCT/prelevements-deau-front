@@ -77,7 +77,7 @@ export function useManagedSelection({
 
     setInternalValue(previous => {
       const matched = matchOptionValue(options, previous)
-      return matched ?? resolvedDefault
+      return matched || resolvedDefault
     })
   }, [isControlled, options, resolvedDefault])
 
