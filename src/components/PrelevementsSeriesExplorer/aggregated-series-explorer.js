@@ -31,6 +31,7 @@ import {
 import {buildDailyAndTimelineData} from '@/components/PrelevementsSeriesExplorer/utils/aggregation.js'
 import CalendarGrid from '@/components/ui/CalendarGrid/index.js'
 import PeriodSelectorHeader from '@/components/ui/PeriodSelectorHeader/index.js'
+import {useManagedSelection} from '@/hook/use-managed-selection.js'
 
 const DEFAULT_PARAMETER = 'volume prélevé'
 
@@ -117,32 +118,6 @@ const normalizeOperatorOptions = options => {
     .filter(Boolean)
 }
 
-const resolvePreferredOption = (options, preferred) => {
-  if (!options || options.length === 0) {
-    return ''
-  }
-
-  if (preferred) {
-    const normalized = preferred.toString().trim().toLowerCase()
-    const match = options.find(option => option.value?.toString().toLowerCase() === normalized)
-    if (match) {
-      return match.value
-    }
-  }
-
-  return options[0].value
-}
-
-const matchOptionValue = (options, value) => {
-  if (!value) {
-    return ''
-  }
-
-  const normalized = value.toString().trim().toLowerCase()
-  const match = options.find(option => option.value?.toString().toLowerCase() === normalized)
-  return match ? match.value : ''
-}
-
 const normalizeMetadataList = series => {
   if (series?.metadata) {
     return [series.metadata]
@@ -164,212 +139,6 @@ const filterValuesByDateRange = (values, dateRange) => {
   const end = format(dateRange.end, 'yyyy-MM-dd')
 
   return values.filter(entry => entry?.date && entry.date >= start && entry.date <= end)
-}
-
-function useManagedParameterSelection({
-  parameters,
-  defaultParameter,
-  selectedParameter,
-  onParameterChange,
-  metadataParameter
-}) {
-  const options = useMemo(
-    () => normalizeParameterOptions(parameters),
-    [parameters]
-  )
-
-  const resolvedDefault = useMemo(
-    () => resolvePreferredOption(options, defaultParameter ?? DEFAULT_PARAMETER),
-    [options, defaultParameter]
-  )
-
-  const isControlled = selectedParameter !== undefined && selectedParameter !== null
-  const [internalValue, setInternalValue] = useState(resolvedDefault)
-
-  useEffect(() => {
-    if (isControlled) {
-      return
-    }
-
-    setInternalValue(previous => {
-      const matched = matchOptionValue(options, previous)
-      return matched ?? resolvedDefault
-    })
-  }, [isControlled, options, resolvedDefault])
-
-  useEffect(() => {
-    if (isControlled || !metadataParameter) {
-      return
-    }
-
-    setInternalValue(previous => {
-      const matched = matchOptionValue(options, metadataParameter)
-      if (matched && matched !== previous) {
-        return matched
-      }
-
-      return previous
-    })
-  }, [isControlled, metadataParameter, options])
-
-  const currentValue = isControlled
-    ? matchOptionValue(options, selectedParameter) || resolvedDefault
-    : internalValue
-
-  const handleChange = useCallback(value => {
-    const matched = matchOptionValue(options, value)
-    if (!matched) {
-      return
-    }
-
-    if (!isControlled) {
-      setInternalValue(matched)
-    }
-
-    onParameterChange?.(matched)
-  }, [isControlled, onParameterChange, options])
-
-  return {
-    options,
-    currentValue,
-    handleChange,
-    resolvedDefault
-  }
-}
-
-function useManagedOperatorSelection({
-  operatorOptions,
-  defaultOperator,
-  selectedOperator,
-  onOperatorChange,
-  metadataOperator
-}) {
-  const options = useMemo(
-    () => normalizeOperatorOptions(operatorOptions),
-    [operatorOptions]
-  )
-
-  const resolvedDefault = useMemo(
-    () => resolvePreferredOption(options, defaultOperator),
-    [options, defaultOperator]
-  )
-
-  const isControlled = selectedOperator !== undefined && selectedOperator !== null
-  const [internalValue, setInternalValue] = useState(resolvedDefault)
-
-  useEffect(() => {
-    if (isControlled) {
-      return
-    }
-
-    setInternalValue(previous => {
-      const matched = matchOptionValue(options, previous)
-      return matched ?? resolvedDefault
-    })
-  }, [isControlled, options, resolvedDefault])
-
-  useEffect(() => {
-    if (isControlled || !metadataOperator) {
-      return
-    }
-
-    setInternalValue(previous => {
-      const matched = matchOptionValue(options, metadataOperator)
-      if (matched && matched !== previous) {
-        return matched
-      }
-
-      return previous
-    })
-  }, [isControlled, metadataOperator, options])
-
-  const currentValue = isControlled
-    ? matchOptionValue(options, selectedOperator) || resolvedDefault
-    : internalValue
-
-  const handleChange = useCallback(value => {
-    const matched = matchOptionValue(options, value)
-    if (!matched) {
-      return
-    }
-
-    if (!isControlled) {
-      setInternalValue(matched)
-    }
-
-    onOperatorChange?.(matched)
-  }, [isControlled, onOperatorChange, options])
-
-  return {
-    options,
-    currentValue,
-    handleChange,
-    resolvedDefault
-  }
-}
-
-function useManagedFrequencySelection({
-  defaultFrequency,
-  selectedFrequency,
-  onFrequencyChange,
-  metadataFrequency
-}) {
-  const resolvedDefault = useMemo(
-    () => resolvePreferredOption(FREQUENCY_OPTIONS, defaultFrequency),
-    [defaultFrequency]
-  )
-
-  const isControlled = selectedFrequency !== undefined && selectedFrequency !== null
-  const [internalValue, setInternalValue] = useState(resolvedDefault)
-
-  useEffect(() => {
-    if (isControlled) {
-      return
-    }
-
-    setInternalValue(previous => {
-      const matched = matchOptionValue(FREQUENCY_OPTIONS, previous)
-      return matched ?? resolvedDefault
-    })
-  }, [isControlled, resolvedDefault])
-
-  useEffect(() => {
-    if (isControlled || !metadataFrequency) {
-      return
-    }
-
-    setInternalValue(previous => {
-      const matched = matchOptionValue(FREQUENCY_OPTIONS, metadataFrequency)
-      if (matched && matched !== previous) {
-        return matched
-      }
-
-      return previous
-    })
-  }, [isControlled, metadataFrequency])
-
-  const currentValue = isControlled
-    ? matchOptionValue(FREQUENCY_OPTIONS, selectedFrequency) || resolvedDefault
-    : internalValue
-
-  const handleChange = useCallback(value => {
-    const matched = matchOptionValue(FREQUENCY_OPTIONS, value)
-    if (!matched) {
-      return
-    }
-
-    if (!isControlled) {
-      setInternalValue(matched)
-    }
-
-    onFrequencyChange?.(matched)
-  }, [isControlled, onFrequencyChange])
-
-  return {
-    currentValue,
-    handleChange,
-    resolvedDefault
-  }
 }
 
 const AggregatedSeriesExplorer = ({
@@ -403,38 +172,50 @@ const AggregatedSeriesExplorer = ({
 }) => {
   const t = {...TRANSLATIONS, ...customTranslations}
 
+  const parameterOptionsNormalized = useMemo(
+    () => normalizeParameterOptions(parameters),
+    [parameters]
+  )
+
   const {
     options: parameterOptions,
     currentValue: currentParameter,
     handleChange: handleParameterChange
-  } = useManagedParameterSelection({
-    parameters,
-    defaultParameter,
-    selectedParameter: selectedParameterProp,
-    onParameterChange,
-    metadataParameter: series?.metadata?.parameter
+  } = useManagedSelection({
+    options: parameterOptionsNormalized,
+    defaultValue: defaultParameter,
+    selectedValue: selectedParameterProp,
+    onChange: onParameterChange,
+    metadataValue: series?.metadata?.parameter,
+    fallbackDefault: DEFAULT_PARAMETER
   })
+
+  const operatorOptionsNormalized = useMemo(
+    () => normalizeOperatorOptions(operatorOptions),
+    [operatorOptions]
+  )
 
   const {
     options: normalizedOperatorOptions,
     currentValue: currentOperator,
     handleChange: handleOperatorSelection
-  } = useManagedOperatorSelection({
-    operatorOptions,
-    defaultOperator,
-    selectedOperator: selectedOperatorProp,
-    onOperatorChange,
-    metadataOperator: series?.metadata?.operator
+  } = useManagedSelection({
+    options: operatorOptionsNormalized,
+    defaultValue: defaultOperator,
+    selectedValue: selectedOperatorProp,
+    onChange: onOperatorChange,
+    metadataValue: series?.metadata?.operator
   })
 
   const {
     currentValue: currentFrequency,
     handleChange: handleFrequencySelection
-  } = useManagedFrequencySelection({
-    defaultFrequency,
-    selectedFrequency: selectedFrequencyProp,
-    onFrequencyChange,
-    metadataFrequency: series?.metadata?.frequency
+  } = useManagedSelection({
+    options: FREQUENCY_OPTIONS,
+    defaultValue: defaultFrequency,
+    selectedValue: selectedFrequencyProp,
+    onChange: onFrequencyChange,
+    metadataValue: series?.metadata?.frequency
   })
 
   const metadataList = useMemo(
