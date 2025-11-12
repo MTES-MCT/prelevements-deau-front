@@ -31,13 +31,14 @@ test('calculateSelectablePeriodsFromDateRange handles single year range', t => {
 })
 
 test('calculateSelectablePeriodsFromDateRange handles only startDate provided', t => {
+  const currentYear = new Date().getFullYear()
   const result = calculateSelectablePeriodsFromDateRange('2024-06-01', null)
 
   t.truthy(result)
   t.true(result.years.length > 0)
   t.true(result.years.includes(2024))
   t.deepEqual(result.months.start, new Date('2024-06-01'))
-  t.deepEqual(result.months.end, new Date(2100, 11, 31))
+  t.deepEqual(result.months.end, new Date(currentYear, 11, 31))
 })
 
 test('calculateSelectablePeriodsFromDateRange handles only endDate provided', t => {

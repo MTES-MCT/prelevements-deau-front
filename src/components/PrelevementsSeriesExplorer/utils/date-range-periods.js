@@ -28,8 +28,10 @@ export function calculateSelectablePeriodsFromDateRange(startDate, endDate) {
   }
 
   // Determine min and max years from dates
+  // Use 1900 as minimum fallback and current year as maximum fallback (no future dates expected)
+  const currentYear = new Date().getFullYear()
   const minYear = start ? start.getFullYear() : 1900
-  const maxYear = end ? end.getFullYear() : 2100
+  const maxYear = end ? end.getFullYear() : currentYear
 
   const years = []
   for (let year = minYear; year <= maxYear; year++) {
@@ -40,7 +42,7 @@ export function calculateSelectablePeriodsFromDateRange(startDate, endDate) {
     years,
     months: {
       start: start ?? new Date(1900, 0, 1),
-      end: end ?? new Date(2100, 11, 31)
+      end: end ?? new Date(currentYear, 11, 31)
     }
   }
 }
