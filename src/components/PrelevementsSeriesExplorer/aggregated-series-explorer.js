@@ -16,6 +16,7 @@ import {
   PARAMETER_COLOR_MAP,
   normalizeParameterKey
 } from './constants/colors.js'
+import {FREQUENCY_OPTIONS} from './constants/parameters.js'
 import {formatPeriodLabel, getViewTypeLabel} from './formatters.js'
 import LoadingState from './loading-state.js'
 import {useChartSeries} from './use-chart-series.js'
@@ -30,6 +31,7 @@ import {
 import {buildDailyAndTimelineData} from '@/components/PrelevementsSeriesExplorer/utils/aggregation.js'
 import CalendarGrid from '@/components/ui/CalendarGrid/index.js'
 import PeriodSelectorHeader from '@/components/ui/PeriodSelectorHeader/index.js'
+import {useManagedSelection} from '@/hook/use-managed-selection.js'
 
 const DEFAULT_PARAMETER = 'volume prélevé'
 
@@ -38,7 +40,10 @@ const TRANSLATIONS = {
   parameterHint: 'Sélectionnez un paramètre à afficher.',
   operatorLabel: 'Opérateur',
   operatorHint: 'Choisissez la fonction appliquée aux valeurs agrégées.',
-  operatorPlaceholder: 'Sélectionner un opérateur'
+  operatorPlaceholder: 'Sélectionner un opérateur',
+  frequencyLabel: 'Pas de temps',
+  frequencyHint: 'Choisissez la fréquence d\'agrégation des données.',
+  frequencyPlaceholder: 'Sélectionner un pas de temps'
 }
 
 const normalizeParameterOptions = options => {
@@ -113,38 +118,43 @@ const normalizeOperatorOptions = options => {
     .filter(Boolean)
 }
 
-const resolvePreferredOption = (options, preferred) => {
-  if (!options || options.length === 0) {
-    return ''
-  }
-
-  if (preferred) {
-    const normalized = preferred.toString().trim().toLowerCase()
-    const match = options.find(option => option.value?.toString().toLowerCase() === normalized)
-    if (match) {
-      return match.value
-    }
-  }
-
-  return options[0].value
-}
-
-const matchOptionValue = (options, value) => {
-  if (!value) {
-    return ''
-  }
-
-  const normalized = value.toString().trim().toLowerCase()
-  const match = options.find(option => option.value?.toString().toLowerCase() === normalized)
-  return match ? match.value : ''
-}
-
 const normalizeMetadataList = series => {
   if (series?.metadata) {
     return [series.metadata]
   }
 
   return []
+}
+
+/**
+ * Determines the current view type based on selected periods.
+ * Returns 'years' if multiple years are selected or if any period has type 'year',
+ * otherwise returns 'months'.
+ *
+ * @param {Array} selectedPeriods - Array of period objects with properties {type, value, year}
+ * @param {string} defaultInitialViewType - Default view type to return when no periods are selected
+ * @returns {string} View type: 'years' or 'months'
+ */
+function determineCurrentViewType(selectedPeriods, defaultInitialViewType) {
+  if (!selectedPeriods || selectedPeriods.length === 0) {
+    return defaultInitialViewType
+  }
+
+  const years = new Set()
+  for (const period of selectedPeriods) {
+    if (period.type === 'year') {
+      years.add(period.value)
+    } else if (period.type === 'month') {
+      years.add(period.year)
+    }
+  }
+
+  if (years.size > 1) {
+    return 'years'
+  }
+
+  const hasYearType = selectedPeriods.some(p => p.type === 'year')
+  return hasYearType ? 'years' : 'months'
 }
 
 const filterValuesByDateRange = (values, dateRange) => {
@@ -162,159 +172,19 @@ const filterValuesByDateRange = (values, dateRange) => {
   return values.filter(entry => entry?.date && entry.date >= start && entry.date <= end)
 }
 
-function useManagedParameterSelection({
-  parameters,
-  defaultParameter,
-  selectedParameter,
-  onParameterChange,
-  metadataParameter
-}) {
-  const options = useMemo(
-    () => normalizeParameterOptions(parameters),
-    [parameters]
-  )
-
-  const resolvedDefault = useMemo(
-    () => resolvePreferredOption(options, defaultParameter ?? DEFAULT_PARAMETER),
-    [options, defaultParameter]
-  )
-
-  const isControlled = selectedParameter !== undefined && selectedParameter !== null
-  const [internalValue, setInternalValue] = useState(resolvedDefault)
-
-  useEffect(() => {
-    if (isControlled) {
-      return
-    }
-
-    setInternalValue(previous => {
-      const matched = matchOptionValue(options, previous)
-      return matched ?? resolvedDefault
-    })
-  }, [isControlled, options, resolvedDefault])
-
-  useEffect(() => {
-    if (isControlled || !metadataParameter) {
-      return
-    }
-
-    setInternalValue(previous => {
-      const matched = matchOptionValue(options, metadataParameter)
-      if (matched && matched !== previous) {
-        return matched
-      }
-
-      return previous
-    })
-  }, [isControlled, metadataParameter, options])
-
-  const currentValue = isControlled
-    ? matchOptionValue(options, selectedParameter) || resolvedDefault
-    : internalValue
-
-  const handleChange = useCallback(value => {
-    const matched = matchOptionValue(options, value)
-    if (!matched) {
-      return
-    }
-
-    if (!isControlled) {
-      setInternalValue(matched)
-    }
-
-    onParameterChange?.(matched)
-  }, [isControlled, onParameterChange, options])
-
-  return {
-    options,
-    currentValue,
-    handleChange,
-    resolvedDefault
-  }
-}
-
-function useManagedOperatorSelection({
-  operatorOptions,
-  defaultOperator,
-  selectedOperator,
-  onOperatorChange,
-  metadataOperator
-}) {
-  const options = useMemo(
-    () => normalizeOperatorOptions(operatorOptions),
-    [operatorOptions]
-  )
-
-  const resolvedDefault = useMemo(
-    () => resolvePreferredOption(options, defaultOperator),
-    [options, defaultOperator]
-  )
-
-  const isControlled = selectedOperator !== undefined && selectedOperator !== null
-  const [internalValue, setInternalValue] = useState(resolvedDefault)
-
-  useEffect(() => {
-    if (isControlled) {
-      return
-    }
-
-    setInternalValue(previous => {
-      const matched = matchOptionValue(options, previous)
-      return matched ?? resolvedDefault
-    })
-  }, [isControlled, options, resolvedDefault])
-
-  useEffect(() => {
-    if (isControlled || !metadataOperator) {
-      return
-    }
-
-    setInternalValue(previous => {
-      const matched = matchOptionValue(options, metadataOperator)
-      if (matched && matched !== previous) {
-        return matched
-      }
-
-      return previous
-    })
-  }, [isControlled, metadataOperator, options])
-
-  const currentValue = isControlled
-    ? matchOptionValue(options, selectedOperator) || resolvedDefault
-    : internalValue
-
-  const handleChange = useCallback(value => {
-    const matched = matchOptionValue(options, value)
-    if (!matched) {
-      return
-    }
-
-    if (!isControlled) {
-      setInternalValue(matched)
-    }
-
-    onOperatorChange?.(matched)
-  }, [isControlled, onOperatorChange, options])
-
-  return {
-    options,
-    currentValue,
-    handleChange,
-    resolvedDefault
-  }
-}
-
 const AggregatedSeriesExplorer = ({
   series,
   parameters,
   selectedParameter: selectedParameterProp,
   defaultParameter = DEFAULT_PARAMETER,
-  onParameterChange,
   operatorOptions,
   selectedOperator: selectedOperatorProp,
   defaultOperator,
-  onOperatorChange,
-  onPeriodChange,
+  enableFrequencySelect = true,
+  frequencyOptions = FREQUENCY_OPTIONS,
+  selectedFrequency: selectedFrequencyProp,
+  defaultFrequency,
+  onFiltersChange,
   defaultPeriods,
   selectablePeriods: providedSelectablePeriods,
   defaultInitialViewType = 'years',
@@ -331,28 +201,62 @@ const AggregatedSeriesExplorer = ({
 }) => {
   const t = {...TRANSLATIONS, ...customTranslations}
 
+  const parameterOptionsNormalized = useMemo(
+    () => normalizeParameterOptions(parameters),
+    [parameters]
+  )
+
+  const handleParameterChange = useCallback(parameter => {
+    onFiltersChange?.({parameter})
+  }, [onFiltersChange])
+
+  const handleOperatorChange = useCallback(operator => {
+    onFiltersChange?.({operator})
+  }, [onFiltersChange])
+
+  const handleFrequencyChange = useCallback(frequency => {
+    onFiltersChange?.({frequency})
+  }, [onFiltersChange])
+
   const {
     options: parameterOptions,
     currentValue: currentParameter,
-    handleChange: handleParameterChange
-  } = useManagedParameterSelection({
-    parameters,
-    defaultParameter,
-    selectedParameter: selectedParameterProp,
-    onParameterChange,
-    metadataParameter: series?.metadata?.parameter
+    handleChange: handleParameterSelection
+  } = useManagedSelection({
+    options: parameterOptionsNormalized,
+    defaultValue: defaultParameter,
+    selectedValue: selectedParameterProp,
+    onChange: handleParameterChange,
+    metadataValue: series?.metadata?.parameter,
+    fallbackDefault: DEFAULT_PARAMETER
   })
+
+  const operatorOptionsNormalized = useMemo(
+    () => normalizeOperatorOptions(operatorOptions),
+    [operatorOptions]
+  )
 
   const {
     options: normalizedOperatorOptions,
     currentValue: currentOperator,
     handleChange: handleOperatorSelection
-  } = useManagedOperatorSelection({
-    operatorOptions,
-    defaultOperator,
-    selectedOperator: selectedOperatorProp,
-    onOperatorChange,
-    metadataOperator: series?.metadata?.operator
+  } = useManagedSelection({
+    options: operatorOptionsNormalized,
+    defaultValue: defaultOperator,
+    selectedValue: selectedOperatorProp,
+    onChange: handleOperatorChange,
+    metadataValue: series?.metadata?.operator
+  })
+
+  const {
+    currentValue: currentFrequency,
+    handleChange: handleFrequencySelection
+  } = useManagedSelection({
+    options: frequencyOptions,
+    defaultValue: defaultFrequency,
+    selectedValue: selectedFrequencyProp,
+    onChange: handleFrequencyChange,
+    metadataValue: series?.metadata?.frequency
   })
 
   const metadataList = useMemo(
@@ -388,10 +292,10 @@ const AggregatedSeriesExplorer = ({
     }
   }, [initialPeriodsKey])
 
-  const handlePeriodChange = useCallback(periods => {
+  const handlePeriodChangeInternal = useCallback(periods => {
     setSelectedPeriods(periods)
-    onPeriodChange?.(periods)
-  }, [onPeriodChange])
+    onFiltersChange?.({periods})
+  }, [onFiltersChange])
 
   const dateRange = useMemo(
     () => periodsToDateRange(selectedPeriods),
@@ -497,27 +401,56 @@ const AggregatedSeriesExplorer = ({
     [selectedPeriods]
   )
 
-  const currentViewType = useMemo(() => {
-    if (!selectedPeriods || selectedPeriods.length === 0) {
-      return defaultInitialViewType
+  const currentViewType = useMemo(() => determineCurrentViewType(selectedPeriods, defaultInitialViewType), [selectedPeriods, defaultInitialViewType])
+
+  const {noDataMessage} = t
+
+  // Render chart content based on loading/error/data state
+  const renderChartSection = () => {
+    if (!showChart) {
+      return null
     }
 
-    const years = new Set()
-    for (const period of selectedPeriods) {
-      if (period.type === 'year') {
-        years.add(period.value)
-      } else if (period.type === 'month') {
-        years.add(period.year)
-      }
+    if (!isLoading && !error && chartSeries.length > 0) {
+      return (
+        <Box sx={{minHeight: 360}}>
+          <ChartWithRangeSlider
+            allDates={allDates}
+            locale={locale}
+            rangeIndices={rangeIndices}
+            rangeLabel={t.rangeLabel}
+            series={chartSeries}
+            showRangeSlider={showRangeSlider}
+            sliderMarks={sliderMarks}
+            timeSeriesChartProps={timeSeriesChartProps}
+            onRangeChange={handleRangeChange}
+          />
+        </Box>
+      )
     }
 
-    if (years.size > 1) {
-      return 'years'
-    }
+    return (
+      <Box sx={{
+        minHeight: 360,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
+      >
+        {isLoading && (
+          <LoadingState message={t.loadingData} />
+        )}
 
-    const hasYearType = selectedPeriods.some(p => p.type === 'year')
-    return hasYearType ? 'years' : 'months'
-  }, [selectedPeriods, defaultInitialViewType])
+        {!isLoading && error && (
+          <Alert severity='error' description={error} />
+        )}
+
+        {!isLoading && !error && chartSeries.length === 0 && (
+          <Alert severity='info' description={noDataMessage} />
+        )}
+      </Box>
+    )
+  }
 
   if (!series && !isLoading) {
     return (
@@ -537,7 +470,7 @@ const AggregatedSeriesExplorer = ({
           currentViewType={currentViewType}
           defaultSelectedPeriods={selectedPeriods}
           selectablePeriods={selectablePeriods}
-          onSelectionChange={handlePeriodChange}
+          onSelectionChange={handlePeriodChangeInternal}
         />
       )}
 
@@ -565,7 +498,7 @@ const AggregatedSeriesExplorer = ({
             nativeSelectProps={{
               value: currentParameter ?? '',
               disabled: parameterOptions.length <= 1,
-              onChange: event => handleParameterChange(event.target.value)
+              onChange: event => handleParameterSelection(event.target.value)
             }}
           >
             <option disabled hidden value=''>
@@ -615,45 +548,42 @@ const AggregatedSeriesExplorer = ({
             </Select>
           </Box>
         )}
+
+        {enableFrequencySelect && (
+          <Box
+            sx={{
+              flex: '1 1 220px',
+              minWidth: 220,
+              maxWidth: 360
+            }}
+          >
+            <Select
+              label={t.frequencyLabel}
+              hintText={t.frequencyHint}
+              nativeSelectProps={{
+                value: currentFrequency ?? '',
+                disabled: frequencyOptions.length <= 1,
+                onChange: event => handleFrequencySelection(event.target.value)
+              }}
+            >
+              <option disabled hidden value=''>
+                {t.frequencyPlaceholder}
+              </option>
+              {frequencyOptions.map(option => (
+                <option
+                  key={option.value}
+                  disabled={option.disabled}
+                  value={option.value}
+                >
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+          </Box>
+        )}
       </Box>
 
-      {showChart && (
-        <Box sx={{minHeight: 360}}>
-          {!isLoading && !error && chartSeries.length > 0 ? (
-            <ChartWithRangeSlider
-              allDates={allDates}
-              locale={locale}
-              rangeIndices={rangeIndices}
-              rangeLabel={t.rangeLabel}
-              series={chartSeries}
-              showRangeSlider={showRangeSlider}
-              sliderMarks={sliderMarks}
-              timeSeriesChartProps={timeSeriesChartProps}
-              onRangeChange={handleRangeChange}
-            />
-          ) : (
-            <Box sx={{
-              minHeight: 360,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-            >
-              {isLoading && (
-                <LoadingState message={t.loadingData} />
-              )}
-
-              {!isLoading && error && (
-                <Alert severity='error' description={error} />
-              )}
-
-              {!isLoading && !error && chartSeries.length === 0 && (
-                <Alert severity='info' description={t.noDataMessage} />
-              )}
-            </Box>
-          )}
-        </Box>
-      )}
+      {renderChartSection()}
     </Box>
   )
 }

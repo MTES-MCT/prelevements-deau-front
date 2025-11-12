@@ -9,20 +9,13 @@ import {Box, Typography} from '@mui/material'
 
 import {getAggregatedSeries} from '@/app/api/series.js'
 import AggregatedSeriesExplorer from '@/components/PrelevementsSeriesExplorer/aggregated-series-explorer.js'
-import {getParameterMetadata} from '@/components/PrelevementsSeriesExplorer/constants/parameters.js'
+import {FREQUENCY_OPTIONS, getParameterMetadata, OPERATOR_LABELS} from '@/components/PrelevementsSeriesExplorer/constants/parameters.js'
 import {
   calculateSelectablePeriodsFromDateRange,
   extractDefaultPeriodsFromDateRange
 } from '@/components/PrelevementsSeriesExplorer/utils/date-range-periods.js'
 
 const DEFAULT_FREQUENCY = '1 day'
-
-const OPERATOR_LABELS = {
-  sum: 'Somme',
-  mean: 'Moyenne',
-  min: 'Minimum',
-  max: 'Maximum'
-}
 
 const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = null, startDate = null, endDate = null}) => {
   // Vérifie si des paramètres sont disponibles depuis l'API
@@ -70,6 +63,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
 
   const [selectedParameter, setSelectedParameter] = useState(derivedDefaultParameter)
   const [selectedOperator, setSelectedOperator] = useState(null)
+  const [selectedFrequency, setSelectedFrequency] = useState(DEFAULT_FREQUENCY)
   const [aggregatedSeries, setAggregatedSeries] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [loadError, setLoadError] = useState(null)
@@ -125,9 +119,9 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
 
   const resolvedOperator = selectedOperator ?? resolvedDefaultOperator ?? null
 
-  const fetchAggregatedSeries = useCallback(async (parameter, operator) => {
+  const fetchAggregatedSeries = useCallback(async (parameter, operator, frequency) => {
     const params = {
-      aggregationFrequency: DEFAULT_FREQUENCY,
+      aggregationFrequency: frequency,
       parameter,
       operator
     }
@@ -152,7 +146,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
   }, [pointIds, preleveurId, startDate, endDate])
 
   useEffect(() => {
-    if (!selectedParameter || !resolvedOperator) {
+    if (!selectedParameter || !resolvedOperator || !selectedFrequency) {
       setAggregatedSeries(null)
       return
     }
@@ -163,7 +157,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
 
     const loadSeries = async () => {
       try {
-        const response = await fetchAggregatedSeries(selectedParameter, resolvedOperator)
+        const response = await fetchAggregatedSeries(selectedParameter, resolvedOperator, selectedFrequency)
         if (!cancelled) {
           setAggregatedSeries(response)
         }
@@ -183,47 +177,45 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
     return () => {
       cancelled = true
     }
-  }, [selectedParameter, resolvedOperator, fetchAggregatedSeries])
+  }, [selectedParameter, resolvedOperator, selectedFrequency, fetchAggregatedSeries])
 
-  const handleParameterChange = useCallback(newParameter => {
-    if (!newParameter || newParameter === selectedParameter) {
-      return
+  const handleFiltersChange = useCallback(({parameter, operator, frequency}) => {
+    // Handle parameter change
+    if (parameter !== undefined && parameter !== selectedParameter) {
+      const nextDefinition = parameterDefinitionMap.get(parameter)
+        ?? getParameterMetadata(parameter)
+      const nextDefaultOperator = nextDefinition?.defaultOperator
+        ?? nextDefinition?.operators?.[0]
+        ?? null
+
+      setSelectedParameter(parameter)
+
+      if (nextDefinition) {
+        const availableOperators = nextDefinition.operators ?? []
+        const isCurrentOperatorValid = selectedOperator && availableOperators.includes(selectedOperator)
+
+        if (!isCurrentOperatorValid) {
+          setSelectedOperator(nextDefaultOperator)
+        }
+      } else {
+        setSelectedOperator(null)
+      }
     }
 
-    const nextDefinition = parameterDefinitionMap.get(newParameter)
-      ?? getParameterMetadata(newParameter)
-    const nextDefaultOperator = nextDefinition?.defaultOperator
-      ?? nextDefinition?.operators?.[0]
-      ?? null
-
-    setSelectedParameter(newParameter)
-
-    if (!nextDefinition) {
-      setSelectedOperator(null)
-      return
+    // Handle operator change
+    if (operator !== undefined && operator !== selectedOperator && operatorOptions.includes(operator)) {
+      setSelectedOperator(operator)
     }
 
-    const availableOperators = nextDefinition.operators ?? []
-    const isCurrentOperatorValid = selectedOperator && availableOperators.includes(selectedOperator)
-
-    if (isCurrentOperatorValid) {
-      return
+    // Handle frequency change
+    if (
+      frequency !== undefined
+      && frequency !== selectedFrequency
+      && FREQUENCY_OPTIONS.some(opt => opt.value === frequency)
+    ) {
+      setSelectedFrequency(frequency)
     }
-
-    setSelectedOperator(nextDefaultOperator)
-  }, [parameterDefinitionMap, selectedParameter, selectedOperator])
-
-  const handleOperatorChange = useCallback(newOperator => {
-    if (!newOperator || newOperator === selectedOperator) {
-      return
-    }
-
-    if (!operatorOptions.includes(newOperator)) {
-      return
-    }
-
-    setSelectedOperator(newOperator)
-  }, [selectedOperator, operatorOptions])
+  }, [parameterDefinitionMap, selectedParameter, selectedOperator, operatorOptions, selectedFrequency])
 
   return hasParameters ? (
     <Box className='flex flex-col gap-4'>
@@ -243,12 +235,14 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
           operatorOptions={operatorSelectOptions}
           selectedOperator={resolvedOperator ?? undefined}
           defaultOperator={resolvedDefaultOperator ?? undefined}
+          frequencyOptions={FREQUENCY_OPTIONS}
+          selectedFrequency={selectedFrequency}
+          defaultFrequency={DEFAULT_FREQUENCY}
           selectablePeriods={selectablePeriods}
           defaultPeriods={defaultPeriods}
           error={loadError}
           isLoading={isLoading}
-          onParameterChange={handleParameterChange}
-          onOperatorChange={handleOperatorChange}
+          onFiltersChange={handleFiltersChange}
         />
       )}
     </Box>
