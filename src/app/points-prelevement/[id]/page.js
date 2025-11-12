@@ -32,10 +32,13 @@ const Page = async ({params}) => {
         <PointLocalisation
           pointPrelevement={pointPrelevement}
         />
-        <ExploitationsList exploitations={exploitations} preleveurs={pointPrelevement.preleveurs} />
         <SeriesExplorer
           pointIds={[pointPrelevement.id_point]}
           seriesOptions={seriesOptions}
+        />
+        <ExploitationsList
+          exploitations={exploitations}
+          preleveurs={pointPrelevement.preleveurs}
         />
       </div>
     </>
