@@ -33,7 +33,8 @@ const Regles = ({regles, documents}) => {
         gap={{xs: 2, md: 3}}
       >
         {regles.map(regle => {
-          const document = documents.find(d => d.id_document === regle.id_document)
+          const document = documents.find(d => d._id === regle.id_document)
+          console.log('Regles.js - document trouvé pour la règle :', document)
 
           return (
             <Regle
