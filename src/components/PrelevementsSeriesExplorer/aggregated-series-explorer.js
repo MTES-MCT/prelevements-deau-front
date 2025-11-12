@@ -16,7 +16,6 @@ import {
   PARAMETER_COLOR_MAP,
   normalizeParameterKey
 } from './constants/colors.js'
-import {FREQUENCY_OPTIONS} from './constants/parameters.js'
 import {formatPeriodLabel, getViewTypeLabel} from './formatters.js'
 import LoadingState from './loading-state.js'
 import {useChartSeries} from './use-chart-series.js'
@@ -181,6 +180,7 @@ const AggregatedSeriesExplorer = ({
   selectedOperator: selectedOperatorProp,
   defaultOperator,
   enableFrequencySelect = true,
+  frequencyOptions,
   selectedFrequency: selectedFrequencyProp,
   defaultFrequency,
   onFiltersChange,
@@ -251,7 +251,7 @@ const AggregatedSeriesExplorer = ({
     currentValue: currentFrequency,
     handleChange: handleFrequencySelection
   } = useManagedSelection({
-    options: FREQUENCY_OPTIONS,
+    options: frequencyOptions,
     defaultValue: defaultFrequency,
     selectedValue: selectedFrequencyProp,
     onChange: handleFrequencyChange,
@@ -561,14 +561,14 @@ const AggregatedSeriesExplorer = ({
               hintText={t.frequencyHint}
               nativeSelectProps={{
                 value: currentFrequency ?? '',
-                disabled: FREQUENCY_OPTIONS.length <= 1,
+                disabled: frequencyOptions.length <= 1,
                 onChange: event => handleFrequencySelection(event.target.value)
               }}
             >
               <option disabled hidden value=''>
                 {t.frequencyPlaceholder}
               </option>
-              {FREQUENCY_OPTIONS.map(option => (
+              {frequencyOptions.map(option => (
                 <option
                   key={option.value}
                   disabled={option.disabled}
