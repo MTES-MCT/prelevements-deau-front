@@ -126,6 +126,37 @@ const normalizeMetadataList = series => {
   return []
 }
 
+/**
+ * Determines the current view type based on selected periods.
+ * Returns 'years' if multiple years are selected or if any period has type 'year',
+ * otherwise returns 'months'.
+ *
+ * @param {Array} selectedPeriods - Array of period objects with properties {type, value, year}
+ * @param {string} defaultInitialViewType - Default view type to return when no periods are selected
+ * @returns {string} View type: 'years' or 'months'
+ */
+function determineCurrentViewType(selectedPeriods, defaultInitialViewType) {
+  if (!selectedPeriods || selectedPeriods.length === 0) {
+    return defaultInitialViewType
+  }
+
+  const years = new Set()
+  for (const period of selectedPeriods) {
+    if (period.type === 'year') {
+      years.add(period.value)
+    } else if (period.type === 'month') {
+      years.add(period.year)
+    }
+  }
+
+  if (years.size > 1) {
+    return 'years'
+  }
+
+  const hasYearType = selectedPeriods.some(p => p.type === 'year')
+  return hasYearType ? 'years' : 'months'
+}
+
 const filterValuesByDateRange = (values, dateRange) => {
   if (!Array.isArray(values) || values.length === 0) {
     return []
@@ -369,29 +400,56 @@ const AggregatedSeriesExplorer = ({
     [selectedPeriods]
   )
 
-  const currentViewType = useMemo(() => {
-    if (!selectedPeriods || selectedPeriods.length === 0) {
-      return defaultInitialViewType
-    }
-
-    const years = new Set()
-    for (const period of selectedPeriods) {
-      if (period.type === 'year') {
-        years.add(period.value)
-      } else if (period.type === 'month') {
-        years.add(period.year)
-      }
-    }
-
-    if (years.size > 1) {
-      return 'years'
-    }
-
-    const hasYearType = selectedPeriods.some(p => p.type === 'year')
-    return hasYearType ? 'years' : 'months'
-  }, [selectedPeriods, defaultInitialViewType])
+  const currentViewType = useMemo(() => determineCurrentViewType(selectedPeriods, defaultInitialViewType), [selectedPeriods, defaultInitialViewType])
 
   const noDataMessage = 'Aucune donnée disponible avec les critères choisis.'
+
+  // Render chart content based on loading/error/data state
+  const renderChartSection = () => {
+    if (!showChart) {
+      return null
+    }
+
+    if (!isLoading && !error && chartSeries.length > 0) {
+      return (
+        <Box sx={{minHeight: 360}}>
+          <ChartWithRangeSlider
+            allDates={allDates}
+            locale={locale}
+            rangeIndices={rangeIndices}
+            rangeLabel={t.rangeLabel}
+            series={chartSeries}
+            showRangeSlider={showRangeSlider}
+            sliderMarks={sliderMarks}
+            timeSeriesChartProps={timeSeriesChartProps}
+            onRangeChange={handleRangeChange}
+          />
+        </Box>
+      )
+    }
+
+    return (
+      <Box sx={{
+        minHeight: 360,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
+      >
+        {isLoading && (
+          <LoadingState message={t.loadingData} />
+        )}
+
+        {!isLoading && error && (
+          <Alert severity='error' description={error} />
+        )}
+
+        {!isLoading && !error && chartSeries.length === 0 && (
+          <Alert severity='info' description={noDataMessage} />
+        )}
+      </Box>
+    )
+  }
 
   if (!series && !isLoading) {
     return (
@@ -524,43 +582,7 @@ const AggregatedSeriesExplorer = ({
         )}
       </Box>
 
-      {showChart && (
-        <Box sx={{minHeight: 360}}>
-          {!isLoading && !error && chartSeries.length > 0 ? (
-            <ChartWithRangeSlider
-              allDates={allDates}
-              locale={locale}
-              rangeIndices={rangeIndices}
-              rangeLabel={t.rangeLabel}
-              series={chartSeries}
-              showRangeSlider={showRangeSlider}
-              sliderMarks={sliderMarks}
-              timeSeriesChartProps={timeSeriesChartProps}
-              onRangeChange={handleRangeChange}
-            />
-          ) : (
-            <Box sx={{
-              minHeight: 360,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-            >
-              {isLoading && (
-                <LoadingState message={t.loadingData} />
-              )}
-
-              {!isLoading && error && (
-                <Alert severity='error' description={error} />
-              )}
-
-              {!isLoading && !error && chartSeries.length === 0 && (
-                <Alert severity='info' description={noDataMessage} />
-              )}
-            </Box>
-          )}
-        </Box>
-      )}
+      {renderChartSection()}
     </Box>
   )
 }
