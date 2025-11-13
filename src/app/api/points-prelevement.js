@@ -232,6 +232,18 @@ export async function deleteExploitation(exploitationId) {
   return response.json()
 }
 
+export async function getReglesFromPreleveur(idPreleveur) {
+  const response = await executeRequest(
+    `api/preleveurs/${idPreleveur}/regles`,
+    {headers: {Authorization: await getAuthorization()}}
+  )
+  if (response.ok === false) {
+    return []
+  }
+
+  return response.json()
+}
+
 export async function getStats(territoire) {
   const path = territoire ? `api/stats/${territoire}` : 'api/stats'
   const response = await executeRequest(path)

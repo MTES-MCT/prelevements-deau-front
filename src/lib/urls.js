@@ -34,10 +34,6 @@ export function getPointPrelevementURL(point) {
   return `/points-prelevement/${point.id_point}`
 }
 
-export function getDocumentURL(document) {
-  return `${STORAGE_URL}/document/${document.nom_fichier}`
-}
-
 export function getDeclarationTemplateAEP() {
   return `${STORAGE_URL}/declaration-templates/donnees-standardisees_v2.9.xlsx`
 }
