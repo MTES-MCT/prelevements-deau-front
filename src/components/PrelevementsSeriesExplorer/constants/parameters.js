@@ -113,6 +113,7 @@ export const FREQUENCY_OPTIONS = [
   {value: '6 hours', label: '6 heures'},
   {value: '1 day', label: '1 jour'},
   {value: '1 month', label: '1 mois'},
+  {value: '1 quarter', label: '1 trimestre'},
   {value: '1 year', label: '1 an'}
 ]
 
