@@ -4,46 +4,38 @@ import {
   useCallback, useEffect, useMemo, useState
 } from 'react'
 
+import {ToggleSwitch} from '@codegouvfr/react-dsfr/ToggleSwitch.js'
 import {
-  Box,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  useTheme
+  Box
 } from '@mui/material'
 import {deburr} from 'lodash-es'
-import {useRouter, useSearchParams} from 'next/navigation'
 
 import {getPointsPrelevement} from '@/app/api/points-prelevement.js'
-import SidePanelLayout from '@/components/layout/side-panel.js'
-import Map from '@/components/map/index.js'
-import Legend from '@/components/map/legend.js'
-import PointsListHeader from '@/components/map/points-list-header.js'
+import MapFilters from '@/components/map/map-filters.js'
 import PointsList from '@/components/map/points-list.js'
+import {RichMap} from '@/components/map/rich-map.js'
+import EntityHeader from '@/components/ui/EntityHeader/index.js'
 import LoadingOverlay from '@/components/ui/LoadingOverlay/index.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import useEvent from '@/hook/use-event.js'
-import {downloadCsv} from '@/lib/export-csv.js'
 import {
   extractStatus,
   extractTypeMilieu,
   extractUsages,
   extractCommunes
 } from '@/lib/points-prelevement.js'
-import {getPointPrelevementURL} from '@/lib/urls.js'
+
+const ViewMode = {
+  MAP: 'map',
+  LIST: 'list'
+}
 
 const Page = () => {
-  const theme = useTheme()
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const selectedPointId = searchParams.get('point-prelevement')
   // État pour les données
   const [points, setPoints] = useState([])
   const [loading, setLoading] = useState(true)
 
   // États locaux pour l'interface
-  const [expanded, setExpanded] = useState(false)
+  const [viewMode, setViewMode] = useState(ViewMode.MAP)
   const [filters, setFilters] = useState({
     name: '',
     typeMilieu: '',
@@ -51,8 +43,60 @@ const Page = () => {
     communes: [],
     usages: []
   })
-  const [filteredPoints, setFilteredPoints] = useState([])
-  const [style, setStyle] = useState('plan-ign')
+  const filteredPoints = useMemo(() => {
+    const filtered = points.filter(point => {
+      let matches = true
+
+      if (filters.name) {
+        // Normalisation de la chaîne de recherche
+        const normalizedSearch = deburr(filters.name.toLowerCase().trim())
+
+        // Normalisation des valeurs à comparer
+        const normalizedName = point.nom ? deburr(point.nom.toLowerCase().trim()) : ''
+        const idPointStr = String(point.id_point).toLowerCase()
+        const preleveurMatches = point.preleveurs.some(preleveur => {
+          const normalizedRaisonSociale = preleveur.raison_sociale ? deburr(preleveur.raison_sociale.toLowerCase().trim()) : ''
+          const normalizedSigle = preleveur.sigle ? deburr(preleveur.sigle.toLowerCase().trim()) : ''
+          const normalizedNom = preleveur.nom ? deburr(preleveur.nom.toLowerCase().trim()) : ''
+          const normalizedPrenom = preleveur.prenom ? deburr(preleveur.prenom.toLowerCase().trim()) : ''
+
+          return (
+            normalizedRaisonSociale.includes(normalizedSearch)
+            || normalizedSigle.includes(normalizedSearch)
+            || normalizedNom.includes(normalizedSearch)
+            || normalizedPrenom.includes(normalizedSearch)
+          )
+        })
+
+        matches &&= normalizedName.includes(normalizedSearch)
+          || idPointStr.includes(normalizedSearch)
+          || preleveurMatches
+      }
+
+      if (filters.typeMilieu) {
+        matches &&= point.type_milieu === filters.typeMilieu
+      }
+
+      if (filters.status) {
+        matches &&= point.exploitationsStatus === filters.status
+      }
+
+      if (filters.usages && filters.usages.length > 0) {
+        matches &&= filters.usages.some(usage => point.usages.includes(usage))
+      }
+
+      if (filters.communes && filters.communes.length > 0) {
+        const communeStr = point.commune && point.commune.nom && point.commune.code
+          ? `${point.commune.nom} - ${point.commune.code}`
+          : null
+        matches &&= communeStr ? filters.communes.includes(communeStr) : false
+      }
+
+      return matches
+    })
+
+    return filtered.map(point => point.id_point)
+  }, [filters, points])
 
   // Récupération des données côté client via l'API
   useEffect(() => {
@@ -85,149 +129,51 @@ const Page = () => {
     }
   }, [points])
 
-  // Gestion de la sélection d'un point sur la carte
-  const handleSelectedPoint = useEvent(point => {
-    router.push(getPointPrelevementURL(point))
-  })
-
   const handleFilter = useCallback(newFilters => {
     setFilters(prevFilters => ({...prevFilters, ...newFilters}))
   }, [])
-
-  // Mise à jour des points filtrés en fonction des filtres
-  useEffect(() => {
-    const filtered = points.filter(point => {
-      let matches = true
-
-      if (filters.name) {
-        // Normalisation de la chaîne de recherche
-        const normalizedSearch = deburr(filters.name.toLowerCase().trim())
-
-        // Normalisation des valeurs à comparer
-        const normalizedName = point.nom ? deburr(point.nom.toLowerCase().trim()) : ''
-        const idPointStr = String(point.id_point).toLowerCase()
-        const preleveurMatches = point.preleveurs.some(preleveur => {
-          const normalizedRaisonSociale = preleveur.raison_sociale ? deburr(preleveur.raison_sociale.toLowerCase().trim()) : ''
-          const normalizedSigle = preleveur.sigle ? deburr(preleveur.sigle.toLowerCase().trim()) : ''
-          const normalizedNom = preleveur.nom ? deburr(preleveur.nom.toLowerCase().trim()) : ''
-          const normalizedPrenom = preleveur.prenom ? deburr(preleveur.prenom.toLowerCase().trim()) : ''
-
-          return (
-            normalizedRaisonSociale.includes(normalizedSearch)
-              || normalizedSigle.includes(normalizedSearch)
-              || normalizedNom.includes(normalizedSearch)
-              || normalizedPrenom.includes(normalizedSearch)
-          )
-        })
-
-        matches &&= normalizedName.includes(normalizedSearch)
-          || idPointStr.includes(normalizedSearch)
-          || preleveurMatches
-      }
-
-      if (filters.typeMilieu) {
-        matches &&= point.type_milieu === filters.typeMilieu
-      }
-
-      if (filters.status) {
-        matches &&= point.exploitationsStatus === filters.status
-      }
-
-      if (filters.usages && filters.usages.length > 0) {
-        matches &&= filters.usages.some(usage => point.usages.includes(usage))
-      }
-
-      if (filters.communes && filters.communes.length > 0) {
-        const communeStr = point.commune && point.commune.nom && point.commune.code
-          ? `${point.commune.nom} - ${point.commune.code}`
-          : null
-        matches &&= communeStr ? filters.communes.includes(communeStr) : false
-      }
-
-      return matches
-    })
-
-    setFilteredPoints(filtered.map(point => point.id_point))
-  }, [filters, points])
-
-  const exportPointsList = () => {
-    const result = points.filter(p => filteredPoints.includes(p.id_point))
-
-    downloadCsv(result, 'points-prelevements-export.csv')
-  }
 
   return (
     <>
       <StartDsfrOnHydration />
 
-      <SidePanelLayout
-        header={
-          <PointsListHeader
-            resultsCount={loading ? null : filteredPoints.length}
-            filters={filters}
-            typeMilieuOptions={typeMilieuOptions}
-            usagesOptions={usagesOptions}
-            statusOptions={statusOptions}
-            communesOptions={communesOptions}
-            exportList={exportPointsList}
-            onFilter={handleFilter}
-          />
-        }
-        isOpen={expanded}
-        handleOpen={setExpanded}
-        panelContent={
-          <PointsList
-            isLoading={loading}
-            points={points.filter(pt => filteredPoints.includes(pt.id_point))}
-          />
-        }
-      >
-        <Box className='flex h-full flex-col relative'>
-          {loading && <LoadingOverlay />}
+      <Box className='flex flex-col fr-container h-full w-full'>
+        <EntityHeader title='Points de prélèvement' hrefButtons={[{
+          label: 'Création d\'un point de prélèvement',
+          icon: 'fr-icon-add-line',
+          alt: 'Création d\'un point de prélèvement',
+          href: '/points-prelevement/new'
+        }]}
+        >
+          <nav className='flex border p-4 gap-4 justify-between items-center'>
+            <MapFilters
+              filters={filters}
+              typeMilieuOptions={typeMilieuOptions}
+              usagesOptions={usagesOptions}
+              statusOptions={statusOptions}
+              communesOptions={communesOptions}
+              onFilterChange={handleFilter}
+            />
+            <div>
+              <ToggleSwitch
+                showCheckedHint={false}
+                label='Afficher vue liste'
+                checked={viewMode === ViewMode.LIST}
+                onChange={() => setViewMode(prevState => prevState === ViewMode.MAP ? ViewMode.LIST : ViewMode.MAP)} />
+            </div>
+          </nav>
 
-          {/* Composant de la carte interactive */}
-          <Map
-            points={points}
-            filteredPoints={filteredPoints}
-            selectedPoint={selectedPointId ? points.find(point => selectedPointId === point.id_point) : null}
-            handleSelectedPoint={handleSelectedPoint}
-            style={style}
-            setStyle={setStyle}
-          />
-          <Box
-            sx={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              backgroundColor: theme.palette.background.default,
-              height: 70,
-              width: 300
-            }}
-          >
-            <FormControl
-              sx={{
-                m: 2,
-                position: 'absolute',
-                width: 270
-              }}
-              size='small'
-            >
-              <InputLabel>Style de la carte</InputLabel>
-              <Select
-                value={style}
-                label='Style de la carte'
-                onChange={e => setStyle(e.target.value)}
-              >
-                <MenuItem value='vector'>Plan OpenMapTiles</MenuItem>
-                <MenuItem value='plan-ign'>Plan IGN</MenuItem>
-                <MenuItem value='photo'>Photographie aérienne</MenuItem>
-                <MenuItem value='vector-ign'>IGN vectoriel</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
-          <Legend />
-        </Box>
-      </SidePanelLayout>
+          {
+            viewMode === ViewMode.MAP
+              ? <Box className='relative flex w-full h-[550px] mt-2'>
+                {loading && <LoadingOverlay />}
+
+                <RichMap points={points} filteredPoints={filteredPoints} />
+              </Box>
+              : <PointsList isLoading={loading} points={points.filter(pt => filteredPoints.includes(pt.id_point))} />
+          }
+        </EntityHeader>
+      </Box>
     </>
   )
 }

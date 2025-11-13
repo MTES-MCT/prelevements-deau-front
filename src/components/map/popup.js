@@ -1,72 +1,70 @@
-import {Person, WaterDropOutlined} from '@mui/icons-material'
+import Badge from '@codegouvfr/react-dsfr/Badge'
 import {
-  Box,
-  Chip,
-  Typography,
+  Box, Chip,
   useTheme
 } from '@mui/material'
 
-import formatDate from '@/lib/format-date.js'
+import {severityMap} from '@/components/exploitations/exploitations-list-item.js'
+import Icon from '@/components/ui/Icon/index.js'
+import MetasList from '@/components/ui/MetasList/index.js'
+import {formatFullDateFr} from '@/lib/format-date.js'
+import {usageIcons} from '@/lib/points-prelevement.js'
+
+const chipStyle = {
+  backgroundColor: 'var(--background-action-low-blue-france)',
+  color: 'var(--text-action-high-blue-france)',
+  fontFamily: 'Marianne'
+}
 
 const Popup = ({point}) => {
   const theme = useTheme()
-  const {nom, autresNoms, preleveurs, exploitationsStatus, exploitationsStartDate, usages, type_milieu: typeMilieu, zre, reservoir_biologique: reservoirBiologique} = point
+  const {
+    nom,
+    preleveurs,
+    exploitationsStatus,
+    exploitationsStartDate,
+    usages,
+    type_milieu: typeMilieu
+  } = point
+
+  const metas = [{
+    content: `${preleveurs.length} préleveur${preleveurs.length > 1 ? 's' : ''}`,
+    iconId: 'fr-icon-account-line'
+  }, {
+    content: `Exploité depuis le ${formatFullDateFr(exploitationsStartDate)}`,
+    iconId: 'fr-icon-calendar-2-line'
+  }]
 
   return (
-    // TODO : Utiliser le theme DSFR
-    <Box className='flex flex-col gap-2' sx={{color: theme.palette.text.primary}}>
-      <Typography variant='h6' sx={{color: theme.palette.text.primary}}>
+    <Box className='flex flex-col gap-2' sx={{color: theme.palette.text.primary, fontFamily: 'Marianne'}}>
+      <h6 className='font-bold text-sm' style={{color: theme.palette.text.primary}}>
         {point.id_point} - {nom || 'Pas de nom renseigné'}
-      </Typography>
+      </h6>
 
-      <Typography variant='caption'>
-        {autresNoms}
-      </Typography>
+      <MetasList metas={metas} size='sm' />
 
-      <Box>
-        {preleveurs.length > 0 ? (
-          preleveurs.length < 4 ? (
-            preleveurs.map(preleveur => (
-              <Box key={preleveur.id_preleveur} className='flex items-center gap-1'>
-                <Person /> {preleveur?.raison_sociale || preleveur?.sigle || preleveur?.nom}
-              </Box>
-            ))
-          ) : (
-            <Box className='flex items-center gap-1'>
-              <Person /> {preleveurs.length} préleveurs
-            </Box>
-          )
-        ) : (
-          <Typography variant='caption'>Aucun préleveur</Typography>
-        )}
-      </Box>
-
-      <Box>
-        <Box className='flex items-center gap-1'>
-          <WaterDropOutlined />Statut de l’exploitation : {exploitationsStatus || 'non renseigné'}
-        </Box>
-        <Box className='flex items-center gap-1'>
-          Exploité depuis le {formatDate(exploitationsStartDate)}
-        </Box>
-        <Box>
-          Zonage réglementaire : <Typography variant='caption' display='inline'>
-            {zre ? 'Zone de répartition des eaux' : (reservoirBiologique ? 'Réservoir biologique' : ' - ')}
-          </Typography>
-        </Box>
-      </Box>
-
-      <Box className='flex flex-col gap-1'>
-        <Box className='flex flex-wrap gap-1'>
-          {usages.map(usage => (
+      <ul className='border p-4'>
+        <li className='flex items-center gap-1'>
+          <span className='fr-text--bold'>Statut :</span>
+          <Badge small severity={severityMap[exploitationsStatus]}>{exploitationsStatus}</Badge>
+        </li>
+        <li className='flex items-center gap-1'>
+          <span className='fr-text--bold'>Type d&apos;environnement :</span>
+          <Chip
+            label={typeMilieu}
+            sx={chipStyle}
+          />
+        </li>
+        <li className='flex items-center gap-1'>
+          <span className='fr-text--bold'>Usages :</span><span>{usages.map(usage => (
             <Chip
               key={usage}
-              label={usage}
-              size='small'
-              variant='outlined' />
-          ))}
-        </Box>
-        <Chip label={typeMilieu} size='small' />
-      </Box>
+              label={<><Icon iconElement={usageIcons[usage]} style={{height: '0.7em'}} /> {usage}</>}
+              sx={chipStyle}
+            />
+          ))}</span>
+        </li>
+      </ul>
     </Box>
   )
 }
