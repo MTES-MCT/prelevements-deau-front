@@ -100,8 +100,8 @@ const FileValidationResult = ({
       }
     })
 
-    // Track if sections were filtered out
-    const validSections = allSections.filter(section => section.pointId !== null || section.series.length > 0)
+    // Filter out sections without valid point ID - we cannot display data without knowing which point it belongs to
+    const validSections = allSections.filter(section => section.pointId !== null)
 
     return {
       sections: validSections,
@@ -151,7 +151,7 @@ const FileValidationResult = ({
             <Notice
               severity='warning'
               title='Point de prélèvement manquant'
-              description='Le fichier contient des données sans point de prélèvement identifiable. Veuillez vérifier que les données du fichier sont correctes.'
+              description="Le fichier contient des données qui ne peuvent pas être affichées car le point de prélèvement n'est pas identifiable. Veuillez vérifier que les identifiants des points de prélèvement sont corrects dans le fichier."
             />
           </div>
         )}
