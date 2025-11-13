@@ -87,7 +87,7 @@ const FileValidationResult = ({
       section.series.push(serie)
     }
 
-    return sectionsOrder.map((sectionKey, index) => {
+    const allSections = sectionsOrder.map((sectionKey, index) => {
       const section = sectionsMap.get(sectionKey)
       const pointInfo = section.pointPrelevement || findPointById(pointsPrelevement, section.pointId)
 
@@ -99,11 +99,19 @@ const FileValidationResult = ({
         accordionId
       }
     })
+
+    // Track if sections were filtered out
+    const validSections = allSections.filter(section => section.pointId !== null || section.series.length > 0)
+
+    return {
+      sections: validSections,
+      hasFilteredSections: allSections.length > validSections.length
+    }
   }, [integrations, series, pointsPrelevement])
 
   useEffect(() => {
     if (scrollIntoView) {
-      const targetSection = pointSections.find(section => section.pointId === scrollIntoView || section.accordionId === scrollIntoView)
+      const targetSection = pointSections.sections.find(section => section.pointId === scrollIntoView || section.accordionId === scrollIntoView)
 
       if (targetSection) {
         setSelectedAccordionId(targetSection.accordionId)
@@ -117,7 +125,8 @@ const FileValidationResult = ({
     }
   }, [scrollIntoView, pointSections])
 
-  const hasDataToDisplay = pointSections.length > 0
+  const hasDataToDisplay = pointSections.sections.length > 0
+  const hasInvalidSections = pointSections.hasFilteredSections
 
   return (
     <Box className='flex flex-col gap-4'>
@@ -137,13 +146,23 @@ const FileValidationResult = ({
           )}
         </div>
 
+        {hasInvalidSections && (
+          <div className='p-4'>
+            <Notice
+              severity='warning'
+              title='Point de prélèvement manquant'
+              description='Le fichier contient des données sans point de prélèvement identifiable. Veuillez vérifier que les données du fichier sont correctes.'
+            />
+          </div>
+        )}
+
         {errors.length > 0 && !hasDataToDisplay && (
           <FileValidationErrors errors={errors} />
         )}
 
         <div className='mt-1'>
           {hasDataToDisplay ? (
-            pointSections.map(section => (
+            pointSections.sections.map(section => (
               <div
                 key={section.accordionId}
                 ref={element => {
@@ -158,12 +177,20 @@ const FileValidationResult = ({
                   status={status}
                   handleSelect={() => handleSelectAccordion(section.accordionId)}
                 >
-                  <DeclarationFileDetails
-                    pointId={section.pointId}
-                    series={section.series}
-                    typePrelevement={typePrelevement}
-                    getSeriesValues={getSeriesValues}
-                  />
+                  {section.series.length > 0 ? (
+                    <DeclarationFileDetails
+                      pointId={section.pointId}
+                      series={section.series}
+                      typePrelevement={typePrelevement}
+                      getSeriesValues={getSeriesValues}
+                    />
+                  ) : (
+                    <Notice
+                      severity='info'
+                      title='Aucune série de données'
+                      description="Aucune donnée de prélèvement n'a été trouvée pour ce point."
+                    />
+                  )}
 
                   {errors.length > 0 && (
                     <FileValidationErrors errors={errors} />
