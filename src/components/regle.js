@@ -8,7 +8,6 @@ import {
 
 import {formatDateRange, formatFullDateFr} from '@/lib/format-date.js'
 import {getParametreInfo, getRegleContrainte} from '@/lib/regles.js'
-import {getDocumentURL} from '@/lib/urls.js'
 import {formatNumber} from '@/utils/number.js'
 
 const InfoRow = ({label, value, description}) => (
@@ -51,7 +50,7 @@ const RegleHeader = ({parametre, debutValidite, finValidite, debutPeriode, finPe
   )
 }
 
-const Regle = ({regle, document}) => (
+const Regle = ({regle}) => (
   <Accordion
     disableGutters
     className='fr-card'
@@ -77,13 +76,13 @@ const Regle = ({regle, document}) => (
         <InfoRow
           label='Document'
           value={
-            document ? (
+            regle.document ? (
               <a
-                href={getDocumentURL(document)}
+                href={regle.document.downloadUrl}
                 target='_blank'
                 rel='noreferrer'
               >
-                {`${document.nature} ${document.reference} du ${formatFullDateFr(document.date_signature)}`}
+                {`${regle.document.nature} ${regle.document.reference} du ${formatFullDateFr(regle.document.date_signature)}`}
               </a>
             ) : '-'
           }

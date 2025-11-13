@@ -37,7 +37,7 @@ const DocumentsListForm = ({documents, idPreleveur}) => {
 
     try {
       const cleanedPayload = emptyStringToNull(payload)
-      const response = await updateDocument(document._id, idPreleveur, cleanedPayload)
+      const response = await updateDocument(document._id, cleanedPayload)
 
       if (response.code === 400) {
         if (response.validationErrors) {
@@ -71,7 +71,7 @@ const DocumentsListForm = ({documents, idPreleveur}) => {
   }
 
   const handleDeleteDocument = async () => {
-    const response = await deleteDocument(idPreleveur, documentToDelete)
+    const response = await deleteDocument(documentToDelete)
 
     if (response.ok) {
       const newDocumentsList = documentsList.filter(d => d._id !== documentToDelete)

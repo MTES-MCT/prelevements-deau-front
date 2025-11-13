@@ -150,9 +150,9 @@ export async function uploadDocument(idPreleveur, document) {
   return response.json()
 }
 
-export async function updateDocument(idDocument, idPreleveur, payload) {
+export async function updateDocument(idDocument, payload) {
   const response = await executeRequest(
-    `api/preleveurs/${idPreleveur}/documents/${idDocument}`,
+    `api/documents/${idDocument}`,
     {
       headers: {Authorization: await getAuthorization()},
       method: 'PUT',
@@ -163,9 +163,9 @@ export async function updateDocument(idDocument, idPreleveur, payload) {
   return response.json()
 }
 
-export async function deleteDocument(idPreleveur, idDocument) {
+export async function deleteDocument(idDocument) {
   const response = await executeRequest(
-    `api/preleveurs/${idPreleveur}/documents/${idDocument}`,
+    `api/documents/${idDocument}`,
     {
       headers: {Authorization: await getAuthorization()},
       method: 'DELETE'
@@ -229,6 +229,18 @@ export async function deleteExploitation(exploitationId) {
     headers: {Authorization: await getAuthorization()},
     method: 'DELETE'
   })
+  return response.json()
+}
+
+export async function getReglesFromPreleveur(idPreleveur) {
+  const response = await executeRequest(
+    `api/preleveurs/${idPreleveur}/regles`,
+    {headers: {Authorization: await getAuthorization()}}
+  )
+  if (response.ok === false) {
+    return []
+  }
+
   return response.json()
 }
 

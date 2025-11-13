@@ -7,7 +7,7 @@ import {Grid} from '@mui/system'
 import Regle from '@/components/regle.js'
 import {downloadCsv} from '@/lib/export-csv.js'
 
-const Regles = ({regles, documents}) => {
+const Regles = ({regles}) => {
   const isSingle = regles.length === 1
 
   return (
@@ -32,17 +32,12 @@ const Regles = ({regles, documents}) => {
         sx={{alignItems: 'start'}}
         gap={{xs: 2, md: 3}}
       >
-        {regles.map(regle => {
-          const document = documents.find(d => d.id_document === regle.id_document)
-
-          return (
-            <Regle
-              key={`regle-${regle.debut_validite}-${regle.valeur}-${regle.unite}`}
-              regle={regle}
-              document={document}
-            />
-          )
-        })}
+        {regles.map(regle => (
+          <Regle
+            key={`regle-${regle.debut_validite}-${regle.valeur}-${regle.unite}`}
+            regle={regle}
+          />
+        ))}
       </Grid>
     </Box>
   )
