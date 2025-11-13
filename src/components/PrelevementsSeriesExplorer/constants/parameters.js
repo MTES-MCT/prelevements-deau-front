@@ -108,12 +108,12 @@ export const AGGREGATED_PARAMETERS = [
 }))
 
 export const FREQUENCY_OPTIONS = [
-  {value: '15 minutes', label: 'Tranches de 15 minutes'},
-  {value: '1 hour', label: 'Horaire'},
-  {value: '6 hours', label: 'Tranches de 6 heures'},
-  {value: '1 day', label: 'Quotidien'},
-  {value: '1 month', label: 'Mensuel'},
-  {value: '1 year', label: 'Annuel'}
+  {value: '15 minutes', label: '15 minutes'},
+  {value: '1 hour', label: '1 heure'},
+  {value: '6 hours', label: '6 heures'},
+  {value: '1 day', label: '1 jour'},
+  {value: '1 month', label: '1 mois'},
+  {value: '1 year', label: '1 an'}
 ]
 
 export const DEFAULT_AGGREGATION_FREQUENCY = '1 day'
