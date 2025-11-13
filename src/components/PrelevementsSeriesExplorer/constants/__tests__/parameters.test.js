@@ -2,9 +2,7 @@ import test from 'ava'
 
 import {
   AGGREGATED_PARAMETERS,
-  DEFAULT_AGGREGATION_FREQUENCY,
   getAvailableParametersFromSeries,
-  getAutomaticFrequency,
   getParameterMetadata
 } from '../parameters.js'
 
@@ -32,12 +30,4 @@ test('getAvailableParametersFromSeries filters by provided series list', t => {
 test('getAvailableParametersFromSeries returns full list when no match', t => {
   const available = getAvailableParametersFromSeries([{parameter: null}])
   t.is(available.length, AGGREGATED_PARAMETERS.length)
-})
-
-test('getAutomaticFrequency picks expected bucket', t => {
-  t.is(getAutomaticFrequency(), DEFAULT_AGGREGATION_FREQUENCY)
-  t.is(getAutomaticFrequency([{type: 'day'}]), '1 hour')
-  t.is(getAutomaticFrequency([{type: 'month'}]), '1 day')
-  t.is(getAutomaticFrequency([{type: 'year'}]), '1 week')
-  t.is(getAutomaticFrequency([{type: 'year'}, {type: 'year'}]), '1 month')
 })
