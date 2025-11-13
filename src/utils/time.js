@@ -120,11 +120,7 @@ const createBaseDate = ({year, month, day}) => {
     return null
   }
 
-  if (
-    baseDate.getFullYear() !== year
-    || baseDate.getMonth() + 1 !== month
-    || baseDate.getDate() !== day
-  ) {
+  if (baseDate.getFullYear() !== year || baseDate.getMonth() + 1 !== month) {
     return null
   }
 
@@ -172,9 +168,8 @@ const applyTimeComponent = (baseDate, timeValue) => {
     return null
   }
 
-  const result = new Date(baseDate)
-  result.setHours(hours, minutes, seconds, 0)
-  return result
+  baseDate.setHours(hours, minutes, seconds, 0)
+  return baseDate
 }
 
 export const parseLocalDateTime = (dateString, timeString) => {
