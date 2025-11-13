@@ -78,7 +78,7 @@ const Regle = ({regle}) => (
           value={
             regle.document ? (
               <a
-                href={document.downloadUrl}
+                href={regle.document.downloadUrl}
                 target='_blank'
                 rel='noreferrer'
               >
