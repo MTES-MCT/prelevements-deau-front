@@ -39,9 +39,7 @@ const DeclarationFileDetails = ({
            && d.getFullYear() === declarationDate.getFullYear()
   }
 
-  const dateBounds = getGlobalDateBounds(series)
-  const minDate = dateBounds?.minDate
-  const maxDate = dateBounds?.maxDate
+  const {minDate, maxDate} = getGlobalDateBounds(series)
 
   const hasDatesOutsideDeclMonth = (() => {
     if (!minDate || !maxDate || !moisDeclaration) {
