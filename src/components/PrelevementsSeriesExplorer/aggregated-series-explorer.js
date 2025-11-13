@@ -7,7 +7,6 @@ import {
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Select} from '@codegouvfr/react-dsfr/Select'
 import {Box} from '@mui/material'
-import {format} from 'date-fns'
 
 import ChartWithRangeSlider from './chart-with-range-slider.js'
 import {
@@ -32,6 +31,7 @@ import {buildDailyAndTimelineData} from '@/components/PrelevementsSeriesExplorer
 import CalendarGrid from '@/components/ui/CalendarGrid/index.js'
 import PeriodSelectorHeader from '@/components/ui/PeriodSelectorHeader/index.js'
 import {useManagedSelection} from '@/hook/use-managed-selection.js'
+import {parseLocalDateTime} from '@/utils/time.js'
 
 const DEFAULT_PARAMETER = 'volume prélevé'
 
@@ -166,10 +166,18 @@ const filterValuesByDateRange = (values, dateRange) => {
     return values
   }
 
-  const start = format(dateRange.start, 'yyyy-MM-dd')
-  const end = format(dateRange.end, 'yyyy-MM-dd')
+  return values.filter(entry => {
+    if (!entry?.date) {
+      return false
+    }
 
-  return values.filter(entry => entry?.date && entry.date >= start && entry.date <= end)
+    const parsed = parseLocalDateTime(entry.date)
+    if (!parsed) {
+      return false
+    }
+
+    return parsed >= dateRange.start && parsed <= dateRange.end
+  })
 }
 
 const AggregatedSeriesExplorer = ({
