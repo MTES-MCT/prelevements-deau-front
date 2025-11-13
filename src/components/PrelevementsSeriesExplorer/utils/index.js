@@ -8,6 +8,8 @@ import {
 
 import {CALENDAR_STATUS_COLORS} from '../constants/colors.js'
 
+import {parseLocalDateTime} from '@/utils/time.js'
+
 /**
  * Color priority map for calendar aggregation
  * Lower number = higher priority (more important to display)
@@ -115,20 +117,12 @@ export function buildSeriesMetadataMap(seriesList) {
  * @returns {Date|null}
  */
 export function parseLocalDate(dateString) {
-  if (typeof dateString !== 'string') {
+  const parsed = parseLocalDateTime(dateString)
+  if (!parsed) {
     return null
   }
 
-  const [yearStr, monthStr, dayStr] = dateString.split('-')
-  const year = Number(yearStr)
-  const month = Number(monthStr)
-  const day = Number(dayStr)
-
-  if ([year, month, day].some(value => Number.isNaN(value))) {
-    return null
-  }
-
-  return new Date(year, month - 1, day, 0, 0, 0, 0)
+  return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 0, 0, 0, 0)
 }
 
 /**

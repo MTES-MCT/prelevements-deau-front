@@ -68,6 +68,24 @@ test('parseLocalDate returns a local midnight Date instance', t => {
   t.deepEqual(date, new Date(2024, 8, 28, 0, 0, 0, 0))
 })
 
+test('parseLocalDate handles month-only ISO strings', t => {
+  const date = parseLocalDate('2024-11')
+  t.truthy(date)
+  t.deepEqual(date, new Date(2024, 10, 1, 0, 0, 0, 0))
+})
+
+test('parseLocalDate handles year-only ISO strings', t => {
+  const date = parseLocalDate('2024')
+  t.truthy(date)
+  t.deepEqual(date, new Date(2024, 0, 1, 0, 0, 0, 0))
+})
+
+test('parseLocalDate ignores time component when present', t => {
+  const date = parseLocalDate('2024-11-01 06:00')
+  t.truthy(date)
+  t.deepEqual(date, new Date(2024, 10, 1, 0, 0, 0, 0))
+})
+
 test('parseLocalDateTime parses time components safely', t => {
   const date = parseLocalDateTime('2024-09-28', '15:30:45')
   t.truthy(date)
@@ -83,6 +101,30 @@ test('parseLocalDateTime falls back to midnight when time missing', t => {
 test('parseLocalDateTime returns null for invalid dates', t => {
   const date = parseLocalDateTime('invalid')
   t.is(date, null)
+})
+
+test('parseLocalDateTime supports month precision dates', t => {
+  const date = parseLocalDateTime('2024-11')
+  t.truthy(date)
+  t.deepEqual(date, new Date(2024, 10, 1, 0, 0, 0, 0))
+})
+
+test('parseLocalDateTime supports year-only dates', t => {
+  const date = parseLocalDateTime('2024')
+  t.truthy(date)
+  t.deepEqual(date, new Date(2024, 0, 1, 0, 0, 0, 0))
+})
+
+test('parseLocalDateTime parses embedded time separated by space', t => {
+  const date = parseLocalDateTime('2024-11-01 06:00')
+  t.truthy(date)
+  t.deepEqual(date, new Date(2024, 10, 1, 6, 0, 0, 0))
+})
+
+test('parseLocalDateTime parses ISO datetime with seconds and timezone suffix', t => {
+  const date = parseLocalDateTime('2024-11-01T06:30:15Z')
+  t.truthy(date)
+  t.deepEqual(date, new Date(2024, 10, 1, 6, 30, 15, 0))
 })
 
 // periodsToDateRange tests
