@@ -60,6 +60,7 @@ const PointLocalisation = ({pointPrelevement}) =>
       </div>
       <div className='h-[360px]'>
         <Map
+          showLabels={false}
           points={[pointPrelevement]}
           filteredPoints={[pointPrelevement]}
           selectedPoint={pointPrelevement}

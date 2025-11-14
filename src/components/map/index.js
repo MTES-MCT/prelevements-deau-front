@@ -29,8 +29,8 @@ const stylesMap = {
   'vector-ign': vectorIGN
 }
 
-function updateHighlightedPoint(map, selectedPoint) {
-  if (selectedPoint) {
+function updateHighlightedPoint(map, selectedPoint, showLabels = true) {
+  if (selectedPoint && showLabels) {
     // Exclure le point sélectionné de la couche de labels standard
     if (map.getLayer('points-prelevement-nom')) {
       // On applique un filtre pour ne pas afficher le point avec l'id sélectionné
@@ -68,7 +68,7 @@ function updateHighlightedPoint(map, selectedPoint) {
     // Placer la couche de mise en surbrillance au-dessus des autres
     map.moveLayer('selected-point-prelevement-nom')
   } else {
-    // Aucun point sélectionné : réinitialiser le filtre pour afficher tous les labels
+    // Aucun point sélectionné ou labels désactivés : réinitialiser le filtre pour afficher tous les labels
     if (map.getLayer('points-prelevement-nom')) {
       map.setFilter('points-prelevement-nom', null)
     }
@@ -80,7 +80,7 @@ function updateHighlightedPoint(map, selectedPoint) {
   }
 }
 
-function loadMap(map, points) {
+function loadMap(map, points, showLabels = true) {
   // --- Chargement de la source et du layer de texte ---
   const geojson = createPointPrelevementFeatures(points)
   if (map.getSource(SOURCE_ID)) {
@@ -145,7 +145,10 @@ function loadMap(map, points) {
     })
   }
 
-  if (!map.getLayer('points-prelevement-nom')) {
+  if (map.getLayer('points-prelevement-nom')) {
+    // Update visibility if layer already exists
+    map.setLayoutProperty('points-prelevement-nom', 'visibility', showLabels ? 'visible' : 'none')
+  } else {
     map.addLayer({
       id: 'points-prelevement-nom',
       type: 'symbol',
@@ -153,7 +156,8 @@ function loadMap(map, points) {
       layout: {
         'text-field': ['get', 'nom'],
         'text-anchor': 'bottom',
-        'text-offset': ['get', 'textOffset']
+        'text-offset': ['get', 'textOffset'],
+        visibility: showLabels ? 'visible' : 'none'
       },
       paint: {
         'text-halo-color': '#fff',
@@ -164,11 +168,11 @@ function loadMap(map, points) {
   }
 }
 
-const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, style = 'plan-ign'}) => {
+const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapStyle = 'plan-ign', showLabels = true}) => {
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
   const popupRef = useRef(null)
-  const currentStyleRef = useRef(style)
+  const currentStyleRef = useRef(mapStyle)
 
   // Stocke la valeur actuelle de "points" pour être accessible dans les callbacks
   const pointsRef = useRef(points)
@@ -183,9 +187,9 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, style 
 
     const map = new maplibre.Map({
       container: mapContainerRef.current,
-      style: stylesMap[style],
-      center: mapRef.current ? mapRef.current.getCenter() : [55.55, -21.13],
-      zoom: mapRef.current ? mapRef.current.getZoom() : 10,
+      style: stylesMap[mapStyle],
+      center: [55.55, -21.13],
+      zoom: 10,
       hash: true,
       debug: true,
       attributionControl: {compact: true}
@@ -256,10 +260,43 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, style 
       map.on('click', 'markers-symbol', onMarkerClick)
     })
 
+    // Fit bounds after the map is fully loaded and sized
+    map.once('idle', () => {
+      if (points && points.length > 0) {
+        const coordinates = points
+          .map(point => point.geom?.coordinates || point.coordinates)
+          .filter(Boolean)
+
+        if (coordinates.length === 1) {
+          // Only one point: center and zoom to it
+          map.flyTo({
+            center: coordinates[0],
+            zoom: 15,
+            duration: 0
+          })
+        } else if (coordinates.length > 1) {
+          // Create bounds from all coordinates
+          const bounds = new maplibre.LngLatBounds(coordinates[0], coordinates[0])
+          for (const coord of coordinates) {
+            bounds.extend(coord)
+          }
+
+          // Fit the map to the bounds with padding
+          map.fitBounds(bounds, {
+            padding: {
+              top: 50, bottom: 50, left: 50, right: 50
+            },
+            maxZoom: 15,
+            duration: 0
+          })
+        }
+      }
+    })
+
     return () => {
       map.remove()
     }
-  }, [style, points, handleSelectedPoint])
+  }, [mapStyle, points, handleSelectedPoint])
 
   // Mise à jour des sources lorsque les points filtrés changent
   useEffect(() => {
@@ -292,17 +329,17 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, style 
     const map = mapRef.current
 
     if (map) {
-      if (style !== currentStyleRef.current) {
-        currentStyleRef.current = style
-        map.setStyle(style)
+      if (mapStyle !== currentStyleRef.current) {
+        currentStyleRef.current = mapStyle
+        map.setStyle(stylesMap[mapStyle])
       }
 
       map.on('load', () => {
-        loadMap(map, points)
-        updateHighlightedPoint(map, selectedPoint)
+        loadMap(map, points, showLabels)
+        updateHighlightedPoint(map, selectedPoint, showLabels)
       })
     }
-  }, [points, style, selectedPoint])
+  }, [points, mapStyle, selectedPoint, showLabels])
 
   useEffect(() => {
     const map = mapRef.current
@@ -321,9 +358,22 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, style 
     }
 
     if (map && map.getLayer('points-prelevement-nom')) {
-      updateHighlightedPoint(map, selectedPoint)
+      updateHighlightedPoint(map, selectedPoint, showLabels)
     }
-  }, [selectedPoint])
+  }, [selectedPoint, showLabels])
+
+  // Update labels visibility when showLabels changes
+  useEffect(() => {
+    const map = mapRef.current
+    if (map && map.getLayer('points-prelevement-nom')) {
+      map.setLayoutProperty('points-prelevement-nom', 'visibility', showLabels ? 'visible' : 'none')
+    }
+
+    // Also update the highlighted point layer
+    if (map) {
+      updateHighlightedPoint(map, selectedPoint, showLabels)
+    }
+  }, [showLabels, selectedPoint])
 
   return (
     <Box className='flex h-full w-full relative'>

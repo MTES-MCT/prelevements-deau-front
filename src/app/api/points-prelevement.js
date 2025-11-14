@@ -75,7 +75,7 @@ export async function getPointsFromPreleveur(idPreleveur) {
     {headers: {Authorization: await getAuthorization()}}
   )
   if (response.ok === false) {
-    return null
+    return []
   }
 
   return response.json()

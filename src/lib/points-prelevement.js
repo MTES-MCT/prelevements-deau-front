@@ -203,6 +203,10 @@ function createPieSegment(cx, cy, r, start, end, color) {
   return path
 }
 
+// Estimated popup dimensions (can be adjusted based on actual popup size)
+const ESTIMATED_POPUP_HEIGHT = 310
+const ESTIMATED_POPUP_WIDTH = 200
+
 export function computeBestPopupAnchor(map, coords) {
   // Calcul de la position du point en pixels
   const canvas = map.getCanvas()
@@ -214,16 +218,43 @@ export function computeBestPopupAnchor(map, coords) {
   const marginLeft = screenPoint.x
   const marginRight = canvasWidth - screenPoint.x
 
-  // Choix dynamique de l'ancre en fonction de la marge minimale
-  let anchor = 'bottom' // Valeur par défaut
-  if (marginTop < marginBottom && marginTop < marginLeft && marginTop < marginRight) {
-    anchor = 'top' // Le point est proche du haut → affiche la popup en dessous (ancre "top")
-  } else if (marginBottom < marginTop && marginBottom < marginLeft && marginBottom < marginRight) {
-    anchor = 'bottom' // Le point est proche du bas → affiche la popup au-dessus (ancre "bottom")
-  } else if (marginLeft < marginTop && marginLeft < marginBottom && marginLeft < marginRight) {
-    anchor = 'left' // Le point est proche de la gauche → affiche la popup à droite (ancre "left")
-  } else if (marginRight < marginTop && marginRight < marginBottom && marginRight < marginLeft) {
-    anchor = 'right' // Le point est proche de la droite → affiche la popup à gauche (ancre "right")
+  // Prioritize vertical positioning first (top/bottom)
+  // Only use left/right if there's not enough vertical space
+  let anchor = 'bottom' // Default
+
+  // Check if there's enough space at the bottom
+  if (marginBottom >= ESTIMATED_POPUP_HEIGHT) {
+    anchor = 'top' // Popup appears below the point
+  } else if (marginTop >= ESTIMATED_POPUP_HEIGHT) {
+    anchor = 'bottom' // Popup appears above the point
+  } else if (marginRight >= ESTIMATED_POPUP_WIDTH) {
+    anchor = 'left' // Popup appears to the right of the point
+  } else if (marginLeft >= ESTIMATED_POPUP_WIDTH) {
+    anchor = 'right' // Popup appears to the left of the point
+  } else {
+    // If no direction has enough space, choose the one with the most space
+    const maxSpace = Math.max(marginTop, marginBottom, marginLeft, marginRight)
+    // Tie-breaking order: bottom > top > right > left
+    switch (maxSpace) {
+      case marginBottom: {
+        anchor = 'top'
+        break
+      }
+
+      case marginTop: {
+        anchor = 'bottom'
+        break
+      }
+
+      case marginRight: {
+        anchor = 'left'
+        break
+      }
+
+      default: {
+        anchor = 'right'
+      }
+    }
   }
 
   return anchor
