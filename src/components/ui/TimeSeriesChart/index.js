@@ -90,6 +90,7 @@ const useChartModel = ({series, locale, theme, exposeAllMarks, options}) => useM
  * @param {Function} props.getPointMeta - Function to retrieve metadata for a point
  * @param {Function} props.getSegmentOrigin - Function to retrieve segment origin data
  * @param {Object} props.translations - Translation strings
+ * @param {string} props.locale - Locale string for date formatting
  * @returns {JSX.Element|null} Tooltip content or null if no data
  */
 const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, getSegmentOrigin, translations: t, locale}) => {
