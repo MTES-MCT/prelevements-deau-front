@@ -29,8 +29,8 @@ const stylesMap = {
   'vector-ign': vectorIGN
 }
 
-function updateHighlightedPoint(map, selectedPoint) {
-  if (selectedPoint) {
+function updateHighlightedPoint(map, selectedPoint, showLabels = true) {
+  if (selectedPoint && showLabels) {
     // Exclure le point sélectionné de la couche de labels standard
     if (map.getLayer('points-prelevement-nom')) {
       // On applique un filtre pour ne pas afficher le point avec l'id sélectionné
@@ -68,7 +68,7 @@ function updateHighlightedPoint(map, selectedPoint) {
     // Placer la couche de mise en surbrillance au-dessus des autres
     map.moveLayer('selected-point-prelevement-nom')
   } else {
-    // Aucun point sélectionné : réinitialiser le filtre pour afficher tous les labels
+    // Aucun point sélectionné ou labels désactivés : réinitialiser le filtre pour afficher tous les labels
     if (map.getLayer('points-prelevement-nom')) {
       map.setFilter('points-prelevement-nom', null)
     }
@@ -80,7 +80,7 @@ function updateHighlightedPoint(map, selectedPoint) {
   }
 }
 
-function loadMap(map, points) {
+function loadMap(map, points, showLabels = true) {
   // --- Chargement de la source et du layer de texte ---
   const geojson = createPointPrelevementFeatures(points)
   if (map.getSource(SOURCE_ID)) {
@@ -145,7 +145,10 @@ function loadMap(map, points) {
     })
   }
 
-  if (!map.getLayer('points-prelevement-nom')) {
+  if (map.getLayer('points-prelevement-nom')) {
+    // Update visibility if layer already exists
+    map.setLayoutProperty('points-prelevement-nom', 'visibility', showLabels ? 'visible' : 'none')
+  } else {
     map.addLayer({
       id: 'points-prelevement-nom',
       type: 'symbol',
@@ -153,7 +156,8 @@ function loadMap(map, points) {
       layout: {
         'text-field': ['get', 'nom'],
         'text-anchor': 'bottom',
-        'text-offset': ['get', 'textOffset']
+        'text-offset': ['get', 'textOffset'],
+        visibility: showLabels ? 'visible' : 'none'
       },
       paint: {
         'text-halo-color': '#fff',
@@ -164,7 +168,7 @@ function loadMap(map, points) {
   }
 }
 
-const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapStyle = 'plan-ign'}) => {
+const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapStyle = 'plan-ign', showLabels = true}) => {
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
   const popupRef = useRef(null)
@@ -331,11 +335,11 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
       }
 
       map.on('load', () => {
-        loadMap(map, points)
-        updateHighlightedPoint(map, selectedPoint)
+        loadMap(map, points, showLabels)
+        updateHighlightedPoint(map, selectedPoint, showLabels)
       })
     }
-  }, [points, mapStyle, selectedPoint])
+  }, [points, mapStyle, selectedPoint, showLabels])
 
   useEffect(() => {
     const map = mapRef.current
@@ -354,9 +358,22 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
     }
 
     if (map && map.getLayer('points-prelevement-nom')) {
-      updateHighlightedPoint(map, selectedPoint)
+      updateHighlightedPoint(map, selectedPoint, showLabels)
     }
-  }, [selectedPoint])
+  }, [selectedPoint, showLabels])
+
+  // Update labels visibility when showLabels changes
+  useEffect(() => {
+    const map = mapRef.current
+    if (map && map.getLayer('points-prelevement-nom')) {
+      map.setLayoutProperty('points-prelevement-nom', 'visibility', showLabels ? 'visible' : 'none')
+    }
+
+    // Also update the highlighted point layer
+    if (map) {
+      updateHighlightedPoint(map, selectedPoint, showLabels)
+    }
+  }, [showLabels, selectedPoint])
 
   return (
     <Box className='flex h-full w-full relative'>
