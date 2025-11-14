@@ -13,8 +13,8 @@ import {
 import {getAggregatedSeriesOptions} from '@/app/api/series.js'
 import DocumentsList from '@/components/documents/documents-list.js'
 import ExploitationsList from '@/components/exploitations/exploitations-list.js'
-import Map from '@/components/map/index.js'
 import SeriesExplorer from '@/components/points-prelevement/series-explorer.js'
+import PreleveurMap from '@/components/preleveurs/preleveur-map.js'
 import EntityHeader from '@/components/ui/EntityHeader/index.js'
 import Icon from '@/components/ui/Icon/index.js'
 import SectionCard from '@/components/ui/SectionCard/index.js'
@@ -126,13 +126,7 @@ const Page = async ({params}) => {
         />
         <InfoCard preleveur={preleveur} />
         {pointsPrelevement.length > 0 && (
-          <Box className='h-[360px]'>
-            <Map
-              points={pointsPrelevement}
-              filteredPoints={pointsPrelevement.map(p => p.id_point)}
-              mapStyle='plan-ign'
-            />
-          </Box>
+          <PreleveurMap points={pointsPrelevement} />
         )}
         <SeriesExplorer preleveurId={preleveur.id_preleveur} seriesOptions={seriesOptions} />
         <ExploitationsList hidePreleveur exploitations={exploitationsWithPoints} preleveurs={[preleveur]} />
