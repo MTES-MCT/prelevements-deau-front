@@ -263,7 +263,14 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
           .map(point => point.geom?.coordinates || point.coordinates)
           .filter(Boolean)
 
-        if (coordinates.length > 0) {
+        if (coordinates.length === 1) {
+          // Only one point: center and zoom to it
+          map.flyTo({
+            center: coordinates[0],
+            zoom: 15,
+            duration: 0
+          })
+        } else if (coordinates.length > 1) {
           // Create bounds from all coordinates
           const bounds = new maplibre.LngLatBounds(coordinates[0], coordinates[0])
           for (const coord of coordinates) {
