@@ -164,11 +164,11 @@ function loadMap(map, points) {
   }
 }
 
-const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, style = 'plan-ign'}) => {
+const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapStyle = 'plan-ign'}) => {
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
   const popupRef = useRef(null)
-  const currentStyleRef = useRef(style)
+  const currentStyleRef = useRef(mapStyle)
 
   // Stocke la valeur actuelle de "points" pour être accessible dans les callbacks
   const pointsRef = useRef(points)
@@ -183,9 +183,9 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, style 
 
     const map = new maplibre.Map({
       container: mapContainerRef.current,
-      style: stylesMap[style],
-      center: mapRef.current ? mapRef.current.getCenter() : [55.55, -21.13],
-      zoom: mapRef.current ? mapRef.current.getZoom() : 10,
+      style: stylesMap[mapStyle],
+      center: [55.55, -21.13],
+      zoom: 10,
       hash: true,
       debug: true,
       attributionControl: {compact: true}
@@ -256,10 +256,36 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, style 
       map.on('click', 'markers-symbol', onMarkerClick)
     })
 
+    // Fit bounds after the map is fully loaded and sized
+    map.once('idle', () => {
+      if (points && points.length > 0) {
+        const coordinates = points
+          .map(point => point.geom?.coordinates || point.coordinates)
+          .filter(Boolean)
+
+        if (coordinates.length > 0) {
+          // Create bounds from all coordinates
+          const bounds = new maplibre.LngLatBounds(coordinates[0], coordinates[0])
+          for (const coord of coordinates) {
+            bounds.extend(coord)
+          }
+
+          // Fit the map to the bounds with padding
+          map.fitBounds(bounds, {
+            padding: {
+              top: 50, bottom: 50, left: 50, right: 50
+            },
+            maxZoom: 15,
+            duration: 0
+          })
+        }
+      }
+    })
+
     return () => {
       map.remove()
     }
-  }, [style, points, handleSelectedPoint])
+  }, [mapStyle, points, handleSelectedPoint])
 
   // Mise à jour des sources lorsque les points filtrés changent
   useEffect(() => {
@@ -292,9 +318,9 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, style 
     const map = mapRef.current
 
     if (map) {
-      if (style !== currentStyleRef.current) {
-        currentStyleRef.current = style
-        map.setStyle(style)
+      if (mapStyle !== currentStyleRef.current) {
+        currentStyleRef.current = mapStyle
+        map.setStyle(stylesMap[mapStyle])
       }
 
       map.on('load', () => {
@@ -302,7 +328,7 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, style 
         updateHighlightedPoint(map, selectedPoint)
       })
     }
-  }, [points, style, selectedPoint])
+  }, [points, mapStyle, selectedPoint])
 
   useEffect(() => {
     const map = mapRef.current
