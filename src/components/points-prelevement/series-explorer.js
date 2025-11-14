@@ -16,6 +16,8 @@ import {
 } from '@/components/PrelevementsSeriesExplorer/utils/date-range-periods.js'
 
 const DEFAULT_FREQUENCY = '1 day'
+const DEFAULT_PARAMETER = 'volume prélevé'
+const DEFAULT_OPERATOR_FOR_VOLUME = 'sum'
 
 const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = null, startDate = null, endDate = null}) => {
   // Vérifie si des paramètres sont disponibles depuis l'API
@@ -59,7 +61,20 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
     )
   }, [seriesOptions])
 
-  const derivedDefaultParameter = parameterOptions[0]?.value ?? null
+  // Prioritize 'volume prélevé' as default parameter if available
+  const derivedDefaultParameter = useMemo(() => {
+    // Priority 1: Check if 'volume prélevé' is available
+    const volumeParameter = parameterOptions.find(
+      opt => opt.value?.toLowerCase() === DEFAULT_PARAMETER.toLowerCase()
+    )
+
+    if (volumeParameter) {
+      return volumeParameter.value
+    }
+
+    // Priority 2: Fallback to first available parameter
+    return parameterOptions[0]?.value ?? null
+  }, [parameterOptions])
 
   const [selectedParameter, setSelectedParameter] = useState(derivedDefaultParameter)
   const [selectedOperator, setSelectedOperator] = useState(null)
@@ -93,9 +108,24 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
     () => currentParameterDefinition?.operators ?? [],
     [currentParameterDefinition]
   )
-  const resolvedDefaultOperator = currentParameterDefinition?.defaultOperator
-    ?? operatorOptions[0]
-    ?? null
+
+  // Force 'sum' operator for volume parameters
+  const resolvedDefaultOperator = useMemo(() => {
+    if (!currentParameterDefinition) {
+      return null
+    }
+
+    // Check if current parameter is a volume parameter
+    const isVolumeParameter = selectedParameter?.toLowerCase().includes('volume')
+    if (isVolumeParameter && currentParameterDefinition.operators?.includes(DEFAULT_OPERATOR_FOR_VOLUME)) {
+      return DEFAULT_OPERATOR_FOR_VOLUME
+    }
+
+    // Use parameter's default operator or fallback to first available
+    return currentParameterDefinition.defaultOperator
+      ?? operatorOptions[0]
+      ?? null
+  }, [currentParameterDefinition, operatorOptions, selectedParameter])
 
   useEffect(() => {
     if (operatorOptions.length === 0) {
