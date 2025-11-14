@@ -52,9 +52,21 @@ export const getRangeBasedDateFormatter = (locale, dates) => {
   }
 
   // Calculate visible range: difference between min and max dates
-  const minDate = new Date(Math.min(...dates.map(d => d.getTime())))
-  const maxDate = new Date(Math.max(...dates.map(d => d.getTime())))
-  const rangeMs = maxDate.getTime() - minDate.getTime()
+  // Use single loop instead of Math.min/max with map for better performance
+  let minTime = Number.POSITIVE_INFINITY
+  let maxTime = Number.NEGATIVE_INFINITY
+  for (const date of dates) {
+    const time = date.getTime()
+    if (time < minTime) {
+      minTime = time
+    }
+
+    if (time > maxTime) {
+      maxTime = time
+    }
+  }
+
+  const rangeMs = maxTime - minTime
 
   // Time range thresholds in milliseconds
   const ONE_DAY_MS = 24 * 60 * 60 * 1000
