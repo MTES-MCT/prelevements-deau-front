@@ -115,6 +115,99 @@ export const insertGapPoints = (data, frequency, gapMultiplier = 1.5) => {
 }
 
 /**
+ * Identify segment boundaries in time series data
+ * A segment is a continuous sequence of data points (non-null y values) separated by gaps.
+ * This function marks the first and last points of each segment for rendering visible markers.
+ *
+ * Behavior:
+ * - First and last point of each continuous segment get showMark: true
+ * - Middle points of segments get showMark: false
+ * - Gap points (null values) are never marked for display
+ * - Isolated single points (segment of length 1) get showMark: true
+ *
+ * @param {Array<{x: Date, y: number|null, isGapPoint?: boolean}>} data - Time series data (possibly with gap points)
+ * @returns {Array<{x: Date, y: number|null, isGapPoint?: boolean, showMark?: boolean}>} Data with showMark flags
+ */
+export const identifySegmentBoundaries = data => {
+  if (!Array.isArray(data) || data.length === 0) {
+    return data
+  }
+
+  const result = []
+  let segmentStart = null
+  let segmentPoints = []
+
+  for (const [i, point] of data.entries()) {
+    // Gap point or null value - end current segment if exists
+    if (point.isGapPoint || point.y === null || point.y === undefined) {
+      // Mark boundaries of completed segment
+      if (segmentPoints.length > 0) {
+        for (let j = 0; j < segmentPoints.length; j++) {
+          const isFirst = j === 0
+          const isLast = j === segmentPoints.length - 1
+          // Mark first and last points of segment, or the only point if segment has length 1
+          result.push({
+            ...segmentPoints[j],
+            showMark: isFirst || isLast
+          })
+        }
+
+        segmentPoints = []
+        segmentStart = null
+      }
+
+      // Add gap point without mark
+      result.push({
+        ...point,
+        showMark: false
+      })
+    } else {
+      // Valid data point - add to current segment
+      if (segmentStart === null) {
+        segmentStart = i
+      }
+
+      segmentPoints.push(point)
+    }
+  }
+
+  // Handle final segment if data ends with valid points
+  if (segmentPoints.length > 0) {
+    for (let j = 0; j < segmentPoints.length; j++) {
+      const isFirst = j === 0
+      const isLast = j === segmentPoints.length - 1
+      result.push({
+        ...segmentPoints[j],
+        showMark: isFirst || isLast
+      })
+    }
+  }
+
+  return result
+}
+
+/**
+ * Process time series data with gap detection and segment boundary identification
+ * Combines gap insertion with segment boundary marking for optimal chart rendering
+ *
+ * @param {Array<{x: Date, y: number|null}>} data - Time series data points
+ * @param {string} frequency - Aggregation frequency (e.g., '1 day', '1 week')
+ * @param {number} gapMultiplier - Multiplier for gap detection (default: 1.5)
+ * @returns {Array<{x: Date, y: number|null, isGapPoint?: boolean, showMark?: boolean}>} Processed data
+ */
+export const processTimeSeriesData = (data, frequency, gapMultiplier = 1.5) => {
+  if (!Array.isArray(data) || data.length === 0) {
+    return data
+  }
+
+  // Step 1: Insert gap points to break line continuity
+  const dataWithGaps = frequency ? insertGapPoints(data, frequency, gapMultiplier) : data
+
+  // Step 2: Identify and mark segment boundaries for visible markers
+  return identifySegmentBoundaries(dataWithGaps)
+}
+
+/**
  * Apply gap detection to multiple series data
  * Useful when processing chart series with same frequency
  *

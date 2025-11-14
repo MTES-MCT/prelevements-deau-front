@@ -209,7 +209,9 @@ export const processInputSeries = (inputSeries, options = {}) => {
     .map(point => ({
       x: toTimestamp(point.x),
       y: point.y,
-      meta: point.meta ?? null
+      meta: point.meta ?? null,
+      // Preserve showMark property if present (used for segment boundary detection)
+      showMark: point.showMark
     }))
     .sort((a, b) => a.x - b.x)
 
@@ -324,6 +326,7 @@ export const alignSeriesToXAxis = (processedSeries, xValues, xAxisDates, axisSta
       const y = entry ? entry.y : null
       const meta = entry ? entry.meta : null
       const synthetic = Boolean(entry?.synthetic)
+      const showMark = entry?.showMark
       const thresholdValue = processed.thresholdEvaluator(xValue)
 
       // Update axis statistics
@@ -345,6 +348,7 @@ export const alignSeriesToXAxis = (processedSeries, xValues, xAxisDates, axisSta
         y,
         meta,
         synthetic,
+        showMark,
         axisId: processed.axisId
       }
       values[index] = y
@@ -472,10 +476,17 @@ export const buildSegments = (alignedData, xValues, options) => {
             return false
           }
 
+          // If showMark property is explicitly set (from segment boundary detection), use it
+          if (typeof point.showMark === 'boolean') {
+            return point.showMark
+          }
+
+          // Show marks for points with metadata (comments/alerts)
           if (metas[index]) {
             return true
           }
 
+          // Otherwise use exposeAllMarks setting
           return exposeAllMarks
         },
         valueFormatter(value) {
@@ -539,10 +550,19 @@ export const buildPlainSeries = (alignedData, options) => {
       label: undefined,
       connectNulls: false,
       showMark({index}) {
+        const point = data.pointsWithMeta[index]
+
+        // If showMark property is explicitly set (from segment boundary detection), use it
+        if (point && typeof point.showMark === 'boolean') {
+          return point.showMark
+        }
+
+        // Show marks for points with metadata (comments/alerts)
         if (data.metas[index]) {
           return true
         }
 
+        // Otherwise use exposeAllMarks setting
         return exposeAllMarks
       },
       valueFormatter(value) {
