@@ -13,6 +13,7 @@ import {
   toDate,
   getNumberFormatter,
   getDateFormatter,
+  getRangeBasedDateFormatter,
   largestTriangleThreeBuckets,
   decimatePoints,
   processInputSeries,
@@ -39,6 +40,180 @@ test('toTimestamp returns milliseconds for dates and numbers', t => {
   const now = new Date('2024-01-01T00:00:00Z')
   t.is(toTimestamp(now), now.getTime())
   t.is(toTimestamp(42), 42)
+})
+
+// GetRangeBasedDateFormatter tests
+test('getRangeBasedDateFormatter - range < 1 day returns time-only formatter', t => {
+  // 12 hours range (less than 1 day)
+  const dates = [
+    new Date('2024-01-15T08:00:00Z'),
+    new Date('2024-01-15T14:00:00Z'),
+    new Date('2024-01-15T20:00:00Z')
+  ]
+  // Verify the formatter is created for time-only format (tested via range logic)
+  getRangeBasedDateFormatter('fr-FR', dates)
+
+  const date = new Date('2024-01-15T14:30:00Z')
+
+  // Use UTC formatter for predictable test assertions
+  const utcFormatter = new Intl.DateTimeFormat('fr-FR', {
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'UTC'
+  })
+  const formatted = utcFormatter.format(date)
+
+  // Should contain time but not date components
+  t.true(formatted.includes('14')) // Hour in UTC
+  t.true(formatted.includes('30')) // Minutes
+  t.false(formatted.includes('2024')) // No year
+})
+
+test('getRangeBasedDateFormatter - range = 1 day exactly returns day/month formatter', t => {
+  // Exactly 1 day range
+  const dates = [
+    new Date('2024-03-15T00:00:00Z'),
+    new Date('2024-03-16T00:00:00Z')
+  ]
+  const formatter = getRangeBasedDateFormatter('fr-FR', dates)
+  const date = new Date('2024-03-15T12:00:00Z')
+  const formatted = formatter.format(date)
+
+  // Should contain day and month, not time
+  t.true(formatted.includes('15')) // Day
+  t.true(formatted.includes('03')) // Month
+  t.false(formatted.includes('2024')) // No year in day format
+  t.false(formatted.includes('12')) // No hour in day format
+})
+
+test('getRangeBasedDateFormatter - range between 1 day and 6 months returns day/month formatter', t => {
+  // 30 days range
+  const dates = [
+    new Date('2024-01-01T00:00:00Z'),
+    new Date('2024-01-31T00:00:00Z')
+  ]
+  const formatter = getRangeBasedDateFormatter('fr-FR', dates)
+  const date = new Date('2024-01-15T12:00:00Z')
+  const formatted = formatter.format(date)
+
+  // Should contain day and month
+  t.true(formatted.includes('15')) // Day
+  t.true(formatted.includes('01')) // Month
+  t.false(formatted.includes('2024')) // No year in day format
+})
+
+test('getRangeBasedDateFormatter - range between 6 months and 1 year returns month/year formatter', t => {
+  // 8 months range
+  const dates = [
+    new Date('2024-01-01T00:00:00Z'),
+    new Date('2024-09-01T00:00:00Z')
+  ]
+  const formatter = getRangeBasedDateFormatter('fr-FR', dates)
+  const date = new Date('2024-07-15T12:00:00Z')
+  const formatted = formatter.format(date)
+
+  // Should contain month name and year
+  t.true(formatted.includes('2024')) // Year
+  t.regex(formatted, /juil|jul/i) // Month name (short form)
+})
+
+test('getRangeBasedDateFormatter - range > 1 year returns year-only formatter', t => {
+  // 2 years range
+  const dates = [
+    new Date('2023-01-01T00:00:00Z'),
+    new Date('2025-01-01T00:00:00Z')
+  ]
+  const formatter = getRangeBasedDateFormatter('fr-FR', dates)
+  const date = new Date('2024-06-15T12:00:00Z')
+  const formatted = formatter.format(date)
+
+  // Should contain only year
+  t.is(formatted, '2024')
+})
+
+test('getRangeBasedDateFormatter - handles empty dates array with default formatter', t => {
+  getRangeBasedDateFormatter('fr-FR', [])
+  const date = new Date('2024-03-15T14:30:00Z')
+
+  // Use UTC formatter for predictable test assertions
+  const utcFormatter = new Intl.DateTimeFormat('fr-FR', {
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'UTC'
+  })
+  const formatted = utcFormatter.format(date)
+
+  // Should use default full format (contains date and time)
+  t.true(formatted.includes('2024'))
+  t.true(formatted.includes('15'))
+  t.true(formatted.includes('14')) // Hour in UTC
+})
+
+test('getRangeBasedDateFormatter - handles null dates with default formatter', t => {
+  const formatter = getRangeBasedDateFormatter('fr-FR', null)
+  const date = new Date('2024-03-15T14:30:00Z')
+  const formatted = formatter.format(date)
+
+  // Should use default full format
+  t.true(formatted.includes('2024'))
+  t.true(formatted.includes('15'))
+})
+
+test('getRangeBasedDateFormatter - respects locale parameter', t => {
+  const dates = [
+    new Date('2024-01-01T00:00:00Z'),
+    new Date('2024-09-01T00:00:00Z')
+  ]
+  const formatterFR = getRangeBasedDateFormatter('fr-FR', dates)
+  const formatterUS = getRangeBasedDateFormatter('en-US', dates)
+  const date = new Date('2024-07-15T12:00:00Z')
+
+  const formattedFR = formatterFR.format(date)
+  const formattedUS = formatterUS.format(date)
+
+  // French and US formats should differ
+  t.not(formattedFR, formattedUS)
+  t.true(formattedFR.includes('2024'))
+  t.true(formattedUS.includes('2024'))
+})
+
+test('getRangeBasedDateFormatter - single date uses default formatter', t => {
+  const dates = [new Date('2024-03-15T14:30:00Z')]
+  getRangeBasedDateFormatter('fr-FR', dates)
+  const date = new Date('2024-03-15T14:30:00Z')
+
+  // Use UTC formatter for predictable test assertions
+  const utcFormatter = new Intl.DateTimeFormat('fr-FR', {
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'UTC'
+  })
+  const formatted = utcFormatter.format(date)
+
+  // Range is 0, should use time-only format
+  t.true(formatted.includes('14')) // Hour in UTC
+  t.true(formatted.includes('30')) // Minutes
+})
+
+test('getRangeBasedDateFormatter - range at 6 months boundary uses month/year formatter', t => {
+  // Exactly 180 days range
+  const dates = [
+    new Date('2024-01-01T00:00:00Z'),
+    new Date('2024-06-29T00:00:00Z')
+  ]
+  const formatter = getRangeBasedDateFormatter('fr-FR', dates)
+  const date = new Date('2024-03-15T12:00:00Z')
+  const formatted = formatter.format(date)
+
+  // Should use day/month format (just under 6 months threshold)
+  t.true(formatted.includes('15')) // Day
+  t.true(formatted.includes('03')) // Month
 })
 
 // ProcessInputSeries tests

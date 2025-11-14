@@ -615,3 +615,106 @@ export const EnglishLocale = {
     }
   }
 }
+
+// Range-based date formatting examples
+export const IntraDayRange = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'Plage de moins d\'une journée - affiche uniquement l\'heure (HH:mm). Les labels de temps uniquement sont autorisés seulement quand la plage est < 24h.'
+      }
+    }
+  },
+  args: {
+    locale: 'fr-FR',
+    series: [
+      buildSerie({
+        id: 'temperature',
+        label: 'Température (°C)',
+        axis: 'left',
+        color: '#2563eb',
+        base: 18,
+        amplitude: 3,
+        threshold: 20
+      })
+    ]
+  }
+}
+
+export const MonthlyRange = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'Plage de 30 jours - affiche le jour et le mois (dd/MM). Format utilisé pour les plages entre 1 jour et 6 mois.'
+      }
+    }
+  },
+  args: {
+    locale: 'fr-FR',
+    series: [
+      {
+        id: 'temperature',
+        label: 'Température (°C)',
+        axis: 'left',
+        color: '#2563eb',
+        data: Array.from({length: 30}, (_, index) => ({
+          x: new Date(start + (index * 24 * hour)),
+          y: 18 + (Math.sin(index / 5) * 3)
+        })),
+        threshold: 20
+      }
+    ]
+  }
+}
+
+export const YearlyRange = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'Plage de 12 mois - affiche le mois et l\'année (MMM yyyy). Format utilisé pour les plages entre 6 mois et 1 an.'
+      }
+    }
+  },
+  args: {
+    locale: 'fr-FR',
+    series: [
+      {
+        id: 'consommation',
+        label: 'Consommation (m³)',
+        axis: 'left',
+        color: '#16a34a',
+        data: Array.from({length: 12}, (_, index) => ({
+          x: new Date(2024, index, 1),
+          y: 1200 + (Math.sin(index / 2) * 200)
+        })),
+        threshold: 1300
+      }
+    ]
+  }
+}
+
+export const MultiYearRange = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'Plage de plusieurs années - affiche uniquement l\'année (yyyy). Format utilisé pour les plages > 1 an.'
+      }
+    }
+  },
+  args: {
+    locale: 'fr-FR',
+    series: [
+      {
+        id: 'consommation',
+        label: 'Consommation annuelle (m³)',
+        axis: 'left',
+        color: '#16a34a',
+        data: Array.from({length: 10}, (_, index) => ({
+          x: new Date(2015 + index, 0, 1),
+          y: 12_000 + (index * 500) + (Math.random() * 1000)
+        })),
+        threshold: 15_000
+      }
+    ]
+  }
+}
