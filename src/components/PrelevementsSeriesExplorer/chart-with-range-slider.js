@@ -58,18 +58,30 @@ const ChartWithRangeSlider = ({
     onRangeChange?.(event, value, activeThumb)
   }, [onRangeChange])
 
-  if (series.length === 0) {
-    return null
-  }
+  const hasChartData = series.length > 0
 
   return (
     <Box className='flex flex-col gap-4'>
-      <Box sx={{minHeight: minChartHeight}}>
-        <TimeSeriesChart
-          series={series}
-          {...resolvedChartProps}
-        />
-      </Box>
+      {hasChartData ? (
+        <Box sx={{minHeight: minChartHeight}}>
+          <TimeSeriesChart
+            series={series}
+            {...resolvedChartProps}
+          />
+        </Box>
+      ) : (
+        <Box sx={{
+          minHeight: minChartHeight,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
+        >
+          <Typography variant='body2' color='text.secondary'>
+            Aucune donnée disponible sur la période sélectionnée
+          </Typography>
+        </Box>
+      )}
 
       {showRangeSlider && allDates.length > 1 && (
         <Box sx={{px: 2}}>

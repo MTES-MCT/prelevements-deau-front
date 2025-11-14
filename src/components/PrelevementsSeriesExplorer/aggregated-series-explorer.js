@@ -418,7 +418,10 @@ const AggregatedSeriesExplorer = ({
       return null
     }
 
-    if (!isLoading && !error && chartSeries.length > 0) {
+    // Always show the slider if there's data available (even if not in visible range)
+    const hasAnyData = !isLoading && !error && allDates.length > 0
+
+    if (hasAnyData) {
       return (
         <Box sx={{minHeight: 360}}>
           <ChartWithRangeSlider
@@ -452,7 +455,7 @@ const AggregatedSeriesExplorer = ({
           <Alert severity='error' description={error} />
         )}
 
-        {!isLoading && !error && chartSeries.length === 0 && (
+        {!isLoading && !error && allDates.length === 0 && (
           <Alert severity='info' description={noDataMessage} />
         )}
       </Box>
