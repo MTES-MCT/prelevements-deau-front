@@ -78,19 +78,14 @@ const Page = async ({params}) => {
   const documents = await getDocumentsFromPreleveur(id)
   const exploitations = await getExploitationFromPreleveur(id)
   const seriesOptions = await getAggregatedSeriesOptions({preleveurId: id})
+  const pointsPrelevement = []
 
   const exploitationsWithPoints = await Promise.all(exploitations.map(async exploitation => {
     const point = await getPointPrelevement(exploitation.point)
+    pointsPrelevement.push(point)
 
     return {...exploitation, point}
   }))
-
-  // Extract unique points for the map
-  const pointsForMap = exploitationsWithPoints
-    .map(exploitation => exploitation.point)
-    .filter((point, index, self) =>
-      point && self.findIndex(p => p?.id_point === point.id_point) === index
-    )
 
   const title = preleveur.raison_sociale
     ? `${preleveur.sigle ? preleveur.sigle + ' ' : ''}${preleveur.raison_sociale}`
@@ -130,11 +125,11 @@ const Page = async ({params}) => {
           ]}
         />
         <InfoCard preleveur={preleveur} />
-        {pointsForMap.length > 0 && (
+        {pointsPrelevement.length > 0 && (
           <Box className='h-[360px]'>
             <Map
-              points={pointsForMap}
-              filteredPoints={pointsForMap.map(p => p.id_point)}
+              points={pointsPrelevement}
+              filteredPoints={pointsPrelevement.map(p => p.id_point)}
               mapStyle='plan-ign'
             />
           </Box>
