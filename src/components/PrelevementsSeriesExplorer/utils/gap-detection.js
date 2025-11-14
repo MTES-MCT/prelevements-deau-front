@@ -134,10 +134,9 @@ export const identifySegmentBoundaries = data => {
   }
 
   const result = []
-  let segmentStart = null
   let segmentPoints = []
 
-  for (const [i, point] of data.entries()) {
+  for (const point of data) {
     // Gap point or null value - end current segment if exists
     if (point.isGapPoint || point.y === null || point.y === undefined) {
       // Mark boundaries of completed segment
@@ -153,7 +152,6 @@ export const identifySegmentBoundaries = data => {
         }
 
         segmentPoints = []
-        segmentStart = null
       }
 
       // Add gap point without mark
@@ -163,10 +161,6 @@ export const identifySegmentBoundaries = data => {
       })
     } else {
       // Valid data point - add to current segment
-      if (segmentStart === null) {
-        segmentStart = i
-      }
-
       segmentPoints.push(point)
     }
   }
