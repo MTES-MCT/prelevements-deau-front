@@ -191,8 +191,7 @@ const Page = () => {
             filteredPoints={filteredPoints}
             selectedPoint={selectedPointId ? points.find(point => selectedPointId === point.id_point) : null}
             handleSelectedPoint={handleSelectedPoint}
-            style={style}
-            setStyle={setStyle}
+            mapStyle={style}
           />
           <Box
             sx={{
