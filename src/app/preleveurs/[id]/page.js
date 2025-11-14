@@ -13,6 +13,7 @@ import {
 import {getAggregatedSeriesOptions} from '@/app/api/series.js'
 import DocumentsList from '@/components/documents/documents-list.js'
 import ExploitationsList from '@/components/exploitations/exploitations-list.js'
+import Map from '@/components/map/index.js'
 import SeriesExplorer from '@/components/points-prelevement/series-explorer.js'
 import EntityHeader from '@/components/ui/EntityHeader/index.js'
 import Icon from '@/components/ui/Icon/index.js'
@@ -84,6 +85,13 @@ const Page = async ({params}) => {
     return {...exploitation, point}
   }))
 
+  // Extract unique points for the map
+  const pointsForMap = exploitationsWithPoints
+    .map(exploitation => exploitation.point)
+    .filter((point, index, self) =>
+      point && self.findIndex(p => p?.id_point === point.id_point) === index
+    )
+
   const title = preleveur.raison_sociale
     ? `${preleveur.sigle ? preleveur.sigle + ' ' : ''}${preleveur.raison_sociale}`
     : (preleveur.civilite && preleveur.nom && preleveur.prenom
@@ -122,6 +130,15 @@ const Page = async ({params}) => {
           ]}
         />
         <InfoCard preleveur={preleveur} />
+        {pointsForMap.length > 0 && (
+          <Box className='h-[360px]'>
+            <Map
+              points={pointsForMap}
+              filteredPoints={pointsForMap.map(p => p.id_point)}
+              mapStyle='plan-ign'
+            />
+          </Box>
+        )}
         <SeriesExplorer preleveurId={preleveur.id_preleveur} seriesOptions={seriesOptions} />
         <ExploitationsList hidePreleveur exploitations={exploitationsWithPoints} preleveurs={[preleveur]} />
         <DocumentsList idPreleveur={id} documents={documents} />
