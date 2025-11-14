@@ -418,7 +418,7 @@ const AggregatedSeriesExplorer = ({
       return null
     }
 
-    // Always show the slider if there's data available (even if not in visible range)
+    // Always show the slider if there are any dates in the timeline (even if no data in visible range)
     const hasAnyData = !isLoading && !error && allDates.length > 0
 
     if (hasAnyData) {
