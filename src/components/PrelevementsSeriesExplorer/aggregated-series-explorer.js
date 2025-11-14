@@ -1,7 +1,7 @@
 'use client'
 
 import {
-  useCallback, useEffect, useMemo, useState
+  useCallback, useEffect, useMemo, useRef, useState
 } from 'react'
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
@@ -277,6 +277,9 @@ const AggregatedSeriesExplorer = ({
     [metadataList, providedSelectablePeriods]
   )
 
+  // Track if this is the initial mount to only initialize periods once
+  const isInitialMount = useRef(true)
+
   const initialPeriods = useMemo(() => {
     if (defaultPeriods && defaultPeriods.length > 0) {
       return defaultPeriods
@@ -285,20 +288,16 @@ const AggregatedSeriesExplorer = ({
     return extractDefaultPeriodsFromSeries(metadataList)
   }, [defaultPeriods, metadataList])
 
-  const initialPeriodsKey = useMemo(
-    () => JSON.stringify(initialPeriods ?? []),
-    [initialPeriods]
-  )
-
   const [selectedPeriods, setSelectedPeriods] = useState(initialPeriods)
 
+  // Only initialize periods on first mount, preserve user selection afterwards
   useEffect(() => {
-    if (initialPeriodsKey) {
-      setSelectedPeriods(JSON.parse(initialPeriodsKey))
-    } else {
-      setSelectedPeriods([])
+    if (isInitialMount.current && initialPeriods) {
+      setSelectedPeriods(initialPeriods)
+      isInitialMount.current = false
     }
-  }, [initialPeriodsKey])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handlePeriodChangeInternal = useCallback(periods => {
     setSelectedPeriods(periods)
