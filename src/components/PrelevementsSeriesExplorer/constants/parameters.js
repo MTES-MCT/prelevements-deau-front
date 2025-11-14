@@ -108,12 +108,13 @@ export const AGGREGATED_PARAMETERS = [
 }))
 
 export const FREQUENCY_OPTIONS = [
-  {value: '15 minutes', label: 'Tranches de 15 minutes'},
-  {value: '1 hour', label: 'Horaire'},
-  {value: '6 hours', label: 'Tranches de 6 heures'},
-  {value: '1 day', label: 'Quotidien'},
-  {value: '1 month', label: 'Mensuel'},
-  {value: '1 year', label: 'Annuel'}
+  {value: '15 minutes', label: '15 minutes'},
+  {value: '1 hour', label: '1 heure'},
+  {value: '6 hours', label: '6 heures'},
+  {value: '1 day', label: '1 jour'},
+  {value: '1 month', label: '1 mois'},
+  {value: '1 quarter', label: '1 trimestre'},
+  {value: '1 year', label: '1 an'}
 ]
 
 export const DEFAULT_AGGREGATION_FREQUENCY = '1 day'
@@ -147,49 +148,4 @@ export function getAvailableParametersFromSeries(series) {
   return AGGREGATED_PARAMETERS.filter(entry =>
     availableKeys.has(normalizeParameterKey(entry.parameter))
   )
-}
-
-export function getAutomaticFrequency(periods) {
-  if (!Array.isArray(periods) || periods.length === 0) {
-    return DEFAULT_AGGREGATION_FREQUENCY
-  }
-
-  let totalDays = 0
-
-  for (const period of periods) {
-    switch (period?.type) {
-      case 'year': {
-        totalDays += 365
-        break
-      }
-
-      case 'month': {
-        totalDays += 30
-        break
-      }
-
-      case 'day': {
-        totalDays += 1
-        break
-      }
-
-      default: {
-        break
-      }
-    }
-  }
-
-  if (totalDays <= 2) {
-    return '1 hour'
-  }
-
-  if (totalDays <= 60) {
-    return '1 day'
-  }
-
-  if (totalDays <= 365) {
-    return '1 week'
-  }
-
-  return '1 month'
 }

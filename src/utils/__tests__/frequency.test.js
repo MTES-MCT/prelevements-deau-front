@@ -10,12 +10,13 @@ import {
 
 // FREQUENCY_LABELS tests
 test('FREQUENCY_LABELS contains all expected frequency mappings', t => {
-  t.is(FREQUENCY_LABELS.size, 5)
+  t.is(FREQUENCY_LABELS.size, 6)
   t.is(FREQUENCY_LABELS.get('1 second'), '1 seconde')
   t.is(FREQUENCY_LABELS.get('1 minute'), '1 minute')
   t.is(FREQUENCY_LABELS.get('15 minutes'), '15 minutes')
   t.is(FREQUENCY_LABELS.get('1 hour'), '1 heure')
   t.is(FREQUENCY_LABELS.get('1 day'), '1 jour')
+  t.is(FREQUENCY_LABELS.get('1 quarter'), '1 trimestre')
 })
 
 // FREQUENCY_ORDER tests
@@ -25,6 +26,7 @@ test('FREQUENCY_ORDER has correct ordering from smallest to largest interval', t
   t.is(FREQUENCY_ORDER['15 minutes'], 3)
   t.is(FREQUENCY_ORDER['1 hour'], 4)
   t.is(FREQUENCY_ORDER['1 day'], 5)
+  t.is(FREQUENCY_ORDER['1 quarter'], 6)
 })
 
 test('FREQUENCY_ORDER maintains ascending order', t => {
@@ -40,6 +42,7 @@ test('formatFrequencyLabel formats known frequencies to French labels', t => {
   t.is(formatFrequencyLabel('15 minutes'), '15 minutes')
   t.is(formatFrequencyLabel('1 hour'), '1 heure')
   t.is(formatFrequencyLabel('1 day'), '1 jour')
+  t.is(formatFrequencyLabel('1 quarter'), '1 trimestre')
 })
 
 test('formatFrequencyLabel returns original value for unknown frequencies', t => {
@@ -60,6 +63,7 @@ test('getFrequencyOrder returns correct order for known frequencies', t => {
   t.is(getFrequencyOrder('15 minutes'), 3)
   t.is(getFrequencyOrder('1 hour'), 4)
   t.is(getFrequencyOrder('1 day'), 5)
+  t.is(getFrequencyOrder('1 quarter'), 6)
 })
 
 test('getFrequencyOrder returns 999 for unknown frequencies', t => {
@@ -71,8 +75,8 @@ test('getFrequencyOrder returns 999 for unknown frequencies', t => {
 
 // SortFrequencies tests
 test('sortFrequencies sorts frequencies in ascending order (most to least frequent)', t => {
-  const unsorted = ['1 day', '1 second', '1 hour', '15 minutes', '1 minute']
-  const expected = ['1 second', '1 minute', '15 minutes', '1 hour', '1 day']
+  const unsorted = ['1 day', '1 second', '1 hour', '15 minutes', '1 minute', '1 quarter']
+  const expected = ['1 second', '1 minute', '15 minutes', '1 hour', '1 day', '1 quarter']
   t.deepEqual(sortFrequencies(unsorted), expected)
 })
 
