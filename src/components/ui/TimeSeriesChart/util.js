@@ -42,7 +42,7 @@ export const getDateFormatter = locale => new Intl.DateTimeFormat(locale, {
  * to avoid ambiguous ticks like multiple "00:00" across different days.
  *
  * @param {string} locale - Locale string (e.g., 'fr-FR', 'en-US')
- * @param {Date[]} dates - Array of dates representing the visible x-axis range
+ * @param {Date[]} dates - Array of dates representing the visible x-axis data points in the chart
  * @returns {Intl.DateTimeFormat} Configured date formatter based on range
  */
 export const getRangeBasedDateFormatter = (locale, dates) => {
