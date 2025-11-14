@@ -36,6 +36,75 @@ export const getDateFormatter = locale => new Intl.DateTimeFormat(locale, {
   minute: '2-digit'
 })
 
+/**
+ * Determines appropriate date formatter based on the visible time range
+ * Format selection ensures clarity: time-only labels are ONLY used when range < 1 day
+ * to avoid ambiguous ticks like multiple "00:00" across different days.
+ *
+ * @param {string} locale - Locale string (e.g., 'fr-FR', 'en-US')
+ * @param {Date[]} dates - Array of dates representing the visible x-axis data points in the chart
+ * @returns {Intl.DateTimeFormat} Configured date formatter based on range
+ */
+export const getRangeBasedDateFormatter = (locale, dates) => {
+  if (!dates || dates.length === 0) {
+    // Default to full date/time format if no dates provided
+    return getDateFormatter(locale)
+  }
+
+  // Calculate visible range: difference between min and max dates
+  // Use single loop instead of Math.min/max with map for better performance
+  let minTime = Number.POSITIVE_INFINITY
+  let maxTime = Number.NEGATIVE_INFINITY
+  for (const date of dates) {
+    const time = date.getTime()
+    if (time < minTime) {
+      minTime = time
+    }
+
+    if (time > maxTime) {
+      maxTime = time
+    }
+  }
+
+  const rangeMs = maxTime - minTime
+
+  // Time range thresholds in milliseconds
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000
+  const SIX_MONTHS_MS = 180 * ONE_DAY_MS // Approximately 6 months
+  const ONE_YEAR_MS = 365 * ONE_DAY_MS
+
+  // Range > 1 year → show year only (yyyy)
+  if (rangeMs > ONE_YEAR_MS) {
+    return new Intl.DateTimeFormat(locale, {
+      year: 'numeric'
+    })
+  }
+
+  // Range between 6 months and 1 year → show month + year (MMM yyyy)
+  if (rangeMs > SIX_MONTHS_MS) {
+    return new Intl.DateTimeFormat(locale, {
+      year: 'numeric',
+      month: 'short'
+    })
+  }
+
+  // Range between 1 day and 6 months → show day and month (dd/MM)
+  if (rangeMs >= ONE_DAY_MS) {
+    return new Intl.DateTimeFormat(locale, {
+      day: '2-digit',
+      month: '2-digit'
+    })
+  }
+
+  // Range < 1 day → show time only (HH:mm)
+  // This is the ONLY case where time-only labels are allowed
+  return new Intl.DateTimeFormat(locale, {
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
 const average = (points, accessor) => {
   if (points.length === 0) {
     return 0
@@ -209,7 +278,9 @@ export const processInputSeries = (inputSeries, options = {}) => {
     .map(point => ({
       x: toTimestamp(point.x),
       y: point.y,
-      meta: point.meta ?? null
+      meta: point.meta ?? null,
+      // Preserve showMark property if present (used for segment boundary detection)
+      showMark: point.showMark
     }))
     .sort((a, b) => a.x - b.x)
 
@@ -324,6 +395,7 @@ export const alignSeriesToXAxis = (processedSeries, xValues, xAxisDates, axisSta
       const y = entry ? entry.y : null
       const meta = entry ? entry.meta : null
       const synthetic = Boolean(entry?.synthetic)
+      const showMark = entry?.showMark
       const thresholdValue = processed.thresholdEvaluator(xValue)
 
       // Update axis statistics
@@ -345,6 +417,7 @@ export const alignSeriesToXAxis = (processedSeries, xValues, xAxisDates, axisSta
         y,
         meta,
         synthetic,
+        showMark,
         axisId: processed.axisId
       }
       values[index] = y
@@ -472,10 +545,17 @@ export const buildSegments = (alignedData, xValues, options) => {
             return false
           }
 
+          // If showMark property is explicitly set (from segment boundary detection), use it
+          if (typeof point.showMark === 'boolean') {
+            return point.showMark
+          }
+
+          // Show marks for points with metadata (comments/alerts)
           if (metas[index]) {
             return true
           }
 
+          // Otherwise use exposeAllMarks setting
           return exposeAllMarks
         },
         valueFormatter(value) {
@@ -539,10 +619,19 @@ export const buildPlainSeries = (alignedData, options) => {
       label: undefined,
       connectNulls: false,
       showMark({index}) {
+        const point = data.pointsWithMeta[index]
+
+        // If showMark property is explicitly set (from segment boundary detection), use it
+        if (point && typeof point.showMark === 'boolean') {
+          return point.showMark
+        }
+
+        // Show marks for points with metadata (comments/alerts)
         if (data.metas[index]) {
           return true
         }
 
+        // Otherwise use exposeAllMarks setting
         return exposeAllMarks
       },
       valueFormatter(value) {
@@ -768,8 +857,15 @@ export const buildSeriesModel = ({
   }
 }
 
-export const axisFormatterFactory = locale => {
-  const formatter = getDateFormatter(locale)
+/**
+ * Creates a value formatter for x-axis tick labels based on visible time range
+ * The date format adapts to the range to ensure clarity and avoid ambiguity
+ * @param {string} locale - Locale string
+ * @param {Date[]} dates - Array of dates representing visible x-axis range
+ * @returns {Function} Formatter function for date values
+ */
+export const axisFormatterFactory = (locale, dates) => {
+  const formatter = getRangeBasedDateFormatter(locale, dates)
   return value => formatter.format(value instanceof Date ? value : new Date(value))
 }
 

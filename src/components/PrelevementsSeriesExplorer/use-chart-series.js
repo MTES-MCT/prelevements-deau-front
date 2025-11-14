@@ -5,6 +5,7 @@
 import {useMemo} from 'react'
 
 import {FALLBACK_PARAMETER_COLOR} from './constants/colors.js'
+import {processTimeSeriesData} from './utils/gap-detection.js'
 
 /**
  * Transforms loaded values into chart-ready series format
@@ -76,6 +77,11 @@ export function useChartSeries({
         return null
       }
 
+      // Apply gap detection to break line continuity when temporal gaps are significant
+      // and mark segment boundaries (first/last points) for visible markers
+      const {frequency} = param
+      const processedData = frequency ? processTimeSeriesData(data, frequency) : data
+
       const axis = param.unit && unitToAxis.has(param.unit)
         ? unitToAxis.get(param.unit)
         : 'left'
@@ -88,7 +94,7 @@ export function useChartSeries({
         label,
         axis,
         color,
-        data
+        data: processedData
       }
     }).filter(Boolean)
   }, [

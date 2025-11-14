@@ -58,14 +58,16 @@ import MetasList from '@/components/ui/MetasList/index.js'
 
 /**
  * Custom hook to build and memoize the chart model
- * @param {Series[]} series - Array of series to display
- * @param {string} locale - Locale for formatting (e.g., 'fr-FR', 'en-US')
- * @param {Object} theme - MUI theme object
- * @param {boolean} exposeAllMarks - Whether to expose all data point marks
+ * @param {Object} params - Chart model parameters
+ * @param {Series[]} params.series - Array of series to display
+ * @param {string} params.locale - Locale for formatting (e.g., 'fr-FR', 'en-US')
+ * @param {Object} params.theme - MUI theme object
+ * @param {boolean} params.exposeAllMarks - Whether to expose all data point marks
+ * @param {Object} params.options - Additional options including frequency
  * @returns {Object} Chart model with processed series, axes, and annotations
  */
 
-const useChartModel = (series, locale, theme, exposeAllMarks, options) => useMemo(
+const useChartModel = ({series, locale, theme, exposeAllMarks, options}) => useMemo(
   () => buildSeriesModel({
     series,
     locale,
@@ -88,14 +90,32 @@ const useChartModel = (series, locale, theme, exposeAllMarks, options) => useMem
  * @param {Function} props.getPointMeta - Function to retrieve metadata for a point
  * @param {Function} props.getSegmentOrigin - Function to retrieve segment origin data
  * @param {Object} props.translations - Translation strings
+ * @param {string} props.locale - Locale string for date formatting
  * @returns {JSX.Element|null} Tooltip content or null if no data
  */
-const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, getSegmentOrigin, translations: t}) => {
+const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, getSegmentOrigin, translations: t, locale}) => {
+  // Tooltip ALWAYS shows full date and time, regardless of x-axis tick format
+  // This ensures users can see the complete timestamp even when ticks show abbreviated formats
+  const tooltipDateFormatter = useMemo(() => {
+    const formatter = new Intl.DateTimeFormat(locale, {
+      hour12: false,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+    return value => formatter.format(value instanceof Date ? value : new Date(value))
+  }, [locale])
+
   if (dataIndex === null || dataIndex === undefined) {
     return null
   }
 
-  const axisFormatter = axis.valueFormatter ?? (value => value?.toString?.() ?? '')
+  const defaultFormatter = value => value?.toString?.() ?? ''
+  const axisFormatter = axis.scaleType === 'time'
+    ? tooltipDateFormatter
+    : (axis.valueFormatter || defaultFormatter)
 
   // Collect all parameters (series values) for MetasList
   const parameters = []
@@ -425,13 +445,20 @@ const TimeSeriesChart = ({
     maxPointsBeforeDecimation
   }), [enableThresholds, enableDecimation, decimationTarget, maxPointsBeforeDecimation])
 
-  const chartModel = useChartModel(series, locale, theme, Boolean(onPointClick), chartOptions)
+  const chartModel = useChartModel({
+    series,
+    locale,
+    theme,
+    exposeAllMarks: Boolean(onPointClick),
+    options: chartOptions
+  })
 
   const xAxis = useMemo(() => [{
     id: X_AXIS_ID,
     scaleType: 'time',
     data: chartModel.xAxisDates,
-    valueFormatter: axisFormatterFactory(locale),
+    // X-axis date format adapts to the visible time range (min to max)
+    valueFormatter: axisFormatterFactory(locale, chartModel.xAxisDates),
     tickLabelStyle: {fontSize: 12}
   }], [chartModel.xAxisDates, locale])
 
@@ -551,6 +578,7 @@ const TimeSeriesChart = ({
                 getPointMeta={getPointMeta}
                 getSegmentOrigin={getSegmentOrigin}
                 translations={t}
+                locale={locale}
               />
             )
           }}

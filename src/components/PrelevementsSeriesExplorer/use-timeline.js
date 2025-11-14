@@ -3,7 +3,7 @@
  */
 
 import {
-  useMemo, useState, useEffect, useCallback
+  useMemo, useState, useEffect, useCallback, useRef
 } from 'react'
 
 import {format, addDays} from 'date-fns'
@@ -64,14 +64,29 @@ export function useTimeline(timelineSamples, showRangeSlider) {
     return expanded
   }, [dayDates])
 
+  // Track if this is the initial mount to only initialize range once
+  const isInitialMount = useRef(true)
+
   // Range indices refer to positions within sliderDates, not the raw timelineSamples.
   const [rangeIndices, setRangeIndices] = useState([0, 0])
 
-  // Reset range when dates change
+  // Initialize range on first mount only, preserve user selection afterwards
   useEffect(() => {
     if (sliderDates.length > 0) {
-      const defaultEnd = Math.max(1, sliderDates.length - 1)
-      setRangeIndices([0, defaultEnd])
+      if (isInitialMount.current) {
+        const defaultEnd = Math.max(1, sliderDates.length - 1)
+        setRangeIndices([0, defaultEnd])
+        isInitialMount.current = false
+      } else {
+        // Adjust indices if they're out of bounds after data changes
+        setRangeIndices(prev => {
+          const maxIndex = sliderDates.length - 1
+          return [
+            Math.min(prev[0], maxIndex),
+            Math.min(prev[1], maxIndex)
+          ]
+        })
+      }
     }
   }, [sliderDates.length])
 
