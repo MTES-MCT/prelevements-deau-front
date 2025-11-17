@@ -3,7 +3,6 @@
 import test from 'ava'
 import {addDays, startOfDay} from 'date-fns'
 
-import {normalizeParameterKey} from './constants/colors.js'
 import {
   buildCalendarEntriesFromMetadata,
   fillDateGaps,
@@ -22,6 +21,7 @@ import {
 } from './utils/index.js'
 
 import {STATIC_CALENDAR_STATUS_COLORS} from '@/lib/calendar-colors.js'
+import {normalizeString} from '@/utils/string.js'
 import {parseLocalDateTime} from '@/utils/time.js'
 
 // Calendar status colors for testing (use centralized values)
@@ -480,25 +480,25 @@ test('computeSliderMarks formats labels correctly', t => {
   t.true(result[1].label.includes('janv') || result[1].label.includes('15'))
 })
 
-// normalizeParameterKey tests
-test('normalizeParameterKey normalizes accents, case and spacing', t => {
+// normalizeString tests
+test('normalizeString normalizes accents, case and spacing', t => {
   const input = '  Volume   Prélevé  '
-  const result = normalizeParameterKey(input)
+  const result = normalizeString(input)
 
   t.is(result, 'volume preleve')
 })
 
-test('normalizeParameterKey removes apostrophes and diacritics', t => {
+test('normalizeString removes apostrophes and diacritics', t => {
   const input = 'Relevé d’index de Compteur'
-  const result = normalizeParameterKey(input)
+  const result = normalizeString(input)
 
   t.is(result, 'releve dindex de compteur')
 })
 
-test('normalizeParameterKey returns empty string for falsy values', t => {
-  t.is(normalizeParameterKey(undefined), '')
-  t.is(normalizeParameterKey(null), '')
-  t.is(normalizeParameterKey(''), '')
+test('normalizeString returns empty string for falsy values', t => {
+  t.is(normalizeString(undefined), '')
+  t.is(normalizeString(null), '')
+  t.is(normalizeString(''), '')
 })
 
 // TransformSeriesToData tests
