@@ -1,13 +1,36 @@
-import {normalizeParameterKey} from './colors.js'
+import {normalizeString} from '@/utils/string.js'
 
 const VOLUME_OPERATORS = Object.freeze(['sum', 'mean', 'min', 'max'])
 const STANDARD_OPERATORS = Object.freeze(['mean', 'min', 'max'])
+
+export const MAX_DIFFERENT_UNITS = 2
 
 export const OPERATOR_LABELS = {
   sum: 'Somme',
   mean: 'Moyenne',
   min: 'Minimum',
   max: 'Maximum'
+}
+
+/**
+ * Default translations for UI strings
+ */
+export const DEFAULT_TRANSLATIONS = {
+  periodLabel: 'Période d\'observation',
+  parameterLabel: 'Paramètres à afficher',
+  parameterHint: 'Vous pouvez sélectionner jusqu’à deux unités différentes. Les options incompatibles sont grisées.',
+  parameterPlaceholder: 'Choisir des paramètres...',
+  operatorLabel: 'Opérateur',
+  operatorHint: 'Choisissez la fonction appliquée aux valeurs agrégées.',
+  operatorPlaceholder: 'Sélectionner un opérateur',
+  frequencyLabel: 'Pas de temps',
+  frequencyHint: 'Choisissez la fréquence d\'agrégation des données.',
+  frequencyPlaceholder: 'Sélectionner un pas de temps',
+  noDataMessage: 'Aucune donnée disponible pour la période sélectionnée',
+  rangeLabel: 'Affiner la plage temporelle',
+  loadingData: 'Chargement des données...',
+  loadError: 'Erreur de chargement',
+  selectParametersMessage: 'Sélectionnez des paramètres pour afficher le graphique'
 }
 
 export const AGGREGATED_PARAMETERS = [
@@ -124,9 +147,9 @@ export function getParameterMetadata(parameterName) {
     return undefined
   }
 
-  const normalized = normalizeParameterKey(parameterName)
+  const normalized = normalizeString(parameterName)
   return AGGREGATED_PARAMETERS.find(
-    entry => normalizeParameterKey(entry.parameter) === normalized
+    entry => normalizeString(entry.parameter) === normalized
   )
 }
 
@@ -137,7 +160,7 @@ export function getAvailableParametersFromSeries(series) {
 
   const availableKeys = new Set(
     series
-      .map(item => normalizeParameterKey(item?.parameter ?? item?.parametre))
+      .map(item => normalizeString(item?.parameter ?? item?.parametre))
       .filter(Boolean)
   )
 
@@ -146,6 +169,6 @@ export function getAvailableParametersFromSeries(series) {
   }
 
   return AGGREGATED_PARAMETERS.filter(entry =>
-    availableKeys.has(normalizeParameterKey(entry.parameter))
+    availableKeys.has(normalizeString(entry.parameter))
   )
 }

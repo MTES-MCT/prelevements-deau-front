@@ -10,14 +10,16 @@ import {Box} from '@mui/material'
 
 import ChartWithRangeSlider from './chart-with-range-slider.js'
 import {
-  DEFAULT_TRANSLATIONS,
   FALLBACK_PARAMETER_COLOR,
-  PARAMETER_COLOR_MAP,
-  normalizeParameterKey
+  PARAMETER_COLOR_MAP
 } from './constants/colors.js'
-import {FREQUENCY_OPTIONS} from './constants/parameters.js'
+import {
+  FREQUENCY_OPTIONS, getParameterMetadata, MAX_DIFFERENT_UNITS,
+  DEFAULT_TRANSLATIONS
+} from './constants/parameters.js'
 import {formatPeriodLabel, getViewTypeLabel} from './formatters.js'
 import LoadingState from './loading-state.js'
+import ParameterSelector from './parameter-selector.js'
 import {useChartSeries} from './use-chart-series.js'
 import {useTimeline} from './use-timeline.js'
 import {
@@ -31,20 +33,10 @@ import {buildDailyAndTimelineData} from '@/components/PrelevementsSeriesExplorer
 import CalendarGrid from '@/components/ui/CalendarGrid/index.js'
 import PeriodSelectorHeader from '@/components/ui/PeriodSelectorHeader/index.js'
 import {useManagedSelection} from '@/hook/use-managed-selection.js'
+import {normalizeString} from '@/utils/string.js'
 import {parseLocalDateTime} from '@/utils/time.js'
 
 const DEFAULT_PARAMETER = 'volume prélevé'
-
-const TRANSLATIONS = {
-  ...DEFAULT_TRANSLATIONS,
-  parameterHint: 'Sélectionnez un paramètre à afficher.',
-  operatorLabel: 'Opérateur',
-  operatorHint: 'Choisissez la fonction appliquée aux valeurs agrégées.',
-  operatorPlaceholder: 'Sélectionner un opérateur',
-  frequencyLabel: 'Pas de temps',
-  frequencyHint: 'Choisissez la fréquence d\'agrégation des données.',
-  frequencyPlaceholder: 'Sélectionner un pas de temps'
-}
 
 const normalizeParameterOptions = options => {
   if (!options) {
@@ -60,7 +52,7 @@ const normalizeParameterOptions = options => {
       if (typeof option === 'string') {
         return {
           value: option,
-          label: option
+          content: option
         }
       }
 
@@ -72,8 +64,7 @@ const normalizeParameterOptions = options => {
 
         return {
           value,
-          label: option.label ?? option.parameter ?? value,
-          description: option.description ?? option.hint,
+          content: option.label ?? option.parameter ?? value,
           disabled: option.disabled ?? false
         }
       }
@@ -116,14 +107,6 @@ const normalizeOperatorOptions = options => {
       return null
     })
     .filter(Boolean)
-}
-
-const normalizeMetadataList = series => {
-  if (series?.metadata) {
-    return [series.metadata]
-  }
-
-  return []
 }
 
 /**
@@ -183,8 +166,8 @@ const filterValuesByDateRange = (values, dateRange) => {
 const AggregatedSeriesExplorer = ({
   series,
   parameters,
-  selectedParameter: selectedParameterProp,
-  defaultParameter = DEFAULT_PARAMETER,
+  selectedParameters: selectedParametersProp,
+  defaultParameters,
   operatorOptions,
   selectedOperator: selectedOperatorProp,
   defaultOperator,
@@ -207,15 +190,15 @@ const AggregatedSeriesExplorer = ({
   isLoading = false,
   error = null
 }) => {
-  const t = {...TRANSLATIONS, ...customTranslations}
+  const t = {...DEFAULT_TRANSLATIONS, ...customTranslations}
 
   const parameterOptionsNormalized = useMemo(
     () => normalizeParameterOptions(parameters),
     [parameters]
   )
 
-  const handleParameterChange = useCallback(parameter => {
-    onFiltersChange?.({parameter})
+  const handleParametersChange = useCallback(parameters => {
+    onFiltersChange?.({parameters})
   }, [onFiltersChange])
 
   const handleOperatorChange = useCallback(operator => {
@@ -226,18 +209,108 @@ const AggregatedSeriesExplorer = ({
     onFiltersChange?.({frequency})
   }, [onFiltersChange])
 
-  const {
-    options: parameterOptions,
-    currentValue: currentParameter,
-    handleChange: handleParameterSelection
-  } = useManagedSelection({
-    options: parameterOptionsNormalized,
-    defaultValue: defaultParameter,
-    selectedValue: selectedParameterProp,
-    onChange: handleParameterChange,
-    metadataValue: series?.metadata?.parameter,
-    fallbackDefault: DEFAULT_PARAMETER
+  // Derive default parameters from props or metadata
+  const derivedDefaultParameters = useMemo(() => {
+    if (defaultParameters && Array.isArray(defaultParameters) && defaultParameters.length > 0) {
+      return defaultParameters
+    }
+
+    // Try to find 'volume prélevé' as default
+    const volumeParam = parameterOptionsNormalized.find(
+      opt => opt.value?.toLowerCase() === DEFAULT_PARAMETER.toLowerCase()
+    )
+    if (volumeParam) {
+      return [volumeParam.value]
+    }
+
+    // Fallback to first available parameter
+    if (parameterOptionsNormalized.length > 0) {
+      return [parameterOptionsNormalized[0].value]
+    }
+
+    return []
+  }, [defaultParameters, parameterOptionsNormalized])
+
+  // Manage selected parameters as an array
+  const [currentParameters, setCurrentParameters] = useState(() => {
+    if (selectedParametersProp && Array.isArray(selectedParametersProp)) {
+      return selectedParametersProp
+    }
+
+    return derivedDefaultParameters
   })
+
+  // Update when props or metadata change
+  useEffect(() => {
+    if (selectedParametersProp && Array.isArray(selectedParametersProp)) {
+      setCurrentParameters(selectedParametersProp)
+    }
+  }, [selectedParametersProp])
+
+  const handleParameterSelection = useCallback(newSelection => {
+    if (!Array.isArray(newSelection) || newSelection.length === 0) {
+      return
+    }
+
+    // Filter out null values
+    const filteredSelection = newSelection.filter(value => value !== null && value !== undefined)
+    if (filteredSelection.length === 0) {
+      return
+    }
+
+    // Get units for selected parameters
+    const selectedUnits = new Set(
+      filteredSelection
+        .map(paramValue => {
+          const option = parameterOptionsNormalized.find(opt => opt.value === paramValue)
+          const metadata = getParameterMetadata(paramValue)
+          return option?.unit ?? metadata?.unit
+        })
+        .filter(Boolean)
+    )
+
+    // Limit to MAX_DIFFERENT_UNITS different units maximum
+    if (selectedUnits.size > MAX_DIFFERENT_UNITS) {
+      return
+    }
+
+    setCurrentParameters(filteredSelection)
+    handleParametersChange(filteredSelection)
+  }, [parameterOptionsNormalized, handleParametersChange])
+
+  // Build parameter options with disabled state based on unit constraints
+  const parameterOptions = useMemo(() => {
+    // Get units of currently selected parameters
+    const selectedUnits = new Set(
+      currentParameters
+        .map(paramValue => {
+          const option = parameterOptionsNormalized.find(opt => opt.value === paramValue)
+          const metadata = getParameterMetadata(paramValue)
+          return option?.unit ?? metadata?.unit
+        })
+        .filter(Boolean)
+    )
+
+    // If we haven't reached the limit, all options are enabled
+    if (selectedUnits.size < MAX_DIFFERENT_UNITS) {
+      return parameterOptionsNormalized
+    }
+
+    // If we've reached the limit, disable options with different units
+    return parameterOptionsNormalized.map(option => {
+      const metadata = getParameterMetadata(option.value)
+      const optionUnit = option.unit ?? metadata?.unit
+
+      // Enable if already selected or if unit matches selected units
+      const isEnabled = currentParameters.includes(option.value)
+        || selectedUnits.has(optionUnit)
+
+      return {
+        ...option,
+        disabled: !isEnabled
+      }
+    })
+  }, [parameterOptionsNormalized, currentParameters])
 
   const operatorOptionsNormalized = useMemo(
     () => normalizeOperatorOptions(operatorOptions),
@@ -252,8 +325,7 @@ const AggregatedSeriesExplorer = ({
     options: operatorOptionsNormalized,
     defaultValue: defaultOperator,
     selectedValue: selectedOperatorProp,
-    onChange: handleOperatorChange,
-    metadataValue: series?.metadata?.operator
+    onChange: handleOperatorChange
   })
 
   const {
@@ -263,14 +335,33 @@ const AggregatedSeriesExplorer = ({
     options: frequencyOptions,
     defaultValue: defaultFrequency,
     selectedValue: selectedFrequencyProp,
-    onChange: handleFrequencyChange,
-    metadataValue: series?.metadata?.frequency
+    onChange: handleFrequencyChange
   })
 
-  const metadataList = useMemo(
-    () => normalizeMetadataList(series),
-    [series]
-  )
+  // Series is expected to be a Map of parameter -> series data
+  const seriesMap = useMemo(() => {
+    if (series instanceof Map) {
+      return series
+    }
+
+    return new Map()
+  }, [series])
+
+  const metadataList = useMemo(() => {
+    // If we have a Map of series, extract all metadata
+    if (seriesMap.size > 0) {
+      const metaList = []
+      for (const paramSeries of seriesMap.values()) {
+        if (paramSeries?.metadata) {
+          metaList.push(paramSeries.metadata)
+        }
+      }
+
+      return metaList
+    }
+
+    return []
+  }, [seriesMap])
 
   const selectablePeriods = useMemo(
     () => providedSelectablePeriods ?? calculateSelectablePeriodsFromSeries(metadataList),
@@ -309,61 +400,57 @@ const AggregatedSeriesExplorer = ({
     [selectedPeriods]
   )
 
-  const parameterLabel = useMemo(() => {
-    if (series?.metadata?.parameter) {
-      return series.metadata.parameter
-    }
-
-    return currentParameter || DEFAULT_PARAMETER
-  }, [series, currentParameter])
-
+  // Build parameter map from current selection and series metadata
   const parameterMap = useMemo(() => {
-    if (!parameterLabel) {
-      return new Map()
-    }
+    const map = new Map()
 
-    const meta = series?.metadata ?? {}
-    const normalizedKey = normalizeParameterKey(meta.parameter ?? parameterLabel)
-    const color = meta.color
-      ?? PARAMETER_COLOR_MAP.get(normalizedKey)
-      ?? FALLBACK_PARAMETER_COLOR
-    const valueType = meta.valueType ?? meta.operator
+    for (const paramValue of currentParameters) {
+      const paramSeries = seriesMap.get(paramValue)
+      const metadata = getParameterMetadata(paramValue)
+      const normalizedKey = normalizeString(paramValue)
 
-    return new Map([
-      [parameterLabel, {
-        parameter: meta.parameter ?? parameterLabel,
-        parameterLabel,
-        unit: meta.unit,
+      // Use series metadata if available, otherwise use static metadata
+      const meta = paramSeries?.metadata ?? {}
+      const color = meta.color
+        ?? PARAMETER_COLOR_MAP.get(normalizedKey)
+        ?? FALLBACK_PARAMETER_COLOR
+
+      map.set(paramValue, {
+        parameter: meta.parameter ?? paramValue,
+        parameterLabel: paramValue,
+        unit: meta.unit ?? metadata?.unit ?? '',
         color,
         frequency: meta.frequency,
-        valueType
-      }]
-    ])
-  }, [series, parameterLabel])
+        valueType: meta.valueType ?? meta.operator
+      })
+    }
+
+    return map
+  }, [seriesMap, currentParameters])
 
   const selectedParams = useMemo(
-    () => (parameterLabel ? [parameterLabel] : []),
-    [parameterLabel]
-  )
-
-  const seriesValues = useMemo(
-    () => series?.values ?? [],
-    [series]
-  )
-  const filteredValues = useMemo(
-    () => filterValuesByDateRange(seriesValues, dateRange),
-    [seriesValues, dateRange]
+    () => currentParameters,
+    [currentParameters]
   )
 
   const loadedValues = useMemo(() => {
-    if (!parameterLabel) {
+    if (currentParameters.length === 0) {
       return {}
     }
 
-    return {
-      [parameterLabel]: filteredValues
+    const result = {}
+
+    for (const param of currentParameters) {
+      const paramSeries = seriesMap.get(param)
+      if (paramSeries) {
+        const values = paramSeries.values ?? []
+        const filtered = filterValuesByDateRange(values, dateRange)
+        result[param] = filtered
+      }
     }
-  }, [parameterLabel, filteredValues])
+
+    return result
+  }, [currentParameters, seriesMap, dateRange])
 
   const {
     dailyValues,
@@ -462,7 +549,7 @@ const AggregatedSeriesExplorer = ({
     )
   }
 
-  if (!series && !isLoading) {
+  if (seriesMap.size === 0 && !isLoading) {
     return (
       <Box className='flex flex-col gap-4'>
         <Alert severity='info' description='Aucune donnée agrégée disponible' />
@@ -494,103 +581,81 @@ const AggregatedSeriesExplorer = ({
         </Box>
       )}
 
-      <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 2}}>
-        <Box
-          sx={{
-            flex: '1 1 280px',
-            minWidth: 240,
-            maxWidth: 420
-          }}
-        >
-          <Select
-            label={t.parameterLabel}
-            hintText={t.parameterHint}
-            nativeSelectProps={{
-              value: currentParameter ?? '',
-              disabled: parameterOptions.length <= 1,
-              onChange: event => handleParameterSelection(event.target.value)
-            }}
-          >
-            <option disabled hidden value=''>
-              {t.parameterPlaceholder}
-            </option>
-            {parameterOptions.map(option => (
-              <option
-                key={option.value}
-                disabled={option.disabled}
-                value={option.value}
+      <Box sx={{display: 'flex', flexDirection: 'column', gap: 2}}>
+        <ParameterSelector
+          label={t.parameterLabel}
+          hint={t.parameterHint}
+          placeholder={t.parameterPlaceholder}
+          value={currentParameters}
+          options={parameterOptions}
+          onChange={handleParameterSelection}
+        />
+
+        <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 2}}>
+          {normalizedOperatorOptions.length > 0 && (
+            <Box
+              sx={{
+                flex: '1 1 220px',
+                minWidth: 220
+              }}
+            >
+              <Select
+                label={t.operatorLabel}
+                hint={t.operatorHint}
+                nativeSelectProps={{
+                  value: currentOperator ?? '',
+                  disabled: normalizedOperatorOptions.length <= 1,
+                  onChange: event => handleOperatorSelection(event.target.value)
+                }}
               >
-                {option.label}
-              </option>
-            ))}
-          </Select>
+                <option disabled hidden value=''>
+                  {t.operatorPlaceholder}
+                </option>
+                {normalizedOperatorOptions.map(option => (
+                  <option
+                    key={option.value}
+                    disabled={option.disabled}
+                    value={option.value}
+                  >
+                    {option.label}
+                  </option>
+                ))}
+              </Select>
+            </Box>
+          )}
+
+          {enableFrequencySelect && (
+            <Box
+              sx={{
+                flex: '1 1 220px',
+                minWidth: 220
+              }}
+            >
+              <Select
+                label={t.frequencyLabel}
+                hint={t.frequencyHint}
+                nativeSelectProps={{
+                  value: currentFrequency ?? '',
+                  disabled: frequencyOptions.length <= 1,
+                  onChange: event => handleFrequencySelection(event.target.value)
+                }}
+              >
+                <option disabled hidden value=''>
+                  {t.frequencyPlaceholder}
+                </option>
+                {frequencyOptions.map(option => (
+                  <option
+                    key={option.value}
+                    disabled={option.disabled}
+                    value={option.value}
+                  >
+                    {option.label}
+                  </option>
+                ))}
+              </Select>
+            </Box>
+          )}
         </Box>
-
-        {normalizedOperatorOptions.length > 0 && (
-          <Box
-            sx={{
-              flex: '1 1 220px',
-              minWidth: 220,
-              maxWidth: 360
-            }}
-          >
-            <Select
-              label={t.operatorLabel}
-              hintText={t.operatorHint}
-              nativeSelectProps={{
-                value: currentOperator ?? '',
-                disabled: normalizedOperatorOptions.length <= 1,
-                onChange: event => handleOperatorSelection(event.target.value)
-              }}
-            >
-              <option disabled hidden value=''>
-                {t.operatorPlaceholder}
-              </option>
-              {normalizedOperatorOptions.map(option => (
-                <option
-                  key={option.value}
-                  disabled={option.disabled}
-                  value={option.value}
-                >
-                  {option.label}
-                </option>
-              ))}
-            </Select>
-          </Box>
-        )}
-
-        {enableFrequencySelect && (
-          <Box
-            sx={{
-              flex: '1 1 220px',
-              minWidth: 220,
-              maxWidth: 360
-            }}
-          >
-            <Select
-              label={t.frequencyLabel}
-              hintText={t.frequencyHint}
-              nativeSelectProps={{
-                value: currentFrequency ?? '',
-                disabled: frequencyOptions.length <= 1,
-                onChange: event => handleFrequencySelection(event.target.value)
-              }}
-            >
-              <option disabled hidden value=''>
-                {t.frequencyPlaceholder}
-              </option>
-              {frequencyOptions.map(option => (
-                <option
-                  key={option.value}
-                  disabled={option.disabled}
-                  value={option.value}
-                >
-                  {option.label}
-                </option>
-              ))}
-            </Select>
-          </Box>
-        )}
       </Box>
 
       {renderChartSection()}

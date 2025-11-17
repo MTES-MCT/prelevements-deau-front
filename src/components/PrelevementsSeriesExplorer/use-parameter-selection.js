@@ -8,12 +8,12 @@ import {
 
 import {
   FALLBACK_PARAMETER_COLOR,
-  PARAMETER_COLOR_MAP,
-  normalizeParameterKey
+  PARAMETER_COLOR_MAP
 } from './constants/colors.js'
 import {indexDuplicateParameters} from './utils/index.js'
 
 import {formatFrequencyLabel} from '@/utils/frequency.js'
+import {normalizeString} from '@/utils/string.js'
 
 // Possible value types (specification) => French labels
 const VALUE_TYPE_LABELS = new Map([
@@ -70,7 +70,7 @@ export function useParameterMetadata(seriesList) {
         continue
       }
 
-      const normalized = normalizeParameterKey(series.parameter)
+      const normalized = normalizeString(series.parameter)
       const resolvedColor = series.color
         ?? PARAMETER_COLOR_MAP.get(normalized)
         ?? FALLBACK_PARAMETER_COLOR

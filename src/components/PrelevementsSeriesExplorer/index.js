@@ -56,7 +56,7 @@ import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Box} from '@mui/material'
 
 import ChartWithRangeSlider from './chart-with-range-slider.js'
-import {DEFAULT_TRANSLATIONS} from './constants/colors.js'
+import {DEFAULT_TRANSLATIONS} from './constants/parameters.js'
 import {formatPeriodLabel, getViewTypeLabel} from './formatters.js'
 import LoadingState from './loading-state.js'
 import ParameterSelector from './parameter-selector.js'

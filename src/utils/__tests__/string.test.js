@@ -5,7 +5,7 @@ import {normalizeString, emptyStringToNull} from '../string.js'
 test('normalizeString', t => {
   t.is(normalizeString('  Hello World!  '), 'hello world!')
   t.is(normalizeString(''), '')
-  t.is(normalizeString(null), null)
+  t.is(normalizeString(null), '')
 })
 
 test('emptyStringToNull', t => {

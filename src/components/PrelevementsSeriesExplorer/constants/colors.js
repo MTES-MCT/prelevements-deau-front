@@ -2,30 +2,7 @@
  * Constants used across PrelevementsSeriesExplorer components
  */
 
-/**
- * Normalizes parameter names for consistent color mapping lookups
- * - Trims surrounding whitespace
- * - Converts to lowercase
- * - Removes diacritic marks and apostrophes
- * - Collapses repeated spaces
- *
- * @param {string} value - Raw parameter label
- * @returns {string} Normalized parameter key
- */
-export const normalizeParameterKey = value => {
-  if (!value) {
-    return ''
-  }
-
-  return value
-    .toString()
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replaceAll(/[\u0300-\u036F]/g, '')
-    .replaceAll(/['\u2019]/g, '') // Remove both straight (') and curly (') apostrophes
-    .replaceAll(/\s+/g, ' ')
-}
+import {normalizeString} from '@/utils/string.js'
 
 /**
  * Color configuration ensuring a deterministic color per known parameter
@@ -49,7 +26,7 @@ const PARAMETER_COLOR_ENTRIES = [
 ]
 
 export const PARAMETER_COLOR_MAP = new Map(
-  PARAMETER_COLOR_ENTRIES.map(([name, color]) => [normalizeParameterKey(name), color])
+  PARAMETER_COLOR_ENTRIES.map(([name, color]) => [normalizeString(name), color])
 )
 
 export const FALLBACK_PARAMETER_COLOR = PARAMETER_COLOR_MAP.get('autre')
@@ -78,18 +55,3 @@ export const MONTH_NAMES = [
   'novembre',
   'décembre'
 ]
-
-/**
- * Default translations for UI strings
- */
-export const DEFAULT_TRANSLATIONS = {
-  periodLabel: 'Période d\'observation',
-  parameterLabel: 'Paramètres à afficher',
-  parameterHint: 'Vous pouvez sélectionner jusqu’à deux unités différentes. Les options incompatibles sont grisées.',
-  parameterPlaceholder: 'Choisir des paramètres...',
-  noDataMessage: 'Aucune donnée disponible pour la période sélectionnée',
-  rangeLabel: 'Affiner la plage temporelle',
-  loadingData: 'Chargement des données...',
-  loadError: 'Erreur de chargement',
-  selectParametersMessage: 'Sélectionnez des paramètres pour afficher le graphique'
-}
