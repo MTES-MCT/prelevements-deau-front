@@ -12,9 +12,9 @@ import {
 } from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
-import {Box, Typography} from '@mui/material'
+import {Box, IconButton, Typography} from '@mui/material'
 import {useTheme} from '@mui/material/styles'
-import {LineChart, ChartsReferenceLine} from '@mui/x-charts'
+import {LineChart, BarChart, ChartsReferenceLine} from '@mui/x-charts'
 import {useDrawingArea, useXScale, useYScale} from '@mui/x-charts/hooks'
 
 import {
@@ -25,7 +25,8 @@ import {
   X_AXIS_ID,
   axisFormatterFactory,
   buildAnnotations,
-  buildSeriesModel
+  buildSeriesModel,
+  getNumberFormatter
 } from './util.js'
 
 import CompactAlert from '@/components/ui/CompactAlert/index.js'
@@ -89,11 +90,12 @@ const useChartModel = ({series, locale, theme, exposeAllMarks, options}) => useM
  * @param {Object} props.axis - Axis configuration
  * @param {Function} props.getPointMeta - Function to retrieve metadata for a point
  * @param {Function} props.getSegmentOrigin - Function to retrieve segment origin data
+ * @param {Function} props.getXAxisDate - Function returning the true date for the tooltip label
  * @param {Object} props.translations - Translation strings
  * @param {string} props.locale - Locale string for date formatting
  * @returns {JSX.Element|null} Tooltip content or null if no data
  */
-const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, getSegmentOrigin, translations: t, locale}) => {
+const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, getSegmentOrigin, getXAxisDate, translations: t, locale}) => {
   // Tooltip ALWAYS shows full date and time, regardless of x-axis tick format
   // This ensures users can see the complete timestamp even when ticks show abbreviated formats
   const tooltipDateFormatter = useMemo(() => {
@@ -112,9 +114,22 @@ const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, g
     return null
   }
 
+  const resolvedAxisValue = useMemo(() => {
+    if (typeof getXAxisDate === 'function') {
+      const value = getXAxisDate(axisValue, dataIndex)
+      if (value) {
+        return value
+      }
+    }
+
+    return axisValue
+  }, [axisValue, dataIndex, getXAxisDate])
+
+  const forceDateFormatting = resolvedAxisValue instanceof Date
+    || (typeof resolvedAxisValue === 'number' && Number.isFinite(resolvedAxisValue))
   const defaultFormatter = value => value?.toString?.() ?? ''
-  const axisFormatter = axis.scaleType === 'time'
-    ? tooltipDateFormatter
+  const axisFormatter = forceDateFormatting
+    ? () => tooltipDateFormatter(resolvedAxisValue)
     : (axis.valueFormatter || defaultFormatter)
 
   // Collect all parameters (series values) for MetasList
@@ -193,7 +208,7 @@ const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, g
       }}
     >
       {axisValue !== undefined && (
-        <Typography sx={{fontWeight: 'bold'}}>{axisFormatter(axisValue)}</Typography>
+        <Typography sx={{fontWeight: 'bold'}}>{axisFormatter(resolvedAxisValue ?? axisValue)}</Typography>
       )}
       <Box sx={{display: 'flex', flexDirection: 'column', gap: 2}}>
         {parameters.length > 0 && <MetasList metas={parameters} />}
@@ -341,13 +356,16 @@ const DEFAULT_TRANSLATIONS = {
   interpolatedPoint: 'Point interpolé',
   noDataAvailable: 'Aucune donnée disponible.',
   decimationWarning: 'Les données ont été décimées pour préserver les performances d\'affichage.',
-  chartAriaLabel: 'Graphique séries temporelles'
+  chartAriaLabel: 'Graphique séries temporelles',
+  toggleToLineChart: 'Basculer en graphique en lignes',
+  toggleToBarChart: 'Basculer en graphique en barres'
 }
 
 /**
  * TimeSeriesChart Component
  *
  * Displays multiple time series on a single chart with support for:
+ * - Toggle between bar chart and line chart display (default: bar)
  * - Dual Y-axes (left and right) for series with different units
  * - Static and dynamic thresholds with conditional coloring
  * - Metadata annotations (comments, tags, alerts)
@@ -429,7 +447,16 @@ const TimeSeriesChart = ({
 }) => {
   const t = {...DEFAULT_TRANSLATIONS, ...translations}
   const theme = useTheme()
+  const numberFormatter = useMemo(() => getNumberFormatter(locale), [locale])
+  const formatBarValue = useCallback(value => {
+    if (value === null || Number.isNaN(value)) {
+      return null
+    }
+
+    return numberFormatter.format(value)
+  }, [numberFormatter])
   const [visibility, setVisibility] = useState(() => getInitialVisibility(series))
+  const [chartType, setChartType] = useState('bar') // Default to bar chart
 
   useEffect(() => {
     setVisibility(previous => ({
@@ -453,16 +480,67 @@ const TimeSeriesChart = ({
     options: chartOptions
   })
 
-  const xAxis = useMemo(() => [{
+  const xAxisDateFormatter = useMemo(
+    () => axisFormatterFactory(locale, chartModel.xAxisDates),
+    [chartModel.xAxisDates, locale]
+  )
+
+  // X-axis configuration for LineChart (time scale)
+  const xAxisLine = useMemo(() => [{
     id: X_AXIS_ID,
     scaleType: 'time',
     data: chartModel.xAxisDates,
-    // X-axis date format adapts to the visible time range (min to max)
-    valueFormatter: axisFormatterFactory(locale, chartModel.xAxisDates),
+    valueFormatter: xAxisDateFormatter,
     tickLabelStyle: {fontSize: 12}
-  }], [chartModel.xAxisDates, locale])
+  }], [chartModel.xAxisDates, xAxisDateFormatter])
+
+  // X-axis configuration for BarChart (band scale with date labels)
+  const xAxisBar = useMemo(() => [{
+    id: X_AXIS_ID,
+    scaleType: 'band',
+    data: chartModel.xAxisDates.map((_date, index) => index), // Use indices for band scale
+    valueFormatter(value) {
+      // Value is index, get corresponding date
+      const date = chartModel.xAxisDates[value]
+      return date ? xAxisDateFormatter(date) : ''
+    },
+    tickLabelStyle: {fontSize: 12}
+  }], [chartModel.xAxisDates, xAxisDateFormatter])
 
   const yAxis = useMemo(() => chartModel.yAxis, [chartModel.yAxis])
+
+  const getTooltipXAxisDate = useCallback((axisValue, dataIndex) => {
+    const hasValidIndex = typeof dataIndex === 'number'
+      && dataIndex >= 0
+      && dataIndex < chartModel.xAxisDates.length
+    if (hasValidIndex) {
+      return chartModel.xAxisDates[dataIndex]
+    }
+
+    if (axisValue instanceof Date) {
+      return axisValue
+    }
+
+    if (typeof axisValue === 'number' && Number.isFinite(axisValue)) {
+      if (Number.isInteger(axisValue)
+          && axisValue >= 0
+          && axisValue < chartModel.xAxisDates.length) {
+        return chartModel.xAxisDates[axisValue]
+      }
+
+      return new Date(axisValue)
+    }
+
+    const numericValue = Number(axisValue)
+    if (!Number.isNaN(numericValue)
+        && Number.isInteger(numericValue)
+        && numericValue >= 0
+        && numericValue < chartModel.xAxisDates.length) {
+      return chartModel.xAxisDates[numericValue]
+    }
+
+    return null
+  }, [chartModel.xAxisDates])
 
   const handleLegendClick = useCallback((event, item) => {
     event.preventDefault()
@@ -482,13 +560,67 @@ const TimeSeriesChart = ({
     [chartModel.dynamicThresholdSeries, visibility]
   )
 
-  const composedSeries = useMemo(() => {
+  // Series for LineChart (time-based data)
+  const composedSeriesLine = useMemo(() => {
     const legendSeries = chartModel.stubSeries.map(stub => ({
       ...stub,
       color: visibility[stub.originalId] === false ? theme.palette.grey[400] : stub.color
     }))
     return [...legendSeries, ...filteredSegments, ...filteredThresholds]
   }, [chartModel.stubSeries, filteredSegments, filteredThresholds, visibility, theme.palette.grey])
+
+  // Series for BarChart (index-based data with type: 'bar')
+  const composedSeriesBar = useMemo(() => {
+    const segmentsByOriginal = new Map()
+
+    for (const segment of filteredSegments) {
+      if (!segmentsByOriginal.has(segment.originalId)) {
+        segmentsByOriginal.set(segment.originalId, [])
+      }
+
+      segmentsByOriginal.get(segment.originalId).push(segment)
+    }
+
+    const sampleLength = chartModel.xAxisDates.length
+
+    const barSeries = chartModel.stubSeries.map(stub => {
+      const mergedData = Array.from({length: sampleLength}).fill(null)
+      const segments = segmentsByOriginal.get(stub.originalId) ?? []
+
+      for (const segment of segments) {
+        for (let index = 0; index < segment.data.length; index += 1) {
+          const value = segment.data[index]
+          if (value !== null && value !== undefined) {
+            mergedData[index] = value
+          }
+        }
+      }
+
+      return {
+        id: stub.id,
+        originalId: stub.originalId,
+        originalLabel: stub.originalLabel,
+        label: stub.label,
+        type: 'bar',
+        data: mergedData,
+        color: visibility[stub.originalId] === false ? theme.palette.grey[400] : stub.color,
+        xAxisId: X_AXIS_ID,
+        yAxisId: stub.yAxisId,
+        valueFormatter: formatBarValue
+      }
+    })
+
+    const lineThresholds = filteredThresholds.map(threshold => {
+      const indexData = threshold.data.map(value => (value === null || value === undefined ? null : value))
+      return {
+        ...threshold,
+        type: 'line',
+        data: indexData
+      }
+    })
+
+    return [...barSeries, ...lineThresholds]
+  }, [chartModel.stubSeries, chartModel.xAxisDates, filteredSegments, filteredThresholds, formatBarValue, visibility, theme.palette.grey])
 
   const annotations = useMemo(() => {
     if (!enableAnnotations) {
@@ -538,16 +670,41 @@ const TimeSeriesChart = ({
     })
   }, [chartModel.pointBySeries, chartModel.segmentToOriginal, onPointClick])
 
+  const toggleChartType = useCallback(() => {
+    setChartType(previous => (previous === 'bar' ? 'line' : 'bar'))
+  }, [])
+
   if (chartModel.xAxisDates.length === 0) {
     return (
       <div className='p-6 border rounded-md bg-gray-50 text-gray-700 text-sm'>{t.noDataAvailable}</div>
     )
   }
 
+  const ChartComponent = chartType === 'bar' ? BarChart : LineChart
+  const xAxis = chartType === 'bar' ? xAxisBar : xAxisLine
+  const composedSeries = chartType === 'bar' ? composedSeriesBar : composedSeriesLine
+
   return (
     <div className='flex flex-col gap-3'>
+      <div className='flex justify-end'>
+        <IconButton
+          aria-label={chartType === 'bar' ? t.toggleToLineChart : t.toggleToBarChart}
+          size='small'
+          sx={{
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 1
+          }}
+          onClick={toggleChartType}
+        >
+          <span
+            aria-hidden
+            className={fr.cx(chartType === 'bar' ? 'fr-icon-line-chart-line' : 'fr-icon-bar-chart-box-line')}
+          />
+        </IconButton>
+      </div>
       <div role='figure' aria-label={t.chartAriaLabel}>
-        <LineChart
+        <ChartComponent
           height={360}
           series={composedSeries}
           xAxis={xAxis}
@@ -564,9 +721,11 @@ const TimeSeriesChart = ({
               direction: 'row',
               position: {vertical: 'top', horizontal: 'middle'}
             },
-            mark: {
-              shape: 'circle'
-            }
+            ...(chartType === 'line' && {
+              mark: {
+                shape: 'circle'
+              }
+            })
           }}
           sx={{
             ...dashedStyles
@@ -577,12 +736,13 @@ const TimeSeriesChart = ({
                 {...props}
                 getPointMeta={getPointMeta}
                 getSegmentOrigin={getSegmentOrigin}
+                getXAxisDate={getTooltipXAxisDate}
                 translations={t}
                 locale={locale}
               />
             )
           }}
-          onMarkClick={handleMarkClick}
+          {...(chartType === 'line' && {onMarkClick: handleMarkClick})}
         >
           {chartModel.staticThresholds.map(threshold => (
             <ChartsReferenceLine
@@ -592,8 +752,8 @@ const TimeSeriesChart = ({
               lineStyle={{stroke: threshold.color, strokeDasharray: '4 4'}}
             />
           ))}
-          {annotations.length > 0 && <ChartAnnotations annotations={annotations} onPointClick={onPointClick} />}
-        </LineChart>
+          {annotations.length > 0 && chartType === 'line' && <ChartAnnotations annotations={annotations} onPointClick={onPointClick} />}
+        </ChartComponent>
       </div>
 
       {chartModel.didDecimate && (
