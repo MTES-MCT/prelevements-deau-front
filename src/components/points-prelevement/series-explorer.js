@@ -9,7 +9,12 @@ import {Box, Typography} from '@mui/material'
 
 import {getAggregatedSeries} from '@/app/api/series.js'
 import AggregatedSeriesExplorer from '@/components/PrelevementsSeriesExplorer/aggregated-series-explorer.js'
-import {FREQUENCY_OPTIONS, getParameterMetadata, OPERATOR_LABELS} from '@/components/PrelevementsSeriesExplorer/constants/parameters.js'
+import {
+  FREQUENCY_OPTIONS,
+  getParameterMetadata,
+  MAX_DIFFERENT_UNITS,
+  OPERATOR_LABELS
+} from '@/components/PrelevementsSeriesExplorer/constants/parameters.js'
 import {
   calculateSelectablePeriodsFromDateRange,
   extractDefaultPeriodsFromDateRange
@@ -62,47 +67,57 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
   }, [seriesOptions])
 
   // Prioritize 'volume prélevé' as default parameter if available
-  const derivedDefaultParameter = useMemo(() => {
+  const derivedDefaultParameters = useMemo(() => {
     // Priority 1: Check if 'volume prélevé' is available
     const volumeParameter = parameterOptions.find(
       opt => opt.value?.toLowerCase() === DEFAULT_PARAMETER.toLowerCase()
     )
 
     if (volumeParameter) {
-      return volumeParameter.value
+      return [volumeParameter.value]
     }
 
     // Priority 2: Fallback to first available parameter
-    return parameterOptions[0]?.value ?? null
+    return parameterOptions[0]?.value ? [parameterOptions[0].value] : []
   }, [parameterOptions])
 
-  const [selectedParameter, setSelectedParameter] = useState(derivedDefaultParameter)
+  const [selectedParameters, setSelectedParameters] = useState(derivedDefaultParameters)
   const [selectedOperator, setSelectedOperator] = useState(null)
   const [selectedFrequency, setSelectedFrequency] = useState(DEFAULT_FREQUENCY)
-  const [aggregatedSeries, setAggregatedSeries] = useState(null)
+  const [aggregatedSeriesMap, setAggregatedSeriesMap] = useState(new Map())
   const [isLoading, setIsLoading] = useState(false)
   const [loadError, setLoadError] = useState(null)
 
   useEffect(() => {
-    if (parameterOptions.length === 0 || !derivedDefaultParameter) {
-      setSelectedParameter(null)
+    if (parameterOptions.length === 0 || derivedDefaultParameters.length === 0) {
+      setSelectedParameters([])
       return
     }
 
-    setSelectedParameter(prev => {
-      const isValid = parameterOptions.some(option => option.value === prev)
-      return isValid ? prev : derivedDefaultParameter
+    setSelectedParameters(prev => {
+      // Keep only valid selections
+      const validSelections = prev.filter(p =>
+        parameterOptions.some(option => option.value === p)
+      )
+      return validSelections.length > 0 ? validSelections : derivedDefaultParameters
     })
-  }, [parameterOptions, derivedDefaultParameter])
+  }, [parameterOptions, derivedDefaultParameters])
 
-  const currentParameterDefinition = useMemo(() => {
-    if (!selectedParameter) {
-      return null
+  // Get definitions for all selected parameters
+  const currentParameterDefinitions = useMemo(() => {
+    if (selectedParameters.length === 0) {
+      return []
     }
 
-    return parameterDefinitionMap.get(selectedParameter)
-      ?? getParameterMetadata(selectedParameter)
-  }, [selectedParameter, parameterDefinitionMap])
+    return selectedParameters
+      .map(param =>
+        parameterDefinitionMap.get(param) ?? getParameterMetadata(param)
+      )
+      .filter(Boolean)
+  }, [selectedParameters, parameterDefinitionMap])
+
+  // For operator selection, use the first parameter's definition
+  const currentParameterDefinition = currentParameterDefinitions[0] ?? null
 
   const operatorOptions = useMemo(
     () => currentParameterDefinition?.operators ?? [],
@@ -115,8 +130,8 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
       return null
     }
 
-    // Check if current parameter is a volume parameter
-    const isVolumeParameter = selectedParameter?.toLowerCase().includes('volume')
+    // Check if first parameter is a volume parameter
+    const isVolumeParameter = selectedParameters[0]?.toLowerCase().includes('volume')
     if (isVolumeParameter && currentParameterDefinition.operators?.includes(DEFAULT_OPERATOR_FOR_VOLUME)) {
       return DEFAULT_OPERATOR_FOR_VOLUME
     }
@@ -125,7 +140,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
     return currentParameterDefinition.defaultOperator
       ?? operatorOptions[0]
       ?? null
-  }, [currentParameterDefinition, operatorOptions, selectedParameter])
+  }, [currentParameterDefinition, operatorOptions, selectedParameters])
 
   useEffect(() => {
     if (operatorOptions.length === 0) {
@@ -176,8 +191,8 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
   }, [pointIds, preleveurId, startDate, endDate])
 
   useEffect(() => {
-    if (!selectedParameter || !resolvedOperator || !selectedFrequency) {
-      setAggregatedSeries(null)
+    if (selectedParameters.length === 0 || !resolvedOperator || !selectedFrequency) {
+      setAggregatedSeriesMap(new Map())
       return
     }
 
@@ -185,11 +200,19 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
     setIsLoading(true)
     setLoadError(null)
 
-    const loadSeries = async () => {
+    const loadAllSeries = async () => {
       try {
-        const response = await fetchAggregatedSeries(selectedParameter, resolvedOperator, selectedFrequency)
+        // Load all parameters in parallel
+        const promises = selectedParameters.map(async param => {
+          const response = await fetchAggregatedSeries(param, resolvedOperator, selectedFrequency)
+          return [param, response]
+        })
+
+        const results = await Promise.all(promises)
+
         if (!cancelled) {
-          setAggregatedSeries(response)
+          const seriesMap = new Map(results)
+          setAggregatedSeriesMap(seriesMap)
         }
       } catch (error) {
         if (!cancelled) {
@@ -202,33 +225,48 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
       }
     }
 
-    loadSeries()
+    loadAllSeries()
 
     return () => {
       cancelled = true
     }
-  }, [selectedParameter, resolvedOperator, selectedFrequency, fetchAggregatedSeries])
+  }, [selectedParameters, resolvedOperator, selectedFrequency, fetchAggregatedSeries])
 
-  const handleFiltersChange = useCallback(({parameter, operator, frequency}) => {
-    // Handle parameter change
-    if (parameter !== undefined && parameter !== selectedParameter) {
-      const nextDefinition = parameterDefinitionMap.get(parameter)
-        ?? getParameterMetadata(parameter)
-      const nextDefaultOperator = nextDefinition?.defaultOperator
-        ?? nextDefinition?.operators?.[0]
-        ?? null
+  const handleFiltersChange = useCallback(({parameters, operator, frequency}) => {
+    // Handle parameters change (multi-select)
+    if (parameters !== undefined && Array.isArray(parameters)) {
+      // Validate units
+      const units = new Set(
+        parameters
+          .map(param => {
+            const def = parameterDefinitionMap.get(param) ?? getParameterMetadata(param)
+            return def?.unit
+          })
+          .filter(Boolean)
+      )
 
-      setSelectedParameter(parameter)
+      if (units.size > MAX_DIFFERENT_UNITS) {
+        return
+      }
 
-      if (nextDefinition) {
-        const availableOperators = nextDefinition.operators ?? []
-        const isCurrentOperatorValid = selectedOperator && availableOperators.includes(selectedOperator)
+      setSelectedParameters(parameters)
 
-        if (!isCurrentOperatorValid) {
-          setSelectedOperator(nextDefaultOperator)
+      // Update operator if needed
+      if (parameters.length > 0) {
+        const nextDefinition = parameterDefinitionMap.get(parameters[0])
+          ?? getParameterMetadata(parameters[0])
+        const nextDefaultOperator = nextDefinition?.defaultOperator
+          ?? nextDefinition?.operators?.[0]
+          ?? null
+
+        if (nextDefinition) {
+          const availableOperators = nextDefinition.operators ?? []
+          const isCurrentOperatorValid = selectedOperator && availableOperators.includes(selectedOperator)
+
+          if (!isCurrentOperatorValid) {
+            setSelectedOperator(nextDefaultOperator)
+          }
         }
-      } else {
-        setSelectedOperator(null)
       }
     }
 
@@ -245,7 +283,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
     ) {
       setSelectedFrequency(frequency)
     }
-  }, [parameterDefinitionMap, selectedParameter, selectedOperator, operatorOptions, selectedFrequency])
+  }, [parameterDefinitionMap, selectedOperator, operatorOptions, selectedFrequency])
 
   return hasParameters ? (
     <Box className='flex flex-col gap-4'>
@@ -253,15 +291,15 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
         Historique des prélèvements
       </Typography>
 
-      {selectedParameter && (
+      {selectedParameters.length > 0 && (
         <AggregatedSeriesExplorer
           showRangeSlider
           showPeriodSelector={false}
           showCalendar={false}
-          series={aggregatedSeries}
+          series={aggregatedSeriesMap}
           parameters={parameterOptions}
-          selectedParameter={selectedParameter}
-          defaultParameter={derivedDefaultParameter ?? undefined}
+          selectedParameters={selectedParameters}
+          defaultParameters={derivedDefaultParameters}
           operatorOptions={operatorSelectOptions}
           selectedOperator={resolvedOperator ?? undefined}
           defaultOperator={resolvedDefaultOperator ?? undefined}
