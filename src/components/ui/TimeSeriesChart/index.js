@@ -80,59 +80,16 @@ const useChartModel = ({series, locale, theme, exposeAllMarks, options}) => useM
 )
 
 /**
- * Custom tooltip content component for the chart
- * Displays series values, metadata, alerts, and synthetic point indicators
- * Styled to match the PeriodTooltip component for UI consistency
- * @param {Object} props - Component props
- * @param {Date} props.axisValue - Current X-axis value (timestamp)
- * @param {number} props.dataIndex - Index of the current data point
- * @param {Array} props.series - Array of series with their data
- * @param {Object} props.axis - Axis configuration
- * @param {Function} props.getPointMeta - Function to retrieve metadata for a point
- * @param {Function} props.getSegmentOrigin - Function to retrieve segment origin data
- * @param {Function} props.getXAxisDate - Function returning the true date for the tooltip label
- * @param {Object} props.translations - Translation strings
- * @param {string} props.locale - Locale string for date formatting
- * @returns {JSX.Element|null} Tooltip content or null if no data
+ * Helper to collect parameters and alerts from series data
+ * @param {Object} config - Configuration object
+ * @param {Array} config.series - Array of series data
+ * @param {number} config.dataIndex - Index of the data point
+ * @param {Function} config.getPointMeta - Function to retrieve metadata
+ * @param {Function} config.getSegmentOrigin - Function to retrieve segment origin
+ * @param {Object} config.translations - Translation strings
+ * @returns {Object} Object with parameters and alerts arrays
  */
-const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, getSegmentOrigin, getXAxisDate, translations: t, locale}) => {
-  // Tooltip ALWAYS shows full date and time, regardless of x-axis tick format
-  // This ensures users can see the complete timestamp even when ticks show abbreviated formats
-  const tooltipDateFormatter = useMemo(() => {
-    const formatter = new Intl.DateTimeFormat(locale, {
-      hour12: false,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-    return value => formatter.format(value instanceof Date ? value : new Date(value))
-  }, [locale])
-
-  if (dataIndex === null || dataIndex === undefined) {
-    return null
-  }
-
-  const resolvedAxisValue = useMemo(() => {
-    if (typeof getXAxisDate === 'function') {
-      const value = getXAxisDate(axisValue, dataIndex)
-      if (value) {
-        return value
-      }
-    }
-
-    return axisValue
-  }, [axisValue, dataIndex, getXAxisDate])
-
-  const forceDateFormatting = resolvedAxisValue instanceof Date
-    || (typeof resolvedAxisValue === 'number' && Number.isFinite(resolvedAxisValue))
-  const defaultFormatter = value => value?.toString?.() ?? ''
-  const axisFormatter = forceDateFormatting
-    ? () => tooltipDateFormatter(resolvedAxisValue)
-    : (axis.valueFormatter || defaultFormatter)
-
-  // Collect all parameters (series values) for MetasList
+const collectTooltipData = ({series, dataIndex, getPointMeta, getSegmentOrigin, translations}) => {
   const parameters = []
   const alerts = []
 
@@ -189,10 +146,77 @@ const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, g
     // Add synthetic point indicator
     if (origin?.synthetic) {
       parameters.push({
-        content: t.interpolatedPoint
+        content: translations.interpolatedPoint
       })
     }
   }
+
+  return {parameters, alerts}
+}
+
+/**
+ * Custom Tooltip Content Component
+ * Displays rich information about data points on hover:
+ * - Full datetime label (always includes date and time)
+ * - Parameter values with color indicators
+ * - Metadata (comments, alerts, synthetic points)
+ * @param {*} props.axisValue - The value on the x-axis
+ * @param {number} props.dataIndex - Index of the data point
+ * @param {Array} props.series - Array of series data
+ * @param {Object} props.axis - Axis configuration
+ * @param {Function} props.getPointMeta - Function to retrieve metadata for a point
+ * @param {Function} props.getSegmentOrigin - Function to retrieve segment origin data
+ * @param {Function} props.getXAxisDate - Function returning the true date for the tooltip label
+ * @param {Object} props.translations - Translation strings
+ * @param {string} props.locale - Locale string for date formatting
+ * @returns {JSX.Element|null} Tooltip content or null if no data
+ */
+const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, getSegmentOrigin, getXAxisDate, translations: t, locale}) => {
+  // Tooltip ALWAYS shows full date and time, regardless of x-axis tick format
+  // This ensures users can see the complete timestamp even when ticks show abbreviated formats
+  const tooltipDateFormatter = useMemo(() => {
+    const formatter = new Intl.DateTimeFormat(locale, {
+      hour12: false,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+    return value => formatter.format(value instanceof Date ? value : new Date(value))
+  }, [locale])
+
+  // Resolve axis value before early return to respect Hooks rules
+  const resolvedAxisValue = useMemo(() => {
+    if (typeof getXAxisDate === 'function') {
+      const value = getXAxisDate(axisValue, dataIndex)
+      if (value) {
+        return value
+      }
+    }
+
+    return axisValue
+  }, [axisValue, dataIndex, getXAxisDate])
+
+  if (dataIndex === null || dataIndex === undefined) {
+    return null
+  }
+
+  const forceDateFormatting = resolvedAxisValue instanceof Date
+    || (typeof resolvedAxisValue === 'number' && Number.isFinite(resolvedAxisValue))
+  const defaultFormatter = value => value?.toString?.() ?? ''
+  const axisFormatter = forceDateFormatting
+    ? () => tooltipDateFormatter(resolvedAxisValue)
+    : (axis.valueFormatter || defaultFormatter)
+
+  // Collect all parameters (series values) and alerts
+  const {parameters, alerts} = collectTooltipData({
+    series,
+    dataIndex,
+    getPointMeta,
+    getSegmentOrigin,
+    translations: t
+  })
 
   return (
     <Box
