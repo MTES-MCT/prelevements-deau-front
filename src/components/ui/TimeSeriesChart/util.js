@@ -669,7 +669,7 @@ export const buildStubSeries = (processedSeries, xValuesLength) => processedSeri
 /**
  * Build single y-axis configuration
  */
-const buildSingleYAxis = (axisId, stats, numberFormatter) => {
+const buildSingleYAxis = (axisId, stats, numberFormatter, label = null) => {
   const hasData = stats.min !== Number.POSITIVE_INFINITY
 
   // Create a default axis even if no data to prevent useYScale errors
@@ -679,6 +679,7 @@ const buildSingleYAxis = (axisId, stats, numberFormatter) => {
       id: axisId,
       position: axisId === AXIS_LEFT_ID ? 'left' : 'right',
       scaleType: 'linear',
+      label,
       valueFormatter(value) {
         if (value === null || value === undefined) {
           return ''
@@ -701,6 +702,7 @@ const buildSingleYAxis = (axisId, stats, numberFormatter) => {
     id: axisId,
     position: axisId === AXIS_LEFT_ID ? 'left' : 'right',
     scaleType: 'linear',
+    label,
     valueFormatter(value) {
       if (value === null || value === undefined) {
         return ''
@@ -717,8 +719,10 @@ const buildSingleYAxis = (axisId, stats, numberFormatter) => {
 /**
  * Build y-axis configurations from statistics
  */
-export const buildYAxisConfigurations = (axisStats, numberFormatter) =>
-  [AXIS_LEFT_ID, AXIS_RIGHT_ID].map(axisId => buildSingleYAxis(axisId, axisStats[axisId], numberFormatter))
+export const buildYAxisConfigurations = (axisStats, numberFormatter, axisLabels = {}) =>
+  [AXIS_LEFT_ID, AXIS_RIGHT_ID].map(axisId =>
+    buildSingleYAxis(axisId, axisStats[axisId], numberFormatter, axisLabels[axisId] ?? null)
+  )
 
 /**
  * Extract static thresholds from processed series
@@ -839,8 +843,21 @@ export const buildSeriesModel = ({
   // Step 7: Extract static thresholds
   const staticThresholds = enableThresholds ? extractStaticThresholds(processedSeries) : []
 
-  // Step 8: Build y-axis configurations
-  const yAxis = buildYAxisConfigurations(axisStats, numberFormatter)
+  // Step 8: Extract unit labels for axes from series labels
+  const axisLabels = {}
+  for (const processed of processedSeries) {
+    const {axisId, label} = processed
+    console.log("🚀 ~ buildSeriesModel ~ label:", label)
+    // Extract unit from label (format: "Parameter (unit)")
+    const unitMatch = label?.match(/\(([^)]+)\)$/)
+    console.log("🚀 ~ buildSeriesModel ~ unitMatch:", unitMatch)
+    if (unitMatch && !axisLabels[axisId]) {
+      axisLabels[axisId] = unitMatch[1]
+    }
+  }
+
+  // Step 9: Build y-axis configurations
+  const yAxis = buildYAxisConfigurations(axisStats, numberFormatter, axisLabels)
 
   return {
     xValues,
