@@ -847,10 +847,8 @@ export const buildSeriesModel = ({
   const axisLabels = {}
   for (const processed of processedSeries) {
     const {axisId, label} = processed
-    console.log("🚀 ~ buildSeriesModel ~ label:", label)
     // Extract unit from label (format: "Parameter (unit)")
     const unitMatch = label?.match(/\(([^)]+)\)$/)
-    console.log("🚀 ~ buildSeriesModel ~ unitMatch:", unitMatch)
     if (unitMatch && !axisLabels[axisId]) {
       axisLabels[axisId] = unitMatch[1]
     }
