@@ -8,8 +8,38 @@
       "type": "vector",
       "tiles": [
         "https://data.geopf.fr/tms/1.0.0/PLAN.IGN/{z}/{x}/{y}.pbf"
-      ],
-      "attribution": "<a target='_blank' href='https://geoservices.ign.fr/documentation/services/services-deprecies/tuiles-vectorielles-tmswmts'>© IGN</a>"
+      ]
+    },
+    "reunion-ocean-mask": {
+      "type": "geojson",
+      "data": {
+         "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [57.23733084768511, -19.464827861879144],
+                  [57.20375698676122, -22.969500515145356],
+                  [52.84475071014335, -22.974652397074692],
+                  [53.085363380097874, -19.438446559737628],
+                  [57.23733084768511, -19.464827861879144]
+                ],
+                [
+                  [55.08216462881706, -20.79999950898096],
+                  [55.07371497111071, -21.456782996284474],
+                  [55.877166978893726, -21.464479929716163],
+                  [55.882082583345884, -20.807008951366186],
+                  [55.08216462881706, -20.79999950898096]
+                ]
+              ]
+            }
+          }
+        ]
+      }
     }
   },
   "transition": {
@@ -26,6 +56,20 @@
       "layout": {
         "visibility": "visible"
       },
+      "paint": {
+        "fill-color": "#aad5e9",
+        "fill-opacity": 1
+      }
+    },
+    {
+      "id": "reunion-ocean-mask",
+      "type": "fill",
+      "source": "reunion-ocean-mask",
+      "layout": {
+        "visibility": "visible"
+      },
+      "minzoom": 6.5,
+      "maxzoom": 12.5,
       "paint": {
         "fill-color": "#aad5e9",
         "fill-opacity": 1
