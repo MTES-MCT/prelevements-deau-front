@@ -26,17 +26,22 @@ export function buildComposedSeries({
 }) {
   const getType = originalId => resolveSeriesType?.(originalId) ?? DEFAULT_SERIES_TYPE
 
-  const legendSeries = stubSeries.map(stub => ({
-    ...stub,
-    type: getType(stub.originalId) === 'bar' ? 'bar' : 'line',
-    color: resolveSeriesColor?.(stub.originalId, stub.color) ?? stub.color
-  }))
+  const legendSeries = stubSeries.map(stub => {
+    const type = getType(stub.originalId) === 'bar' ? 'bar' : 'line'
+    return {
+      ...stub,
+      type,
+      ...(type === 'line' && {curve: 'linear'}),
+      color: resolveSeriesColor?.(stub.originalId, stub.color) ?? stub.color
+    }
+  })
 
   const lineSegments = segmentSeries
     .filter(segment => getType(segment.originalId) !== 'bar')
     .map(segment => ({
       ...segment,
-      type: 'line'
+      type: 'line',
+      curve: 'linear'
     }))
 
   const segmentsByOriginal = new Map()
@@ -85,7 +90,8 @@ export function buildComposedSeries({
 
   const thresholdSeries = dynamicThresholdSeries.map(threshold => ({
     ...threshold,
-    type: 'line'
+    type: 'line',
+    curve: 'linear'
   }))
 
   const composedSeries = [
