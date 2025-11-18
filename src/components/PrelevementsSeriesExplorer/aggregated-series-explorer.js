@@ -338,6 +338,7 @@ const AggregatedSeriesExplorer = ({
   }, [parameterOptionMap, handleParametersChange])
 
   // Build parameter options with disabled state based on unit constraints
+  // Group by valueType and put "volume prélevé" first
   const parameterOptions = useMemo(() => {
     const selectedUnits = new Set(
       currentParameters
@@ -345,12 +346,12 @@ const AggregatedSeriesExplorer = ({
         .filter(Boolean)
     )
 
-    if (selectedUnits.size < MAX_DIFFERENT_UNITS) {
-      return parameterOptionsNormalized
-    }
+    const maxUnitsReached = selectedUnits.size >= MAX_DIFFERENT_UNITS
 
-    return parameterOptionsNormalized.map(option => {
-      const isEnabled = currentParameters.includes(option.value)
+    // Apply disabled state
+    const optionsWithDisabled = parameterOptionsNormalized.map(option => {
+      const isEnabled = !maxUnitsReached
+        || currentParameters.includes(option.value)
         || selectedUnits.has(option.unit)
 
       return {
@@ -358,6 +359,52 @@ const AggregatedSeriesExplorer = ({
         disabled: !isEnabled
       }
     })
+
+    // Separate "volume prélevé" to put it first
+    const volumePreleveOption = optionsWithDisabled.find(
+      opt => opt.value.toLowerCase() === DEFAULT_PARAMETER.toLowerCase()
+    )
+    const otherOptions = optionsWithDisabled.filter(
+      opt => opt.value.toLowerCase() !== DEFAULT_PARAMETER.toLowerCase()
+    )
+
+    // Group other options by valueType
+    const groupedByValueType = new Map()
+    for (const option of otherOptions) {
+      const valueTypeLabel = formatValueTypeLabel(option.valueType) ?? 'Non spécifié'
+      if (!groupedByValueType.has(valueTypeLabel)) {
+        groupedByValueType.set(valueTypeLabel, [])
+      }
+
+      groupedByValueType.get(valueTypeLabel).push(option)
+    }
+
+    // Build final structure with groups
+    const groups = []
+
+    // Add "volume prélevé" first as a single-item group if it exists
+    if (volumePreleveOption) {
+      groups.push({
+        label: formatValueTypeLabel(volumePreleveOption.valueType) ?? 'Non spécifié',
+        options: [volumePreleveOption]
+      })
+    }
+
+    // Add other groups sorted by label
+    const sortedValueTypes = [...groupedByValueType.keys()].sort()
+    for (const valueTypeLabel of sortedValueTypes) {
+      // Skip if already added as volume prélevé group
+      if (volumePreleveOption && formatValueTypeLabel(volumePreleveOption.valueType) === valueTypeLabel) {
+        continue
+      }
+
+      groups.push({
+        label: valueTypeLabel,
+        options: groupedByValueType.get(valueTypeLabel)
+      })
+    }
+
+    return groups
   }, [parameterOptionsNormalized, currentParameters, parameterOptionMap])
 
   const operatorOptionsNormalized = useMemo(
