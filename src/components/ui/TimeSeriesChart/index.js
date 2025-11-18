@@ -81,12 +81,11 @@ const useChartModel = ({series, locale, theme, exposeAllMarks, options}) => useM
 
 /**
  * Helper to collect parameters and alerts from series data
- * @param {Object} config - Configuration object
- * @param {Array} config.series - Array of series data
- * @param {number} config.dataIndex - Index of the data point
- * @param {Function} config.getPointMeta - Function to retrieve metadata
- * @param {Function} config.getSegmentOrigin - Function to retrieve segment origin
- * @param {Object} config.translations - Translation strings
+ * @param {Array} series - Array of series data
+ * @param {number} dataIndex - Index of the data point
+ * @param {Function} getPointMeta - Function to retrieve metadata
+ * @param {Function} getSegmentOrigin - Function to retrieve segment origin
+ * @param {Object} translations - Translation strings
  * @returns {Object} Object with parameters and alerts arrays
  */
 const collectTooltipData = ({series, dataIndex, getPointMeta, getSegmentOrigin, translations}) => {
@@ -160,7 +159,7 @@ const collectTooltipData = ({series, dataIndex, getPointMeta, getSegmentOrigin, 
  * - Full datetime label (always includes date and time)
  * - Parameter values with color indicators
  * - Metadata (comments, alerts, synthetic points)
- * @param {*} props.axisValue - The value on the x-axis
+ * @param {Date|number|string} props.axisValue - The value on the x-axis
  * @param {number} props.dataIndex - Index of the data point
  * @param {Array} props.series - Array of series data
  * @param {Object} props.axis - Axis configuration
@@ -545,19 +544,18 @@ const TimeSeriesChart = ({
       return axisValue
     }
 
-    if (typeof axisValue === 'number' && Number.isFinite(axisValue)) {
-      if (Number.isInteger(axisValue)
-          && axisValue >= 0
-          && axisValue < chartModel.xAxisDates.length) {
-        return chartModel.xAxisDates[axisValue]
-      }
+    if (Number.isInteger(axisValue)
+        && axisValue >= 0
+        && axisValue < chartModel.xAxisDates.length) {
+      return chartModel.xAxisDates[axisValue]
+    }
 
+    if (typeof axisValue === 'number' && Number.isFinite(axisValue)) {
       return new Date(axisValue)
     }
 
     const numericValue = Number(axisValue)
-    if (!Number.isNaN(numericValue)
-        && Number.isInteger(numericValue)
+    if (Number.isInteger(numericValue)
         && numericValue >= 0
         && numericValue < chartModel.xAxisDates.length) {
       return chartModel.xAxisDates[numericValue]
@@ -611,6 +609,8 @@ const TimeSeriesChart = ({
       const mergedData = Array.from({length: sampleLength}).fill(null)
       const segments = segmentsByOriginal.get(stub.originalId) ?? []
 
+      // Merge all segment data into a single array
+      // Note: If segments overlap (same index has non-null values), last value wins
       for (const segment of segments) {
         for (let index = 0; index < segment.data.length; index += 1) {
           const value = segment.data[index]
@@ -621,7 +621,7 @@ const TimeSeriesChart = ({
       }
 
       return {
-        id: stub.id,
+        id: `${stub.id}__bar`,
         originalId: stub.originalId,
         originalLabel: stub.originalLabel,
         label: stub.label,
@@ -634,14 +634,11 @@ const TimeSeriesChart = ({
       }
     })
 
-    const lineThresholds = filteredThresholds.map(threshold => {
-      const indexData = threshold.data.map(value => (value === null || value === undefined ? null : value))
-      return {
-        ...threshold,
-        type: 'line',
-        data: indexData
-      }
-    })
+    const lineThresholds = filteredThresholds.map(threshold => ({
+      ...threshold,
+      type: 'line',
+      data: threshold.data
+    }))
 
     return [...barSeries, ...lineThresholds]
   }, [chartModel.stubSeries, chartModel.xAxisDates, filteredSegments, filteredThresholds, formatBarValue, visibility, theme.palette.grey])
