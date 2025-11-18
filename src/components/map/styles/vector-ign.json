@@ -13,7 +13,7 @@
     "reunion-ocean-mask": {
       "type": "geojson",
       "data": {
-         "type": "FeatureCollection",
+        "type": "FeatureCollection",
         "features": [
           {
             "type": "Feature",
