@@ -185,7 +185,8 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
       return
     }
 
-    const map = new maplibre.Map({
+    // Calculate initial center and zoom based on points to avoid visible transitions
+    const mapConfig = {
       container: mapContainerRef.current,
       style: stylesMap[mapStyle],
       center: [55.55, -21.13],
@@ -193,8 +194,39 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
       hash: true,
       debug: true,
       attributionControl: {compact: true}
-    })
+    }
+
+    let boundsToFit = null
+    let fitBoundsOptions = null
+
+    if (points && points.length > 0) {
+      const coordinates = points
+        .map(point => point.geom?.coordinates || point.coordinates)
+        .filter(Boolean)
+
+      if (coordinates.length === 1) {
+        mapConfig.center = coordinates[0]
+      } else if (coordinates.length > 1) {
+        const bounds = new maplibre.LngLatBounds(coordinates[0], coordinates[0])
+        for (const coord of coordinates) {
+          bounds.extend(coord)
+        }
+
+        boundsToFit = bounds
+        fitBoundsOptions = {
+          padding: 80,
+          duration: 0
+        }
+      }
+    }
+
+    const map = new maplibre.Map(mapConfig)
     mapRef.current = map
+
+    // Apply bounds after map creation if needed
+    if (boundsToFit) {
+      map.fitBounds(boundsToFit, fitBoundsOptions)
+    }
 
     // Contrôle d'échelle
     const scale = new maplibre.ScaleControl({
@@ -258,39 +290,6 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
       map.on('mouseenter', 'markers-symbol', onMarkerMouseEnter)
       map.on('mouseleave', 'markers-symbol', onMarkerMouseLeave)
       map.on('click', 'markers-symbol', onMarkerClick)
-    })
-
-    // Fit bounds after the map is fully loaded and sized
-    map.once('idle', () => {
-      if (points && points.length > 0) {
-        const coordinates = points
-          .map(point => point.geom?.coordinates || point.coordinates)
-          .filter(Boolean)
-
-        if (coordinates.length === 1) {
-          // Only one point: center and zoom to it
-          map.flyTo({
-            center: coordinates[0],
-            zoom: 15,
-            duration: 0
-          })
-        } else if (coordinates.length > 1) {
-          // Create bounds from all coordinates
-          const bounds = new maplibre.LngLatBounds(coordinates[0], coordinates[0])
-          for (const coord of coordinates) {
-            bounds.extend(coord)
-          }
-
-          // Fit the map to the bounds with padding
-          map.fitBounds(bounds, {
-            padding: {
-              top: 50, bottom: 50, left: 50, right: 50
-            },
-            maxZoom: 15,
-            duration: 0
-          })
-        }
-      }
     })
 
     return () => {
