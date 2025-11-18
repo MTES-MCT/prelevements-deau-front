@@ -42,10 +42,15 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
 
   // Construit les options de paramètres depuis la réponse API
   const parameterOptions = useMemo(
-    () => (seriesOptions?.parameters ?? []).map(param => ({
-      value: param.name,
-      label: param.name
-    })),
+    () => (seriesOptions?.parameters ?? []).map(param => {
+      const metadata = getParameterMetadata(param.name)
+      return {
+        value: param.name,
+        label: param.name,
+        unit: param.unit ?? metadata?.unit ?? '',
+        valueType: param.valueType ?? metadata?.valueType ?? metadata?.type ?? null
+      }
+    }),
     [seriesOptions]
   )
 

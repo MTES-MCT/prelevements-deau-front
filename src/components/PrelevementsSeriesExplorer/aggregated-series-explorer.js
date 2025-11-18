@@ -28,6 +28,12 @@ import {
   extractDefaultPeriodsFromSeries,
   periodsToDateRange
 } from './utils/index.js'
+import {
+  formatValueTypeLabel,
+  normalizeUnitLabel,
+  normalizeValueType,
+  resolveKnownValueType
+} from './utils/parameter-display.js'
 
 import {buildDailyAndTimelineData} from '@/components/PrelevementsSeriesExplorer/utils/aggregation.js'
 import CalendarGrid from '@/components/ui/CalendarGrid/index.js'
@@ -37,6 +43,52 @@ import {normalizeString} from '@/utils/string.js'
 import {parseLocalDateTime} from '@/utils/time.js'
 
 const DEFAULT_PARAMETER = 'volume prélevé'
+
+const ParameterOptionContent = ({label, unitLabel, valueTypeLabel}) => (
+  <div className='selector-option-content'>
+    <div className='selector-option-header'>
+      <span className='selector-option-label'>{label}</span>
+      {valueTypeLabel && (
+        <span className='selector-option-value-type'>{valueTypeLabel}</span>
+      )}
+    </div>
+    {unitLabel && (
+      <span className='selector-option-unit'>{unitLabel}</span>
+    )}
+  </div>
+)
+
+const buildNormalizedOption = ({
+  value,
+  label,
+  unit,
+  valueType,
+  disabled = false,
+  disabledReason,
+  title,
+  content
+}) => {
+  const normalizedUnit = normalizeUnitLabel(unit)
+  const normalizedValueType = normalizeValueType(valueType)
+  const resolvedLabel = label ?? value
+
+  return {
+    value,
+    label: resolvedLabel,
+    unit: normalizedUnit,
+    valueType: normalizedValueType,
+    disabled: Boolean(disabled),
+    disabledReason,
+    title,
+    content: content ?? (
+      <ParameterOptionContent
+        label={resolvedLabel}
+        unitLabel={normalizedUnit}
+        valueTypeLabel={formatValueTypeLabel(normalizedValueType)}
+      />
+    )
+  }
+}
 
 const normalizeParameterOptions = options => {
   if (!options) {
@@ -50,10 +102,13 @@ const normalizeParameterOptions = options => {
       }
 
       if (typeof option === 'string') {
-        return {
+        const metadata = getParameterMetadata(option)
+        return buildNormalizedOption({
           value: option,
-          content: option
-        }
+          label: option,
+          unit: metadata?.unit,
+          valueType: metadata?.valueType ?? metadata?.type
+        })
       }
 
       if (typeof option === 'object') {
@@ -62,11 +117,17 @@ const normalizeParameterOptions = options => {
           return null
         }
 
-        return {
+        const metadata = getParameterMetadata(value)
+        return buildNormalizedOption({
           value,
-          content: option.label ?? option.parameter ?? value,
-          disabled: option.disabled ?? false
-        }
+          label: option.label ?? option.parameter ?? value,
+          unit: option.unit ?? metadata?.unit,
+          valueType: option.valueType ?? metadata?.valueType ?? metadata?.type,
+          disabled: option.disabled,
+          disabledReason: option.disabledReason,
+          title: option.title,
+          content: option.content
+        })
       }
 
       return null
@@ -247,70 +308,57 @@ const AggregatedSeriesExplorer = ({
     }
   }, [selectedParametersProp])
 
+  const parameterOptionMap = useMemo(
+    () => new Map(parameterOptionsNormalized.map(option => [option.value, option])),
+    [parameterOptionsNormalized]
+  )
+
   const handleParameterSelection = useCallback(newSelection => {
     if (!Array.isArray(newSelection) || newSelection.length === 0) {
       return
     }
 
-    // Filter out null values
     const filteredSelection = newSelection.filter(value => value !== null && value !== undefined)
     if (filteredSelection.length === 0) {
       return
     }
 
-    // Get units for selected parameters
     const selectedUnits = new Set(
       filteredSelection
-        .map(paramValue => {
-          const option = parameterOptionsNormalized.find(opt => opt.value === paramValue)
-          const metadata = getParameterMetadata(paramValue)
-          return option?.unit ?? metadata?.unit
-        })
+        .map(paramValue => parameterOptionMap.get(paramValue)?.unit)
         .filter(Boolean)
     )
 
-    // Limit to MAX_DIFFERENT_UNITS different units maximum
     if (selectedUnits.size > MAX_DIFFERENT_UNITS) {
       return
     }
 
     setCurrentParameters(filteredSelection)
     handleParametersChange(filteredSelection)
-  }, [parameterOptionsNormalized, handleParametersChange])
+  }, [parameterOptionMap, handleParametersChange])
 
   // Build parameter options with disabled state based on unit constraints
   const parameterOptions = useMemo(() => {
-    // Get units of currently selected parameters
     const selectedUnits = new Set(
       currentParameters
-        .map(paramValue => {
-          const option = parameterOptionsNormalized.find(opt => opt.value === paramValue)
-          const metadata = getParameterMetadata(paramValue)
-          return option?.unit ?? metadata?.unit
-        })
+        .map(paramValue => parameterOptionMap.get(paramValue)?.unit)
         .filter(Boolean)
     )
 
-    // If we haven't reached the limit, all options are enabled
     if (selectedUnits.size < MAX_DIFFERENT_UNITS) {
       return parameterOptionsNormalized
     }
 
-    // If we've reached the limit, disable options with different units
     return parameterOptionsNormalized.map(option => {
-      const metadata = getParameterMetadata(option.value)
-      const optionUnit = option.unit ?? metadata?.unit
-
-      // Enable if already selected or if unit matches selected units
       const isEnabled = currentParameters.includes(option.value)
-        || selectedUnits.has(optionUnit)
+        || selectedUnits.has(option.unit)
 
       return {
         ...option,
         disabled: !isEnabled
       }
     })
-  }, [parameterOptionsNormalized, currentParameters])
+  }, [parameterOptionsNormalized, currentParameters, parameterOptionMap])
 
   const operatorOptionsNormalized = useMemo(
     () => normalizeOperatorOptions(operatorOptions),
@@ -403,11 +451,28 @@ const AggregatedSeriesExplorer = ({
   // Build parameter map from current selection and series metadata
   const parameterMap = useMemo(() => {
     const map = new Map()
+    // Cache resolveKnownValueType calls to avoid repeated lookups
+    const valueTypeCache = new Map()
+
+    const getCachedValueType = valueType => {
+      if (!valueType) {
+        return null
+      }
+
+      if (valueTypeCache.has(valueType)) {
+        return valueTypeCache.get(valueType)
+      }
+
+      const resolved = resolveKnownValueType(valueType)
+      valueTypeCache.set(valueType, resolved)
+      return resolved
+    }
 
     for (const paramValue of currentParameters) {
       const paramSeries = seriesMap.get(paramValue)
       const metadata = getParameterMetadata(paramValue)
       const normalizedKey = normalizeString(paramValue)
+      const optionMetadata = parameterOptionMap.get(paramValue)
 
       // Use series metadata if available, otherwise use static metadata
       const meta = paramSeries?.metadata ?? {}
@@ -415,18 +480,25 @@ const AggregatedSeriesExplorer = ({
         ?? PARAMETER_COLOR_MAP.get(normalizedKey)
         ?? FALLBACK_PARAMETER_COLOR
 
+      const resolvedMetaValueType = getCachedValueType(meta.valueType)
+      const resolvedOptionValueType = getCachedValueType(optionMetadata?.valueType)
+      const resolvedMetadataValueType = getCachedValueType(metadata?.valueType ?? metadata?.type)
+
       map.set(paramValue, {
         parameter: meta.parameter ?? paramValue,
         parameterLabel: paramValue,
         unit: meta.unit ?? metadata?.unit ?? '',
         color,
         frequency: meta.frequency,
-        valueType: meta.valueType ?? meta.operator
+        valueType: resolvedMetaValueType
+          ?? resolvedOptionValueType
+          ?? resolvedMetadataValueType
+          ?? null
       })
     }
 
     return map
-  }, [seriesMap, currentParameters])
+  }, [seriesMap, currentParameters, parameterOptionMap])
 
   const selectedParams = useMemo(
     () => currentParameters,

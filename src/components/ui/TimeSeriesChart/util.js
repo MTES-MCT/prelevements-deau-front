@@ -273,6 +273,7 @@ export const processInputSeries = (inputSeries, options = {}) => {
   const axisId = inputSeries.axis === 'right' ? AXIS_RIGHT_ID : AXIS_LEFT_ID
   const thresholdConfig = enableThresholds ? inputSeries.threshold : undefined
   const thresholdEvaluator = enableThresholds ? buildThresholdEvaluator(thresholdConfig) : () => null
+  const chartType = inputSeries.type === 'bar' ? 'bar' : 'line'
 
   const sortedPoints = [...inputSeries.data]
     .map(point => ({
@@ -299,7 +300,8 @@ export const processInputSeries = (inputSeries, options = {}) => {
     id: inputSeries.id,
     label: inputSeries.label,
     color: inputSeries.color,
-    threshold: thresholdConfig
+    threshold: thresholdConfig,
+    chartType
   }
 }
 
@@ -663,7 +665,8 @@ export const buildStubSeries = (processedSeries, xValuesLength) => processedSeri
   yAxisId: processed.axisId,
   showMark: false,
   connectNulls: false,
-  valueFormatter: () => null
+  valueFormatter: () => null,
+  chartType: processed.chartType
 }))
 
 /**
@@ -796,7 +799,8 @@ export const buildSeriesModel = ({
       thresholdEvaluator: processed.thresholdEvaluator,
       thresholdConfig: processed.threshold,
       threshold: processed.threshold, // Keep for extractStaticThresholds
-      points: pointMap
+      points: pointMap,
+      chartType: processed.chartType || 'line'
     })
   }
 

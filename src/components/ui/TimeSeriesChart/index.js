@@ -8,15 +8,27 @@
 'use client'
 
 import {
-  useCallback, useEffect, useMemo, useState
+  useCallback, useEffect, useMemo, useRef, useState
 } from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
-import {Box, IconButton, Typography} from '@mui/material'
+import {Box, Typography} from '@mui/material'
 import {useTheme} from '@mui/material/styles'
-import {LineChart, BarChart, ChartsReferenceLine} from '@mui/x-charts'
+import {
+  ChartsReferenceLine,
+  ChartsLegend,
+  ChartsTooltip,
+  ChartsAxis,
+  ChartsGrid,
+  ChartsAxisHighlight,
+  LinePlot,
+  BarPlot,
+  MarkPlot
+} from '@mui/x-charts'
+import {ChartContainer} from '@mui/x-charts/ChartContainer'
 import {useDrawingArea, useXScale, useYScale} from '@mui/x-charts/hooks'
 
+import buildComposedSeries from './build-composed-series.js'
 import {
   AXIS_LEFT_ID,
   AXIS_RIGHT_ID,
@@ -31,6 +43,8 @@ import {
 
 import CompactAlert from '@/components/ui/CompactAlert/index.js'
 import MetasList from '@/components/ui/MetasList/index.js'
+
+const CHART_HEIGHT = 360
 
 /**
  * @typedef {Object} DataPoint
@@ -379,16 +393,14 @@ const DEFAULT_TRANSLATIONS = {
   interpolatedPoint: 'Point interpolé',
   noDataAvailable: 'Aucune donnée disponible.',
   decimationWarning: 'Les données ont été décimées pour préserver les performances d\'affichage.',
-  chartAriaLabel: 'Graphique séries temporelles',
-  toggleToLineChart: 'Basculer en graphique en lignes',
-  toggleToBarChart: 'Basculer en graphique en barres'
+  chartAriaLabel: 'Graphique séries temporelles'
 }
 
 /**
  * TimeSeriesChart Component
  *
  * Displays multiple time series on a single chart with support for:
- * - Toggle between bar chart and line chart display (default: bar)
+ * - Mixed bar/line rendering where each series can define its own type
  * - Dual Y-axes (left and right) for series with different units
  * - Static and dynamic thresholds with conditional coloring
  * - Metadata annotations (comments, tags, alerts)
@@ -479,7 +491,8 @@ const TimeSeriesChart = ({
     return numberFormatter.format(value)
   }, [numberFormatter])
   const [visibility, setVisibility] = useState(() => getInitialVisibility(series))
-  const [chartType, setChartType] = useState('bar') // Default to bar chart
+  const containerRef = useRef(null)
+  const [containerWidth, setContainerWidth] = useState(null)
 
   useEffect(() => {
     setVisibility(previous => ({
@@ -487,6 +500,34 @@ const TimeSeriesChart = ({
       ...previous
     }))
   }, [series])
+
+  useEffect(() => {
+    const node = containerRef.current
+    if (!node) {
+      return
+    }
+
+    const updateWidth = () => setContainerWidth(node.clientWidth || 0)
+    updateWidth()
+
+    if (typeof ResizeObserver === 'undefined') {
+      if (typeof window !== 'undefined') {
+        window.addEventListener('resize', updateWidth)
+        return () => window.removeEventListener('resize', updateWidth)
+      }
+
+      return undefined
+    }
+
+    const observer = new ResizeObserver(entries => {
+      const entry = entries[0]
+      if (entry) {
+        setContainerWidth(entry.contentRect.width)
+      }
+    })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
 
   const chartOptions = useMemo(() => ({
     enableThresholds,
@@ -507,18 +548,7 @@ const TimeSeriesChart = ({
     () => axisFormatterFactory(locale, chartModel.xAxisDates),
     [chartModel.xAxisDates, locale]
   )
-
-  // X-axis configuration for LineChart (time scale)
-  const xAxisLine = useMemo(() => [{
-    id: X_AXIS_ID,
-    scaleType: 'time',
-    data: chartModel.xAxisDates,
-    valueFormatter: xAxisDateFormatter,
-    tickLabelStyle: {fontSize: 12}
-  }], [chartModel.xAxisDates, xAxisDateFormatter])
-
-  // X-axis configuration for BarChart (band scale with date labels)
-  const xAxisBar = useMemo(() => [{
+  const xAxisBand = useMemo(() => [{
     id: X_AXIS_ID,
     scaleType: 'band',
     data: chartModel.xAxisDates.map((_date, index) => index), // Use indices for band scale
@@ -531,6 +561,14 @@ const TimeSeriesChart = ({
   }], [chartModel.xAxisDates, xAxisDateFormatter])
 
   const yAxis = useMemo(() => chartModel.yAxis, [chartModel.yAxis])
+  const inputSeriesTypeById = useMemo(
+    () => new Map(series.map(item => [item.id, item.type === 'bar' ? 'bar' : 'line'])),
+    [series]
+  )
+  const resolveSeriesType = useCallback(
+    originalId => inputSeriesTypeById.get(originalId) ?? 'line',
+    [inputSeriesTypeById]
+  )
 
   const getTooltipXAxisDate = useCallback((axisValue, dataIndex) => {
     const hasValidIndex = typeof dataIndex === 'number'
@@ -582,66 +620,28 @@ const TimeSeriesChart = ({
     [chartModel.dynamicThresholdSeries, visibility]
   )
 
-  // Series for LineChart (time-based data)
-  const composedSeriesLine = useMemo(() => {
-    const legendSeries = chartModel.stubSeries.map(stub => ({
-      ...stub,
-      color: visibility[stub.originalId] === false ? theme.palette.grey[400] : stub.color
-    }))
-    return [...legendSeries, ...filteredSegments, ...filteredThresholds]
-  }, [chartModel.stubSeries, filteredSegments, filteredThresholds, visibility, theme.palette.grey])
+  const resolveSeriesColor = useCallback(
+    (originalId, baseColor) => (visibility[originalId] === false ? theme.palette.grey[400] : baseColor),
+    [visibility, theme.palette.grey]
+  )
 
-  // Series for BarChart (index-based data with type: 'bar')
-  const composedSeriesBar = useMemo(() => {
-    const segmentsByOriginal = new Map()
-
-    for (const segment of filteredSegments) {
-      if (!segmentsByOriginal.has(segment.originalId)) {
-        segmentsByOriginal.set(segment.originalId, [])
-      }
-
-      segmentsByOriginal.get(segment.originalId).push(segment)
-    }
-
-    const sampleLength = chartModel.xAxisDates.length
-
-    const barSeries = chartModel.stubSeries.map(stub => {
-      const mergedData = Array.from({length: sampleLength}).fill(null)
-      const segments = segmentsByOriginal.get(stub.originalId) ?? []
-
-      // Merge all segment data into a single array
-      // Note: If segments overlap (same index has non-null values), last value wins
-      for (const segment of segments) {
-        for (let index = 0; index < segment.data.length; index += 1) {
-          const value = segment.data[index]
-          if (value !== null && value !== undefined) {
-            mergedData[index] = value
-          }
-        }
-      }
-
-      return {
-        id: `${stub.id}__bar`,
-        originalId: stub.originalId,
-        originalLabel: stub.originalLabel,
-        label: stub.label,
-        type: 'bar',
-        data: mergedData,
-        color: visibility[stub.originalId] === false ? theme.palette.grey[400] : stub.color,
-        xAxisId: X_AXIS_ID,
-        yAxisId: stub.yAxisId,
-        valueFormatter: formatBarValue
-      }
-    })
-
-    const lineThresholds = filteredThresholds.map(threshold => ({
-      ...threshold,
-      type: 'line',
-      data: threshold.data
-    }))
-
-    return [...barSeries, ...lineThresholds]
-  }, [chartModel.stubSeries, chartModel.xAxisDates, filteredSegments, filteredThresholds, formatBarValue, visibility, theme.palette.grey])
+  const {composedSeries} = useMemo(() => buildComposedSeries({
+    stubSeries: chartModel.stubSeries,
+    segmentSeries: filteredSegments,
+    dynamicThresholdSeries: filteredThresholds,
+    xAxisLength: chartModel.xAxisDates.length,
+    resolveSeriesType,
+    resolveSeriesColor,
+    formatBarValue
+  }), [
+    chartModel.stubSeries,
+    filteredSegments,
+    filteredThresholds,
+    chartModel.xAxisDates.length,
+    resolveSeriesType,
+    resolveSeriesColor,
+    formatBarValue
+  ])
 
   const annotations = useMemo(() => {
     if (!enableAnnotations) {
@@ -669,6 +669,16 @@ const TimeSeriesChart = ({
     return styles
   }, [chartModel.dynamicThresholdSeries])
 
+  const leftAxisId = useMemo(() => {
+    const axis = yAxis.find(item => item.position === 'left' && item.hasData)
+    return axis?.id ?? null
+  }, [yAxis])
+
+  const rightAxisId = useMemo(() => {
+    const axis = yAxis.find(item => item.position === 'right' && item.hasData)
+    return axis?.id ?? null
+  }, [yAxis])
+
   const getPointMeta = useCallback((seriesId, index) => chartModel.metaBySeries.get(seriesId)?.[index] ?? null, [chartModel.metaBySeries])
 
   const getSegmentOrigin = useCallback((seriesId, index) => chartModel.pointBySeries.get(seriesId)?.[index] ?? null, [chartModel.pointBySeries])
@@ -691,90 +701,80 @@ const TimeSeriesChart = ({
     })
   }, [chartModel.pointBySeries, chartModel.segmentToOriginal, onPointClick])
 
-  const toggleChartType = useCallback(() => {
-    setChartType(previous => (previous === 'bar' ? 'line' : 'bar'))
-  }, [])
-
   if (chartModel.xAxisDates.length === 0) {
     return (
       <div className='p-6 border rounded-md bg-gray-50 text-gray-700 text-sm'>{t.noDataAvailable}</div>
     )
   }
 
-  const ChartComponent = chartType === 'bar' ? BarChart : LineChart
-  const xAxis = chartType === 'bar' ? xAxisBar : xAxisLine
-  const composedSeries = chartType === 'bar' ? composedSeriesBar : composedSeriesLine
-
   return (
     <div className='flex flex-col gap-3'>
-      <div className='flex justify-end'>
-        <IconButton
-          aria-label={chartType === 'bar' ? t.toggleToLineChart : t.toggleToBarChart}
-          size='small'
-          sx={{
-            border: '1px solid',
-            borderColor: 'divider',
-            borderRadius: 1
-          }}
-          onClick={toggleChartType}
-        >
-          <span
-            aria-hidden
-            className={fr.cx(chartType === 'bar' ? 'fr-icon-line-chart-line' : 'fr-icon-bar-chart-box-line')}
-          />
-        </IconButton>
-      </div>
-      <div role='figure' aria-label={t.chartAriaLabel}>
-        <ChartComponent
-          height={360}
-          series={composedSeries}
-          xAxis={xAxis}
-          yAxis={yAxis}
-          leftAxis={yAxis[0]?.hasData ? yAxis[0]?.id : null}
-          rightAxis={yAxis[1]?.hasData ? yAxis[1]?.id : null}
-          margin={{
-            top: 48, right: 80, bottom: 36, left: 80
-          }}
-          grid={{horizontal: true, vertical: true}}
-          slotProps={{
-            legend: {
-              onItemClick: handleLegendClick,
-              direction: 'row',
-              position: {vertical: 'top', horizontal: 'middle'}
-            },
-            ...(chartType === 'line' && {
-              mark: {
-                shape: 'circle'
-              }
-            })
-          }}
-          sx={{
-            ...dashedStyles
-          }}
-          slots={{
-            axisContent: props => (
-              <AxisTooltipContent
-                {...props}
-                getPointMeta={getPointMeta}
-                getSegmentOrigin={getSegmentOrigin}
-                getXAxisDate={getTooltipXAxisDate}
-                translations={t}
-                locale={locale}
+      <div ref={containerRef} className='w-full'>
+        {containerWidth ? (
+          <div role='figure' aria-label={t.chartAriaLabel}>
+            <ChartContainer
+              width={containerWidth}
+              height={CHART_HEIGHT}
+              series={composedSeries}
+              xAxis={xAxisBand}
+              yAxis={yAxis}
+              margin={{
+                top: 48, right: 80, bottom: 36, left: 80
+              }}
+              sx={{
+                ...dashedStyles
+              }}
+            >
+              <ChartsGrid horizontal vertical />
+              <ChartsAxis
+                leftAxis={leftAxisId ?? null}
+                rightAxis={rightAxisId ?? null}
               />
-            )
-          }}
-          {...(chartType === 'line' && {onMarkClick: handleMarkClick})}
-        >
-          {chartModel.staticThresholds.map(threshold => (
-            <ChartsReferenceLine
-              key={`${threshold.axisId}-${threshold.value}`}
-              y={threshold.value}
-              yAxisId={threshold.axisId}
-              lineStyle={{stroke: threshold.color, strokeDasharray: '4 4'}}
-            />
-          ))}
-          {annotations.length > 0 && chartType === 'line' && <ChartAnnotations annotations={annotations} onPointClick={onPointClick} />}
-        </ChartComponent>
+              <ChartsAxisHighlight x='line' y='line' />
+              <BarPlot />
+              <LinePlot />
+              <MarkPlot
+                slotProps={{
+                  mark: {
+                    shape: 'circle'
+                  }
+                }}
+                onItemClick={handleMarkClick}
+              />
+              <ChartsLegend
+                direction='row'
+                position={{vertical: 'top', horizontal: 'middle'}}
+                onItemClick={handleLegendClick}
+              />
+              <ChartsTooltip
+                trigger='axis'
+                slots={{
+                  axisContent: props => (
+                    <AxisTooltipContent
+                      {...props}
+                      getPointMeta={getPointMeta}
+                      getSegmentOrigin={getSegmentOrigin}
+                      getXAxisDate={getTooltipXAxisDate}
+                      translations={t}
+                      locale={locale}
+                    />
+                  )
+                }}
+              />
+              {chartModel.staticThresholds.map(threshold => (
+                <ChartsReferenceLine
+                  key={`${threshold.axisId}-${threshold.value}`}
+                  y={threshold.value}
+                  yAxisId={threshold.axisId}
+                  lineStyle={{stroke: threshold.color, strokeDasharray: '4 4'}}
+                />
+              ))}
+              {annotations.length > 0 && <ChartAnnotations annotations={annotations} onPointClick={onPointClick} />}
+            </ChartContainer>
+          </div>
+        ) : (
+          <Box sx={{height: CHART_HEIGHT}} />
+        )}
       </div>
 
       {chartModel.didDecimate && (
