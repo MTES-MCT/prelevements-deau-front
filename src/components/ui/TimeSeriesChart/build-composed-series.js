@@ -63,6 +63,13 @@ export function buildComposedSeries({
       const mergedData = Array.from({length: xAxisLength}).fill(null)
       const segments = segmentsByOriginal.get(stub.originalId) ?? []
 
+      // Merge all segment data into a single data array for the bar series.
+      // Note: segments belong to the same original series (grouped by originalId).
+      // If multiple segments provide a non-null value at the same index,
+      // the value from the later segment in the `segments` array overwrites
+      // the earlier one (last-wins). This behavior is intentional and relies
+      // on the ordering of `segmentSeries`; if you need another conflict
+      // resolution strategy (first-wins, sum, max), update this loop.
       for (const segment of segments) {
         for (let index = 0; index < segment.data.length; index += 1) {
           const value = segment.data[index]
@@ -70,6 +77,7 @@ export function buildComposedSeries({
             continue
           }
 
+          // Later segments overwrite earlier values at the same index
           mergedData[index] = value
         }
       }

@@ -220,7 +220,7 @@ const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, g
   const defaultFormatter = value => value?.toString?.() ?? ''
   const axisFormatter = forceDateFormatting
     ? () => tooltipDateFormatter(resolvedAxisValue)
-    : (axis.valueFormatter || defaultFormatter)
+    : (axis?.valueFormatter || defaultFormatter)
 
   // Collect all parameters (series values) and alerts
   const {parameters, alerts} = collectTooltipData({
