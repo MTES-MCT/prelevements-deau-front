@@ -78,6 +78,7 @@ const Page = async ({params}) => {
   const documents = await getDocumentsFromPreleveur(id)
   const exploitations = await getExploitationFromPreleveur(id)
   const seriesOptions = await getAggregatedSeriesOptions({preleveurId: id})
+
   const pointsPrelevement = []
 
   const exploitationsWithPoints = await Promise.all(exploitations.map(async exploitation => {
