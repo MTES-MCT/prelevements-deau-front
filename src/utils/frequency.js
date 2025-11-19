@@ -9,7 +9,9 @@ export const FREQUENCY_LABELS = new Map([
   ['15 minutes', '15 minutes'],
   ['1 hour', '1 heure'],
   ['1 day', '1 jour'],
-  ['1 quarter', '1 trimestre']
+  ['1 month', '1 mois'],
+  ['1 quarter', '1 trimestre'],
+  ['1 year', '1 an']
 ])
 
 // Frequency ordering for sorting (smallest to largest interval)
@@ -19,7 +21,9 @@ export const FREQUENCY_ORDER = {
   '15 minutes': 3,
   '1 hour': 4,
   '1 day': 5,
-  '1 quarter': 6
+  '1 month': 6,
+  '1 quarter': 7,
+  '1 year': 8
 }
 
 /**
