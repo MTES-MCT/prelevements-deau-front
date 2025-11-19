@@ -35,7 +35,7 @@ export function getPointPrelevementURL(point) {
 }
 
 export function getDeclarationTemplateAEP() {
-  return `${STORAGE_URL}/declaration-templates/donnees-standardisees_v2.9.xlsx`
+  return `${STORAGE_URL}/declaration-templates/donnees-standardisees_v2.10.xlsx`
 }
 
 export function getDeclarationTemplateTableauSuivi() {
