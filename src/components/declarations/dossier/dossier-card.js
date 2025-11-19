@@ -6,7 +6,8 @@ import {
   LocalDrinkOutlined,
   LocalShippingOutlined,
   TableRowsOutlined,
-  FactoryOutlined
+  FactoryOutlined,
+  WaterDropOutlined
 } from '@mui/icons-material'
 import {format} from 'date-fns'
 import {fr} from 'date-fns/locale'
@@ -14,6 +15,7 @@ import Link from 'next/link'
 
 import ListItem from '@/components/ui/ListItem/index.js'
 import {getDossierPeriodLabel} from '@/lib/dossier.js'
+import {formatNumber} from '@/utils/number.js'
 
 const rightIcons = {
   'camion-citerne': {
@@ -87,6 +89,17 @@ const metas = dossier => {
     {
       icon: TableRowsOutlined,
       content: typeDonnees(dossier.typeDonnees)
+    },
+    {
+      icon: WaterDropOutlined,
+      content: dossier.result?.totalVolumePreleve
+        ? (
+          <>
+            Volume prélevé : {formatNumber(dossier.result.totalVolumePreleve)}{' '}
+            <span aria-label='mètres cubes' role='text'>m³</span>
+          </>
+        )
+        : 'Aucun volume prélevé déclaré'
     }
   ]
 }
