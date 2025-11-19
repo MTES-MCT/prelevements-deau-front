@@ -624,12 +624,12 @@ const AggregatedSeriesExplorer = ({
       return null
     }
 
-    // Always show the slider if there are any dates in the timeline (even if no data in visible range)
-    const hasAnyData = !isLoading && !error && allDates.length > 0
+    // Always show the chart if we already have data, even while a new fetch is running.
+    const canDisplayChart = !error && allDates.length > 0
 
-    if (hasAnyData) {
+    if (canDisplayChart) {
       return (
-        <Box sx={{minHeight: 360}}>
+        <Box sx={{minHeight: 360, position: 'relative'}}>
           <ChartWithRangeSlider
             allDates={allDates}
             locale={locale}
@@ -641,6 +641,22 @@ const AggregatedSeriesExplorer = ({
             timeSeriesChartProps={timeSeriesChartProps}
             onRangeChange={handleRangeChange}
           />
+
+          {isLoading && (
+            <Box
+              sx={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                pointerEvents: 'all'
+              }}
+            >
+              <LoadingState message={t.loadingData} />
+            </Box>
+          )}
         </Box>
       )
     }
@@ -668,7 +684,9 @@ const AggregatedSeriesExplorer = ({
     )
   }
 
-  if (seriesMap.size === 0 && !isLoading) {
+  // Only show "no data available" message if there are no parameters available from API
+  // If we have parameters but seriesMap is empty, it means data is loading or user hasn't selected any
+  if (!isLoading && (!parameters || parameters.length === 0)) {
     return (
       <Box className='flex flex-col gap-4'>
         <Alert severity='info' description='Aucune donnée agrégée disponible' />
