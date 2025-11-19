@@ -232,6 +232,7 @@ const DossierDetails = ({dossier, preleveur, files = [], idPoints}) => {
     )
   }, [
     dossier.compteur,
+    dossier.id_point_prelevement_manuel,
     dossier.moisDeclaration,
     dossier.relevesIndex,
     dossier.typePrelevement,
