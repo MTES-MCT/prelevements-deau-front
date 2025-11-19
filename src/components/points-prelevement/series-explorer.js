@@ -252,7 +252,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
 
     let isActive = true
     const abortController = new AbortController()
-    
+
     setIsLoading(true)
     setLoadError(null)
 
