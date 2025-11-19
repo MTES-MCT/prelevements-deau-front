@@ -208,11 +208,16 @@ export function buildAggregatedSeriesQuery(params = {}) {
  * @param {Object} params
  * @returns {Promise<Object>}
  */
-export async function getAggregatedSeries(params = {}) {
+export async function getAggregatedSeries(params = {}, requestOptions = {}) {
   const query = buildAggregatedSeriesQuery(params)
+  const {signal} = requestOptions
+  const authorization = await getAuthorization()
   const response = await executeRequest(
     `api/aggregated-series${query}`,
-    {headers: {Authorization: await getAuthorization()}}
+    {
+      headers: {Authorization: authorization},
+      signal
+    }
   )
 
   let payload = null

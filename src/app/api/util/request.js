@@ -26,11 +26,15 @@ export async function getAuthorization() {
 }
 
 export async function executeRequest(url, options = {}) {
-  const {method, body, headers} = options
+  const {method, body, headers = {}, signal} = options
 
   const fetchOptions = {
     method: method || 'GET',
     headers
+  }
+
+  if (signal) {
+    fetchOptions.signal = signal
   }
 
   if (body && body instanceof Blob) {
