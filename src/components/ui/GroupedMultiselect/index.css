@@ -71,6 +71,11 @@
   text-transform: lowercase;
 }
 
+.selector-option-unit {
+  font-size: 0.75rem;
+  color: var(--text-mention-grey);
+}
+
 .fr-bg-disabled-grey {
   color: var(--text-disabled-grey);
 }

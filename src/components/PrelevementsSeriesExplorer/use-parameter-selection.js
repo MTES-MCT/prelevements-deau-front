@@ -11,31 +11,13 @@ import {
   PARAMETER_COLOR_MAP
 } from './constants/colors.js'
 import {indexDuplicateParameters} from './utils/index.js'
+import {
+  formatValueTypeLabel,
+  normalizeUnitLabel
+} from './utils/parameter-display.js'
 
 import {formatFrequencyLabel} from '@/utils/frequency.js'
 import {normalizeString} from '@/utils/string.js'
-
-// Possible value types (specification) => French labels
-const VALUE_TYPE_LABELS = new Map([
-  ['instantaneous', 'instantané'],
-  ['average', 'moyenne'],
-  ['minimum', 'minimum'],
-  ['maximum', 'maximum'],
-  ['median', 'médiane'],
-  ['delta-index', 'delta-index'],
-  ['cumulative', 'cumulé'],
-  ['raw', 'brut']
-])
-
-function formatValueTypeLabel(valueType) {
-  const trimmed = valueType?.toString().trim()
-  if (!trimmed) {
-    return null
-  }
-
-  const label = VALUE_TYPE_LABELS.get(trimmed.toLowerCase())
-  return label ?? VALUE_TYPE_LABELS.get('raw')
-}
 
 // Shared presentation for parameter entries inside the multiselect
 const ParameterOptionContent = ({label, frequencyLabel, valueTypeLabel}) => (
@@ -117,16 +99,6 @@ function findDefaultSelectedParams(parameters) {
   }
 
   return [parameters[0].parameterLabel]
-}
-
-const FALLBACK_UNIT_LABEL = 'Sans unité'
-
-const normalizeUnitLabel = unit => {
-  if (typeof unit === 'string' && unit.trim()) {
-    return unit.trim()
-  }
-
-  return FALLBACK_UNIT_LABEL
 }
 
 /**

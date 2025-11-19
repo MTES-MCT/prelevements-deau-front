@@ -23,6 +23,8 @@ import {
 const DEFAULT_FREQUENCY = '1 day'
 const DEFAULT_PARAMETER = 'volume prélevé'
 const DEFAULT_OPERATOR_FOR_VOLUME = 'sum'
+const FALLBACK_VOLUME_OPERATORS = ['sum', 'mean', 'min', 'max']
+const FALLBACK_STANDARD_OPERATORS = ['mean', 'min', 'max']
 
 const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = null, startDate = null, endDate = null}) => {
   // Vérifie si des paramètres sont disponibles depuis l'API
@@ -42,10 +44,15 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
 
   // Construit les options de paramètres depuis la réponse API
   const parameterOptions = useMemo(
-    () => (seriesOptions?.parameters ?? []).map(param => ({
-      value: param.name,
-      label: param.name
-    })),
+    () => (seriesOptions?.parameters ?? []).map(param => {
+      const metadata = getParameterMetadata(param.name)
+      return {
+        value: param.name,
+        label: param.name,
+        unit: param.unit ?? metadata?.unit ?? '',
+        valueType: param.valueType ?? metadata?.valueType ?? metadata?.type ?? null
+      }
+    }),
     [seriesOptions]
   )
 
@@ -56,11 +63,41 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
 
     return new Map(
       seriesOptions.parameters.map(param => {
-        const metadata = getParameterMetadata(param.name)
+        const metadata = getParameterMetadata(param.name) ?? {}
+        const normalizedName = param.name?.toLowerCase() ?? ''
+        const fallbackOperators = normalizedName.includes('volume')
+          ? FALLBACK_VOLUME_OPERATORS
+          : FALLBACK_STANDARD_OPERATORS
+
+        const operatorSource = (() => {
+          if (Array.isArray(param.operators) && param.operators.length > 0) {
+            return param.operators
+          }
+
+          if (Array.isArray(metadata.operators) && metadata.operators.length > 0) {
+            return metadata.operators
+          }
+
+          return fallbackOperators
+        })()
+
+        const operators = [...new Set(operatorSource)].filter(Boolean)
+
+        const unit = param.unit ?? metadata.unit ?? ''
+        const valueType = param.valueType ?? metadata.valueType ?? metadata.type ?? null
+        const defaultOperator = param.defaultOperator
+          ?? metadata.defaultOperator
+          ?? operators[0]
+          ?? (normalizedName.includes('volume') ? DEFAULT_OPERATOR_FOR_VOLUME : fallbackOperators[0])
+
         return [param.name, {
           ...metadata,
           ...param,
-          parameter: param.name
+          parameter: param.name,
+          operators,
+          defaultOperator,
+          unit,
+          valueType
         }]
       })
     )
@@ -164,7 +201,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
 
   const resolvedOperator = selectedOperator ?? resolvedDefaultOperator ?? null
 
-  const fetchAggregatedSeries = useCallback(async (parameter, operator, frequency) => {
+  const fetchAggregatedSeries = useCallback(async (parameter, operator, frequency, requestOptions = {}) => {
     const params = {
       aggregationFrequency: frequency,
       parameter,
@@ -187,39 +224,65 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
       params.endDate = endDate
     }
 
-    return getAggregatedSeries(params)
+    return getAggregatedSeries(params, requestOptions)
   }, [pointIds, preleveurId, startDate, endDate])
 
   useEffect(() => {
-    if (selectedParameters.length === 0 || !resolvedOperator || !selectedFrequency) {
+    // Clear the map only when no parameters are selected
+    if (selectedParameters.length === 0) {
       setAggregatedSeriesMap(new Map())
+      setIsLoading(false)
       return
     }
 
-    let cancelled = false
+    // Don't load if frequency is missing
+    if (!selectedFrequency) {
+      return
+    }
+
+    const operatorForFetch = resolvedOperator ?? resolvedDefaultOperator ?? null
+
+    // When the operator is still being derived (after a parameter change), show
+    // a loading state but keep the previous data visible.
+    if (!operatorForFetch) {
+      setIsLoading(true)
+      setLoadError(null)
+      return
+    }
+
+    let isActive = true
+    const abortController = new AbortController()
+
     setIsLoading(true)
     setLoadError(null)
 
     const loadAllSeries = async () => {
       try {
-        // Load all parameters in parallel
         const promises = selectedParameters.map(async param => {
-          const response = await fetchAggregatedSeries(param, resolvedOperator, selectedFrequency)
+          const response = await fetchAggregatedSeries(
+            param,
+            operatorForFetch,
+            selectedFrequency,
+            {signal: abortController.signal}
+          )
           return [param, response]
         })
 
         const results = await Promise.all(promises)
 
-        if (!cancelled) {
-          const seriesMap = new Map(results)
-          setAggregatedSeriesMap(seriesMap)
+        if (isActive) {
+          setAggregatedSeriesMap(new Map(results))
         }
       } catch (error) {
-        if (!cancelled) {
+        if (error?.name === 'AbortError') {
+          return
+        }
+
+        if (isActive) {
           setLoadError(error instanceof Error ? error.message : 'Impossible de charger les séries agrégées')
         }
       } finally {
-        if (!cancelled) {
+        if (isActive) {
           setIsLoading(false)
         }
       }
@@ -228,9 +291,10 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
     loadAllSeries()
 
     return () => {
-      cancelled = true
+      isActive = false
+      abortController.abort()
     }
-  }, [selectedParameters, resolvedOperator, selectedFrequency, fetchAggregatedSeries])
+  }, [selectedParameters, resolvedOperator, resolvedDefaultOperator, selectedFrequency, fetchAggregatedSeries])
 
   const handleFiltersChange = useCallback(({parameters, operator, frequency}) => {
     // Handle parameters change (multi-select)

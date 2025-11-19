@@ -273,6 +273,7 @@ export const processInputSeries = (inputSeries, options = {}) => {
   const axisId = inputSeries.axis === 'right' ? AXIS_RIGHT_ID : AXIS_LEFT_ID
   const thresholdConfig = enableThresholds ? inputSeries.threshold : undefined
   const thresholdEvaluator = enableThresholds ? buildThresholdEvaluator(thresholdConfig) : () => null
+  const chartType = inputSeries.type === 'bar' ? 'bar' : 'line'
 
   const sortedPoints = [...inputSeries.data]
     .map(point => ({
@@ -299,7 +300,8 @@ export const processInputSeries = (inputSeries, options = {}) => {
     id: inputSeries.id,
     label: inputSeries.label,
     color: inputSeries.color,
-    threshold: thresholdConfig
+    threshold: thresholdConfig,
+    chartType
   }
 }
 
@@ -663,13 +665,20 @@ export const buildStubSeries = (processedSeries, xValuesLength) => processedSeri
   yAxisId: processed.axisId,
   showMark: false,
   connectNulls: false,
-  valueFormatter: () => null
+  valueFormatter: () => null,
+  chartType: processed.chartType
 }))
 
 /**
- * Build single y-axis configuration
+ * Builds a single y-axis configuration
+ * @param {string} axisId - The axis identifier
+ * @param {object} stats - Statistics with min and max values
+ * @param {Function} numberFormatter - Number formatting function
+ * @param {string|null} label - Optional axis label
+ * @param {boolean} hasBarSeries - Whether this axis contains bar-type series
+ * @returns {object} Y-axis configuration
  */
-const buildSingleYAxis = (axisId, stats, numberFormatter, label = null) => {
+const buildSingleYAxis = (axisId, stats, numberFormatter, label = null, hasBarSeries = false) => {
   const hasData = stats.min !== Number.POSITIVE_INFINITY
 
   // Create a default axis even if no data to prevent useYScale errors
@@ -693,9 +702,20 @@ const buildSingleYAxis = (axisId, stats, numberFormatter, label = null) => {
     }
   }
 
-  if (stats.min === stats.max) {
-    stats.min -= 1
-    stats.max += 1
+  // For bar charts, anchor the axis at zero to prevent bars from rendering below baseline
+  // Support both positive and negative values by extending the range to include zero
+  let axisMin = stats.min
+  let axisMax = stats.max
+
+  if (hasBarSeries) {
+    axisMin = Math.min(0, stats.min)
+    axisMax = Math.max(0, stats.max)
+  }
+
+  // Prevent collapsed axis when min equals max
+  if (axisMin === axisMax) {
+    axisMin -= 1
+    axisMax += 1
   }
 
   return {
@@ -710,19 +730,43 @@ const buildSingleYAxis = (axisId, stats, numberFormatter, label = null) => {
 
       return numberFormatter.format(value)
     },
-    min: stats.min,
-    max: stats.max,
+    min: axisMin,
+    max: axisMax,
     hasData: true
   }
 }
 
 /**
  * Build y-axis configurations from statistics
+ * @param {object} axisStats - Statistics per axis
+ * @param {Function} numberFormatter - Number formatting function
+ * @param {object} axisLabels - Optional labels per axis
+ * @param {Array} processedSeries - Processed series to detect bar types
+ * @returns {Array} Y-axis configurations
  */
-export const buildYAxisConfigurations = (axisStats, numberFormatter, axisLabels = {}) =>
-  [AXIS_LEFT_ID, AXIS_RIGHT_ID].map(axisId =>
-    buildSingleYAxis(axisId, axisStats[axisId], numberFormatter, axisLabels[axisId] ?? null)
+export const buildYAxisConfigurations = (axisStats, numberFormatter, axisLabels = {}, processedSeries = []) => {
+  // Detect which axes contain bar-type series
+  const axisHasBarSeries = {
+    [AXIS_LEFT_ID]: false,
+    [AXIS_RIGHT_ID]: false
+  }
+
+  for (const series of processedSeries) {
+    if (series.chartType === 'bar') {
+      axisHasBarSeries[series.axisId] = true
+    }
+  }
+
+  return [AXIS_LEFT_ID, AXIS_RIGHT_ID].map(axisId =>
+    buildSingleYAxis(
+      axisId,
+      axisStats[axisId],
+      numberFormatter,
+      axisLabels[axisId] ?? null,
+      axisHasBarSeries[axisId]
+    )
   )
+}
 
 /**
  * Extract static thresholds from processed series
@@ -796,7 +840,8 @@ export const buildSeriesModel = ({
       thresholdEvaluator: processed.thresholdEvaluator,
       thresholdConfig: processed.threshold,
       threshold: processed.threshold, // Keep for extractStaticThresholds
-      points: pointMap
+      points: pointMap,
+      chartType: processed.chartType || 'line'
     })
   }
 
@@ -855,7 +900,7 @@ export const buildSeriesModel = ({
   }
 
   // Step 9: Build y-axis configurations
-  const yAxis = buildYAxisConfigurations(axisStats, numberFormatter, axisLabels)
+  const yAxis = buildYAxisConfigurations(axisStats, numberFormatter, axisLabels, processedSeries)
 
   return {
     xValues,

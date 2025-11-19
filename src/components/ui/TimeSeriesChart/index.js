@@ -8,15 +8,27 @@
 'use client'
 
 import {
-  useCallback, useEffect, useMemo, useState
+  useCallback, useEffect, useMemo, useRef, useState
 } from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
 import {Box, Typography} from '@mui/material'
 import {useTheme} from '@mui/material/styles'
-import {LineChart, ChartsReferenceLine} from '@mui/x-charts'
+import {
+  ChartsReferenceLine,
+  ChartsLegend,
+  ChartsTooltip,
+  ChartsAxis,
+  ChartsGrid,
+  ChartsAxisHighlight,
+  LinePlot,
+  BarPlot,
+  MarkPlot
+} from '@mui/x-charts'
+import {ChartContainer} from '@mui/x-charts/ChartContainer'
 import {useDrawingArea, useXScale, useYScale} from '@mui/x-charts/hooks'
 
+import buildComposedSeries from './build-composed-series.js'
 import {
   AXIS_LEFT_ID,
   AXIS_RIGHT_ID,
@@ -25,11 +37,14 @@ import {
   X_AXIS_ID,
   axisFormatterFactory,
   buildAnnotations,
-  buildSeriesModel
+  buildSeriesModel,
+  getNumberFormatter
 } from './util.js'
 
 import CompactAlert from '@/components/ui/CompactAlert/index.js'
 import MetasList from '@/components/ui/MetasList/index.js'
+
+const CHART_HEIGHT = 360
 
 /**
  * @typedef {Object} DataPoint
@@ -79,45 +94,15 @@ const useChartModel = ({series, locale, theme, exposeAllMarks, options}) => useM
 )
 
 /**
- * Custom tooltip content component for the chart
- * Displays series values, metadata, alerts, and synthetic point indicators
- * Styled to match the PeriodTooltip component for UI consistency
- * @param {Object} props - Component props
- * @param {Date} props.axisValue - Current X-axis value (timestamp)
- * @param {number} props.dataIndex - Index of the current data point
- * @param {Array} props.series - Array of series with their data
- * @param {Object} props.axis - Axis configuration
- * @param {Function} props.getPointMeta - Function to retrieve metadata for a point
- * @param {Function} props.getSegmentOrigin - Function to retrieve segment origin data
- * @param {Object} props.translations - Translation strings
- * @param {string} props.locale - Locale string for date formatting
- * @returns {JSX.Element|null} Tooltip content or null if no data
+ * Helper to collect parameters and alerts from series data
+ * @param {Array} series - Array of series data
+ * @param {number} dataIndex - Index of the data point
+ * @param {Function} getPointMeta - Function to retrieve metadata
+ * @param {Function} getSegmentOrigin - Function to retrieve segment origin
+ * @param {Object} translations - Translation strings
+ * @returns {Object} Object with parameters and alerts arrays
  */
-const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, getSegmentOrigin, translations: t, locale}) => {
-  // Tooltip ALWAYS shows full date and time, regardless of x-axis tick format
-  // This ensures users can see the complete timestamp even when ticks show abbreviated formats
-  const tooltipDateFormatter = useMemo(() => {
-    const formatter = new Intl.DateTimeFormat(locale, {
-      hour12: false,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-    return value => formatter.format(value instanceof Date ? value : new Date(value))
-  }, [locale])
-
-  if (dataIndex === null || dataIndex === undefined) {
-    return null
-  }
-
-  const defaultFormatter = value => value?.toString?.() ?? ''
-  const axisFormatter = axis.scaleType === 'time'
-    ? tooltipDateFormatter
-    : (axis.valueFormatter || defaultFormatter)
-
-  // Collect all parameters (series values) for MetasList
+const collectTooltipData = ({series, dataIndex, getPointMeta, getSegmentOrigin, translations}) => {
   const parameters = []
   const alerts = []
 
@@ -174,10 +159,77 @@ const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, g
     // Add synthetic point indicator
     if (origin?.synthetic) {
       parameters.push({
-        content: t.interpolatedPoint
+        content: translations.interpolatedPoint
       })
     }
   }
+
+  return {parameters, alerts}
+}
+
+/**
+ * Custom Tooltip Content Component
+ * Displays rich information about data points on hover:
+ * - Full datetime label (always includes date and time)
+ * - Parameter values with color indicators
+ * - Metadata (comments, alerts, synthetic points)
+ * @param {Date|number|string} props.axisValue - The value on the x-axis
+ * @param {number} props.dataIndex - Index of the data point
+ * @param {Array} props.series - Array of series data
+ * @param {Object} props.axis - Axis configuration
+ * @param {Function} props.getPointMeta - Function to retrieve metadata for a point
+ * @param {Function} props.getSegmentOrigin - Function to retrieve segment origin data
+ * @param {Function} props.getXAxisDate - Function returning the true date for the tooltip label
+ * @param {Object} props.translations - Translation strings
+ * @param {string} props.locale - Locale string for date formatting
+ * @returns {JSX.Element|null} Tooltip content or null if no data
+ */
+const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, getSegmentOrigin, getXAxisDate, translations: t, locale}) => {
+  // Tooltip ALWAYS shows full date and time, regardless of x-axis tick format
+  // This ensures users can see the complete timestamp even when ticks show abbreviated formats
+  const tooltipDateFormatter = useMemo(() => {
+    const formatter = new Intl.DateTimeFormat(locale, {
+      hour12: false,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+    return value => formatter.format(value instanceof Date ? value : new Date(value))
+  }, [locale])
+
+  // Resolve axis value before early return to respect Hooks rules
+  const resolvedAxisValue = useMemo(() => {
+    if (typeof getXAxisDate === 'function') {
+      const value = getXAxisDate(axisValue, dataIndex)
+      if (value) {
+        return value
+      }
+    }
+
+    return axisValue
+  }, [axisValue, dataIndex, getXAxisDate])
+
+  if (dataIndex === null || dataIndex === undefined) {
+    return null
+  }
+
+  const forceDateFormatting = resolvedAxisValue instanceof Date
+    || (typeof resolvedAxisValue === 'number' && Number.isFinite(resolvedAxisValue))
+  const defaultFormatter = value => value?.toString?.() ?? ''
+  const axisFormatter = forceDateFormatting
+    ? () => tooltipDateFormatter(resolvedAxisValue)
+    : (axis?.valueFormatter || defaultFormatter)
+
+  // Collect all parameters (series values) and alerts
+  const {parameters, alerts} = collectTooltipData({
+    series,
+    dataIndex,
+    getPointMeta,
+    getSegmentOrigin,
+    translations: t
+  })
 
   return (
     <Box
@@ -193,7 +245,7 @@ const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, g
       }}
     >
       {axisValue !== undefined && (
-        <Typography sx={{fontWeight: 'bold'}}>{axisFormatter(axisValue)}</Typography>
+        <Typography sx={{fontWeight: 'bold'}}>{axisFormatter(resolvedAxisValue ?? axisValue)}</Typography>
       )}
       <Box sx={{display: 'flex', flexDirection: 'column', gap: 2}}>
         {parameters.length > 0 && <MetasList metas={parameters} />}
@@ -348,6 +400,7 @@ const DEFAULT_TRANSLATIONS = {
  * TimeSeriesChart Component
  *
  * Displays multiple time series on a single chart with support for:
+ * - Mixed bar/line rendering where each series can define its own type
  * - Dual Y-axes (left and right) for series with different units
  * - Static and dynamic thresholds with conditional coloring
  * - Metadata annotations (comments, tags, alerts)
@@ -429,7 +482,17 @@ const TimeSeriesChart = ({
 }) => {
   const t = {...DEFAULT_TRANSLATIONS, ...translations}
   const theme = useTheme()
+  const numberFormatter = useMemo(() => getNumberFormatter(locale), [locale])
+  const formatBarValue = useCallback(value => {
+    if (value === null || Number.isNaN(value)) {
+      return null
+    }
+
+    return numberFormatter.format(value)
+  }, [numberFormatter])
   const [visibility, setVisibility] = useState(() => getInitialVisibility(series))
+  const containerRef = useRef(null)
+  const [containerWidth, setContainerWidth] = useState(null)
 
   useEffect(() => {
     setVisibility(previous => ({
@@ -437,6 +500,34 @@ const TimeSeriesChart = ({
       ...previous
     }))
   }, [series])
+
+  useEffect(() => {
+    const node = containerRef.current
+    if (!node) {
+      return
+    }
+
+    const updateWidth = () => setContainerWidth(node.clientWidth || 0)
+    updateWidth()
+
+    if (typeof ResizeObserver === 'undefined') {
+      if (typeof window !== 'undefined') {
+        window.addEventListener('resize', updateWidth)
+        return () => window.removeEventListener('resize', updateWidth)
+      }
+
+      return undefined
+    }
+
+    const observer = new ResizeObserver(entries => {
+      const entry = entries[0]
+      if (entry) {
+        setContainerWidth(entry.contentRect.width)
+      }
+    })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
 
   const chartOptions = useMemo(() => ({
     enableThresholds,
@@ -453,16 +544,63 @@ const TimeSeriesChart = ({
     options: chartOptions
   })
 
-  const xAxis = useMemo(() => [{
+  const xAxisDateFormatter = useMemo(
+    () => axisFormatterFactory(locale, chartModel.xAxisDates),
+    [chartModel.xAxisDates, locale]
+  )
+  const xAxisBand = useMemo(() => [{
     id: X_AXIS_ID,
-    scaleType: 'time',
-    data: chartModel.xAxisDates,
-    // X-axis date format adapts to the visible time range (min to max)
-    valueFormatter: axisFormatterFactory(locale, chartModel.xAxisDates),
+    scaleType: 'band',
+    data: chartModel.xAxisDates.map((_date, index) => index), // Use indices for band scale
+    valueFormatter(value) {
+      // Value is index, get corresponding date
+      const date = chartModel.xAxisDates[value]
+      return date ? xAxisDateFormatter(date) : ''
+    },
     tickLabelStyle: {fontSize: 12}
-  }], [chartModel.xAxisDates, locale])
+  }], [chartModel.xAxisDates, xAxisDateFormatter])
 
   const yAxis = useMemo(() => chartModel.yAxis, [chartModel.yAxis])
+  const inputSeriesTypeById = useMemo(
+    () => new Map(series.map(item => [item.id, item.type === 'bar' ? 'bar' : 'line'])),
+    [series]
+  )
+  const resolveSeriesType = useCallback(
+    originalId => inputSeriesTypeById.get(originalId) ?? 'line',
+    [inputSeriesTypeById]
+  )
+
+  const getTooltipXAxisDate = useCallback((axisValue, dataIndex) => {
+    const hasValidIndex = typeof dataIndex === 'number'
+      && dataIndex >= 0
+      && dataIndex < chartModel.xAxisDates.length
+    if (hasValidIndex) {
+      return chartModel.xAxisDates[dataIndex]
+    }
+
+    if (axisValue instanceof Date) {
+      return axisValue
+    }
+
+    if (Number.isInteger(axisValue)
+        && axisValue >= 0
+        && axisValue < chartModel.xAxisDates.length) {
+      return chartModel.xAxisDates[axisValue]
+    }
+
+    if (typeof axisValue === 'number' && Number.isFinite(axisValue)) {
+      return new Date(axisValue)
+    }
+
+    const numericValue = Number(axisValue)
+    if (Number.isInteger(numericValue)
+        && numericValue >= 0
+        && numericValue < chartModel.xAxisDates.length) {
+      return chartModel.xAxisDates[numericValue]
+    }
+
+    return null
+  }, [chartModel.xAxisDates])
 
   const handleLegendClick = useCallback((event, item) => {
     event.preventDefault()
@@ -482,13 +620,28 @@ const TimeSeriesChart = ({
     [chartModel.dynamicThresholdSeries, visibility]
   )
 
-  const composedSeries = useMemo(() => {
-    const legendSeries = chartModel.stubSeries.map(stub => ({
-      ...stub,
-      color: visibility[stub.originalId] === false ? theme.palette.grey[400] : stub.color
-    }))
-    return [...legendSeries, ...filteredSegments, ...filteredThresholds]
-  }, [chartModel.stubSeries, filteredSegments, filteredThresholds, visibility, theme.palette.grey])
+  const resolveSeriesColor = useCallback(
+    (originalId, baseColor) => (visibility[originalId] === false ? theme.palette.grey[400] : baseColor),
+    [visibility, theme.palette.grey]
+  )
+
+  const {composedSeries} = useMemo(() => buildComposedSeries({
+    stubSeries: chartModel.stubSeries,
+    segmentSeries: filteredSegments,
+    dynamicThresholdSeries: filteredThresholds,
+    xAxisLength: chartModel.xAxisDates.length,
+    resolveSeriesType,
+    resolveSeriesColor,
+    formatBarValue
+  }), [
+    chartModel.stubSeries,
+    filteredSegments,
+    filteredThresholds,
+    chartModel.xAxisDates.length,
+    resolveSeriesType,
+    resolveSeriesColor,
+    formatBarValue
+  ])
 
   const annotations = useMemo(() => {
     if (!enableAnnotations) {
@@ -515,6 +668,16 @@ const TimeSeriesChart = ({
 
     return styles
   }, [chartModel.dynamicThresholdSeries])
+
+  const leftAxisId = useMemo(() => {
+    const axis = yAxis.find(item => item.position === 'left' && item.hasData)
+    return axis?.id ?? null
+  }, [yAxis])
+
+  const rightAxisId = useMemo(() => {
+    const axis = yAxis.find(item => item.position === 'right' && item.hasData)
+    return axis?.id ?? null
+  }, [yAxis])
 
   const getPointMeta = useCallback((seriesId, index) => chartModel.metaBySeries.get(seriesId)?.[index] ?? null, [chartModel.metaBySeries])
 
@@ -546,54 +709,72 @@ const TimeSeriesChart = ({
 
   return (
     <div className='flex flex-col gap-3'>
-      <div role='figure' aria-label={t.chartAriaLabel}>
-        <LineChart
-          height={360}
-          series={composedSeries}
-          xAxis={xAxis}
-          yAxis={yAxis}
-          leftAxis={yAxis[0]?.hasData ? yAxis[0]?.id : null}
-          rightAxis={yAxis[1]?.hasData ? yAxis[1]?.id : null}
-          margin={{
-            top: 48, right: 80, bottom: 36, left: 80
-          }}
-          grid={{horizontal: true, vertical: true}}
-          slotProps={{
-            legend: {
-              onItemClick: handleLegendClick,
-              direction: 'row',
-              position: {vertical: 'top', horizontal: 'middle'}
-            },
-            mark: {
-              shape: 'circle'
-            }
-          }}
-          sx={{
-            ...dashedStyles
-          }}
-          slots={{
-            axisContent: props => (
-              <AxisTooltipContent
-                {...props}
-                getPointMeta={getPointMeta}
-                getSegmentOrigin={getSegmentOrigin}
-                translations={t}
-                locale={locale}
+      <div ref={containerRef} className='w-full'>
+        {containerWidth ? (
+          <div role='figure' aria-label={t.chartAriaLabel}>
+            <ChartContainer
+              width={containerWidth}
+              height={CHART_HEIGHT}
+              series={composedSeries}
+              xAxis={xAxisBand}
+              yAxis={yAxis}
+              margin={{
+                top: 48, right: 80, bottom: 36, left: 80
+              }}
+              sx={{
+                ...dashedStyles
+              }}
+            >
+              <ChartsGrid horizontal vertical />
+              <ChartsAxis
+                leftAxis={leftAxisId ?? null}
+                rightAxis={rightAxisId ?? null}
               />
-            )
-          }}
-          onMarkClick={handleMarkClick}
-        >
-          {chartModel.staticThresholds.map(threshold => (
-            <ChartsReferenceLine
-              key={`${threshold.axisId}-${threshold.value}`}
-              y={threshold.value}
-              yAxisId={threshold.axisId}
-              lineStyle={{stroke: threshold.color, strokeDasharray: '4 4'}}
-            />
-          ))}
-          {annotations.length > 0 && <ChartAnnotations annotations={annotations} onPointClick={onPointClick} />}
-        </LineChart>
+              <ChartsAxisHighlight x='line' y='line' />
+              <BarPlot />
+              <LinePlot />
+              <MarkPlot
+                slotProps={{
+                  mark: {
+                    shape: 'circle'
+                  }
+                }}
+                onItemClick={handleMarkClick}
+              />
+              <ChartsLegend
+                direction='row'
+                position={{vertical: 'top', horizontal: 'middle'}}
+                onItemClick={handleLegendClick}
+              />
+              <ChartsTooltip
+                trigger='axis'
+                slots={{
+                  axisContent: props => (
+                    <AxisTooltipContent
+                      {...props}
+                      getPointMeta={getPointMeta}
+                      getSegmentOrigin={getSegmentOrigin}
+                      getXAxisDate={getTooltipXAxisDate}
+                      translations={t}
+                      locale={locale}
+                    />
+                  )
+                }}
+              />
+              {chartModel.staticThresholds.map(threshold => (
+                <ChartsReferenceLine
+                  key={`${threshold.axisId}-${threshold.value}`}
+                  y={threshold.value}
+                  yAxisId={threshold.axisId}
+                  lineStyle={{stroke: threshold.color, strokeDasharray: '4 4'}}
+                />
+              ))}
+              {annotations.length > 0 && <ChartAnnotations annotations={annotations} onPointClick={onPointClick} />}
+            </ChartContainer>
+          </div>
+        ) : (
+          <Box sx={{height: CHART_HEIGHT}} />
+        )}
       </div>
 
       {chartModel.didDecimate && (

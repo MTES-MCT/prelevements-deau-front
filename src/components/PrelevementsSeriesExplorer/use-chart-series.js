@@ -6,6 +6,7 @@ import {useMemo} from 'react'
 
 import {FALLBACK_PARAMETER_COLOR} from './constants/colors.js'
 import {processTimeSeriesData} from './utils/gap-detection.js'
+import {isCumulativeValueType} from './utils/parameter-display.js'
 
 /**
  * Transforms loaded values into chart-ready series format
@@ -94,7 +95,8 @@ export function useChartSeries({
         label,
         axis,
         color,
-        data: processedData
+        data: processedData,
+        type: isCumulativeValueType(param.valueType) ? 'bar' : 'line'
       }
     }).filter(Boolean)
   }, [
