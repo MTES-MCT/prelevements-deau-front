@@ -6,12 +6,13 @@ import Button from '@codegouvfr/react-dsfr/Button'
 import Notice from '@codegouvfr/react-dsfr/Notice'
 import {Card} from '@mui/material'
 import {Box} from '@mui/system'
+import {orderBy} from 'lodash-es'
 
 import DeclarationFileDetails from '../dossier/prelevements/declaration-file-details.js'
 
 import PrelevementsAccordion from '@/components/declarations/dossier/prelevements/prelevements-accordion.js'
 import FileValidationErrors from '@/components/declarations/file-validation-errors.js'
-import {normalizePointId} from '@/utils/point-prelevement.js'
+import {normalizePointId, getPointPrelevementName} from '@/utils/point-prelevement.js'
 
 const findPointById = (points = [], pointId) => {
   if (pointId === null || pointId === undefined) {
@@ -87,7 +88,7 @@ const FileValidationResult = ({
       section.series.push(serie)
     }
 
-    return sectionsOrder.map((sectionKey, index) => {
+    const sectionsWithOrder = sectionsOrder.map((sectionKey, index) => {
       const section = sectionsMap.get(sectionKey)
       const pointInfo = section.pointPrelevement || findPointById(pointsPrelevement, section.pointId)
 
@@ -96,9 +97,22 @@ const FileValidationResult = ({
       return {
         ...section,
         pointPrelevement: pointInfo || null,
-        accordionId
+        accordionId,
+        orderIndex: index
       }
     })
+
+    const sortedSections = orderBy(
+      sectionsWithOrder,
+      [
+        section => String(getPointPrelevementName(section.pointPrelevement)).toLowerCase(),
+        section => String(section.pointId ?? ''),
+        section => section.orderIndex
+      ],
+      ['asc', 'asc', 'asc']
+    )
+
+    return sortedSections.map(({orderIndex, ...section}) => section)
   }, [integrations, series, pointsPrelevement])
 
   useEffect(() => {

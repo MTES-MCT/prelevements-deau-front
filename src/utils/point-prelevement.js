@@ -1,5 +1,15 @@
+export function getPointPrelevementName(pointPrelevement) {
+  if (!pointPrelevement) {
+    return ''
+  }
+
+  return pointPrelevement.nom
+    || pointPrelevement.autresNoms
+    || ''
+}
+
 export function getPointPrelevementLabel({idPoint, pointPrelevement, fallback = 'Point de prélèvement'}) {
-  const pointName = pointPrelevement?.nom || pointPrelevement?.name || pointPrelevement?.label
+  const pointName = getPointPrelevementName(pointPrelevement)
   const hasPointId = idPoint !== null && idPoint !== undefined && idPoint !== ''
 
   if (pointName && hasPointId) {
