@@ -10,13 +10,15 @@ import {
 
 // FREQUENCY_LABELS tests
 test('FREQUENCY_LABELS contains all expected frequency mappings', t => {
-  t.is(FREQUENCY_LABELS.size, 6)
+  t.is(FREQUENCY_LABELS.size, 8)
   t.is(FREQUENCY_LABELS.get('1 second'), '1 seconde')
   t.is(FREQUENCY_LABELS.get('1 minute'), '1 minute')
   t.is(FREQUENCY_LABELS.get('15 minutes'), '15 minutes')
   t.is(FREQUENCY_LABELS.get('1 hour'), '1 heure')
   t.is(FREQUENCY_LABELS.get('1 day'), '1 jour')
+  t.is(FREQUENCY_LABELS.get('1 month'), '1 mois')
   t.is(FREQUENCY_LABELS.get('1 quarter'), '1 trimestre')
+  t.is(FREQUENCY_LABELS.get('1 year'), '1 an')
 })
 
 // FREQUENCY_ORDER tests
@@ -26,7 +28,9 @@ test('FREQUENCY_ORDER has correct ordering from smallest to largest interval', t
   t.is(FREQUENCY_ORDER['15 minutes'], 3)
   t.is(FREQUENCY_ORDER['1 hour'], 4)
   t.is(FREQUENCY_ORDER['1 day'], 5)
-  t.is(FREQUENCY_ORDER['1 quarter'], 6)
+  t.is(FREQUENCY_ORDER['1 month'], 6)
+  t.is(FREQUENCY_ORDER['1 quarter'], 7)
+  t.is(FREQUENCY_ORDER['1 year'], 8)
 })
 
 test('FREQUENCY_ORDER maintains ascending order', t => {
@@ -42,7 +46,9 @@ test('formatFrequencyLabel formats known frequencies to French labels', t => {
   t.is(formatFrequencyLabel('15 minutes'), '15 minutes')
   t.is(formatFrequencyLabel('1 hour'), '1 heure')
   t.is(formatFrequencyLabel('1 day'), '1 jour')
+  t.is(formatFrequencyLabel('1 month'), '1 mois')
   t.is(formatFrequencyLabel('1 quarter'), '1 trimestre')
+  t.is(formatFrequencyLabel('1 year'), '1 an')
 })
 
 test('formatFrequencyLabel returns original value for unknown frequencies', t => {
@@ -63,7 +69,9 @@ test('getFrequencyOrder returns correct order for known frequencies', t => {
   t.is(getFrequencyOrder('15 minutes'), 3)
   t.is(getFrequencyOrder('1 hour'), 4)
   t.is(getFrequencyOrder('1 day'), 5)
-  t.is(getFrequencyOrder('1 quarter'), 6)
+  t.is(getFrequencyOrder('1 month'), 6)
+  t.is(getFrequencyOrder('1 quarter'), 7)
+  t.is(getFrequencyOrder('1 year'), 8)
 })
 
 test('getFrequencyOrder returns 999 for unknown frequencies', t => {
