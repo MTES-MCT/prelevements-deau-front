@@ -196,7 +196,7 @@ const DossierDetails = ({dossier, preleveur, files = [], idPoints}) => {
       // Select manual point explicitly, e.g. by id or type
       const manualPoint = dossier.id_point_prelevement_manuel
         ? pointsPrelevement.find(p => p.id_point === dossier.id_point_prelevement_manuel)
-        : pointsPrelevement.find(p => p.type === 'manuel' || p.isManual);
+        : pointsPrelevement.find(p => p.type === 'manuel' || p.isManual)
       if (manualPoint) {
         items.push({
           key: 'manual-prelevements',
