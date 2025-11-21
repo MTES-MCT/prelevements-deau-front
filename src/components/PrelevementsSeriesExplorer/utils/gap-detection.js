@@ -6,7 +6,7 @@
 
 /**
  * Parse frequency string and convert to milliseconds
- * Supports formats like '1 day', '1 week', '1 month', '1 hour', etc.
+ * Supports formats like '1 day', '1 week', '1 month', '1 quarter', '1 hour', etc.
  *
  * @param {string} frequency - Frequency string (e.g., '1 day', '7 days', '1 month')
  * @returns {number} Frequency interval in milliseconds
@@ -17,7 +17,7 @@ export const parseFrequencyToMs = frequency => {
   }
 
   const normalized = frequency.toLowerCase().trim()
-  const match = normalized.match(/^(\d+)\s*(hour|day|week|month|year)s?$/)
+  const match = normalized.match(/^(\d+)\s*(second|minute|hour|day|week|month|quarter|year)s?$/)
 
   if (!match) {
     return null
@@ -26,19 +26,24 @@ export const parseFrequencyToMs = frequency => {
   const value = Number.parseInt(match[1], 10)
   const unit = match[2]
 
+  const MS_PER_MINUTE = 60 * 1000
   const MS_PER_HOUR = 60 * 60 * 1000
   const MS_PER_DAY = 24 * MS_PER_HOUR
   const MS_PER_WEEK = 7 * MS_PER_DAY
   // Approximate: months can have 28, 29, 30, or 31 days; using 30 days may cause slight inaccuracies,
   // but is acceptable for gap detection purposes in time series visualization.
   const MS_PER_MONTH = 30 * MS_PER_DAY
+  const MS_PER_QUARTER = 90 * MS_PER_DAY
   const MS_PER_YEAR = 365 * MS_PER_DAY // Approximate
 
   const unitMap = {
+    second: 1000,
+    minute: MS_PER_MINUTE,
     hour: MS_PER_HOUR,
     day: MS_PER_DAY,
     week: MS_PER_WEEK,
     month: MS_PER_MONTH,
+    quarter: MS_PER_QUARTER,
     year: MS_PER_YEAR
   }
 
