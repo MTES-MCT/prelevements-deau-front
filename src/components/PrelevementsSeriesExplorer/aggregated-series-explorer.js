@@ -19,6 +19,7 @@ import {
 } from './constants/parameters.js'
 import {formatPeriodLabel, getViewTypeLabel} from './formatters.js'
 import LoadingState from './loading-state.js'
+import ParameterOperatorsSelector from './parameter-operators-selector.js'
 import ParameterSelector from './parameter-selector.js'
 import {useChartSeries} from './use-chart-series.js'
 import {useTimeline} from './use-timeline.js'
@@ -135,41 +136,6 @@ const normalizeParameterOptions = options => {
     .filter(Boolean)
 }
 
-const normalizeOperatorOptions = options => {
-  if (!options) {
-    return []
-  }
-
-  return options
-    .map(option => {
-      if (!option) {
-        return null
-      }
-
-      if (typeof option === 'string') {
-        return {
-          value: option,
-          label: option
-        }
-      }
-
-      if (typeof option === 'object') {
-        const value = option.value ?? option.label
-        if (!value) {
-          return null
-        }
-
-        return {
-          value,
-          label: option.label ?? value
-        }
-      }
-
-      return null
-    })
-    .filter(Boolean)
-}
-
 /**
  * Determines the current view type based on selected periods.
  * Returns 'years' if multiple years are selected or if any period has type 'year',
@@ -229,9 +195,9 @@ const AggregatedSeriesExplorer = ({
   parameters,
   selectedParameters: selectedParametersProp,
   defaultParameters,
-  operatorOptions,
-  selectedOperator: selectedOperatorProp,
-  defaultOperator,
+  operatorOptionsByParameter,
+  selectedOperators: selectedOperatorsProp,
+  defaultOperators,
   enableFrequencySelect = true,
   frequencyOptions = FREQUENCY_OPTIONS,
   selectedFrequency: selectedFrequencyProp,
@@ -260,10 +226,6 @@ const AggregatedSeriesExplorer = ({
 
   const handleParametersChange = useCallback(parameters => {
     onFiltersChange?.({parameters})
-  }, [onFiltersChange])
-
-  const handleOperatorChange = useCallback(operator => {
-    onFiltersChange?.({operator})
   }, [onFiltersChange])
 
   const handleFrequencyChange = useCallback(frequency => {
@@ -406,22 +368,6 @@ const AggregatedSeriesExplorer = ({
 
     return groups
   }, [parameterOptionsNormalized, currentParameters, parameterOptionMap])
-
-  const operatorOptionsNormalized = useMemo(
-    () => normalizeOperatorOptions(operatorOptions),
-    [operatorOptions]
-  )
-
-  const {
-    options: normalizedOperatorOptions,
-    currentValue: currentOperator,
-    handleChange: handleOperatorSelection
-  } = useManagedSelection({
-    options: operatorOptionsNormalized,
-    defaultValue: defaultOperator,
-    selectedValue: selectedOperatorProp,
-    onChange: handleOperatorChange
-  })
 
   const {
     currentValue: currentFrequency,
@@ -729,37 +675,15 @@ const AggregatedSeriesExplorer = ({
         />
 
         <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 2}}>
-          {normalizedOperatorOptions.length > 0 && (
-            <Box
-              sx={{
-                flex: '1 1 220px',
-                minWidth: 220
-              }}
-            >
-              <Select
-                label={t.operatorLabel}
-                hint={t.operatorHint}
-                nativeSelectProps={{
-                  value: currentOperator ?? '',
-                  disabled: normalizedOperatorOptions.length <= 1,
-                  onChange: event => handleOperatorSelection(event.target.value)
-                }}
-              >
-                <option disabled hidden value=''>
-                  {t.operatorPlaceholder}
-                </option>
-                {normalizedOperatorOptions.map(option => (
-                  <option
-                    key={option.value}
-                    disabled={option.disabled}
-                    value={option.value}
-                  >
-                    {option.label}
-                  </option>
-                ))}
-              </Select>
-            </Box>
-          )}
+          <ParameterOperatorsSelector
+            parameters={currentParameters}
+            operatorOptionsByParameter={operatorOptionsByParameter}
+            defaultOperators={defaultOperators}
+            selectedOperators={selectedOperatorsProp}
+            parameterOptionMap={parameterOptionMap}
+            placeholder={t.operatorPlaceholder}
+            onChange={parameterOperators => onFiltersChange?.({parameterOperators})}
+          />
 
           {enableFrequencySelect && (
             <Box
