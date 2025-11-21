@@ -18,17 +18,7 @@ const getOrCreateDailyEntry = (context, date) => {
   return dailyMap.get(date)
 }
 
-// Keep a list of timeline samples for each day so we can backfill sub-daily entries.
-const registerTimelineEntry = (context, date, sample) => {
-  const {timelineEntriesByDate} = context
-  if (!timelineEntriesByDate.has(date)) {
-    timelineEntriesByDate.set(date, [])
-  }
-
-  timelineEntriesByDate.get(date).push(sample)
-}
-
-// Lazily build a timestamped sample (potentially sub-daily) and register it in the context.
+// Lazily build a timestamped sample (potentially sub-daily) and store it in the context.
 const getOrCreateTimelineEntry = (context, {date, time = null}) => {
   const {timelineMap, parametersCount} = context
   const key = `${date}::${time ?? ''}`
@@ -50,7 +40,6 @@ const getOrCreateTimelineEntry = (context, {date, time = null}) => {
   }
 
   timelineMap.set(key, sample)
-  registerTimelineEntry(context, date, sample)
 
   return sample
 }
@@ -150,12 +139,10 @@ export function buildDailyAndTimelineData({
 
   const dailyMap = new Map()
   const timelineMap = new Map()
-  const timelineEntriesByDate = new Map()
   const aggregationContext = {
     parametersCount,
     dailyMap,
-    timelineMap,
-    timelineEntriesByDate
+    timelineMap
   }
 
   for (const [paramIndex, paramLabel] of selectedParams.entries()) {
@@ -187,23 +174,6 @@ export function buildDailyAndTimelineData({
           subValues: dayEntry.values,
           paramIndex
         })
-      }
-    }
-  }
-
-  for (const dailyEntry of dailyMap.values()) {
-    const timelineEntries = timelineEntriesByDate.get(dailyEntry.date)
-    if (!timelineEntries) {
-      continue
-    }
-
-    for (const sample of timelineEntries) {
-      for (const [index, dailyValue] of dailyEntry.values.entries()) {
-        if (dailyValue === null || sample.values[index] !== null) {
-          continue
-        }
-
-        sample.values[index] = dailyValue
       }
     }
   }
