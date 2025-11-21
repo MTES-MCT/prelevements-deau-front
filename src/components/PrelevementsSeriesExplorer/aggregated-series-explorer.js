@@ -40,17 +40,18 @@ import {buildDailyAndTimelineData} from '@/components/PrelevementsSeriesExplorer
 import CalendarGrid from '@/components/ui/CalendarGrid/index.js'
 import PeriodSelectorHeader from '@/components/ui/PeriodSelectorHeader/index.js'
 import {useManagedSelection} from '@/hook/use-managed-selection.js'
+import {formatFrequencyLabel} from '@/utils/frequency.js'
 import {normalizeString} from '@/utils/string.js'
 import {parseLocalDateTime} from '@/utils/time.js'
 
 const DEFAULT_PARAMETER = 'volume prélevé'
 
-const ParameterOptionContent = ({label, unitLabel, valueTypeLabel}) => (
+const ParameterOptionContent = ({label, unitLabel, frequencyLabel}) => (
   <div className='selector-option-content'>
     <div className='selector-option-header'>
       <span className='selector-option-label'>{label}</span>
-      {valueTypeLabel && (
-        <span className='selector-option-value-type'>{valueTypeLabel}</span>
+      {frequencyLabel && (
+        <span className='selector-option-value-type'>{frequencyLabel}</span>
       )}
     </div>
     {unitLabel && (
@@ -64,6 +65,7 @@ const buildNormalizedOption = ({
   label,
   unit,
   valueType,
+  frequency,
   disabled = false,
   disabledReason,
   title,
@@ -85,7 +87,7 @@ const buildNormalizedOption = ({
       <ParameterOptionContent
         label={resolvedLabel}
         unitLabel={normalizedUnit}
-        valueTypeLabel={formatValueTypeLabel(normalizedValueType)}
+        frequencyLabel={formatFrequencyLabel(frequency)}
       />
     )
   }
@@ -108,6 +110,7 @@ const normalizeParameterOptions = options => {
           value: option,
           label: option,
           unit: metadata?.unit,
+          frequency: metadata?.frequency,
           valueType: metadata?.valueType ?? metadata?.type
         })
       }
