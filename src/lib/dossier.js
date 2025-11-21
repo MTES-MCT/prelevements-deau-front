@@ -2,7 +2,7 @@ import {format, isValid} from 'date-fns'
 import {fr} from 'date-fns/locale'
 import {flatMap} from 'lodash-es'
 
-import {getFile, getFileIntegrations, getFileSeries} from '@/app/api/dossiers.js'
+import {getFile, getFileSeries, getFileIntegrations} from '@/app/api/dossiers.js'
 
 export const validationStatus = {
   success: 'Succès',
@@ -108,7 +108,8 @@ export async function getDossierFiles(dossier) {
     return {
       ...details,
       series,
-      integrations
+      integrations,
+      attachmentId: file._id
     }
   }))
 
