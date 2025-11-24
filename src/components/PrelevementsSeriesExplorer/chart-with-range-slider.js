@@ -9,6 +9,7 @@
 import {useMemo, useCallback} from 'react'
 
 import {Box, Slider, Typography} from '@mui/material'
+import {addDays} from 'date-fns'
 import {fr} from 'date-fns/locale'
 
 import {formatSliderMark, formatSliderValue} from './formatters.js'
@@ -27,6 +28,7 @@ const DEFAULT_MIN_CHART_HEIGHT = 360
  * @param {Array<Object>} props.sliderMarks - Slider marks configuration
  * @param {string} props.rangeLabel - Label displayed above the slider
  * @param {Function} props.onRangeChange - Slider change handler, receives same args as MUI `Slider` onChange
+ * @param {Function} [props.onRangeChangeCommitted] - Slider change handler for release (MUI `onChangeCommitted`)
  * @param {number} [props.minChartHeight=DEFAULT_MIN_CHART_HEIGHT] - Minimum height for the chart container
  * @param {Object} [props.timeSeriesChartProps] - Additional props forwarded to `TimeSeriesChart`
  */
@@ -39,6 +41,7 @@ const ChartWithRangeSlider = ({
   sliderMarks,
   rangeLabel,
   onRangeChange,
+  onRangeChangeCommitted,
   minChartHeight = DEFAULT_MIN_CHART_HEIGHT,
   timeSeriesChartProps
 }) => {
@@ -57,6 +60,20 @@ const ChartWithRangeSlider = ({
   const handleSliderChange = useCallback((event, value, activeThumb) => {
     onRangeChange?.(event, value, activeThumb)
   }, [onRangeChange])
+
+  const resolveDisplayDate = useCallback(idx => {
+    const date = allDates[idx]
+    if (!date) {
+      return date
+    }
+
+    // The last slider index is the exclusive boundary (day+1). Show the real last day instead.
+    if (idx === allDates.length - 1) {
+      return addDays(date, -1)
+    }
+
+    return date
+  }, [allDates])
 
   const hasChartData = series.length > 0
 
@@ -90,7 +107,7 @@ const ChartWithRangeSlider = ({
           </Typography>
           <Slider
             disableSwap
-            getAriaValueText={idx => formatSliderValue(allDates[idx])}
+            getAriaValueText={idx => formatSliderValue(resolveDisplayDate(idx))}
             marks={sliderMarks}
             max={allDates.length - 1}
             min={0}
@@ -102,8 +119,9 @@ const ChartWithRangeSlider = ({
             step={1}
             value={rangeIndices}
             valueLabelDisplay='on'
-            valueLabelFormat={idx => formatSliderMark(allDates[idx])}
+            valueLabelFormat={idx => formatSliderMark(resolveDisplayDate(idx))}
             onChange={handleSliderChange}
+            onChangeCommitted={onRangeChangeCommitted}
           />
         </Box>
       )}
