@@ -179,6 +179,25 @@ const buildAccumulator = bucketStart => ({
   max: Number.NEGATIVE_INFINITY
 })
 
+const isValidPoint = (point, timeRange) => {
+  const date = toDate(point?.t ?? point?.x ?? point?.timestamp ?? point?.date)
+  const value = point?.value ?? point?.y
+
+  if (!date || value === null || value === undefined || Number.isNaN(value)) {
+    return null
+  }
+
+  if (timeRange?.start && date < timeRange.start) {
+    return null
+  }
+
+  if (timeRange?.end && date > timeRange.end) {
+    return null
+  }
+
+  return {date, value}
+}
+
 export const aggregateSeriesIntoBuckets = (points, {
   bucketResolution,
   timeRange,
@@ -192,21 +211,12 @@ export const aggregateSeriesIntoBuckets = (points, {
   const buckets = new Map()
 
   for (const point of points) {
-    const date = toDate(point?.t ?? point?.x ?? point?.timestamp ?? point?.date)
-    const value = point?.value ?? point?.y
-
-    if (!date || value === null || value === undefined || Number.isNaN(value)) {
+    const validated = isValidPoint(point, timeRange)
+    if (!validated) {
       continue
     }
 
-    if (timeRange?.start && date < timeRange.start) {
-      continue
-    }
-
-    if (timeRange?.end && date > timeRange.end) {
-      continue
-    }
-
+    const {date, value} = validated
     const bucketStart = floorToBucket(date, resolutionId)
     if (!bucketStart) {
       continue
@@ -283,5 +293,9 @@ export const bucketSeriesCollection = (series, timeRange, widthPx = DEFAULT_WIDT
 
 export const useBucketedSeries = (series, timeRange, widthPx) => useMemo(
   () => bucketSeriesCollection(series, timeRange, widthPx),
+  // We intentionally exclude the timeRange object itself from the dependency array
+  // and only include its start and end properties. This avoids unnecessary recomputation
+  // when the timeRange reference changes but its relevant properties remain the same.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   [series, timeRange?.start, timeRange?.end, widthPx]
 )

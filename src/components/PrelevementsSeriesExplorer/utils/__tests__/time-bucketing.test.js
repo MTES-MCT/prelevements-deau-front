@@ -15,12 +15,12 @@ test('chooseDisplayResolution adapts to range length and width', t => {
   const start = new Date('2024-01-01T00:00:00')
   const end = new Date('2024-01-02T00:00:00')
   const resolutionDay = chooseDisplayResolution(start, end, 1200)
-  t.is(resolutionDay, '15m') // short range sticks to finest resolution
+  t.is(resolutionDay, '15m') // Short range sticks to finest resolution
 
   const longStart = new Date('2024-01-01T00:00:00')
   const longEnd = new Date('2024-07-01T00:00:00')
   const resolutionLong = chooseDisplayResolution(longStart, longEnd, 1200)
-  t.is(resolutionLong, '1d') // long range switches to daily buckets
+  t.is(resolutionLong, '1d') // Long range switches to daily buckets
 })
 
 test('chooseSeriesBucketResolution never goes finer than native resolution', t => {
