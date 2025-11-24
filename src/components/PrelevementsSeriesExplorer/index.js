@@ -168,7 +168,7 @@ const PrelevementsSeriesExplorer = ({
     sliderMarks,
     handleRangeChange,
     handleCalendarDayClick
-  } = useTimeline(timelineSamples, showRangeSlider)
+  } = useTimeline(timelineSamples, showRangeSlider, dateRange)
 
   // Prepare chart series from loaded values
   const chartSeries = useChartSeries({
