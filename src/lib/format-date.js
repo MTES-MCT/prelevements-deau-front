@@ -104,4 +104,27 @@ export function getMonthPeriodRange(start, end, maxSelections) {
   }).slice(0, maxSelections || undefined)
 }
 
+/**
+ * Parses a quarter date string (YYYY-Q[1-4]) and returns a Date object
+ * set to the first day of the first month of that quarter.
+ * Returns null if the input is not a valid quarter format.
+ * @param {string} dateString - Date string in format YYYY-Q[1-4] (e.g., 2024-Q1, 2024-Q4)
+ * @returns {Date|null} Date object or null if invalid
+ */
+export function parseQuarterDate(dateString) {
+  if (typeof dateString !== 'string') {
+    return null
+  }
+
+  const quarterMatch = dateString.match(/^(\d{4})-Q([1-4])$/)
+  if (!quarterMatch) {
+    return null
+  }
+
+  const year = Number.parseInt(quarterMatch[1], 10)
+  const quarter = Number.parseInt(quarterMatch[2], 10)
+  const month = (quarter - 1) * 3
+  return new Date(year, month, 1, 0, 0, 0, 0)
+}
+
 export default formatDate
