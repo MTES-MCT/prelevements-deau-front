@@ -10,7 +10,6 @@ import {Box, Typography} from '@mui/material'
 import {getAggregatedSeries} from '@/app/api/series.js'
 import AggregatedSeriesExplorer from '@/components/PrelevementsSeriesExplorer/aggregated-series-explorer.js'
 import {
-  FREQUENCY_OPTIONS,
   getParameterMetadata,
   MAX_DIFFERENT_UNITS,
   OPERATOR_LABELS
@@ -30,16 +29,44 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
   // Vérifie si des paramètres sont disponibles depuis l'API
   const hasParameters = seriesOptions?.parameters?.length > 0
 
+  // Compute dateRange: use explicit startDate/endDate props if provided,
+  // otherwise fall back to extracting min/max dates from seriesOptions.parameters.
+  const dateRange = useMemo(() => {
+    if (startDate && endDate) {
+      return {start: startDate, end: endDate}
+    }
+
+    // Compute from seriesOptions parameters
+    if (!seriesOptions?.parameters || seriesOptions.parameters.length === 0) {
+      return {start: null, end: null}
+    }
+
+    let minDate = null
+    let maxDate = null
+
+    for (const param of seriesOptions.parameters) {
+      if (param.minDate && (!minDate || param.minDate < minDate)) {
+        minDate = param.minDate
+      }
+
+      if (param.maxDate && (!maxDate || param.maxDate > maxDate)) {
+        maxDate = param.maxDate
+      }
+    }
+
+    return {start: minDate, end: maxDate}
+  }, [startDate, endDate, seriesOptions])
+
   // Calcule les périodes sélectionnables en tenant compte de startDate/endDate
   const selectablePeriods = useMemo(
-    () => calculateSelectablePeriodsFromDateRange(startDate, endDate),
-    [startDate, endDate]
+    () => calculateSelectablePeriodsFromDateRange(dateRange.start, dateRange.end),
+    [dateRange]
   )
 
   // Calcule les périodes par défaut en tenant compte de startDate/endDate
   const defaultPeriods = useMemo(
-    () => extractDefaultPeriodsFromDateRange(startDate, endDate),
-    [startDate, endDate]
+    () => extractDefaultPeriodsFromDateRange(dateRange.start, dateRange.end),
+    [dateRange]
   )
 
   // Construit les options de paramètres depuis la réponse API
@@ -120,7 +147,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
 
   const [selectedParameters, setSelectedParameters] = useState(derivedDefaultParameters)
   const [parameterOperators, setParameterOperators] = useState({})
-  const [selectedFrequency, setSelectedFrequency] = useState(DEFAULT_FREQUENCY)
+  const [displayFrequency, setDisplayFrequency] = useState(DEFAULT_FREQUENCY)
   const [aggregatedSeriesMap, setAggregatedSeriesMap] = useState(new Map())
   const [isLoading, setIsLoading] = useState(false)
   const [loadError, setLoadError] = useState(null)
@@ -237,16 +264,16 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
       params.preleveurId = preleveurId
     }
 
-    if (startDate) {
-      params.startDate = startDate
+    if (dateRange.start) {
+      params.startDate = dateRange.start
     }
 
-    if (endDate) {
-      params.endDate = endDate
+    if (dateRange.end) {
+      params.endDate = dateRange.end
     }
 
     return getAggregatedSeries(params, requestOptions)
-  }, [pointIds, preleveurId, startDate, endDate])
+  }, [pointIds, preleveurId, dateRange])
 
   useEffect(() => {
     // Clear the map only when no parameters are selected
@@ -257,7 +284,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
     }
 
     // Don't load if frequency is missing
-    if (!selectedFrequency) {
+    if (!displayFrequency) {
       return
     }
 
@@ -288,7 +315,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
           const response = await fetchAggregatedSeries(
             param,
             operator,
-            selectedFrequency,
+            displayFrequency,
             {signal: abortController.signal}
           )
           return [param, response]
@@ -320,9 +347,9 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
       isActive = false
       abortController.abort()
     }
-  }, [selectedParameters, resolvedOperatorsByParameter, selectedFrequency, fetchAggregatedSeries])
+  }, [selectedParameters, resolvedOperatorsByParameter, displayFrequency, fetchAggregatedSeries])
 
-  const handleFiltersChange = useCallback(({parameters, parameterOperators: nextParameterOperators, frequency}) => {
+  const handleFiltersChange = useCallback(({parameters, parameterOperators: nextParameterOperators}) => {
     let nextParameters = selectedParameters
 
     // Handle parameters change (multi-select)
@@ -348,16 +375,13 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
     if (nextParameterOperators !== undefined) {
       setParameterOperators(buildOperatorsForParameters(nextParameters, nextParameterOperators))
     }
+  }, [buildOperatorsForParameters, parameterDefinitionMap, selectedParameters])
 
-    // Handle frequency change
-    if (
-      frequency !== undefined
-      && frequency !== selectedFrequency
-      && FREQUENCY_OPTIONS.some(opt => opt.value === frequency)
-    ) {
-      setSelectedFrequency(frequency)
+  const handleDisplayResolutionChange = useCallback(frequency => {
+    if (frequency) {
+      setDisplayFrequency(frequency)
     }
-  }, [buildOperatorsForParameters, parameterDefinitionMap, selectedFrequency, selectedParameters])
+  }, [])
 
   return hasParameters ? (
     <Box className='flex flex-col gap-4'>
@@ -377,14 +401,12 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
           operatorOptionsByParameter={operatorOptionsByParameter}
           selectedOperators={resolvedOperatorsByParameter}
           defaultOperators={defaultOperatorsByParameter}
-          frequencyOptions={FREQUENCY_OPTIONS}
-          selectedFrequency={selectedFrequency}
-          defaultFrequency={DEFAULT_FREQUENCY}
           selectablePeriods={selectablePeriods}
           defaultPeriods={defaultPeriods}
           error={loadError}
           isLoading={isLoading}
           onFiltersChange={handleFiltersChange}
+          onDisplayResolutionChange={handleDisplayResolutionChange}
         />
       )}
     </Box>
