@@ -157,7 +157,6 @@ export function useChartSeries({
           bucketed.data.map(point => ({
             x: point.t,
             y: point.value,
-            bucketStart: point.t,
             min: point.min,
             max: point.max,
             sourceCount: point.count
