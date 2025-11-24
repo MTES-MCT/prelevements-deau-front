@@ -458,6 +458,10 @@ const AggregatedSeriesExplorer = ({
       const color = meta.color
         ?? PARAMETER_COLOR_MAP.get(normalizedKey)
         ?? FALLBACK_PARAMETER_COLOR
+      const frequency = meta.frequency
+        ?? meta.aggregationFrequency
+        ?? metadata?.frequency
+        ?? null
 
       const resolvedMetaValueType = getCachedValueType(meta.valueType)
       const resolvedOptionValueType = getCachedValueType(optionMetadata?.valueType)
@@ -468,7 +472,7 @@ const AggregatedSeriesExplorer = ({
         parameterLabel: paramValue,
         unit: meta.unit ?? metadata?.unit ?? '',
         color,
-        frequency: meta.frequency,
+        frequency,
         valueType: resolvedMetaValueType
           ?? resolvedOptionValueType
           ?? resolvedMetadataValueType
@@ -575,6 +579,29 @@ const AggregatedSeriesExplorer = ({
     [displayResolutionForUI]
   )
 
+  const frequencyBadges = useMemo(() => {
+    if (selectedParams.length === 0) {
+      return []
+    }
+
+    const badges = []
+
+    for (const param of selectedParams) {
+      const paramMeta = parameterMap.get(param)
+      const frequency = paramMeta?.frequency
+      if (!frequency) {
+        continue
+      }
+
+      badges.push({
+        parameter: paramMeta.parameter ?? paramMeta.parameterLabel ?? param,
+        frequency
+      })
+    }
+
+    return badges
+  }, [parameterMap, selectedParams])
+
   // Notify parent of resolution change
   const lastSentFrequencyRef = useRef(null)
   useEffect(() => {
@@ -633,23 +660,80 @@ const AggregatedSeriesExplorer = ({
     if (canDisplayChart) {
       return (
         <Box sx={{minHeight: 360, position: 'relative'}}>
-          {displayResolutionForUI && (
+          {(frequencyBadges.length > 0 || displayResolutionForUI) && (
             <Box sx={{
               display: 'flex',
-              justifyContent: 'flex-end',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: frequencyBadges.length > 0 ? 'space-between' : 'flex-end',
+              gap: 1,
               mb: 1
             }}
             >
-              <Typography
-                variant='caption'
-                sx={{
-                  color: 'text.secondary',
-                  fontStyle: 'italic',
-                  fontSize: '0.75rem'
-                }}
-              >
-                Résolution : {formatFrequencyLabel(displayFrequency) ?? displayResolutionForUI}
-              </Typography>
+              {frequencyBadges.length > 0 ? (
+                <>
+                  <Typography
+                    variant='caption'
+                    sx={{
+                      color: 'text.secondary',
+                      fontStyle: 'italic',
+                      fontSize: '0.75rem'
+                    }}
+                  >
+                    Résolution par série :
+                  </Typography>
+                  <Box sx={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 1
+                  }}
+                  >
+                    {frequencyBadges.map(({parameter, frequency}) => (
+                      <Box
+                        key={`${parameter}-${frequency}`}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 0.75,
+                          px: 1,
+                          py: 0.5,
+                          borderRadius: 1,
+                          backgroundColor: 'action.hover'
+                        }}
+                      >
+                        <Typography
+                          variant='caption'
+                          sx={{
+                            color: 'text.secondary',
+                            fontWeight: 600
+                          }}
+                        >
+                          {parameter} :{' '}
+                        </Typography>
+                        <Typography
+                          variant='caption'
+                          sx={{
+                            color: 'text.secondary'
+                          }}
+                        >
+                          {formatFrequencyLabel(frequency) ?? frequency}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                </>
+              ) : (
+                <Typography
+                  variant='caption'
+                  sx={{
+                    color: 'text.secondary',
+                    fontStyle: 'italic',
+                    fontSize: '0.75rem'
+                  }}
+                >
+                  Résolution : {formatFrequencyLabel(displayFrequency) ?? displayResolutionForUI}
+                </Typography>
+              )}
             </Box>
           )}
           <ChartWithRangeSlider

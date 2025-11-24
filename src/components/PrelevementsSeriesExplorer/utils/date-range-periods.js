@@ -82,7 +82,7 @@ export function extractDefaultPeriodsFromDateRange(startDate, endDate) {
   }
 
   const periods = []
-  const cursor = new Date(start.getFullYear(), start.getMonth(), 1)
+  let cursor = new Date(start.getFullYear(), start.getMonth(), 1)
   const endCursor = new Date(end.getFullYear(), end.getMonth(), 1)
 
   // Always return month periods spanning the exact date range boundaries
@@ -93,7 +93,7 @@ export function extractDefaultPeriodsFromDateRange(startDate, endDate) {
       month: cursor.getMonth()
     })
 
-    cursor.setMonth(cursor.getMonth() + 1)
+    cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1)
   }
 
   return periods

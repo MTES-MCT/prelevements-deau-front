@@ -5,19 +5,22 @@ import {
   FREQUENCY_ORDER,
   formatFrequencyLabel,
   getFrequencyOrder,
+  pickAvailableFrequency,
   sortFrequencies
 } from '../frequency.js'
 
 // FREQUENCY_LABELS tests
 test('FREQUENCY_LABELS contains all expected frequency mappings', t => {
-  t.is(FREQUENCY_LABELS.size, 8)
+  t.is(FREQUENCY_LABELS.size, 10)
   t.is(FREQUENCY_LABELS.get('1 second'), '1 seconde')
   t.is(FREQUENCY_LABELS.get('1 minute'), '1 minute')
   t.is(FREQUENCY_LABELS.get('15 minutes'), '15 minutes')
   t.is(FREQUENCY_LABELS.get('1 hour'), '1 heure')
+  t.is(FREQUENCY_LABELS.get('6 hours'), '6 heures')
   t.is(FREQUENCY_LABELS.get('1 day'), '1 jour')
   t.is(FREQUENCY_LABELS.get('1 month'), '1 mois')
   t.is(FREQUENCY_LABELS.get('1 quarter'), '1 trimestre')
+  t.is(FREQUENCY_LABELS.get('6 months'), '6 mois')
   t.is(FREQUENCY_LABELS.get('1 year'), '1 an')
 })
 
@@ -27,9 +30,11 @@ test('FREQUENCY_ORDER has correct ordering from smallest to largest interval', t
   t.is(FREQUENCY_ORDER['1 minute'], 2)
   t.is(FREQUENCY_ORDER['15 minutes'], 3)
   t.is(FREQUENCY_ORDER['1 hour'], 4)
+  t.is(FREQUENCY_ORDER['6 hours'], 4.5)
   t.is(FREQUENCY_ORDER['1 day'], 5)
   t.is(FREQUENCY_ORDER['1 month'], 6)
   t.is(FREQUENCY_ORDER['1 quarter'], 7)
+  t.is(FREQUENCY_ORDER['6 months'], 7.5)
   t.is(FREQUENCY_ORDER['1 year'], 8)
 })
 
@@ -45,9 +50,11 @@ test('formatFrequencyLabel formats known frequencies to French labels', t => {
   t.is(formatFrequencyLabel('1 minute'), '1 minute')
   t.is(formatFrequencyLabel('15 minutes'), '15 minutes')
   t.is(formatFrequencyLabel('1 hour'), '1 heure')
+  t.is(formatFrequencyLabel('6 hours'), '6 heures')
   t.is(formatFrequencyLabel('1 day'), '1 jour')
   t.is(formatFrequencyLabel('1 month'), '1 mois')
   t.is(formatFrequencyLabel('1 quarter'), '1 trimestre')
+  t.is(formatFrequencyLabel('6 months'), '6 mois')
   t.is(formatFrequencyLabel('1 year'), '1 an')
 })
 
@@ -68,9 +75,11 @@ test('getFrequencyOrder returns correct order for known frequencies', t => {
   t.is(getFrequencyOrder('1 minute'), 2)
   t.is(getFrequencyOrder('15 minutes'), 3)
   t.is(getFrequencyOrder('1 hour'), 4)
+  t.is(getFrequencyOrder('6 hours'), 4.5)
   t.is(getFrequencyOrder('1 day'), 5)
   t.is(getFrequencyOrder('1 month'), 6)
   t.is(getFrequencyOrder('1 quarter'), 7)
+  t.is(getFrequencyOrder('6 months'), 7.5)
   t.is(getFrequencyOrder('1 year'), 8)
 })
 
@@ -131,4 +140,38 @@ test('sortFrequencies sorts mixed known and unknown frequencies correctly', t =>
   // Unknown frequencies should be last
   t.true(sorted.slice(3).includes('unknown1'))
   t.true(sorted.slice(3).includes('unknown2'))
+})
+
+// PickAvailableFrequency tests
+test('pickAvailableFrequency returns target when available', t => {
+  t.is(
+    pickAvailableFrequency('1 day', ['1 day', '1 month']),
+    '1 day'
+  )
+})
+
+test('pickAvailableFrequency picks closest coarser frequency when target unavailable', t => {
+  t.is(
+    pickAvailableFrequency('1 hour', ['15 minutes', '6 hours', '1 day']),
+    '6 hours'
+  )
+})
+
+test('pickAvailableFrequency falls back to coarsest available when all are finer', t => {
+  t.is(
+    pickAvailableFrequency('1 year', ['1 hour', '1 day']),
+    '1 day'
+  )
+})
+
+test('pickAvailableFrequency returns first available when no target provided', t => {
+  t.is(
+    pickAvailableFrequency(null, ['1 day', '1 month']),
+    '1 day'
+  )
+})
+
+test('pickAvailableFrequency returns target when availability missing', t => {
+  t.is(pickAvailableFrequency('1 month', null), '1 month')
+  t.is(pickAvailableFrequency('1 month', []), '1 month')
 })

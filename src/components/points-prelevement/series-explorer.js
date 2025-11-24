@@ -18,6 +18,7 @@ import {
   calculateSelectablePeriodsFromDateRange,
   extractDefaultPeriodsFromDateRange
 } from '@/components/PrelevementsSeriesExplorer/utils/date-range-periods.js'
+import {pickAvailableFrequency} from '@/utils/frequency.js'
 
 const DEFAULT_FREQUENCY = '1 day'
 const DEFAULT_PARAMETER = 'volume prélevé'
@@ -147,7 +148,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
 
   const [selectedParameters, setSelectedParameters] = useState(derivedDefaultParameters)
   const [parameterOperators, setParameterOperators] = useState({})
-  const [displayFrequency, setDisplayFrequency] = useState(DEFAULT_FREQUENCY)
+  const [targetDisplayFrequency, setTargetDisplayFrequency] = useState(DEFAULT_FREQUENCY)
   const [aggregatedSeriesMap, setAggregatedSeriesMap] = useState(new Map())
   const [isLoading, setIsLoading] = useState(false)
   const [loadError, setLoadError] = useState(null)
@@ -284,7 +285,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
     }
 
     // Don't load if frequency is missing
-    if (!displayFrequency) {
+    if (!targetDisplayFrequency) {
       return
     }
 
@@ -312,13 +313,31 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
             return [param, null]
           }
 
+          const parameterDefinition = parameterDefinitionMap.get(param) ?? getParameterMetadata(param)
+          const availableFrequencies = parameterDefinition?.availableFrequencies
+          const chosenFrequency = pickAvailableFrequency(
+            targetDisplayFrequency,
+            availableFrequencies
+          ) ?? targetDisplayFrequency ?? DEFAULT_FREQUENCY
+
           const response = await fetchAggregatedSeries(
             param,
             operator,
-            displayFrequency,
+            chosenFrequency,
             {signal: abortController.signal}
           )
-          return [param, response]
+
+          const normalizedResponse = response && typeof response === 'object'
+            ? {
+              ...response,
+              metadata: {
+                ...response.metadata,
+                frequency: response?.metadata?.frequency ?? chosenFrequency
+              }
+            }
+            : response
+
+          return [param, normalizedResponse]
         })
 
         const results = await Promise.all(promises)
@@ -347,7 +366,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
       isActive = false
       abortController.abort()
     }
-  }, [selectedParameters, resolvedOperatorsByParameter, displayFrequency, fetchAggregatedSeries])
+  }, [selectedParameters, resolvedOperatorsByParameter, targetDisplayFrequency, fetchAggregatedSeries, parameterDefinitionMap])
 
   const handleFiltersChange = useCallback(({parameters, parameterOperators: nextParameterOperators}) => {
     let nextParameters = selectedParameters
@@ -379,7 +398,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
 
   const handleDisplayResolutionChange = useCallback(frequency => {
     if (frequency) {
-      setDisplayFrequency(frequency)
+      setTargetDisplayFrequency(frequency)
     }
   }, [])
 
