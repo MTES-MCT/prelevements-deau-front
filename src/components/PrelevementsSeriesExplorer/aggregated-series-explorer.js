@@ -5,8 +5,7 @@ import {
 } from 'react'
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
-import {Select} from '@codegouvfr/react-dsfr/Select'
-import {Box} from '@mui/material'
+import {Box, Typography} from '@mui/material'
 
 import ChartWithRangeSlider from './chart-with-range-slider.js'
 import {
@@ -14,7 +13,7 @@ import {
   PARAMETER_COLOR_MAP
 } from './constants/colors.js'
 import {
-  FREQUENCY_OPTIONS, getParameterMetadata, MAX_DIFFERENT_UNITS,
+  getParameterMetadata, MAX_DIFFERENT_UNITS,
   DEFAULT_TRANSLATIONS
 } from './constants/parameters.js'
 import {formatPeriodLabel, getViewTypeLabel} from './formatters.js'
@@ -35,24 +34,25 @@ import {
   normalizeValueType,
   resolveKnownValueType
 } from './utils/parameter-display.js'
+import {
+  chooseDisplayResolution,
+  resolutionToFrequency
+} from './utils/time-bucketing.js'
 
 import {buildDailyAndTimelineData} from '@/components/PrelevementsSeriesExplorer/utils/aggregation.js'
 import CalendarGrid from '@/components/ui/CalendarGrid/index.js'
 import PeriodSelectorHeader from '@/components/ui/PeriodSelectorHeader/index.js'
-import {useManagedSelection} from '@/hook/use-managed-selection.js'
+import {parseQuarterDate} from '@/lib/format-date.js'
 import {formatFrequencyLabel} from '@/utils/frequency.js'
 import {normalizeString} from '@/utils/string.js'
 import {parseLocalDateTime} from '@/utils/time.js'
 
 const DEFAULT_PARAMETER = 'volume prélevé'
 
-const ParameterOptionContent = ({label, unitLabel, frequencyLabel}) => (
+const ParameterOptionContent = ({label, unitLabel}) => (
   <div className='selector-option-content'>
     <div className='selector-option-header'>
       <span className='selector-option-label'>{label}</span>
-      {frequencyLabel && (
-        <span className='selector-option-value-type'>{frequencyLabel}</span>
-      )}
     </div>
     {unitLabel && (
       <span className='selector-option-unit'>{unitLabel}</span>
@@ -65,7 +65,6 @@ const buildNormalizedOption = ({
   label,
   unit,
   valueType,
-  frequency,
   disabled = false,
   disabledReason,
   title,
@@ -87,7 +86,6 @@ const buildNormalizedOption = ({
       <ParameterOptionContent
         label={resolvedLabel}
         unitLabel={normalizedUnit}
-        frequencyLabel={formatFrequencyLabel(frequency)}
       />
     )
   }
@@ -110,7 +108,6 @@ const normalizeParameterOptions = options => {
           value: option,
           label: option,
           unit: metadata?.unit,
-          frequency: metadata?.frequency,
           valueType: metadata?.valueType ?? metadata?.type
         })
       }
@@ -184,7 +181,10 @@ const filterValuesByDateRange = (values, dateRange) => {
       return false
     }
 
-    const parsed = parseLocalDateTime(entry.date)
+    // Handle quarter format YYYY-Q[1-4]
+    const quarterDate = parseQuarterDate(entry.date)
+    const parsed = quarterDate || parseLocalDateTime(entry.date)
+
     if (!parsed) {
       return false
     }
@@ -201,11 +201,8 @@ const AggregatedSeriesExplorer = ({
   operatorOptionsByParameter,
   selectedOperators: selectedOperatorsProp,
   defaultOperators,
-  enableFrequencySelect = true,
-  frequencyOptions = FREQUENCY_OPTIONS,
-  selectedFrequency: selectedFrequencyProp,
-  defaultFrequency,
   onFiltersChange,
+  onDisplayResolutionChange,
   defaultPeriods,
   selectablePeriods: providedSelectablePeriods,
   defaultInitialViewType = 'years',
@@ -218,7 +215,8 @@ const AggregatedSeriesExplorer = ({
   timeSeriesChartProps,
   legendLabels,
   isLoading = false,
-  error = null
+  error = null,
+  chartWidthPx = 1200
 }) => {
   const t = {...DEFAULT_TRANSLATIONS, ...customTranslations}
 
@@ -229,10 +227,6 @@ const AggregatedSeriesExplorer = ({
 
   const handleParametersChange = useCallback(parameters => {
     onFiltersChange?.({parameters})
-  }, [onFiltersChange])
-
-  const handleFrequencyChange = useCallback(frequency => {
-    onFiltersChange?.({frequency})
   }, [onFiltersChange])
 
   // Derive default parameters from props or metadata
@@ -372,16 +366,6 @@ const AggregatedSeriesExplorer = ({
     return groups
   }, [parameterOptionsNormalized, currentParameters, parameterOptionMap])
 
-  const {
-    currentValue: currentFrequency,
-    handleChange: handleFrequencySelection
-  } = useManagedSelection({
-    options: frequencyOptions,
-    defaultValue: defaultFrequency,
-    selectedValue: selectedFrequencyProp,
-    onChange: handleFrequencyChange
-  })
-
   // Series is expected to be a Map of parameter -> series data
   const seriesMap = useMemo(() => {
     if (series instanceof Map) {
@@ -431,8 +415,7 @@ const AggregatedSeriesExplorer = ({
       setSelectedPeriods(initialPeriods)
       isInitialMount.current = false
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [initialPeriods])
 
   const handlePeriodChangeInternal = useCallback(periods => {
     setSelectedPeriods(periods)
@@ -531,18 +514,89 @@ const AggregatedSeriesExplorer = ({
   const {
     allDates,
     rangeIndices,
+    committedSelectedRange,
     visibleSamples,
     sliderMarks,
     handleRangeChange,
+    handleRangeChangeCommitted,
     handleCalendarDayClick
-  } = useTimeline(timelineSamples, showRangeSlider)
+  } = useTimeline(timelineSamples, showRangeSlider, dateRange)
+
+  // Calculate display resolution based on visible range
+  const displayResolution = useMemo(() => {
+    if (visibleSamples.length < 2) {
+      return null
+    }
+
+    const firstSample = visibleSamples[0]
+    const lastSample = visibleSamples.at(-1)
+
+    if (!firstSample?.timestamp || !lastSample?.timestamp) {
+      return null
+    }
+
+    const start = firstSample.timestamp instanceof Date
+      ? firstSample.timestamp
+      : new Date(firstSample.timestamp)
+    const end = lastSample.timestamp instanceof Date
+      ? lastSample.timestamp
+      : new Date(lastSample.timestamp)
+
+    return chooseDisplayResolution(start, end, chartWidthPx)
+  }, [visibleSamples, chartWidthPx])
+
+  // When fetching, only consider the last committed slider position to avoid re-fetching on drag
+  const fetchDisplayResolution = useMemo(() => {
+    if (!committedSelectedRange?.start || !committedSelectedRange?.end) {
+      return null
+    }
+
+    return chooseDisplayResolution(
+      committedSelectedRange.start,
+      committedSelectedRange.end,
+      chartWidthPx
+    )
+  }, [chartWidthPx, committedSelectedRange?.end, committedSelectedRange?.start])
+
+  const fetchDisplayFrequency = useMemo(
+    () => fetchDisplayResolution ? resolutionToFrequency(fetchDisplayResolution) : null,
+    [fetchDisplayResolution]
+  )
+
+  // Resolution to show to the user: prefer the resolution used for fetching (authoritative),
+  // fall back to the on-the-fly estimation from visible samples.
+  const displayResolutionForUI = useMemo(
+    () => fetchDisplayResolution ?? displayResolution,
+    [displayResolution, fetchDisplayResolution]
+  )
+
+  const displayFrequency = useMemo(
+    () => displayResolutionForUI ? resolutionToFrequency(displayResolutionForUI) : null,
+    [displayResolutionForUI]
+  )
+
+  // Notify parent of resolution change
+  const lastSentFrequencyRef = useRef(null)
+  useEffect(() => {
+    if (!fetchDisplayFrequency) {
+      return
+    }
+
+    if (lastSentFrequencyRef.current === fetchDisplayFrequency) {
+      return
+    }
+
+    lastSentFrequencyRef.current = fetchDisplayFrequency
+    onDisplayResolutionChange?.(fetchDisplayFrequency)
+  }, [fetchDisplayFrequency, onDisplayResolutionChange])
 
   const chartSeries = useChartSeries({
     showChart,
     timelineSamples,
     visibleSamples,
     selectedParams,
-    parameterMap
+    parameterMap,
+    chartWidthPx
   })
 
   const calendarData = useMemo(() => {
@@ -579,6 +633,25 @@ const AggregatedSeriesExplorer = ({
     if (canDisplayChart) {
       return (
         <Box sx={{minHeight: 360, position: 'relative'}}>
+          {displayResolutionForUI && (
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              mb: 1
+            }}
+            >
+              <Typography
+                variant='caption'
+                sx={{
+                  color: 'text.secondary',
+                  fontStyle: 'italic',
+                  fontSize: '0.75rem'
+                }}
+              >
+                Résolution : {formatFrequencyLabel(displayFrequency) ?? displayResolutionForUI}
+              </Typography>
+            </Box>
+          )}
           <ChartWithRangeSlider
             allDates={allDates}
             locale={locale}
@@ -589,6 +662,7 @@ const AggregatedSeriesExplorer = ({
             sliderMarks={sliderMarks}
             timeSeriesChartProps={timeSeriesChartProps}
             onRangeChange={handleRangeChange}
+            onRangeChangeCommitted={handleRangeChangeCommitted}
           />
 
           {isLoading && (
@@ -687,38 +761,6 @@ const AggregatedSeriesExplorer = ({
             placeholder={t.operatorPlaceholder}
             onChange={parameterOperators => onFiltersChange?.({parameterOperators})}
           />
-
-          {enableFrequencySelect && (
-            <Box
-              sx={{
-                flex: '1 1 220px',
-                minWidth: 220
-              }}
-            >
-              <Select
-                label={t.frequencyLabel}
-                hint={t.frequencyHint}
-                nativeSelectProps={{
-                  value: currentFrequency ?? '',
-                  disabled: frequencyOptions.length <= 1,
-                  onChange: event => handleFrequencySelection(event.target.value)
-                }}
-              >
-                <option disabled hidden value=''>
-                  {t.frequencyPlaceholder}
-                </option>
-                {frequencyOptions.map(option => (
-                  <option
-                    key={option.value}
-                    disabled={option.disabled}
-                    value={option.value}
-                  >
-                    {option.label}
-                  </option>
-                ))}
-              </Select>
-            </Box>
-          )}
         </Box>
       </Box>
 
