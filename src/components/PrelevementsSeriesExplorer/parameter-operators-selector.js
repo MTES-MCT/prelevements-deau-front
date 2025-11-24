@@ -145,21 +145,20 @@ const ParameterOperatorsSelector = ({
       return
     }
 
-    setCurrentParameterOperators(prev => {
-      const base = selectedOperators
-        ?? (Object.keys(prev).length > 0 ? prev : null)
-        ?? defaultOperators
-      const next = {...base, [parameter]: operator}
+    const base = selectedOperators
+      ?? (Object.keys(currentParameterOperators).length > 0 ? currentParameterOperators : null)
+      ?? defaultOperators
+    const next = {...base, [parameter]: operator}
 
+    // Defer onChange call to avoid updating parent during render
+    queueMicrotask(() => {
       onChange?.(next)
-
-      if (selectedOperators) {
-        return prev
-      }
-
-      return next
     })
-  }, [defaultOperators, normalizedOperatorOptionsByParam, onChange, selectedOperators])
+
+    if (!selectedOperators) {
+      setCurrentParameterOperators(next)
+    }
+  }, [currentParameterOperators, defaultOperators, normalizedOperatorOptionsByParam, onChange, selectedOperators])
 
   return (
     <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 2}}>
