@@ -8,6 +8,7 @@ import {
 
 import {CALENDAR_STATUS_COLORS} from '../constants/colors.js'
 
+import {parseQuarterDate} from '@/lib/format-date.js'
 import {parseLocalDateTime} from '@/utils/time.js'
 
 /**
@@ -117,6 +118,12 @@ export function buildSeriesMetadataMap(seriesList) {
  * @returns {Date|null}
  */
 export function parseLocalDate(dateString) {
+  // Handle quarter format YYYY-Q[1-4] (e.g., 2024-Q1, 2024-Q4)
+  const quarterDate = parseQuarterDate(dateString)
+  if (quarterDate) {
+    return quarterDate
+  }
+
   const parsed = parseLocalDateTime(dateString)
   if (!parsed) {
     return null
@@ -289,34 +296,33 @@ export function periodsToDateRange(periods) {
     return null
   }
 
-  const dates = periods.map(period => {
-    if (period.type === 'year') {
-      return new Date(period.value, 0, 1)
+  // Sort periods chronologically to ensure start/end calculation is correct
+  const sortedPeriods = [...periods].sort((a, b) => {
+    const yearA = a.type === 'year' ? a.value : a.year
+    const yearB = b.type === 'year' ? b.value : b.year
+    if (yearA !== yearB) {
+      return yearA - yearB
     }
 
-    if (period.type === 'month') {
-      return new Date(period.year, period.month, 1)
-    }
+    const monthA = a.type === 'month' ? a.month : -1
+    const monthB = b.type === 'month' ? b.month : -1
+    return monthA - monthB
+  })
 
-    return null
-  }).filter(Boolean)
+  const firstPeriod = sortedPeriods[0]
+  const lastPeriod = sortedPeriods.at(-1)
 
-  if (dates.length === 0) {
-    return null
+  let start
+  if (firstPeriod.type === 'year') {
+    start = new Date(firstPeriod.value, 0, 1)
+  } else {
+    start = new Date(firstPeriod.year, firstPeriod.month, 1)
   }
 
-  dates.sort((a, b) => a.getTime() - b.getTime())
-
-  const start = dates[0]
-  const lastPeriod = periods.at(-1)
-
-  // Calculate end date based on period type
   let end
   if (lastPeriod.type === 'year') {
-    // Last day of the year
     end = new Date(lastPeriod.value, 11, 31)
   } else {
-    // Last day of the month
     end = new Date(lastPeriod.year, lastPeriod.month + 1, 0)
   }
 

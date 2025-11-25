@@ -20,11 +20,24 @@ import {
  *
  * @param {Array} timelineSamples - Timeline samples with timestamp precision
  * @param {boolean} showRangeSlider - Whether slider is enabled
+ * @param {{start: Date|null, end: Date|null}} [rangeOverride] - Optional explicit date range for the slider
  * @returns {Object} Timeline state and handlers
  */
-export function useTimeline(timelineSamples, showRangeSlider) {
+export function useTimeline(timelineSamples, showRangeSlider, rangeOverride = null) {
   // Collect unique day strings from samples to figure out the continuous day range.
   const baseDates = useMemo(() => {
+    if (rangeOverride?.start && rangeOverride?.end && rangeOverride.end > rangeOverride.start) {
+      // Build a dense list of dates from the override range to guarantee full coverage.
+      const days = []
+      let current = rangeOverride.start
+      while (current <= rangeOverride.end) {
+        days.push(current)
+        current = addDays(current, 1)
+      }
+
+      return days
+    }
+
     if (!Array.isArray(timelineSamples) || timelineSamples.length === 0) {
       return []
     }
@@ -40,7 +53,7 @@ export function useTimeline(timelineSamples, showRangeSlider) {
       .sort()
       .map(date => parseLocalDate(date))
       .filter(Boolean)
-  }, [timelineSamples])
+  }, [rangeOverride?.end, rangeOverride?.start, timelineSamples])
 
   // Fill any potential gaps to get a complete array of consecutive days.
   const {allDates: dayDates} = useMemo(() => {
@@ -69,13 +82,16 @@ export function useTimeline(timelineSamples, showRangeSlider) {
 
   // Range indices refer to positions within sliderDates, not the raw timelineSamples.
   const [rangeIndices, setRangeIndices] = useState([0, 0])
+  const [committedRangeIndices, setCommittedRangeIndices] = useState([0, 0])
 
   // Initialize range on first mount only, preserve user selection afterwards
   useEffect(() => {
     if (sliderDates.length > 0) {
       if (isInitialMount.current) {
         const defaultEnd = Math.max(1, sliderDates.length - 1)
-        setRangeIndices([0, defaultEnd])
+        const initialRange = [0, defaultEnd]
+        setRangeIndices(initialRange)
+        setCommittedRangeIndices(initialRange)
         isInitialMount.current = false
       } else {
         // Adjust indices if they're out of bounds after data changes
@@ -86,7 +102,18 @@ export function useTimeline(timelineSamples, showRangeSlider) {
             Math.min(prev[1], maxIndex)
           ]
         })
+
+        setCommittedRangeIndices(prev => {
+          const maxIndex = sliderDates.length - 1
+          return [
+            Math.min(prev[0], maxIndex),
+            Math.min(prev[1], maxIndex)
+          ]
+        })
       }
+    } else {
+      setRangeIndices([0, 0])
+      setCommittedRangeIndices([0, 0])
     }
   }, [sliderDates.length])
 
@@ -106,7 +133,42 @@ export function useTimeline(timelineSamples, showRangeSlider) {
     return dayDates.filter(date => date >= rangeStart && date < rangeEnd)
   }, [dayDates, sliderDates, rangeIndices])
 
-  // Marks are built on whole days, we map them back to slider indices after expanding.
+  const visibleSelectedRange = useMemo(() => {
+    if (sliderDates.length === 0) {
+      return null
+    }
+
+    const [startIdx, endIdx] = rangeIndices
+    const start = sliderDates[startIdx]
+    const endBoundary = sliderDates[endIdx]
+
+    if (!start || !endBoundary || endBoundary <= start) {
+      return null
+    }
+
+    const end = addDays(endBoundary, -1)
+
+    return {start, end}
+  }, [rangeIndices, sliderDates])
+
+  const committedSelectedRange = useMemo(() => {
+    if (sliderDates.length === 0) {
+      return null
+    }
+
+    const [startIdx, endIdx] = committedRangeIndices
+    const start = sliderDates[startIdx]
+    const endBoundary = sliderDates[endIdx]
+
+    if (!start || !endBoundary || endBoundary <= start) {
+      return null
+    }
+
+    const end = addDays(endBoundary, -1)
+
+    return {start, end}
+  }, [committedRangeIndices, sliderDates])
+
   const sliderMarks = useMemo(() => {
     if (sliderDates.length === 0) {
       return []
@@ -159,47 +221,58 @@ export function useTimeline(timelineSamples, showRangeSlider) {
   const maxIndex = Math.max(totalDates - 1, 0)
   // Minimum width of the window: 1 step → a full day when sliderDates include the +1 day boundary.
   const minSteps = totalDates > 1 ? 1 : 0
+
+  const computeNextRange = useCallback((previous, newValue, activeThumb) => {
+    let [start, end] = newValue.map(value => clamp(Math.round(value), 0, maxIndex))
+
+    if (start > end) {
+      if (activeThumb === 0) {
+        start = end
+      } else if (activeThumb === 1) {
+        end = start
+      } else {
+        start = Math.min(start, end)
+        end = Math.max(start, end)
+      }
+    }
+
+    if (minSteps > 0 && end - start < minSteps) {
+      if (activeThumb === 0) {
+        const adjustedStart = clamp(start, 0, maxIndex - minSteps)
+        start = adjustedStart
+        end = Math.min(maxIndex, adjustedStart + minSteps)
+      } else if (activeThumb === 1) {
+        const adjustedEnd = clamp(end, minSteps, maxIndex)
+        end = adjustedEnd
+        start = clamp(adjustedEnd - minSteps, 0, maxIndex - minSteps)
+      } else {
+        const adjustedStart = clamp(previous[0], 0, maxIndex - minSteps)
+        start = adjustedStart
+        end = Math.min(maxIndex, adjustedStart + minSteps)
+      }
+    }
+
+    return [
+      clamp(start, 0, maxIndex),
+      clamp(end, 0, maxIndex)
+    ]
+  }, [maxIndex, minSteps])
   const handleRangeChange = useCallback((event, newValue, activeThumb) => {
     if (!Array.isArray(newValue) || totalDates <= 1) {
       return
     }
 
-    setRangeIndices(previous => {
-      let [start, end] = newValue.map(value => clamp(Math.round(value), 0, maxIndex))
+    setRangeIndices(previous => computeNextRange(previous, newValue, activeThumb))
+  }, [computeNextRange, totalDates])
 
-      if (start > end) {
-        if (activeThumb === 0) {
-          start = end
-        } else if (activeThumb === 1) {
-          end = start
-        } else {
-          start = Math.min(start, end)
-          end = Math.max(start, end)
-        }
-      }
+  const handleRangeChangeCommitted = useCallback((event, newValue, activeThumb) => {
+    if (!Array.isArray(newValue) || totalDates <= 1) {
+      return
+    }
 
-      if (minSteps > 0 && end - start < minSteps) {
-        if (activeThumb === 0) {
-          const adjustedStart = clamp(start, 0, maxIndex - minSteps)
-          start = adjustedStart
-          end = Math.min(maxIndex, adjustedStart + minSteps)
-        } else if (activeThumb === 1) {
-          const adjustedEnd = clamp(end, minSteps, maxIndex)
-          end = adjustedEnd
-          start = clamp(adjustedEnd - minSteps, 0, maxIndex - minSteps)
-        } else {
-          const adjustedStart = clamp(previous[0], 0, maxIndex - minSteps)
-          start = adjustedStart
-          end = Math.min(maxIndex, adjustedStart + minSteps)
-        }
-      }
-
-      return [
-        clamp(start, 0, maxIndex),
-        clamp(end, 0, maxIndex)
-      ]
-    })
-  }, [maxIndex, minSteps, totalDates])
+    setRangeIndices(previous => computeNextRange(previous, newValue, activeThumb))
+    setCommittedRangeIndices(previous => computeNextRange(previous, newValue, activeThumb))
+  }, [computeNextRange, totalDates])
 
   const handleCalendarDayClick = useCallback(value => {
     if (!value?.date || !showRangeSlider || dayDates.length === 0 || sliderDates.length <= 1) {
@@ -283,16 +356,22 @@ export function useTimeline(timelineSamples, showRangeSlider) {
       return
     }
 
-    setRangeIndices([sliderStartIndex, sliderEndIndex])
+    const nextRange = [sliderStartIndex, sliderEndIndex]
+    setRangeIndices(nextRange)
+    setCommittedRangeIndices(nextRange)
   }, [dayDates, showRangeSlider, sliderDates])
 
   return {
     allDates: sliderDates,
     rangeIndices,
+    committedRangeIndices,
+    visibleSelectedRange,
+    committedSelectedRange,
     visibleDateRange,
     visibleSamples,
     sliderMarks,
     handleRangeChange,
+    handleRangeChangeCommitted,
     handleCalendarDayClick
   }
 }

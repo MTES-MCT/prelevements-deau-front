@@ -81,30 +81,19 @@ export function extractDefaultPeriodsFromDateRange(startDate, endDate) {
     return undefined
   }
 
-  const minYear = start.getFullYear()
-  const maxYear = end.getFullYear()
-
-  // If multiple years, return year periods
-  if (maxYear > minYear) {
-    const periods = []
-    for (let year = minYear; year <= maxYear; year++) {
-      periods.push({type: 'year', value: year})
-    }
-
-    return periods
-  }
-
-  // Single year: return month periods
   const periods = []
-  const minMonth = start.getMonth()
-  const maxMonth = end.getMonth()
+  let cursor = new Date(start.getFullYear(), start.getMonth(), 1)
+  const endCursor = new Date(end.getFullYear(), end.getMonth(), 1)
 
-  for (let month = minMonth; month <= maxMonth; month++) {
+  // Always return month periods spanning the exact date range boundaries
+  while (cursor <= endCursor) {
     periods.push({
       type: 'month',
-      year: minYear,
-      month
+      year: cursor.getFullYear(),
+      month: cursor.getMonth()
     })
+
+    cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1)
   }
 
   return periods

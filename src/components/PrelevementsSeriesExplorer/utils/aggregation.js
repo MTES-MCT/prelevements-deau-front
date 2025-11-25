@@ -2,6 +2,7 @@
  * Shared helpers to transform loaded series values into calendar/timeline data.
  */
 
+import {parseQuarterDate} from '@/lib/format-date.js'
 import {coerceNumericValue} from '@/utils/number.js'
 import {parseLocalDateTime} from '@/utils/time.js'
 
@@ -27,7 +28,10 @@ const getOrCreateTimelineEntry = (context, {date, time = null}) => {
     return existingSample
   }
 
-  const timestamp = parseLocalDateTime(date, time ?? null)
+  // Handle quarter format YYYY-Q[1-4] or regular date/time
+  const quarterDate = parseQuarterDate(date)
+  const timestamp = quarterDate || parseLocalDateTime(date, time ?? null)
+
   if (!timestamp) {
     return null
   }

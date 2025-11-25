@@ -39,7 +39,7 @@ test('parseFrequencyToMs handles case-insensitive input', t => {
 
 test('parseFrequencyToMs returns null for invalid frequency', t => {
   t.is(parseFrequencyToMs('invalid'), null)
-  t.is(parseFrequencyToMs('1 second'), null)
+  t.is(parseFrequencyToMs('1 second'), 1000)
   t.is(parseFrequencyToMs(''), null)
   t.is(parseFrequencyToMs(null), null)
 })

@@ -136,6 +136,7 @@ export function buildAggregatedSeriesQuery(params = {}) {
   const {
     pointIds,
     preleveurId,
+    attachmentId,
     parameter,
     operator,
     aggregationFrequency,
@@ -149,9 +150,10 @@ export function buildAggregatedSeriesQuery(params = {}) {
 
   const normalizedPointIds = normalizeIdentifierList(pointIds)
   const normalizedPreleveurId = normalizeIdentifier(preleveurId)
+  const normalizedAttachmentId = normalizeIdentifier(attachmentId)
 
-  if (!normalizedPointIds && !normalizedPreleveurId) {
-    throw new Error('La récupération de séries agrégées nécessite au moins un identifiant de point (pointIds) ou un identifiant de préleveur (preleveurId).')
+  if (!normalizedPointIds && !normalizedPreleveurId && !normalizedAttachmentId) {
+    throw new Error('La récupération de séries agrégées nécessite au moins un identifiant de point (pointIds), un identifiant de préleveur (preleveurId) ou un identifiant de fichier (attachmentId).')
   }
 
   if (!parameter) {
@@ -168,6 +170,10 @@ export function buildAggregatedSeriesQuery(params = {}) {
 
   if (normalizedPreleveurId) {
     queryParams.set('preleveurId', normalizedPreleveurId)
+  }
+
+  if (normalizedAttachmentId) {
+    queryParams.set('attachmentId', normalizedAttachmentId)
   }
 
   queryParams.set('parameter', parameter)
@@ -242,9 +248,10 @@ export async function getAggregatedSeries(params = {}, requestOptions = {}) {
  * @param {Object} params
  * @param {string|number|Array<string|number>} [params.pointIds] - Point IDs
  * @param {string|number} [params.preleveurId] - Preleveur ID
+ * @param {string|number} [params.attachmentId] - Attachment ID
  * @returns {Promise<Object>} Object with parameters and points arrays
  */
-export async function getAggregatedSeriesOptions({pointIds, preleveurId} = {}) {
+export async function getAggregatedSeriesOptions({pointIds, preleveurId, attachmentId} = {}) {
   const params = new URLSearchParams()
 
   // Normalize pointIds to comma-separated string
@@ -255,6 +262,10 @@ export async function getAggregatedSeriesOptions({pointIds, preleveurId} = {}) {
 
   if (preleveurId !== undefined && preleveurId !== null) {
     params.set('preleveurId', String(preleveurId))
+  }
+
+  if (attachmentId !== undefined && attachmentId !== null) {
+    params.set('attachmentId', String(attachmentId))
   }
 
   const query = params.toString() ? `?${params.toString()}` : ''

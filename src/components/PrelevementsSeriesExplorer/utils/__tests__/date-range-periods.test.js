@@ -89,14 +89,16 @@ test('extractDefaultPeriodsFromDateRange returns undefined when only endDate pro
   t.is(result, undefined)
 })
 
-test('extractDefaultPeriodsFromDateRange returns year periods for multi-year range', t => {
+test('extractDefaultPeriodsFromDateRange returns month periods for multi-year range', t => {
   const result = extractDefaultPeriodsFromDateRange('2022-06-01', '2024-09-30')
 
-  t.deepEqual(result, [
-    {type: 'year', value: 2022},
-    {type: 'year', value: 2023},
-    {type: 'year', value: 2024}
-  ])
+  // Now always returns month periods spanning the exact range
+  t.is(result.length, 28) // June 2022 to September 2024 = 28 months
+  t.is(result[0].type, 'month')
+  t.is(result[0].year, 2022)
+  t.is(result[0].month, 5) // June (0-indexed)
+  t.is(result[27].year, 2024)
+  t.is(result[27].month, 8) // September (0-indexed)
 })
 
 test('extractDefaultPeriodsFromDateRange returns month periods for single year', t => {
@@ -135,10 +137,10 @@ test('extractDefaultPeriodsFromDateRange accepts Date objects', t => {
 test('extractDefaultPeriodsFromDateRange handles year boundary correctly', t => {
   const result = extractDefaultPeriodsFromDateRange('2023-12-01', '2024-01-31')
 
-  // Spans two years, should return year periods
+  // Now returns month periods even across year boundaries
   t.deepEqual(result, [
-    {type: 'year', value: 2023},
-    {type: 'year', value: 2024}
+    {type: 'month', year: 2023, month: 11}, // December 2023
+    {type: 'month', year: 2024, month: 0} // January 2024
   ])
 })
 

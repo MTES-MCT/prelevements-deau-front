@@ -8,9 +8,11 @@ export const FREQUENCY_LABELS = new Map([
   ['1 minute', '1 minute'],
   ['15 minutes', '15 minutes'],
   ['1 hour', '1 heure'],
+  ['6 hours', '6 heures'],
   ['1 day', '1 jour'],
   ['1 month', '1 mois'],
   ['1 quarter', '1 trimestre'],
+  ['6 months', '6 mois'],
   ['1 year', '1 an']
 ])
 
@@ -20,9 +22,11 @@ export const FREQUENCY_ORDER = {
   '1 minute': 2,
   '15 minutes': 3,
   '1 hour': 4,
+  '6 hours': 4.5,
   '1 day': 5,
   '1 month': 6,
   '1 quarter': 7,
+  '6 months': 7.5,
   '1 year': 8
 }
 
@@ -63,4 +67,43 @@ export function sortFrequencies(frequencies) {
     const orderB = getFrequencyOrder(b)
     return orderA - orderB
   })
+}
+
+/**
+ * Pick the closest available frequency that is compatible with the target.
+ * - If the target is available, return it.
+ * - Otherwise, pick the first available frequency that is coarser than the target.
+ * - If none are coarser, fall back to the coarsest available frequency.
+ * - If no availability is provided, return the target (may be null).
+ *
+ * @param {string|null} targetFrequency - Desired frequency (e.g., '1 day')
+ * @param {Array<string>} availableFrequencies - List of allowed frequencies
+ * @returns {string|null} Frequency to use that respects the availability
+ */
+export function pickAvailableFrequency(targetFrequency, availableFrequencies) {
+  const uniqueAvailable = [...new Set((availableFrequencies ?? []).filter(Boolean))]
+
+  if (uniqueAvailable.length === 0) {
+    return targetFrequency ?? null
+  }
+
+  if (targetFrequency && uniqueAvailable.includes(targetFrequency)) {
+    return targetFrequency
+  }
+
+  const sorted = sortFrequencies(uniqueAvailable)
+
+  if (!targetFrequency) {
+    return sorted[0] ?? null
+  }
+
+  const targetOrder = getFrequencyOrder(targetFrequency)
+  if (targetOrder !== 999) {
+    const coarserOrEqual = sorted.find(freq => getFrequencyOrder(freq) >= targetOrder)
+    if (coarserOrEqual) {
+      return coarserOrEqual
+    }
+  }
+
+  return sorted.at(-1) ?? null
 }
