@@ -45,11 +45,16 @@ const RegleEditionForm = ({preleveur, regle, exploitations, documents}) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
+  // Parameters that require a unit selection
+  const parametresRequiringUnite = ['Débit prélevé', 'Débit réservé']
+  const isUniteRequired = parametresRequiringUnite.includes(formData.parametre)
+
   const isFormValid = formData.exploitations?.length > 0
     && formData.parametre
     && formData.valeur !== ''
     && formData.contrainte
     && formData.debut_validite
+    && (!isUniteRequired || formData.unite)
 
   const handleSubmit = withSubmit(
     async () => {

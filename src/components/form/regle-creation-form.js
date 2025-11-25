@@ -32,11 +32,16 @@ const RegleCreationForm = ({preleveur, exploitations, documents}) => {
 
   const [regle, setRegle] = useState(emptyRegle)
 
+  // Parameters that require a unit selection
+  const parametresRequiringUnite = ['Débit prélevé', 'Débit réservé']
+  const isUniteRequired = parametresRequiringUnite.includes(regle.parametre)
+
   const isFormValid = regle.exploitations?.length > 0
     && regle.parametre
     && regle.valeur !== ''
     && regle.contrainte
     && regle.debut_validite
+    && (!isUniteRequired || regle.unite)
 
   const handleSubmit = withSubmit(
     async () => {
