@@ -22,7 +22,6 @@ import {pickAvailableFrequency} from '@/utils/frequency.js'
 
 const DEFAULT_FREQUENCY = '1 day'
 const DEFAULT_PARAMETER = 'volume prélevé'
-const DEFAULT_TEMPORAL_OPERATOR_FOR_VOLUME = 'sum'
 const FALLBACK_VOLUME_TEMPORAL_OPERATORS = ['sum', 'mean', 'min', 'max']
 const FALLBACK_STANDARD_TEMPORAL_OPERATORS = ['mean', 'min', 'max']
 
@@ -116,7 +115,6 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
         const defaultTemporalOperator = param.defaultTemporalOperator
           ?? metadata.defaultTemporalOperator
           ?? temporalOperators[0]
-          ?? (normalizedName.includes('volume') ? DEFAULT_TEMPORAL_OPERATOR_FOR_VOLUME : fallbackTemporalOperators[0])
 
         return [param.name, {
           ...metadata,
@@ -179,16 +177,8 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
       return parameterDefinition.defaultTemporalOperator
     }
 
-    // Priority 2: For volume parameters, use 'sum' if available
-    const temporalOperators = parameterDefinition.temporalOperators ?? []
-    const isVolumeParameter = parameterName?.toLowerCase().includes('volume')
-
-    if (isVolumeParameter && temporalOperators.includes(DEFAULT_TEMPORAL_OPERATOR_FOR_VOLUME)) {
-      return DEFAULT_TEMPORAL_OPERATOR_FOR_VOLUME
-    }
-
-    // Priority 3: Fall back to first available operator
-    return temporalOperators[0] ?? null
+    // Priority 2: Fall back to first available operator
+    return parameterDefinition.temporalOperators?.[0] ?? null
   }, [parameterDefinitionMap])
 
   const buildTemporalOperatorsForParameters = useCallback((parametersList, baseTemporalOperators = {}) => {
