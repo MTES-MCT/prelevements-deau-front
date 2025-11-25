@@ -116,7 +116,9 @@ export async function deletePreleveur(idPreleveur) {
 export async function createDocument(idPreleveur, payload, document) {
   const formData = new FormData()
   for (const [key, value] of Object.entries(payload)) {
-    formData.append(key, value)
+    if (value !== null && value !== undefined) {
+      formData.append(key, value)
+    }
   }
 
   formData.append('document', document)
@@ -131,7 +133,14 @@ export async function createDocument(idPreleveur, payload, document) {
     }
   )
 
-  return response.json()
+  const data = await response.json()
+
+  // Add HTTP status info to the response for proper error handling
+  if (!response.ok) {
+    return {...data, code: response.status}
+  }
+
+  return data
 }
 
 export async function uploadDocument(idPreleveur, document) {
@@ -235,6 +244,65 @@ export async function deleteExploitation(exploitationId) {
 export async function getReglesFromPreleveur(idPreleveur) {
   const response = await executeRequest(
     `api/preleveurs/${idPreleveur}/regles`,
+    {headers: {Authorization: await getAuthorization()}}
+  )
+  if (response.ok === false) {
+    return []
+  }
+
+  return response.json()
+}
+
+export async function getRegle(regleId) {
+  const response = await executeRequest(
+    `api/regles/${regleId}`,
+    {headers: {Authorization: await getAuthorization()}}
+  )
+  if (response.ok === false) {
+    return null
+  }
+
+  return response.json()
+}
+
+export async function createRegle(preleveurId, payload) {
+  const response = await executeRequest(
+    `api/preleveurs/${preleveurId}/regles`,
+    {
+      headers: {Authorization: await getAuthorization()},
+      method: 'POST',
+      body: payload
+    }
+  )
+  return response.json()
+}
+
+export async function updateRegle(regleId, payload) {
+  const response = await executeRequest(
+    `api/regles/${regleId}`,
+    {
+      headers: {Authorization: await getAuthorization()},
+      method: 'PUT',
+      body: payload
+    }
+  )
+  return response.json()
+}
+
+export async function deleteRegle(regleId) {
+  const response = await executeRequest(
+    `api/regles/${regleId}`,
+    {
+      headers: {Authorization: await getAuthorization()},
+      method: 'DELETE'
+    }
+  )
+  return response.json()
+}
+
+export async function getExploitationDocuments(exploitationId) {
+  const response = await executeRequest(
+    `api/exploitations/${exploitationId}/documents`,
     {headers: {Authorization: await getAuthorization()}}
   )
   if (response.ok === false) {

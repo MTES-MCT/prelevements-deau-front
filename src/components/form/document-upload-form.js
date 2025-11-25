@@ -13,46 +13,29 @@ import {useRouter} from 'next/navigation'
 
 import {createDocument} from '@/app/api/points-prelevement.js'
 import DocumentForm from '@/components/form/document-form.js'
+import FormErrors from '@/components/ui/FormErrors/index.js'
 import SimpleLoading from '@/components/ui/SimpleLoading/index.js'
+import useFormSubmit from '@/hook/use-form-submit.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
 const DocumentUploadForm = ({preleveur}) => {
   const router = useRouter()
+  const {isSubmitting, error, validationErrors, resetErrors, withSubmit} = useFormSubmit()
 
-  const [isLoading, setIsLoading] = useState(false)
-  const [isDisabled, setIsDisabled] = useState(true)
   const [filesList, setFilesList] = useState()
   const [document, setDocument] = useState()
   const [uploadMessage, setUploadMessage] = useState()
-  const [error, setError] = useState(null)
-  const [validationErrors, setValidationErrors] = useState([])
 
-  const handleDocument = async () => {
-    setError(null)
-    setValidationErrors([])
-    setIsLoading(true)
-
-    try {
+  const handleDocument = withSubmit(
+    async () => {
       const cleanedDocument = emptyStringToNull(document)
-      const response = await createDocument(preleveur._id, cleanedDocument, filesList[0])
-
-      if (response.code === 400) {
-        if (response.validationErrors) {
-          setValidationErrors(response.validationErrors)
-        } else {
-          setError(response.message)
-        }
-      } else if (response.code === 409) {
-        setError(response.message)
-      } else {
-        router.push(`/preleveurs/${preleveur.id_preleveur}`)
-      }
-    } catch (error) {
-      setError(error.message)
+      return createDocument(preleveur._id, cleanedDocument, filesList[0])
+    },
+    {
+      successIndicator: '_id',
+      onSuccess: () => router.push(`/preleveurs/${preleveur.id_preleveur}`)
     }
-
-    setIsLoading(false)
-  }
+  )
 
   useEffect(() => {
     if (filesList && filesList.length > 0) {
@@ -64,13 +47,9 @@ const DocumentUploadForm = ({preleveur}) => {
     }
   }, [filesList])
 
-  useEffect(() => {
-    setIsDisabled(
-      !(document?.date_signature
-        && document?.nature
-        && filesList?.length > 0)
-    )
-  }, [document, filesList])
+  const isDisabled = !(document?.date_signature
+    && document?.nature
+    && filesList?.length > 0)
 
   return (
     <div className='p-3 m-3 border'>
@@ -78,7 +57,7 @@ const DocumentUploadForm = ({preleveur}) => {
         Associer un document
       </Typography>
       <div>
-        {isLoading ? (
+        {isSubmitting ? (
           <div className='flex p-5 my-5 justify-center'>
             <SimpleLoading />
           </div>
@@ -107,25 +86,15 @@ const DocumentUploadForm = ({preleveur}) => {
         document={document}
         setDocument={setDocument}
       />
-      {error && (
-        <div className='text-center p-5 text-red-500'>
-          <p><b>Un problème est survenu :</b></p>
-          {error}
-        </div>
-      )}
-      {validationErrors?.length > 0 && (
-        <div className='text-center p-5 text-red-500'>
-          <p><b>{validationErrors.length === 1 ? 'Problème de validation :' : 'Problèmes de validation :'}</b></p>
-          {validationErrors.map(err => (
-            <p key={err.message}>{err.message}</p>
-          )
-          )}
-        </div>
-      )}
+      <FormErrors
+        error={error}
+        validationErrors={validationErrors}
+        onClose={resetErrors}
+      />
       <div className='flex justify-end'>
         <Button
           className='my-5'
-          disabled={isDisabled}
+          disabled={isDisabled || isSubmitting}
           onClick={handleDocument}
         >
           Associer au préleveur
