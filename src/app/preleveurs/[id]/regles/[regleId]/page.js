@@ -6,7 +6,8 @@ import {
   getPreleveur,
   getRegle,
   getExploitationFromPreleveur,
-  getDocumentsFromPreleveur
+  getDocumentsFromPreleveur,
+  getPointPrelevement
 } from '@/app/api/points-prelevement.js'
 import RegleEditionForm from '@/components/form/regle-edition-form.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
@@ -35,11 +36,13 @@ const Page = async ({params}) => {
   const exploitations = await getExploitationFromPreleveur(id)
   const documents = await getDocumentsFromPreleveur(id)
 
-  // Enrich exploitations with point info for display
-  const enrichedExploitations = exploitations.map(exploitation => ({
-    ...exploitation,
-    point: exploitation.point || {}
-  }))
+  // Enrich exploitations with point details for display
+  const enrichedExploitations = await Promise.all(
+    exploitations.map(async exploitation => {
+      const point = await getPointPrelevement(exploitation.point)
+      return {...exploitation, point}
+    })
+  )
 
   return (
     <>
