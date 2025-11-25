@@ -15,6 +15,8 @@ import {useRouter} from 'next/navigation'
 
 import {updateRegle, deleteRegle} from '@/app/api/points-prelevement.js'
 import RegleForm from '@/components/form/regle-form.js'
+import FormErrors from '@/components/ui/FormErrors/index.js'
+import useFormSubmit from '@/hook/use-form-submit.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
 /**
@@ -37,69 +39,51 @@ const transformRegleForForm = regle => ({
 
 const RegleEditionForm = ({preleveur, regle, exploitations, documents}) => {
   const router = useRouter()
+  const {isSubmitting, error, validationErrors, resetErrors, withSubmit, handleResponse, setError} = useFormSubmit()
 
-  const [error, setError] = useState(null)
-  const [validationErrors, setValidationErrors] = useState([])
   const [formData, setFormData] = useState(transformRegleForForm(regle))
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const isFormValid = formData.exploitations?.length > 0
     && formData.parametre
-    && formData.unite
     && formData.valeur !== ''
     && formData.contrainte
     && formData.debut_validite
 
-  const handleSubmit = async () => {
-    setError(null)
-    setValidationErrors([])
-    setIsSubmitting(true)
-
-    try {
+  const handleSubmit = withSubmit(
+    async () => {
       const payload = emptyStringToNull({
         ...formData,
         valeur: Number(formData.valeur)
       })
-
-      const response = await updateRegle(regle._id, payload)
-
-      if (response.code === 400) {
-        if (response.validationErrors) {
-          setValidationErrors(response.validationErrors)
-        } else {
-          setError(response.message)
-        }
-      } else if (response._id) {
-        router.push(`/preleveurs/${preleveur.id_preleveur}`)
-      } else {
-        setError('Une erreur inattendue est survenue')
-      }
-    } catch (error_) {
-      setError(error_.message)
-    } finally {
-      setIsSubmitting(false)
+      return updateRegle(regle._id, payload)
+    },
+    {
+      successIndicator: '_id',
+      onSuccess: () => router.push(`/preleveurs/${preleveur.id_preleveur}`)
     }
-  }
+  )
 
   const handleDelete = async () => {
-    setError(null)
-    setIsSubmitting(true)
+    resetErrors()
+    setIsDeleting(true)
 
     try {
       const response = await deleteRegle(regle._id)
+      const success = await handleResponse(response, {
+        successIndicator: null,
+        onSuccess: () => router.push(`/preleveurs/${preleveur.id_preleveur}`)
+      })
 
-      if (response.code) {
+      if (!success) {
         setIsDialogOpen(false)
-        setError(response.message)
-        return
       }
-
-      router.push(`/preleveurs/${preleveur.id_preleveur}`)
     } catch (error_) {
       setError(error_.message)
+      setIsDialogOpen(false)
     } finally {
-      setIsSubmitting(false)
+      setIsDeleting(false)
     }
   }
 
@@ -161,31 +145,21 @@ const RegleEditionForm = ({preleveur, regle, exploitations, documents}) => {
               Annuler
             </Button>
             <Button
-              disabled={isSubmitting}
+              disabled={isDeleting}
               style={{backgroundColor: 'red'}}
               onClick={handleDelete}
             >
-              Supprimer cette règle
+              {isDeleting ? 'Suppression...' : 'Supprimer cette règle'}
             </Button>
           </DialogActions>
         </Dialog>
       </div>
 
-      {error && (
-        <div className='text-center p-5 text-red-500'>
-          <p><b>Un problème est survenu :</b></p>
-          {error}
-        </div>
-      )}
-
-      {validationErrors?.length > 0 && !validationErrors.some(e => e.path) && (
-        <div className='text-center p-5 text-red-500'>
-          <p><b>{validationErrors.length === 1 ? 'Problème de validation :' : 'Problèmes de validation :'}</b></p>
-          {validationErrors.map(err => (
-            <p key={err.message}>{err.message}</p>
-          ))}
-        </div>
-      )}
+      <FormErrors
+        error={error}
+        validationErrors={validationErrors.filter(e => !e.path)}
+        onClose={resetErrors}
+      />
 
       <div className='w-full flex justify-center p-5 mb-8'>
         <Button

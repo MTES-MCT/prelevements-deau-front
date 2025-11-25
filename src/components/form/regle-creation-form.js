@@ -8,6 +8,8 @@ import {useRouter} from 'next/navigation'
 
 import {createRegle} from '@/app/api/points-prelevement.js'
 import RegleForm from '@/components/form/regle-form.js'
+import FormErrors from '@/components/ui/FormErrors/index.js'
+import useFormSubmit from '@/hook/use-form-submit.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
 const emptyRegle = {
@@ -26,49 +28,29 @@ const emptyRegle = {
 
 const RegleCreationForm = ({preleveur, exploitations, documents}) => {
   const router = useRouter()
+  const {isSubmitting, error, validationErrors, resetErrors, withSubmit} = useFormSubmit()
 
-  const [error, setError] = useState(null)
-  const [validationErrors, setValidationErrors] = useState([])
   const [regle, setRegle] = useState(emptyRegle)
-  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const isFormValid = regle.exploitations?.length > 0
     && regle.parametre
-    && regle.unite
     && regle.valeur !== ''
     && regle.contrainte
     && regle.debut_validite
 
-  const handleSubmit = async () => {
-    setError(null)
-    setValidationErrors([])
-    setIsSubmitting(true)
-
-    try {
+  const handleSubmit = withSubmit(
+    async () => {
       const payload = emptyStringToNull({
         ...regle,
         valeur: Number(regle.valeur)
       })
-
-      const response = await createRegle(preleveur._id, payload)
-
-      if (response.code === 400) {
-        if (response.validationErrors) {
-          setValidationErrors(response.validationErrors)
-        } else {
-          setError(response.message)
-        }
-      } else if (response._id) {
-        router.push(`/preleveurs/${preleveur.id_preleveur}`)
-      } else {
-        setError('Une erreur inattendue est survenue')
-      }
-    } catch (error_) {
-      setError(error_.message)
-    } finally {
-      setIsSubmitting(false)
+      return createRegle(preleveur._id, payload)
+    },
+    {
+      successIndicator: '_id',
+      onSuccess: () => router.push(`/preleveurs/${preleveur.id_preleveur}`)
     }
-  }
+  )
 
   const hasNoExploitations = !exploitations || exploitations.length === 0
 
@@ -82,21 +64,11 @@ const RegleCreationForm = ({preleveur, exploitations, documents}) => {
         validationErrors={validationErrors}
       />
 
-      {error && (
-        <div className='text-center p-5 text-red-500'>
-          <p><b>Un problème est survenu :</b></p>
-          {error}
-        </div>
-      )}
-
-      {validationErrors?.length > 0 && !validationErrors.some(e => e.path) && (
-        <div className='text-center p-5 text-red-500'>
-          <p><b>{validationErrors.length === 1 ? 'Problème de validation :' : 'Problèmes de validation :'}</b></p>
-          {validationErrors.map(err => (
-            <p key={err.message}>{err.message}</p>
-          ))}
-        </div>
-      )}
+      <FormErrors
+        error={error}
+        validationErrors={validationErrors.filter(e => !e.path)}
+        onClose={resetErrors}
+      />
 
       {!hasNoExploitations && (
         <div className='w-full flex justify-center p-5 mb-8'>

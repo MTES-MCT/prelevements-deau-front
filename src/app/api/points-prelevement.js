@@ -116,7 +116,9 @@ export async function deletePreleveur(idPreleveur) {
 export async function createDocument(idPreleveur, payload, document) {
   const formData = new FormData()
   for (const [key, value] of Object.entries(payload)) {
-    formData.append(key, value)
+    if (value !== null && value !== undefined) {
+      formData.append(key, value)
+    }
   }
 
   formData.append('document', document)
@@ -131,7 +133,14 @@ export async function createDocument(idPreleveur, payload, document) {
     }
   )
 
-  return response.json()
+  const data = await response.json()
+
+  // Add HTTP status info to the response for proper error handling
+  if (!response.ok) {
+    return {...data, code: response.status}
+  }
+
+  return data
 }
 
 export async function uploadDocument(idPreleveur, document) {
