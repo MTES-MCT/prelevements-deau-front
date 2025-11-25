@@ -10,6 +10,7 @@ import {Select} from '@codegouvfr/react-dsfr/SelectNext'
 import DayMonthSelector from '@/components/form/day-month-selector.js'
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import {formatFullDateFr} from '@/lib/format-date.js'
+import DividerSection from '../ui/DividerSection'
 
 const contraintes = [
   {value: 'minimum', label: 'Minimum (>)'},
@@ -17,41 +18,42 @@ const contraintes = [
   {value: 'moyenne', label: 'Moyenne (≃)'}
 ]
 
-const parametres = [
-  'Volume journalier',
-  'Volume mensuel',
-  'Volume annuel',
-  'Relevé d\'index',
-  'Débit prélevé',
-  'Débit réservé',
-  'Chlorures',
-  'Nitrates',
-  'Sulfates',
-  'Température',
-  'Niveau piézométrique',
-  'Conductivité électrique',
-  'pH'
-]
+// Mapping of parameters to their valid units
+const parametreUnites = {
+  'Volume journalier': ['m³'],
+  'Volume mensuel': ['m³'],
+  'Volume annuel': ['m³'],
+  'Relevé d\'index': ['m³'],
+  'Débit prélevé': ['L/s', 'm³/h'],
+  'Débit réservé': ['L/s', 'm³/h'],
+  Chlorures: ['mg/L'],
+  Nitrates: ['mg/L'],
+  Sulfates: ['mg/L'],
+  Température: ['degré Celsius'],
+  'Niveau piézométrique': ['m NGR'],
+  'Conductivité électrique': ['µS/cm'],
+  pH: []
+}
 
-const unites = [
-  {value: 'm³', label: 'm³'},
-  {value: 'L/s', label: 'L/s'},
-  {value: 'm³/h', label: 'm³/h'},
-  {value: 'mg/L', label: 'mg/L'},
-  {value: 'degré Celsius', label: 'degré Celsius'},
-  {value: 'm NGR', label: 'm NGR'},
-  {value: 'µS/cm', label: 'µS/cm'}
-]
-
+// Build parameter options with unit in label when there's only one unit
 const parametreOptions = [
   {value: '', label: '-- Sélectionner --', disabled: true},
-  ...parametres.map(p => ({value: p, label: p}))
+  ...Object.entries(parametreUnites).map(([parametre, unites]) => {
+    // Show unit in label only if there's exactly one unit
+    const label = unites.length === 1 ? `${parametre} (${unites[0]})` : parametre
+    return {value: parametre, label}
+  })
 ]
 
+// Unit options for parameters with multiple units (Débit prélevé, Débit réservé)
 const uniteOptions = [
   {value: '', label: '-- Sélectionner --', disabled: true},
-  ...unites.map(u => ({value: u.value, label: u.label}))
+  {value: 'L/s', label: 'L/s'},
+  {value: 'm³/h', label: 'm³/h'}
 ]
+
+// Check if a parameter requires unit selection (has multiple units)
+const requiresUniteSelection = parametre => (parametreUnites[parametre]?.length || 0) > 1
 
 const contrainteOptions = [
   {value: '', label: '-- Sélectionner --', disabled: true},
@@ -123,6 +125,125 @@ const getFieldError = (validationErrors, field) => {
   const error = validationErrors.find(e => e.path?.includes(field))
   return error?.message
 }
+
+// Parametre and value section component
+const ParametreSection = ({regle, setRegle, fieldError}) => {
+  // Handle parameter change - auto-select unit if only one valid option
+  const handleParametreChange = newParametre => {
+    const validUnites = parametreUnites[newParametre] || []
+    const newUnite = validUnites.length === 1 ? validUnites[0] : ''
+
+    setRegle(prev => ({
+      ...prev,
+      parametre: newParametre,
+      unite: newUnite
+    }))
+  }
+
+  const showUniteField = requiresUniteSelection(regle.parametre)
+
+  return (
+    <DividerSection title='Paramètre et valeur'>
+      <Select
+        label='Paramètre *'
+        placeholder='Sélectionner un paramètre'
+        state={fieldError('parametre') ? 'error' : 'default'}
+        stateRelatedMessage={fieldError('parametre')}
+        nativeSelectProps={{
+          value: regle.parametre || '',
+          onChange: e => handleParametreChange(e.target.value)
+        }}
+        options={parametreOptions}
+      />
+
+      <div className={showUniteField ? 'grid grid-cols-2 gap-4' : ''}>
+        {showUniteField && (
+          <Select
+            label='Unité *'
+            placeholder='Sélectionner une unité'
+            state={fieldError('unite') ? 'error' : 'default'}
+            stateRelatedMessage={fieldError('unite')}
+            nativeSelectProps={{
+              value: regle.unite || '',
+              onChange: e => setRegle(prev => ({...prev, unite: e.target.value}))
+            }}
+            options={uniteOptions}
+          />
+        )}
+        <Input
+          label='Valeur *'
+          state={fieldError('valeur') ? 'error' : 'default'}
+          stateRelatedMessage={fieldError('valeur')}
+          nativeInputProps={{
+            type: 'number',
+            step: 'any',
+            min: 0,
+            placeholder: 'Entrer une valeur',
+            value: regle.valeur ?? '',
+            onChange: e => setRegle(prev => ({...prev, valeur: e.target.value}))
+          }}
+        />
+      </div>
+
+      <Select
+        label='Contrainte *'
+        placeholder='Sélectionner un niveau de contrainte'
+        state={fieldError('contrainte') ? 'error' : 'default'}
+        stateRelatedMessage={fieldError('contrainte')}
+        nativeSelectProps={{
+          value: regle.contrainte || '',
+          onChange: e => setRegle(prev => ({...prev, contrainte: e.target.value}))
+        }}
+        options={contrainteOptions}
+      />
+    </DividerSection>
+  )
+}
+
+// Period section component
+const PeriodeSection = ({regle, setRegle, fieldError}) => (
+  <DividerSection title='Période de validité'>
+    <div className='grid grid-cols-2 gap-4'>
+      <Input
+        label='Début de validité *'
+        hintText="Date de début d'application de la règle"
+        state={fieldError('debut_validite') ? 'error' : 'default'}
+        stateRelatedMessage={fieldError('debut_validite')}
+        nativeInputProps={{
+          type: 'date',
+          value: regle.debut_validite || '',
+          onChange: e => setRegle(prev => ({...prev, debut_validite: e.target.value}))
+        }}
+      />
+      <Input
+        label='Fin de validité'
+        hintText='Laisser vide si la règle est toujours en vigueur'
+        state={fieldError('fin_validite') ? 'error' : 'default'}
+        stateRelatedMessage={fieldError('fin_validite')}
+        nativeInputProps={{
+          type: 'date',
+          value: regle.fin_validite || '',
+          onChange: e => setRegle(prev => ({...prev, fin_validite: e.target.value}))
+        }}
+      />
+    </div>
+
+    <div className='grid grid-cols-2 gap-4'>
+      <DayMonthSelector
+        label='Début de période'
+        toolTip="Début de la période annuelle durant laquelle s'applique la règle (par exemple 01/05 pour une règle saisonnière débutant le 1er mai)"
+        defaultValue={regle.debut_periode}
+        onChange={date => setRegle(prev => ({...prev, debut_periode: date}))}
+      />
+      <DayMonthSelector
+        label='Fin de période'
+        toolTip="Fin de la période annuelle durant laquelle s'applique la règle (par exemple 30/09 pour une règle cessant le 30 septembre)"
+        defaultValue={regle.fin_periode}
+        onChange={date => setRegle(prev => ({...prev, fin_periode: date}))}
+      />
+    </div>
+  </DividerSection>
+)
 
 /**
  * Reusable form component for creating/editing a regle
@@ -222,96 +343,9 @@ const RegleFormFields = ({regle, setRegle, exploitations, documents, validationE
         options={documentOptions}
       />
 
-      <Select
-        label='Paramètre *'
-        placeholder='Sélectionner un paramètre'
-        state={fieldError('parametre') ? 'error' : 'default'}
-        stateRelatedMessage={fieldError('parametre')}
-        nativeSelectProps={{
-          value: regle.parametre || '',
-          onChange: e => setRegle(prev => ({...prev, parametre: e.target.value}))
-        }}
-        options={parametreOptions}
-      />
+      <ParametreSection fieldError={fieldError} regle={regle} setRegle={setRegle} />
 
-      <div className='grid grid-cols-2 gap-4'>
-        <Select
-          label='Unité *'
-          placeholder='Sélectionner une unité'
-          state={fieldError('unite') ? 'error' : 'default'}
-          stateRelatedMessage={fieldError('unite')}
-          nativeSelectProps={{
-            value: regle.unite || '',
-            onChange: e => setRegle(prev => ({...prev, unite: e.target.value}))
-          }}
-          options={uniteOptions}
-        />
-        <Input
-          label='Valeur *'
-          state={fieldError('valeur') ? 'error' : 'default'}
-          stateRelatedMessage={fieldError('valeur')}
-          nativeInputProps={{
-            type: 'number',
-            step: 'any',
-            min: 0,
-            placeholder: 'Entrer une valeur',
-            value: regle.valeur ?? '',
-            onChange: e => setRegle(prev => ({...prev, valeur: e.target.value}))
-          }}
-        />
-      </div>
-
-      <Select
-        label='Contrainte *'
-        placeholder='Sélectionner un niveau de contrainte'
-        state={fieldError('contrainte') ? 'error' : 'default'}
-        stateRelatedMessage={fieldError('contrainte')}
-        nativeSelectProps={{
-          value: regle.contrainte || '',
-          onChange: e => setRegle(prev => ({...prev, contrainte: e.target.value}))
-        }}
-        options={contrainteOptions}
-      />
-
-      <div className='grid grid-cols-2 gap-4'>
-        <Input
-          label='Début de validité *'
-          hintText="Date de début d'application de la règle"
-          state={fieldError('debut_validite') ? 'error' : 'default'}
-          stateRelatedMessage={fieldError('debut_validite')}
-          nativeInputProps={{
-            type: 'date',
-            value: regle.debut_validite || '',
-            onChange: e => setRegle(prev => ({...prev, debut_validite: e.target.value}))
-          }}
-        />
-        <Input
-          label='Fin de validité'
-          hintText='Laisser vide si la règle est toujours en vigueur'
-          state={fieldError('fin_validite') ? 'error' : 'default'}
-          stateRelatedMessage={fieldError('fin_validite')}
-          nativeInputProps={{
-            type: 'date',
-            value: regle.fin_validite || '',
-            onChange: e => setRegle(prev => ({...prev, fin_validite: e.target.value}))
-          }}
-        />
-      </div>
-
-      <div className='grid grid-cols-2 gap-4'>
-        <DayMonthSelector
-          label='Début de période'
-          toolTip="Début de la période annuelle durant laquelle s'applique la règle (par exemple 01/05 pour une règle saisonnière débutant le 1er mai)"
-          defaultValue={regle.debut_periode}
-          onChange={date => setRegle(prev => ({...prev, debut_periode: date}))}
-        />
-        <DayMonthSelector
-          label='Fin de période'
-          toolTip="Fin de la période annuelle durant laquelle s'applique la règle (par exemple 30/09 pour une règle cessant le 30 septembre)"
-          defaultValue={regle.fin_periode}
-          onChange={date => setRegle(prev => ({...prev, fin_periode: date}))}
-        />
-      </div>
+      <PeriodeSection fieldError={fieldError} regle={regle} setRegle={setRegle} />
 
       <Input
         textArea
