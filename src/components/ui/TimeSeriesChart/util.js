@@ -675,10 +675,9 @@ export const buildStubSeries = (processedSeries, xValuesLength) => processedSeri
  * @param {object} stats - Statistics with min and max values
  * @param {Function} numberFormatter - Number formatting function
  * @param {string|null} label - Optional axis label
- * @param {boolean} hasBarSeries - Whether this axis contains bar-type series
  * @returns {object} Y-axis configuration
  */
-const buildSingleYAxis = (axisId, stats, numberFormatter, label = null, hasBarSeries = false) => {
+const buildSingleYAxis = (axisId, stats, numberFormatter, label = null) => {
   const hasData = stats.min !== Number.POSITIVE_INFINITY
 
   // Create a default axis even if no data to prevent useYScale errors
@@ -702,15 +701,10 @@ const buildSingleYAxis = (axisId, stats, numberFormatter, label = null, hasBarSe
     }
   }
 
-  // For bar charts, anchor the axis at zero to prevent bars from rendering below baseline
+  // Extend axis range to include zero when data doesn't already span it
   // Support both positive and negative values by extending the range to include zero
-  let axisMin = stats.min
-  let axisMax = stats.max
-
-  if (hasBarSeries) {
-    axisMin = Math.min(0, stats.min)
-    axisMax = Math.max(0, stats.max)
-  }
+  let axisMin = Math.min(0, stats.min)
+  let axisMax = Math.max(0, stats.max)
 
   // Prevent collapsed axis when min equals max
   if (axisMin === axisMax) {
@@ -741,32 +735,17 @@ const buildSingleYAxis = (axisId, stats, numberFormatter, label = null, hasBarSe
  * @param {object} axisStats - Statistics per axis
  * @param {Function} numberFormatter - Number formatting function
  * @param {object} axisLabels - Optional labels per axis
- * @param {Array} processedSeries - Processed series to detect bar types
  * @returns {Array} Y-axis configurations
  */
-export const buildYAxisConfigurations = (axisStats, numberFormatter, axisLabels = {}, processedSeries = []) => {
-  // Detect which axes contain bar-type series
-  const axisHasBarSeries = {
-    [AXIS_LEFT_ID]: false,
-    [AXIS_RIGHT_ID]: false
-  }
-
-  for (const series of processedSeries) {
-    if (series.chartType === 'bar') {
-      axisHasBarSeries[series.axisId] = true
-    }
-  }
-
-  return [AXIS_LEFT_ID, AXIS_RIGHT_ID].map(axisId =>
+export const buildYAxisConfigurations = (axisStats, numberFormatter, axisLabels = {}) =>
+  [AXIS_LEFT_ID, AXIS_RIGHT_ID].map(axisId =>
     buildSingleYAxis(
       axisId,
       axisStats[axisId],
       numberFormatter,
-      axisLabels[axisId] ?? null,
-      axisHasBarSeries[axisId]
+      axisLabels[axisId] ?? null
     )
   )
-}
 
 /**
  * Extract static thresholds from processed series
@@ -900,7 +879,7 @@ export const buildSeriesModel = ({
   }
 
   // Step 9: Build y-axis configurations
-  const yAxis = buildYAxisConfigurations(axisStats, numberFormatter, axisLabels, processedSeries)
+  const yAxis = buildYAxisConfigurations(axisStats, numberFormatter, axisLabels)
 
   return {
     xValues,
