@@ -1,19 +1,15 @@
 /* eslint-disable camelcase */
 'use client'
 
+import {useMemo} from 'react'
+
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Input} from '@codegouvfr/react-dsfr/Input'
 import {Select} from '@codegouvfr/react-dsfr/SelectNext'
-import {Tooltip} from '@codegouvfr/react-dsfr/Tooltip'
-import dynamic from 'next/dynamic'
 
 import DayMonthSelector from '@/components/form/day-month-selector.js'
+import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import {formatFullDateFr} from '@/lib/format-date.js'
-
-const DynamicCheckbox = dynamic(
-  () => import('@codegouvfr/react-dsfr/Checkbox'),
-  {ssr: false}
-)
 
 const contraintes = [
   {value: 'minimum', label: 'Minimum (>)'},
@@ -47,6 +43,87 @@ const unites = [
   {value: 'µS/cm', label: 'µS/cm'}
 ]
 
+const parametreOptions = [
+  {value: '', label: '-- Sélectionner --', disabled: true},
+  ...parametres.map(p => ({value: p, label: p}))
+]
+
+const uniteOptions = [
+  {value: '', label: '-- Sélectionner --', disabled: true},
+  ...unites.map(u => ({value: u.value, label: u.label}))
+]
+
+const contrainteOptions = [
+  {value: '', label: '-- Sélectionner --', disabled: true},
+  ...contraintes.map(c => ({value: c.value, label: c.label}))
+]
+
+// Build a map from exploitation ID to display label
+const buildExploitationLabelsMap = exploitations => {
+  const map = {}
+  for (const exploitation of exploitations) {
+    const pointName = exploitation.point?.nom || exploitation.point?.id_point || 'Point inconnu'
+    const usagesText = exploitation.usages?.join(', ') || 'Usage non renseigné'
+    map[exploitation._id] = `${pointName} - ${usagesText}`
+  }
+
+  return map
+}
+
+// Group exploitations by statut for the multiselect
+const buildExploitationOptions = exploitations => {
+  const statutOrder = ['En activité', 'Terminée', 'Abandonnée', 'Non renseigné']
+  const grouped = {}
+
+  for (const exploitation of exploitations) {
+    const statut = exploitation.statut || 'Non renseigné'
+    grouped[statut] ||= []
+
+    const pointName = exploitation.point?.nom || exploitation.point?.id_point || 'Point inconnu'
+    const usagesText = exploitation.usages?.join(', ') || 'Usage non renseigné'
+    const dateText = `Depuis le ${formatFullDateFr(exploitation.date_debut)}${exploitation.date_fin ? ` jusqu'au ${formatFullDateFr(exploitation.date_fin)}` : ''}`
+
+    grouped[statut].push({
+      value: exploitation._id,
+      content: `${pointName} - ${usagesText}`,
+      title: dateText
+    })
+  }
+
+  // Return groups in order, filtering out empty groups
+  return statutOrder
+    .filter(statut => grouped[statut]?.length > 0)
+    .map(statut => ({
+      label: statut,
+      options: grouped[statut]
+    }))
+}
+
+// Build reverse map from label to ID and convert labels to IDs
+const convertLabelsToIds = (newLabels, labelsById) => {
+  const idByLabel = {}
+  for (const [id, label] of Object.entries(labelsById)) {
+    idByLabel[label] = id
+  }
+
+  return newLabels.map(label => idByLabel[label] || label)
+}
+
+// Build document options for the select
+const buildDocumentOptions = documents => [
+  {value: '', label: '-- Aucun document --'},
+  ...documents.map(doc => ({
+    value: doc._id,
+    label: `${doc.nature}${doc.reference ? ` - ${doc.reference}` : ''} (${formatFullDateFr(doc.date_signature)})`
+  }))
+]
+
+// Get validation error message for a specific field
+const getFieldError = (validationErrors, field) => {
+  const error = validationErrors.find(e => e.path?.includes(field))
+  return error?.message
+}
+
 /**
  * Reusable form component for creating/editing a regle
  * @param {Object} regle - Current regle state
@@ -58,22 +135,7 @@ const unites = [
 const RegleForm = ({regle, setRegle, exploitations, documents, validationErrors = []}) => {
   const hasNoExploitations = !exploitations || exploitations.length === 0
 
-  const getFieldError = field => {
-    const error = validationErrors.find(e => e.path?.includes(field))
-    return error?.message
-  }
-
-  const handleExploitationChange = (exploitationId, checked) => {
-    setRegle(prev => {
-      const currentExploitations = prev.exploitations || []
-      if (checked) {
-        return {...prev, exploitations: [...currentExploitations, exploitationId]}
-      }
-
-      return {...prev, exploitations: currentExploitations.filter(id => id !== exploitationId)}
-    })
-  }
-
+  // Early return before any hooks if no exploitations
   if (hasNoExploitations) {
     return (
       <Alert
@@ -85,81 +147,102 @@ const RegleForm = ({regle, setRegle, exploitations, documents, validationErrors 
   }
 
   return (
+    <RegleFormFields
+      documents={documents}
+      exploitations={exploitations}
+      regle={regle}
+      setRegle={setRegle}
+      validationErrors={validationErrors}
+    />
+  )
+}
+
+const RegleFormFields = ({regle, setRegle, exploitations, documents, validationErrors}) => {
+  const fieldError = field => getFieldError(validationErrors, field)
+
+  const exploitationLabelsById = useMemo(
+    () => buildExploitationLabelsMap(exploitations || []),
+    [exploitations]
+  )
+
+  const exploitationOptions = useMemo(
+    () => buildExploitationOptions(exploitations || []),
+    [exploitations]
+  )
+
+  const documentOptions = useMemo(
+    () => buildDocumentOptions(documents || []),
+    [documents]
+  )
+
+  // Convert selected IDs to display labels for the multiselect
+  const selectedLabels = useMemo(() =>
+    (regle.exploitations || []).map(id => exploitationLabelsById[id] || id),
+  [regle.exploitations, exploitationLabelsById])
+
+  // Handle selection change - convert labels back to IDs
+  const handleExploitationsChange = newLabels => {
+    const newIds = convertLabelsToIds(newLabels, exploitationLabelsById)
+    setRegle(prev => ({...prev, exploitations: newIds}))
+  }
+
+  return (
     <div className='flex flex-col gap-4'>
-      <DynamicCheckbox
-        legend='Exploitations associées *'
-        hintText="Sélectionnez au moins une exploitation à laquelle cette règle s'applique"
-        state={getFieldError('exploitations') ? 'error' : 'default'}
-        stateRelatedMessage={getFieldError('exploitations')}
-        options={exploitations.map(exploitation => ({
-          label: `${exploitation.point?.nom || exploitation.point?.id_point || 'Point inconnu'} - ${exploitation.usages?.join(', ') || 'Usage non renseigné'}`,
-          hintText: `Depuis le ${formatFullDateFr(exploitation.date_debut)}${exploitation.date_fin ? ` jusqu'au ${formatFullDateFr(exploitation.date_fin)}` : ''}`,
-          nativeInputProps: {
-            checked: regle.exploitations?.includes(exploitation._id),
-            onChange: e => handleExploitationChange(exploitation._id, e.target.checked)
-          }
-        }))}
-      />
+      <div className={fieldError('exploitations') ? 'fr-input-group--error' : ''}>
+        <GroupedMultiselect
+          label='Exploitations associées *'
+          hint="Sélectionnez au moins une exploitation à laquelle cette règle s'applique"
+          placeholder='Sélectionner des exploitations'
+          options={exploitationOptions}
+          value={selectedLabels}
+          onChange={handleExploitationsChange}
+        />
+        {fieldError('exploitations') && (
+          <p className='fr-error-text'>{fieldError('exploitations')}</p>
+        )}
+      </div>
 
       <Select
         label='Document associé'
         hint='Document administratif dont est issue la règle (optionnel)'
         placeholder='Sélectionner un document'
-        state={getFieldError('document') ? 'error' : 'default'}
-        stateRelatedMessage={getFieldError('document')}
+        state={fieldError('document') ? 'error' : 'default'}
+        stateRelatedMessage={fieldError('document')}
         nativeSelectProps={{
           value: regle.document || '',
           onChange: e => setRegle(prev => ({...prev, document: e.target.value || null}))
         }}
-        options={[
-          {value: '', label: '-- Aucun document --'},
-          ...documents.map(doc => ({
-            value: doc._id,
-            label: `${doc.nature}${doc.reference ? ` - ${doc.reference}` : ''} (${formatFullDateFr(doc.date_signature)})`
-          }))
-        ]}
+        options={documentOptions}
       />
 
       <Select
         label='Paramètre *'
         placeholder='Sélectionner un paramètre'
-        state={getFieldError('parametre') ? 'error' : 'default'}
-        stateRelatedMessage={getFieldError('parametre')}
+        state={fieldError('parametre') ? 'error' : 'default'}
+        stateRelatedMessage={fieldError('parametre')}
         nativeSelectProps={{
           value: regle.parametre || '',
           onChange: e => setRegle(prev => ({...prev, parametre: e.target.value}))
         }}
-        options={[
-          {value: '', label: '-- Sélectionner --', disabled: true},
-          ...parametres.map(parametre => ({
-            value: parametre,
-            label: parametre
-          }))
-        ]}
+        options={parametreOptions}
       />
 
       <div className='grid grid-cols-2 gap-4'>
         <Select
           label='Unité *'
           placeholder='Sélectionner une unité'
-          state={getFieldError('unite') ? 'error' : 'default'}
-          stateRelatedMessage={getFieldError('unite')}
+          state={fieldError('unite') ? 'error' : 'default'}
+          stateRelatedMessage={fieldError('unite')}
           nativeSelectProps={{
             value: regle.unite || '',
             onChange: e => setRegle(prev => ({...prev, unite: e.target.value}))
           }}
-          options={[
-            {value: '', label: '-- Sélectionner --', disabled: true},
-            ...unites.map(unite => ({
-              value: unite.value,
-              label: unite.label
-            }))
-          ]}
+          options={uniteOptions}
         />
         <Input
           label='Valeur *'
-          state={getFieldError('valeur') ? 'error' : 'default'}
-          stateRelatedMessage={getFieldError('valeur')}
+          state={fieldError('valeur') ? 'error' : 'default'}
+          stateRelatedMessage={fieldError('valeur')}
           nativeInputProps={{
             type: 'number',
             step: 'any',
@@ -174,32 +257,21 @@ const RegleForm = ({regle, setRegle, exploitations, documents, validationErrors 
       <Select
         label='Contrainte *'
         placeholder='Sélectionner un niveau de contrainte'
-        state={getFieldError('contrainte') ? 'error' : 'default'}
-        stateRelatedMessage={getFieldError('contrainte')}
+        state={fieldError('contrainte') ? 'error' : 'default'}
+        stateRelatedMessage={fieldError('contrainte')}
         nativeSelectProps={{
           value: regle.contrainte || '',
           onChange: e => setRegle(prev => ({...prev, contrainte: e.target.value}))
         }}
-        options={[
-          {value: '', label: '-- Sélectionner --', disabled: true},
-          ...contraintes.map(contrainte => ({
-            value: contrainte.value,
-            label: contrainte.label
-          }))
-        ]}
+        options={contrainteOptions}
       />
 
       <div className='grid grid-cols-2 gap-4'>
         <Input
           label='Début de validité *'
-          hintText={
-            <>
-              <span className='pr-2'>Date de début d&apos;application de la règle</span>
-              <Tooltip kind='hover' title='En général, la date du document dont est issue la règle' />
-            </>
-          }
-          state={getFieldError('debut_validite') ? 'error' : 'default'}
-          stateRelatedMessage={getFieldError('debut_validite')}
+          hintText="Date de début d'application de la règle"
+          state={fieldError('debut_validite') ? 'error' : 'default'}
+          stateRelatedMessage={fieldError('debut_validite')}
           nativeInputProps={{
             type: 'date',
             value: regle.debut_validite || '',
@@ -208,17 +280,9 @@ const RegleForm = ({regle, setRegle, exploitations, documents, validationErrors 
         />
         <Input
           label='Fin de validité'
-          hintText={
-            <>
-              <span className='pr-2'>Date de fin d&apos;application de la règle</span>
-              <Tooltip
-                kind='hover'
-                title='Laisser vide si la règle est toujours en vigueur'
-              />
-            </>
-          }
-          state={getFieldError('fin_validite') ? 'error' : 'default'}
-          stateRelatedMessage={getFieldError('fin_validite')}
+          hintText='Laisser vide si la règle est toujours en vigueur'
+          state={fieldError('fin_validite') ? 'error' : 'default'}
+          stateRelatedMessage={fieldError('fin_validite')}
           nativeInputProps={{
             type: 'date',
             value: regle.fin_validite || '',
@@ -245,8 +309,8 @@ const RegleForm = ({regle, setRegle, exploitations, documents, validationErrors 
       <Input
         textArea
         label='Remarque'
-        state={getFieldError('remarque') ? 'error' : 'default'}
-        stateRelatedMessage={getFieldError('remarque')}
+        state={fieldError('remarque') ? 'error' : 'default'}
+        stateRelatedMessage={fieldError('remarque')}
         nativeTextAreaProps={{
           placeholder: 'Commentaire ou précision sur cette règle',
           value: regle.remarque || '',
