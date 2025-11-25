@@ -138,7 +138,7 @@ export function buildAggregatedSeriesQuery(params = {}) {
     preleveurId,
     attachmentId,
     parameter,
-    operator,
+    temporalOperator,
     aggregationFrequency,
     startDate,
     endDate,
@@ -179,8 +179,8 @@ export function buildAggregatedSeriesQuery(params = {}) {
   queryParams.set('parameter', parameter)
   queryParams.set('aggregationFrequency', aggregationFrequency)
 
-  if (operator) {
-    queryParams.set('operator', operator)
+  if (temporalOperator) {
+    queryParams.set('temporalOperator', temporalOperator)
   }
 
   const normalizedStartDate = normalizeDate(startDate)

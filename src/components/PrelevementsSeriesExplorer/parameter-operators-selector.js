@@ -9,7 +9,7 @@ import {Box} from '@mui/material'
 
 import {normalizeUnitLabel} from './utils/parameter-display.js'
 
-const normalizeOperatorOptions = options => {
+const normalizeTemporalOperatorOptions = options => {
   if (!options) {
     return []
   }
@@ -60,35 +60,35 @@ const getValue = (source, key) => {
 
 const ParameterOperatorsSelector = ({
   parameters = [],
-  operatorOptionsByParameter,
-  defaultOperators,
-  selectedOperators,
+  temporalOperatorOptionsByParameter,
+  defaultTemporalOperators,
+  selectedTemporalOperators,
   parameterOptionMap,
   labelPrefix = 'Agrégation',
   placeholder = 'Sélectionner un opérateur',
   onChange
 }) => {
-  const normalizedOperatorOptionsByParam = useMemo(() => {
+  const normalizedTemporalOperatorOptionsByParam = useMemo(() => {
     const map = new Map()
 
-    if (!operatorOptionsByParameter) {
+    if (!temporalOperatorOptionsByParameter) {
       return map
     }
 
-    if (operatorOptionsByParameter instanceof Map) {
-      for (const [param, options] of operatorOptionsByParameter.entries()) {
-        map.set(param, normalizeOperatorOptions(options))
+    if (temporalOperatorOptionsByParameter instanceof Map) {
+      for (const [param, options] of temporalOperatorOptionsByParameter.entries()) {
+        map.set(param, normalizeTemporalOperatorOptions(options))
       }
     } else {
-      for (const [param, options] of Object.entries(operatorOptionsByParameter)) {
-        map.set(param, normalizeOperatorOptions(options))
+      for (const [param, options] of Object.entries(temporalOperatorOptionsByParameter)) {
+        map.set(param, normalizeTemporalOperatorOptions(options))
       }
     }
 
     return map
-  }, [operatorOptionsByParameter])
+  }, [temporalOperatorOptionsByParameter])
 
-  const resolveParameterOperators = useCallback((parametersList, baseOperators = {}) => {
+  const resolveParameterTemporalOperators = useCallback((parametersList, baseTemporalOperators = {}) => {
     if (!Array.isArray(parametersList)) {
       return {}
     }
@@ -96,14 +96,14 @@ const ParameterOperatorsSelector = ({
     const resolved = {}
 
     for (const param of parametersList) {
-      const options = normalizedOperatorOptionsByParam.get(param) ?? []
+      const options = normalizedTemporalOperatorOptionsByParam.get(param) ?? []
       if (options.length === 0) {
         continue
       }
 
       const allowedValues = new Set(options.map(option => option.value))
-      const requested = getValue(baseOperators, param)
-      const defaultValue = getValue(defaultOperators, param)
+      const requested = getValue(baseTemporalOperators, param)
+      const defaultValue = getValue(defaultTemporalOperators, param)
 
       const selectedValue = allowedValues.has(requested)
         ? requested
@@ -115,60 +115,60 @@ const ParameterOperatorsSelector = ({
     }
 
     return resolved
-  }, [defaultOperators, normalizedOperatorOptionsByParam])
+  }, [defaultTemporalOperators, normalizedTemporalOperatorOptionsByParam])
 
-  const [currentParameterOperators, setCurrentParameterOperators] = useState({})
+  const [currentParameterTemporalOperators, setCurrentParameterTemporalOperators] = useState({})
 
-  const resolvedParameterOperators = useMemo(
+  const resolvedParameterTemporalOperators = useMemo(
     () => {
-      const baseOperators = selectedOperators
-        ?? (Object.keys(currentParameterOperators).length > 0 ? currentParameterOperators : null)
-        ?? defaultOperators
-      return resolveParameterOperators(parameters, baseOperators)
+      const baseTemporalOperators = selectedTemporalOperators
+        ?? (Object.keys(currentParameterTemporalOperators).length > 0 ? currentParameterTemporalOperators : null)
+        ?? defaultTemporalOperators
+      return resolveParameterTemporalOperators(parameters, baseTemporalOperators)
     },
-    [resolveParameterOperators, parameters, selectedOperators, currentParameterOperators, defaultOperators]
+    [resolveParameterTemporalOperators, parameters, selectedTemporalOperators, currentParameterTemporalOperators, defaultTemporalOperators]
   )
 
   useEffect(() => {
-    setCurrentParameterOperators(prev => {
-      const base = selectedOperators
+    setCurrentParameterTemporalOperators(prev => {
+      const base = selectedTemporalOperators
         ?? (Object.keys(prev).length > 0 ? prev : null)
-        ?? defaultOperators
-      return resolveParameterOperators(parameters, base)
+        ?? defaultTemporalOperators
+      return resolveParameterTemporalOperators(parameters, base)
     })
-  }, [parameters, selectedOperators, resolveParameterOperators, defaultOperators])
+  }, [parameters, selectedTemporalOperators, resolveParameterTemporalOperators, defaultTemporalOperators])
 
-  const handleParameterOperatorSelection = useCallback((parameter, operator) => {
-    const options = normalizedOperatorOptionsByParam.get(parameter) ?? []
-    const isAllowed = options.some(option => option.value === operator)
+  const handleParameterTemporalOperatorSelection = useCallback((parameter, temporalOperator) => {
+    const options = normalizedTemporalOperatorOptionsByParam.get(parameter) ?? []
+    const isAllowed = options.some(option => option.value === temporalOperator)
     if (!isAllowed) {
       return
     }
 
-    const base = selectedOperators
-      ?? (Object.keys(currentParameterOperators).length > 0 ? currentParameterOperators : null)
-      ?? defaultOperators
-    const next = {...base, [parameter]: operator}
+    const base = selectedTemporalOperators
+      ?? (Object.keys(currentParameterTemporalOperators).length > 0 ? currentParameterTemporalOperators : null)
+      ?? defaultTemporalOperators
+    const next = {...base, [parameter]: temporalOperator}
 
     // Defer onChange call to avoid updating parent during render
     queueMicrotask(() => {
       onChange?.(next)
     })
 
-    if (!selectedOperators) {
-      setCurrentParameterOperators(next)
+    if (!selectedTemporalOperators) {
+      setCurrentParameterTemporalOperators(next)
     }
-  }, [currentParameterOperators, defaultOperators, normalizedOperatorOptionsByParam, onChange, selectedOperators])
+  }, [currentParameterTemporalOperators, defaultTemporalOperators, normalizedTemporalOperatorOptionsByParam, onChange, selectedTemporalOperators])
 
   return (
     <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 2}}>
       {parameters.map(param => {
-        const operatorOptions = normalizedOperatorOptionsByParam.get(param) ?? []
-        if (operatorOptions.length === 0) {
+        const temporalOperatorOptions = normalizedTemporalOperatorOptionsByParam.get(param) ?? []
+        if (temporalOperatorOptions.length === 0) {
           return null
         }
 
-        const selectedValue = resolvedParameterOperators?.[param] ?? ''
+        const selectedValue = resolvedParameterTemporalOperators?.[param] ?? ''
         const optionMetadata = parameterOptionMap?.get ? parameterOptionMap.get(param) : null
         const normalizedUnit = optionMetadata?.unit ? normalizeUnitLabel(optionMetadata.unit) : ''
         const parameterLabel = optionMetadata?.label ?? param
@@ -188,14 +188,14 @@ const ParameterOperatorsSelector = ({
               label={label}
               nativeSelectProps={{
                 value: selectedValue,
-                disabled: operatorOptions.length <= 1,
-                onChange: event => handleParameterOperatorSelection(param, event.target.value)
+                disabled: temporalOperatorOptions.length <= 1,
+                onChange: event => handleParameterTemporalOperatorSelection(param, event.target.value)
               }}
             >
               <option disabled hidden value=''>
                 {placeholder}
               </option>
-              {operatorOptions.map(option => (
+              {temporalOperatorOptions.map(option => (
                 <option
                   key={option.value}
                   disabled={option.disabled}

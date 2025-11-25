@@ -10,7 +10,7 @@ test('getParameterMetadata returns matching entry (case insensitive)', t => {
   const metadata = getParameterMetadata('Volume PRÉLEVÉ')
   t.truthy(metadata)
   t.is(metadata.parameter, 'volume prélevé')
-  t.deepEqual(metadata.operators, ['sum', 'mean', 'min', 'max'])
+  t.deepEqual(metadata.temporalOperators, ['sum', 'mean', 'min', 'max'])
 })
 
 test('getAvailableParametersFromSeries filters by provided series list', t => {
