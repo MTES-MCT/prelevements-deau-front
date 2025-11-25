@@ -174,6 +174,12 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
       return null
     }
 
+    // Priority 1: Use the default operator from the parameter definition (API or metadata)
+    if (parameterDefinition.defaultTemporalOperator) {
+      return parameterDefinition.defaultTemporalOperator
+    }
+
+    // Priority 2: For volume parameters, use 'sum' if available
     const temporalOperators = parameterDefinition.temporalOperators ?? []
     const isVolumeParameter = parameterName?.toLowerCase().includes('volume')
 
@@ -181,9 +187,8 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
       return DEFAULT_TEMPORAL_OPERATOR_FOR_VOLUME
     }
 
-    return parameterDefinition.defaultTemporalOperator
-      ?? temporalOperators[0]
-      ?? null
+    // Priority 3: Fall back to first available operator
+    return temporalOperators[0] ?? null
   }, [parameterDefinitionMap])
 
   const buildTemporalOperatorsForParameters = useCallback((parametersList, baseTemporalOperators = {}) => {
