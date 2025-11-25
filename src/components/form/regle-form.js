@@ -25,6 +25,7 @@ const parametres = [
   'Volume journalier',
   'Volume mensuel',
   'Volume annuel',
+  'Relevé d\'index',
   'Débit prélevé',
   'Débit réservé',
   'Chlorures',
@@ -33,19 +34,17 @@ const parametres = [
   'Température',
   'Niveau piézométrique',
   'Conductivité électrique',
-  'pH',
-  'Turbidité'
+  'pH'
 ]
 
 const unites = [
-  {value: 'm3', label: 'm³'},
+  {value: 'm³', label: 'm³'},
   {value: 'L/s', label: 'L/s'},
-  {value: 'm3/h', label: 'm³/h'},
+  {value: 'm³/h', label: 'm³/h'},
   {value: 'mg/L', label: 'mg/L'},
-  {value: 'degré Celsius', label: 'degrés Celsius'},
+  {value: 'degré Celsius', label: 'degré Celsius'},
   {value: 'm NGR', label: 'm NGR'},
-  {value: 'µS/cm', label: 'µS/cm'},
-  {value: 'NTU', label: 'NTU'}
+  {value: 'µS/cm', label: 'µS/cm'}
 ]
 
 /**
