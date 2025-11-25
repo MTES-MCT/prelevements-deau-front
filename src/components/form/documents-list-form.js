@@ -2,6 +2,7 @@
 
 import {useState} from 'react'
 
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import InfoOutlined from '@mui/icons-material/InfoOutlined'
 import {
@@ -14,6 +15,7 @@ import {
 import {deleteDocument, updateDocument} from '@/app/api/points-prelevement.js'
 import DocumentsList from '@/components/documents/documents-list.js'
 import DocumentForm from '@/components/form/document-form.js'
+import DividerSection from '@/components/ui/DividerSection/index.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
 const DocumentsListForm = ({documents, idPreleveur}) => {
@@ -85,92 +87,95 @@ const DocumentsListForm = ({documents, idPreleveur}) => {
   }
 
   return (
-    documentsList?.length > 0 ? (
-      <>
-        <DocumentsList
-          documents={documentsList}
-          idPreleveur={idPreleveur}
-          handleDelete={handleDeleteDialog}
-          handleEdit={handleEdit}
+    <DividerSection title='Documents existants'>
+      {documentsList?.length > 0 ? (
+        <>
+          <DocumentsList
+            documents={documentsList}
+            idPreleveur={idPreleveur}
+            handleDelete={handleDeleteDialog}
+            handleEdit={handleEdit}
+          />
+          {error && (
+            <div className='text-center p-5 text-red-500'>
+              <p><b>Un problème est survenu :</b></p>
+              {error}
+            </div>
+          )}
+          <Dialog
+            open={isEditDialogOpen}
+            maxWidth='md'
+            onClose={() => setIsEditDialogOpen(false)}
+          >
+            <DialogTitle>
+              <InfoOutlined className='mr-3' />
+              Édition du document : {document?.nom_fichier}
+            </DialogTitle>
+            <DialogContent>
+              <DocumentForm
+                document={document}
+                setDocument={setPayload}
+              />
+              {validationErrors?.length > 0 && (
+                <div className='text-center p-5 text-red-500'>
+                  <p><b>{validationErrors.length === 1 ? 'Problème de validation :' : 'Problèmes de validation :'}</b></p>
+                  {validationErrors.map(err => (
+                    <p key={err.message}>{err.message}</p>
+                  )
+                  )}
+                </div>
+              )}
+            </DialogContent>
+            <DialogActions className='m-3'>
+              <Button
+                priority='secondary'
+                onClick={() => setIsEditDialogOpen(false)}
+              >
+                Annuler
+              </Button>
+              <Button
+                className='my-5'
+                onClick={handlePayload}
+              >
+                Valider les modifications
+              </Button>
+            </DialogActions>
+          </Dialog>
+          <Dialog
+            open={isDeleteDialogOpen}
+            maxWidth='md'
+            onClose={() => setIsDeleteDialogOpen(false)}
+          >
+            <DialogTitle>
+              <InfoOutlined className='mr-3' />
+              Confirmer la suppression du document
+            </DialogTitle>
+            <DialogContent>
+              Êtes-vous sûr de vouloir supprimer ce document ? Cette action est irréversible.
+            </DialogContent>
+            <DialogActions className='m-3'>
+              <Button
+                priority='secondary'
+                onClick={() => setIsDeleteDialogOpen(!isDeleteDialogOpen)}
+              >
+                Annuler
+              </Button>
+              <Button
+                style={{backgroundColor: 'red'}}
+                onClick={handleDeleteDocument}
+              >
+                Supprimer ce document
+              </Button>
+            </DialogActions>
+          </Dialog>
+        </>
+      ) : (
+        <Alert
+          severity='info'
+          description="Aucun document n'est associé à ce préleveur. Utilisez le formulaire ci-dessus pour en ajouter un."
         />
-        {error && (
-          <div className='text-center p-5 text-red-500'>
-            <p><b>Un problème est survenu :</b></p>
-            {error}
-          </div>
-        )}
-        <Dialog
-          open={isEditDialogOpen}
-          maxWidth='md'
-          onClose={() => setIsEditDialogOpen(false)}
-        >
-          <DialogTitle>
-            <InfoOutlined className='mr-3' />
-            Édition du document : {document?.nom_fichier}
-          </DialogTitle>
-          <DialogContent>
-            <DocumentForm
-              document={document}
-              setDocument={setPayload}
-            />
-            {validationErrors?.length > 0 && (
-              <div className='text-center p-5 text-red-500'>
-                <p><b>{validationErrors.length === 1 ? 'Problème de validation :' : 'Problèmes de validation :'}</b></p>
-                {validationErrors.map(err => (
-                  <p key={err.message}>{err.message}</p>
-                )
-                )}
-              </div>
-            )}
-          </DialogContent>
-          <DialogActions className='m-3'>
-            <Button
-              priority='secondary'
-              onClick={() => setIsEditDialogOpen(false)}
-            >
-              Annuler
-            </Button>
-            <Button
-              className='my-5'
-              onClick={handlePayload}
-            >
-              Valider les modifications
-            </Button>
-          </DialogActions>
-        </Dialog>
-        <Dialog
-          open={isDeleteDialogOpen}
-          maxWidth='md'
-          onClose={() => setIsDeleteDialogOpen(false)}
-        >
-          <DialogTitle>
-            <InfoOutlined className='mr-3' />
-            Confirmer la suppression du document
-          </DialogTitle>
-          <DialogContent>
-            Êtes-vous sûr de vouloir supprimer ce document ? Cette action est irréversible.
-          </DialogContent>
-          <DialogActions className='m-3'>
-            <Button
-              priority='secondary'
-              onClick={() => setIsDeleteDialogOpen(!isDeleteDialogOpen)}
-            >
-              Annuler
-            </Button>
-            <Button
-              style={{backgroundColor: 'red'}}
-              onClick={handleDeleteDocument}
-            >
-              Supprimer ce document
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </>
-    ) : (
-      <div>
-        <i>Pas de documents associés à ce préleveur</i>
-      </div>
-    )
+      )}
+    </DividerSection>
   )
 }
 
