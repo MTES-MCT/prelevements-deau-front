@@ -244,6 +244,65 @@ export async function getReglesFromPreleveur(idPreleveur) {
   return response.json()
 }
 
+export async function getRegle(regleId) {
+  const response = await executeRequest(
+    `api/regles/${regleId}`,
+    {headers: {Authorization: await getAuthorization()}}
+  )
+  if (response.ok === false) {
+    return null
+  }
+
+  return response.json()
+}
+
+export async function createRegle(preleveurId, payload) {
+  const response = await executeRequest(
+    `api/preleveurs/${preleveurId}/regles`,
+    {
+      headers: {Authorization: await getAuthorization()},
+      method: 'POST',
+      body: payload
+    }
+  )
+  return response.json()
+}
+
+export async function updateRegle(regleId, payload) {
+  const response = await executeRequest(
+    `api/regles/${regleId}`,
+    {
+      headers: {Authorization: await getAuthorization()},
+      method: 'PUT',
+      body: payload
+    }
+  )
+  return response.json()
+}
+
+export async function deleteRegle(regleId) {
+  const response = await executeRequest(
+    `api/regles/${regleId}`,
+    {
+      headers: {Authorization: await getAuthorization()},
+      method: 'DELETE'
+    }
+  )
+  return response.json()
+}
+
+export async function getExploitationDocuments(exploitationId) {
+  const response = await executeRequest(
+    `api/exploitations/${exploitationId}/documents`,
+    {headers: {Authorization: await getAuthorization()}}
+  )
+  if (response.ok === false) {
+    return []
+  }
+
+  return response.json()
+}
+
 export async function getStats(territoire) {
   const path = territoire ? `api/stats/${territoire}` : 'api/stats'
   const response = await executeRequest(path)
