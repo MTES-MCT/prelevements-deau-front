@@ -70,8 +70,19 @@ const buildExploitationLabelsMap = exploitations => {
   return map
 }
 
+// Build reverse map from label to ID
+const buildIdByLabelMap = labelsById => {
+  const idByLabel = {}
+  for (const [id, label] of Object.entries(labelsById)) {
+    idByLabel[label] = id
+  }
+
+  return idByLabel
+}
+
 // Group exploitations by statut for the multiselect
-const buildExploitationOptions = exploitations => {
+// Uses the display label as value since GroupedMultiselect displays values directly
+const buildExploitationOptions = (exploitations, labelsById) => {
   const statutOrder = ['En activité', 'Terminée', 'Abandonnée', 'Non renseigné']
   const grouped = {}
 
@@ -79,13 +90,12 @@ const buildExploitationOptions = exploitations => {
     const statut = exploitation.statut || 'Non renseigné'
     grouped[statut] ||= []
 
-    const pointName = exploitation.point?.nom || exploitation.point?.id_point || 'Point inconnu'
-    const usagesText = exploitation.usages?.join(', ') || 'Usage non renseigné'
+    const label = labelsById[exploitation._id]
     const dateText = `Depuis le ${formatFullDateFr(exploitation.date_debut)}${exploitation.date_fin ? ` jusqu'au ${formatFullDateFr(exploitation.date_fin)}` : ''}`
 
     grouped[statut].push({
-      value: exploitation._id,
-      content: `${pointName} - ${usagesText}`,
+      value: label,
+      content: label,
       title: dateText
     })
   }
@@ -97,16 +107,6 @@ const buildExploitationOptions = exploitations => {
       label: statut,
       options: grouped[statut]
     }))
-}
-
-// Build reverse map from label to ID and convert labels to IDs
-const convertLabelsToIds = (newLabels, labelsById) => {
-  const idByLabel = {}
-  for (const [id, label] of Object.entries(labelsById)) {
-    idByLabel[label] = id
-  }
-
-  return newLabels.map(label => idByLabel[label] || label)
 }
 
 // Build document options for the select
@@ -160,14 +160,21 @@ const RegleForm = ({regle, setRegle, exploitations, documents, validationErrors 
 const RegleFormFields = ({regle, setRegle, exploitations, documents, validationErrors}) => {
   const fieldError = field => getFieldError(validationErrors, field)
 
+  // Build ID <-> label mappings
   const exploitationLabelsById = useMemo(
     () => buildExploitationLabelsMap(exploitations || []),
     [exploitations]
   )
 
+  const idByLabel = useMemo(
+    () => buildIdByLabelMap(exploitationLabelsById),
+    [exploitationLabelsById]
+  )
+
+  // Build options using labels as values (for display in GroupedMultiselect)
   const exploitationOptions = useMemo(
-    () => buildExploitationOptions(exploitations || []),
-    [exploitations]
+    () => buildExploitationOptions(exploitations || [], exploitationLabelsById),
+    [exploitations, exploitationLabelsById]
   )
 
   const documentOptions = useMemo(
@@ -182,7 +189,7 @@ const RegleFormFields = ({regle, setRegle, exploitations, documents, validationE
 
   // Handle selection change - convert labels back to IDs
   const handleExploitationsChange = newLabels => {
-    const newIds = convertLabelsToIds(newLabels, exploitationLabelsById)
+    const newIds = newLabels.map(label => idByLabel[label] || label)
     setRegle(prev => ({...prev, exploitations: newIds}))
   }
 
