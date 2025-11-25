@@ -8,9 +8,9 @@ import {Input} from '@codegouvfr/react-dsfr/Input'
 import {Select} from '@codegouvfr/react-dsfr/SelectNext'
 
 import DayMonthSelector from '@/components/form/day-month-selector.js'
+import DividerSection from '@/components/ui/DividerSection/index.js'
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import {formatFullDateFr} from '@/lib/format-date.js'
-import DividerSection from '../ui/DividerSection'
 
 const contraintes = [
   {value: 'minimum', label: 'Minimum (>)'},
