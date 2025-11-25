@@ -198,9 +198,9 @@ const AggregatedSeriesExplorer = ({
   parameters,
   selectedParameters: selectedParametersProp,
   defaultParameters,
-  operatorOptionsByParameter,
-  selectedOperators: selectedOperatorsProp,
-  defaultOperators,
+  temporalOperatorOptionsByParameter,
+  selectedTemporalOperators: selectedTemporalOperatorsProp,
+  defaultTemporalOperators,
   onFiltersChange,
   onDisplayResolutionChange,
   defaultPeriods,
@@ -838,12 +838,12 @@ const AggregatedSeriesExplorer = ({
         <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 2}}>
           <ParameterOperatorsSelector
             parameters={currentParameters}
-            operatorOptionsByParameter={operatorOptionsByParameter}
-            defaultOperators={defaultOperators}
-            selectedOperators={selectedOperatorsProp}
+            temporalOperatorOptionsByParameter={temporalOperatorOptionsByParameter}
+            defaultTemporalOperators={defaultTemporalOperators}
+            selectedTemporalOperators={selectedTemporalOperatorsProp}
             parameterOptionMap={parameterOptionMap}
             placeholder={t.operatorPlaceholder}
-            onChange={parameterOperators => onFiltersChange?.({parameterOperators})}
+            onChange={parameterTemporalOperators => onFiltersChange?.({parameterTemporalOperators})}
           />
         </Box>
       </Box>

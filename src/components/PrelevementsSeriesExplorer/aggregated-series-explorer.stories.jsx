@@ -18,7 +18,7 @@ const toIsoDate = date => date.toISOString().split('T')[0]
 const createAggregatedSeries = ({
   parameter,
   unit,
-  operator,
+  temporalOperator,
   pointName,
   base,
   amplitude,
@@ -49,7 +49,7 @@ const createAggregatedSeries = ({
     metadata: {
       parameter,
       unit,
-      operator,
+      temporalOperator,
       frequency: '1 day',
       startDate: minDate,
       endDate: maxDate,
@@ -72,7 +72,7 @@ const SERIES_FIXTURES = {
   'volume prélevé': createAggregatedSeries({
     parameter: 'volume prélevé',
     unit: 'm³',
-    operator: 'sum',
+    temporalOperator: 'sum',
     pointName: 'Puits sucrerie du Gol',
     base: 85,
     amplitude: 25,
@@ -82,7 +82,7 @@ const SERIES_FIXTURES = {
   'débit instantané': createAggregatedSeries({
     parameter: 'débit instantané',
     unit: 'm³/h',
-    operator: 'avg',
+    temporalOperator: 'avg',
     pointName: 'Forage Plaine des Cafres',
     base: 40,
     amplitude: 15,
@@ -118,7 +118,7 @@ const meta = {
   "metadata": {
     "parameter": "volume prélevé",
     "unit": "m³/h",
-    "operator": "sum",
+    "temporalOperator": "sum",
     "frequency": "1 day",
     "startDate": "2024-01-01",
     "endDate": "2024-12-25",
@@ -145,19 +145,19 @@ const OPERATOR_LABELS = {
   max: 'Maximum'
 }
 
-const PARAMETER_OPERATOR_CONFIG = {
-  'volume prélevé': {defaultOperator: 'sum', operators: ['sum', 'mean', 'min', 'max']},
-  'débit instantané': {defaultOperator: 'mean', operators: ['mean', 'min', 'max']}
+const PARAMETER_TEMPORAL_OPERATOR_CONFIG = {
+  'volume prélevé': {defaultTemporalOperator: 'sum', temporalOperators: ['sum', 'mean', 'min', 'max']},
+  'débit instantané': {defaultTemporalOperator: 'mean', temporalOperators: ['mean', 'min', 'max']}
 }
 
-const formatOperatorOptions = definition => {
+const formatTemporalOperatorOptions = definition => {
   if (!definition) {
     return []
   }
 
-  return (definition.operators ?? []).map(operator => ({
-    value: operator,
-    label: OPERATOR_LABELS[operator] ?? operator.toUpperCase()
+  return (definition.temporalOperators ?? []).map(temporalOperator => ({
+    value: temporalOperator,
+    label: OPERATOR_LABELS[temporalOperator] ?? temporalOperator.toUpperCase()
   }))
 }
 
@@ -170,25 +170,25 @@ const Template = args => {
   const firstParameter = parameterList[0]?.value ?? DEFAULT_PARAMETERS[0].value
 
   const [selectedParameter, setSelectedParameter] = useState(firstParameter)
-  const [selectedOperator, setSelectedOperator] = useState(
-    PARAMETER_OPERATOR_CONFIG[firstParameter]?.defaultOperator ?? 'sum'
+  const [selectedTemporalOperator, setSelectedTemporalOperator] = useState(
+    PARAMETER_TEMPORAL_OPERATOR_CONFIG[firstParameter]?.defaultTemporalOperator ?? 'sum'
   )
   const [series, setSeries] = useState(() => SERIES_FIXTURES[firstParameter])
   const [isLoading, setIsLoading] = useState(false)
   const pendingTimeout = useRef(null)
 
-  const operatorDefinition = useMemo(
-    () => PARAMETER_OPERATOR_CONFIG[selectedParameter] ?? PARAMETER_OPERATOR_CONFIG[firstParameter],
+  const temporalOperatorDefinition = useMemo(
+    () => PARAMETER_TEMPORAL_OPERATOR_CONFIG[selectedParameter] ?? PARAMETER_TEMPORAL_OPERATOR_CONFIG[firstParameter],
     [selectedParameter, firstParameter]
   )
 
-  const operatorOptions = useMemo(
-    () => formatOperatorOptions(operatorDefinition),
-    [operatorDefinition]
+  const temporalOperatorOptions = useMemo(
+    () => formatTemporalOperatorOptions(temporalOperatorDefinition),
+    [temporalOperatorDefinition]
   )
 
-  const defaultOperator = operatorDefinition?.defaultOperator
-    ?? operatorOptions[0]?.value
+  const defaultTemporalOperator = temporalOperatorDefinition?.defaultTemporalOperator
+    ?? temporalOperatorOptions[0]?.value
     ?? null
 
   useEffect(() => {
@@ -200,14 +200,14 @@ const Template = args => {
   }, [parameterList, selectedParameter])
 
   useEffect(() => {
-    setSelectedOperator(prev => {
-      if (prev && operatorOptions.some(option => option.value === prev)) {
+    setSelectedTemporalOperator(prev => {
+      if (prev && temporalOperatorOptions.some(option => option.value === prev)) {
         return prev
       }
 
-      return defaultOperator
+      return defaultTemporalOperator
     })
-  }, [operatorOptions, defaultOperator])
+  }, [temporalOperatorOptions, defaultTemporalOperator])
 
   useEffect(() => () => {
     if (pendingTimeout.current) {
@@ -232,21 +232,21 @@ const Template = args => {
           ...baseSeries,
           metadata: {
             ...baseSeries.metadata,
-            operator: selectedOperator ?? baseSeries.metadata.operator
+            temporalOperator: selectedTemporalOperator ?? baseSeries.metadata.temporalOperator
           }
         })
       }
 
       setIsLoading(false)
     }, 400)
-  }, [selectedParameter, selectedOperator, firstParameter])
+  }, [selectedParameter, selectedTemporalOperator, firstParameter])
 
   const handleParameterChange = useCallback(newParameter => {
     setSelectedParameter(newParameter)
   }, [])
 
-  const handleOperatorChange = useCallback(newOperator => {
-    setSelectedOperator(newOperator)
+  const handleTemporalOperatorChange = useCallback(newTemporalOperator => {
+    setSelectedTemporalOperator(newTemporalOperator)
   }, [])
 
   return (
@@ -255,12 +255,12 @@ const Template = args => {
       series={series}
       parameters={parameterList}
       selectedParameter={selectedParameter}
-      operatorOptions={operatorOptions}
-      selectedOperator={selectedOperator}
-      defaultOperator={defaultOperator}
+      temporalOperatorOptions={temporalOperatorOptions}
+      selectedTemporalOperator={selectedTemporalOperator}
+      defaultTemporalOperator={defaultTemporalOperator}
       isLoading={isLoading}
       onParameterChange={handleParameterChange}
-      onOperatorChange={handleOperatorChange}
+      onTemporalOperatorChange={handleTemporalOperatorChange}
     />
   )
 }

@@ -1,7 +1,7 @@
 import {normalizeString} from '@/utils/string.js'
 
-const VOLUME_OPERATORS = Object.freeze(['sum', 'mean', 'min', 'max'])
-const STANDARD_OPERATORS = Object.freeze(['mean', 'min', 'max'])
+const VOLUME_TEMPORAL_OPERATORS = Object.freeze(['sum', 'mean', 'min', 'max'])
+const STANDARD_TEMPORAL_OPERATORS = Object.freeze(['mean', 'min', 'max'])
 
 export const MAX_DIFFERENT_UNITS = 2
 
@@ -37,96 +37,96 @@ export const AGGREGATED_PARAMETERS = [
     parameter: 'volume prélevé',
     unit: 'm³',
     type: 'cumulative',
-    defaultOperator: 'sum',
-    operators: VOLUME_OPERATORS
+    defaultTemporalOperator: 'sum',
+    temporalOperators: VOLUME_TEMPORAL_OPERATORS
   },
   {
     parameter: 'volume restitué',
     unit: 'm³',
     type: 'cumulative',
-    defaultOperator: 'sum',
-    operators: VOLUME_OPERATORS
+    defaultTemporalOperator: 'sum',
+    temporalOperators: VOLUME_TEMPORAL_OPERATORS
   },
   {
     parameter: 'débit prélevé',
     unit: 'L/s',
     type: 'instantaneous',
-    defaultOperator: 'mean',
-    operators: STANDARD_OPERATORS
+    defaultTemporalOperator: 'mean',
+    temporalOperators: STANDARD_TEMPORAL_OPERATORS
   },
   {
     parameter: 'débit réservé',
     unit: 'L/s',
     type: 'instantaneous',
-    defaultOperator: 'mean',
-    operators: STANDARD_OPERATORS
+    defaultTemporalOperator: 'mean',
+    temporalOperators: STANDARD_TEMPORAL_OPERATORS
   },
   {
     parameter: 'débit restitué',
     unit: 'L/s',
     type: 'instantaneous',
-    defaultOperator: 'mean',
-    operators: STANDARD_OPERATORS
+    defaultTemporalOperator: 'mean',
+    temporalOperators: STANDARD_TEMPORAL_OPERATORS
   },
   {
     parameter: 'température',
     unit: '°C',
     type: 'instantaneous',
-    defaultOperator: 'mean',
-    operators: STANDARD_OPERATORS
+    defaultTemporalOperator: 'mean',
+    temporalOperators: STANDARD_TEMPORAL_OPERATORS
   },
   {
     parameter: 'niveau piézométrique',
     unit: 'm NGR',
     type: 'instantaneous',
-    defaultOperator: 'mean',
-    operators: STANDARD_OPERATORS
+    defaultTemporalOperator: 'mean',
+    temporalOperators: STANDARD_TEMPORAL_OPERATORS
   },
   {
     parameter: 'chlorures',
     unit: 'mg/L',
     type: 'instantaneous',
-    defaultOperator: 'mean',
-    operators: STANDARD_OPERATORS
+    defaultTemporalOperator: 'mean',
+    temporalOperators: STANDARD_TEMPORAL_OPERATORS
   },
   {
     parameter: 'nitrates',
     unit: 'mg/L',
     type: 'instantaneous',
-    defaultOperator: 'mean',
-    operators: STANDARD_OPERATORS
+    defaultTemporalOperator: 'mean',
+    temporalOperators: STANDARD_TEMPORAL_OPERATORS
   },
   {
     parameter: 'sulfates',
     unit: 'mg/L',
     type: 'instantaneous',
-    defaultOperator: 'mean',
-    operators: STANDARD_OPERATORS
+    defaultTemporalOperator: 'mean',
+    temporalOperators: STANDARD_TEMPORAL_OPERATORS
   },
   {
     parameter: 'turbidité',
     unit: 'FTU',
     type: 'instantaneous',
-    defaultOperator: 'mean',
-    operators: STANDARD_OPERATORS
+    defaultTemporalOperator: 'mean',
+    temporalOperators: STANDARD_TEMPORAL_OPERATORS
   },
   {
     parameter: 'conductivité électrique',
     unit: 'µS/cm',
     type: 'instantaneous',
-    defaultOperator: 'mean',
-    operators: STANDARD_OPERATORS
+    defaultTemporalOperator: 'mean',
+    temporalOperators: STANDARD_TEMPORAL_OPERATORS
   },
   {
     parameter: 'pH',
     unit: '',
     type: 'instantaneous',
-    defaultOperator: 'mean',
-    operators: STANDARD_OPERATORS
+    defaultTemporalOperator: 'mean',
+    temporalOperators: STANDARD_TEMPORAL_OPERATORS
   }
 ].map(entry => ({
   ...entry,
-  operators: [...entry.operators]
+  temporalOperators: [...entry.temporalOperators]
 }))
 
 export const FREQUENCY_OPTIONS = [

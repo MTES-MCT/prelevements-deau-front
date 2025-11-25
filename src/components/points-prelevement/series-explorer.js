@@ -22,9 +22,9 @@ import {pickAvailableFrequency} from '@/utils/frequency.js'
 
 const DEFAULT_FREQUENCY = '1 day'
 const DEFAULT_PARAMETER = 'volume prélevé'
-const DEFAULT_OPERATOR_FOR_VOLUME = 'sum'
-const FALLBACK_VOLUME_OPERATORS = ['sum', 'mean', 'min', 'max']
-const FALLBACK_STANDARD_OPERATORS = ['mean', 'min', 'max']
+const DEFAULT_TEMPORAL_OPERATOR_FOR_VOLUME = 'sum'
+const FALLBACK_VOLUME_TEMPORAL_OPERATORS = ['sum', 'mean', 'min', 'max']
+const FALLBACK_STANDARD_TEMPORAL_OPERATORS = ['mean', 'min', 'max']
 
 const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = null, startDate = null, endDate = null}) => {
   // Vérifie si des paramètres sont disponibles depuis l'API
@@ -93,37 +93,37 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
       seriesOptions.parameters.map(param => {
         const metadata = getParameterMetadata(param.name) ?? {}
         const normalizedName = param.name?.toLowerCase() ?? ''
-        const fallbackOperators = normalizedName.includes('volume')
-          ? FALLBACK_VOLUME_OPERATORS
-          : FALLBACK_STANDARD_OPERATORS
+        const fallbackTemporalOperators = normalizedName.includes('volume')
+          ? FALLBACK_VOLUME_TEMPORAL_OPERATORS
+          : FALLBACK_STANDARD_TEMPORAL_OPERATORS
 
-        const operatorSource = (() => {
-          if (Array.isArray(param.operators) && param.operators.length > 0) {
-            return param.operators
+        const temporalOperatorSource = (() => {
+          if (Array.isArray(param.temporalOperators) && param.temporalOperators.length > 0) {
+            return param.temporalOperators
           }
 
-          if (Array.isArray(metadata.operators) && metadata.operators.length > 0) {
-            return metadata.operators
+          if (Array.isArray(metadata.temporalOperators) && metadata.temporalOperators.length > 0) {
+            return metadata.temporalOperators
           }
 
-          return fallbackOperators
+          return fallbackTemporalOperators
         })()
 
-        const operators = [...new Set(operatorSource)].filter(Boolean)
+        const temporalOperators = [...new Set(temporalOperatorSource)].filter(Boolean)
 
         const unit = param.unit ?? metadata.unit ?? ''
         const valueType = param.valueType ?? metadata.valueType ?? metadata.type ?? null
-        const defaultOperator = param.defaultOperator
-          ?? metadata.defaultOperator
-          ?? operators[0]
-          ?? (normalizedName.includes('volume') ? DEFAULT_OPERATOR_FOR_VOLUME : fallbackOperators[0])
+        const defaultTemporalOperator = param.defaultTemporalOperator
+          ?? metadata.defaultTemporalOperator
+          ?? temporalOperators[0]
+          ?? (normalizedName.includes('volume') ? DEFAULT_TEMPORAL_OPERATOR_FOR_VOLUME : fallbackTemporalOperators[0])
 
         return [param.name, {
           ...metadata,
           ...param,
           parameter: param.name,
-          operators,
-          defaultOperator,
+          temporalOperators,
+          defaultTemporalOperator,
           unit,
           valueType
         }]
@@ -147,7 +147,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
   }, [parameterOptions])
 
   const [selectedParameters, setSelectedParameters] = useState(derivedDefaultParameters)
-  const [parameterOperators, setParameterOperators] = useState({})
+  const [parameterTemporalOperators, setParameterTemporalOperators] = useState({})
   const [targetDisplayFrequency, setTargetDisplayFrequency] = useState(DEFAULT_FREQUENCY)
   const [aggregatedSeriesMap, setAggregatedSeriesMap] = useState(new Map())
   const [isLoading, setIsLoading] = useState(false)
@@ -168,25 +168,25 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
     })
   }, [parameterOptions, derivedDefaultParameters])
 
-  const resolveDefaultOperatorForParameter = useCallback((parameterName, definition) => {
+  const resolveDefaultTemporalOperatorForParameter = useCallback((parameterName, definition) => {
     const parameterDefinition = definition ?? parameterDefinitionMap.get(parameterName) ?? getParameterMetadata(parameterName)
     if (!parameterDefinition) {
       return null
     }
 
-    const operators = parameterDefinition.operators ?? []
+    const temporalOperators = parameterDefinition.temporalOperators ?? []
     const isVolumeParameter = parameterName?.toLowerCase().includes('volume')
 
-    if (isVolumeParameter && operators.includes(DEFAULT_OPERATOR_FOR_VOLUME)) {
-      return DEFAULT_OPERATOR_FOR_VOLUME
+    if (isVolumeParameter && temporalOperators.includes(DEFAULT_TEMPORAL_OPERATOR_FOR_VOLUME)) {
+      return DEFAULT_TEMPORAL_OPERATOR_FOR_VOLUME
     }
 
-    return parameterDefinition.defaultOperator
-      ?? operators[0]
+    return parameterDefinition.defaultTemporalOperator
+      ?? temporalOperators[0]
       ?? null
   }, [parameterDefinitionMap])
 
-  const buildOperatorsForParameters = useCallback((parametersList, baseOperators = {}) => {
+  const buildTemporalOperatorsForParameters = useCallback((parametersList, baseTemporalOperators = {}) => {
     if (!Array.isArray(parametersList)) {
       return {}
     }
@@ -195,23 +195,23 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
 
     for (const param of parametersList) {
       const definition = parameterDefinitionMap.get(param) ?? getParameterMetadata(param)
-      const availableOperators = definition?.operators ?? []
-      const requestedOperator = baseOperators[param]
-      const defaultOperator = resolveDefaultOperatorForParameter(param, definition)
+      const availableTemporalOperators = definition?.temporalOperators ?? []
+      const requestedTemporalOperator = baseTemporalOperators[param]
+      const defaultTemporalOperator = resolveDefaultTemporalOperatorForParameter(param, definition)
 
-      const selectedOperator = availableOperators.includes(requestedOperator)
-        ? requestedOperator
-        : (availableOperators.includes(defaultOperator) ? defaultOperator : availableOperators[0])
+      const selectedTemporalOperator = availableTemporalOperators.includes(requestedTemporalOperator)
+        ? requestedTemporalOperator
+        : (availableTemporalOperators.includes(defaultTemporalOperator) ? defaultTemporalOperator : availableTemporalOperators[0])
 
-      if (selectedOperator) {
-        result[param] = selectedOperator
+      if (selectedTemporalOperator) {
+        result[param] = selectedTemporalOperator
       }
     }
 
     return result
-  }, [parameterDefinitionMap, resolveDefaultOperatorForParameter])
+  }, [parameterDefinitionMap, resolveDefaultTemporalOperatorForParameter])
 
-  const operatorOptionsByParameter = useMemo(() => {
+  const temporalOperatorOptionsByParameter = useMemo(() => {
     if (selectedParameters.length === 0) {
       return {}
     }
@@ -220,10 +220,10 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
 
     for (const param of selectedParameters) {
       const definition = parameterDefinitionMap.get(param) ?? getParameterMetadata(param)
-      const operators = definition?.operators ?? []
-      optionsMap[param] = operators.map(operator => ({
-        value: operator,
-        label: OPERATOR_LABELS[operator] ?? operator.toUpperCase()
+      const temporalOperators = definition?.temporalOperators ?? []
+      optionsMap[param] = temporalOperators.map(temporalOperator => ({
+        value: temporalOperator,
+        label: OPERATOR_LABELS[temporalOperator] ?? temporalOperator.toUpperCase()
       }))
     }
 
@@ -232,29 +232,29 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
 
   useEffect(() => {
     if (selectedParameters.length === 0) {
-      setParameterOperators({})
+      setParameterTemporalOperators({})
       return
     }
 
-    // Use buildOperatorsForParameters directly to avoid code duplication
-    setParameterOperators(prev => buildOperatorsForParameters(selectedParameters, prev))
-  }, [selectedParameters, parameterDefinitionMap, buildOperatorsForParameters])
+    // Use buildTemporalOperatorsForParameters directly to avoid code duplication
+    setParameterTemporalOperators(prev => buildTemporalOperatorsForParameters(selectedParameters, prev))
+  }, [selectedParameters, parameterDefinitionMap, buildTemporalOperatorsForParameters])
 
-  const resolvedOperatorsByParameter = useMemo(
-    () => buildOperatorsForParameters(selectedParameters, parameterOperators),
-    [buildOperatorsForParameters, parameterOperators, selectedParameters]
+  const resolvedTemporalOperatorsByParameter = useMemo(
+    () => buildTemporalOperatorsForParameters(selectedParameters, parameterTemporalOperators),
+    [buildTemporalOperatorsForParameters, parameterTemporalOperators, selectedParameters]
   )
 
-  const defaultOperatorsByParameter = useMemo(
-    () => buildOperatorsForParameters(selectedParameters, {}),
-    [buildOperatorsForParameters, selectedParameters]
+  const defaultTemporalOperatorsByParameter = useMemo(
+    () => buildTemporalOperatorsForParameters(selectedParameters, {}),
+    [buildTemporalOperatorsForParameters, selectedParameters]
   )
 
-  const fetchAggregatedSeries = useCallback(async (parameter, operator, frequency, requestOptions = {}) => {
+  const fetchAggregatedSeries = useCallback(async (parameter, temporalOperator, frequency, requestOptions = {}) => {
     const params = {
       aggregationFrequency: frequency,
       parameter,
-      operator
+      temporalOperator
     }
 
     if (pointIds) {
@@ -289,12 +289,12 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
       return
     }
 
-    const allOperatorsResolved = selectedParameters.every(param => resolvedOperatorsByParameter[param])
+    const allTemporalOperatorsResolved = selectedParameters.every(param => resolvedTemporalOperatorsByParameter[param])
 
     let isActive = true
     const abortController = new AbortController()
 
-    if (!allOperatorsResolved) {
+    if (!allTemporalOperatorsResolved) {
       setIsLoading(false)
       return () => {
         abortController.abort()
@@ -307,9 +307,9 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
     const loadAllSeries = async () => {
       try {
         const promises = selectedParameters.map(async param => {
-          const operator = resolvedOperatorsByParameter[param]
-          // Skip fetch if operator cannot be resolved for this parameter
-          if (!operator) {
+          const temporalOperator = resolvedTemporalOperatorsByParameter[param]
+          // Skip fetch if temporalOperator cannot be resolved for this parameter
+          if (!temporalOperator) {
             return [param, null]
           }
 
@@ -322,7 +322,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
 
           const response = await fetchAggregatedSeries(
             param,
-            operator,
+            temporalOperator,
             chosenFrequency,
             {signal: abortController.signal}
           )
@@ -366,9 +366,9 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
       isActive = false
       abortController.abort()
     }
-  }, [selectedParameters, resolvedOperatorsByParameter, targetDisplayFrequency, fetchAggregatedSeries, parameterDefinitionMap])
+  }, [selectedParameters, resolvedTemporalOperatorsByParameter, targetDisplayFrequency, fetchAggregatedSeries, parameterDefinitionMap])
 
-  const handleFiltersChange = useCallback(({parameters, parameterOperators: nextParameterOperators}) => {
+  const handleFiltersChange = useCallback(({parameters, parameterTemporalOperators: nextParameterTemporalOperators}) => {
     let nextParameters = selectedParameters
 
     // Handle parameters change (multi-select)
@@ -391,10 +391,10 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
       nextParameters = parameters
     }
 
-    if (nextParameterOperators !== undefined) {
-      setParameterOperators(buildOperatorsForParameters(nextParameters, nextParameterOperators))
+    if (nextParameterTemporalOperators !== undefined) {
+      setParameterTemporalOperators(buildTemporalOperatorsForParameters(nextParameters, nextParameterTemporalOperators))
     }
-  }, [buildOperatorsForParameters, parameterDefinitionMap, selectedParameters])
+  }, [buildTemporalOperatorsForParameters, parameterDefinitionMap, selectedParameters])
 
   const handleDisplayResolutionChange = useCallback(frequency => {
     if (frequency) {
@@ -417,9 +417,9 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
           parameters={parameterOptions}
           selectedParameters={selectedParameters}
           defaultParameters={derivedDefaultParameters}
-          operatorOptionsByParameter={operatorOptionsByParameter}
-          selectedOperators={resolvedOperatorsByParameter}
-          defaultOperators={defaultOperatorsByParameter}
+          temporalOperatorOptionsByParameter={temporalOperatorOptionsByParameter}
+          selectedTemporalOperators={resolvedTemporalOperatorsByParameter}
+          defaultTemporalOperators={defaultTemporalOperatorsByParameter}
           selectablePeriods={selectablePeriods}
           defaultPeriods={defaultPeriods}
           error={loadError}
