@@ -860,6 +860,25 @@ test('buildAnnotations uses info color for all metadata points', t => {
   t.is(annotations[0].color, baseTheme.palette.info.main)
 })
 
+test('buildAnnotations preserves meta with comment in originalPoint', t => {
+  const start = new Date('2024-01-01T00:00:00Z')
+  const pointBySeries = new Map([
+    ['commented', [{
+      x: start.getTime(),
+      y: 10,
+      meta: {comment: 'Test comment'},
+      axisId: AXIS_LEFT_ID
+    }]]
+  ])
+  const annotations = buildAnnotations({
+    pointBySeries,
+    visibility: {commented: true},
+    theme: baseTheme
+  })
+  t.is(annotations.length, 1)
+  t.deepEqual(annotations[0].originalPoint.meta, {comment: 'Test comment'})
+})
+
 // Test buildSeriesModel with null values
 test('buildSeriesModel handles null y values', t => {
   const start = new Date('2024-01-01T00:00:00Z')
