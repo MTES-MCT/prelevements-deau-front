@@ -176,7 +176,8 @@ const buildAccumulator = bucketStart => ({
   count: 0,
   sum: 0,
   min: Number.POSITIVE_INFINITY,
-  max: Number.NEGATIVE_INFINITY
+  max: Number.NEGATIVE_INFINITY,
+  metaComments: []
 })
 
 const isValidPoint = (point, timeRange) => {
@@ -232,6 +233,11 @@ export const aggregateSeriesIntoBuckets = (points, {
     acc.sum += value
     acc.min = Math.min(acc.min, value)
     acc.max = Math.max(acc.max, value)
+
+    const comment = point?.meta?.comment
+    if (typeof comment === 'string' && comment.trim()) {
+      acc.metaComments.push(comment.trim())
+    }
   }
 
   const bucketed = []
@@ -241,12 +247,28 @@ export const aggregateSeriesIntoBuckets = (points, {
       continue
     }
 
+    const uniqueComments = []
+    const seenComments = new Set()
+    for (const comment of acc.metaComments) {
+      if (!seenComments.has(comment)) {
+        seenComments.add(comment)
+        uniqueComments.push(comment)
+      }
+      if (uniqueComments.length >= 10) {
+        break
+      }
+    }
+
     const basePoint = {
       t: acc.bucketStart,
       value: kind === 'cumulative' ? acc.sum : acc.sum / acc.count,
       min: acc.min,
       max: acc.max,
       count: acc.count
+    }
+
+    if (uniqueComments.length > 0) {
+      basePoint.meta = {comment: uniqueComments.join(' • ')}
     }
 
     bucketed.push(basePoint)

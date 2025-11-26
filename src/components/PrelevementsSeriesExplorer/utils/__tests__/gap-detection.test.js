@@ -381,3 +381,19 @@ test('processTimeSeriesData handles continuous data without gaps', async t => {
   t.is(result[1].showMark, false) // Middle
   t.is(result[2].showMark, true) // Last
 })
+
+test('processTimeSeriesData preserves metadata on points', async t => {
+  const {processTimeSeriesData} = await import('../gap-detection.js')
+  const data = [
+    {x: new Date('2024-01-01'), y: 10, meta: {comment: 'First comment'}},
+    {x: new Date('2024-01-02'), y: 20},
+    {x: new Date('2024-01-03'), y: 30, meta: {comment: 'Last comment'}}
+  ]
+
+  const result = processTimeSeriesData(data, '1 day')
+
+  t.is(result.length, 3)
+  t.deepEqual(result[0].meta, {comment: 'First comment'})
+  t.falsy(result[1].meta)
+  t.deepEqual(result[2].meta, {comment: 'Last comment'})
+})

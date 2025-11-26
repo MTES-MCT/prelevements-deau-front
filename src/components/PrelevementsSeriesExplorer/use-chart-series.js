@@ -106,7 +106,9 @@ export function useChartSeries({
             ? sample.timestamp
             : new Date(sample.timestamp)
 
-          return {t: timestamp, value}
+          const meta = sample.metas?.[paramIndex] ?? null
+
+          return {t: timestamp, value, meta}
         })
         .filter(Boolean)
 
@@ -159,7 +161,8 @@ export function useChartSeries({
             y: point.value,
             min: point.min,
             max: point.max,
-            sourceCount: point.count
+            sourceCount: point.count,
+            meta: point.meta ?? null
           })),
           bucketFrequency
         )
