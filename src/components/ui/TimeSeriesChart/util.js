@@ -898,12 +898,14 @@ export const axisFormatterFactory = (locale, dates) => {
   return value => formatter.format(value instanceof Date ? value : new Date(value))
 }
 
-export const buildAnnotations = ({pointBySeries, metaBySeries, visibility, theme}) => {
+export const buildAnnotations = ({pointBySeries, metaBySeries, visibility, theme, seriesTypes}) => {
   const annotations = []
   for (const [seriesId, points] of pointBySeries.entries()) {
     if (visibility[seriesId] === false) {
       continue
     }
+
+    const seriesType = seriesTypes?.get(seriesId) ?? 'line'
 
     for (const [index, point] of points.entries()) {
       if (!point || point.synthetic || point.y === null || Number.isNaN(point.y)) {
@@ -917,6 +919,7 @@ export const buildAnnotations = ({pointBySeries, metaBySeries, visibility, theme
 
       annotations.push({
         seriesId,
+        seriesType,
         axisId: point.axisId,
         index,
         x: point.x,

@@ -342,6 +342,12 @@ const ChartAnnotations = ({annotations, onPointClick}) => {
           }
 
           y = yScale(annotation.y)
+
+          // For bar charts, offset the annotation to float above/below the bar
+          if (annotation.seriesType === 'bar') {
+            const offset = 10
+            y += annotation.y >= 0 ? -offset : offset
+          }
         } catch {
           return null
         }
@@ -674,7 +680,8 @@ const TimeSeriesChart = ({
       pointBySeries: chartModel.pointBySeries,
       metaBySeries: chartModel.metaBySeries,
       visibility,
-      theme
+      theme,
+      seriesTypes: inputSeriesTypeById
     })
 
     // Filter annotations to only keep those whose axis is configured
