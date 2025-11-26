@@ -59,6 +59,7 @@ import ChartWithRangeSlider from './chart-with-range-slider.js'
 import {DEFAULT_TRANSLATIONS} from './constants/parameters.js'
 import {formatPeriodLabel, getViewTypeLabel} from './formatters.js'
 import LoadingState from './loading-state.js'
+import ParameterComments from './parameter-comments.js'
 import ParameterSelector from './parameter-selector.js'
 import {useChartSeries} from './use-chart-series.js'
 import {useLoadSeriesValues} from './use-load-series-values.js'
@@ -270,6 +271,12 @@ const PrelevementsSeriesExplorer = ({
           onChange={handleParameterChange}
         />
       </Box>
+
+      {/* Parameter Comments */}
+      <ParameterComments
+        selectedParams={selectedParams}
+        parameterMap={parameterMap}
+      />
 
       {/* Loading state */}
       {showChart && isLoadingValues && (
