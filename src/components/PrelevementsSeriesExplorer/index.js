@@ -108,7 +108,6 @@ const PrelevementsSeriesExplorer = ({
   legendLabels
 }) => {
   const t = {...DEFAULT_TRANSLATIONS, ...customTranslations}
-
   // Extract metadata from series
   const {
     parameters,

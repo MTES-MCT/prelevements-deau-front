@@ -140,3 +140,18 @@ test('frequency helpers convert between frequency strings and resolutions', t =>
   t.is(resolutionToFrequency('1h'), '1 hour')
   t.is(resolutionToFrequency(RESOLUTIONS[0].id), '15 minutes')
 })
+
+test('aggregateSeriesIntoBuckets merges metadata comments within a bucket', t => {
+  const points = [
+    {t: new Date('2024-01-01T00:00:00'), value: 2, meta: {comment: 'Estimation'}},
+    {t: new Date('2024-01-01T00:10:00'), value: 4, meta: {comment: 'Capteur'}},
+    {t: new Date('2024-01-01T00:20:00'), value: 6, meta: {comment: 'Estimation'}}
+  ]
+
+  const aggregated = aggregateSeriesIntoBuckets(points, {
+    bucketResolution: '15m',
+    kind: 'instant'
+  })
+
+  t.is(aggregated[0].meta?.comment, 'Estimation • Capteur')
+})

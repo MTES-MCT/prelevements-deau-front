@@ -6,13 +6,55 @@ import {parseQuarterDate} from '@/lib/format-date.js'
 import {coerceNumericValue} from '@/utils/number.js'
 import {parseLocalDateTime} from '@/utils/time.js'
 
+// Normalize remarks (string or array) into a single comment string suitable for chart metadata.
+const normalizeMetaComment = entry => {
+  if (!entry) {
+    return null
+  }
+
+  const collected = []
+
+  if (typeof entry.remark === 'string' && entry.remark.trim()) {
+    collected.push(entry.remark.trim())
+  }
+
+  if (Array.isArray(entry.remarks)) {
+    for (const remark of entry.remarks) {
+      if (typeof remark === 'string' && remark.trim()) {
+        collected.push(remark.trim())
+      }
+    }
+  }
+
+  if (collected.length === 0) {
+    return null
+  }
+
+  // Deduplicate in insertion order and align with backend cap (10).
+  const seen = new Set()
+  const unique = []
+  for (const remark of collected) {
+    if (!seen.has(remark)) {
+      seen.add(remark)
+      unique.push(remark)
+    }
+
+    if (unique.length >= 10) {
+      break
+    }
+  }
+
+  return unique.join(' • ')
+}
+
 // Create or return the daily aggregation entry backing the calendar view.
 const getOrCreateDailyEntry = (context, date) => {
   const {dailyMap, parametersCount} = context
   if (!dailyMap.has(date)) {
     dailyMap.set(date, {
       date,
-      values: Array.from({length: parametersCount}, () => null)
+      values: Array.from({length: parametersCount}, () => null),
+      metas: Array.from({length: parametersCount}, () => null)
     })
   }
 
@@ -40,7 +82,8 @@ const getOrCreateTimelineEntry = (context, {date, time = null}) => {
     date,
     time,
     timestamp,
-    values: Array.from({length: parametersCount}, () => null)
+    values: Array.from({length: parametersCount}, () => null),
+    metas: Array.from({length: parametersCount}, () => null)
   }
 
   timelineMap.set(key, sample)
@@ -69,6 +112,7 @@ const assignSubDailyFromObject = ({context, date, subValues, paramIndex}) => {
     }
 
     sample.values[paramIndex] = numericValue
+    sample.metas[paramIndex] = null
     sum += numericValue
     count++
   }
@@ -103,6 +147,8 @@ const assignSubDailyValues = ({context, date, subValues, paramIndex}) => {
     }
 
     sample.values[paramIndex] = numericValue
+    const metaComment = normalizeMetaComment(entry)
+    sample.metas[paramIndex] = metaComment ? {comment: metaComment} : null
     sum += numericValue
     count++
   }
@@ -158,14 +204,17 @@ export function buildDailyAndTimelineData({
       }
 
       const directValue = coerceNumericValue(dayEntry.value)
+      const directMetaComment = normalizeMetaComment(dayEntry)
 
       if (directValue !== null) {
         const dailyEntry = getOrCreateDailyEntry(aggregationContext, dayEntry.date)
         dailyEntry.values[paramIndex] = directValue
+        dailyEntry.metas[paramIndex] = directMetaComment ? {comment: directMetaComment} : null
 
         const sample = getOrCreateTimelineEntry(aggregationContext, {date: dayEntry.date, time: null})
         if (sample) {
           sample.values[paramIndex] = directValue
+          sample.metas[paramIndex] = directMetaComment ? {comment: directMetaComment} : null
         }
 
         continue

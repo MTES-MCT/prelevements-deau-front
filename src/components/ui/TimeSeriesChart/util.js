@@ -477,7 +477,7 @@ export const buildSegments = (alignedData, xValues, options) => {
   const segmentToOriginal = new Map()
 
   for (const data of alignedData) {
-    const {values, thresholds, pointsWithMeta, metas} = data
+    const {values, thresholds, pointsWithMeta} = data
     let currentSegment = null
     const segments = []
     let previousSegmentLastIndex = null
@@ -552,12 +552,7 @@ export const buildSegments = (alignedData, xValues, options) => {
             return point.showMark
           }
 
-          // Show marks for points with metadata (comments/alerts)
-          if (metas[index]) {
-            return true
-          }
-
-          // Otherwise use exposeAllMarks setting
+          // Only show explicit boundary marks or exposeAllMarks.
           return exposeAllMarks
         },
         valueFormatter(value) {
@@ -628,12 +623,7 @@ export const buildPlainSeries = (alignedData, options) => {
           return point.showMark
         }
 
-        // Show marks for points with metadata (comments/alerts)
-        if (data.metas[index]) {
-          return true
-        }
-
-        // Otherwise use exposeAllMarks setting
+        // Only show explicit boundary marks or exposeAllMarks.
         return exposeAllMarks
       },
       valueFormatter(value) {
@@ -908,25 +898,33 @@ export const axisFormatterFactory = (locale, dates) => {
   return value => formatter.format(value instanceof Date ? value : new Date(value))
 }
 
-export const buildAnnotations = ({pointBySeries, visibility, theme}) => {
+export const buildAnnotations = ({pointBySeries, metaBySeries, visibility, theme, seriesTypes}) => {
   const annotations = []
   for (const [seriesId, points] of pointBySeries.entries()) {
     if (visibility[seriesId] === false) {
       continue
     }
 
+    const seriesType = seriesTypes?.get(seriesId) ?? 'line'
+
     for (const [index, point] of points.entries()) {
-      if (!point || point.synthetic || !point.meta || point.y === null || Number.isNaN(point.y)) {
+      if (!point || point.synthetic || point.y === null || Number.isNaN(point.y)) {
+        continue
+      }
+
+      const resolvedMeta = point.meta ?? metaBySeries?.get(seriesId)?.[index] ?? null
+      if (!resolvedMeta) {
         continue
       }
 
       annotations.push({
         seriesId,
+        seriesType,
         axisId: point.axisId,
         index,
         x: point.x,
         y: point.y,
-        originalPoint: point,
+        originalPoint: {...point, meta: resolvedMeta},
         color: theme.palette.info.main
       })
     }

@@ -313,6 +313,12 @@ const ChartAnnotations = ({annotations, onPointClick}) => {
     return '#6b7280' // Gray for other metadata
   }
 
+  /**
+   * Choose a shape for the annotation marker based on metadata.
+   * Comments or alerts use a square to differentiate from segment markers (circles).
+   */
+  const getPointShape = meta => (meta?.comment || meta?.alert ? 'square' : 'circle')
+
   return (
     <g>
       {annotations.map(annotation => {
@@ -328,8 +334,20 @@ const ChartAnnotations = ({annotations, onPointClick}) => {
 
         // Safely call the scale functions with try-catch for added safety
         try {
-          x = xScale(annotation.x)
+          // Since x-axis is a band scale using indices, we must use the index
+          // and center the point in the band
+          x = xScale(annotation.index)
+          if (typeof xScale.bandwidth === 'function') {
+            x += xScale.bandwidth() / 2
+          }
+
           y = yScale(annotation.y)
+
+          // For bar charts, offset the annotation to float above/below the bar
+          if (annotation.seriesType === 'bar') {
+            const offset = 10
+            y += annotation.y >= 0 ? -offset : offset
+          }
         } catch {
           return null
         }
@@ -349,6 +367,7 @@ const ChartAnnotations = ({annotations, onPointClick}) => {
         }
 
         const pointFillColor = getPointFillColor(annotation.originalPoint.meta)
+        const pointShape = getPointShape(annotation.originalPoint.meta)
 
         return (
           <g
@@ -369,8 +388,17 @@ const ChartAnnotations = ({annotations, onPointClick}) => {
               }
             }}
           >
-            <circle r={6} fill='white' stroke={annotation.color} strokeWidth={2} />
-            <circle r={2.5} fill={pointFillColor} />
+            {pointShape === 'square' ? (
+              <>
+                <rect x={-6} y={-6} width={12} height={12} fill='white' stroke={annotation.color} strokeWidth={2} />
+                <rect x={-3} y={-3} width={6} height={6} fill={pointFillColor} />
+              </>
+            ) : (
+              <>
+                <circle r={6} fill='white' stroke={annotation.color} strokeWidth={2} />
+                <circle r={2.5} fill={pointFillColor} />
+              </>
+            )}
           </g>
         )
       })}
@@ -650,15 +678,17 @@ const TimeSeriesChart = ({
 
     const allAnnotations = buildAnnotations({
       pointBySeries: chartModel.pointBySeries,
+      metaBySeries: chartModel.metaBySeries,
       visibility,
-      theme
+      theme,
+      seriesTypes: inputSeriesTypeById
     })
 
     // Filter annotations to only keep those whose axis is configured
     // This prevents errors when rendering annotations for non-existent axes
     const configuredAxisIds = new Set(yAxis.map(axis => axis.id))
     return allAnnotations.filter(annotation => configuredAxisIds.has(annotation.axisId))
-  }, [chartModel.pointBySeries, visibility, theme, yAxis, enableAnnotations])
+  }, [chartModel.pointBySeries, chartModel.metaBySeries, visibility, theme, yAxis, enableAnnotations, inputSeriesTypeById])
 
   const dashedStyles = useMemo(() => {
     const styles = {}
