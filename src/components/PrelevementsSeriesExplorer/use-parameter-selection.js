@@ -68,7 +68,8 @@ export function useParameterMetadata(seriesList) {
       color: colorMap.get(s.parameter),
       frequency: s.frequency,
       valueType: s.valueType,
-      seriesId: s._id
+      seriesId: s._id,
+      extras: s.extras
     }))
 
     // Use parameterLabel as key for direct lookup
