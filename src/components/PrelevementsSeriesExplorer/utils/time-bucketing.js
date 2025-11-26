@@ -254,6 +254,7 @@ export const aggregateSeriesIntoBuckets = (points, {
         seenComments.add(comment)
         uniqueComments.push(comment)
       }
+
       if (uniqueComments.length >= 10) {
         break
       }
