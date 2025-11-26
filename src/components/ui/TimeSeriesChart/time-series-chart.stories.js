@@ -50,7 +50,7 @@ export const BarChart = {
       color: '#0ea5e9',
       type: 'bar',
       data: generateData(15, day, i => ({
-        y: Math.max(0, (Math.sin(i) * 10) + (Math.random() * 5)),
+        y: Math.max(0, (Math.sin(i) * 10) + (i % 5)),
         meta: i === 3 ? {comment: 'Orage violent', alert: 'Alerte inondation'} : (i === 7 ? {comment: 'Pluie fine'} : undefined)
       }))
     }],
@@ -108,7 +108,7 @@ export const AnnotationsAndAlerts = {
         }
 
         return {
-          y: 80 + (Math.random() * 20) - (i === 10 ? 40 : 0),
+          y: 80 + ((Math.sin(i) + 1) * 10) - (i === 10 ? 40 : 0),
           meta
         }
       }),
@@ -128,7 +128,7 @@ export const Decimation = {
       label: 'Haute fréquence',
       axis: 'left',
       color: '#8b5cf6',
-      data: generateData(1000, hour / 4, () => ({y: 50 + (Math.random() * 10)}))
+      data: generateData(1000, hour / 4, i => ({y: 50 + ((Math.sin(i) + 1) * 5)}))
     }]
   }
 }

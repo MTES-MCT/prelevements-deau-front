@@ -688,7 +688,7 @@ const TimeSeriesChart = ({
     // This prevents errors when rendering annotations for non-existent axes
     const configuredAxisIds = new Set(yAxis.map(axis => axis.id))
     return allAnnotations.filter(annotation => configuredAxisIds.has(annotation.axisId))
-  }, [chartModel.pointBySeries, chartModel.metaBySeries, visibility, theme, yAxis, enableAnnotations])
+  }, [chartModel.pointBySeries, chartModel.metaBySeries, visibility, theme, yAxis, enableAnnotations, inputSeriesTypeById])
 
   const dashedStyles = useMemo(() => {
     const styles = {}
