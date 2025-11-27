@@ -192,6 +192,7 @@ const Page = () => {
             selectedPoint={selectedPointId ? points.find(point => selectedPointId === point.id_point) : null}
             handleSelectedPoint={handleSelectedPoint}
             mapStyle={style}
+            options={{hash: true}}
           />
           <Box
             sx={{
