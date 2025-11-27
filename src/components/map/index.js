@@ -192,6 +192,12 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
       center: [55.55, -21.13],
       zoom: 10,
       hash: options.hash ?? false,
+      cooperativeGestures: options.cooperativeGestures ?? true,
+      locale: {
+        'CooperativeGesturesHandler.WindowsHelpText': 'Utilisez Ctrl + molette pour zoomer sur la carte',
+        'CooperativeGesturesHandler.MacHelpText': 'Utilisez ⌘ + molette pour zoomer sur la carte',
+        'CooperativeGesturesHandler.MobileHelpText': 'Utilisez deux doigts pour déplacer la carte'
+      },
       attributionControl: {compact: true}
     }
 
@@ -294,7 +300,7 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
     return () => {
       map.remove()
     }
-  }, [mapStyle, points, handleSelectedPoint, options.hash])
+  }, [mapStyle, points, handleSelectedPoint, options.hash, options.cooperativeGestures])
 
   // Mise à jour des sources lorsque les points filtrés changent
   useEffect(() => {

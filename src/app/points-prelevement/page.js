@@ -192,7 +192,7 @@ const Page = () => {
             selectedPoint={selectedPointId ? points.find(point => selectedPointId === point.id_point) : null}
             handleSelectedPoint={handleSelectedPoint}
             mapStyle={style}
-            options={{hash: true}}
+            options={{hash: true, cooperativeGestures: false}}
           />
           <Box
             sx={{
