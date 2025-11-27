@@ -168,7 +168,7 @@ function loadMap(map, points, showLabels = true) {
   }
 }
 
-const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapStyle = 'plan-ign', showLabels = true}) => {
+const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapStyle = 'plan-ign', showLabels = true, options = {}}) => {
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
   const popupRef = useRef(null)
@@ -191,8 +191,13 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
       style: stylesMap[mapStyle],
       center: [55.55, -21.13],
       zoom: 10,
-      hash: true,
-      debug: true,
+      hash: options.hash ?? false,
+      cooperativeGestures: options.cooperativeGestures ?? true,
+      locale: {
+        'CooperativeGesturesHandler.WindowsHelpText': 'Utilisez Ctrl + molette pour zoomer sur la carte',
+        'CooperativeGesturesHandler.MacHelpText': 'Utilisez ⌘ + molette pour zoomer sur la carte',
+        'CooperativeGesturesHandler.MobileHelpText': 'Utilisez deux doigts pour déplacer la carte'
+      },
       attributionControl: {compact: true}
     }
 
@@ -295,7 +300,7 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
     return () => {
       map.remove()
     }
-  }, [mapStyle, points, handleSelectedPoint])
+  }, [mapStyle, points, handleSelectedPoint, options.hash, options.cooperativeGestures])
 
   // Mise à jour des sources lorsque les points filtrés changent
   useEffect(() => {
