@@ -3,16 +3,48 @@ import {
   startOfMonth,
   endOfMonth,
   startOfWeek,
-  endOfWeek
+  endOfWeek,
+  parseISO,
+  isValid
 } from 'date-fns'
 import {fr} from 'date-fns/locale'
+
+/**
+ * Safely parse a date string into a Date object.
+ * Uses parseISO for ISO strings to ensure cross-browser compatibility (Safari).
+ * @param {string|Date} dateInput - Date string or Date object
+ * @returns {Date|null} Valid Date object or null if invalid
+ */
+export function safeParseDate(dateInput) {
+  if (!dateInput) {
+    return null
+  }
+
+  if (dateInput instanceof Date) {
+    return isValid(dateInput) ? dateInput : null
+  }
+
+  // Only accept string or Date input, otherwise return null
+  if (typeof dateInput === 'string') {
+    const date = parseISO(dateInput)
+    return isValid(date) ? date : null
+  }
+
+  // Unsupported type
+  return null
+}
 
 function formatDate(date) {
   if (!date) {
     return null
   }
 
-  return format(date, 'dd/MM/yyyy')
+  const parsedDate = safeParseDate(date)
+  if (!parsedDate) {
+    return null
+  }
+
+  return format(parsedDate, 'dd/MM/yyyy')
 }
 
 export function formatFullDateFr(dateString) {
@@ -20,7 +52,11 @@ export function formatFullDateFr(dateString) {
     return null
   }
 
-  const date = new Date(dateString)
+  const date = safeParseDate(dateString)
+  if (!date) {
+    return null
+  }
+
   const dayNum = date.getDate()
   const day = dayNum === 1 ? '1er' : String(dayNum).padStart(2, '0')
   const month = format(date, 'MMMM', {locale: fr})
