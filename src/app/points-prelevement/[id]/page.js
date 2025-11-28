@@ -7,6 +7,7 @@ import PointIdentification from '@/components/points-prelevement/point-identific
 import PointLocalisation from '@/components/points-prelevement/point-localisation.js'
 import SeriesExplorer from '@/components/points-prelevement/series-explorer.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
+import {getNewExploitationURL} from '@/lib/urls.js'
 
 const Page = async ({params}) => {
   const {id} = (await params)
@@ -39,6 +40,7 @@ const Page = async ({params}) => {
         <ExploitationsList
           exploitations={exploitations}
           preleveurs={pointPrelevement.preleveurs}
+          createHref={getNewExploitationURL({idPoint: pointPrelevement._id})}
         />
       </div>
     </>

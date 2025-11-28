@@ -34,6 +34,20 @@ export function getPointPrelevementURL(point) {
   return `/points-prelevement/${point.id_point}`
 }
 
+export function getNewExploitationURL(params) {
+  const url = '/exploitations/new'
+  if (params) {
+    const query = new URLSearchParams(params).toString()
+    return `${url}?${query}`
+  }
+
+  return url
+}
+
+export function getExploitationURL(exploitation) {
+  return `/exploitations/${exploitation._id}`
+}
+
 export function getDeclarationTemplateAEP() {
   return `${STORAGE_URL}/declaration-templates/donnees-standardisees_v2.10.xlsx`
 }
