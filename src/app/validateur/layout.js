@@ -27,7 +27,7 @@ const Validateur = async ({children}) => (
         Validateur de fichier de déclaration de prélèvements
       </Typography>
       <p>
-        Cet outil vous permet de valider la conformité de vos fichiers de déclaration de prélèvements avant de les soumettre sur Démarches Simplifiées.
+        Cet outil vous permet de valider la conformité de vos fichiers de déclaration de prélèvements avant de les soumettre sur Démarche Numérique.
       </p>
 
       {children}

@@ -19,7 +19,7 @@ const DossierHeader = ({numero, status, dateDepot, periodLabel, dsUrl}) => (
           target: '_blank'
         }}
       >
-        Voir sur Démarches Simplifiees
+        Voir sur Démarche Numérique
       </Button>
     </Box>
 

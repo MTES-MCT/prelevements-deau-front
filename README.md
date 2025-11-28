@@ -23,7 +23,7 @@ Cette application est le front-end du projet de gestion des prélèvements d'eau
 | `NEXTAUTH_SECRET`             | Clé secrète utilisée par NextAuth pour signer les sessions.                          |
 | `NEXTAUTH_URL`                | URL publique de l'application (ex: `http://localhost:3000`).                            |
 | `NEXT_PUBLIC_API_URL`         | URL de base de l'API métier à laquelle l'application se connecte.                      |
-| `NEXT_PUBLIC_PROCEDURE_DS_ID` | Identifiant de la procédure Démarches Simplifiées pour générer les liens vers les dossiers. |
+| `NEXT_PUBLIC_PROCEDURE_DS_ID` | Identifiant de la procédure Démarche Numérique pour générer les liens vers les dossiers. |
 | `NEXT_PUBLIC_STORAGE_URL`     | URL de base du stockage des documents.                                                 |
 
 Exemple de fichier `.env` :
