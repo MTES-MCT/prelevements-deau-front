@@ -1,6 +1,6 @@
 'use client'
 
-import {useMemo, useState} from 'react'
+import {useEffect, useMemo, useState} from 'react'
 
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import InfoOutlined from '@mui/icons-material/InfoOutlined'
@@ -97,7 +97,7 @@ const DocumentEditDialog = ({
   )
 
   // Initialize selected exploitations when dialog opens
-  useMemo(() => {
+  useEffect(() => {
     if (isOpen && document && !isInitialized) {
       const currentExploitationIds = exploitations
         .filter(e => e.documents?.some(d => (d._id || d) === document._id))

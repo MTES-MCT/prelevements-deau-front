@@ -115,6 +115,11 @@ const DocumentUploadForm = ({preleveur, exploitations = []}) => {
       if (response._id && selectedExploitations.length > 0) {
         const assignmentPromises = selectedExploitations.map(async exploitationId => {
           const exploitation = exploitations.find(e => e._id === exploitationId)
+
+          if (!exploitation) {
+            throw new Error(`Exploitation ${exploitationLabelsById[exploitationId]} introuvable`)
+          }
+
           const currentDocIds = exploitation.documents?.map(d => d._id || d) || []
           const updatedDocIds = [...currentDocIds, response._id]
 
@@ -123,7 +128,7 @@ const DocumentUploadForm = ({preleveur, exploitations = []}) => {
           })
 
           if (updateResponse.code === 400) {
-            throw new Error(exploitationLabelsById[exploitationId])
+            throw new Error(`Échec de l'assignation à ${exploitationLabelsById[exploitationId]}`)
           }
 
           return exploitationId
@@ -132,7 +137,7 @@ const DocumentUploadForm = ({preleveur, exploitations = []}) => {
         const results = await Promise.allSettled(assignmentPromises)
         const assignmentErrors = results
           .filter(r => r.status === 'rejected')
-          .map(r => r.reason?.message || exploitationLabelsById[r.reason])
+          .map(r => r.reason?.message)
 
         if (assignmentErrors.length > 0) {
           setAssignmentWarning(
