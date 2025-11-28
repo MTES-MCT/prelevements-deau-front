@@ -8,13 +8,15 @@ import {
   getPreleveur,
   getExploitationFromPreleveur,
   getDocumentsFromPreleveur,
-  getPointPrelevement
+  getPointPrelevement,
+  getReglesFromPreleveur
 } from '@/app/api/points-prelevement.js'
 import {getAggregatedSeriesOptions} from '@/app/api/series.js'
 import DocumentsList from '@/components/documents/documents-list.js'
 import ExploitationsList from '@/components/exploitations/exploitations-list.js'
 import SeriesExplorer from '@/components/points-prelevement/series-explorer.js'
 import PreleveurMap from '@/components/preleveurs/preleveur-map.js'
+import ReglesListCard from '@/components/regles/regles-list-card.js'
 import EntityHeader from '@/components/ui/EntityHeader/index.js'
 import Icon from '@/components/ui/Icon/index.js'
 import SectionCard from '@/components/ui/SectionCard/index.js'
@@ -78,6 +80,7 @@ const Page = async ({params}) => {
 
   const documents = await getDocumentsFromPreleveur(id)
   const exploitations = await getExploitationFromPreleveur(id)
+  const regles = await getReglesFromPreleveur(preleveur._id)
   const seriesOptions = await getAggregatedSeriesOptions({preleveurId: id})
 
   const pointsPrelevement = []
@@ -141,6 +144,11 @@ const Page = async ({params}) => {
           idPreleveur={id}
           documents={documents}
           exploitations={exploitationsWithPoints}
+        />
+        <ReglesListCard
+          hasExploitations={exploitations.length > 0}
+          preleveurId={id}
+          regles={regles}
         />
       </Box>
     </>
