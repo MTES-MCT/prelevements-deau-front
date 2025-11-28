@@ -8,15 +8,13 @@ import {
   getPreleveur,
   getExploitationFromPreleveur,
   getDocumentsFromPreleveur,
-  getPointPrelevement,
-  getReglesFromPreleveur
+  getPointPrelevement
 } from '@/app/api/points-prelevement.js'
 import {getAggregatedSeriesOptions} from '@/app/api/series.js'
 import DocumentsList from '@/components/documents/documents-list.js'
 import ExploitationsList from '@/components/exploitations/exploitations-list.js'
 import SeriesExplorer from '@/components/points-prelevement/series-explorer.js'
 import PreleveurMap from '@/components/preleveurs/preleveur-map.js'
-import ReglesListCard from '@/components/regles/regles-list-card.js'
 import EntityHeader from '@/components/ui/EntityHeader/index.js'
 import Icon from '@/components/ui/Icon/index.js'
 import SectionCard from '@/components/ui/SectionCard/index.js'
@@ -80,7 +78,6 @@ const Page = async ({params}) => {
 
   const documents = await getDocumentsFromPreleveur(id)
   const exploitations = await getExploitationFromPreleveur(id)
-  const regles = await getReglesFromPreleveur(id)
   const seriesOptions = await getAggregatedSeriesOptions({preleveurId: id})
 
   const pointsPrelevement = []
@@ -139,11 +136,6 @@ const Page = async ({params}) => {
           exploitations={exploitationsWithPoints}
           preleveurs={[preleveur]}
           createHref={getNewExploitationURL({idPreleveur: preleveur._id})}
-        />
-        <ReglesListCard
-          hasExploitations={exploitations.length > 0}
-          preleveurId={preleveur.id_preleveur}
-          regles={regles}
         />
         <DocumentsList idPreleveur={id} documents={documents} />
       </Box>
