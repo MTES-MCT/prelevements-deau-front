@@ -9,7 +9,7 @@ import formatDate from '@/lib/format-date.js'
 // Format exploitations count for display
 const formatExploitationsCount = exploitations => {
   if (!exploitations || exploitations.length === 0) {
-    return 'Aucune exploitation liée'
+    return null
   }
 
   if (exploitations.length === 1) {
