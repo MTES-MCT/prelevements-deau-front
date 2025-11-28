@@ -22,6 +22,7 @@ import Icon from '@/components/ui/Icon/index.js'
 import SectionCard from '@/components/ui/SectionCard/index.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {usageIcons} from '@/lib/points-prelevement.js'
+import {getNewExploitationURL} from '@/lib/urls.js'
 
 const iconColorStyle = {color: fr.colors.decisions.text.label.blueFrance.default}
 
@@ -133,7 +134,12 @@ const Page = async ({params}) => {
           <PreleveurMap points={pointsPrelevement} />
         )}
         <SeriesExplorer preleveurId={preleveur.id_preleveur} seriesOptions={seriesOptions} />
-        <ExploitationsList hidePreleveur exploitations={exploitationsWithPoints} preleveurs={[preleveur]} />
+        <ExploitationsList
+          hidePreleveur
+          exploitations={exploitationsWithPoints}
+          preleveurs={[preleveur]}
+          createHref={getNewExploitationURL({idPreleveur: preleveur._id})}
+        />
         <ReglesListCard
           hasExploitations={exploitations.length > 0}
           preleveurId={preleveur.id_preleveur}
