@@ -124,10 +124,7 @@ const FileDropzone = ({
         <div className='file-dropzone__files'>
           {files.map((file, index) => (
             <div key={`${file.name}-${file.lastModified}`} className='file-dropzone__file'>
-              <span
-                className='fr-icon-file-line'
-                style={{color: fr.colors.decisions.text.default.success.default}}
-              />
+              <span className='fr-icon-file-line' />
               <span className='file-dropzone__file-name'>{file.name}</span>
               <button
                 className='file-dropzone__file-remove'
