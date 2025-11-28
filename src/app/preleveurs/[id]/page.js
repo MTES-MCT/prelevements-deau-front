@@ -137,7 +137,11 @@ const Page = async ({params}) => {
           preleveurs={[preleveur]}
           createHref={getNewExploitationURL({idPreleveur: preleveur._id})}
         />
-        <DocumentsList idPreleveur={id} documents={documents} />
+        <DocumentsList
+          idPreleveur={id}
+          documents={documents}
+          exploitations={exploitationsWithPoints}
+        />
       </Box>
     </>
   )
