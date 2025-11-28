@@ -80,7 +80,7 @@ const Page = async ({params}) => {
 
   const documents = await getDocumentsFromPreleveur(id)
   const exploitations = await getExploitationFromPreleveur(id)
-  const regles = await getReglesFromPreleveur(id)
+  const regles = await getReglesFromPreleveur(preleveur._id)
   const seriesOptions = await getAggregatedSeriesOptions({preleveurId: id})
 
   const pointsPrelevement = []
@@ -140,12 +140,16 @@ const Page = async ({params}) => {
           preleveurs={[preleveur]}
           createHref={getNewExploitationURL({idPreleveur: preleveur._id})}
         />
+        <DocumentsList
+          idPreleveur={id}
+          documents={documents}
+          exploitations={exploitationsWithPoints}
+        />
         <ReglesListCard
           hasExploitations={exploitations.length > 0}
-          preleveurId={preleveur.id_preleveur}
+          preleveurId={id}
           regles={regles}
         />
-        <DocumentsList idPreleveur={id} documents={documents} />
       </Box>
     </>
   )

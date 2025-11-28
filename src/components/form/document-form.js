@@ -25,7 +25,7 @@ const DocumentForm = ({document, setDocument}) => (
         }}
       />
       <Select
-        label='Nature'
+        label='Nature *'
         placeholder='Sélectionner la nature du document'
         nativeSelectProps={{
           defaultValue: document?.nature,
@@ -39,7 +39,7 @@ const DocumentForm = ({document, setDocument}) => (
     </div>
     <div className='grid grid-cols-2 gap-4'>
       <Input
-        label='Date de signature'
+        label='Date de signature *'
         nativeInputProps={{
           type: 'date',
           defaultValue: document?.date_signature,
