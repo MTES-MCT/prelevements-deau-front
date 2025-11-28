@@ -128,7 +128,7 @@ const DocumentUploadForm = ({preleveur, exploitations = []}) => {
           })
 
           if (updateResponse.code === 400) {
-            throw new Error(`Échec de l'assignation à ${exploitationLabelsById[exploitationId]}`)
+            throw new Error(`Échec de l'assignation à ${exploitationLabelsById[exploitationId]}: ${updateResponse.message || 'erreur inconnue'}`)
           }
 
           return exploitationId

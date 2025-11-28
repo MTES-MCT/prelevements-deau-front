@@ -183,7 +183,7 @@ const DocumentEditDialog = ({
 
       onClose()
     } catch (error_) {
-      setError(error_.message)
+      setError(error_?.message || 'Une erreur est survenue lors de la sauvegarde')
     }
   }
 
