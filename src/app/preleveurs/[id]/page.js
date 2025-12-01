@@ -45,8 +45,8 @@ const InfoCard = ({preleveur}) => {
         <li>
           <Icon iconId='ri-user-line' style={iconColorStyle} />
           <span>
-            {preleveur.civilite && preleveur.nom && preleveur.prenom
-              ? `${preleveur.civilite} ${preleveur.nom} ${preleveur.prenom}`
+            {preleveur.civilite || preleveur.nom || preleveur.prenom
+              ? `${preleveur.civilite || ''} ${preleveur.nom || ''} ${preleveur.prenom || ''}`.trim()
               : 'Non renseigné'}
           </span>
         </li>
