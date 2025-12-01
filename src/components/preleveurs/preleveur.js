@@ -3,6 +3,7 @@ import Link from 'next/link'
 
 import ListItem from '@/components/ui/ListItem/index.js'
 import {usageIcons} from '@/lib/points-prelevement.js'
+import {getPreleveurTypeIcon} from '@/lib/preleveurs.js'
 
 const Preleveur = ({preleveur, index}) =>
   (
@@ -12,7 +13,7 @@ const Preleveur = ({preleveur, index}) =>
         background={index % 2 === 0 ? 'primary' : 'secondary'}
         title={<>
           <span
-            className={`mr-2 ${preleveur.raison_sociale ? 'fr-icon-building-line' : 'fr-icon-user-line'}`}
+            className={`mr-2 ${getPreleveurTypeIcon(preleveur)}`}
             style={{color: fr.colors.decisions.text.label.blueFrance.default}}
           />
           <span>{preleveur.civilite} {preleveur.nom} {preleveur.prenom} {preleveur.sigle || ''} {preleveur.raison_sociale || ''}</span>

@@ -22,6 +22,7 @@ import Icon from '@/components/ui/Icon/index.js'
 import SectionCard from '@/components/ui/SectionCard/index.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {usageIcons} from '@/lib/points-prelevement.js'
+import {getPreleveurTitle, getPreleveurTypeIcon} from '@/lib/preleveurs.js'
 import {getNewExploitationURL} from '@/lib/urls.js'
 
 const iconColorStyle = {color: fr.colors.decisions.text.label.blueFrance.default}
@@ -92,11 +93,7 @@ const Page = async ({params}) => {
     return {...exploitation, point}
   }))
 
-  const title = preleveur.raison_sociale
-    ? `${preleveur.sigle ? preleveur.sigle + ' ' : ''}${preleveur.raison_sociale}`
-    : (preleveur.civilite && preleveur.nom && preleveur.prenom
-      ? `${preleveur.civilite} ${preleveur.nom} ${preleveur.prenom}`
-      : 'Non renseigné')
+  const title = getPreleveurTitle(preleveur)
 
   return (
     <>
@@ -106,7 +103,7 @@ const Page = async ({params}) => {
         <EntityHeader
           title={
             <>
-              <span className='fr-icon-user-line' />
+              <span className={getPreleveurTypeIcon(preleveur)} />
               {' '}{title}
             </>
           }
