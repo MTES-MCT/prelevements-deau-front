@@ -48,6 +48,15 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
           onChange: e => setPreleveur(prev => ({...prev, raison_sociale: e.target.value}))
         }}
       />
+      <Input
+        label='Sigle'
+        hintText='Abréviation ou acronyme de l’entreprise'
+        nativeInputProps={{
+          placeholder: 'Entrer le sigle',
+          defaultValue: preleveur?.sigle || '',
+          onChange: e => setPreleveur(prev => ({...prev, sigle: e.target.value}))
+        }}
+      />
       <div className='w-full grid grid-cols-[1fr_2fr_2fr] gap-4 pb-5'>
         <Select
           label='Civilité du contact'
