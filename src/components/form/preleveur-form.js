@@ -7,7 +7,7 @@ import {useState} from 'react'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {SegmentedControl} from '@codegouvfr/react-dsfr/SegmentedControl'
 import {Typography} from '@mui/material'
-import {pick} from 'lodash-es'
+import {pick, trim} from 'lodash-es'
 import {useRouter} from 'next/navigation'
 
 import PreleveurMoralForm from './preleveur-moral-form.js'
@@ -65,10 +65,10 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
     ...initialPreleveur
   })
 
-  // Determine if submit button should be disabled
+  // Determine if submit button should be disabled (trim values to handle whitespace-only)
   const isDisabled = isPreleveurPhysique
-    ? !(preleveur.nom && preleveur.prenom && preleveur.email)
-    : !(preleveur.raison_sociale && preleveur.code_siren)
+    ? !(trim(preleveur.nom) && trim(preleveur.prenom) && trim(preleveur.email))
+    : !(trim(preleveur.raison_sociale) && trim(preleveur.code_siren))
 
   const handleSubmit = async () => {
     setError(null)
