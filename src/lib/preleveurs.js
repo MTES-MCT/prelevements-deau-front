@@ -45,11 +45,5 @@ export function getPreleveurTitle(preleveur) {
   }
 
   // Moral person: sigle or raison_sociale
-  if (preleveur?.sigle) {
-    return preleveur.raison_sociale
-      ? `${preleveur.sigle} ${preleveur.raison_sociale}`
-      : preleveur.sigle
-  }
-
-  return preleveur?.raison_sociale || 'Non renseigné'
+  return preleveur.raison_sociale || preleveur.sigle || 'Non renseigné'
 }
