@@ -68,7 +68,7 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
   // Determine if submit button should be disabled (trim values to handle whitespace-only)
   const isDisabled = isPreleveurPhysique
     ? !(trim(preleveur.nom) && trim(preleveur.prenom) && trim(preleveur.email))
-    : !(trim(preleveur.raison_sociale) && trim(preleveur.code_siren))
+    : !(trim(preleveur.raison_sociale) || trim(preleveur.sigle))
 
   const handleSubmit = async () => {
     setError(null)
