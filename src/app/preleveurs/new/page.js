@@ -1,6 +1,6 @@
 import dynamic from 'next/dynamic'
 
-import PreleveurCreationForm from '@/components/form/preleveur-creation-form.js'
+import PreleveurForm from '@/components/form/preleveur-form.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 
 const DynamicBreadcrumb = dynamic(
@@ -27,7 +27,7 @@ const Page = () => (
         ]}
       />
     </div>
-    <PreleveurCreationForm />
+    <PreleveurForm />
   </>
 )
 

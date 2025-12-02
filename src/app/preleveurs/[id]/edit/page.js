@@ -2,7 +2,8 @@ import dynamic from 'next/dynamic'
 import {notFound} from 'next/navigation'
 
 import {getPreleveur} from '@/app/api/points-prelevement.js'
-import PreleveurEditionForm from '@/components/form/preleveur-edition-form.js'
+import PreleveurDeleteSection from '@/components/form/preleveur-delete-section.js'
+import PreleveurForm from '@/components/form/preleveur-form.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 
 const DynamicBreadcrumb = dynamic(
@@ -37,7 +38,10 @@ const Page = async ({params}) => {
           ]}
         />
       </div>
-      <PreleveurEditionForm
+      <PreleveurForm
+        preleveur={preleveur}
+      />
+      <PreleveurDeleteSection
         preleveur={preleveur}
       />
     </>
