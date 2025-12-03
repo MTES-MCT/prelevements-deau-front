@@ -51,11 +51,11 @@ test('chooseDisplayResolution excludes quarter resolution for ranges <= 9 months
   t.not(resolution6m, '1Q') // Quarter should not be available
 
   // 12 months range - should allow quarter resolution
+  // maxPoints = max(12, 50/15) = 12, targetBucketMs = 365 days / 12 = ~30 days -> picks 1Q (90 days)
   const start12m = new Date('2024-01-01T00:00:00')
   const end12m = new Date('2025-01-01T00:00:00')
   const resolution12m = chooseDisplayResolution(start12m, end12m, 50)
-  // With 12 months and small width, quarter could be selected
-  t.true(['1M', '1Q', '1Y', '1d'].includes(resolution12m))
+  t.is(resolution12m, '1Q') // Quarter resolution expected for 12 months with small width
 })
 
 test('chooseDisplayResolution excludes year resolution for ranges <= 3 years', t => {

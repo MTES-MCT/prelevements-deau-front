@@ -79,6 +79,8 @@ export function useChartSeries({
       const color = param.color ?? FALLBACK_PARAMETER_COLOR
       const label = param.unit ? `${param.parameterLabel} (${param.unit})` : param.parameterLabel
       const nativeResolution = param.nativeResolution ?? resolutionFromFrequency(param.frequency)
+      // Fallback to param.frequency which is already in human-readable format (e.g., '1 day')
+      // compatible with processTimeSeriesData's parseFrequencyToMs function
       const nativeFrequency = resolutionToFrequency(nativeResolution) ?? param.frequency
 
       // Transform data points to chart format

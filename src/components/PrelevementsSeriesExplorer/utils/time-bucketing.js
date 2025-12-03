@@ -12,14 +12,18 @@ import {parseFrequencyToMs} from './gap-detection.js'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
+// Resolution definitions with millisecond approximations.
+// Note: Month/quarter/year use fixed approximations (30/90/365 days) which may vary
+// from actual calendar lengths. This is acceptable as these values are only used for
+// resolution threshold calculations, not for data aggregation.
 export const RESOLUTIONS = Object.freeze([
   {id: '15m', ms: 15 * 60 * 1000},
   {id: '1h', ms: 60 * 60 * 1000},
-  {id: '6h', ms: 6 * 60 * 60 * 1000}, // 6 hours
+  {id: '6h', ms: 6 * 60 * 60 * 1000},
   {id: '1d', ms: DAY_MS},
-  {id: '1M', ms: 30 * DAY_MS}, // Approximate month
-  {id: '1Q', ms: 90 * DAY_MS}, // Approximate quarter
-  {id: '1Y', ms: 365 * DAY_MS} // Approximate year
+  {id: '1M', ms: 30 * DAY_MS},
+  {id: '1Q', ms: 90 * DAY_MS},
+  {id: '1Y', ms: 365 * DAY_MS}
 ])
 
 const RESOLUTION_MS_MAP = new Map(RESOLUTIONS.map(item => [item.id, item.ms]))
