@@ -622,8 +622,7 @@ const AggregatedSeriesExplorer = ({
     timelineSamples,
     visibleSamples,
     selectedParams,
-    parameterMap,
-    chartWidthPx
+    parameterMap
   })
 
   const calendarData = useMemo(() => {
