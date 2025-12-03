@@ -12,28 +12,36 @@ import {parseFrequencyToMs} from './gap-detection.js'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
+// Resolution definitions with millisecond approximations.
+// Note: Month/quarter/year use fixed approximations (30/90/365 days) which may vary
+// from actual calendar lengths. This is acceptable as these values are only used for
+// resolution threshold calculations, not for data aggregation.
 export const RESOLUTIONS = Object.freeze([
   {id: '15m', ms: 15 * 60 * 1000},
   {id: '1h', ms: 60 * 60 * 1000},
+  {id: '6h', ms: 6 * 60 * 60 * 1000},
   {id: '1d', ms: DAY_MS},
-  {id: '1Q', ms: 90 * DAY_MS}, // Approximate quarter
-  {id: '6M', ms: 182 * DAY_MS}, // Approximate 6 months
-  {id: '1Y', ms: 365 * DAY_MS} // Approximate year
+  {id: '1M', ms: 30 * DAY_MS},
+  {id: '1Q', ms: 90 * DAY_MS},
+  {id: '1Y', ms: 365 * DAY_MS}
 ])
 
 const RESOLUTION_MS_MAP = new Map(RESOLUTIONS.map(item => [item.id, item.ms]))
 const RESOLUTION_ORDER = RESOLUTIONS.map(item => item.id)
 
 const DEFAULT_WIDTH_PX = 1200
-const MIN_POINTS = 50
-const PX_PER_POINT = 5
+// Reduced MIN_POINTS and increased PX_PER_POINT to prefer coarser resolutions
+// for better readability (e.g., monthly instead of daily for ~10 months of data)
+const MIN_POINTS = 12
+const PX_PER_POINT = 15
 
 const RESOLUTION_TO_FREQUENCY = {
   '15m': '15 minutes',
   '1h': '1 hour',
+  '6h': '6 hours',
   '1d': '1 day',
+  '1M': '1 month',
   '1Q': '1 quarter',
-  '6M': '6 months',
   '1Y': '1 year'
 }
 
@@ -80,18 +88,63 @@ const normalizeTimeRange = (timeRange, series) => {
 
 const resolutionToMs = resolution => RESOLUTION_MS_MAP.get(resolution) ?? RESOLUTIONS[0].ms
 
-const pickResolutionByMs = targetMs => {
+// Minimum date range required to enable specific resolutions
+// These thresholds ensure we have enough data points to make the resolution meaningful
+// Month: > 3 months (to have at least 3 monthly points)
+// Quarter: > 9 months (to have at least 3 quarterly points)
+// Year: > 3 years (to have at least 3 yearly points)
+const MONTHS_3_MS = 3 * 30 * DAY_MS // ~90 days
+const MONTHS_9_MS = 9 * 30 * DAY_MS // ~270 days
+const YEARS_3_MS = 3 * 365 * DAY_MS // ~1095 days
+
+/**
+ * Filter resolutions based on the date range duration.
+ * - Month (1M) requires > 3 months of data
+ * - Quarter (1Q) requires > 9 months of data
+ * - Year (1Y) requires > 3 years of data
+ *
+ * @param {number|null} rangeMs - Duration of the date range in milliseconds
+ * @returns {Array} Filtered list of resolutions
+ */
+const getAvailableResolutions = rangeMs => {
+  if (!rangeMs || rangeMs <= 0) {
+    return RESOLUTIONS
+  }
+
+  return RESOLUTIONS.filter(entry => {
+    // Month resolution requires more than 3 months of data
+    if (entry.id === '1M' && rangeMs <= MONTHS_3_MS) {
+      return false
+    }
+
+    // Quarter resolution requires more than 9 months of data
+    if (entry.id === '1Q' && rangeMs <= MONTHS_9_MS) {
+      return false
+    }
+
+    // Year resolution requires more than 3 years of data
+    if (entry.id === '1Y' && rangeMs <= YEARS_3_MS) {
+      return false
+    }
+
+    return true
+  })
+}
+
+const pickResolutionByMs = (targetMs, rangeMs = null) => {
   if (!Number.isFinite(targetMs) || targetMs <= 0) {
     return RESOLUTIONS[0].id
   }
 
-  for (const entry of RESOLUTIONS) {
+  const availableResolutions = getAvailableResolutions(rangeMs)
+
+  for (const entry of availableResolutions) {
     if (entry.ms >= targetMs) {
       return entry.id
     }
   }
 
-  return RESOLUTIONS.at(-1).id
+  return availableResolutions.at(-1)?.id ?? RESOLUTIONS.at(-1).id
 }
 
 export const resolutionFromFrequency = frequency => {
@@ -118,7 +171,7 @@ export const chooseDisplayResolution = (rangeStart, rangeEnd, widthPx = DEFAULT_
   const maxPoints = Math.max(MIN_POINTS, Math.floor(widthPx / PX_PER_POINT))
   const targetBucketMs = rangeMs / maxPoints
 
-  return pickResolutionByMs(Math.max(targetBucketMs, RESOLUTIONS[0].ms))
+  return pickResolutionByMs(Math.max(targetBucketMs, RESOLUTIONS[0].ms), rangeMs)
 }
 
 export const chooseSeriesBucketResolution = (displayResolution, nativeResolution) => {
@@ -147,18 +200,22 @@ export const floorToBucket = (date, resolution) => {
       return new Date(resolved.getFullYear(), resolved.getMonth(), resolved.getDate(), resolved.getHours(), 0, 0, 0)
     }
 
+    case '6h': {
+      const hour6Block = Math.floor(resolved.getHours() / 6) * 6
+      return new Date(resolved.getFullYear(), resolved.getMonth(), resolved.getDate(), hour6Block, 0, 0, 0)
+    }
+
     case '1d': {
       return new Date(resolved.getFullYear(), resolved.getMonth(), resolved.getDate(), 0, 0, 0, 0)
+    }
+
+    case '1M': {
+      return new Date(resolved.getFullYear(), resolved.getMonth(), 1, 0, 0, 0, 0)
     }
 
     case '1Q': {
       const quarterStartMonth = Math.floor(resolved.getMonth() / 3) * 3
       return new Date(resolved.getFullYear(), quarterStartMonth, 1, 0, 0, 0, 0)
-    }
-
-    case '6M': {
-      const semesterStartMonth = resolved.getMonth() < 6 ? 0 : 6
-      return new Date(resolved.getFullYear(), semesterStartMonth, 1, 0, 0, 0, 0)
     }
 
     case '1Y': {

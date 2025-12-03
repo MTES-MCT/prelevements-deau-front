@@ -1,5 +1,10 @@
 /**
  * Custom hook for preparing chart series data
+ *
+ * Note: Client-side bucketing has been disabled. Data from the API is passed
+ * directly to the chart without re-aggregation. The backend handles aggregation
+ * via getAggregatedSeries, and users can no longer manually choose frequency,
+ * so there's no risk of overloading the UI with too many data points.
  */
 
 import {useMemo} from 'react'
@@ -8,7 +13,6 @@ import {FALLBACK_PARAMETER_COLOR} from './constants/colors.js'
 import {processTimeSeriesData} from './utils/gap-detection.js'
 import {isCumulativeValueType} from './utils/parameter-display.js'
 import {
-  bucketSeriesCollection,
   resolutionFromFrequency,
   resolutionToFrequency
 } from './utils/time-bucketing.js'
@@ -22,7 +26,6 @@ import {
  * @param {Array} config.visibleSamples - Timeline samples within range
  * @param {Array<string>} config.selectedParams - Selected parameterLabels
  * @param {Map} config.parameterMap - Parameter metadata map (keyed by parameterLabel)
- * @param {number} [config.chartWidthPx=1200] - Available width to estimate bucket count
  * @returns {Array} Chart series data
  */
 export function useChartSeries({
@@ -30,8 +33,7 @@ export function useChartSeries({
   timelineSamples,
   visibleSamples,
   selectedParams,
-  parameterMap,
-  chartWidthPx = 1200
+  parameterMap
 }) {
   return useMemo(() => {
     if (!showChart || selectedParams.length === 0) {
@@ -63,25 +65,8 @@ export function useChartSeries({
       unitToAxis.set(uniqueUnits[1], 'right')
     }
 
-    const timeRange = (() => {
-      const firstSample = visibleSamples[0]
-      const lastSample = visibleSamples.at(-1)
-
-      if (!firstSample?.timestamp || !lastSample?.timestamp) {
-        return null
-      }
-
-      return {
-        start: firstSample.timestamp instanceof Date
-          ? firstSample.timestamp
-          : new Date(firstSample.timestamp),
-        end: lastSample.timestamp instanceof Date
-          ? lastSample.timestamp
-          : new Date(lastSample.timestamp)
-      }
-    })()
-
-    const seriesInputs = selectedParams.map((paramLabel, paramIndex) => {
+    // Build chart series directly from visible samples without client-side bucketing
+    return selectedParams.map((paramLabel, paramIndex) => {
       const param = parameterMap.get(paramLabel)
       if (!param) {
         return null
@@ -94,8 +79,12 @@ export function useChartSeries({
       const color = param.color ?? FALLBACK_PARAMETER_COLOR
       const label = param.unit ? `${param.parameterLabel} (${param.unit})` : param.parameterLabel
       const nativeResolution = param.nativeResolution ?? resolutionFromFrequency(param.frequency)
-      const kind = isCumulativeValueType(param.valueType) ? 'cumulative' : 'instant'
-      const data = visibleSamples
+      // Fallback to param.frequency which is already in human-readable format (e.g., '1 day')
+      // compatible with processTimeSeriesData's parseFrequencyToMs function
+      const nativeFrequency = resolutionToFrequency(nativeResolution) ?? param.frequency
+
+      // Transform data points to chart format
+      const rawData = visibleSamples
         .map(sample => {
           const value = sample.values?.[paramIndex]
           if (value === null || value === undefined || Number.isNaN(value)) {
@@ -108,65 +97,22 @@ export function useChartSeries({
 
           const meta = sample.metas?.[paramIndex] ?? null
 
-          return {t: timestamp, value, meta}
+          return {
+            x: timestamp,
+            y: value,
+            meta
+          }
         })
         .filter(Boolean)
 
-      return {
-        id: param.parameterLabel,
-        axis,
-        color,
-        label,
-        meta: {
-          ...param,
-          nativeResolution,
-          kind
-        },
-        data
-      }
-    }).filter(Boolean)
-
-    const {bucketedSeries} = bucketSeriesCollection(
-      seriesInputs,
-      timeRange,
-      chartWidthPx
-    )
-
-    const bucketedById = new Map(
-      bucketedSeries.map(item => [item.id, item])
-    )
-
-    return selectedParams.map(paramLabel => {
-      const param = parameterMap.get(paramLabel)
-      if (!param) {
+      if (rawData.length === 0) {
         return null
       }
 
-      const bucketed = bucketedById.get(param.parameterLabel)
-      if (!bucketed || bucketed.data.length === 0) {
-        return null
-      }
-
-      const axis = param.unit && unitToAxis.has(param.unit)
-        ? unitToAxis.get(param.unit)
-        : 'left'
-
-      const color = param.color ?? FALLBACK_PARAMETER_COLOR
-      const label = param.unit ? `${param.parameterLabel} (${param.unit})` : param.parameterLabel
-      const bucketFrequency = resolutionToFrequency(bucketed.bucketResolution)
-      const processedData = bucketFrequency
-        ? processTimeSeriesData(
-          bucketed.data.map(point => ({
-            x: point.t,
-            y: point.value,
-            min: point.min,
-            max: point.max,
-            sourceCount: point.count,
-            meta: point.meta ?? null
-          })),
-          bucketFrequency
-        )
-        : bucketed.data
+      // Apply gap detection based on native frequency (no re-aggregation)
+      const processedData = nativeFrequency
+        ? processTimeSeriesData(rawData, nativeFrequency)
+        : rawData
 
       return {
         id: param.parameterLabel,
@@ -175,7 +121,7 @@ export function useChartSeries({
         color,
         data: processedData,
         type: isCumulativeValueType(param.valueType) ? 'bar' : 'line',
-        bucketResolution: bucketed.bucketResolution
+        nativeResolution
       }
     }).filter(Boolean)
   }, [
@@ -183,7 +129,6 @@ export function useChartSeries({
     timelineSamples,
     visibleSamples,
     selectedParams,
-    parameterMap,
-    chartWidthPx
+    parameterMap
   ])
 }
