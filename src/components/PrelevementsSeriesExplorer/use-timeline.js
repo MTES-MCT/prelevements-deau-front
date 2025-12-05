@@ -26,6 +26,12 @@ import {
 export function useTimeline(timelineSamples, showRangeSlider, rangeOverride = null) {
   // Collect unique day strings from samples to figure out the continuous day range.
   const baseDates = useMemo(() => {
+    // Don't generate dense timeline if there are no samples - this prevents expensive
+    // computation during data loading transitions when the map is temporarily empty
+    if (!Array.isArray(timelineSamples) || timelineSamples.length === 0) {
+      return []
+    }
+
     if (rangeOverride?.start && rangeOverride?.end && rangeOverride.end > rangeOverride.start) {
       // Build a dense list of dates from the override range to guarantee full coverage.
       const days = []
@@ -36,10 +42,6 @@ export function useTimeline(timelineSamples, showRangeSlider, rangeOverride = nu
       }
 
       return days
-    }
-
-    if (!Array.isArray(timelineSamples) || timelineSamples.length === 0) {
-      return []
     }
 
     const uniqueDates = new Set()
@@ -123,8 +125,13 @@ export function useTimeline(timelineSamples, showRangeSlider, rangeOverride = nu
       return []
     }
 
-    const rangeStart = sliderDates[rangeIndices[0]]
-    const rangeEnd = sliderDates[rangeIndices[1]]
+    // Protect against stale rangeIndices
+    const maxIndex = sliderDates.length - 1
+    const safeStartIdx = Math.min(rangeIndices[0], maxIndex)
+    const safeEndIdx = Math.min(rangeIndices[1], maxIndex)
+
+    const rangeStart = sliderDates[safeStartIdx]
+    const rangeEnd = sliderDates[safeEndIdx]
 
     if (!rangeStart || !rangeEnd || rangeEnd <= rangeStart) {
       return []
@@ -138,9 +145,13 @@ export function useTimeline(timelineSamples, showRangeSlider, rangeOverride = nu
       return null
     }
 
-    const [startIdx, endIdx] = rangeIndices
-    const start = sliderDates[startIdx]
-    const endBoundary = sliderDates[endIdx]
+    // Protect against stale rangeIndices
+    const maxIndex = sliderDates.length - 1
+    const safeStartIdx = Math.min(rangeIndices[0], maxIndex)
+    const safeEndIdx = Math.min(rangeIndices[1], maxIndex)
+
+    const start = sliderDates[safeStartIdx]
+    const endBoundary = sliderDates[safeEndIdx]
 
     if (!start || !endBoundary || endBoundary <= start) {
       return null
@@ -156,9 +167,13 @@ export function useTimeline(timelineSamples, showRangeSlider, rangeOverride = nu
       return null
     }
 
-    const [startIdx, endIdx] = committedRangeIndices
-    const start = sliderDates[startIdx]
-    const endBoundary = sliderDates[endIdx]
+    // Protect against stale committedRangeIndices
+    const maxIndex = sliderDates.length - 1
+    const safeStartIdx = Math.min(committedRangeIndices[0], maxIndex)
+    const safeEndIdx = Math.min(committedRangeIndices[1], maxIndex)
+
+    const start = sliderDates[safeStartIdx]
+    const endBoundary = sliderDates[safeEndIdx]
 
     if (!start || !endBoundary || endBoundary <= start) {
       return null
@@ -201,10 +216,21 @@ export function useTimeline(timelineSamples, showRangeSlider, rangeOverride = nu
       return []
     }
 
-    const startDate = sliderDates[rangeIndices[0]]
-    const endDate = sliderDates[rangeIndices[1]]
+    // Protect against stale rangeIndices that may be out of bounds
+    // This can happen when timelineSamples changes before the useEffect adjusts rangeIndices
+    const maxIndex = sliderDates.length - 1
+    const safeStartIdx = Math.min(rangeIndices[0], maxIndex)
+    const safeEndIdx = Math.min(rangeIndices[1], maxIndex)
+
+    const startDate = sliderDates[safeStartIdx]
+    const endDate = sliderDates[safeEndIdx]
 
     if (!startDate || !endDate) {
+      return []
+    }
+
+    // If indices are invalid (start >= end after clamping), return empty to avoid showing all data
+    if (startDate >= endDate) {
       return []
     }
 

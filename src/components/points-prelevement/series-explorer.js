@@ -296,6 +296,15 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
       }
     }
 
+    // Clear stale data immediately to prevent rendering old data during fetch
+    // This prevents the UI freeze caused by rendering large datasets from previous selections
+    // Note: The map is also cleared in handleFiltersChange for synchronous batching,
+    // but we keep this here for cases where useEffect triggers without going through the handler
+    setAggregatedSeriesMap(prev => {
+      // Only clear if there are stale entries that don't match current selection
+      const hasStaleData = [...prev.keys()].some(key => !selectedParameters.includes(key))
+      return hasStaleData ? new Map() : prev
+    })
     setIsLoading(true)
     setLoadError(null)
 
@@ -382,6 +391,9 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
         return
       }
 
+      // Clear the map immediately to prevent rendering stale data during the transition
+      // This must happen in the same event handler to be batched with setSelectedParameters
+      setAggregatedSeriesMap(new Map())
       setSelectedParameters(parameters)
       nextParameters = parameters
     }
