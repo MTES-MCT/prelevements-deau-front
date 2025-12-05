@@ -4,6 +4,12 @@
  * and inserts null values to break line continuity in charts
  */
 
+import {
+  addCalendarIncrement,
+  isCalendarBasedUnit,
+  parseFrequency
+} from '@/utils/frequency-parsing.js'
+
 /**
  * Parse frequency string and convert to milliseconds
  * Supports formats like '1 day', '1 week', '1 month', '1 quarter', '1 hour', etc.
@@ -227,70 +233,6 @@ export const applyGapDetectionToSeries = (series, frequency, gapMultiplier = 1.5
 }
 
 /**
- * Parse frequency string into value and unit
- * @param {string} frequency - Frequency string (e.g., '1 day', '15 minutes')
- * @returns {{value: number, unit: string}|null} Parsed frequency or null if parsing fails
- */
-const parseFrequency = frequency => {
-  if (!frequency || typeof frequency !== 'string') {
-    return null
-  }
-
-  const normalized = frequency.toLowerCase().trim()
-  const match = normalized.match(/^(\d+)\s*(second|minute|hour|day|week|month|quarter|year)s?$/)
-
-  if (!match) {
-    return null
-  }
-
-  return {
-    value: Number.parseInt(match[1], 10),
-    unit: match[2]
-  }
-}
-
-/**
- * Check if a frequency unit is calendar-based (variable duration)
- * @param {string} unit - Frequency unit
- * @returns {boolean} True if calendar-based
- */
-const isCalendarBasedUnit = unit => ['month', 'quarter', 'year'].includes(unit)
-
-/**
- * Add calendar-based increment to a date
- * @param {Date} date - Starting date
- * @param {number} value - Number of units to add
- * @param {string} unit - Calendar unit ('month', 'quarter', 'year')
- * @returns {Date} New date with increment applied
- */
-const addCalendarIncrement = (date, value, unit) => {
-  const result = new Date(date)
-
-  switch (unit) {
-    case 'month': {
-      result.setMonth(result.getMonth() + value)
-      break
-    }
-
-    case 'quarter': {
-      result.setMonth(result.getMonth() + (value * 3))
-      break
-    }
-
-    case 'year': {
-      result.setFullYear(result.getFullYear() + value)
-      break
-    }
-
-    default: {
-      break
-    }
-  }
-
-  return result
-}
-
-/**
  * Normalize a date to the start of its calendar period
  * @param {Date} date - Date to normalize
  * @param {string} unit - Calendar unit ('month', 'quarter', 'year')
@@ -430,7 +372,7 @@ export const alignSeriesToLinearTimeline = (data, timeline, frequency, gapMultip
   let inSegment = false
   let segmentStartIndex = -1
 
-  for (const [_i, timelineDate] of timeline.entries()) {
+  for (const timelineDate of timeline) {
     const timelineTs = timelineDate.getTime()
 
     // Find matching data point within tolerance

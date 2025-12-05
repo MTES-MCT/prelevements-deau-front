@@ -1,3 +1,9 @@
+import {
+  addCalendarIncrement,
+  isCalendarBasedUnit,
+  parseFrequency
+} from '@/utils/frequency-parsing.js'
+
 export const AXIS_LEFT_ID = 'y-left'
 export const AXIS_RIGHT_ID = 'y-right'
 export const X_AXIS_ID = 'time'
@@ -757,36 +763,6 @@ export const extractStaticThresholds = processedSeries => {
 }
 
 /**
- * Parse frequency string into value and unit
- * @param {string} frequency - Frequency string (e.g., '1 day', '15 minutes')
- * @returns {{value: number, unit: string}|null} Parsed frequency or null if parsing fails
- */
-const parseFrequency = frequency => {
-  if (!frequency || typeof frequency !== 'string') {
-    return null
-  }
-
-  const normalized = frequency.toLowerCase().trim()
-  const match = normalized.match(/^(\d+)\s*(second|minute|hour|day|week|month|quarter|year)s?$/)
-
-  if (!match) {
-    return null
-  }
-
-  return {
-    value: Number.parseInt(match[1], 10),
-    unit: match[2]
-  }
-}
-
-/**
- * Check if a frequency unit is calendar-based (variable duration)
- * @param {string} unit - Frequency unit
- * @returns {boolean} True if calendar-based
- */
-const isCalendarBasedUnit = unit => ['month', 'quarter', 'year'].includes(unit)
-
-/**
  * Parse frequency string to approximate milliseconds (for fixed-duration units)
  * @param {string} frequency - Frequency string (e.g., '1 day', '15 minutes')
  * @returns {number|null} Milliseconds or null if parsing fails
@@ -819,40 +795,6 @@ const parseFrequencyToMs = frequency => {
   }
 
   return value * (unitMap[unit] ?? 0)
-}
-
-/**
- * Add calendar-based increment to a date
- * @param {Date} date - Starting date
- * @param {number} value - Number of units to add
- * @param {string} unit - Calendar unit ('month', 'quarter', 'year')
- * @returns {Date} New date with increment applied
- */
-const addCalendarIncrement = (date, value, unit) => {
-  const result = new Date(date)
-
-  switch (unit) {
-    case 'month': {
-      result.setMonth(result.getMonth() + value)
-      break
-    }
-
-    case 'quarter': {
-      result.setMonth(result.getMonth() + (value * 3))
-      break
-    }
-
-    case 'year': {
-      result.setFullYear(result.getFullYear() + value)
-      break
-    }
-
-    default: {
-      break
-    }
-  }
-
-  return result
 }
 
 /**
@@ -1042,7 +984,7 @@ export const buildSeriesModel = ({
 
     if (linearTimeline.length > 0) {
       // Use the linear timeline, but ensure all original data points are included
-      const timelineSet = new Set(linearTimeline.map(ts => ts))
+      const timelineSet = new Set(linearTimeline)
 
       // Add any original timestamps not covered by the timeline (e.g., due to rounding)
       for (const ts of xValuesSet) {
