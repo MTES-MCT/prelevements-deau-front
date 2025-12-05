@@ -31,6 +31,8 @@ const DEFAULT_MIN_CHART_HEIGHT = 360
  * @param {Function} [props.onRangeChangeCommitted] - Slider change handler for release (MUI `onChangeCommitted`)
  * @param {number} [props.minChartHeight=DEFAULT_MIN_CHART_HEIGHT] - Minimum height for the chart container
  * @param {Object} [props.timeSeriesChartProps] - Additional props forwarded to `TimeSeriesChart`
+ * @param {string} [props.frequency] - Frequency for linear X-axis timeline (e.g., '1 day', '15 minutes')
+ * @param {Object} [props.timelineRange] - Date range for timeline bounds ({ start: Date, end: Date })
  */
 const ChartWithRangeSlider = ({
   series,
@@ -43,19 +45,23 @@ const ChartWithRangeSlider = ({
   onRangeChange,
   onRangeChangeCommitted,
   minChartHeight = DEFAULT_MIN_CHART_HEIGHT,
-  timeSeriesChartProps
+  timeSeriesChartProps,
+  frequency = null,
+  timelineRange = null
 }) => {
   const resolvedChartProps = useMemo(() => {
     if (!timeSeriesChartProps) {
-      return {locale}
+      return {locale, frequency, timelineRange}
     }
 
-    const {series: _ignoredSeries, locale: overrideLocale, ...otherProps} = timeSeriesChartProps
+    const {series: _ignoredSeries, locale: overrideLocale, frequency: overrideFrequency, timelineRange: overrideTimelineRange, ...otherProps} = timeSeriesChartProps
     return {
       locale: overrideLocale ?? locale,
+      frequency: overrideFrequency ?? frequency,
+      timelineRange: overrideTimelineRange ?? timelineRange,
       ...otherProps
     }
-  }, [locale, timeSeriesChartProps])
+  }, [locale, timeSeriesChartProps, frequency, timelineRange])
 
   const handleSliderChange = useCallback((event, value, activeThumb) => {
     onRangeChange?.(event, value, activeThumb)
