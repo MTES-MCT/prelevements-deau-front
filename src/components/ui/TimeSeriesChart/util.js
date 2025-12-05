@@ -757,6 +757,200 @@ export const extractStaticThresholds = processedSeries => {
 }
 
 /**
+ * Parse frequency string into value and unit
+ * @param {string} frequency - Frequency string (e.g., '1 day', '15 minutes')
+ * @returns {{value: number, unit: string}|null} Parsed frequency or null if parsing fails
+ */
+const parseFrequency = frequency => {
+  if (!frequency || typeof frequency !== 'string') {
+    return null
+  }
+
+  const normalized = frequency.toLowerCase().trim()
+  const match = normalized.match(/^(\d+)\s*(second|minute|hour|day|week|month|quarter|year)s?$/)
+
+  if (!match) {
+    return null
+  }
+
+  return {
+    value: Number.parseInt(match[1], 10),
+    unit: match[2]
+  }
+}
+
+/**
+ * Check if a frequency unit is calendar-based (variable duration)
+ * @param {string} unit - Frequency unit
+ * @returns {boolean} True if calendar-based
+ */
+const isCalendarBasedUnit = unit => ['month', 'quarter', 'year'].includes(unit)
+
+/**
+ * Parse frequency string to approximate milliseconds (for fixed-duration units)
+ * @param {string} frequency - Frequency string (e.g., '1 day', '15 minutes')
+ * @returns {number|null} Milliseconds or null if parsing fails
+ */
+const parseFrequencyToMs = frequency => {
+  const parsed = parseFrequency(frequency)
+  if (!parsed) {
+    return null
+  }
+
+  const {value, unit} = parsed
+
+  const MS_PER_MINUTE = 60 * 1000
+  const MS_PER_HOUR = 60 * 60 * 1000
+  const MS_PER_DAY = 24 * MS_PER_HOUR
+  const MS_PER_WEEK = 7 * MS_PER_DAY
+  const MS_PER_MONTH = 30 * MS_PER_DAY
+  const MS_PER_QUARTER = 90 * MS_PER_DAY
+  const MS_PER_YEAR = 365 * MS_PER_DAY
+
+  const unitMap = {
+    second: 1000,
+    minute: MS_PER_MINUTE,
+    hour: MS_PER_HOUR,
+    day: MS_PER_DAY,
+    week: MS_PER_WEEK,
+    month: MS_PER_MONTH,
+    quarter: MS_PER_QUARTER,
+    year: MS_PER_YEAR
+  }
+
+  return value * (unitMap[unit] ?? 0)
+}
+
+/**
+ * Add calendar-based increment to a date
+ * @param {Date} date - Starting date
+ * @param {number} value - Number of units to add
+ * @param {string} unit - Calendar unit ('month', 'quarter', 'year')
+ * @returns {Date} New date with increment applied
+ */
+const addCalendarIncrement = (date, value, unit) => {
+  const result = new Date(date)
+
+  switch (unit) {
+    case 'month': {
+      result.setMonth(result.getMonth() + value)
+      break
+    }
+
+    case 'quarter': {
+      result.setMonth(result.getMonth() + (value * 3))
+      break
+    }
+
+    case 'year': {
+      result.setFullYear(result.getFullYear() + value)
+      break
+    }
+
+    default: {
+      break
+    }
+  }
+
+  return result
+}
+
+/**
+ * Normalize a timestamp to the start of its calendar period
+ * @param {number} timestamp - Timestamp in milliseconds
+ * @param {string} unit - Calendar unit ('month', 'quarter', 'year')
+ * @returns {number} Normalized timestamp at period start
+ */
+const normalizeToCalendarPeriodStart = (timestamp, unit) => {
+  const date = new Date(timestamp)
+
+  switch (unit) {
+    case 'month': {
+      // Start of month
+      return new Date(date.getFullYear(), date.getMonth(), 1).getTime()
+    }
+
+    case 'quarter': {
+      // Start of quarter (Q1: Jan, Q2: Apr, Q3: Jul, Q4: Oct)
+      const quarterMonth = Math.floor(date.getMonth() / 3) * 3
+      return new Date(date.getFullYear(), quarterMonth, 1).getTime()
+    }
+
+    case 'year': {
+      // Start of year
+      return new Date(date.getFullYear(), 0, 1).getTime()
+    }
+
+    default: {
+      return timestamp
+    }
+  }
+}
+
+/**
+ * Generate a linear timeline from start to end timestamps at regular intervals
+ * Uses calendar-based increments for month/quarter/year to handle variable durations
+ * @param {number} startTs - Start timestamp in milliseconds
+ * @param {number} endTs - End timestamp in milliseconds
+ * @param {string} frequency - Frequency string (e.g., '1 day', '15 minutes', '1 month')
+ * @returns {number[]} Array of timestamps at regular intervals
+ */
+const generateLinearTimelineFromTimestamps = (startTs, endTs, frequency) => {
+  const parsed = parseFrequency(frequency)
+  if (!parsed) {
+    return []
+  }
+
+  const {value, unit} = parsed
+
+  if (startTs >= endTs) {
+    return []
+  }
+
+  // Limit the number of generated points to prevent memory issues
+  const MAX_TIMELINE_POINTS = 10_000
+
+  // For calendar-based units, use proper date arithmetic
+  if (isCalendarBasedUnit(unit)) {
+    // Normalize start to the beginning of its period
+    const normalizedStart = normalizeToCalendarPeriodStart(startTs, unit)
+
+    const timeline = []
+    let currentDate = new Date(normalizedStart)
+
+    while (currentDate.getTime() <= endTs && timeline.length < MAX_TIMELINE_POINTS) {
+      timeline.push(currentDate.getTime())
+      currentDate = addCalendarIncrement(currentDate, value, unit)
+    }
+
+    return timeline
+  }
+
+  // For fixed-duration units, use millisecond arithmetic
+  const frequencyMs = parseFrequencyToMs(frequency)
+  if (!frequencyMs || frequencyMs <= 0) {
+    return []
+  }
+
+  const expectedPoints = Math.ceil((endTs - startTs) / frequencyMs) + 1
+
+  if (expectedPoints > MAX_TIMELINE_POINTS) {
+    // Return empty to fall back to non-linear mode
+    return []
+  }
+
+  const timeline = []
+  let current = startTs
+
+  while (current <= endTs) {
+    timeline.push(current)
+    current += frequencyMs
+  }
+
+  return timeline
+}
+
+/**
  * Main orchestrator function that builds complete series model
  * Coordinates all sub-functions to transform raw series into chart-ready data
  */
@@ -768,7 +962,9 @@ export const buildSeriesModel = ({
   enableThresholds = true,
   enableDecimation = true,
   decimationTarget = DECIMATION_TARGET,
-  maxPointsBeforeDecimation = MAX_POINTS_BEFORE_DECIMATION
+  maxPointsBeforeDecimation = MAX_POINTS_BEFORE_DECIMATION,
+  timelineFrequency = null,
+  timelineRange = null
 }) => {
   const numberFormatter = getNumberFormatter(locale)
   const xValuesSet = new Set()
@@ -815,8 +1011,55 @@ export const buildSeriesModel = ({
   }
 
   // Step 2: Create unified x-axis
-  const xValues = [...xValuesSet].sort((a, b) => a - b)
-  const xAxisDates = xValues.map(value => toDate(value))
+  // If timelineFrequency is provided, generate a linear timeline
+  let xValues
+  let xAxisDates
+
+  if (timelineFrequency && (xValuesSet.size > 0 || timelineRange)) {
+    // Determine timeline bounds: prefer timelineRange if provided, fallback to data bounds
+    let minTs
+    let maxTs
+
+    if (timelineRange?.start && timelineRange?.end) {
+      // Use the user-selected range to ensure full coverage even without data
+      minTs = timelineRange.start instanceof Date ? timelineRange.start.getTime() : timelineRange.start
+      maxTs = timelineRange.end instanceof Date ? timelineRange.end.getTime() : timelineRange.end
+    } else if (xValuesSet.size > 0) {
+      // Fallback to data bounds
+      const timestamps = [...xValuesSet]
+      minTs = Math.min(...timestamps)
+      maxTs = Math.max(...timestamps)
+    } else {
+      // No range and no data - nothing to generate
+      minTs = null
+      maxTs = null
+    }
+
+    // Generate linear timeline if we have valid bounds
+    const linearTimeline = (minTs !== null && maxTs !== null)
+      ? generateLinearTimelineFromTimestamps(minTs, maxTs, timelineFrequency)
+      : []
+
+    if (linearTimeline.length > 0) {
+      // Use the linear timeline, but ensure all original data points are included
+      const timelineSet = new Set(linearTimeline.map(ts => ts))
+
+      // Add any original timestamps not covered by the timeline (e.g., due to rounding)
+      for (const ts of xValuesSet) {
+        timelineSet.add(ts)
+      }
+
+      xValues = [...timelineSet].sort((a, b) => a - b)
+      xAxisDates = xValues.map(value => toDate(value))
+    } else {
+      // Fallback to original behavior if timeline generation fails
+      xValues = [...xValuesSet].sort((a, b) => a - b)
+      xAxisDates = xValues.map(value => toDate(value))
+    }
+  } else {
+    xValues = [...xValuesSet].sort((a, b) => a - b)
+    xAxisDates = xValues.map(value => toDate(value))
+  }
 
   // Step 3: Align all series to unified x-axis and update statistics
   const {metaBySeries, pointBySeries, alignedData} = alignSeriesToXAxis(
