@@ -17,6 +17,8 @@ import {
   resolutionToFrequency
 } from './utils/time-bucketing.js'
 
+import {getSmallestFrequency} from '@/utils/frequency.js'
+
 /**
  * Transforms loaded values into chart-ready series format
  *
@@ -26,7 +28,7 @@ import {
  * @param {Array} config.visibleSamples - Timeline samples within range
  * @param {Array<string>} config.selectedParams - Selected parameterLabels
  * @param {Map} config.parameterMap - Parameter metadata map (keyed by parameterLabel)
- * @returns {Array} Chart series data
+ * @returns {Object} Object containing { series: Array, smallestFrequency: string|null }
  */
 export function useChartSeries({
   showChart,
@@ -37,14 +39,14 @@ export function useChartSeries({
 }) {
   return useMemo(() => {
     if (!showChart || selectedParams.length === 0) {
-      return []
+      return {series: [], smallestFrequency: null}
     }
 
     const hasTimelineData = Array.isArray(timelineSamples) && timelineSamples.length > 0
     const hasVisibleData = Array.isArray(visibleSamples) && visibleSamples.length > 0
 
     if (!hasTimelineData || !hasVisibleData) {
-      return []
+      return {series: [], smallestFrequency: null}
     }
 
     const selectedParamsData = selectedParams
@@ -52,7 +54,7 @@ export function useChartSeries({
       .filter(Boolean)
 
     if (selectedParamsData.length === 0) {
-      return []
+      return {series: [], smallestFrequency: null}
     }
 
     const uniqueUnits = [...new Set(selectedParamsData.map(param => param.unit).filter(Boolean))]
@@ -65,8 +67,11 @@ export function useChartSeries({
       unitToAxis.set(uniqueUnits[1], 'right')
     }
 
+    // Collect all frequencies to determine the smallest one
+    const seriesFrequencies = []
+
     // Build chart series directly from visible samples without client-side bucketing
-    return selectedParams.map((paramLabel, paramIndex) => {
+    const series = selectedParams.map((paramLabel, paramIndex) => {
       const param = parameterMap.get(paramLabel)
       if (!param) {
         return null
@@ -82,6 +87,11 @@ export function useChartSeries({
       // Fallback to param.frequency which is already in human-readable format (e.g., '1 day')
       // compatible with processTimeSeriesData's parseFrequencyToMs function
       const nativeFrequency = resolutionToFrequency(nativeResolution) ?? param.frequency
+
+      // Collect frequency for determining smallest
+      if (nativeFrequency) {
+        seriesFrequencies.push(nativeFrequency)
+      }
 
       // Transform data points to chart format
       const rawData = visibleSamples
@@ -121,9 +131,15 @@ export function useChartSeries({
         color,
         data: processedData,
         type: isCumulativeValueType(param.valueType) ? 'bar' : 'line',
-        nativeResolution
+        nativeResolution,
+        frequency: nativeFrequency
       }
     }).filter(Boolean)
+
+    // Determine the smallest frequency among all series
+    const smallestFrequency = getSmallestFrequency(seriesFrequencies)
+
+    return {series, smallestFrequency}
   }, [
     showChart,
     timelineSamples,
