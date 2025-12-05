@@ -617,7 +617,7 @@ const AggregatedSeriesExplorer = ({
     onDisplayResolutionChange?.(fetchDisplayFrequency)
   }, [fetchDisplayFrequency, onDisplayResolutionChange])
 
-  const chartSeries = useChartSeries({
+  const {series: chartSeries, smallestFrequency} = useChartSeries({
     showChart,
     timelineSamples,
     visibleSamples,
@@ -737,6 +737,7 @@ const AggregatedSeriesExplorer = ({
           )}
           <ChartWithRangeSlider
             allDates={allDates}
+            frequency={smallestFrequency}
             locale={locale}
             rangeIndices={rangeIndices}
             rangeLabel={t.rangeLabel}
@@ -744,6 +745,7 @@ const AggregatedSeriesExplorer = ({
             showRangeSlider={showRangeSlider}
             sliderMarks={sliderMarks}
             timeSeriesChartProps={timeSeriesChartProps}
+            timelineRange={committedSelectedRange}
             onRangeChange={handleRangeChange}
             onRangeChangeCommitted={handleRangeChangeCommitted}
           />

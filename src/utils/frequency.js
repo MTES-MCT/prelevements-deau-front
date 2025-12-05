@@ -107,3 +107,25 @@ export function pickAvailableFrequency(targetFrequency, availableFrequencies) {
 
   return sorted.at(-1) ?? null
 }
+
+/**
+ * Get the smallest (finest) frequency from an array of frequencies
+ * Useful for determining the base frequency for a linear timeline with multiple series
+ *
+ * @param {Array<string>} frequencies - Array of frequency values
+ * @returns {string|null} The smallest frequency, or null if empty
+ */
+export function getSmallestFrequency(frequencies) {
+  const validFrequencies = (frequencies ?? []).filter(Boolean)
+
+  if (validFrequencies.length === 0) {
+    return null
+  }
+
+  if (validFrequencies.length === 1) {
+    return validFrequencies[0]
+  }
+
+  const sorted = sortFrequencies(validFrequencies)
+  return sorted[0] ?? null
+}

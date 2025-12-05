@@ -506,7 +506,9 @@ const TimeSeriesChart = ({
   enableAnnotations = true,
   enableDecimation = true,
   decimationTarget = DECIMATION_TARGET,
-  maxPointsBeforeDecimation = MAX_POINTS_BEFORE_DECIMATION
+  maxPointsBeforeDecimation = MAX_POINTS_BEFORE_DECIMATION,
+  frequency = null,
+  timelineRange = null
 }) => {
   const t = {...DEFAULT_TRANSLATIONS, ...translations}
   const theme = useTheme()
@@ -561,8 +563,10 @@ const TimeSeriesChart = ({
     enableThresholds,
     enableDecimation,
     decimationTarget,
-    maxPointsBeforeDecimation
-  }), [enableThresholds, enableDecimation, decimationTarget, maxPointsBeforeDecimation])
+    maxPointsBeforeDecimation,
+    timelineFrequency: frequency,
+    timelineRange
+  }), [enableThresholds, enableDecimation, decimationTarget, maxPointsBeforeDecimation, frequency, timelineRange])
 
   const chartModel = useChartModel({
     series,

@@ -4,6 +4,12 @@
  * and inserts null values to break line continuity in charts
  */
 
+import {
+  addCalendarIncrement,
+  isCalendarBasedUnit,
+  parseFrequency
+} from '@/utils/frequency-parsing.js'
+
 /**
  * Parse frequency string and convert to milliseconds
  * Supports formats like '1 day', '1 week', '1 month', '1 quarter', '1 hour', etc.
@@ -224,4 +230,210 @@ export const applyGapDetectionToSeries = (series, frequency, gapMultiplier = 1.5
     ...item,
     data: insertGapPoints(item.data, frequency, gapMultiplier)
   }))
+}
+
+/**
+ * Normalize a date to the start of its calendar period
+ * @param {Date} date - Date to normalize
+ * @param {string} unit - Calendar unit ('month', 'quarter', 'year')
+ * @returns {Date} Normalized date at period start
+ */
+const normalizeToCalendarPeriodStart = (date, unit) => {
+  switch (unit) {
+    case 'month': {
+      return new Date(date.getFullYear(), date.getMonth(), 1)
+    }
+
+    case 'quarter': {
+      const quarterMonth = Math.floor(date.getMonth() / 3) * 3
+      return new Date(date.getFullYear(), quarterMonth, 1)
+    }
+
+    case 'year': {
+      return new Date(date.getFullYear(), 0, 1)
+    }
+
+    default: {
+      return date
+    }
+  }
+}
+
+/**
+ * Generate a complete linear timeline with regular intervals
+ * Creates a grid of timestamps from start to end at the specified frequency
+ * Uses calendar-based increments for month/quarter/year to handle variable durations
+ *
+ * @param {Date|number} startDate - Start of the timeline
+ * @param {Date|number} endDate - End of the timeline
+ * @param {string} frequency - Interval frequency (e.g., '1 day', '1 hour', '15 minutes', '1 month')
+ * @returns {Date[]} Array of Date objects at regular intervals
+ */
+export const generateLinearTimeline = (startDate, endDate, frequency) => {
+  if (!startDate || !endDate || !frequency) {
+    return []
+  }
+
+  const parsed = parseFrequency(frequency)
+  if (!parsed) {
+    return []
+  }
+
+  const {value, unit} = parsed
+
+  const start = startDate instanceof Date ? startDate : new Date(startDate)
+  const end = endDate instanceof Date ? endDate : new Date(endDate)
+
+  if (start.getTime() >= end.getTime()) {
+    return []
+  }
+
+  // Limit the number of generated points to prevent memory issues
+  const MAX_TIMELINE_POINTS = 10_000
+
+  // For calendar-based units, use proper date arithmetic
+  if (isCalendarBasedUnit(unit)) {
+    const normalizedStart = normalizeToCalendarPeriodStart(start, unit)
+
+    const timeline = []
+    let currentDate = normalizedStart
+
+    while (currentDate.getTime() <= end.getTime() && timeline.length < MAX_TIMELINE_POINTS) {
+      timeline.push(new Date(currentDate))
+      currentDate = addCalendarIncrement(currentDate, value, unit)
+    }
+
+    return timeline
+  }
+
+  // For fixed-duration units, use millisecond arithmetic
+  const frequencyMs = parseFrequencyToMs(frequency)
+  if (!frequencyMs || frequencyMs <= 0) {
+    return []
+  }
+
+  const startMs = start.getTime()
+  const endMs = end.getTime()
+  const expectedPoints = Math.ceil((endMs - startMs) / frequencyMs) + 1
+
+  if (expectedPoints > MAX_TIMELINE_POINTS) {
+    return []
+  }
+
+  const timeline = []
+  let current = startMs
+
+  while (current <= endMs) {
+    timeline.push(new Date(current))
+    current += frequencyMs
+  }
+
+  return timeline
+}
+
+/**
+ * Align series data to a linear timeline, filling gaps with null values
+ * Preserves segment breaks by inserting explicit gap markers where data is missing
+ *
+ * @param {Array<{x: Date, y: number|null, ...}>} data - Series data points
+ * @param {Date[]} timeline - Complete linear timeline
+ * @param {string} frequency - Data frequency for gap detection
+ * @param {number} gapMultiplier - Multiplier for gap threshold (default: 1.5)
+ * @returns {Array<{x: Date, y: number|null, isGapPoint: boolean, showMark: boolean}>} Aligned data
+ */
+export const alignSeriesToLinearTimeline = (data, timeline, frequency, gapMultiplier = 1.5) => {
+  if (!Array.isArray(timeline) || timeline.length === 0) {
+    // Fall back to original gap detection if no timeline provided
+    return processTimeSeriesData(data, frequency, gapMultiplier)
+  }
+
+  if (!Array.isArray(data) || data.length === 0) {
+    // Return timeline with all null values
+    return timeline.map(date => ({
+      x: date,
+      y: null,
+      isGapPoint: true,
+      showMark: false
+    }))
+  }
+
+  const frequencyMs = parseFrequencyToMs(frequency)
+  // Tolerance for matching timestamps (half the frequency interval)
+  const tolerance = frequencyMs ? frequencyMs / 2 : 0
+
+  // Create a map of data points by timestamp for efficient lookup
+  const dataMap = new Map()
+  for (const point of data) {
+    const timestamp = point.x instanceof Date ? point.x.getTime() : new Date(point.x).getTime()
+    dataMap.set(timestamp, point)
+  }
+
+  const result = []
+  let inSegment = false
+  let segmentStartIndex = -1
+
+  for (const timelineDate of timeline) {
+    const timelineTs = timelineDate.getTime()
+
+    // Find matching data point within tolerance
+    let matchedPoint = dataMap.get(timelineTs)
+
+    // If no exact match, search within tolerance
+    if (!matchedPoint && tolerance > 0) {
+      for (const [ts, point] of dataMap.entries()) {
+        if (Math.abs(ts - timelineTs) <= tolerance) {
+          matchedPoint = point
+          break
+        }
+      }
+    }
+
+    if (matchedPoint && matchedPoint.y !== null && matchedPoint.y !== undefined) {
+      // Valid data point
+      if (!inSegment) {
+        // Starting a new segment
+        inSegment = true
+        segmentStartIndex = result.length
+      }
+
+      result.push({
+        x: timelineDate,
+        y: matchedPoint.y,
+        meta: matchedPoint.meta ?? null,
+        isGapPoint: false,
+        showMark: false // Will be updated when segment ends
+      })
+    } else {
+      // Missing data point - gap in the timeline
+      if (inSegment) {
+        // End current segment - mark boundaries
+        const segmentEndIndex = result.length - 1
+        if (segmentStartIndex >= 0 && segmentStartIndex <= segmentEndIndex) {
+          result[segmentStartIndex].showMark = true
+          result[segmentEndIndex].showMark = true
+        }
+
+        inSegment = false
+        segmentStartIndex = -1
+      }
+
+      result.push({
+        x: timelineDate,
+        y: null,
+        isGapPoint: true,
+        showMark: false
+      })
+    }
+  }
+
+  // Handle final segment if data ends with valid points
+  if (inSegment && segmentStartIndex >= 0) {
+    const segmentEndIndex = result.length - 1
+    result[segmentStartIndex].showMark = true
+    if (segmentEndIndex !== segmentStartIndex) {
+      result[segmentEndIndex].showMark = true
+    }
+  }
+
+  return result
 }
