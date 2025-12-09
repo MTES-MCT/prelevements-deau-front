@@ -3,10 +3,32 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
+/**
+ * Request a magic link to be sent to the user's email
+ * @param {string} email - User's email address
+ * @returns {Promise<{success: boolean, message: string}>}
+ */
+export async function requestMagicLink(email) {
+  const res = await fetch(`${API_URL}/auth/request`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({email})
+  })
+
+  return res.json()
+}
+
+/**
+ * Fetch user info using session token
+ * @param {string} token - Session token from magic link verification
+ * @returns {Promise<{user: object, role: string, territoire: object}>}
+ */
 async function getInfo(token) {
   const res = await fetch(`${API_URL}/info`, {
     headers: {
-      Authorization: `Token ${token}`
+      Authorization: `Bearer ${token}`
     },
     mode: 'cors'
   })
@@ -31,7 +53,8 @@ export const authOptions = {
       if (user) {
         token.token = user.token
         token.territoire = user.territoire
-        token.role = user.isAdmin ? 'administrateur' : null
+        token.role = user.role
+        token.userInfo = user.userInfo
       }
 
       return token
@@ -40,6 +63,12 @@ export const authOptions = {
       session.user.token = token.token
       session.user.territoire = token.territoire
       session.user.role = token.role
+      if (token.userInfo) {
+        session.user.nom = token.userInfo.nom
+        session.user.prenom = token.userInfo.prenom
+        session.user.email = token.userInfo.email
+        session.user.structure = token.userInfo.structure
+      }
 
       return session
     }
@@ -51,16 +80,24 @@ export const authOptions = {
     CredentialsProvider.default({
       name: 'Credentials',
       credentials: {
-        password: {label: 'Password', type: 'password'}
+        // Token is passed from /auth/verify page after magic link verification
+        token: {label: 'Token', type: 'text'}
       },
       async authorize(credentials) {
-        const info = await getInfo(credentials.password)
+        try {
+          const info = await getInfo(credentials.token)
 
-        if (info) {
-          return {
-            ...info,
-            token: credentials.password
+          if (info) {
+            return {
+              id: info.user?._id || 'anonymous',
+              token: credentials.token,
+              territoire: info.territoire,
+              role: info.role, // 'reader' or 'editor'
+              userInfo: info.user || null
+            }
           }
+        } catch {
+          return null
         }
 
         return null
