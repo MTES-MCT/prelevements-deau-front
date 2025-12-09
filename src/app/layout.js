@@ -4,7 +4,7 @@ import Link from 'next/link'
 
 import Footer from '@/components/footer.js'
 import Header from '@/components/header.js'
-import SessionProvider from '@/components/session-provider.js'
+import {AuthProvider} from '@/contexts/auth-context.js'
 import {defaultColorScheme} from '@/dsfr-bootstrap/default-color-scheme.js'
 import {StartDsfrOnHydration, DsfrProvider} from '@/dsfr-bootstrap/index.js'
 import {getHtmlAttributes, DsfrHead} from '@/dsfr-bootstrap/server-only-index.js'
@@ -30,7 +30,7 @@ const RootLayout = ({children}) => (
       />
     </head>
     <body>
-      <SessionProvider>
+      <AuthProvider>
         <AppRouterCacheProvider>
           <DsfrProvider>
             <MuiDsfrThemeProvider>
@@ -42,7 +42,7 @@ const RootLayout = ({children}) => (
             </MuiDsfrThemeProvider>
           </DsfrProvider>
         </AppRouterCacheProvider>
-      </SessionProvider>
+      </AuthProvider>
     </body>
   </html>
 )
