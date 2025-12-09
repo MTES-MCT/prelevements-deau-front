@@ -1,6 +1,5 @@
 import {fr} from '@codegouvfr/react-dsfr'
 import {Box, Typography} from '@mui/material'
-import {getServerSession} from 'next-auth'
 
 import {getStats} from '@/app/api/points-prelevement.js'
 import DebitsReservesChart from '@/components/points-prelevement/debits-reserves-chart.js'
@@ -10,11 +9,9 @@ import Counter from '@/components/ui/Counter/index.js'
 import Pie from '@/components/ui/Pie/index.js'
 import SidedSection from '@/components/ui/SidedSection/index.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {authOptions} from '@/server/auth.js'
 
 const Page = async () => {
-  const session = await getServerSession(authOptions)
-  const {territoire} = session?.user || {}
+  // Stats are loaded for the user's territory (filtered by backend based on auth)
   const {
     pointsCount,
     documents,
@@ -24,7 +21,7 @@ const Page = async () => {
     termineePoints,
     abandoneePoints,
     nonRenseignePoints
-  } = await getStats(territoire)
+  } = await getStats()
 
   const pieData = []
 

@@ -3,6 +3,7 @@ import {Box, Typography} from '@mui/material'
 import {orderBy} from 'lodash-es'
 
 import {getPreleveurs} from '@/app/api/points-prelevement.js'
+import {RequireEditor} from '@/components/permissions/index.js'
 import PreleveursList from '@/components/preleveurs/preleveurs-list.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 
@@ -19,7 +20,7 @@ const Page = async () => {
       <Box className='flex flex-col fr-container h-full w-full'>
         <div className='flex justify-between items-end'>
           <Typography variant='h4' className='fr-pt-3w'>Préleveurs</Typography>
-          <div>
+          <RequireEditor>
             <Button
               priority='secondary'
               iconId='fr-icon-add-line'
@@ -31,7 +32,7 @@ const Page = async () => {
             >
               Ajouter un nouveau préleveur
             </Button>
-          </div>
+          </RequireEditor>
         </div>
         <PreleveursList preleveurs={orderedPreleveurs} />
       </Box>
