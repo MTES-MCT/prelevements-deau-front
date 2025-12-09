@@ -16,3 +16,8 @@ main {
   display: flex;
   flex-direction: column;
 }
+
+/* Fix DSFR header quick access items being cropped on mobile */
+[id^="fr-header-quick-access-item-"][id$="-mobile"] {
+  max-width: none !important;
+}
