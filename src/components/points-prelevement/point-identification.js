@@ -3,6 +3,7 @@ import Article from '@mui/icons-material/Article'
 import Launch from '@mui/icons-material/Launch'
 import {Box, Chip, Typography} from '@mui/material'
 
+import {RequireEditor} from '@/components/permissions/index.js'
 import {getTypeMilieuColor} from '@/lib/points-prelevement.js'
 import {getPointPrelevementLabel} from '@/utils/point-prelevement.js'
 
@@ -31,7 +32,7 @@ const PointIdentification = ({pointPrelevement, lienBss, lienBnpe}) => {
             )}
           </div>
         </Typography>
-        <div>
+        <RequireEditor>
           <Button
             priority='secondary'
             iconId='fr-icon-edit-line'
@@ -41,7 +42,7 @@ const PointIdentification = ({pointPrelevement, lienBss, lienBnpe}) => {
           >
             Éditer
           </Button>
-        </div>
+        </RequireEditor>
       </div>
 
       {pointPrelevement.type_milieu && (
