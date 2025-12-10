@@ -1,3 +1,5 @@
+'use client'
+
 import {fr} from '@codegouvfr/react-dsfr'
 import Button from '@codegouvfr/react-dsfr/Button'
 import Tag from '@codegouvfr/react-dsfr/Tag'
@@ -7,6 +9,7 @@ import {uniqBy} from 'lodash-es'
 import Icon from '@/components/ui/Icon/index.js'
 import MetasList from '@/components/ui/MetasList/index.js'
 import TagsList from '@/components/ui/TagsList/index.js'
+import {usePermissions} from '@/hook/use-permissions.js'
 
 const EntityHeader = ({
   title,
@@ -16,8 +19,14 @@ const EntityHeader = ({
   hrefButtons,
   children
 }) => {
+  const {canEdit} = usePermissions()
   const uniqRightBadges = uniqBy(rightBadges, 'label')
   const uniqHrefButtons = uniqBy(hrefButtons, 'label')
+
+  // Filter out buttons that require editor permission if user can't edit
+  const visibleButtons = uniqHrefButtons.filter(
+    button => !button.requireEditor || canEdit
+  )
 
   return (
     <Box className='w-fill flex flex-col gap-10 fr-mt-3w'>
@@ -40,7 +49,7 @@ const EntityHeader = ({
             <TagsList tags={tags} />
           </Box>
 
-          {(uniqRightBadges.length > 0 || uniqHrefButtons.length > 0) && (
+          {(uniqRightBadges.length > 0 || visibleButtons.length > 0) && (
             <Box className='flex items-start sm:items-center content-between sm:w-fill gap-4'>
               {uniqRightBadges.length > 0 && (
                 <Box className='flex items-center w-fit gap-1 flex-wrap'>
@@ -60,9 +69,9 @@ const EntityHeader = ({
                 </Box>
               )}
 
-              {uniqHrefButtons.length > 0 && (
+              {visibleButtons.length > 0 && (
                 <Box className='flex items-center w-fit gap-2'>
-                  {uniqHrefButtons.map(
+                  {visibleButtons.map(
                     ({label, icon, alt, priority = 'secondary', href}) => (
                       <Button
                         key={label}

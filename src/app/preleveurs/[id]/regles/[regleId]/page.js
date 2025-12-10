@@ -2,15 +2,15 @@ import {Typography} from '@mui/material'
 import nextDynamic from 'next/dynamic'
 import {notFound} from 'next/navigation'
 
-import {
-  getPreleveur,
-  getRegle,
-  getExploitationFromPreleveur,
-  getDocumentsFromPreleveur,
-  getPointPrelevement
-} from '@/app/api/points-prelevement.js'
 import RegleEditionForm from '@/components/form/regle-edition-form.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
+import {
+  getPreleveurAction,
+  getRegleAction,
+  getExploitationFromPreleveurAction,
+  getDocumentsFromPreleveurAction,
+  getPointPrelevementAction
+} from '@/server/actions/index.js'
 import {displayPreleveur} from '@/utils/preleveurs.js'
 
 const DynamicBreadcrumb = nextDynamic(
@@ -21,26 +21,32 @@ export const dynamic = 'force-dynamic'
 
 const Page = async ({params}) => {
   const {id, regleId} = await params
-  const preleveur = await getPreleveur(id)
+  const preleveurResult = await getPreleveurAction(id)
 
-  if (!preleveur) {
+  if (!preleveurResult.success || !preleveurResult.data) {
     notFound()
   }
 
-  const regle = await getRegle(regleId)
+  const preleveur = preleveurResult.data
 
-  if (!regle) {
+  const regleResult = await getRegleAction(regleId)
+
+  if (!regleResult.success || !regleResult.data) {
     notFound()
   }
 
-  const exploitations = await getExploitationFromPreleveur(id)
-  const documents = await getDocumentsFromPreleveur(id)
+  const regle = regleResult.data
+
+  const exploitationsResult = await getExploitationFromPreleveurAction(id)
+  const exploitations = exploitationsResult.data || []
+  const documentsResult = await getDocumentsFromPreleveurAction(id)
+  const documents = documentsResult.data || []
 
   // Enrich exploitations with point details for display
   const enrichedExploitations = await Promise.all(
     exploitations.map(async exploitation => {
-      const point = await getPointPrelevement(exploitation.point)
-      return {...exploitation, point}
+      const pointResult = await getPointPrelevementAction(exploitation.point)
+      return {...exploitation, point: pointResult.data}
     })
   )
 

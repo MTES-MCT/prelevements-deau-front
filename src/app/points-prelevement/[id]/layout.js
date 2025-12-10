@@ -1,18 +1,20 @@
 import Breadcrumb from '@codegouvfr/react-dsfr/Breadcrumb'
 import {notFound} from 'next/navigation'
 
-import {getPointPrelevement} from '@/app/api/points-prelevement.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getPointsPrelevementURL} from '@/lib/urls.js'
+import {getPointPrelevementAction} from '@/server/actions/points-prelevement.js'
 import {getPointPrelevementLabel} from '@/utils/point-prelevement.js'
 
 const Layout = async ({params, children}) => {
   const {id} = await params
 
-  const pointPrelevement = await getPointPrelevement(id)
-  if (!pointPrelevement) {
+  const result = await getPointPrelevementAction(id)
+  if (!result.success || !result.data) {
     notFound()
   }
+
+  const pointPrelevement = result.data
 
   const pointLabel = getPointPrelevementLabel({idPoint: pointPrelevement.id_point, pointPrelevement})
 

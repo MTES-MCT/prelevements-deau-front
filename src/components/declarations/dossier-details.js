@@ -12,8 +12,6 @@ import {flatMap, sumBy, orderBy} from 'lodash-es'
 import PrelevementsAccordion from './dossier/prelevements/prelevements-accordion.js'
 import VolumesPompes from './dossier/prelevements/volumes-pompes.js'
 
-import {getFileBlob} from '@/app/api/dossiers.js'
-import {getPointPrelevement} from '@/app/api/points-prelevement.js'
 import DeclarantDetails from '@/components/declarations/dossier/declarant-details.js'
 import DemandeurDetails from '@/components/declarations/dossier/demandeur-details.js'
 import DossierInfos from '@/components/declarations/dossier/infos.js'
@@ -24,6 +22,7 @@ import FileValidationResult from '@/components/declarations/validateur/file-vali
 import SectionCard from '@/components/ui/SectionCard/index.js'
 import {getFileNameFromStorageKey} from '@/lib/dossier.js'
 import {computePointsStatus} from '@/lib/points-prelevement.js'
+import {getFileBlobAction, getPointPrelevementAction} from '@/server/actions/index.js'
 import {formatNumber} from '@/utils/number.js'
 import {getPointPrelevementName} from '@/utils/point-prelevement.js'
 
@@ -61,9 +60,10 @@ const DossierDetails = ({dossier, preleveur, files = [], idPoints}) => {
   // Récupération des points de prélèvement
   useEffect(() => {
     const fetchPointsPrelevement = async () => {
-      const points = await Promise.all(idPoints.map(idPoint => getPointPrelevement(idPoint)))
+      const results = await Promise.all(idPoints.map(idPoint => getPointPrelevementAction(idPoint)))
+      const points = results.map(r => r.data).filter(Boolean)
       const sortedPoints = orderBy(
-        points.filter(Boolean), // Filtre 404 not found
+        points, // Filtre 404 not found
         point => String(getPointPrelevementName(point)).toLowerCase(),
         'asc'
       )
@@ -78,7 +78,8 @@ const DossierDetails = ({dossier, preleveur, files = [], idPoints}) => {
     const [, ...filenameParts] = storageKey.split('-')
     const filename = filenameParts.join('-')
     try {
-      const file = await getFileBlob(dossier._id, attachmentId)
+      const result = await getFileBlobAction(dossier._id, attachmentId)
+      const file = result.data
       const url = URL.createObjectURL(file)
       const a = document.createElement('a')
       a.href = url

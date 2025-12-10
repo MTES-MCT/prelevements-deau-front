@@ -1,24 +1,28 @@
 import {notFound} from 'next/navigation'
 
-import {getExploitationsByPointId, getPointPrelevement} from '@/app/api/points-prelevement.js'
-import {getAggregatedSeriesOptions} from '@/app/api/series.js'
 import ExploitationsList from '@/components/exploitations/exploitations-list.js'
 import PointIdentification from '@/components/points-prelevement/point-identification.js'
 import PointLocalisation from '@/components/points-prelevement/point-localisation.js'
 import SeriesExplorer from '@/components/points-prelevement/series-explorer.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getNewExploitationURL} from '@/lib/urls.js'
+import {getPointPrelevementAction, getExploitationsByPointIdAction} from '@/server/actions/points-prelevement.js'
+import {getAggregatedSeriesOptionsAction} from '@/server/actions/series.js'
 
 const Page = async ({params}) => {
   const {id} = (await params)
 
-  const pointPrelevement = await getPointPrelevement(id)
-  if (!pointPrelevement) {
+  const pointResult = await getPointPrelevementAction(id)
+  if (!pointResult.success || !pointResult.data) {
     notFound()
   }
 
-  const seriesOptions = await getAggregatedSeriesOptions({pointIds: [pointPrelevement._id]})
-  const exploitations = await getExploitationsByPointId(id)
+  const pointPrelevement = pointResult.data
+
+  const seriesResult = await getAggregatedSeriesOptionsAction({pointIds: [pointPrelevement._id]})
+  const seriesOptions = seriesResult.data
+  const exploitationsResult = await getExploitationsByPointIdAction(id)
+  const exploitations = exploitationsResult.data || []
 
   return (
     <>
