@@ -4,19 +4,27 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL
 const FRONTEND_DOMAIN = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://prelevements-deau.beta.gouv.fr'
 
 /**
- * Validate that a redirect URL is safe (only allow our own domain paths).
+ * Validate that a redirect URL is safe.
+ * Only allows redirects to known domains (frontend or backend) with specific auth paths.
  */
 function isValidRedirectUrl(url) {
   try {
     const parsed = new URL(url)
     const frontendUrl = new URL(FRONTEND_DOMAIN)
+    const backendUrl = new URL(API_URL)
 
-    // Only allow redirects to our own domain
-    if (parsed.hostname !== frontendUrl.hostname) {
+    // Allow redirects to frontend domain or backend domain (for local dev)
+    const allowedHostnames = [frontendUrl.hostname, backendUrl.hostname]
+    if (!allowedHostnames.includes(parsed.hostname)) {
       return false
     }
 
-    // Only allow specific auth paths
+    // Allow root path with token param (backend redirects to /?token=...)
+    if (parsed.pathname === '/' && parsed.searchParams.has('token')) {
+      return true
+    }
+
+    // Allow specific auth paths
     const allowedPaths = ['/auth/callback', '/auth/error']
     return allowedPaths.some(path => parsed.pathname.startsWith(path))
   } catch {
@@ -31,11 +39,8 @@ function isValidRedirectUrl(url) {
  *   /api/auth/verify/{token}?territoire={territoire}
  *
  * This route proxies the request to the backend, which will:
- * - On success: redirect to /auth/callback?token={sessionToken}
+ * - On success: redirect to /?token={sessionToken}
  * - On error: redirect to /auth/error?reason={errorCode}
- *
- * Since the backend does redirect-based auth (302 redirects), we follow
- * the redirect to get the final destination URL, then redirect the client there.
  */
 export async function GET(request, {params}) {
   const {token} = await params
@@ -50,10 +55,9 @@ export async function GET(request, {params}) {
 
   try {
     // Make request to backend WITHOUT following redirects
-    // This lets us capture the redirect URL and forward it to the client
     const response = await fetch(verifyUrl.toString(), {
       method: 'GET',
-      redirect: 'manual', // Don't follow redirects automatically
+      redirect: 'manual',
       headers: {
         Accept: 'application/json, text/html'
       }
@@ -64,12 +68,11 @@ export async function GET(request, {params}) {
       const location = response.headers.get('location')
 
       if (location && isValidRedirectUrl(location)) {
-        // The backend redirects to absolute URLs on the frontend domain
         return NextResponse.redirect(location)
       }
     }
 
-    // Fallback: redirect to error page if backend doesn't redirect or URL is invalid
+    // Fallback: redirect to error page
     const errorUrl = new URL('/auth/error', request.url)
     errorUrl.searchParams.set('reason', 'server_error')
     return NextResponse.redirect(errorUrl)
