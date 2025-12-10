@@ -1,5 +1,6 @@
 /**
- * Client-side authentication utilities using localStorage
+ * Client-side authentication utilities for NextAuth using HTTP-only cookies.
+ * (Note: localStorage usage is deprecated and will be removed in future versions.)
  */
 
 const TOKEN_KEY = 'auth_token'
