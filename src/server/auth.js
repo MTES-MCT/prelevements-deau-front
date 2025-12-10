@@ -62,6 +62,7 @@ export async function getAuthOptions() {
     || credentialsModule
 
   cachedAuthOptions = {
+    secret: process.env.NEXTAUTH_SECRET,
     session: {
       strategy: 'jwt'
     },
