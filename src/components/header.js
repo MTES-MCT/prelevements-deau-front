@@ -10,7 +10,7 @@ import {useAuth} from '@/contexts/auth-context.js'
 
 const ROLE_LABELS = {
   editor: 'Administrateur',
-  reader: 'Inspecteur'
+  reader: 'Instructeur'
 }
 
 const ROLE_COLORS = {
