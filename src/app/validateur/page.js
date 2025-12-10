@@ -5,10 +5,10 @@ import {useCallback, useRef, useState} from 'react'
 import {extractMultiParamFile, extractCamionCiterne} from '@fabnum/prelevements-deau-timeseries-parsers'
 import {Divider} from '@mui/material'
 
-import {getPointPrelevement} from '@/app/api/points-prelevement.js'
 import FileValidationResult from '@/components/declarations/validateur/file-validation-result.js'
 import ValidateurForm from '@/components/declarations/validateur/form.js'
 import {createLocalSeriesRegistry} from '@/lib/local-series-registry.js'
+import {getPointPrelevementAction} from '@/server/actions/index.js'
 import {coerceNumericValue} from '@/utils/number.js'
 import {normalizePointId} from '@/utils/point-prelevement.js'
 import {normalizeString} from '@/utils/string.js'
@@ -327,15 +327,16 @@ const ValidateurPage = () => {
 
       const uniquePointIds = conversion.pointIds
       if (uniquePointIds.length > 0) {
-        const fetchedPoints = await Promise.all(uniquePointIds.map(async id => {
+        const fetchedResults = await Promise.all(uniquePointIds.map(async id => {
           try {
-            return await getPointPrelevement(id)
+            const result = await getPointPrelevementAction(id)
+            return result.data
           } catch {
             return null
           }
         }))
 
-        setPointsPrelevement(fetchedPoints.filter(Boolean))
+        setPointsPrelevement(fetchedResults.filter(Boolean))
       } else {
         setPointsPrelevement([])
       }

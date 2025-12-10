@@ -13,10 +13,10 @@ import {
 } from '@mui/material'
 import {useRouter} from 'next/navigation'
 
-import {updateRegle, deleteRegle} from '@/app/api/points-prelevement.js'
 import RegleForm from '@/components/form/regle-form.js'
 import FormErrors from '@/components/ui/FormErrors/index.js'
 import useFormSubmit from '@/hook/use-form-submit.js'
+import {updateRegleAction, deleteRegleAction} from '@/server/actions/index.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
 /**
@@ -39,7 +39,7 @@ const transformRegleForForm = regle => ({
 
 const RegleEditionForm = ({preleveur, regle, exploitations, documents}) => {
   const router = useRouter()
-  const {isSubmitting, error, validationErrors, resetErrors, withSubmit, handleResponse, setError} = useFormSubmit()
+  const {isSubmitting, error, validationErrors, resetErrors, withSubmit, setError} = useFormSubmit()
 
   const [formData, setFormData] = useState(transformRegleForForm(regle))
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -62,7 +62,12 @@ const RegleEditionForm = ({preleveur, regle, exploitations, documents}) => {
         ...formData,
         valeur: Number(formData.valeur)
       })
-      return updateRegle(regle._id, payload)
+      const response = await updateRegleAction(regle._id, payload)
+      if (!response.success) {
+        throw response
+      }
+
+      return response.data
     },
     {
       successIndicator: '_id',
@@ -75,13 +80,12 @@ const RegleEditionForm = ({preleveur, regle, exploitations, documents}) => {
     setIsDeleting(true)
 
     try {
-      const response = await deleteRegle(regle._id)
-      const success = await handleResponse(response, {
-        successIndicator: null,
-        onSuccess: () => router.push(`/preleveurs/${preleveur.id_preleveur}`)
-      })
+      const response = await deleteRegleAction(regle._id)
 
-      if (!success) {
+      if (response.success) {
+        router.push(`/preleveurs/${preleveur.id_preleveur}`)
+      } else {
+        setError(response.error)
         setIsDialogOpen(false)
       }
     } catch (error_) {

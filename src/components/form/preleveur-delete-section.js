@@ -12,7 +12,7 @@ import {
 } from '@mui/material'
 import {useRouter} from 'next/navigation'
 
-import {deletePreleveur} from '@/app/api/points-prelevement.js'
+import {deletePreleveurAction} from '@/server/actions/index.js'
 
 const PreleveurDeleteSection = ({preleveur}) => {
   const router = useRouter()
@@ -24,11 +24,11 @@ const PreleveurDeleteSection = ({preleveur}) => {
     setError(null)
 
     try {
-      const response = await deletePreleveur(preleveur._id)
+      const response = await deletePreleveurAction(preleveur._id)
 
-      if (response.code) {
+      if (!response.success) {
         setIsDialogOpen(false)
-        setError(response.message)
+        setError(response.error)
         return
       }
 

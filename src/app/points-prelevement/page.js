@@ -15,7 +15,6 @@ import {
 import {deburr} from 'lodash-es'
 import {useRouter, useSearchParams} from 'next/navigation'
 
-import {getPointsPrelevement} from '@/app/api/points-prelevement.js'
 import SidePanelLayout from '@/components/layout/side-panel.js'
 import Map from '@/components/map/index.js'
 import Legend from '@/components/map/legend.js'
@@ -32,6 +31,7 @@ import {
   extractCommunes
 } from '@/lib/points-prelevement.js'
 import {getPointPrelevementURL} from '@/lib/urls.js'
+import {getPointsPrelevementAction} from '@/server/actions/points-prelevement.js'
 
 const Page = () => {
   const theme = useTheme()
@@ -58,8 +58,10 @@ const Page = () => {
   useEffect(() => {
     async function fetchPoints() {
       try {
-        const points = await getPointsPrelevement()
-        setPoints(points)
+        const result = await getPointsPrelevementAction()
+        if (result.success) {
+          setPoints(result.data)
+        }
       } catch (error) {
         console.error('Erreur lors du chargement des points:', error)
       } finally {

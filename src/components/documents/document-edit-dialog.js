@@ -11,10 +11,10 @@ import {
   DialogTitle
 } from '@mui/material'
 
-import {updateDocument, updateExploitation} from '@/app/api/points-prelevement.js'
 import DocumentForm from '@/components/form/document-form.js'
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import {formatFullDateFr} from '@/lib/format-date.js'
+import {updateDocumentAction, updateExploitationAction} from '@/server/actions/index.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
 // Build a map from exploitation ID to display label (point name only)
@@ -133,19 +133,19 @@ const DocumentEditDialog = ({
       // Update document metadata if changed
       if (Object.keys(payload).length > 0) {
         const cleanedPayload = emptyStringToNull(payload)
-        const response = await updateDocument(document._id, cleanedPayload)
+        const response = await updateDocumentAction(document._id, cleanedPayload)
 
-        if (response.code === 400) {
+        if (!response.success) {
           if (response.validationErrors) {
             setValidationErrors(response.validationErrors)
           } else {
-            setError(response.message)
+            setError(response.error)
           }
 
           return
         }
 
-        updatedDocument = response
+        updatedDocument = response.data
         onDocumentUpdated(updatedDocument)
       }
 
@@ -163,7 +163,7 @@ const DocumentEditDialog = ({
         const currentDocIds = exploitation.documents?.map(d => d._id || d) || []
         const updatedDocIds = [...currentDocIds, document._id]
 
-        return updateExploitation(exploitationId, {documents: updatedDocIds})
+        return updateExploitationAction(exploitationId, {documents: updatedDocIds})
       })
 
       // Remove document from unselected exploitations
@@ -173,7 +173,7 @@ const DocumentEditDialog = ({
           ?.map(d => d._id || d)
           .filter(id => id !== document._id) || []
 
-        return updateExploitation(exploitationId, {documents: updatedDocIds})
+        return updateExploitationAction(exploitationId, {documents: updatedDocIds})
       })
 
       await Promise.all([...addPromises, ...removePromises])

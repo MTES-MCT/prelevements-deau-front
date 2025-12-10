@@ -13,8 +13,8 @@ import {useRouter} from 'next/navigation'
 import PreleveurMoralForm from './preleveur-moral-form.js'
 import PreleveurPhysiqueForm from './preleveur-physique-form.js'
 
-import {createPreleveur, updatePreleveur} from '@/app/api/points-prelevement.js'
 import {isPreleveurPhysique as checkIsPreleveurPhysique, PRELEVEUR_TYPE_ICONS} from '@/lib/preleveurs.js'
+import {createPreleveurAction, updatePreleveurAction} from '@/server/actions/index.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
 // Fields common to both preleveur types
@@ -102,19 +102,17 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
       let response
 
       if (isEditing) {
-        response = await updatePreleveur(initialPreleveur._id, cleanedPreleveur)
+        response = await updatePreleveurAction(initialPreleveur._id, cleanedPreleveur)
       } else {
-        response = await createPreleveur(cleanedPreleveur)
+        response = await createPreleveurAction(cleanedPreleveur)
       }
 
-      if (response.code === 400) {
-        if (response.validationErrors) {
-          setValidationErrors(response.validationErrors)
-        } else {
-          setError(response.message)
-        }
+      if (response.success) {
+        router.push(`/preleveurs/${response.data.id_preleveur}`)
+      } else if (response.validationErrors) {
+        setValidationErrors(response.validationErrors)
       } else {
-        router.push(`/preleveurs/${response.id_preleveur}`)
+        setError(response.error)
       }
     } catch (error) {
       setError(error.message)
