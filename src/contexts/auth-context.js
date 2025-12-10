@@ -36,7 +36,7 @@ const AuthContext = createContext({
 async function fetchUserInfo(authToken) {
   const response = await fetch(`${API_URL}/info`, {
     headers: {
-      Authorization: `Token ${authToken}`
+      Authorization: `Bearer ${authToken}`
     }
   })
 
@@ -117,7 +117,7 @@ export const AuthProvider = ({children}) => {
         await fetch(`${API_URL}/auth/logout`, {
           method: 'POST',
           headers: {
-            Authorization: `Token ${currentToken}`
+            Authorization: `Bearer ${currentToken}`
           }
         })
       } catch (error) {

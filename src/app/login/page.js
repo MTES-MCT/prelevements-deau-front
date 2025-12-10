@@ -82,7 +82,7 @@ const LoginPage = ({searchParams}) => {
             <Box className='flex flex-col items-center gap-4'>
               <Pictogram pictogram={SelfTraining} />
               <Typography variant='h4' component='h2' sx={{fontWeight: 500}}>
-                {'Connexion à l\'espace instructeur'}
+                Connexion à l&apos;espace instructeur
               </Typography>
             </Box>
             <div className='flex flex-1 flex-col justify-center p-6'>
