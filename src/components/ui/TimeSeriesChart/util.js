@@ -318,7 +318,8 @@ export const processInputSeries = (inputSeries, options = {}) => {
     label: inputSeries.label,
     color: inputSeries.color,
     threshold: thresholdConfig,
-    chartType
+    chartType,
+    precision: inputSeries.precision ?? 0
   }
 }
 
@@ -489,12 +490,14 @@ export const buildDynamicThresholdSeries = (alignedData, theme) => {
  * Split series data into segments based on threshold classification
  */
 export const buildSegments = (alignedData, xValues, options) => {
-  const {numberFormatter, exposeAllMarks, theme} = options
+  const {locale, exposeAllMarks, theme} = options
   const segmentSeries = []
   const segmentToOriginal = new Map()
 
   for (const data of alignedData) {
     const {values, thresholds, pointsWithMeta} = data
+    // Create per-series formatter with appropriate precision
+    const seriesFormatter = getNumberFormatterWithPrecision(locale, data.precision ?? 0)
     let currentSegment = null
     const segments = []
     let previousSegmentLastIndex = null
@@ -577,7 +580,7 @@ export const buildSegments = (alignedData, xValues, options) => {
             return null
           }
 
-          return numberFormatter.format(value)
+          return seriesFormatter.format(value)
         }
       })
       segmentToOriginal.set(segmentId, data.id)
@@ -615,12 +618,14 @@ export const buildSegments = (alignedData, xValues, options) => {
  * Build simplified series when thresholds are disabled.
  */
 export const buildPlainSeries = (alignedData, options) => {
-  const {numberFormatter, exposeAllMarks} = options
+  const {locale, exposeAllMarks} = options
   const plainSeries = []
   const plainToOriginal = new Map()
 
   for (const data of alignedData) {
     const seriesId = `${data.id}__plain`
+    // Create per-series formatter with appropriate precision
+    const seriesFormatter = getNumberFormatterWithPrecision(locale, data.precision ?? 0)
 
     plainSeries.push({
       id: seriesId,
@@ -648,7 +653,7 @@ export const buildPlainSeries = (alignedData, options) => {
           return null
         }
 
-        return numberFormatter.format(value)
+        return seriesFormatter.format(value)
       }
     })
 
@@ -1032,7 +1037,7 @@ export const buildSeriesModel = ({
   let segmentToOriginal
   if (enableThresholds) {
     const segments = buildSegments(alignedData, xValues, {
-      numberFormatter,
+      locale,
       exposeAllMarks,
       theme
     })
@@ -1040,7 +1045,7 @@ export const buildSeriesModel = ({
     segmentToOriginal = segments.segmentToOriginal
   } else {
     const plain = buildPlainSeries(alignedData, {
-      numberFormatter,
+      locale,
       exposeAllMarks
     })
     segmentSeries = plain.plainSeries
