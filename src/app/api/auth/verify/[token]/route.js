@@ -73,12 +73,12 @@ export async function GET(request, {params}) {
     }
 
     // Fallback: redirect to error page
-    const errorUrl = new URL('/auth/error', request.url)
+    const errorUrl = new URL('/auth/error', FRONTEND_DOMAIN)
     errorUrl.searchParams.set('reason', 'server_error')
     return NextResponse.redirect(errorUrl)
   } catch (error) {
     console.error('[Magic Link] Verification error:', error)
-    const errorUrl = new URL('/auth/error', request.url)
+    const errorUrl = new URL('/auth/error', FRONTEND_DOMAIN)
     errorUrl.searchParams.set('reason', 'server_error')
     return NextResponse.redirect(errorUrl)
   }
