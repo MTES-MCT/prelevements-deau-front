@@ -476,7 +476,8 @@ const AggregatedSeriesExplorer = ({
         valueType: resolvedMetaValueType
           ?? resolvedOptionValueType
           ?? resolvedMetadataValueType
-          ?? null
+          ?? null,
+        precision: metadata?.precision ?? 0
       })
     }
 
