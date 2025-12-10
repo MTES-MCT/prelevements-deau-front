@@ -33,6 +33,17 @@ export const getNumberFormatter = locale => new Intl.NumberFormat(locale, {
   maximumFractionDigits: 2
 })
 
+/**
+ * Returns a number formatter with specific precision (decimal places).
+ * @param {string} locale - Locale string
+ * @param {number} precision - Number of decimal places (default: 0 for integers)
+ * @returns {Intl.NumberFormat}
+ */
+export const getNumberFormatterWithPrecision = (locale, precision = 0) => new Intl.NumberFormat(locale, {
+  minimumFractionDigits: precision,
+  maximumFractionDigits: precision
+})
+
 export const getDateFormatter = locale => new Intl.DateTimeFormat(locale, {
   hour12: false,
   year: 'numeric',
