@@ -2,7 +2,7 @@ import {format, isValid} from 'date-fns'
 import {fr} from 'date-fns/locale'
 import {flatMap} from 'lodash-es'
 
-import {getFileAction, getFileSeriesAction, getFileIntegrationsAction} from '@/server/actions/index.js'
+import {getFile, getFileSeries, getFileIntegrations} from '@/app/api/dossiers.js'
 
 export const validationStatus = {
   success: 'Succès',
@@ -92,19 +92,18 @@ export async function getDossierFiles(dossier) {
   }
 
   const enriched = await Promise.all(dossier.files.map(async file => {
-    const [detailsResult, seriesResult, integrationsResult] = await Promise.all([
-      getFileAction(dossier._id, file._id),
-      getFileSeriesAction(dossier._id, file._id, {withPoint: true}),
-      getFileIntegrationsAction(dossier._id, file._id, {withPoint: true})
+    const [details, seriesPayload, integrationsPayload] = await Promise.all([
+      getFile(dossier._id, file._id),
+      getFileSeries(dossier._id, file._id, {withPoint: true}),
+      getFileIntegrations(dossier._id, file._id, {withPoint: true})
     ])
 
-    if (!detailsResult.success || !detailsResult.data) {
+    if (!details) {
       return null
     }
 
-    const details = detailsResult.data
-    const series = seriesResult.data?.series ?? []
-    const integrations = integrationsResult.data?.integrations ?? []
+    const series = seriesPayload?.series ?? []
+    const integrations = integrationsPayload?.integrations ?? []
 
     return {
       ...details,

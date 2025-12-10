@@ -4,7 +4,6 @@ import Tooltip from '@codegouvfr/react-dsfr/Tooltip'
 import {Article} from '@mui/icons-material'
 import {Box, Typography} from '@mui/material'
 
-import {RequireEditor} from '@/components/permissions/index.js'
 import formatDate from '@/lib/format-date.js'
 
 // Format exploitations count for display
@@ -74,25 +73,23 @@ const Document = ({document, exploitations = [], handleDelete, handleEdit, ...pr
         }}
       >
         <Box>
-          <RequireEditor>
-            {handleEdit && (
-              <Button
-                iconId='fr-icon-edit-line'
-                priority='tertiary no outline'
-                size='small'
-                onClick={() => handleEdit(document._id)}
-              />
-            )}
-            {handleDelete && (
-              <Button
-                iconId='fr-icon-delete-line'
-                priority='tertiary no outline'
-                size='small'
-                style={{color: fr.colors.decisions.text.active.redMarianne.default}}
-                onClick={() => handleDelete(document._id)}
-              />
-            )}
-          </RequireEditor>
+          {handleEdit && (
+            <Button
+              iconId='fr-icon-edit-line'
+              priority='tertiary no outline'
+              size='small'
+              onClick={() => handleEdit(document._id)}
+            />
+          )}
+          {handleDelete && (
+            <Button
+              iconId='fr-icon-delete-line'
+              priority='tertiary no outline'
+              size='small'
+              style={{color: fr.colors.decisions.text.active.redMarianne.default}}
+              onClick={() => handleDelete(document._id)}
+            />
+          )}
           {document.downloadUrl && (
             <Button
               iconId='fr-icon-external-link-line'

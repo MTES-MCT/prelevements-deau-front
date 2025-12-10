@@ -1,29 +1,29 @@
 import {Box, Typography} from '@mui/material'
 import Image from 'next/image'
 import Link from 'next/link'
+import {getServerSession} from 'next-auth'
 
-import TokenRedirectHandler from '@/components/token-redirect-handler.js'
+import {getStats} from '@/app/api/points-prelevement.js'
 import Counter from '@/components/ui/Counter/index.js'
 import Pie from '@/components/ui/Pie/index.js'
 import SidedSection from '@/components/ui/SidedSection/index.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getPointsPrelevementURL} from '@/lib/urls.js'
-import {getStatsAction} from '@/server/actions/stats.js'
+import {authOptions} from '@/server/auth.js'
 
 const Home = async () => {
-  // Stats are shown globally without territory filter on the public homepage
-  const result = await getStatsAction()
+  const session = await getServerSession(authOptions)
+  const {territoire} = session?.user || {}
   const {
     activPointsPrelevementCount,
     activPointsSurfaceCount,
     activPointsSouterrainCount,
     activPreleveursCount
-  } = result.data || {}
+  } = await getStats(territoire)
 
   return (
     <>
       <StartDsfrOnHydration />
-      <TokenRedirectHandler />
 
       <SidedSection
         background='secondary'

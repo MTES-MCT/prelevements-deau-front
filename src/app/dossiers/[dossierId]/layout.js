@@ -1,17 +1,15 @@
 import {notFound} from 'next/navigation'
 
+import {getDossier} from '@/app/api/dossiers.js'
 import DossiersBreadcrumb from '@/components/declarations/dossier/dossiers-breadcrumb.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {getDossierAction} from '@/server/actions/index.js'
 
 const DossierPage = async ({params, children}) => {
   const {dossierId} = await params
-  const result = await getDossierAction(dossierId)
-  if (!result.success || !result.data) {
+  const dossier = await getDossier(dossierId)
+  if (!dossier) {
     notFound()
   }
-
-  const dossier = result.data
 
   return (
     <>

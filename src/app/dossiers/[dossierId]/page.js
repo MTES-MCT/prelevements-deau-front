@@ -1,21 +1,21 @@
 import {notFound} from 'next/navigation'
 
+import {getDossier} from '@/app/api/dossiers.js'
+import {getPreleveur} from '@/app/api/points-prelevement.js'
 import DossierHeader from '@/components/declarations/dossier/dossier-header.js'
 import DossierDetails from '@/components/declarations/dossier-details.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getDossierFiles, getPointsPrelementIdFromDossier, getDossierPeriodLabel} from '@/lib/dossier.js'
 import {getDossierDSURL} from '@/lib/urls.js'
-import {getDossierAction, getPreleveurAction} from '@/server/actions/index.js'
 
 const DossierPage = async ({params}) => {
   const {dossierId} = await params
 
-  const dossierResult = await getDossierAction(dossierId)
-  if (!dossierResult.success || !dossierResult.data) {
+  const dossier = await getDossier(dossierId)
+  if (!dossier) {
     notFound()
   }
 
-  const dossier = dossierResult.data
   const files = await getDossierFiles(dossier)
   const idPoints = getPointsPrelementIdFromDossier(dossier, files)
   const periodLabel = getDossierPeriodLabel(dossier)
@@ -23,8 +23,7 @@ const DossierPage = async ({params}) => {
   let preleveur = dossier?.demandeur
   if (dossier?.result?.preleveur) {
     try {
-      const preleveurResult = await getPreleveurAction(dossier.result.preleveur)
-      preleveur = preleveurResult.data
+      preleveur = await getPreleveur(dossier.result.preleveur)
     } catch {}
   }
 

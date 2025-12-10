@@ -6,10 +6,10 @@ import {useState} from 'react'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {useRouter} from 'next/navigation'
 
+import {createRegle} from '@/app/api/points-prelevement.js'
 import RegleForm from '@/components/form/regle-form.js'
 import FormErrors from '@/components/ui/FormErrors/index.js'
 import useFormSubmit from '@/hook/use-form-submit.js'
-import {createRegleAction} from '@/server/actions/index.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
 const emptyRegle = {
@@ -49,12 +49,7 @@ const RegleCreationForm = ({preleveur, exploitations, documents}) => {
         ...regle,
         valeur: Number(regle.valeur)
       })
-      const response = await createRegleAction(preleveur._id, payload)
-      if (!response.success) {
-        throw response
-      }
-
-      return response.data
+      return createRegle(preleveur._id, payload)
     },
     {
       successIndicator: '_id',

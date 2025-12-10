@@ -9,6 +9,7 @@ import {Button} from '@codegouvfr/react-dsfr/Button'
 import {format} from 'date-fns'
 import {useRouter} from 'next/navigation'
 
+import {createDocument, updateExploitation} from '@/app/api/points-prelevement.js'
 import DocumentForm from '@/components/form/document-form.js'
 import DividerSection from '@/components/ui/DividerSection/index.js'
 import FileDropzone from '@/components/ui/FileDropzone/index.js'
@@ -17,7 +18,6 @@ import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import SimpleLoading from '@/components/ui/SimpleLoading/index.js'
 import useFormSubmit from '@/hook/use-form-submit.js'
 import {formatFullDateFr} from '@/lib/format-date.js'
-import {createDocumentAction, updateExploitationAction} from '@/server/actions/index.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
 // Build a map from exploitation ID to display label (point name only)
@@ -109,16 +109,10 @@ const DocumentUploadForm = ({preleveur, exploitations = []}) => {
   const handleDocument = withSubmit(
     async () => {
       const cleanedDocument = emptyStringToNull(document)
-      const response = await createDocumentAction(preleveur._id, cleanedDocument, filesList[0])
-
-      if (!response.success) {
-        throw response
-      }
-
-      const createdDoc = response.data
+      const response = await createDocument(preleveur._id, cleanedDocument, filesList[0])
 
       // If document created successfully and exploitations selected, assign them
-      if (createdDoc._id && selectedExploitations.length > 0) {
+      if (response._id && selectedExploitations.length > 0) {
         const assignmentPromises = selectedExploitations.map(async exploitationId => {
           const exploitation = exploitations.find(e => e._id === exploitationId)
 
@@ -127,14 +121,14 @@ const DocumentUploadForm = ({preleveur, exploitations = []}) => {
           }
 
           const currentDocIds = exploitation.documents?.map(d => d._id || d) || []
-          const updatedDocIds = [...currentDocIds, createdDoc._id]
+          const updatedDocIds = [...currentDocIds, response._id]
 
-          const updateResponse = await updateExploitationAction(exploitationId, {
+          const updateResponse = await updateExploitation(exploitationId, {
             documents: updatedDocIds
           })
 
-          if (!updateResponse.success) {
-            throw new Error(`Échec de l'assignation à ${exploitationLabelsById[exploitationId]}: ${updateResponse.error || 'erreur inconnue'}`)
+          if (updateResponse.code === 400) {
+            throw new Error(`Échec de l'assignation à ${exploitationLabelsById[exploitationId]}: ${updateResponse.message || 'erreur inconnue'}`)
           }
 
           return exploitationId
@@ -152,7 +146,7 @@ const DocumentUploadForm = ({preleveur, exploitations = []}) => {
         }
       }
 
-      return createdDoc
+      return response
     },
     {
       successIndicator: '_id',

@@ -1,22 +1,12 @@
 'use client'
 
-import {useCallback, useMemo} from 'react'
+import {useMemo} from 'react'
 
 import {Header as DSFRHeader} from '@codegouvfr/react-dsfr/Header'
-import {Chip} from '@mui/material'
-import {usePathname, useRouter} from 'next/navigation'
+import {usePathname} from 'next/navigation'
+import {useSession} from 'next-auth/react'
 
-import {useAuth} from '@/contexts/auth-context.js'
-
-const ROLE_LABELS = {
-  editor: 'Administrateur',
-  reader: 'Inspecteur'
-}
-
-const ROLE_COLORS = {
-  editor: 'var(--artwork-decorative-blue-france)',
-  reader: 'var(--artwork-decorative-purple-glycine)'
-}
+import LoginHeaderItem from '@/components/ui/LoginHeaderItem/index.js'
 
 const defaultNavigation = [
   {
@@ -84,14 +74,11 @@ const adminNavigation = [
 ]
 
 const HeaderComponent = () => {
-  const {user, logout, isLoading: isLoadingUser} = useAuth()
-  const router = useRouter()
-  const pathname = usePathname()
+  const {data: session, status} = useSession()
+  const user = session?.user
+  const isLoadingUser = status === 'loading'
 
-  const handleLogout = useCallback(async () => {
-    await logout()
-    router.push('/login')
-  }, [logout, router])
+  const pathname = usePathname()
 
   const navigation = useMemo(() => {
     if (isLoadingUser) {
@@ -117,81 +104,17 @@ const HeaderComponent = () => {
     }))
   }, [user, isLoadingUser, pathname])
 
-  const quickAccessItems = useMemo(() => {
-    if (isLoadingUser) {
-      return []
-    }
-
-    if (!user) {
-      return [
-        {
-          iconId: 'ri-account-circle-line',
-          text: 'Se connecter',
-          linkProps: {
-            href: '/login'
-          }
-        }
-      ]
-    }
-
-    const items = []
-
-    // User name with role badge (non-interactive element)
-    const userName = `${user.prenom || ''} ${user.nom || ''}`.trim()
-    const roleLabel = user.role ? ROLE_LABELS[user.role] : null
-    const roleColor = user.role ? ROLE_COLORS[user.role] : null
-
-    if (userName) {
-      items.push(
-        <span key='user' className='fr-btn ri-account-circle-fill flex items-center gap-2' style={{cursor: 'default', pointerEvents: 'none'}}>
-          {userName}
-          {roleLabel && (
-            <Chip
-              label={roleLabel}
-              size='small'
-              sx={{
-                backgroundColor: roleColor,
-                color: 'var(--text-default-grey)',
-                height: '20px',
-                fontSize: '0.75rem'
-              }}
-            />
-          )}
-        </span>
-      )
-    }
-
-    // Territory information (non-interactive element)
-    if (user.territoire?.nom) {
-      items.push(
-        <span key='territoire' className='fr-btn fr-icon-map-pin-2-line' style={{cursor: 'default', pointerEvents: 'none'}}>
-          {user.territoire.nom}
-        </span>
-      )
-    }
-
-    // Logout button
-    items.push({
-      iconId: 'ri-logout-box-r-line',
-      text: 'Se déconnecter',
-      buttonProps: {
-        onClick: handleLogout
-      }
-    })
-
-    return items
-  }, [user, isLoadingUser, handleLogout])
-
   return (
     <DSFRHeader
       brandTop={<>Préfet<br />de la Réunion</>}
       serviceTitle='Suivi des prélèvements d’eau'
       homeLinkProps={{
         href: '/',
-        // eslint-disable-next-line quotes
-        title: "Accueil - Suivi des prélèvements d’eau"
+        title: 'Accueil - Suivi des prélèvements d’eau'
       }}
-      quickAccessItems={quickAccessItems}
+      quickAccessItems={isLoadingUser ? [] : [
+        <LoginHeaderItem key='login' user={user} />
+      ]}
       navigation={navigation}
     />
   )

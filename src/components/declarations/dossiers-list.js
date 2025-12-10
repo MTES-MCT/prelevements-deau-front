@@ -4,11 +4,11 @@ import {useEffect, useMemo, useState} from 'react'
 
 import {deburr, toLower} from 'lodash-es'
 
+import {getDossiersByStatus} from '@/app/api/dossiers.js'
 import DossierCard from '@/components/declarations/dossier/dossier-card.js'
 import SimpleLoading from '@/components/ui/SimpleLoading/index.js'
 import {getDossierPeriod, getDossierPeriodLabel} from '@/lib/dossier.js'
 import {getDossierURL} from '@/lib/urls.js'
-import {getDossiersByStatusAction} from '@/server/actions/dossiers.js'
 
 const DossiersList = ({status, filters, onAvailablePeriodsChange}) => {
   const [mounted, setMounted] = useState(false)
@@ -20,10 +20,8 @@ const DossiersList = ({status, filters, onAvailablePeriodsChange}) => {
     async function fetchDossiers() {
       setIsLoading(true)
 
-      const result = await getDossiersByStatusAction(status)
-      if (result.success) {
-        setDossiers(result.data)
-      }
+      const dossiers = await getDossiersByStatus(status)
+      setDossiers(dossiers)
 
       setIsLoading(false)
     }
