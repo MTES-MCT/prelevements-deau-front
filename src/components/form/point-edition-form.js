@@ -12,9 +12,9 @@ import {
 } from '@mui/material'
 import {useRouter} from 'next/navigation'
 
-import {editPointPrelevement, deletePointPrelevement} from '@/app/api/points-prelevement.js'
 import PointForm from '@/components/form/point-form.js'
 import {getCommuneFromCoords} from '@/lib/communes.js'
+import {editPointPrelevementAction, deletePointPrelevementAction} from '@/server/actions/index.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
 const PointEditionForm = ({
@@ -43,16 +43,14 @@ const PointEditionForm = ({
 
     try {
       const cleanedPayload = emptyStringToNull(payload)
-      const response = await editPointPrelevement(point._id, cleanedPayload)
+      const response = await editPointPrelevementAction(point._id, cleanedPayload)
 
-      if (response.code === 400) {
-        if (response.validationErrors) {
-          setValidationErrors(response.validationErrors)
-        } else {
-          setError(response.message)
-        }
+      if (response.success) {
+        router.push(`/points-prelevement/${response.data.id_point}`)
+      } else if (response.validationErrors) {
+        setValidationErrors(response.validationErrors)
       } else {
-        router.push(`/points-prelevement/${response.id_point}`)
+        setError(response.error)
       }
     } catch (error) {
       setError(error.message)
@@ -63,11 +61,11 @@ const PointEditionForm = ({
     setError(null)
 
     try {
-      const response = await deletePointPrelevement(point._id)
+      const response = await deletePointPrelevementAction(point._id)
 
-      if (response.code) {
+      if (!response.success) {
         setIsDialogOpen(false)
-        setError(response.message)
+        setError(response.error)
         return
       }
 

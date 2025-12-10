@@ -2,13 +2,13 @@ import {Typography} from '@mui/material'
 import dynamic from 'next/dynamic'
 import {notFound} from 'next/navigation'
 
-import {
-  getPreleveur,
-  getExploitationFromPreleveur,
-  getPointPrelevement
-} from '@/app/api/points-prelevement.js'
 import DocumentUploadForm from '@/components/form/document-upload-form.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
+import {
+  getPreleveurAction,
+  getExploitationFromPreleveurAction,
+  getPointPrelevementAction
+} from '@/server/actions/index.js'
 import {displayPreleveur} from '@/utils/preleveurs.js'
 
 const DynamicBreadcrumb = dynamic(
@@ -17,18 +17,21 @@ const DynamicBreadcrumb = dynamic(
 
 const Page = async ({params}) => {
   const {id} = await params
-  const preleveur = await getPreleveur(id)
+  const preleveurResult = await getPreleveurAction(id)
 
-  if (!preleveur) {
+  if (!preleveurResult.success || !preleveurResult.data) {
     notFound()
   }
 
-  const exploitations = await getExploitationFromPreleveur(id)
+  const preleveur = preleveurResult.data
+
+  const exploitationsResult = await getExploitationFromPreleveurAction(id)
+  const exploitations = exploitationsResult.data || []
 
   // Fetch points for each exploitation to get their names
   const exploitationsWithPoints = await Promise.all(exploitations.map(async exploitation => {
-    const point = await getPointPrelevement(exploitation.point)
-    return {...exploitation, point}
+    const pointResult = await getPointPrelevementAction(exploitation.point)
+    return {...exploitation, point: pointResult.data}
   }))
 
   return (

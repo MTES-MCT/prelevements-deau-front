@@ -1,8 +1,6 @@
 import {fr} from '@codegouvfr/react-dsfr'
 import {Box, Typography} from '@mui/material'
-import {getServerSession} from 'next-auth'
 
-import {getStats} from '@/app/api/points-prelevement.js'
 import DebitsReservesChart from '@/components/points-prelevement/debits-reserves-chart.js'
 import DocumentChart from '@/components/points-prelevement/documents-chart.js'
 import RegularisationsCharts from '@/components/points-prelevement/regularisations-chart.js'
@@ -10,11 +8,14 @@ import Counter from '@/components/ui/Counter/index.js'
 import Pie from '@/components/ui/Pie/index.js'
 import SidedSection from '@/components/ui/SidedSection/index.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {authOptions} from '@/server/auth.js'
+import {getStatsAction} from '@/server/actions/stats.js'
+
+// Force dynamic rendering - this page fetches user-specific stats
+export const dynamic = 'force-dynamic'
 
 const Page = async () => {
-  const session = await getServerSession(authOptions)
-  const {territoire} = session?.user || {}
+  // Stats are loaded for the user's territory (filtered by backend based on auth)
+  const result = await getStatsAction()
   const {
     pointsCount,
     documents,
@@ -24,7 +25,7 @@ const Page = async () => {
     termineePoints,
     abandoneePoints,
     nonRenseignePoints
-  } = await getStats(territoire)
+  } = result.data || {}
 
   const pieData = []
 
