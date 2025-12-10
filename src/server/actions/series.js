@@ -235,7 +235,7 @@ export async function buildAggregatedSeriesQuery(params = {}) {
  */
 export async function getAggregatedSeriesAction(params = {}, requestOptions = {}) {
   return withErrorHandling(async () => {
-    const query = buildAggregatedSeriesQuery(params)
+    const query = await buildAggregatedSeriesQuery(params)
     const {signal} = requestOptions
 
     return fetchJSON(`api/aggregated-series${query}`, {signal})
