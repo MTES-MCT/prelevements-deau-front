@@ -38,91 +38,104 @@ export const AGGREGATED_PARAMETERS = [
     unit: 'm³',
     type: 'cumulative',
     defaultTemporalOperator: 'sum',
-    temporalOperators: VOLUME_TEMPORAL_OPERATORS
+    temporalOperators: VOLUME_TEMPORAL_OPERATORS,
+    precision: 0
   },
   {
     parameter: 'volume restitué',
     unit: 'm³',
     type: 'cumulative',
     defaultTemporalOperator: 'sum',
-    temporalOperators: VOLUME_TEMPORAL_OPERATORS
+    temporalOperators: VOLUME_TEMPORAL_OPERATORS,
+    precision: 0
   },
   {
     parameter: 'débit prélevé',
     unit: 'L/s',
     type: 'instantaneous',
     defaultTemporalOperator: 'mean',
-    temporalOperators: STANDARD_TEMPORAL_OPERATORS
+    temporalOperators: STANDARD_TEMPORAL_OPERATORS,
+    precision: 0 // L/s: integer; use 1 for m³/h
   },
   {
     parameter: 'débit réservé',
     unit: 'L/s',
     type: 'instantaneous',
     defaultTemporalOperator: 'mean',
-    temporalOperators: STANDARD_TEMPORAL_OPERATORS
+    temporalOperators: STANDARD_TEMPORAL_OPERATORS,
+    precision: 0 // L/s: integer; use 1 for m³/h
   },
   {
     parameter: 'débit restitué',
     unit: 'L/s',
     type: 'instantaneous',
     defaultTemporalOperator: 'mean',
-    temporalOperators: STANDARD_TEMPORAL_OPERATORS
+    temporalOperators: STANDARD_TEMPORAL_OPERATORS,
+    precision: 0 // L/s: integer; use 1 for m³/h
   },
   {
     parameter: 'température',
     unit: '°C',
     type: 'instantaneous',
     defaultTemporalOperator: 'mean',
-    temporalOperators: STANDARD_TEMPORAL_OPERATORS
+    temporalOperators: STANDARD_TEMPORAL_OPERATORS,
+    precision: 1
   },
   {
     parameter: 'niveau piézométrique',
     unit: 'm NGR',
     type: 'instantaneous',
     defaultTemporalOperator: 'mean',
-    temporalOperators: STANDARD_TEMPORAL_OPERATORS
+    temporalOperators: STANDARD_TEMPORAL_OPERATORS,
+    precision: 2
   },
   {
     parameter: 'chlorures',
     unit: 'mg/L',
     type: 'instantaneous',
     defaultTemporalOperator: 'mean',
-    temporalOperators: STANDARD_TEMPORAL_OPERATORS
+    temporalOperators: STANDARD_TEMPORAL_OPERATORS,
+    precision: 0
   },
   {
     parameter: 'nitrates',
     unit: 'mg/L',
     type: 'instantaneous',
     defaultTemporalOperator: 'mean',
-    temporalOperators: STANDARD_TEMPORAL_OPERATORS
+    temporalOperators: STANDARD_TEMPORAL_OPERATORS,
+    precision: 0
   },
   {
     parameter: 'sulfates',
     unit: 'mg/L',
     type: 'instantaneous',
     defaultTemporalOperator: 'mean',
-    temporalOperators: STANDARD_TEMPORAL_OPERATORS
+    temporalOperators: STANDARD_TEMPORAL_OPERATORS,
+    precision: 0
   },
   {
     parameter: 'turbidité',
     unit: 'FTU',
     type: 'instantaneous',
     defaultTemporalOperator: 'mean',
-    temporalOperators: STANDARD_TEMPORAL_OPERATORS
+    temporalOperators: STANDARD_TEMPORAL_OPERATORS,
+    precision: 0
   },
   {
     parameter: 'conductivité électrique',
     unit: 'µS/cm',
     type: 'instantaneous',
     defaultTemporalOperator: 'mean',
-    temporalOperators: STANDARD_TEMPORAL_OPERATORS
+    temporalOperators: STANDARD_TEMPORAL_OPERATORS,
+    precision: 0
   },
   {
     parameter: 'pH',
     unit: '',
     type: 'instantaneous',
     defaultTemporalOperator: 'mean',
-    temporalOperators: STANDARD_TEMPORAL_OPERATORS
+    temporalOperators: STANDARD_TEMPORAL_OPERATORS,
+    precision: 2
   }
 ].map(entry => ({
   ...entry,
