@@ -4,6 +4,14 @@ import {
 } from '@mui/material'
 import {notFound} from 'next/navigation'
 
+import {
+  getPreleveur,
+  getExploitationFromPreleveur,
+  getDocumentsFromPreleveur,
+  getPointPrelevement,
+  getReglesFromPreleveur
+} from '@/app/api/points-prelevement.js'
+import {getAggregatedSeriesOptions} from '@/app/api/series.js'
 import DocumentsList from '@/components/documents/documents-list.js'
 import ExploitationsList from '@/components/exploitations/exploitations-list.js'
 import SeriesExplorer from '@/components/points-prelevement/series-explorer.js'
@@ -16,11 +24,6 @@ import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {usageIcons} from '@/lib/points-prelevement.js'
 import {getPreleveurTitle, getPreleveurTypeIcon} from '@/lib/preleveurs.js'
 import {getNewExploitationURL} from '@/lib/urls.js'
-import {getDocumentsFromPreleveurAction} from '@/server/actions/documents.js'
-import {getPointPrelevementAction} from '@/server/actions/points-prelevement.js'
-import {getPreleveurAction, getExploitationFromPreleveurAction} from '@/server/actions/preleveurs.js'
-import {getReglesFromPreleveurAction} from '@/server/actions/regles.js'
-import {getAggregatedSeriesOptionsAction} from '@/server/actions/series.js'
 
 const iconColorStyle = {color: fr.colors.decisions.text.label.blueFrance.default}
 
@@ -70,29 +73,21 @@ const InfoCard = ({preleveur}) => {
 const Page = async ({params}) => {
   const {id} = await params
 
-  const preleveurResult = await getPreleveurAction(id)
+  const preleveur = await getPreleveur(id)
 
-  if (!preleveurResult.success || !preleveurResult.data) {
+  if (!preleveur) {
     notFound()
   }
 
-  const preleveur = preleveurResult.data
-
-  const documentsResult = await getDocumentsFromPreleveurAction(id)
-  const exploitationsResult = await getExploitationFromPreleveurAction(id)
-  const reglesResult = await getReglesFromPreleveurAction(preleveur._id)
-  const seriesResult = await getAggregatedSeriesOptionsAction({preleveurId: id})
-
-  const documents = documentsResult.data || []
-  const exploitations = exploitationsResult.data || []
-  const regles = reglesResult.data || []
-  const seriesOptions = seriesResult.data
+  const documents = await getDocumentsFromPreleveur(id)
+  const exploitations = await getExploitationFromPreleveur(id)
+  const regles = await getReglesFromPreleveur(preleveur._id)
+  const seriesOptions = await getAggregatedSeriesOptions({preleveurId: id})
 
   const pointsPrelevement = []
 
   const exploitationsWithPoints = await Promise.all(exploitations.map(async exploitation => {
-    const pointResult = await getPointPrelevementAction(exploitation.point)
-    const point = pointResult.data
+    const point = await getPointPrelevement(exploitation.point)
     pointsPrelevement.push(point)
 
     return {...exploitation, point}
@@ -121,8 +116,7 @@ const Page = async ({params}) => {
               icon: 'fr-icon-edit-line',
               alt: '',
               priority: 'secondary',
-              href: `/preleveurs/${preleveur.id_preleveur}/edit`,
-              requireEditor: true
+              href: `/preleveurs/${preleveur.id_preleveur}/edit`
             }
           ]}
           metas={[

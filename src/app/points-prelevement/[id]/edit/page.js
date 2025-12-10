@@ -3,38 +3,29 @@ import {Typography} from '@mui/material'
 import {orderBy} from 'lodash-es'
 import {notFound} from 'next/navigation'
 
+import {
+  getBnpe,
+  getBss,
+  getBvBdcarthage,
+  getMeContinentales,
+  getMeso,
+  getPointPrelevement
+} from '@/app/api/points-prelevement.js'
 import PointEditionForm from '@/components/form/point-edition-form.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {
-  getBnpeAction,
-  getBssAction,
-  getBvBdcarthageAction,
-  getMeContinentalesAction,
-  getMesoAction,
-  getPointPrelevementAction
-} from '@/server/actions/points-prelevement.js'
 
 const Page = async ({params}) => {
   const {id} = await params
-  const result = await getPointPrelevementAction(id)
-  if (!result.success || !result.data) {
+  const pointPrelevement = await getPointPrelevement(id)
+  if (!pointPrelevement) {
     notFound()
   }
 
-  const pointPrelevement = result.data
-
-  const [bnpeResult, bssResult, mesoResult, meContinentalesResult, bvBdcarthageResult] = await Promise.all([
-    getBnpeAction(),
-    getBssAction(),
-    getMesoAction(),
-    getMeContinentalesAction(),
-    getBvBdcarthageAction()
-  ])
-  const bnpeList = bnpeResult.data || []
-  const bssList = bssResult.data || []
-  const mesoList = mesoResult.data || []
-  const meContinentalesBvList = meContinentalesResult.data || []
-  const bvBdCarthageList = bvBdcarthageResult.data || []
+  const bnpeList = await getBnpe()
+  const bssList = await getBss()
+  const mesoList = await getMeso()
+  const meContinentalesBvList = await getMeContinentales()
+  const bvBdCarthageList = await getBvBdcarthage()
   const orderedBnpeList = orderBy(bnpeList, 'nom_ouvrage')
   const orderedMesoList = orderBy(mesoList, ['nom_provis'])
   const orderedMeContinentaleBvList = orderBy(meContinentalesBvList, 'nom')

@@ -16,7 +16,6 @@ import {
 } from '@mui/material'
 import Link from 'next/link'
 
-import {RequireEditor} from '@/components/permissions/index.js'
 import SectionCard from '@/components/ui/SectionCard/index.js'
 import {downloadCsv} from '@/lib/export-csv.js'
 import {formatDateRange, formatFullDateFr} from '@/lib/format-date.js'
@@ -171,19 +170,17 @@ const RegleItem = ({regle, preleveurId, status}) => {
           />
           <InfoRow label='Exploitations' value={regle.exploitations?.length || 0} />
           <InfoRow label='Commentaire' value={regle.remarque} />
-          <RequireEditor>
-            <Box className='flex justify-end mt-2'>
-              <Link href={`/preleveurs/${preleveurId}/regles/${regle._id}`}>
-                <Button
-                  iconId='fr-icon-edit-line'
-                  priority='tertiary'
-                  size='small'
-                >
-                  Modifier
-                </Button>
-              </Link>
-            </Box>
-          </RequireEditor>
+          <Box className='flex justify-end mt-2'>
+            <Link href={`/preleveurs/${preleveurId}/regles/${regle._id}`}>
+              <Button
+                iconId='fr-icon-edit-line'
+                priority='tertiary'
+                size='small'
+              >
+                Modifier
+              </Button>
+            </Link>
+          </Box>
         </Box>
       </AccordionDetails>
     </Accordion>

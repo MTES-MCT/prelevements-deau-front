@@ -1,20 +1,27 @@
 import {redirect} from 'next/navigation'
+import {getServerSession} from 'next-auth'
+import {getSession, signOut} from 'next-auth/react'
 
-import {
-  getToken,
-  clearAuth,
-  syncTokenToCookie
-} from '@/lib/auth.js'
+import {authOptions} from '@/server/auth.js'
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL
 
-export function getAuthorization() {
-  const authToken = getToken()
+export async function getAuthorization() {
+  try {
+    let authToken
+    if (typeof window === 'undefined') {
+      const session = await getServerSession(authOptions)
+      authToken = session?.user?.token
+    } else {
+      const session = await getSession()
+      authToken = session?.user?.token
+    }
 
-  if (authToken) {
-    // Sync token to cookie for middleware access
-    syncTokenToCookie(authToken)
-    return `Bearer ${authToken}`
+    if (authToken) {
+      return `Token ${authToken}`
+    }
+  } catch (error) {
+    console.error('Unable to retrieve auth token', error)
   }
 }
 
@@ -40,25 +47,13 @@ export async function executeRequest(url, options = {}) {
 
   const response = await fetch(`${API_URL}/${url}`, fetchOptions)
 
-  if (!response.ok && response.status === 401) {
-    // Session expired - clear auth and redirect
+  if (!response.ok // Handle authentication errors by forcing a sign‑out then redirecting.
+    && (response.status === 401 || response.status === 403)) {
     if (typeof window !== 'undefined') {
-      clearAuth()
-      window.location.href = '/login?error=session_expired'
-      return response
+      await signOut({callbackUrl: '/login'})
     }
 
-    redirect('/login?error=session_expired')
-  }
-
-  if (!response.ok && response.status === 403) {
-    // Insufficient permissions - redirect to error page
-    if (typeof window !== 'undefined') {
-      window.location.href = '/auth/error?reason=insufficient_permissions'
-      return response
-    }
-
-    redirect('/auth/error?reason=insufficient_permissions')
+    redirect('/login')
   }
 
   return response

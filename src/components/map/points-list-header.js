@@ -2,24 +2,21 @@ import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Typography} from '@mui/material'
 
 import MapFilters from '@/components/map/map-filters.js'
-import {RequireEditor} from '@/components/permissions/index.js'
 
 const PointsListHeader = ({filters, resultsCount, typeMilieuOptions, usagesOptions, statusOptions, communesOptions, onFilter, exportList}) => (
   <div className='flex flex-col gap-2'>
     <Typography variant='h6'>Liste des points de prélèvement</Typography>
     <div className='inline-flex justify-end w-full'>
-      <RequireEditor>
-        <Button
-          priority='secondary'
-          iconId='fr-icon-add-line'
-          size='small'
-          linkProps={{
-            href: '/points-prelevement/new'
-          }}
-        >
-          {'Création d\'un point'}
-        </Button>
-      </RequireEditor>
+      <Button
+        priority='secondary'
+        iconId='fr-icon-add-line'
+        size='small'
+        linkProps={{
+          href: '/points-prelevement/new'
+        }}
+      >
+        Création d’un point
+      </Button>
     </div>
     {/* Barre de filtres */}
     <MapFilters

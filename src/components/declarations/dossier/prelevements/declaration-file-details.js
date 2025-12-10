@@ -5,17 +5,11 @@ import {Button} from '@codegouvfr/react-dsfr/Button'
 import Tag from '@codegouvfr/react-dsfr/Tag'
 import {Box} from '@mui/material'
 
+import {getSeriesValues as fetchSeriesValues} from '@/app/api/series.js'
 import PrelevementsSeriesExplorer from '@/components/PrelevementsSeriesExplorer/index.js'
 import {getGlobalDateBounds} from '@/components/PrelevementsSeriesExplorer/utils/index.js'
 import DividerSection from '@/components/ui/DividerSection/index.js'
-import {getSeriesValuesAction} from '@/server/actions/index.js'
 import {formatFrequencyLabel, sortFrequencies} from '@/utils/frequency.js'
-
-// Wrapper to extract .data from Server Action result
-async function fetchSeriesValues(seriesId, options) {
-  const result = await getSeriesValuesAction(seriesId, options)
-  return result.data
-}
 
 const DeclarationFileDetails = ({
   pointId,

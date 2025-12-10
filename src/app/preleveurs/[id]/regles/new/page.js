@@ -2,14 +2,14 @@ import {Typography} from '@mui/material'
 import nextDynamic from 'next/dynamic'
 import {notFound} from 'next/navigation'
 
+import {
+  getPreleveur,
+  getExploitationFromPreleveur,
+  getDocumentsFromPreleveur,
+  getPointPrelevement
+} from '@/app/api/points-prelevement.js'
 import RegleCreationForm from '@/components/form/regle-creation-form.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {
-  getPreleveurAction,
-  getExploitationFromPreleveurAction,
-  getDocumentsFromPreleveurAction,
-  getPointPrelevementAction
-} from '@/server/actions/index.js'
 import {displayPreleveur} from '@/utils/preleveurs.js'
 
 const DynamicBreadcrumb = nextDynamic(
@@ -20,24 +20,20 @@ export const dynamic = 'force-dynamic'
 
 const Page = async ({params}) => {
   const {id} = await params
-  const preleveurResult = await getPreleveurAction(id)
+  const preleveur = await getPreleveur(id)
 
-  if (!preleveurResult.success || !preleveurResult.data) {
+  if (!preleveur) {
     notFound()
   }
 
-  const preleveur = preleveurResult.data
-
-  const exploitationsResult = await getExploitationFromPreleveurAction(id)
-  const exploitations = exploitationsResult.data || []
-  const documentsResult = await getDocumentsFromPreleveurAction(id)
-  const documents = documentsResult.data || []
+  const exploitations = await getExploitationFromPreleveur(id)
+  const documents = await getDocumentsFromPreleveur(id)
 
   // Enrich exploitations with point details for display
   const enrichedExploitations = await Promise.all(
     exploitations.map(async exploitation => {
-      const pointResult = await getPointPrelevementAction(exploitation.point)
-      return {...exploitation, point: pointResult.data}
+      const point = await getPointPrelevement(exploitation.point)
+      return {...exploitation, point}
     })
   )
 
