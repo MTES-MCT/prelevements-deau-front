@@ -33,7 +33,8 @@ const AuthCallbackPage = () => {
           invalid_token: 'Le lien de connexion est invalide.',
           user_not_found: 'Utilisateur introuvable.',
           invalid_territoire: 'Vous n\'avez pas accès à ce territoire.',
-          territoire_not_found: 'Le territoire demandé n\'existe pas.'
+          territoire_not_found: 'Le territoire demandé n’existe pas.',
+          server_error: 'Erreur de communication avec le serveur. Veuillez réessayer.'
         }
         /* eslint-enable camelcase */
         setErrorMessage(errorMessages[error] || 'Une erreur est survenue lors de la connexion.')
