@@ -1,6 +1,28 @@
 import {NextResponse} from 'next/server'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
+const FRONTEND_DOMAIN = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://prelevements-deau.beta.gouv.fr'
+
+/**
+ * Validate that a redirect URL is safe (only allow our own domain paths).
+ */
+function isValidRedirectUrl(url) {
+  try {
+    const parsed = new URL(url)
+    const frontendUrl = new URL(FRONTEND_DOMAIN)
+
+    // Only allow redirects to our own domain
+    if (parsed.hostname !== frontendUrl.hostname) {
+      return false
+    }
+
+    // Only allow specific auth paths
+    const allowedPaths = ['/auth/callback', '/auth/error']
+    return allowedPaths.some(path => parsed.pathname.startsWith(path))
+  } catch {
+    return false
+  }
+}
 
 /**
  * Route handler to proxy magic link verification requests to the backend.
@@ -41,29 +63,13 @@ export async function GET(request, {params}) {
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get('location')
 
-      if (location) {
+      if (location && isValidRedirectUrl(location)) {
         // The backend redirects to absolute URLs on the frontend domain
-        // We can just forward this redirect to the client
         return NextResponse.redirect(location)
       }
     }
 
-    // If backend returns JSON directly (unlikely but handle it)
-    if (response.headers.get('content-type')?.includes('application/json')) {
-      const data = await response.json()
-
-      const callbackUrl = new URL('/auth/callback', request.url)
-      if (response.ok && data.token) {
-        callbackUrl.searchParams.set('token', data.token)
-      } else {
-        const errorCode = data.code || data.error || 'invalid_token'
-        callbackUrl.searchParams.set('error', errorCode)
-      }
-
-      return NextResponse.redirect(callbackUrl)
-    }
-
-    // Fallback: redirect to error page
+    // Fallback: redirect to error page if backend doesn't redirect or URL is invalid
     const errorUrl = new URL('/auth/error', request.url)
     errorUrl.searchParams.set('reason', 'server_error')
     return NextResponse.redirect(errorUrl)
