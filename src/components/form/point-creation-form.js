@@ -7,9 +7,9 @@ import Button from '@codegouvfr/react-dsfr/Button'
 import {Typography} from '@mui/material'
 import {useRouter} from 'next/navigation'
 
-import {createPointPrelevement} from '@/app/api/points-prelevement.js'
 import PointForm from '@/components/form/point-form.js'
 import {getCommuneFromCoords} from '@/lib/communes.js'
+import {createPointPrelevementAction} from '@/server/actions/points-prelevement.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
 const PointCreationForm = ({
@@ -35,16 +35,14 @@ const PointCreationForm = ({
 
     try {
       const cleanedPoint = emptyStringToNull(point)
-      const response = await createPointPrelevement(cleanedPoint)
+      const result = await createPointPrelevementAction(cleanedPoint)
 
-      if (response.code === 400) {
-        if (response.validationErrors) {
-          setValidationErrors(response.validationErrors)
-        } else {
-          setError(response.message)
-        }
+      if (result.success) {
+        router.push(`/points-prelevement/${result.data.id_point}`)
+      } else if (result.validationErrors) {
+        setValidationErrors(result.validationErrors)
       } else {
-        router.push(`/points-prelevement/${response.id_point}`)
+        setError(result.error)
       }
     } catch (error) {
       setError(error.message)

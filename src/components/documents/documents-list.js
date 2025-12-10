@@ -13,10 +13,10 @@ import {
   DialogTitle
 } from '@mui/material'
 
-import {deleteDocument} from '@/app/api/points-prelevement.js'
 import DocumentEditDialog from '@/components/documents/document-edit-dialog.js'
 import Document from '@/components/documents/document.js'
 import SectionCard from '@/components/ui/SectionCard/index.js'
+import {deleteDocumentAction} from '@/server/actions/index.js'
 
 const DocumentsList = ({idPreleveur, documents: initialDocuments, exploitations = []}) => {
   const [documentsList, setDocumentsList] = useState(initialDocuments)
@@ -61,13 +61,13 @@ const DocumentsList = ({idPreleveur, documents: initialDocuments, exploitations 
   }
 
   const handleConfirmDelete = async () => {
-    const response = await deleteDocument(documentToDelete)
+    const response = await deleteDocumentAction(documentToDelete)
 
-    if (response.ok) {
+    if (response.success) {
       setDocumentsList(prev => prev.filter(d => d._id !== documentToDelete))
       setIsDeleteDialogOpen(false)
     } else {
-      setError(response.message)
+      setError(response.error)
       setIsDeleteDialogOpen(false)
     }
   }

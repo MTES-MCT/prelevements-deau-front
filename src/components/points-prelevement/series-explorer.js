@@ -7,7 +7,6 @@ import {
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Box, Typography} from '@mui/material'
 
-import {getAggregatedSeries} from '@/app/api/series.js'
 import AggregatedSeriesExplorer from '@/components/PrelevementsSeriesExplorer/aggregated-series-explorer.js'
 import {
   getParameterMetadata,
@@ -18,6 +17,7 @@ import {
   calculateSelectablePeriodsFromDateRange,
   extractDefaultPeriodsFromDateRange
 } from '@/components/PrelevementsSeriesExplorer/utils/date-range-periods.js'
+import {getAggregatedSeriesAction} from '@/server/actions/index.js'
 import {pickAvailableFrequency} from '@/utils/frequency.js'
 
 const DEFAULT_FREQUENCY = '1 day'
@@ -268,7 +268,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
       params.endDate = dateRange.end
     }
 
-    return getAggregatedSeries(params, requestOptions)
+    return getAggregatedSeriesAction(params, requestOptions)
   }, [pointIds, preleveurId, dateRange])
 
   useEffect(() => {

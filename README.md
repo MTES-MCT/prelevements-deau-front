@@ -23,8 +23,10 @@ Cette application est le front-end du projet de gestion des prélèvements d'eau
 | `NEXT_PUBLIC_API_URL`         | URL de base de l'API métier à laquelle l'application se connecte.                      |
 | `NEXT_PUBLIC_PROCEDURE_DS_ID` | Identifiant de la procédure Démarche Numérique pour générer les liens vers les dossiers. |
 | `NEXT_PUBLIC_STORAGE_URL`     | URL de base du stockage des documents.                                                 |
+| `NEXTAUTH_URL`                | URL de l'application (ex: `http://localhost:3000` en dev).                             |
+| `NEXTAUTH_SECRET`             | Clé secrète pour signer les JWT de session. Générez-la avec `openssl rand -base64 32`. |
 
-> **Note** : Cette application utilise un système d'authentification par lien magique (magic link). L'authentification est gérée par l'API backend, aucune configuration NextAuth n'est nécessaire.
+> **Note** : Cette application utilise un système d'authentification par lien magique (magic link). L'API backend envoie le lien par email, et NextAuth gère la session côté front.
 
 Exemple de fichier `.env` :
 
@@ -32,6 +34,8 @@ Exemple de fichier `.env` :
 NEXT_PUBLIC_API_URL=http://localhost:4000
 NEXT_PUBLIC_PROCEDURE_DS_ID=12345
 NEXT_PUBLIC_STORAGE_URL=http://localhost:5000
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=votre_secret_genere_avec_openssl
 ```
 
 ## Scripts disponibles
