@@ -14,6 +14,10 @@ import {formatFrequencyLabel, sortFrequencies} from '@/utils/frequency.js'
 // Wrapper to extract .data from Server Action result
 async function fetchSeriesValues(seriesId, options) {
   const result = await getSeriesValuesAction(seriesId, options)
+  if (!result.success) {
+    return {values: []}
+  }
+
   return result.data
 }
 

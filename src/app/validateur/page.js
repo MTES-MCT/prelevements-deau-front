@@ -330,7 +330,7 @@ const ValidateurPage = () => {
         const fetchedResults = await Promise.all(uniquePointIds.map(async id => {
           try {
             const result = await getPointPrelevementAction(id)
-            return result.data
+            return result.success ? result.data : null
           } catch {
             return null
           }

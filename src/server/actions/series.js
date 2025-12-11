@@ -229,16 +229,12 @@ export async function buildAggregatedSeriesQuery(params = {}) {
 /**
  * Fetch aggregated time series from the API
  * @param {Object} params - Query parameters
- * @param {Object} [requestOptions={}] - Request options
- * @param {AbortSignal} [requestOptions.signal] - Abort signal
  * @returns {Promise<Object>} - Result object
  */
-export async function getAggregatedSeriesAction(params = {}, requestOptions = {}) {
+export async function getAggregatedSeriesAction(params = {}) {
   return withErrorHandling(async () => {
     const query = await buildAggregatedSeriesQuery(params)
-    const {signal} = requestOptions
-
-    return fetchJSON(`api/aggregated-series${query}`, {signal})
+    return fetchJSON(`api/aggregated-series${query}`)
   })
 }
 

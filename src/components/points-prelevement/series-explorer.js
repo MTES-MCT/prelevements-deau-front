@@ -245,7 +245,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
     [buildTemporalOperatorsForParameters, selectedParameters]
   )
 
-  const fetchAggregatedSeries = useCallback(async (parameter, temporalOperator, frequency, requestOptions = {}) => {
+  const fetchAggregatedSeries = useCallback(async (parameter, temporalOperator, frequency) => {
     const params = {
       aggregationFrequency: frequency,
       parameter,
@@ -268,7 +268,10 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
       params.endDate = dateRange.end
     }
 
-    return getAggregatedSeriesAction(params, requestOptions)
+    // Server actions cannot receive AbortSignal (not serializable)
+    // Cancellation is handled client-side via isActive flag
+    const result = await getAggregatedSeriesAction(params)
+    return result.success ? result.data : null
   }, [pointIds, preleveurId, dateRange])
 
   useEffect(() => {
@@ -327,8 +330,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
           const response = await fetchAggregatedSeries(
             param,
             temporalOperator,
-            chosenFrequency,
-            {signal: abortController.signal}
+            chosenFrequency
           )
 
           const normalizedResponse = response && typeof response === 'object'
