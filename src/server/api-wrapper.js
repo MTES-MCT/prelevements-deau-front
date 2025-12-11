@@ -169,6 +169,15 @@ export async function withErrorHandling(fn) {
     const result = await fn()
     return successResult(result)
   } catch (error) {
+    // Log server errors for debugging
+    if (error.code >= 500) {
+      console.error('[API] Server error:', {
+        message: error.message,
+        code: error.code,
+        data: error.data
+      })
+    }
+
     // Re-throw auth errors so they can be handled at the page level
     if (error.message === 'UNAUTHORIZED' || error.code === 401) {
       return {
