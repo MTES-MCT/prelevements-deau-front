@@ -51,7 +51,8 @@ export const AuthProvider = ({children}) => {
     try {
       const result = await signIn('credentials', {
         token: magicLinkToken,
-        redirect: false
+        redirect: false,
+        callbackUrl: '/'
       })
 
       if (result?.error) {
@@ -60,6 +61,7 @@ export const AuthProvider = ({children}) => {
 
       return {success: true}
     } catch (error) {
+      console.error('[Auth] signIn error:', error)
       return {success: false, error: error.message}
     }
   }, [])
