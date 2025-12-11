@@ -178,6 +178,7 @@ const PrelevementsSeriesExplorer = ({
     selectedParams,
     parameterMap
   })
+
   // Build calendar data from loaded values
   const calendarData = useMemo(() => {
     if (!showCalendar || !dailyValues || dailyValues.length === 0) {
@@ -298,7 +299,8 @@ const PrelevementsSeriesExplorer = ({
           locale={locale}
           rangeIndices={rangeIndices}
           rangeLabel={t.rangeLabel}
-          series={chartSeries}
+          series={chartSeries.series}
+          frequency={chartSeries.smallestFrequency}
           showRangeSlider={showRangeSlider}
           sliderMarks={sliderMarks}
           timeSeriesChartProps={timeSeriesChartProps}
