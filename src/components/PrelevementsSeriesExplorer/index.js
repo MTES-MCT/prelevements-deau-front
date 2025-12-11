@@ -178,7 +178,6 @@ const PrelevementsSeriesExplorer = ({
     selectedParams,
     parameterMap
   })
-
   // Build calendar data from loaded values
   const calendarData = useMemo(() => {
     if (!showCalendar || !dailyValues || dailyValues.length === 0) {
