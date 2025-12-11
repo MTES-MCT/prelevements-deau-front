@@ -24,7 +24,10 @@ const DossierPage = async ({params}) => {
   if (dossier?.result?.preleveur) {
     try {
       const preleveurResult = await getPreleveurAction(dossier.result.preleveur)
-      preleveur = preleveurResult.data
+      // Only assign if the request was successful
+      if (preleveurResult.success) {
+        preleveur = preleveurResult.data
+      }
     } catch {}
   }
 

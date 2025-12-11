@@ -92,10 +92,13 @@ const Page = async ({params}) => {
 
   const exploitationsWithPoints = await Promise.all(exploitations.map(async exploitation => {
     const pointResult = await getPointPrelevementAction(exploitation.point)
-    const point = pointResult.data
-    pointsPrelevement.push(point)
 
-    return {...exploitation, point}
+    // Only push point if the request was successful
+    if (pointResult.success && pointResult.data) {
+      pointsPrelevement.push(pointResult.data)
+    }
+
+    return {...exploitation, point: pointResult.success ? pointResult.data : null}
   }))
 
   const title = getPreleveurTitle(preleveur)
