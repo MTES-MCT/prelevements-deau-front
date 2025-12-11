@@ -41,7 +41,7 @@ export async function GET(request, {params}) {
     if (response.ok && data.success && data.token) {
       // Redirect to callback page with session token
       const callbackUrl = new URL('/auth/callback', FRONTEND_URL)
-      callbackUrl.searchParams.set('token', encodeURIComponent(data.token))
+      callbackUrl.searchParams.set('token', data.token)
       return NextResponse.redirect(callbackUrl.toString())
     }
 
