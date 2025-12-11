@@ -1,6 +1,7 @@
 import {getServerSession} from 'next-auth'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
+const IS_DEV = process.env.NODE_ENV === 'development'
 
 /**
  * Request a magic link to be sent to the user's email
@@ -8,12 +9,20 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL
  * @returns {Promise<{success: boolean, message: string}>}
  */
 export async function requestMagicLink(email) {
+  const body = {email}
+
+  // In dev mode, send prefixUrl so the magic link points to localhost
+  // This allows using prod backend with local frontend
+  if (IS_DEV && process.env.NEXT_PUBLIC_FRONTEND_URL) {
+    body.prefixUrl = process.env.NEXT_PUBLIC_FRONTEND_URL
+  }
+
   const res = await fetch(`${API_URL}/auth/request`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({email})
+    body: JSON.stringify(body)
   })
 
   return res.json()

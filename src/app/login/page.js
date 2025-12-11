@@ -9,8 +9,7 @@ import {Typography, Box} from '@mui/material'
 
 import Pictogram from '@/components/ui/Pictogram/index.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+import {requestMagicLinkAction} from '@/server/actions/auth.js'
 
 const LoginPage = ({searchParams}) => {
   const params = React.use(searchParams)
@@ -31,17 +30,9 @@ const LoginPage = ({searchParams}) => {
     setError(null)
 
     try {
-      const response = await fetch(`${API_URL}/auth/request`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({email})
-      })
+      const data = await requestMagicLinkAction(email)
 
-      const data = await response.json()
-
-      if (response.ok) {
+      if (data.success) {
         setIsEmailSent(true)
       } else {
         setError(data.message || 'Une erreur est survenue')
