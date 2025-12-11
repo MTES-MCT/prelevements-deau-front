@@ -27,7 +27,9 @@ Cette application est le front-end du projet de gestion des prélèvements d'eau
 | `NEXTAUTH_URL`                | URL de l'application NextAuth avec basePath (ex: `http://localhost:3000/auth/nextauth` en dev). |
 | `NEXTAUTH_SECRET`             | Clé secrète pour signer les JWT de session. Générez-la avec `openssl rand -base64 32`. |
 
-> **Note** : Cette application utilise un système d'authentification par lien magique (magic link). L'API backend envoie le lien par email, et NextAuth gère la session côté front.
+> **Note** : Cette application utilise NextAuth.js pour l'authentification par lien magique (magic link). 
+> - **Sessions persistantes** : Les utilisateurs restent connectés pendant **30 jours** via des cookies HTTP-only sécurisés
+> - L'API backend envoie le lien par email, NextAuth gère la session côté front
 > 
 > **Mode développement** : Pour travailler avec un backend de production tout en exécutant le frontend localement, configurez :
 > - `NEXT_PUBLIC_FRONTEND_URL=http://localhost:3000` (pour les magic links)

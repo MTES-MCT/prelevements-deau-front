@@ -3,6 +3,39 @@ import {getServerSession} from 'next-auth'
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 const IS_DEV = process.env.NODE_ENV === 'development'
 
+// Session configuration shared between async and static exports
+const SESSION_CONFIG = {
+  strategy: 'jwt',
+  maxAge: 30 * 24 * 60 * 60 // 30 days in seconds
+}
+
+// Session callbacks shared between async and static exports
+const SESSION_CALLBACKS = {
+  async jwt({token, user}) {
+    if (user) {
+      token.token = user.token
+      token.territoire = user.territoire
+      token.role = user.role
+      token.userInfo = user.userInfo
+    }
+
+    return token
+  },
+  async session({session, token}) {
+    session.user.token = token.token
+    session.user.territoire = token.territoire
+    session.user.role = token.role
+    if (token.userInfo) {
+      session.user.nom = token.userInfo.nom
+      session.user.prenom = token.userInfo.prenom
+      session.user.email = token.userInfo.email
+      session.user.structure = token.userInfo.structure
+    }
+
+    return session
+  }
+}
+
 /**
  * Request a magic link to be sent to the user's email
  * @param {string} email - User's email address
@@ -72,34 +105,19 @@ export async function getAuthOptions() {
 
   cachedAuthOptions = {
     secret: process.env.NEXTAUTH_SECRET,
-    session: {
-      strategy: 'jwt'
-    },
-    callbacks: {
-      async jwt({token, user}) {
-        if (user) {
-          token.token = user.token
-          token.territoire = user.territoire
-          token.role = user.role
-          token.userInfo = user.userInfo
+    session: SESSION_CONFIG,
+    cookies: {
+      sessionToken: {
+        name: `${process.env.NODE_ENV === 'production' ? '__Secure-' : ''}next-auth.session-token`,
+        options: {
+          httpOnly: true,
+          sameSite: 'lax',
+          path: '/',
+          secure: process.env.NODE_ENV === 'production'
         }
-
-        return token
-      },
-      async session({session, token}) {
-        session.user.token = token.token
-        session.user.territoire = token.territoire
-        session.user.role = token.role
-        if (token.userInfo) {
-          session.user.nom = token.userInfo.nom
-          session.user.prenom = token.userInfo.prenom
-          session.user.email = token.userInfo.email
-          session.user.structure = token.userInfo.structure
-        }
-
-        return session
       }
     },
+    callbacks: SESSION_CALLBACKS,
     pages: {
       signIn: '/login'
     },
@@ -139,32 +157,19 @@ export async function getAuthOptions() {
 // Keep backward compatibility with static authOptions export
 // This will be replaced at runtime with the async version
 export const authOptions = {
-  session: {strategy: 'jwt'},
-  callbacks: {
-    async jwt({token, user}) {
-      if (user) {
-        token.token = user.token
-        token.territoire = user.territoire
-        token.role = user.role
-        token.userInfo = user.userInfo
+  session: SESSION_CONFIG,
+  cookies: {
+    sessionToken: {
+      name: `${process.env.NODE_ENV === 'production' ? '__Secure-' : ''}next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production'
       }
-
-      return token
-    },
-    async session({session, token}) {
-      session.user.token = token.token
-      session.user.territoire = token.territoire
-      session.user.role = token.role
-      if (token.userInfo) {
-        session.user.nom = token.userInfo.nom
-        session.user.prenom = token.userInfo.prenom
-        session.user.email = token.userInfo.email
-        session.user.structure = token.userInfo.structure
-      }
-
-      return session
     }
   },
+  callbacks: SESSION_CALLBACKS,
   pages: {signIn: '/login'},
   providers: [] // Will be populated dynamically
 }
