@@ -2,7 +2,6 @@ import {Box, Typography} from '@mui/material'
 import Image from 'next/image'
 import Link from 'next/link'
 
-import TokenRedirectHandler from '@/components/token-redirect-handler.js'
 import Counter from '@/components/ui/Counter/index.js'
 import Pie from '@/components/ui/Pie/index.js'
 import SidedSection from '@/components/ui/SidedSection/index.js'
@@ -23,7 +22,6 @@ const Home = async () => {
   return (
     <>
       <StartDsfrOnHydration />
-      <TokenRedirectHandler />
 
       <SidedSection
         background='secondary'
