@@ -1,37 +1,9 @@
 import {NextResponse} from 'next/server'
 
+import {getErrorReason} from '@/lib/auth-errors.js'
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL
-const NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000'
-
-/**
- * Map HTTP status codes to error reasons for user-friendly messages
- * @param {number} status - HTTP status code
- * @param {object} data - Response data from backend
- * @returns {string} Error reason code
- */
-function getErrorReason(status, data) {
-  switch (status) {
-    case 400: {
-      return 'missing_params'
-    }
-
-    case 401: {
-      return data?.message?.includes('expiré') ? 'expired' : 'invalid_token'
-    }
-
-    case 403: {
-      return 'invalid_territoire'
-    }
-
-    case 404: {
-      return 'territoire_not_found'
-    }
-
-    default: {
-      return 'server_error'
-    }
-  }
-}
+const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000'
 
 /**
  * Route handler for magic link verification in dev mode.
@@ -51,7 +23,7 @@ export async function GET(request, {params}) {
   const territoire = searchParams.get('territoire')
 
   if (!token || !territoire) {
-    const errorUrl = new URL('/auth/error', NEXTAUTH_URL)
+    const errorUrl = new URL('/auth/error', FRONTEND_URL)
     errorUrl.searchParams.set('reason', 'missing_params')
     return NextResponse.redirect(errorUrl.toString())
   }
@@ -70,19 +42,19 @@ export async function GET(request, {params}) {
 
     if (response.ok && data.success && data.token) {
       // Redirect to callback page with session token
-      const callbackUrl = new URL('/auth/callback', NEXTAUTH_URL)
+      const callbackUrl = new URL('/auth/callback', FRONTEND_URL)
       callbackUrl.searchParams.set('token', data.token)
       return NextResponse.redirect(callbackUrl.toString())
     }
 
     // Handle errors based on status code
-    const errorUrl = new URL('/auth/error', NEXTAUTH_URL)
+    const errorUrl = new URL('/auth/error', FRONTEND_URL)
     const errorReason = getErrorReason(response.status, data)
     errorUrl.searchParams.set('reason', errorReason)
     return NextResponse.redirect(errorUrl.toString())
   } catch (error) {
     console.error('[Magic Link] Verification error:', error)
-    const errorUrl = new URL('/auth/error', NEXTAUTH_URL)
+    const errorUrl = new URL('/auth/error', FRONTEND_URL)
     errorUrl.searchParams.set('reason', 'server_error')
     return NextResponse.redirect(errorUrl.toString())
   }
