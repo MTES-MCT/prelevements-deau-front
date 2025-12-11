@@ -103,8 +103,8 @@ export async function getDossierFiles(dossier) {
     }
 
     const details = detailsResult.data
-    const series = seriesResult.data?.series ?? []
-    const integrations = integrationsResult.data?.integrations ?? []
+    const series = seriesResult.success ? (seriesResult.data?.series ?? []) : []
+    const integrations = integrationsResult.success ? (integrationsResult.data?.integrations ?? []) : []
 
     return {
       ...details,
