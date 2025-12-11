@@ -1,9 +1,7 @@
 import {NextResponse} from 'next/server'
 
+import {API_URL, FRONTEND_URL} from '@/app/api/util/request.js'
 import {getErrorReason} from '@/lib/auth-errors.js'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL
-const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000'
 
 /**
  * Route handler for magic link verification.
