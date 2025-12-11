@@ -73,7 +73,8 @@ export async function getAuthOptions() {
   cachedAuthOptions = {
     secret: process.env.NEXTAUTH_SECRET,
     session: {
-      strategy: 'jwt'
+      strategy: 'jwt',
+      maxAge: 30 * 24 * 60 * 60 // 30 days in seconds
     },
     callbacks: {
       async jwt({token, user}) {
@@ -139,7 +140,10 @@ export async function getAuthOptions() {
 // Keep backward compatibility with static authOptions export
 // This will be replaced at runtime with the async version
 export const authOptions = {
-  session: {strategy: 'jwt'},
+  session: {
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60 // 30 days in seconds
+  },
   callbacks: {
     async jwt({token, user}) {
       if (user) {
