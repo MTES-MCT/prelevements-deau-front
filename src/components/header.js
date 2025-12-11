@@ -9,8 +9,8 @@ import {usePathname, useRouter} from 'next/navigation'
 import {useAuth} from '@/contexts/auth-context.js'
 
 const ROLE_LABELS = {
-  editor: 'Administrateur',
-  reader: 'Instructeur'
+  editor: 'Instructeur',
+  reader: 'Invité'
 }
 
 const ROLE_COLORS = {
