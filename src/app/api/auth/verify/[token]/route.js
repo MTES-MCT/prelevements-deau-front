@@ -1,85 +1,89 @@
 import {NextResponse} from 'next/server'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
-const FRONTEND_DOMAIN = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://prelevements-deau.beta.gouv.fr'
+const NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000'
 
 /**
- * Validate that a redirect URL is safe.
- * Only allows redirects to known domains (frontend or backend) with specific auth paths.
+ * Map HTTP status codes to error reasons for user-friendly messages
+ * @param {number} status - HTTP status code
+ * @param {object} data - Response data from backend
+ * @returns {string} Error reason code
  */
-function isValidRedirectUrl(url) {
-  try {
-    const parsed = new URL(url)
-    const frontendUrl = new URL(FRONTEND_DOMAIN)
-    const backendUrl = new URL(API_URL)
-
-    // Allow redirects to frontend domain or backend domain (for local dev)
-    const allowedHostnames = [frontendUrl.hostname, backendUrl.hostname]
-    if (!allowedHostnames.includes(parsed.hostname)) {
-      return false
+function getErrorReason(status, data) {
+  switch (status) {
+    case 400: {
+      return 'missing_params'
     }
 
-    // Allow root path with token param (backend redirects to /?token=...)
-    if (parsed.pathname === '/' && parsed.searchParams.has('token')) {
-      return true
+    case 401: {
+      return data?.message?.includes('expiré') ? 'expired' : 'invalid_token'
     }
 
-    // Allow specific auth paths
-    const allowedPaths = ['/auth/callback', '/auth/error']
-    return allowedPaths.some(path => parsed.pathname.startsWith(path))
-  } catch {
-    return false
+    case 403: {
+      return 'invalid_territoire'
+    }
+
+    case 404: {
+      return 'territoire_not_found'
+    }
+
+    default: {
+      return 'server_error'
+    }
   }
 }
 
 /**
- * Route handler to proxy magic link verification requests to the backend.
+ * Route handler for magic link verification in dev mode.
  *
- * The backend sends magic link emails with URLs like:
- *   /api/auth/verify/{token}?territoire={territoire}
+ * In dev, the backend sends magic link emails pointing to localhost:
+ *   http://localhost:3000/api/auth/verify/{token}?territoire={territoire}
  *
- * This route proxies the request to the backend, which will:
- * - On success: redirect to /?token={sessionToken}
- * - On error: redirect to /auth/error?reason={errorCode}
+ * This route calls the new POST /auth/verify endpoint (no redirects)
+ * and redirects to /auth/callback with the session token.
+ *
+ * In production, this route is never called because the magic link
+ * points directly to the backend at /api/auth/verify/{token}.
  */
 export async function GET(request, {params}) {
   const {token} = await params
   const {searchParams} = new URL(request.url)
   const territoire = searchParams.get('territoire')
 
-  // Build backend verification URL
-  const verifyUrl = new URL(`${API_URL}/auth/verify/${token}`)
-  if (territoire) {
-    verifyUrl.searchParams.set('territoire', territoire)
+  if (!token || !territoire) {
+    const errorUrl = new URL('/auth/error', NEXTAUTH_URL)
+    errorUrl.searchParams.set('reason', 'missing_params')
+    return NextResponse.redirect(errorUrl.toString())
   }
 
   try {
-    // Make request to backend WITHOUT following redirects
-    const response = await fetch(verifyUrl.toString(), {
-      method: 'GET',
-      redirect: 'manual',
+    // Call the new POST /auth/verify endpoint (no redirects)
+    const response = await fetch(`${API_URL}/auth/verify`, {
+      method: 'POST',
       headers: {
-        Accept: 'application/json, text/html'
-      }
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({token, territoire})
     })
 
-    // Backend should return a redirect (302)
-    if (response.status >= 300 && response.status < 400) {
-      const location = response.headers.get('location')
+    const data = await response.json()
 
-      if (location && isValidRedirectUrl(location)) {
-        return NextResponse.redirect(location)
-      }
+    if (response.ok && data.success && data.token) {
+      // Redirect to callback page with session token
+      const callbackUrl = new URL('/auth/callback', NEXTAUTH_URL)
+      callbackUrl.searchParams.set('token', data.token)
+      return NextResponse.redirect(callbackUrl.toString())
     }
 
-    // Fallback: redirect to error page
-    const errorUrl = new URL('/auth/error', FRONTEND_DOMAIN)
-    errorUrl.searchParams.set('reason', 'server_error')
-    return NextResponse.redirect(errorUrl)
+    // Handle errors based on status code
+    const errorUrl = new URL('/auth/error', NEXTAUTH_URL)
+    const errorReason = getErrorReason(response.status, data)
+    errorUrl.searchParams.set('reason', errorReason)
+    return NextResponse.redirect(errorUrl.toString())
   } catch (error) {
     console.error('[Magic Link] Verification error:', error)
-    const errorUrl = new URL('/auth/error', FRONTEND_DOMAIN)
+    const errorUrl = new URL('/auth/error', NEXTAUTH_URL)
     errorUrl.searchParams.set('reason', 'server_error')
-    return NextResponse.redirect(errorUrl)
+    return NextResponse.redirect(errorUrl.toString())
   }
 }
