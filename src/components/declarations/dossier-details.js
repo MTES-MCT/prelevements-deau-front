@@ -61,7 +61,7 @@ const DossierDetails = ({dossier, preleveur, files = [], idPoints}) => {
   useEffect(() => {
     const fetchPointsPrelevement = async () => {
       const results = await Promise.all(idPoints.map(idPoint => getPointPrelevementAction(idPoint)))
-      const points = results.map(r => r.data).filter(Boolean)
+      const points = results.filter(r => r.success).map(r => r.data)
       const sortedPoints = orderBy(
         points, // Filtre 404 not found
         point => String(getPointPrelevementName(point)).toLowerCase(),
