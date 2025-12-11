@@ -46,7 +46,7 @@ const Page = async ({params}) => {
   const enrichedExploitations = await Promise.all(
     exploitations.map(async exploitation => {
       const pointResult = await getPointPrelevementAction(exploitation.point)
-      return {...exploitation, point: pointResult.data}
+      return {...exploitation, point: pointResult.success ? pointResult.data : null}
     })
   )
 
