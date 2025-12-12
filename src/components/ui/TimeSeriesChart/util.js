@@ -685,12 +685,14 @@ export const buildStubSeries = (processedSeries, xValuesLength) => processedSeri
  * Builds a single y-axis configuration
  * @param {string} axisId - The axis identifier
  * @param {object} stats - Statistics with min and max values
- * @param {Function} numberFormatter - Number formatting function
+ * @param {string} locale - Locale string for number formatting
+ * @param {number} precision - Number of decimal places to display
  * @param {string|null} label - Optional axis label
  * @returns {object} Y-axis configuration
  */
-const buildSingleYAxis = (axisId, stats, numberFormatter, label = null) => {
+const buildSingleYAxis = (axisId, stats, locale, precision, label = null) => {
   const hasData = stats.min !== Number.POSITIVE_INFINITY
+  const numberFormatter = getNumberFormatterWithPrecision(locale, precision)
 
   // Create a default axis even if no data to prevent useYScale errors
   // This ensures both axes are always defined for React hooks consistency
@@ -745,16 +747,18 @@ const buildSingleYAxis = (axisId, stats, numberFormatter, label = null) => {
 /**
  * Build y-axis configurations from statistics
  * @param {object} axisStats - Statistics per axis
- * @param {Function} numberFormatter - Number formatting function
+ * @param {string} locale - Locale string for number formatting
  * @param {object} axisLabels - Optional labels per axis
+ * @param {object} axisPrecision - Precision (decimal places) per axis
  * @returns {Array} Y-axis configurations
  */
-export const buildYAxisConfigurations = (axisStats, numberFormatter, axisLabels = {}) =>
+export const buildYAxisConfigurations = (axisStats, locale, axisLabels = {}, axisPrecision = {}) =>
   [AXIS_LEFT_ID, AXIS_RIGHT_ID].map(axisId =>
     buildSingleYAxis(
       axisId,
       axisStats[axisId],
-      numberFormatter,
+      locale,
+      axisPrecision[axisId] ?? 0,
       axisLabels[axisId] ?? null
     )
   )
@@ -964,7 +968,8 @@ export const buildSeriesModel = ({
       thresholdConfig: processed.threshold,
       threshold: processed.threshold, // Keep for extractStaticThresholds
       points: pointMap,
-      chartType: processed.chartType || 'line'
+      chartType: processed.chartType || 'line',
+      precision: processed.precision
     })
   }
 
@@ -1058,19 +1063,25 @@ export const buildSeriesModel = ({
   // Step 7: Extract static thresholds
   const staticThresholds = enableThresholds ? extractStaticThresholds(processedSeries) : []
 
-  // Step 8: Extract unit labels for axes from series labels
+  // Step 8: Extract unit labels and max precision for axes from series labels
   const axisLabels = {}
+  const axisPrecision = {
+    [AXIS_LEFT_ID]: 0,
+    [AXIS_RIGHT_ID]: 0
+  }
   for (const processed of processedSeries) {
-    const {axisId, label} = processed
+    const {axisId, label, precision} = processed
     // Extract unit from label (format: "Parameter (unit)")
     const unitMatch = label?.match(/\(([^)]+)\)$/)
     if (unitMatch && !axisLabels[axisId]) {
       axisLabels[axisId] = unitMatch[1]
     }
+    // Track max precision per axis
+    axisPrecision[axisId] = Math.max(axisPrecision[axisId], precision ?? 0)
   }
 
   // Step 9: Build y-axis configurations
-  const yAxis = buildYAxisConfigurations(axisStats, numberFormatter, axisLabels)
+  const yAxis = buildYAxisConfigurations(axisStats, locale, axisLabels, axisPrecision)
 
   return {
     xValues,
