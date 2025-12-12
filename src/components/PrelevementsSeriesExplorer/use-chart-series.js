@@ -132,7 +132,8 @@ export function useChartSeries({
         data: processedData,
         type: isCumulativeValueType(param.valueType) ? 'bar' : 'line',
         nativeResolution,
-        frequency: nativeFrequency
+        frequency: nativeFrequency,
+        precision: param.precision ?? 0
       }
     }).filter(Boolean)
 

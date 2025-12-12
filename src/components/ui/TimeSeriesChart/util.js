@@ -33,6 +33,17 @@ export const getNumberFormatter = locale => new Intl.NumberFormat(locale, {
   maximumFractionDigits: 2
 })
 
+/**
+ * Returns a number formatter with specific precision (decimal places).
+ * @param {string} locale - Locale string
+ * @param {number} precision - Number of decimal places (default: 0 for integers)
+ * @returns {Intl.NumberFormat}
+ */
+export const getNumberFormatterWithPrecision = (locale, precision = 0) => new Intl.NumberFormat(locale, {
+  minimumFractionDigits: precision,
+  maximumFractionDigits: precision
+})
+
 export const getDateFormatter = locale => new Intl.DateTimeFormat(locale, {
   hour12: false,
   year: 'numeric',
@@ -307,7 +318,8 @@ export const processInputSeries = (inputSeries, options = {}) => {
     label: inputSeries.label,
     color: inputSeries.color,
     threshold: thresholdConfig,
-    chartType
+    chartType,
+    precision: inputSeries.precision ?? 0
   }
 }
 
@@ -478,12 +490,14 @@ export const buildDynamicThresholdSeries = (alignedData, theme) => {
  * Split series data into segments based on threshold classification
  */
 export const buildSegments = (alignedData, xValues, options) => {
-  const {numberFormatter, exposeAllMarks, theme} = options
+  const {locale, exposeAllMarks, theme} = options
   const segmentSeries = []
   const segmentToOriginal = new Map()
 
   for (const data of alignedData) {
     const {values, thresholds, pointsWithMeta} = data
+    // Create per-series formatter with appropriate precision
+    const seriesFormatter = getNumberFormatterWithPrecision(locale, data.precision ?? 0)
     let currentSegment = null
     const segments = []
     let previousSegmentLastIndex = null
@@ -566,7 +580,7 @@ export const buildSegments = (alignedData, xValues, options) => {
             return null
           }
 
-          return numberFormatter.format(value)
+          return seriesFormatter.format(value)
         }
       })
       segmentToOriginal.set(segmentId, data.id)
@@ -604,12 +618,14 @@ export const buildSegments = (alignedData, xValues, options) => {
  * Build simplified series when thresholds are disabled.
  */
 export const buildPlainSeries = (alignedData, options) => {
-  const {numberFormatter, exposeAllMarks} = options
+  const {locale, exposeAllMarks} = options
   const plainSeries = []
   const plainToOriginal = new Map()
 
   for (const data of alignedData) {
     const seriesId = `${data.id}__plain`
+    // Create per-series formatter with appropriate precision
+    const seriesFormatter = getNumberFormatterWithPrecision(locale, data.precision ?? 0)
 
     plainSeries.push({
       id: seriesId,
@@ -637,7 +653,7 @@ export const buildPlainSeries = (alignedData, options) => {
           return null
         }
 
-        return numberFormatter.format(value)
+        return seriesFormatter.format(value)
       }
     })
 
@@ -669,12 +685,14 @@ export const buildStubSeries = (processedSeries, xValuesLength) => processedSeri
  * Builds a single y-axis configuration
  * @param {string} axisId - The axis identifier
  * @param {object} stats - Statistics with min and max values
- * @param {Function} numberFormatter - Number formatting function
+ * @param {string} locale - Locale string for number formatting
+ * @param {number} precision - Number of decimal places to display
  * @param {string|null} label - Optional axis label
  * @returns {object} Y-axis configuration
  */
-const buildSingleYAxis = (axisId, stats, numberFormatter, label = null) => {
+const buildSingleYAxis = (axisId, stats, locale, precision, label = null) => {
   const hasData = stats.min !== Number.POSITIVE_INFINITY
+  const numberFormatter = getNumberFormatterWithPrecision(locale, precision)
 
   // Create a default axis even if no data to prevent useYScale errors
   // This ensures both axes are always defined for React hooks consistency
@@ -729,16 +747,18 @@ const buildSingleYAxis = (axisId, stats, numberFormatter, label = null) => {
 /**
  * Build y-axis configurations from statistics
  * @param {object} axisStats - Statistics per axis
- * @param {Function} numberFormatter - Number formatting function
+ * @param {string} locale - Locale string for number formatting
  * @param {object} axisLabels - Optional labels per axis
+ * @param {object} axisPrecision - Precision (decimal places) per axis
  * @returns {Array} Y-axis configurations
  */
-export const buildYAxisConfigurations = (axisStats, numberFormatter, axisLabels = {}) =>
+export const buildYAxisConfigurations = (axisStats, locale, axisLabels = {}, axisPrecision = {}) =>
   [AXIS_LEFT_ID, AXIS_RIGHT_ID].map(axisId =>
     buildSingleYAxis(
       axisId,
       axisStats[axisId],
-      numberFormatter,
+      locale,
+      axisPrecision[axisId] ?? 0,
       axisLabels[axisId] ?? null
     )
   )
@@ -893,67 +913,14 @@ const generateLinearTimelineFromTimestamps = (startTs, endTs, frequency) => {
 }
 
 /**
- * Main orchestrator function that builds complete series model
- * Coordinates all sub-functions to transform raw series into chart-ready data
+ * Compute unified x-axis values and dates
+ * Handles timeline generation with frequency or falls back to data-based axis
+ * @param {Set} xValuesSet - Set of timestamp values from all series
+ * @param {string|null} timelineFrequency - Optional frequency for linear timeline
+ * @param {object|null} timelineRange - Optional range with start/end dates
+ * @returns {{xValues: number[], xAxisDates: Date[]}}
  */
-export const buildSeriesModel = ({
-  series,
-  locale,
-  theme,
-  exposeAllMarks,
-  enableThresholds = true,
-  enableDecimation = true,
-  decimationTarget = DECIMATION_TARGET,
-  maxPointsBeforeDecimation = MAX_POINTS_BEFORE_DECIMATION,
-  timelineFrequency = null,
-  timelineRange = null
-}) => {
-  const numberFormatter = getNumberFormatter(locale)
-  const xValuesSet = new Set()
-  const processedSeries = []
-  let didDecimate = false
-
-  const axisStats = {
-    [AXIS_LEFT_ID]: {min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY},
-    [AXIS_RIGHT_ID]: {min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY}
-  }
-
-  // Step 1: Process each input series
-  for (const inputSeries of series) {
-    const processed = processInputSeries(inputSeries, {
-      enableThresholds,
-      enableDecimation,
-      decimationTarget
-    })
-
-    if (enableDecimation
-        && (processed.didDecimate || processed.sortedPoints.length > maxPointsBeforeDecimation)) {
-      didDecimate = true
-    }
-
-    // Calculate threshold crossings
-    const crossings = enableThresholds
-      ? computeThresholdCrossings(processed.filteredPoints, processed.thresholdEvaluator)
-      : []
-
-    // Build unified point map
-    const pointMap = buildPointMap(processed.filteredPoints, crossings, xValuesSet)
-
-    processedSeries.push({
-      id: processed.id,
-      label: processed.label,
-      color: processed.color,
-      axisId: processed.axisId,
-      thresholdEvaluator: processed.thresholdEvaluator,
-      thresholdConfig: processed.threshold,
-      threshold: processed.threshold, // Keep for extractStaticThresholds
-      points: pointMap,
-      chartType: processed.chartType || 'line'
-    })
-  }
-
-  // Step 2: Create unified x-axis
-  // If timelineFrequency is provided, generate a linear timeline
+const computeUnifiedXAxis = (xValuesSet, timelineFrequency, timelineRange) => {
   let xValues
   let xAxisDates
 
@@ -1003,6 +970,123 @@ export const buildSeriesModel = ({
     xAxisDates = xValues.map(value => toDate(value))
   }
 
+  return {xValues, xAxisDates}
+}
+
+/**
+ * Process all input series with decimation and threshold handling
+ * @param {Array} series - Raw input series
+ * @param {object} options - Processing options (enableThresholds, enableDecimation, etc.)
+ * @returns {{processedSeries: Array, xValuesSet: Set, didDecimate: boolean}}
+ */
+const processSeriesWithDecimation = (series, options) => {
+  const {
+    enableThresholds,
+    enableDecimation,
+    decimationTarget,
+    maxPointsBeforeDecimation
+  } = options
+
+  const xValuesSet = new Set()
+  const processedSeries = []
+  let didDecimate = false
+
+  for (const inputSeries of series) {
+    const processed = processInputSeries(inputSeries, {
+      enableThresholds,
+      enableDecimation,
+      decimationTarget
+    })
+
+    if (enableDecimation
+        && (processed.didDecimate || processed.sortedPoints.length > maxPointsBeforeDecimation)) {
+      didDecimate = true
+    }
+
+    // Calculate threshold crossings
+    const crossings = enableThresholds
+      ? computeThresholdCrossings(processed.filteredPoints, processed.thresholdEvaluator)
+      : []
+
+    // Build unified point map
+    const pointMap = buildPointMap(processed.filteredPoints, crossings, xValuesSet)
+
+    processedSeries.push({
+      id: processed.id,
+      label: processed.label,
+      color: processed.color,
+      axisId: processed.axisId,
+      thresholdEvaluator: processed.thresholdEvaluator,
+      thresholdConfig: processed.threshold,
+      threshold: processed.threshold, // Keep for extractStaticThresholds
+      points: pointMap,
+      chartType: processed.chartType || 'line',
+      precision: processed.precision
+    })
+  }
+
+  return {processedSeries, xValuesSet, didDecimate}
+}
+
+/**
+ * Extract axis labels and precision from processed series
+ * @param {Array} processedSeries - Processed series with label and precision
+ * @returns {{axisLabels: object, axisPrecision: object}}
+ */
+const extractAxisMetadata = processedSeries => {
+  const axisLabels = {}
+  const axisPrecision = {
+    [AXIS_LEFT_ID]: 0,
+    [AXIS_RIGHT_ID]: 0
+  }
+
+  for (const processed of processedSeries) {
+    const {axisId, label, precision} = processed
+    // Extract unit from label (format: "Parameter (unit)")
+    const unitMatch = label?.match(/\(([^)]+)\)$/)
+    if (unitMatch && !axisLabels[axisId]) {
+      axisLabels[axisId] = unitMatch[1]
+    }
+
+    // Track max precision per axis
+    axisPrecision[axisId] = Math.max(axisPrecision[axisId], precision ?? 0)
+  }
+
+  return {axisLabels, axisPrecision}
+}
+
+/**
+ * Main orchestrator function that builds complete series model
+ * Coordinates all sub-functions to transform raw series into chart-ready data
+ */
+export const buildSeriesModel = ({
+  series,
+  locale,
+  theme,
+  exposeAllMarks,
+  enableThresholds = true,
+  enableDecimation = true,
+  decimationTarget = DECIMATION_TARGET,
+  maxPointsBeforeDecimation = MAX_POINTS_BEFORE_DECIMATION,
+  timelineFrequency = null,
+  timelineRange = null
+}) => {
+  const axisStats = {
+    [AXIS_LEFT_ID]: {min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY},
+    [AXIS_RIGHT_ID]: {min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY}
+  }
+
+  // Step 1: Process series with decimation
+  const {processedSeries, xValuesSet, didDecimate} = processSeriesWithDecimation(series, {
+    enableThresholds,
+    enableDecimation,
+    decimationTarget,
+    maxPointsBeforeDecimation
+  })
+
+  // Step 2: Compute unified x-axis
+  const {xValues, xAxisDates} = computeUnifiedXAxis(xValuesSet, timelineFrequency, timelineRange)
+
   // Step 3: Align all series to unified x-axis and update statistics
   const {metaBySeries, pointBySeries, alignedData} = alignSeriesToXAxis(
     processedSeries,
@@ -1021,7 +1105,7 @@ export const buildSeriesModel = ({
   let segmentToOriginal
   if (enableThresholds) {
     const segments = buildSegments(alignedData, xValues, {
-      numberFormatter,
+      locale,
       exposeAllMarks,
       theme
     })
@@ -1029,7 +1113,7 @@ export const buildSeriesModel = ({
     segmentToOriginal = segments.segmentToOriginal
   } else {
     const plain = buildPlainSeries(alignedData, {
-      numberFormatter,
+      locale,
       exposeAllMarks
     })
     segmentSeries = plain.plainSeries
@@ -1042,19 +1126,11 @@ export const buildSeriesModel = ({
   // Step 7: Extract static thresholds
   const staticThresholds = enableThresholds ? extractStaticThresholds(processedSeries) : []
 
-  // Step 8: Extract unit labels for axes from series labels
-  const axisLabels = {}
-  for (const processed of processedSeries) {
-    const {axisId, label} = processed
-    // Extract unit from label (format: "Parameter (unit)")
-    const unitMatch = label?.match(/\(([^)]+)\)$/)
-    if (unitMatch && !axisLabels[axisId]) {
-      axisLabels[axisId] = unitMatch[1]
-    }
-  }
+  // Step 8: Extract axis metadata
+  const {axisLabels, axisPrecision} = extractAxisMetadata(processedSeries)
 
   // Step 9: Build y-axis configurations
-  const yAxis = buildYAxisConfigurations(axisStats, numberFormatter, axisLabels)
+  const yAxis = buildYAxisConfigurations(axisStats, locale, axisLabels, axisPrecision)
 
   return {
     xValues,
