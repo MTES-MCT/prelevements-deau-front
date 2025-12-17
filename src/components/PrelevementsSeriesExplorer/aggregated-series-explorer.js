@@ -43,11 +43,109 @@ import {buildDailyAndTimelineData} from '@/components/PrelevementsSeriesExplorer
 import CalendarGrid from '@/components/ui/CalendarGrid/index.js'
 import PeriodSelectorHeader from '@/components/ui/PeriodSelectorHeader/index.js'
 import {parseQuarterDate} from '@/lib/format-date.js'
-import {formatFrequencyLabel} from '@/utils/frequency.js'
+import {formatFrequencyLabel, getFrequencyOrder, getSmallestFrequency} from '@/utils/frequency.js'
 import {normalizeString} from '@/utils/string.js'
 import {parseLocalDateTime} from '@/utils/time.js'
 
 const DEFAULT_PARAMETER = 'volume prélevé'
+
+/**
+ * FrequencyBadges Component
+ * Displays frequency information for selected parameters with aggregation indicators
+ *
+ * @param {Object} props - Component props
+ * @param {Array<Object>} props.badges - Array of badge objects
+ * @param {string} props.badges[].parameter - Parameter name
+ * @param {string} props.badges[].frequency - Current frequency (may be aggregated)
+ * @param {Array<string>} [props.badges[].availableFrequencies] - All available frequencies for this parameter
+ * @returns {JSX.Element} Frequency badges display
+ */
+const FrequencyBadges = ({badges}) => {
+  if (!badges || badges.length === 0) {
+    return null
+  }
+
+  return (
+    <>
+      <Typography
+        variant='caption'
+        sx={{
+          color: 'text.secondary',
+          fontStyle: 'italic',
+          fontSize: '0.75rem'
+        }}
+      >
+        Résolution par série :
+      </Typography>
+      <Box sx={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: 1
+      }}
+      >
+        {badges.map(({parameter, frequency, availableFrequencies}) => {
+          // A series is aggregated if its frequency is not the finest among its own available frequencies
+          let isAggregated = false
+          if (availableFrequencies && availableFrequencies.length > 0) {
+            // Find the finest frequency available for this specific parameter
+            const finestAvailable = getSmallestFrequency(availableFrequencies)
+
+            // It's aggregated if current frequency is coarser than the finest available
+            if (finestAvailable) {
+              isAggregated = frequency !== finestAvailable
+                && getFrequencyOrder(frequency) > getFrequencyOrder(finestAvailable)
+            }
+          }
+
+          return (
+            <Box
+              key={`${parameter}-${frequency}`}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                backgroundColor: 'action.hover'
+              }}
+            >
+              <Typography
+                variant='caption'
+                sx={{
+                  color: 'text.secondary',
+                  fontWeight: 600
+                }}
+              >
+                {parameter} :{' '}
+              </Typography>
+              <Typography
+                variant='caption'
+                sx={{
+                  color: 'text.secondary'
+                }}
+              >
+                {formatFrequencyLabel(frequency) ?? frequency}
+              </Typography>
+              {isAggregated && (
+                <Typography
+                  variant='caption'
+                  sx={{
+                    color: 'text.secondary',
+                    fontStyle: 'italic',
+                    fontSize: '0.7rem'
+                  }}
+                >
+                  (agrégé)
+                </Typography>
+              )}
+            </Box>
+          )
+        })}
+      </Box>
+    </>
+  )
+}
 
 const ParameterOptionContent = ({label, unitLabel}) => (
   <div className='selector-option-content'>
@@ -216,7 +314,8 @@ const AggregatedSeriesExplorer = ({
   legendLabels,
   isLoading = false,
   error = null,
-  chartWidthPx = 1200
+  chartWidthPx = 1200,
+  seriesOptions = null
 }) => {
   const t = {...DEFAULT_TRANSLATIONS, ...customTranslations}
 
@@ -579,6 +678,20 @@ const AggregatedSeriesExplorer = ({
     [displayResolutionForUI]
   )
 
+  // Build a map of parameter name -> availableFrequencies from seriesOptions
+  const paramAvailableFrequenciesMap = useMemo(() => {
+    const map = new Map()
+    if (seriesOptions?.parameters) {
+      for (const param of seriesOptions.parameters) {
+        if (param.name && param.availableFrequencies) {
+          map.set(param.name, param.availableFrequencies)
+        }
+      }
+    }
+
+    return map
+  }, [seriesOptions])
+
   const frequencyBadges = useMemo(() => {
     if (selectedParams.length === 0) {
       return []
@@ -593,14 +706,18 @@ const AggregatedSeriesExplorer = ({
         continue
       }
 
+      // Get available frequencies for this specific parameter from seriesOptions
+      const availableFrequencies = paramAvailableFrequenciesMap.get(param) ?? []
+
       badges.push({
         parameter: paramMeta.parameter ?? paramMeta.parameterLabel ?? param,
-        frequency
+        frequency,
+        availableFrequencies
       })
     }
 
     return badges
-  }, [parameterMap, selectedParams])
+  }, [parameterMap, selectedParams, paramAvailableFrequenciesMap])
 
   // Notify parent of resolution change
   const lastSentFrequencyRef = useRef(null)
@@ -670,57 +787,7 @@ const AggregatedSeriesExplorer = ({
             }}
             >
               {frequencyBadges.length > 0 ? (
-                <>
-                  <Typography
-                    variant='caption'
-                    sx={{
-                      color: 'text.secondary',
-                      fontStyle: 'italic',
-                      fontSize: '0.75rem'
-                    }}
-                  >
-                    Résolution par série :
-                  </Typography>
-                  <Box sx={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: 1
-                  }}
-                  >
-                    {frequencyBadges.map(({parameter, frequency}) => (
-                      <Box
-                        key={`${parameter}-${frequency}`}
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 0.75,
-                          px: 1,
-                          py: 0.5,
-                          borderRadius: 1,
-                          backgroundColor: 'action.hover'
-                        }}
-                      >
-                        <Typography
-                          variant='caption'
-                          sx={{
-                            color: 'text.secondary',
-                            fontWeight: 600
-                          }}
-                        >
-                          {parameter} :{' '}
-                        </Typography>
-                        <Typography
-                          variant='caption'
-                          sx={{
-                            color: 'text.secondary'
-                          }}
-                        >
-                          {formatFrequencyLabel(frequency) ?? frequency}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Box>
-                </>
+                <FrequencyBadges badges={frequencyBadges} />
               ) : (
                 <Typography
                   variant='caption'
