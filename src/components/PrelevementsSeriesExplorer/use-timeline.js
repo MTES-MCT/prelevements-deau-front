@@ -113,10 +113,10 @@ export function useTimeline(timelineSamples, showRangeSlider, rangeOverride = nu
           ]
         })
       }
-    } else {
-      setRangeIndices([0, 0])
-      setCommittedRangeIndices([0, 0])
     }
+    // If sliderDates is empty (during transitions), preserve existing indices
+    // instead of resetting to [0, 0]. This prevents losing user's selection
+    // when parameters change and timelineSamples is temporarily reconstructed.
   }, [sliderDates.length])
 
   // Visible date range is inclusive of start and exclusive of end, but expressed in day precision.

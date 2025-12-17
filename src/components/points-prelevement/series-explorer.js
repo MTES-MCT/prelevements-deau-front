@@ -433,6 +433,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
           defaultPeriods={defaultPeriods}
           error={loadError}
           isLoading={isLoading}
+          seriesOptions={seriesOptions}
           onFiltersChange={handleFiltersChange}
           onDisplayResolutionChange={handleDisplayResolutionChange}
         />
