@@ -10,6 +10,11 @@ const meta = {
         component: 'Graphique de séries temporelles avancé avec support multi-axes, types mixtes (ligne/barre), seuils, et annotations.'
       }
     }
+  },
+  args: {
+    // Default frequency for all stories (1 hour intervals)
+    frequency: '1 hour',
+    locale: 'fr-FR'
   }
 }
 
