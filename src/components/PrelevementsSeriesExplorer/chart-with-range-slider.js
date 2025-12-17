@@ -113,7 +113,7 @@ const ChartWithRangeSlider = ({
           </Typography>
           <Slider
             disableSwap
-            getAriaValueText={idx => formatSliderValue(resolveDisplayDate(idx))}
+            getAriaValueText={idx => formatSliderValue(resolveDisplayDate(idx), frequency, locale)}
             marks={sliderMarks}
             max={allDates.length - 1}
             min={0}
@@ -125,7 +125,7 @@ const ChartWithRangeSlider = ({
             step={1}
             value={rangeIndices}
             valueLabelDisplay='on'
-            valueLabelFormat={idx => formatSliderMark(resolveDisplayDate(idx))}
+            valueLabelFormat={idx => formatSliderMark(resolveDisplayDate(idx), frequency, locale)}
             onChange={handleSliderChange}
             onChangeCommitted={onRangeChangeCommitted}
           />

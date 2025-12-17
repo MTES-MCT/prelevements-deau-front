@@ -587,7 +587,7 @@ export function clamp(value, min, max) {
 }
 
 /**
- * Computes slider marks for date range
+ * Computes slider marks for date range with appropriate formatting based on time span
  * @param {Array<Date>} dates - Array of dates
  * @param {number} [maxMarks=5] - Maximum number of marks to display
  * @returns {Array<{value: number, label: string}>} Slider marks
@@ -597,10 +597,25 @@ export function computeSliderMarks(dates, maxMarks = 5) {
     return []
   }
 
+  // Determine format based on time span
+  const firstDate = dates[0]
+  const lastDate = dates.at(-1)
+  const spanMs = lastDate.getTime() - firstDate.getTime()
+  const spanDays = spanMs / (1000 * 60 * 60 * 24)
+
+  // If span > 1 year or crosses year boundary, include year
+  const crossesYear = firstDate.getFullYear() !== lastDate.getFullYear()
+  const needsYear = spanDays > 365 || crossesYear
+
+  // Format options based on span
+  const formatOptions = needsYear
+    ? {day: 'numeric', month: 'short', year: 'numeric'}
+    : {day: 'numeric', month: 'short'}
+
   if (dates.length <= maxMarks) {
     return dates.map((date, idx) => ({
       value: idx,
-      label: date.toLocaleDateString('fr-FR', {day: 'numeric', month: 'short'})
+      label: date.toLocaleDateString('fr-FR', formatOptions)
     }))
   }
 
@@ -611,14 +626,14 @@ export function computeSliderMarks(dates, maxMarks = 5) {
     const idx = i * step
     marks.push({
       value: idx,
-      label: dates[idx].toLocaleDateString('fr-FR', {day: 'numeric', month: 'short'})
+      label: dates[idx].toLocaleDateString('fr-FR', formatOptions)
     })
   }
 
   // Always include last date
   marks.push({
     value: dates.length - 1,
-    label: dates.at(-1).toLocaleDateString('fr-FR', {day: 'numeric', month: 'short'})
+    label: dates.at(-1).toLocaleDateString('fr-FR', formatOptions)
   })
 
   return marks
