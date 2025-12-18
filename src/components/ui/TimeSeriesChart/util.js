@@ -362,7 +362,9 @@ export const processInputSeries = (inputSeries, options = {}) => {
     color: inputSeries.color,
     threshold: thresholdConfig,
     chartType,
-    precision: inputSeries.precision ?? 0
+    precision: inputSeries.precision ?? 0,
+    ...(inputSeries.area && {area: true}),
+    ...(inputSeries.stack && {stack: inputSeries.stack})
   }
 }
 
@@ -604,6 +606,8 @@ export const buildSegments = (alignedData, xValues, options) => {
         color: currentSegment.classification === SEGMENT_ABOVE ? theme.palette.error.main : data.color,
         label: undefined,
         connectNulls: false,
+        ...(data.area && {area: true}),
+        ...(data.stack && {stack: data.stack}),
         showMark({index}) {
           const point = pointsWithMeta[index]
           if (!point || point.synthetic) {
@@ -680,6 +684,8 @@ export const buildPlainSeries = (alignedData, options) => {
       color: data.color,
       label: undefined,
       connectNulls: false,
+      ...(data.area && {area: true}),
+      ...(data.stack && {stack: data.stack}),
       showMark({index}) {
         const point = data.pointsWithMeta[index]
 
@@ -721,7 +727,9 @@ export const buildStubSeries = (processedSeries, xValuesLength) => processedSeri
   showMark: false,
   connectNulls: false,
   valueFormatter: () => null,
-  chartType: processed.chartType
+  chartType: processed.chartType,
+  ...(processed.area && {area: true}),
+  ...(processed.stack && {stack: processed.stack})
 }))
 
 /**
@@ -1064,7 +1072,9 @@ const processSeriesWithDecimation = (series, options) => {
       threshold: processed.threshold, // Keep for extractStaticThresholds
       points: pointMap,
       chartType: processed.chartType || 'line',
-      precision: processed.precision
+      precision: processed.precision,
+      ...(processed.area && {area: true}),
+      ...(processed.stack && {stack: processed.stack})
     })
   }
 
@@ -1203,14 +1213,12 @@ export const axisFormatterFactory = (locale, dates, frequency) => {
   return value => formatter.format(value instanceof Date ? value : new Date(value))
 }
 
-export const buildAnnotations = ({pointBySeries, metaBySeries, visibility, theme, seriesTypes}) => {
+export const buildAnnotations = ({pointBySeries, metaBySeries, visibility, theme}) => {
   const annotations = []
   for (const [seriesId, points] of pointBySeries.entries()) {
     if (visibility[seriesId] === false) {
       continue
     }
-
-    const seriesType = seriesTypes?.get(seriesId) ?? 'line'
 
     for (const [index, point] of points.entries()) {
       if (!point || point.synthetic || point.y === null || Number.isNaN(point.y)) {
@@ -1224,7 +1232,6 @@ export const buildAnnotations = ({pointBySeries, metaBySeries, visibility, theme
 
       annotations.push({
         seriesId,
-        seriesType,
         axisId: point.axisId,
         index,
         x: point.x,
