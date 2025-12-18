@@ -43,29 +43,9 @@ export const Default = {
   }
 }
 
-export const BarChart = {
-  parameters: {
-    docs: {description: {story: 'Affichage en barres avec annotations. Les marqueurs carrés flottent au-dessus des barres.'}}
-  },
-  args: {
-    series: [{
-      id: 'precip',
-      label: 'Précipitations (mm)',
-      axis: 'left',
-      color: '#0ea5e9',
-      type: 'bar',
-      data: generateData(15, day, i => ({
-        y: Math.max(0, (Math.sin(i) * 10) + (i % 5)),
-        meta: i === 3 ? {comment: 'Orage violent', alert: 'Alerte inondation'} : (i === 7 ? {comment: 'Pluie fine'} : undefined)
-      }))
-    }],
-    onPointClick: (id, point) => console.log('Clicked', id, point)
-  }
-}
-
 export const MixedTypesAndAxes = {
   parameters: {
-    docs: {description: {story: 'Mélange de lignes et barres sur deux axes Y différents.'}}
+    docs: {description: {story: 'Séries sur deux axes Y différents.'}}
   },
   args: {
     series: [
@@ -81,7 +61,6 @@ export const MixedTypesAndAxes = {
         label: 'Pluie (mm)',
         axis: 'right',
         color: '#3b82f6',
-        type: 'bar',
         data: generateData(24, hour, i => ({y: Math.max(0, Math.cos(i / 4) * 8)}))
       }
     ]
