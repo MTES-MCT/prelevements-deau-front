@@ -1,100 +1,57 @@
-const DEFAULT_SERIES_TYPE = 'line'
-
 /**
- * Compose the final list of series (line segments, bars, thresholds and legend metadata)
+ * Compose the final list of series (line segments, thresholds and legend metadata)
  * used by the chart container.
  *
  * @param {Object} params
  * @param {Array} params.stubSeries - Base series definitions (one per parameter) used for the legend.
  * @param {Array} params.segmentSeries - Line segments produced by the threshold processor.
  * @param {Array} params.dynamicThresholdSeries - Dynamic threshold series.
- * @param {number} params.xAxisLength - Number of x-axis samples (used to rebuild bar data arrays).
- * @param {Function} params.resolveSeriesType - Function returning `'bar'` or `'line'` for a given original series id.
  * @param {Function} params.resolveSeriesColor - Function returning the resolved color for a given series (handles hidden state).
- * @param {Function} params.formatBarValue - Formatter applied to bar series values.
  *
- * @returns {Object} Object containing legendSeries, lineSegments, barSeries, thresholdSeries and composedSeries.
+ * @returns {Object} Object containing legendSeries, lineSegments, thresholdSeries and composedSeries.
  */
 export function buildComposedSeries({
   stubSeries,
   segmentSeries,
   dynamicThresholdSeries,
-  xAxisLength,
-  resolveSeriesType,
-  resolveSeriesColor,
-  formatBarValue
+  resolveSeriesColor
 }) {
-  const getType = originalId => resolveSeriesType?.(originalId) ?? DEFAULT_SERIES_TYPE
-
   const legendSeries = stubSeries.map(stub => {
-    const type = getType(stub.originalId) === 'bar' ? 'bar' : 'line'
-    return {
+    const resolved = {
       ...stub,
-      type,
-      ...(type === 'line' && {curve: 'linear'}),
+      type: 'line',
+      curve: 'linear',
       color: resolveSeriesColor?.(stub.originalId, stub.color) ?? stub.color
     }
+    // Explicitly preserve area and stack from original stub
+    if (stub.area) {
+      resolved.area = stub.area
+    }
+
+    if (stub.stack) {
+      resolved.stack = stub.stack
+    }
+
+    return resolved
   })
 
-  const lineSegments = segmentSeries
-    .filter(segment => getType(segment.originalId) !== 'bar')
-    .map(segment => ({
+  const lineSegments = segmentSeries.map(segment => {
+    const resolved = {
       ...segment,
       type: 'line',
       curve: 'linear'
-    }))
-
-  const segmentsByOriginal = new Map()
-  for (const segment of segmentSeries) {
-    if (getType(segment.originalId) !== 'bar') {
-      continue
+    }
+    // Explicitly preserve area and stack from original segment
+    if (segment.area) {
+      resolved.area = segment.area
     }
 
-    if (!segmentsByOriginal.has(segment.originalId)) {
-      segmentsByOriginal.set(segment.originalId, [])
+    if (segment.stack) {
+      resolved.stack = segment.stack
     }
 
-    segmentsByOriginal.get(segment.originalId).push(segment)
-  }
-
-  const barSeries = stubSeries
-    .filter(stub => getType(stub.originalId) === 'bar')
-    .map(stub => {
-      const mergedData = Array.from({length: xAxisLength}).fill(null)
-      const segments = segmentsByOriginal.get(stub.originalId) ?? []
-
-      // Merge all segment data into a single data array for the bar series.
-      // Note: segments belong to the same original series (grouped by originalId).
-      // If multiple segments provide a non-null value at the same index,
-      // the value from the later segment in the `segments` array overwrites
-      // the earlier one (last-wins). This behavior is intentional and relies
-      // on the ordering of `segmentSeries`; if you need another conflict
-      // resolution strategy (first-wins, sum, max), update this loop.
-      for (const segment of segments) {
-        for (let index = 0; index < segment.data.length; index += 1) {
-          const value = segment.data[index]
-          if (value === null || value === undefined) {
-            continue
-          }
-
-          // Later segments overwrite earlier values at the same index
-          mergedData[index] = value
-        }
-      }
-
-      return {
-        id: `${stub.id}__bar`,
-        originalId: stub.originalId,
-        originalLabel: stub.originalLabel,
-        type: 'bar',
-        data: mergedData,
-        layout: 'vertical',
-        xAxisId: stub.xAxisId,
-        yAxisId: stub.yAxisId,
-        color: resolveSeriesColor?.(stub.originalId, stub.color) ?? stub.color,
-        valueFormatter: formatBarValue
-      }
-    })
+    return resolved
+  })
 
   const thresholdSeries = dynamicThresholdSeries.map(threshold => ({
     ...threshold,
@@ -105,14 +62,12 @@ export function buildComposedSeries({
   const composedSeries = [
     ...legendSeries,
     ...lineSegments,
-    ...barSeries,
     ...thresholdSeries
   ]
 
   return {
     legendSeries,
     lineSegments,
-    barSeries,
     thresholdSeries,
     composedSeries
   }
