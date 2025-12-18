@@ -6,6 +6,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Transpile next-auth to fix ESM/CJS compatibility with Next.js 15
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '50mb',
+    },
+  },
   transpilePackages: ['next-auth'],
   webpack(config) {
     config.module.rules.push({
