@@ -43,15 +43,15 @@ test('toTimestamp returns milliseconds for dates and numbers', t => {
 })
 
 // GetRangeBasedDateFormatter tests
-test('getRangeBasedDateFormatter - range < 1 day returns time-only formatter', t => {
+test('getRangeBasedDateFormatter - hour frequency returns time-only formatter', t => {
   // 12 hours range (less than 1 day)
   const dates = [
     new Date('2024-01-15T08:00:00Z'),
     new Date('2024-01-15T14:00:00Z'),
     new Date('2024-01-15T20:00:00Z')
   ]
-  // Verify the formatter is created for time-only format (tested via range logic)
-  getRangeBasedDateFormatter('fr-FR', dates)
+  // Verify the formatter is created for time-only format with hour frequency
+  getRangeBasedDateFormatter('fr-FR', dates, '1 hour')
 
   const date = new Date('2024-01-15T14:30:00Z')
 
@@ -70,13 +70,13 @@ test('getRangeBasedDateFormatter - range < 1 day returns time-only formatter', t
   t.false(formatted.includes('2024')) // No year
 })
 
-test('getRangeBasedDateFormatter - range = 1 day exactly returns day/month formatter', t => {
+test('getRangeBasedDateFormatter - day frequency returns day/month formatter', t => {
   // Exactly 1 day range
   const dates = [
     new Date('2024-03-15T00:00:00Z'),
     new Date('2024-03-16T00:00:00Z')
   ]
-  const formatter = getRangeBasedDateFormatter('fr-FR', dates)
+  const formatter = getRangeBasedDateFormatter('fr-FR', dates, '1 day')
   const date = new Date('2024-03-15T12:00:00Z')
   const formatted = formatter.format(date)
 
@@ -87,13 +87,13 @@ test('getRangeBasedDateFormatter - range = 1 day exactly returns day/month forma
   t.false(formatted.includes('12')) // No hour in day format
 })
 
-test('getRangeBasedDateFormatter - range between 1 day and 6 months returns day/month formatter', t => {
+test('getRangeBasedDateFormatter - day frequency with longer range returns day/month formatter', t => {
   // 30 days range
   const dates = [
     new Date('2024-01-01T00:00:00Z'),
     new Date('2024-01-31T00:00:00Z')
   ]
-  const formatter = getRangeBasedDateFormatter('fr-FR', dates)
+  const formatter = getRangeBasedDateFormatter('fr-FR', dates, '1 day')
   const date = new Date('2024-01-15T12:00:00Z')
   const formatted = formatter.format(date)
 
@@ -103,13 +103,13 @@ test('getRangeBasedDateFormatter - range between 1 day and 6 months returns day/
   t.false(formatted.includes('2024')) // No year in day format
 })
 
-test('getRangeBasedDateFormatter - range between 6 months and 1 year returns month/year formatter', t => {
+test('getRangeBasedDateFormatter - month frequency returns month/year formatter', t => {
   // 8 months range
   const dates = [
     new Date('2024-01-01T00:00:00Z'),
     new Date('2024-09-01T00:00:00Z')
   ]
-  const formatter = getRangeBasedDateFormatter('fr-FR', dates)
+  const formatter = getRangeBasedDateFormatter('fr-FR', dates, '1 month')
   const date = new Date('2024-07-15T12:00:00Z')
   const formatted = formatter.format(date)
 
@@ -118,13 +118,13 @@ test('getRangeBasedDateFormatter - range between 6 months and 1 year returns mon
   t.regex(formatted, /juil|jul/i) // Month name (short form)
 })
 
-test('getRangeBasedDateFormatter - range > 1 year returns year-only formatter', t => {
+test('getRangeBasedDateFormatter - year frequency returns year-only formatter', t => {
   // 2 years range
   const dates = [
     new Date('2023-01-01T00:00:00Z'),
     new Date('2025-01-01T00:00:00Z')
   ]
-  const formatter = getRangeBasedDateFormatter('fr-FR', dates)
+  const formatter = getRangeBasedDateFormatter('fr-FR', dates, '1 year')
   const date = new Date('2024-06-15T12:00:00Z')
   const formatted = formatter.format(date)
 
@@ -132,36 +132,25 @@ test('getRangeBasedDateFormatter - range > 1 year returns year-only formatter', 
   t.is(formatted, '2024')
 })
 
-test('getRangeBasedDateFormatter - handles empty dates array with default formatter', t => {
-  getRangeBasedDateFormatter('fr-FR', [])
-  const date = new Date('2024-03-15T14:30:00Z')
-
-  // Use UTC formatter for predictable test assertions
-  const utcFormatter = new Intl.DateTimeFormat('fr-FR', {
-    hour12: false,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'UTC'
-  })
-  const formatted = utcFormatter.format(date)
-
-  // Should use default full format (contains date and time)
-  t.true(formatted.includes('2024'))
-  t.true(formatted.includes('15'))
-  t.true(formatted.includes('14')) // Hour in UTC
-})
-
-test('getRangeBasedDateFormatter - handles null dates with default formatter', t => {
-  const formatter = getRangeBasedDateFormatter('fr-FR', null)
+test('getRangeBasedDateFormatter - handles empty dates array with frequency', t => {
+  const formatter = getRangeBasedDateFormatter('fr-FR', [], '1 day')
   const date = new Date('2024-03-15T14:30:00Z')
   const formatted = formatter.format(date)
 
-  // Should use default full format
-  t.true(formatted.includes('2024'))
-  t.true(formatted.includes('15'))
+  // Should use day format based on frequency
+  t.true(formatted.includes('15')) // Day
+  t.true(formatted.includes('03')) // Month
+  t.false(formatted.includes('2024')) // No year in day format
+})
+
+test('getRangeBasedDateFormatter - handles null dates with frequency', t => {
+  const formatter = getRangeBasedDateFormatter('fr-FR', null, '1 month')
+  const date = new Date('2024-03-15T14:30:00Z')
+  const formatted = formatter.format(date)
+
+  // Should use month format based on frequency
+  t.true(formatted.includes('2024')) // Year
+  t.regex(formatted, /mars|mar/i) // Month name
 })
 
 test('getRangeBasedDateFormatter - respects locale parameter', t => {
@@ -169,8 +158,8 @@ test('getRangeBasedDateFormatter - respects locale parameter', t => {
     new Date('2024-01-01T00:00:00Z'),
     new Date('2024-09-01T00:00:00Z')
   ]
-  const formatterFR = getRangeBasedDateFormatter('fr-FR', dates)
-  const formatterUS = getRangeBasedDateFormatter('en-US', dates)
+  const formatterFR = getRangeBasedDateFormatter('fr-FR', dates, '1 month')
+  const formatterUS = getRangeBasedDateFormatter('en-US', dates, '1 month')
   const date = new Date('2024-07-15T12:00:00Z')
 
   const formattedFR = formatterFR.format(date)
@@ -182,36 +171,30 @@ test('getRangeBasedDateFormatter - respects locale parameter', t => {
   t.true(formattedUS.includes('2024'))
 })
 
-test('getRangeBasedDateFormatter - single date uses default formatter', t => {
+test('getRangeBasedDateFormatter - single date uses frequency-based formatter', t => {
   const dates = [new Date('2024-03-15T14:30:00Z')]
-  getRangeBasedDateFormatter('fr-FR', dates)
+  const formatter = getRangeBasedDateFormatter('fr-FR', dates, '1 hour')
   const date = new Date('2024-03-15T14:30:00Z')
+  const formatted = formatter.format(date)
 
-  // Use UTC formatter for predictable test assertions
-  const utcFormatter = new Intl.DateTimeFormat('fr-FR', {
-    hour12: false,
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'UTC'
-  })
-  const formatted = utcFormatter.format(date)
-
-  // Range is 0, should use time-only format
-  t.true(formatted.includes('14')) // Hour in UTC
+  // Should use HH:mm format for '1 hour' frequency (no day/month)
+  // Note: UTC 14:30 becomes 15:30 in CET (UTC+1 during winter)
+  t.true(formatted.includes('15')) // Hour (local time)
   t.true(formatted.includes('30')) // Minutes
+  t.false(formatted.includes('03')) // Should NOT include month
 })
 
-test('getRangeBasedDateFormatter - range at 6 months boundary uses month/year formatter', t => {
-  // Exactly 180 days range
+test('getRangeBasedDateFormatter - range at 6 months boundary uses day/month formatter', t => {
+  // Exactly 180 days range with daily frequency
   const dates = [
     new Date('2024-01-01T00:00:00Z'),
     new Date('2024-06-29T00:00:00Z')
   ]
-  const formatter = getRangeBasedDateFormatter('fr-FR', dates)
+  const formatter = getRangeBasedDateFormatter('fr-FR', dates, '1 day')
   const date = new Date('2024-03-15T12:00:00Z')
   const formatted = formatter.format(date)
 
-  // Should use day/month format (just under 6 months threshold)
+  // Should use dd/MM format for daily frequency
   t.true(formatted.includes('15')) // Day
   t.true(formatted.includes('03')) // Month
 })
@@ -593,10 +576,14 @@ test('buildAnnotations returns metadata markers', t => {
   t.is(annotations[0].color, baseTheme.palette.info.main)
 })
 
-test('axisFormatterFactory localises dates', t => {
-  const formatter = axisFormatterFactory('fr-FR')
+test('axisFormatterFactory localises dates based on frequency', t => {
+  const dates = [new Date('2024-02-20T10:30:00Z')]
+  const formatter = axisFormatterFactory('fr-FR', dates, '1 day')
   const output = formatter(new Date('2024-02-20T10:30:00Z'))
   t.true(typeof output === 'string')
+  // Day format should show day/month
+  t.true(output.includes('20'))
+  t.true(output.includes('02'))
 })
 
 // ============================================================================

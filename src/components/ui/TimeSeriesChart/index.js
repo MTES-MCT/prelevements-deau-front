@@ -38,11 +38,13 @@ import {
   axisFormatterFactory,
   buildAnnotations,
   buildSeriesModel,
+  getDateFormatForFrequency,
   getNumberFormatter
 } from './util.js'
 
 import CompactAlert from '@/components/ui/CompactAlert/index.js'
 import MetasList from '@/components/ui/MetasList/index.js'
+import {parseFrequency} from '@/utils/frequency-parsing.js'
 
 const CHART_HEIGHT = 360
 
@@ -184,20 +186,51 @@ const collectTooltipData = ({series, dataIndex, getPointMeta, getSegmentOrigin, 
  * @param {string} props.locale - Locale string for date formatting
  * @returns {JSX.Element|null} Tooltip content or null if no data
  */
-const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, getSegmentOrigin, getXAxisDate, translations: t, locale}) => {
-  // Tooltip ALWAYS shows full date and time, regardless of x-axis tick format
-  // This ensures users can see the complete timestamp even when ticks show abbreviated formats
+const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, getSegmentOrigin, getXAxisDate, translations: t, locale, frequency}) => {
+  // Tooltip formatter always shows year, shows time only for 6h or less aggregation
   const tooltipDateFormatter = useMemo(() => {
-    const formatter = new Intl.DateTimeFormat(locale, {
-      hour12: false,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
+    const parsed = parseFrequency(frequency)
+
+    // For 6h or less aggregations (hour ≤ 6, minute, second), show date+time with year
+    if (parsed && (parsed.unit === 'minute' || parsed.unit === 'second')) {
+      const formatter = new Intl.DateTimeFormat(locale, {
+        hour12: false,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+      return value => formatter.format(value instanceof Date ? value : new Date(value))
+    }
+
+    if (parsed && parsed.unit === 'hour' && parsed.value <= 6) {
+      const formatter = new Intl.DateTimeFormat(locale, {
+        hour12: false,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+      return value => formatter.format(value instanceof Date ? value : new Date(value))
+    }
+
+    // For daily or longer aggregations, use frequency formatter but ensure year is shown
+    // Day/week aggregations: show dd/MM/yyyy
+    if (parsed && (parsed.unit === 'day' || parsed.unit === 'week')) {
+      const formatter = new Intl.DateTimeFormat(locale, {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      })
+      return value => formatter.format(value instanceof Date ? value : new Date(value))
+    }
+
+    // For month, quarter, year - use the frequency-based formatter (already includes year)
+    const formatter = getDateFormatForFrequency(frequency, locale)
     return value => formatter.format(value instanceof Date ? value : new Date(value))
-  }, [locale])
+  }, [locale, frequency])
 
   // Resolve axis value before early return to respect Hooks rules
   const resolvedAxisValue = useMemo(() => {
@@ -510,6 +543,11 @@ const TimeSeriesChart = ({
   frequency = null,
   timelineRange = null
 }) => {
+  // Validate that frequency is provided (required for date formatting)
+  if (!frequency) {
+    throw new Error('TimeSeriesChart: frequency prop is required for proper date formatting')
+  }
+
   const t = {...DEFAULT_TRANSLATIONS, ...translations}
   const theme = useTheme()
   const numberFormatter = useMemo(() => getNumberFormatter(locale), [locale])
@@ -577,8 +615,8 @@ const TimeSeriesChart = ({
   })
 
   const xAxisDateFormatter = useMemo(
-    () => axisFormatterFactory(locale, chartModel.xAxisDates),
-    [chartModel.xAxisDates, locale]
+    () => axisFormatterFactory(locale, chartModel.xAxisDates, frequency),
+    [chartModel.xAxisDates, locale, frequency]
   )
   const xAxisBand = useMemo(() => [{
     id: X_AXIS_ID,
@@ -791,6 +829,7 @@ const TimeSeriesChart = ({
                       getXAxisDate={getTooltipXAxisDate}
                       translations={t}
                       locale={locale}
+                      frequency={frequency}
                     />
                   )
                 }}
