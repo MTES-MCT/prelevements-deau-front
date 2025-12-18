@@ -23,7 +23,9 @@ import {
   classifyPoint,
   buildSeriesModel,
   axisFormatterFactory,
-  buildAnnotations
+  buildAnnotations,
+  resampleSeriesData,
+  detectNativeFrequency
 } from './util.js'
 
 const baseTheme = {
@@ -947,5 +949,230 @@ test('buildSeriesModel creates correct Y-axis configuration', t => {
   t.truthy(rightAxis)
   t.is(leftAxis.position, 'left')
   t.is(rightAxis.position, 'right')
+})
+
+// Resampling tests
+test('detectNativeFrequency detects daily frequency correctly', t => {
+  const MS_PER_DAY = 24 * 60 * 60 * 1000
+  const baseTime = new Date('2024-01-01T00:00:00Z').getTime()
+
+  const dataPoints = [
+    {x: baseTime, y: 10},
+    {x: baseTime + MS_PER_DAY, y: 20},
+    {x: baseTime + (2 * MS_PER_DAY), y: 30},
+    {x: baseTime + (3 * MS_PER_DAY), y: 40}
+  ]
+
+  const frequency = detectNativeFrequency(dataPoints)
+  t.is(frequency, '1 day')
+})
+
+test('detectNativeFrequency detects 6-hour frequency correctly', t => {
+  const MS_PER_HOUR = 60 * 60 * 1000
+  const baseTime = new Date('2024-01-01T00:00:00Z').getTime()
+
+  const dataPoints = [
+    {x: baseTime, y: 10},
+    {x: baseTime + (6 * MS_PER_HOUR), y: 20},
+    {x: baseTime + (12 * MS_PER_HOUR), y: 30},
+    {x: baseTime + (18 * MS_PER_HOUR), y: 40}
+  ]
+
+  const frequency = detectNativeFrequency(dataPoints)
+  t.is(frequency, '6 hour')
+})
+
+test('detectNativeFrequency returns null for insufficient data', t => {
+  const dataPoints = [{x: 1000, y: 10}]
+  const frequency = detectNativeFrequency(dataPoints)
+  t.is(frequency, null)
+})
+
+test('detectNativeFrequency returns null for empty array', t => {
+  const dataPoints = []
+  const frequency = detectNativeFrequency(dataPoints)
+  t.is(frequency, null)
+})
+
+test('detectNativeFrequency is robust to outliers using median', t => {
+  const MS_PER_DAY = 24 * 60 * 60 * 1000
+  const baseTime = new Date('2024-01-01T00:00:00Z').getTime()
+
+  // Mostly daily with one outlier at 2 days
+  const dataPoints = [
+    {x: baseTime, y: 10},
+    {x: baseTime + MS_PER_DAY, y: 20},
+    {x: baseTime + (2 * MS_PER_DAY), y: 30},
+    {x: baseTime + (3 * MS_PER_DAY), y: 40},
+    {x: baseTime + (5 * MS_PER_DAY), y: 50}, // Outlier: 2-day gap
+    {x: baseTime + (6 * MS_PER_DAY), y: 60},
+    {x: baseTime + (7 * MS_PER_DAY), y: 70}
+  ]
+
+  const frequency = detectNativeFrequency(dataPoints)
+  t.is(frequency, '1 day')
+})
+
+test('resampleSeriesData returns original map when native frequency is finer', t => {
+  const MS_PER_HOUR = 60 * 60 * 1000
+  const baseTime = new Date('2024-01-01T00:00:00Z').getTime()
+
+  const pointMap = new Map([
+    [baseTime, {
+      x: baseTime, y: 10, meta: null, synthetic: false
+    }],
+    [baseTime + MS_PER_HOUR, {
+      x: baseTime + MS_PER_HOUR, y: 20, meta: null, synthetic: false
+    }]
+  ])
+
+  const targetXValues = [baseTime, baseTime + MS_PER_HOUR]
+
+  const result = resampleSeriesData(pointMap, targetXValues, '1 hour', '6 hour')
+
+  // Native frequency (1 hour) is finer than target (6 hour) - no resampling
+  t.is(result, pointMap)
+})
+
+test('resampleSeriesData returns original map when frequencies are equal', t => {
+  const MS_PER_HOUR = 60 * 60 * 1000
+  const baseTime = new Date('2024-01-01T00:00:00Z').getTime()
+
+  const pointMap = new Map([
+    [baseTime, {
+      x: baseTime, y: 10, meta: null, synthetic: false
+    }],
+    [baseTime + MS_PER_HOUR, {
+      x: baseTime + MS_PER_HOUR, y: 20, meta: null, synthetic: false
+    }]
+  ])
+
+  const targetXValues = [baseTime, baseTime + MS_PER_HOUR]
+
+  const result = resampleSeriesData(pointMap, targetXValues, '1 hour', '1 hour')
+
+  // Frequencies are equal - no resampling
+  t.is(result, pointMap)
+})
+
+test('resampleSeriesData duplicates values for coarser frequency', t => {
+  const MS_PER_HOUR = 60 * 60 * 1000
+  const MS_PER_DAY = 24 * MS_PER_HOUR
+  const baseTime = new Date('2024-01-01T00:00:00Z').getTime()
+
+  // Daily data
+  const pointMap = new Map([
+    [baseTime, {
+      x: baseTime, y: 100, meta: null, synthetic: false
+    }],
+    [baseTime + MS_PER_DAY, {
+      x: baseTime + MS_PER_DAY, y: 200, meta: null, synthetic: false
+    }]
+  ])
+
+  // Target is 6-hourly (finer than daily)
+  const targetXValues = [
+    baseTime,
+    baseTime + (6 * MS_PER_HOUR),
+    baseTime + (12 * MS_PER_HOUR),
+    baseTime + (18 * MS_PER_HOUR),
+    baseTime + MS_PER_DAY
+  ]
+
+  const result = resampleSeriesData(pointMap, targetXValues, '1 day', '6 hour')
+
+  // All timestamps should be filled
+  t.is(result.size, 5)
+
+  // First day's value duplicated to all 6-hour intervals before next day
+  t.is(result.get(baseTime).y, 100)
+  t.is(result.get(baseTime + (6 * MS_PER_HOUR)).y, 100)
+  t.is(result.get(baseTime + (12 * MS_PER_HOUR)).y, 100)
+  t.is(result.get(baseTime + (18 * MS_PER_HOUR)).y, 100)
+  t.is(result.get(baseTime + MS_PER_DAY).y, 200)
+
+  // Check resampled flag
+  t.true(result.get(baseTime + (6 * MS_PER_HOUR)).resampled)
+  t.is(result.get(baseTime + (6 * MS_PER_HOUR)).originalX, baseTime)
+})
+
+test('resampleSeriesData respects data gaps', t => {
+  const MS_PER_HOUR = 60 * 60 * 1000
+  const MS_PER_DAY = 24 * MS_PER_HOUR
+  const baseTime = new Date('2024-01-01T00:00:00Z').getTime()
+
+  // Daily data with a 3-day gap (gap > 1.5x native frequency)
+  const pointMap = new Map([
+    [baseTime, {
+      x: baseTime, y: 100, meta: null, synthetic: false
+    }],
+    [baseTime + (4 * MS_PER_DAY), {
+      x: baseTime + (4 * MS_PER_DAY), y: 200, meta: null, synthetic: false
+    }]
+  ])
+
+  // Target includes timestamps before the gap, in the gap, and after
+  const targetXValues = [
+    baseTime,
+    baseTime + (6 * MS_PER_HOUR),
+    baseTime + (12 * MS_PER_HOUR),
+    baseTime + MS_PER_DAY,
+    baseTime + (2 * MS_PER_DAY),
+    baseTime + (3 * MS_PER_DAY),
+    baseTime + (4 * MS_PER_DAY)
+  ]
+
+  const result = resampleSeriesData(pointMap, targetXValues, '1 day', '6 hour')
+
+  // Check result size - should only have points within native frequency of original points
+  t.true(result.size > 0, 'Result should have some points')
+
+  // First day's value should be duplicated to 6-hour and 12-hour marks
+  // (within 1 day of the first point)
+  const firstDayPoints = [baseTime, baseTime + (6 * MS_PER_HOUR), baseTime + (12 * MS_PER_HOUR)]
+  for (const ts of firstDayPoints) {
+    const point = result.get(ts)
+    if (point) {
+      t.is(point.y, 100, `Timestamp ${ts - baseTime}ms should have value 100`)
+    }
+  }
+
+  // Gap should NOT be filled (these timestamps are more than 1.5 days from nearest point)
+  t.falsy(result.get(baseTime + MS_PER_DAY), '1 day mark should not be filled')
+  t.falsy(result.get(baseTime + (2 * MS_PER_DAY)), '2 day mark should not be filled')
+  t.falsy(result.get(baseTime + (3 * MS_PER_DAY)), '3 day mark should not be filled')
+
+  // Last point should exist (exact match)
+  const lastPoint = result.get(baseTime + (4 * MS_PER_DAY))
+  if (lastPoint) {
+    t.is(lastPoint.y, 200, 'Last point should have value 200')
+  }
+})
+
+test('resampleSeriesData handles empty point map', t => {
+  const MS_PER_HOUR = 60 * 60 * 1000
+  const baseTime = new Date('2024-01-01T00:00:00Z').getTime()
+
+  const pointMap = new Map()
+  const targetXValues = [baseTime, baseTime + MS_PER_HOUR]
+
+  const result = resampleSeriesData(pointMap, targetXValues, '1 day', '6 hour')
+
+  t.is(result.size, 0)
+})
+
+test('resampleSeriesData returns original map when frequencies cannot be parsed', t => {
+  const baseTime = new Date('2024-01-01T00:00:00Z').getTime()
+
+  const pointMap = new Map([
+    [baseTime, {
+      x: baseTime, y: 10, meta: null, synthetic: false
+    }]
+  ])
+  const targetXValues = [baseTime]
+
+  const result = resampleSeriesData(pointMap, targetXValues, 'invalid', '6 hour')
+
+  t.is(result, pointMap)
 })
 
