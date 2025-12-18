@@ -115,6 +115,15 @@ export function formatPeriodLabel(periods, fallback) {
 }
 
 /**
+ * Check if frequency unit is sub-daily or daily
+ * @param {string} unit - Frequency unit ('hour', 'day', etc.)
+ * @returns {boolean} True if unit is hour, minute, second, day, or week
+ */
+function isSubDailyOrDailyUnit(unit) {
+  return unit === 'hour' || unit === 'minute' || unit === 'second' || unit === 'day' || unit === 'week'
+}
+
+/**
  * Format slider mark label based on aggregation frequency
  * Slider marks show day precision (dd/MM) as minimum, never show time
  *
@@ -132,7 +141,7 @@ export function formatSliderMark(date, frequency, locale = 'fr-FR') {
   const parsed = parseFrequency(frequency)
 
   // For all daily or sub-daily aggregations, always show dd/MM format only
-  if (parsed && (parsed.unit === 'hour' || parsed.unit === 'minute' || parsed.unit === 'second' || parsed.unit === 'day' || parsed.unit === 'week')) {
+  if (parsed && isSubDailyOrDailyUnit(parsed.unit)) {
     return format(date, 'dd/MM', {locale: fr})
   }
 
@@ -176,7 +185,7 @@ export function formatSliderValue(date, frequency, locale = 'fr-FR') {
   const parsed = parseFrequency(frequency)
 
   // For all daily or sub-daily aggregations, always show dd/MM format only
-  if (parsed && (parsed.unit === 'hour' || parsed.unit === 'minute' || parsed.unit === 'second' || parsed.unit === 'day' || parsed.unit === 'week')) {
+  if (parsed && isSubDailyOrDailyUnit(parsed.unit)) {
     return format(date, 'dd/MM', {locale: fr})
   }
 

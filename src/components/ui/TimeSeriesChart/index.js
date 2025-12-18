@@ -189,19 +189,6 @@ const collectTooltipData = ({series, dataIndex, getPointMeta, getSegmentOrigin, 
 const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, getSegmentOrigin, getXAxisDate, translations: t, locale, frequency}) => {
   // Tooltip formatter always shows year, shows time only for 6h or less aggregation
   const tooltipDateFormatter = useMemo(() => {
-    if (!frequency) {
-      // Fallback to full date/time if frequency not provided
-      const formatter = new Intl.DateTimeFormat(locale, {
-        hour12: false,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-      return value => formatter.format(value instanceof Date ? value : new Date(value))
-    }
-
     const parsed = parseFrequency(frequency)
 
     // For 6h or less aggregations (hour ≤ 6, minute, second), show date+time with year
