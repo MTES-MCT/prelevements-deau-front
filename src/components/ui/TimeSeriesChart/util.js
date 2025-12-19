@@ -3,6 +3,7 @@ import {
   isCalendarBasedUnit,
   parseFrequency
 } from '@/utils/frequency-parsing.js'
+import {getFrequencyOrder} from '@/utils/frequency.js'
 
 export const AXIS_LEFT_ID = 'y-left'
 export const AXIS_RIGHT_ID = 'y-right'
@@ -1303,20 +1304,41 @@ export const buildSeriesModel = ({
     maxPointsBeforeDecimation
   })
 
-  // Step 2: Compute unified x-axis
-  const {xValues, xAxisDates} = computeUnifiedXAxis(xValuesSet, timelineFrequency, timelineRange)
+  // Step 2.5: Resample coarser series to match the finest frequency
+  // Find the series with the finest (smallest) frequency
+  let finestFrequency = null
+  let finestSeriesTimestamps = null
 
-  // Step 2.5: Resample series that have coarser frequency than timeline
+  for (const processed of processedSeries) {
+    if (!processed.nativeFrequency) {
+      continue
+    }
+
+    if (!finestFrequency || getFrequencyOrder(processed.nativeFrequency) < getFrequencyOrder(finestFrequency)) {
+      finestFrequency = processed.nativeFrequency
+      // Extract timestamps from this series
+      finestSeriesTimestamps = [...processed.points.keys()].sort((a, b) => a - b)
+    }
+  }
+
+  // Resample coarser series using the finest series' timestamps as targets
   const resampledSeries = processedSeries.map(processed => {
-    if (!timelineFrequency || !processed.nativeFrequency) {
+    // Skip if no resampling needed (no finest series found or this series has no frequency)
+    if (!finestFrequency || !finestSeriesTimestamps || !processed.nativeFrequency) {
       return processed
     }
 
+    // Skip if this IS the finest series or is finer than the finest
+    if (getFrequencyOrder(processed.nativeFrequency) <= getFrequencyOrder(finestFrequency)) {
+      return processed
+    }
+
+    // Resample using the finest series' real timestamps
     const resampledMap = resampleSeriesData(
       processed.points,
-      xValues,
+      finestSeriesTimestamps,
       processed.nativeFrequency,
-      timelineFrequency
+      finestFrequency
     )
 
     return {
@@ -1324,6 +1346,19 @@ export const buildSeriesModel = ({
       points: resampledMap
     }
   })
+
+  // Update xValuesSet with resampled timestamps to ensure all real timestamps are included
+  const updatedXValuesSet = new Set(xValuesSet)
+  if (finestSeriesTimestamps) {
+    for (const ts of finestSeriesTimestamps) {
+      updatedXValuesSet.add(ts)
+    }
+  }
+
+  // Step 2: Compute unified x-axis
+  // Pass null for timelineFrequency to prevent linear grid generation when we're using real timestamps
+  const effectiveTimelineFrequency = finestSeriesTimestamps ? null : timelineFrequency
+  const {xValues, xAxisDates} = computeUnifiedXAxis(updatedXValuesSet, effectiveTimelineFrequency, timelineRange)
 
   // Step 3: Align all series to unified x-axis and update statistics
   const {metaBySeries, pointBySeries, alignedData} = alignSeriesToXAxis(
