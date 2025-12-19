@@ -22,7 +22,7 @@ import {
   ChartsGrid,
   ChartsAxisHighlight,
   LinePlot,
-  BarPlot,
+  AreaPlot,
   MarkPlot
 } from '@mui/x-charts'
 import {ChartContainer} from '@mui/x-charts/ChartContainer'
@@ -38,8 +38,7 @@ import {
   axisFormatterFactory,
   buildAnnotations,
   buildSeriesModel,
-  getDateFormatForFrequency,
-  getNumberFormatter
+  getDateFormatForFrequency
 } from './util.js'
 
 import CompactAlert from '@/components/ui/CompactAlert/index.js'
@@ -375,12 +374,6 @@ const ChartAnnotations = ({annotations, onPointClick}) => {
           }
 
           y = yScale(annotation.y)
-
-          // For bar charts, offset the annotation to float above/below the bar
-          if (annotation.seriesType === 'bar') {
-            const offset = 10
-            y += annotation.y >= 0 ? -offset : offset
-          }
         } catch {
           return null
         }
@@ -461,7 +454,6 @@ const DEFAULT_TRANSLATIONS = {
  * TimeSeriesChart Component
  *
  * Displays multiple time series on a single chart with support for:
- * - Mixed bar/line rendering where each series can define its own type
  * - Dual Y-axes (left and right) for series with different units
  * - Static and dynamic thresholds with conditional coloring
  * - Metadata annotations (comments, tags, alerts)
@@ -550,14 +542,6 @@ const TimeSeriesChart = ({
 
   const t = {...DEFAULT_TRANSLATIONS, ...translations}
   const theme = useTheme()
-  const numberFormatter = useMemo(() => getNumberFormatter(locale), [locale])
-  const formatBarValue = useCallback(value => {
-    if (value === null || Number.isNaN(value)) {
-      return null
-    }
-
-    return numberFormatter.format(value)
-  }, [numberFormatter])
   const [visibility, setVisibility] = useState(() => getInitialVisibility(series))
   const containerRef = useRef(null)
   const [containerWidth, setContainerWidth] = useState(null)
@@ -631,14 +615,6 @@ const TimeSeriesChart = ({
   }], [chartModel.xAxisDates, xAxisDateFormatter])
 
   const yAxis = useMemo(() => chartModel.yAxis, [chartModel.yAxis])
-  const inputSeriesTypeById = useMemo(
-    () => new Map(series.map(item => [item.id, item.type === 'bar' ? 'bar' : 'line'])),
-    [series]
-  )
-  const resolveSeriesType = useCallback(
-    originalId => inputSeriesTypeById.get(originalId) ?? 'line',
-    [inputSeriesTypeById]
-  )
 
   const getTooltipXAxisDate = useCallback((axisValue, dataIndex) => {
     const hasValidIndex = typeof dataIndex === 'number'
@@ -699,18 +675,12 @@ const TimeSeriesChart = ({
     stubSeries: chartModel.stubSeries,
     segmentSeries: filteredSegments,
     dynamicThresholdSeries: filteredThresholds,
-    xAxisLength: chartModel.xAxisDates.length,
-    resolveSeriesType,
-    resolveSeriesColor,
-    formatBarValue
+    resolveSeriesColor
   }), [
     chartModel.stubSeries,
     filteredSegments,
     filteredThresholds,
-    chartModel.xAxisDates.length,
-    resolveSeriesType,
-    resolveSeriesColor,
-    formatBarValue
+    resolveSeriesColor
   ])
 
   const annotations = useMemo(() => {
@@ -722,15 +692,14 @@ const TimeSeriesChart = ({
       pointBySeries: chartModel.pointBySeries,
       metaBySeries: chartModel.metaBySeries,
       visibility,
-      theme,
-      seriesTypes: inputSeriesTypeById
+      theme
     })
 
     // Filter annotations to only keep those whose axis is configured
     // This prevents errors when rendering annotations for non-existent axes
     const configuredAxisIds = new Set(yAxis.map(axis => axis.id))
     return allAnnotations.filter(annotation => configuredAxisIds.has(annotation.axisId))
-  }, [chartModel.pointBySeries, chartModel.metaBySeries, visibility, theme, yAxis, enableAnnotations, inputSeriesTypeById])
+  }, [chartModel.pointBySeries, chartModel.metaBySeries, visibility, theme, yAxis, enableAnnotations])
 
   const dashedStyles = useMemo(() => {
     const styles = {}
@@ -803,7 +772,7 @@ const TimeSeriesChart = ({
                 rightAxis={rightAxisId ?? null}
               />
               <ChartsAxisHighlight x='line' y='line' />
-              <BarPlot />
+              <AreaPlot />
               <LinePlot />
               <MarkPlot
                 slotProps={{

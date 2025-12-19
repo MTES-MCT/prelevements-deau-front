@@ -130,7 +130,8 @@ export function useChartSeries({
         axis,
         color,
         data: processedData,
-        type: isCumulativeValueType(param.valueType) ? 'bar' : 'line',
+        area: isCumulativeValueType(param.valueType),
+        stack: isCumulativeValueType(param.valueType) ? 'total' : undefined,
         nativeResolution,
         frequency: nativeFrequency,
         precision: param.precision ?? 0

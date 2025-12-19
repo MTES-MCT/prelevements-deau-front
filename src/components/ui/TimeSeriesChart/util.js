@@ -3,6 +3,7 @@ import {
   isCalendarBasedUnit,
   parseFrequency
 } from '@/utils/frequency-parsing.js'
+import {getFrequencyOrder} from '@/utils/frequency.js'
 
 export const AXIS_LEFT_ID = 'y-left'
 export const AXIS_RIGHT_ID = 'y-right'
@@ -362,7 +363,9 @@ export const processInputSeries = (inputSeries, options = {}) => {
     color: inputSeries.color,
     threshold: thresholdConfig,
     chartType,
-    precision: inputSeries.precision ?? 0
+    precision: inputSeries.precision ?? 0,
+    ...(inputSeries.area && {area: true}),
+    ...(inputSeries.stack && {stack: inputSeries.stack})
   }
 }
 
@@ -410,6 +413,175 @@ export const computeThresholdCrossings = (filteredPoints, thresholdEvaluator) =>
   }
 
   return crossings
+}
+
+/**
+ * Resample a series to match a target frequency by duplicating values
+ * Respects genuine data gaps (when delta between points > native frequency)
+ *
+ * @param {Map} pointMap - Original point map with sparse data
+ * @param {number[]} targetXValues - Target x-axis values at finer frequency
+ * @param {string} nativeFrequency - Native frequency of the series (e.g., '1 day')
+ * @param {string} targetFrequency - Target frequency to resample to (e.g., '6 hour')
+ * @returns {Map} Resampled point map with duplicated values
+ */
+export const resampleSeriesData = (pointMap, targetXValues, nativeFrequency, targetFrequency) => {
+  // Parse frequencies to milliseconds for comparison
+  const nativeMs = parseFrequencyToMs(nativeFrequency)
+  const targetMs = parseFrequencyToMs(targetFrequency)
+
+  if (!nativeMs || !targetMs) {
+    // Cannot resample without valid frequencies
+    return pointMap
+  }
+
+  if (nativeMs <= targetMs) {
+    // Native frequency is finer or equal - no resampling needed
+    return pointMap
+  }
+
+  // Sort original points by timestamp
+  const originalPoints = [...pointMap.entries()]
+    .map(([x, point]) => ({x, ...point}))
+    .sort((a, b) => a.x - b.x)
+
+  if (originalPoints.length === 0) {
+    return pointMap
+  }
+
+  const resampledMap = new Map()
+
+  // Tolerance for considering two points consecutive.
+  // We allow up to 1.5x the native frequency to treat points as continuous so that
+  // small scheduling jitter/clock drift (e.g. ~50% slower than ideal) does not
+  // create artificial gaps, while intervals significantly longer than the expected
+  // native spacing are still detected as genuine missing data.
+  const gapThreshold = nativeMs * 1.5
+
+  // For each target timestamp, find which original point it belongs to
+  for (const targetX of targetXValues) {
+    // Find the original point that "owns" this target timestamp
+    // A point owns all timestamps from itself until just before the next point
+    let ownerPoint = null
+
+    for (let i = 0; i < originalPoints.length; i++) {
+      const point = originalPoints[i]
+      const nextPoint = originalPoints[i + 1]
+
+      if (targetX < point.x) {
+        // Target is before this point - no owner
+        break
+      }
+
+      if (nextPoint) {
+        // Check if target is between this point and next
+        if (targetX >= point.x && targetX < nextPoint.x) {
+          // Check if there's a gap between this point and next
+          const delta = nextPoint.x - point.x
+          if (delta <= gapThreshold) {
+            // No gap - this point owns the target timestamp
+            ownerPoint = point
+          }
+
+          break
+        }
+      } else {
+        // This is the last point - it owns everything after it
+        // But only within the native frequency threshold
+        const delta = targetX - point.x
+        if (delta <= nativeMs) {
+          ownerPoint = point
+        }
+
+        break
+      }
+    }
+
+    if (ownerPoint) {
+      // Duplicate the owner's value to this target timestamp
+      resampledMap.set(targetX, {
+        x: targetX,
+        y: ownerPoint.y,
+        meta: ownerPoint.meta,
+        synthetic: false, // Not a threshold crossing, just a resampled point
+        resampled: true, // Mark as resampled for debugging
+        originalX: ownerPoint.x // Keep reference to original timestamp
+      })
+    }
+    // If no owner, leave this timestamp as null (genuine gap)
+  }
+
+  return resampledMap
+}
+
+/**
+ * Detect native frequency from a series' data points
+ * @param {Array} dataPoints - Array of {x, y} points
+ * @returns {string|null} Detected frequency string (e.g., '1 day') or null
+ */
+export const detectNativeFrequency = dataPoints => {
+  if (dataPoints.length < 2) {
+    return null
+  }
+
+  // Calculate deltas between consecutive points
+  const deltas = []
+  for (let i = 1; i < dataPoints.length; i++) {
+    const delta = dataPoints[i].x - dataPoints[i - 1].x
+    if (delta > 0) {
+      deltas.push(delta)
+    }
+  }
+
+  if (deltas.length === 0) {
+    return null
+  }
+
+  // Use median delta to be robust against outliers
+  deltas.sort((a, b) => a - b)
+  const medianDelta = deltas[Math.floor(deltas.length / 2)]
+
+  // Map delta to frequency string
+  const MS_PER_MINUTE = 60 * 1000
+  const MS_PER_HOUR = 60 * MS_PER_MINUTE
+  const MS_PER_DAY = 24 * MS_PER_HOUR
+  const MS_PER_WEEK = 7 * MS_PER_DAY
+  // Approximate month length using 30 days; calendar-based frequency parsing
+  // elsewhere handles actual month boundaries when working with real dates.
+  const MS_PER_MONTH = 30 * MS_PER_DAY
+
+  // Find closest match with some tolerance
+  const frequencies = [
+    {ms: MS_PER_MINUTE, str: '1 minute'},
+    {ms: 15 * MS_PER_MINUTE, str: '15 minute'},
+    {ms: MS_PER_HOUR, str: '1 hour'},
+    {ms: 6 * MS_PER_HOUR, str: '6 hour'},
+    {ms: MS_PER_DAY, str: '1 day'},
+    {ms: MS_PER_WEEK, str: '1 week'},
+    {ms: MS_PER_MONTH, str: '1 month'}
+  ]
+
+  let closest = frequencies[0]
+  let minDiff = Math.abs(medianDelta - closest.ms)
+
+  for (const freq of frequencies) {
+    const diff = Math.abs(medianDelta - freq.ms)
+    if (diff < minDiff) {
+      minDiff = diff
+      closest = freq
+    }
+  }
+
+  // Only accept if within 20% tolerance. A 20% margin was chosen as a balance
+  // between robustness to minor timestamp jitter / irregular sampling and rejecting
+  // data that does not consistently match any of the known frequencies. If the
+  // closest match is outside this threshold, we return null to indicate that no
+  // reliable native frequency could be detected for the provided data.
+  if (minDiff / closest.ms < 0.2) {
+    return closest.str
+  }
+
+  return null
 }
 
 /**
@@ -593,7 +765,7 @@ export const buildSegments = (alignedData, xValues, options) => {
       const lastIndexForNextSegment = getLastIndexForNextSegment(nextIndex, pointsWithMeta, currentSegment)
 
       const segmentId = `${data.id}__segment-${segments.length}`
-      segments.push({
+      const segment = {
         id: segmentId,
         originalId: data.id,
         originalLabel: data.label,
@@ -603,7 +775,9 @@ export const buildSegments = (alignedData, xValues, options) => {
         yAxisId: data.axisId,
         color: currentSegment.classification === SEGMENT_ABOVE ? theme.palette.error.main : data.color,
         label: undefined,
-        connectNulls: false,
+        connectNulls: Boolean(data.area),
+        ...(data.area && {area: true}),
+        ...(data.stack && {stack: data.stack}),
         showMark({index}) {
           const point = pointsWithMeta[index]
           if (!point || point.synthetic) {
@@ -625,7 +799,8 @@ export const buildSegments = (alignedData, xValues, options) => {
 
           return seriesFormatter.format(value)
         }
-      })
+      }
+      segments.push(segment)
       segmentToOriginal.set(segmentId, data.id)
       currentSegment = null
       previousSegmentLastIndex = lastIndexForNextSegment
@@ -679,7 +854,9 @@ export const buildPlainSeries = (alignedData, options) => {
       yAxisId: data.axisId,
       color: data.color,
       label: undefined,
-      connectNulls: false,
+      connectNulls: Boolean(data.area),
+      ...(data.area && {area: true}),
+      ...(data.stack && {stack: data.stack}),
       showMark({index}) {
         const point = data.pointsWithMeta[index]
 
@@ -719,9 +896,11 @@ export const buildStubSeries = (processedSeries, xValuesLength) => processedSeri
   xAxisId: X_AXIS_ID,
   yAxisId: processed.axisId,
   showMark: false,
-  connectNulls: false,
+  connectNulls: Boolean(processed.area),
   valueFormatter: () => null,
-  chartType: processed.chartType
+  chartType: processed.chartType,
+  ...(processed.area && {area: true}),
+  ...(processed.stack && {stack: processed.stack})
 }))
 
 /**
@@ -1054,7 +1233,11 @@ const processSeriesWithDecimation = (series, options) => {
     // Build unified point map
     const pointMap = buildPointMap(processed.filteredPoints, crossings, xValuesSet)
 
-    processedSeries.push({
+    // Store native frequency for potential resampling
+    const nativeFrequency = inputSeries.frequency
+      || detectNativeFrequency(processed.filteredPoints)
+
+    const seriesItem = {
       id: processed.id,
       label: processed.label,
       color: processed.color,
@@ -1064,8 +1247,12 @@ const processSeriesWithDecimation = (series, options) => {
       threshold: processed.threshold, // Keep for extractStaticThresholds
       points: pointMap,
       chartType: processed.chartType || 'line',
-      precision: processed.precision
-    })
+      precision: processed.precision,
+      nativeFrequency, // Store for later resampling
+      ...(processed.area && {area: true}),
+      ...(processed.stack && {stack: processed.stack})
+    }
+    processedSeries.push(seriesItem)
   }
 
   return {processedSeries, xValuesSet, didDecimate}
@@ -1127,12 +1314,65 @@ export const buildSeriesModel = ({
     maxPointsBeforeDecimation
   })
 
+  // Step 2.5: Resample coarser series to match the finest frequency
+  // Find the series with the finest (smallest) frequency
+  let finestFrequency = null
+  let finestSeriesTimestamps = null
+
+  for (const processed of processedSeries) {
+    if (!processed.nativeFrequency) {
+      continue
+    }
+
+    if (!finestFrequency || getFrequencyOrder(processed.nativeFrequency) < getFrequencyOrder(finestFrequency)) {
+      finestFrequency = processed.nativeFrequency
+      // Extract timestamps from this series
+      finestSeriesTimestamps = [...processed.points.keys()].sort((a, b) => a - b)
+    }
+  }
+
+  // Resample coarser series using the finest series' timestamps as targets
+  const resampledSeries = processedSeries.map(processed => {
+    // Skip if no resampling needed (no finest series found or this series has no frequency)
+    if (!finestFrequency || !finestSeriesTimestamps || !processed.nativeFrequency) {
+      return processed
+    }
+
+    // Skip if this IS the finest series or is finer than the finest
+    if (getFrequencyOrder(processed.nativeFrequency) <= getFrequencyOrder(finestFrequency)) {
+      return processed
+    }
+
+    // Resample using the finest series' real timestamps
+    const resampledMap = resampleSeriesData(
+      processed.points,
+      finestSeriesTimestamps,
+      processed.nativeFrequency,
+      finestFrequency
+    )
+
+    return {
+      ...processed,
+      points: resampledMap
+    }
+  })
+
+  // Update xValuesSet with resampled timestamps to ensure all real timestamps are included
+  const updatedXValuesSet = new Set(xValuesSet)
+  if (finestSeriesTimestamps) {
+    for (const ts of finestSeriesTimestamps) {
+      updatedXValuesSet.add(ts)
+    }
+  }
+
   // Step 2: Compute unified x-axis
-  const {xValues, xAxisDates} = computeUnifiedXAxis(xValuesSet, timelineFrequency, timelineRange)
+  // Pass null for timelineFrequency to prevent linear grid generation when we're using real timestamps
+  const effectiveTimelineFrequency = finestSeriesTimestamps ? null : timelineFrequency
+  const {xValues, xAxisDates} = computeUnifiedXAxis(updatedXValuesSet, effectiveTimelineFrequency, timelineRange)
 
   // Step 3: Align all series to unified x-axis and update statistics
   const {metaBySeries, pointBySeries, alignedData} = alignSeriesToXAxis(
-    processedSeries,
+    resampledSeries, // Use resampled instead of processed
     xValues,
     xAxisDates,
     axisStats
@@ -1203,14 +1443,12 @@ export const axisFormatterFactory = (locale, dates, frequency) => {
   return value => formatter.format(value instanceof Date ? value : new Date(value))
 }
 
-export const buildAnnotations = ({pointBySeries, metaBySeries, visibility, theme, seriesTypes}) => {
+export const buildAnnotations = ({pointBySeries, metaBySeries, visibility, theme}) => {
   const annotations = []
   for (const [seriesId, points] of pointBySeries.entries()) {
     if (visibility[seriesId] === false) {
       continue
     }
-
-    const seriesType = seriesTypes?.get(seriesId) ?? 'line'
 
     for (const [index, point] of points.entries()) {
       if (!point || point.synthetic || point.y === null || Number.isNaN(point.y)) {
@@ -1224,7 +1462,6 @@ export const buildAnnotations = ({pointBySeries, metaBySeries, visibility, theme
 
       annotations.push({
         seriesId,
-        seriesType,
         axisId: point.axisId,
         index,
         x: point.x,

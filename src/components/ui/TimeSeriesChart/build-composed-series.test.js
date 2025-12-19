@@ -35,7 +35,7 @@ const baseSegment = ({
   connectNulls: false
 })
 
-test('buildComposedSeries keeps line segments when type=line', t => {
+test('buildComposedSeries keeps line segments', t => {
   const stubSeries = [baseStub({id: 'temperature'})]
   const segmentSeries = [
     baseSegment({
@@ -45,24 +45,20 @@ test('buildComposedSeries keeps line segments when type=line', t => {
     })
   ]
 
-  const {legendSeries, lineSegments, barSeries} = buildComposedSeries({
+  const {legendSeries, lineSegments} = buildComposedSeries({
     stubSeries,
     segmentSeries,
     dynamicThresholdSeries: [],
-    xAxisLength: 3,
-    resolveSeriesType: () => 'line',
-    resolveSeriesColor: (_, color) => color,
-    formatBarValue: value => value
+    resolveSeriesColor: (_, color) => color
   })
 
   t.is(legendSeries.length, 1)
   t.is(legendSeries[0].type, 'line')
   t.is(lineSegments.length, 1)
   t.true(lineSegments.every(segment => segment.type === 'line'))
-  t.is(barSeries.length, 0)
 })
 
-test('buildComposedSeries generates bar series for cumulative parameters', t => {
+test('buildComposedSeries processes all segments as lines', t => {
   const stubSeries = [baseStub({id: 'volume', color: '#123'})]
   const segmentSeries = [
     baseSegment({
@@ -77,21 +73,16 @@ test('buildComposedSeries generates bar series for cumulative parameters', t => 
     })
   ]
 
-  const {legendSeries, lineSegments, barSeries} = buildComposedSeries({
+  const {legendSeries, lineSegments} = buildComposedSeries({
     stubSeries,
     segmentSeries,
     dynamicThresholdSeries: [],
-    xAxisLength: 4,
-    resolveSeriesType: id => (id === 'volume' ? 'bar' : 'line'),
-    resolveSeriesColor: (_, color) => color,
-    formatBarValue: value => value
+    resolveSeriesColor: (_, color) => color
   })
 
-  t.is(legendSeries[0].type, 'bar')
-  t.deepEqual(lineSegments, [], 'no line segment for bar series')
-  t.is(barSeries.length, 1)
-  t.is(barSeries[0].type, 'bar')
-  t.deepEqual(barSeries[0].data, [10, 20, 30, 40])
+  t.is(legendSeries[0].type, 'line')
+  t.is(lineSegments.length, 2, 'all segments processed as line segments')
+  t.true(lineSegments.every(segment => segment.type === 'line'))
 })
 
 test('buildComposedSeries greys out hidden legend entries via resolveSeriesColor', t => {
@@ -102,10 +93,7 @@ test('buildComposedSeries greys out hidden legend entries via resolveSeriesColor
     stubSeries,
     segmentSeries,
     dynamicThresholdSeries: [],
-    xAxisLength: 1,
-    resolveSeriesType: () => 'line',
-    resolveSeriesColor: (id, color) => (id === 'hidden' ? '#ccc' : color),
-    formatBarValue: value => value
+    resolveSeriesColor: (id, color) => (id === 'hidden' ? '#ccc' : color)
   })
 
   t.is(legendSeries[0].color, '#ccc')
