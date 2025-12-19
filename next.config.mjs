@@ -8,8 +8,8 @@ const nextConfig = {
   // Transpile next-auth to fix ESM/CJS compatibility with Next.js 15
   experimental: {
     serverActions: {
-      bodySizeLimit: '50mb',
-    },
+      bodySizeLimit: '50mb'
+    }
   },
   transpilePackages: ['next-auth'],
   webpack(config) {
