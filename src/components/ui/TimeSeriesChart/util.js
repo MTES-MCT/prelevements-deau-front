@@ -451,7 +451,11 @@ export const resampleSeriesData = (pointMap, targetXValues, nativeFrequency, tar
 
   const resampledMap = new Map()
 
-  // Tolerance for considering two points consecutive (1.5x native frequency)
+  // Tolerance for considering two points consecutive.
+  // We allow up to 1.5x the native frequency to treat points as continuous so that
+  // small scheduling jitter/clock drift (e.g. ~50% slower than ideal) does not
+  // create artificial gaps, while intervals significantly longer than the expected
+  // native spacing are still detected as genuine missing data.
   const gapThreshold = nativeMs * 1.5
 
   // For each target timestamp, find which original point it belongs to
@@ -485,7 +489,7 @@ export const resampleSeriesData = (pointMap, targetXValues, nativeFrequency, tar
         // This is the last point - it owns everything after it
         // But only within the native frequency threshold
         const delta = targetX - point.x
-        if (delta < nativeMs) {
+        if (delta <= nativeMs) {
           ownerPoint = point
         }
 
@@ -542,6 +546,8 @@ export const detectNativeFrequency = dataPoints => {
   const MS_PER_HOUR = 60 * MS_PER_MINUTE
   const MS_PER_DAY = 24 * MS_PER_HOUR
   const MS_PER_WEEK = 7 * MS_PER_DAY
+  // Approximate month length using 30 days; calendar-based frequency parsing
+  // elsewhere handles actual month boundaries when working with real dates.
   const MS_PER_MONTH = 30 * MS_PER_DAY
 
   // Find closest match with some tolerance
@@ -566,7 +572,11 @@ export const detectNativeFrequency = dataPoints => {
     }
   }
 
-  // Only accept if within 20% tolerance
+  // Only accept if within 20% tolerance. A 20% margin was chosen as a balance
+  // between robustness to minor timestamp jitter / irregular sampling and rejecting
+  // data that does not consistently match any of the known frequencies. If the
+  // closest match is outside this threshold, we return null to indicate that no
+  // reliable native frequency could be detected for the provided data.
   if (minDiff / closest.ms < 0.2) {
     return closest.str
   }
