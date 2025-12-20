@@ -27,6 +27,7 @@ const transformRegleForForm = regle => ({
   exploitations: regle.exploitations?.map(e => e._id || e) || [],
   document: regle.document?._id || regle.document || null,
   parametre: regle.parametre || '',
+  frequence: regle.frequence || '',
   unite: regle.unite || '',
   valeur: regle.valeur ?? '',
   contrainte: regle.contrainte || '',
