@@ -13,25 +13,22 @@ import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import {formatFullDateFr} from '@/lib/format-date.js'
 
 const contraintes = [
-  {value: 'minimum', label: 'Minimum (>)'},
-  {value: 'maximum', label: 'Maximum (<)'},
-  {value: 'moyenne', label: 'Moyenne (≃)'}
+  {value: 'min', label: 'Minimum (>)'},
+  {value: 'max', label: 'Maximum (<)'}
 ]
 
 // Mapping of parameters to their valid units
 const parametreUnites = {
-  'Volume journalier': ['m³'],
-  'Volume mensuel': ['m³'],
-  'Volume annuel': ['m³'],
-  'Relevé d\'index': ['m³'],
-  'Débit prélevé': ['L/s', 'm³/h'],
-  'Débit réservé': ['L/s', 'm³/h'],
-  Chlorures: ['mg/L'],
-  Nitrates: ['mg/L'],
-  Sulfates: ['mg/L'],
-  Température: ['degré Celsius'],
-  'Niveau piézométrique': ['m NGR'],
-  'Conductivité électrique': ['µS/cm'],
+  'volume prélevé': ['m³'],
+  'relevé d\'index': ['m³'],
+  'débit prélevé': ['L/s', 'm³/h'],
+  'débit réservé': ['L/s', 'm³/h'],
+  chlorures: ['mg/L'],
+  nitrates: ['mg/L'],
+  sulfates: ['mg/L'],
+  température: ['degrés Celsius'],
+  'niveau piézométrique': ['m NGR'],
+  conductivité: ['µS/cm'],
   pH: []
 }
 
@@ -141,6 +138,7 @@ const ParametreSection = ({regle, setRegle, fieldError}) => {
   }
 
   const showUniteField = requiresUniteSelection(regle.parametre)
+  const isVolumePreleveParametre = regle.parametre === 'volume prélevé'
 
   return (
     <DividerSection title='Paramètre et valeur'>
@@ -155,6 +153,25 @@ const ParametreSection = ({regle, setRegle, fieldError}) => {
         }}
         options={parametreOptions}
       />
+
+      {isVolumePreleveParametre && (
+        <Select
+          label='Fréquence *'
+          placeholder='Sélectionner une fréquence'
+          state={fieldError('frequence') ? 'error' : 'default'}
+          stateRelatedMessage={fieldError('frequence')}
+          nativeSelectProps={{
+            value: regle.frequence || '',
+            onChange: e => setRegle(prev => ({...prev, frequence: e.target.value}))
+          }}
+          options={[
+            {value: '', label: '-- Sélectionner --', disabled: true},
+            {value: '1 day', label: 'Journalier'},
+            {value: '1 month', label: 'Mensuel'},
+            {value: '1 year', label: 'Annuel'}
+          ]}
+        />
+      )}
 
       <div className={showUniteField ? 'grid grid-cols-2 gap-4' : ''}>
         {showUniteField && (

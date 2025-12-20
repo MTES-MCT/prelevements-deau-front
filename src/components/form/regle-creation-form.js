@@ -19,6 +19,7 @@ const emptyRegle = {
   unite: '',
   valeur: '',
   contrainte: '',
+  frequence: null,
   debut_validite: '',
   fin_validite: '',
   debut_periode: '',
@@ -33,8 +34,9 @@ const RegleCreationForm = ({preleveur, exploitations, documents}) => {
   const [regle, setRegle] = useState(emptyRegle)
 
   // Parameters that require a unit selection
-  const parametresRequiringUnite = ['Débit prélevé', 'Débit réservé']
+  const parametresRequiringUnite = ['débit prélevé', 'débit réservé']
   const isUniteRequired = parametresRequiringUnite.includes(regle.parametre)
+  const isFrequenceRequired = regle.parametre === 'volume prélevé'
 
   const isFormValid = regle.exploitations?.length > 0
     && regle.parametre
@@ -42,6 +44,7 @@ const RegleCreationForm = ({preleveur, exploitations, documents}) => {
     && regle.contrainte
     && regle.debut_validite
     && (!isUniteRequired || regle.unite)
+    && (!isFrequenceRequired || regle.frequence)
 
   const handleSubmit = withSubmit(
     async () => {

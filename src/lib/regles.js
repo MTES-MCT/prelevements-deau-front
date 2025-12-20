@@ -11,28 +11,44 @@ import WaterOutlinedIcon from '@mui/icons-material/WaterOutlined'
 import {safeParseDate} from '@/lib/format-date.js'
 
 const regleParametres = {
-  'Volume annuel': {label: 'Volume prélevé annuel', icon: <OpacityOutlinedIcon />},
-  'Volume mensuel': {label: 'Volume prélevé mensuel', icon: <OpacityOutlinedIcon />},
-  'Volume journalier': {label: 'Volume prélevé journalier', icon: <OpacityOutlinedIcon />},
-  'Débit prélevé': {label: 'Débit prélevé', icon: <OilBarrelOutlinedIcon />},
-  'Débit réservé': {label: 'Débit réservé', icon: <WaterOutlinedIcon />},
-  'Niveau piézométrique': {label: 'Niveau piézométrique', icon: <HeightOutlinedIcon />},
-  'Conductivité électrique': {label: 'Conductivité électrique', icon: <OfflineBoltOutlinedIcon />},
-  Température: {label: 'Conductivité électrique', icon: <DeviceThermostatOutlinedIcon />},
-  Chlorures: {label: 'Concentration en chlorures', icon: <ScienceOutlinedIcon />},
-  Nitrates: {label: 'Concentration en nitrates', icon: <ScienceOutlinedIcon />},
-  Sulfates: {label: 'Concentration en sulfates', icon: <ScienceOutlinedIcon />},
-  Ph: {label: 'Ph', icon: <BloodtypeOutlinedIcon />},
-  Turbidité: {label: 'Turbidité', icon: <LocalDrinkOutlinedIcon />}
+  'volume prélevé': {
+    '1 day': {label: 'Volume prélevé journalier', icon: <OpacityOutlinedIcon />},
+    '1 month': {label: 'Volume prélevé mensuel', icon: <OpacityOutlinedIcon />},
+    '1 year': {label: 'Volume prélevé annuel', icon: <OpacityOutlinedIcon />},
+    default: {label: 'Volume prélevé', icon: <OpacityOutlinedIcon />}
+  },
+  'relevé d\'index': {label: 'Relevé d\'index', icon: <OpacityOutlinedIcon />},
+  'débit prélevé': {label: 'Débit prélevé', icon: <OilBarrelOutlinedIcon />},
+  'débit réservé': {label: 'Débit réservé', icon: <WaterOutlinedIcon />},
+  'niveau piézométrique': {label: 'Niveau piézométrique', icon: <HeightOutlinedIcon />},
+  conductivité: {label: 'Conductivité', icon: <OfflineBoltOutlinedIcon />},
+  température: {label: 'Température', icon: <DeviceThermostatOutlinedIcon />},
+  chlorures: {label: 'Concentration en chlorures', icon: <ScienceOutlinedIcon />},
+  nitrates: {label: 'Concentration en nitrates', icon: <ScienceOutlinedIcon />},
+  sulfates: {label: 'Concentration en sulfates', icon: <ScienceOutlinedIcon />},
+  pH: {label: 'pH', icon: <BloodtypeOutlinedIcon />},
+  turbidité: {label: 'Turbidité', icon: <LocalDrinkOutlinedIcon />}
 }
 
 const regleContrainte = {
-  minimum: '>',
-  maximum: '<',
-  moyenne: '≃'
+  min: '>',
+  max: '<'
 }
 
-export const getParametreInfo = parametre => regleParametres[parametre]
+export const getParametreInfo = (parametre, frequence) => {
+  const parametreData = regleParametres[parametre]
+  if (!parametreData) {
+    return null
+  }
+
+  // Si c'est volume prélevé, utiliser la fréquence pour obtenir le label spécifique
+  if (parametre === 'volume prélevé' && typeof parametreData === 'object' && !parametreData.label) {
+    return parametreData[frequence] || parametreData.default
+  }
+
+  return parametreData
+}
+
 export const getRegleContrainte = contrainte => regleContrainte[contrainte]
 
 /**

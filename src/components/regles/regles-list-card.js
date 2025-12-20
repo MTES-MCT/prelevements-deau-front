@@ -93,8 +93,8 @@ const RegleStatusBadge = ({status}) => {
   )
 }
 
-const RegleHeader = ({parametre, debutValidite, finValidite, debutPeriode, finPeriode, unite, valeur, contrainte, status}) => {
-  const parametreInfo = getParametreInfo(parametre)
+const RegleHeader = ({parametre, frequence, debutValidite, finValidite, debutPeriode, finPeriode, unite, valeur, contrainte, status}) => {
+  const parametreInfo = getParametreInfo(parametre, frequence)
   const label = parametreInfo?.label || parametre
   const icon = parametreInfo?.icon
 
@@ -144,6 +144,7 @@ const RegleItem = ({regle, preleveurId, status}) => {
           debutValidite={regle.debut_validite}
           finPeriode={regle.fin_periode}
           finValidite={regle.fin_validite}
+          frequence={regle.frequence}
           parametre={regle.parametre}
           status={status}
           unite={regle.unite}
