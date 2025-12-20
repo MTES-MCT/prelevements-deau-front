@@ -13,31 +13,30 @@ import DayMonthSelector from '@/components/form/day-month-selector.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
 const contraintes = [
-  'minimum',
-  'maximum'
+  'min',
+  'max'
 ]
 
 const parametres = [
-  'Volume journalier',
-  'Volume mensuel',
-  'Volume annuel',
-  'Débit prélevé',
-  'Débit réservé',
-  'Chlorures',
-  'Nitrates',
-  'Sulfates',
-  'Température',
-  'Niveau piézométrique',
-  'Conductivité électrique',
+  'volume prélevé',
+  'relevé d\'index',
+  'débit prélevé',
+  'débit réservé',
+  'chlorures',
+  'nitrates',
+  'sulfates',
+  'température',
+  'niveau piézométrique',
+  'conductivité',
   'pH'
 ]
 
 const unites = [
-  {value: 'm3', label: 'm³'},
+  {value: 'm³', label: 'm³'},
   {value: 'L/s', label: 'L/s'},
-  {value: 'm3/h', label: 'm³/h'},
+  {value: 'm³/h', label: 'm³/h'},
   {value: 'mg/L', label: 'mg/L'},
-  {value: 'degré Celsius', label: 'degrès Celsius'},
+  {value: 'degrés Celsius', label: 'degrés Celsius'},
   {value: 'm NGR', label: 'm NGR'},
   {value: 'µS/cm', label: 'µS/cm'}
 ]
@@ -47,6 +46,7 @@ const emptyRegle = {
   unite: '',
   valeur: '',
   contrainte: '',
+  frequence: '',
   debut_validite: '',
   fin_validite: '',
   debut_periode: '',
@@ -69,6 +69,11 @@ const ReglesForm = ({defaultRegles, setExploitation}) => {
 
     if (!regle.parametre || !regle.unite || !regle.valeur || !regle.contrainte || !regle.debut_validite) {
       setError('Les champs "Paramètre", "Unité", "Valeur", "Contrainte" et "Début de validité" sont requis.')
+      return
+    }
+
+    if (regle.parametre === 'volume prélevé' && !regle.frequence) {
+      setError('Le champ "Fréquence" est requis pour le paramètre "volume prélevé".')
       return
     }
 
@@ -109,6 +114,21 @@ const ReglesForm = ({defaultRegles, setExploitation}) => {
           label: parametre
         }))}
       />
+      {regle?.parametre === 'volume prélevé' && (
+        <Select
+          label='Fréquence *'
+          placeholder='Sélectionner une fréquence'
+          nativeSelectProps={{
+            value: regle?.frequence,
+            onChange: e => setRegle(prev => ({...prev, frequence: e.target.value}))
+          }}
+          options={[
+            {value: '1 day', label: 'Journalier'},
+            {value: '1 month', label: 'Mensuel'},
+            {value: '1 year', label: 'Annuel'}
+          ]}
+        />
+      )}
       <div className='grid grid-cols-2 gap-4'>
         <Select
           label='Unité *'

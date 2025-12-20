@@ -122,7 +122,7 @@ export const AGGREGATED_PARAMETERS = [
     precision: 0
   },
   {
-    parameter: 'conductivité électrique',
+    parameter: 'conductivité',
     unit: 'µS/cm',
     type: 'instantaneous',
     defaultTemporalOperator: 'mean',

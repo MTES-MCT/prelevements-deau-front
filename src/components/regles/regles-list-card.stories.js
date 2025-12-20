@@ -21,8 +21,9 @@ const periodDate = (month, day) => `0001-${String(month).padStart(2, '0')}-${Str
 // Mock data for different rule statuses
 const activeRule = {
   _id: 'active-1',
-  parametre: 'Volume annuel',
-  contrainte: 'maximum',
+  parametre: 'volume prélevé',
+  frequence: '1 year',
+  contrainte: 'max',
   valeur: 50_000,
   unite: 'm³',
   debut_validite: daysAgo(365),
@@ -41,8 +42,8 @@ const activeRule = {
 
 const activeSeasonalRuleInSeason = {
   _id: 'seasonal-in-1',
-  parametre: 'Débit prélevé',
-  contrainte: 'maximum',
+  parametre: 'débit prélevé',
+  contrainte: 'max',
   valeur: 150,
   unite: 'm³/h',
   debut_validite: daysAgo(365),
@@ -57,8 +58,9 @@ const activeSeasonalRuleInSeason = {
 
 const horsSaisonRule = {
   _id: 'hors-saison-1',
-  parametre: 'Volume mensuel',
-  contrainte: 'maximum',
+  parametre: 'volume prélevé',
+  frequence: '1 month',
+  contrainte: 'max',
   valeur: 5000,
   unite: 'm³',
   debut_validite: daysAgo(365),
@@ -78,8 +80,9 @@ const horsSaisonRule = {
 
 const aVenirRule = {
   _id: 'a-venir-1',
-  parametre: 'Volume journalier',
-  contrainte: 'maximum',
+  parametre: 'volume prélevé',
+  frequence: '1 day',
+  contrainte: 'max',
   valeur: 200,
   unite: 'm³',
   debut_validite: daysFromNow(30), // Starts in 30 days
@@ -98,8 +101,9 @@ const aVenirRule = {
 
 const obsoleteRule = {
   _id: 'obsolete-1',
-  parametre: 'Volume annuel',
-  contrainte: 'maximum',
+  parametre: 'volume prélevé',
+  frequence: '1 year',
+  contrainte: 'max',
   valeur: 75_000,
   unite: 'm³',
   debut_validite: daysAgo(1000),
@@ -118,8 +122,8 @@ const obsoleteRule = {
 
 const obsoleteSeasonalRule = {
   _id: 'obsolete-2',
-  parametre: 'Niveau piézométrique',
-  contrainte: 'minimum',
+  parametre: 'niveau piézométrique',
+  contrainte: 'min',
   valeur: -15,
   unite: 'm NGF',
   debut_validite: daysAgo(800),
@@ -149,7 +153,7 @@ const meta = {
     docs: {
       description: {
         component: `Composant affichant la liste des règles d'un préleveur avec distinction visuelle des différents statuts :
-        
+
 - **Active** : règle actuellement en vigueur (pas de badge)
 - **Hors saison** : règle active mais hors période saisonnière (badge bleu)
 - **À venir** : règle dont la date de début de validité n'est pas encore atteinte (badge violet)
@@ -324,43 +328,44 @@ export const ParametresDifferents = {
     regles: [
       {
         ...activeRule,
-        parametre: 'Volume annuel',
+        parametre: 'volume prélevé',
+        frequence: '1 year',
         valeur: 50_000,
         unite: 'm³'
       },
       {
         ...activeRule,
         _id: 'p2',
-        parametre: 'Débit prélevé',
+        parametre: 'débit prélevé',
         valeur: 120,
         unite: 'm³/h'
       },
       {
         ...activeRule,
         _id: 'p3',
-        parametre: 'Niveau piézométrique',
+        parametre: 'niveau piézométrique',
         valeur: -10,
         unite: 'm NGF',
-        contrainte: 'minimum'
+        contrainte: 'min'
       },
       {
         ...activeRule,
         _id: 'p4',
-        parametre: 'Température',
+        parametre: 'température',
         valeur: 25,
         unite: '°C'
       },
       {
         ...activeRule,
         _id: 'p5',
-        parametre: 'Conductivité électrique',
+        parametre: 'conductivité',
         valeur: 500,
         unite: 'µS/cm'
       },
       {
         ...activeRule,
         _id: 'p6',
-        parametre: 'Chlorures',
+        parametre: 'chlorures',
         valeur: 100,
         unite: 'mg/L'
       }

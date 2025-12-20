@@ -20,8 +20,9 @@ const InfoRow = ({label, value, description}) => (
   </Box>
 )
 
-const RegleHeader = ({parametre, debutValidite, finValidite, debutPeriode, finPeriode, unite, valeur, contrainte}) => {
-  const {label, icon} = getParametreInfo(parametre)
+const RegleHeader = ({parametre, frequence, debutValidite, finValidite, debutPeriode, finPeriode, unite, valeur, contrainte}) => {
+  const parametreInfo = getParametreInfo(parametre, frequence)
+  const {label, icon} = parametreInfo || {label: parametre, icon: null}
 
   return (
     <Box className='flex flex-col w-full gap-4'>
@@ -59,6 +60,7 @@ const Regle = ({regle}) => (
     <AccordionSummary expandIcon={<ExpandMoreIcon />}>
       <RegleHeader
         parametre={regle.parametre}
+        frequence={regle.frequence}
         debutValidite={regle.debut_validite}
         debutPeriode={regle.debut_periode}
         finValidite={regle.fin_validite}
