@@ -350,6 +350,7 @@ const ValidateurPage = () => {
       }
 
       const result = await extractFn(buffer)
+      console.log(result)
       const errors = Array.isArray(result?.errors) ? result.errors : []
 
       registryRef.current.clear(LOCAL_SERIES_PREFIX)
