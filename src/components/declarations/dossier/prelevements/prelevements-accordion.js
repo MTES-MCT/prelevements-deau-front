@@ -12,9 +12,12 @@ import {
 import {formatNumber} from '@/utils/number.js'
 import {getPointPrelevementLabel} from '@/utils/point-prelevement.js'
 
-const PrelevementsAccordion = ({idPoint, pointPrelevement, volumePreleveTotal = null, status, isOpen, handleSelect, children}) => {
+const PrelevementsAccordion = ({idPoint, pointPrelevement, volumePreleveTotal = null, status, isOpen, handleSelect, typePrelevement, children}) => {
   const isVolumeDefined = typeof volumePreleveTotal === 'number' && !Number.isNaN(volumePreleveTotal)
   const hasPointId = idPoint !== null && idPoint !== undefined && idPoint !== ''
+  
+  // Ne pas afficher de warning pour les types qui ne vérifient pas l'existence des points
+  const skipPointCheck = ['template-file', 'extract-aquasys', 'gidaf'].includes(typePrelevement)
 
   const pointLabel = getPointPrelevementLabel({idPoint, pointPrelevement})
 
@@ -26,7 +29,7 @@ const PrelevementsAccordion = ({idPoint, pointPrelevement, volumePreleveTotal = 
       <AccordionSummary expandIcon={<ExpandMoreIcon />}>
         <Box className='flex justify-between w-full items-center'>
           <Box>
-            {pointPrelevement ? (
+            {pointPrelevement || skipPointCheck ? (
               <Box>
                 <Typography fontWeight='bold' className='flex gap-2'>
                   {pointLabel}
@@ -49,8 +52,8 @@ const PrelevementsAccordion = ({idPoint, pointPrelevement, volumePreleveTotal = 
                   color: fr.colors.decisions.background.flat.warning.default
                 }} />
                 {hasPointId
-                  ? `Le point de prélèvement ${idPoint} n’est pas reconnu`
-                  : 'Aucun point de prélèvement n’est renseigné pour ces prélèvements'}
+                  ? `Le point de prélèvement ${idPoint} n'est pas reconnu`
+                  : "Aucun point de prélèvement n'est renseigné pour ces prélèvements"}
               </Typography>
             )}
           </Box>

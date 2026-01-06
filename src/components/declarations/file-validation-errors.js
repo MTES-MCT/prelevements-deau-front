@@ -78,7 +78,8 @@ const FileValidationErrors = ({errors: errorList}) => {
     return (
       <div className={`flex flex-col ${isError ? '' : 'mt-4'}`}>
         {displayItems.map((item, idx) => {
-          const [messageText, cells] = item.message.split('pour les cellule')
+          const message = item.message || 'Erreur non spécifiée'
+          const [messageText, cells] = message.split('pour les cellule')
           return (
             <Accordion
               key={uniqueId('error-')}

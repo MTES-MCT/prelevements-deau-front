@@ -46,6 +46,9 @@ const FileValidateurForm = ({isLoading, resetForm, handleSubmit}) => {
         <option disabled hidden value=''>Sélectionnez un type de fichier</option>
         <option value='aep-zre'>Données standardisées (Tableau multi-paramètre)</option>
         <option value='camion-citerne'>Tableau de suivi camions citerne</option>
+        <option value='template-file'>Fichier type</option>
+        <option value='extract-aquasys'>Extraction Aquasys</option>
+        <option value='gidaf'>Extraction Gidaf</option>
       </Select>
 
       <Upload
