@@ -17,6 +17,7 @@ jobs:
     environment: testing
 
     env:
+      TZ: Europe/Paris
       SCW_REGION: ${{ vars.SCW_REGION }}
       SCW_REGISTRY_ENDPOINT: ${{ vars.SCW_REGISTRY_ENDPOINT }}
       SCW_IMAGE_NAME: ${{ vars.SCW_IMAGE_NAME }}
