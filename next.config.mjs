@@ -5,6 +5,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   // Transpile next-auth to fix ESM/CJS compatibility with Next.js 15
   experimental: {
     serverActions: {
