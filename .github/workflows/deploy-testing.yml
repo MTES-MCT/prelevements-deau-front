@@ -82,8 +82,11 @@ jobs:
           SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
           SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
           SCW_DEFAULT_PROJECT_ID: ${{ secrets.SCW_DEFAULT_PROJECT_ID }}
-          SCW_DEFAULT_REGION: ${{ env.SCW_REGION }}
           SCW_DEFAULT_ORGANIZATION_ID: ${{ secrets.SCW_DEFAULT_ORGANIZATION_ID }}
+          SCW_DEFAULT_REGION: ${{ env.SCW_REGION }}
+          SCW_SERVERLESS_CONTAINER_ID_TESTING: ${{ secrets.SCW_SERVERLESS_CONTAINER_ID_TESTING }}
+          SCW_REGISTRY_ENDPOINT: ${{ env.SCW_REGISTRY_ENDPOINT }}
+          SCW_IMAGE_NAME: ${{ env.SCW_IMAGE_NAME }}
         run: |
-          scw container container update ${{ env.SCW_SERVERLESS_CONTAINER_ID_TESTING }} \
-            registry-image=${{ env.SCW_REGISTRY_ENDPOINT }}/${{ env.SCW_IMAGE_NAME }}:testing-latest
+          scw container container update "$SCW_SERVERLESS_CONTAINER_ID_TESTING" \
+            registry-image="$SCW_REGISTRY_ENDPOINT/$SCW_IMAGE_NAME:testing-latest"
