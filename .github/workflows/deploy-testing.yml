@@ -83,6 +83,6 @@ jobs:
           SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
           SCW_DEFAULT_PROJECT_ID: ${{ secrets.SCW_DEFAULT_PROJECT_ID }}
         run: |
-          scw config set region=${{ env.SCW_REGION }}
+          scw config set default-region=${{ env.SCW_REGION }}
           scw container container update ${{ env.SCW_SERVERLESS_CONTAINER_ID }} \
             registry-image=${{ env.SCW_REGISTRY_ENDPOINT }}/${{ env.SCW_IMAGE_NAME }}:testing-latest
