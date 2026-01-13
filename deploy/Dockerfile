@@ -3,7 +3,6 @@ WORKDIR /app
 
 RUN corepack enable
 ENV YARN_NODE_LINKER=node-modules
-ENV NODE_ENV=development
 
 COPY package.json yarn.lock .yarnrc.yml ./
 COPY .yarn/ .yarn/
@@ -15,7 +14,6 @@ WORKDIR /app
 
 RUN corepack enable
 ENV YARN_NODE_LINKER=node-modules
-ENV NODE_ENV=development
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
