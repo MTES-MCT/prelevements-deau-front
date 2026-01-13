@@ -69,4 +69,3 @@ Pour générer un build de production :
 yarn build
 yarn start
 ```
-
