@@ -14,8 +14,7 @@ const SESSION_CALLBACKS = {
   async jwt({token, user}) {
     if (user) {
       token.token = user.token
-      token.territoire = user.territoire
-      token.role = user.role
+      token.roles = user.roles
       token.userInfo = user.userInfo
     }
 
@@ -23,8 +22,7 @@ const SESSION_CALLBACKS = {
   },
   async session({session, token}) {
     session.user.token = token.token
-    session.user.territoire = token.territoire
-    session.user.role = token.role
+    session.user.roles = token.roles
     if (token.userInfo) {
       session.user.nom = token.userInfo.nom
       session.user.prenom = token.userInfo.prenom
@@ -132,12 +130,13 @@ export async function getAuthOptions() {
           try {
             const info = await getInfo(credentials.token)
 
+            console.log('info', info)
+
             if (info) {
               return {
                 id: info.user?._id || 'anonymous',
                 token: credentials.token,
-                territoire: info.territoire,
-                role: info.role, // 'reader' or 'editor'
+                roles: info.roles,
                 userInfo: info.user || null
               }
             }

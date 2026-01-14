@@ -14,10 +14,8 @@ import {getErrorReason} from '@/lib/auth-errors.js'
  */
 export async function GET(request, {params}) {
   const {token} = await params
-  const {searchParams} = new URL(request.url)
-  const territoire = searchParams.get('territoire')
 
-  if (!token || !territoire) {
+  if (!token) {
     const errorUrl = new URL('/auth/error', FRONTEND_URL)
     errorUrl.searchParams.set('reason', 'missing_params')
     return NextResponse.redirect(errorUrl.toString())
@@ -30,7 +28,7 @@ export async function GET(request, {params}) {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({token, territoire}),
+      body: JSON.stringify({token}),
       cache: 'no-store'
     })
 

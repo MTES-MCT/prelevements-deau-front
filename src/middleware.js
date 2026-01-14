@@ -28,7 +28,7 @@ export default withAuth(
     // Check if this route requires editor role
     const requiresEditor = matchesPattern(pathname, editorOnlyPatterns)
 
-    if (requiresEditor && token?.role !== 'editor') {
+    if (requiresEditor && !token?.roles?.includes('editor')) {
       // User is authenticated but doesn't have editor permission
       const url = new URL('/auth/error', request.url)
       url.searchParams.set('reason', 'insufficient_permissions')
@@ -36,7 +36,7 @@ export default withAuth(
     }
 
     // Check if user has at least reader role
-    if (!token?.role || (token.role !== 'reader' && token.role !== 'editor')) {
+    if (!token?.roles) {
       const url = new URL('/login', request.url)
       url.searchParams.set('error', 'invalid_session')
       return NextResponse.redirect(url)

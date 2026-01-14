@@ -8,7 +8,6 @@ import {useAuth} from '@/contexts/auth-context.js'
  *   canRead: boolean,
  *   canEdit: boolean,
  *   userRole: 'reader' | 'editor' | null,
- *   territoire: {code: string, nom: string} | null,
  *   isLoading: boolean,
  *   isAuthenticated: boolean
  * }}
@@ -16,19 +15,15 @@ import {useAuth} from '@/contexts/auth-context.js'
 export const usePermissions = () => {
   const {user, isAuthenticated, isLoading} = useAuth()
 
-  const userRole = user?.role || null
-  const territoire = user?.territoire || null
+  const userRoles = user?.roles || []
 
-  // Reader and editor can read
-  const canRead = userRole === 'reader' || userRole === 'editor'
-  // Only editor can edit
-  const canEdit = userRole === 'editor'
+  const canRead = userRoles.includes('reader') || userRoles.includes('editor')
+  const canEdit = userRoles.includes('editor')
 
   return {
     canRead,
     canEdit,
-    userRole,
-    territoire,
+    userRoles,
     isLoading,
     isAuthenticated
   }
