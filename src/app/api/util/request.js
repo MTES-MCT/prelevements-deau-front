@@ -4,4 +4,4 @@
  */
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL
-export const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://prelevements-deau.beta.gouv.fr'
+export const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || process.env.FRONT_URL || 'https://prelevements-deau.beta.gouv.fr'
