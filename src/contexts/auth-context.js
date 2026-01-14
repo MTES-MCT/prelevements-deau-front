@@ -9,7 +9,7 @@ import {
 
 import {useSession, signIn, signOut} from 'next-auth/react'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL
 
 const AuthContext = createContext({
   user: null,

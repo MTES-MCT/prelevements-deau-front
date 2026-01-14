@@ -1,6 +1,6 @@
 import {getServerAuthSession} from '@/server/auth.js'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL
 
 /**
  * Get authenticated session or throw if not authenticated

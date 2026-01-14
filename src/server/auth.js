@@ -1,6 +1,6 @@
 import {getServerSession} from 'next-auth'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL
 const IS_DEV = process.env.NODE_ENV === 'development'
 
 // Session configuration shared between async and static exports
