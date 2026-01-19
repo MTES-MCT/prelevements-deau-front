@@ -2,7 +2,13 @@
 
 import {useCallback, useRef, useState} from 'react'
 
-import {extractMultiParamFile, extractCamionCiterne} from '@fabnum/prelevements-deau-timeseries-parsers'
+import {
+  extractMultiParamFile,
+  extractCamionCiterne,
+  extractTemplateFile,
+  extractAquasys,
+  extractGidaf
+} from '@fabnum/prelevements-deau-timeseries-parsers'
 import {Divider} from '@mui/material'
 
 import FileValidationResult from '@/components/declarations/validateur/file-validation-result.js'
@@ -231,12 +237,19 @@ const maybeAccumulateVolume = ({serie, localValues, hasSubDaily}, totals) => {
 
 /**
  * Convert newly extracted series into UI-ready descriptors and cached values.
- * @param {'aep-zre'|'camion-citerne'} prelevementType
+ * @param {'aep-zre'|'camion-citerne'|'template-file'|'extract-aquasys'|'gidaf'} prelevementType
  * @param {*} seriesInput
  * @returns {{series: Array, localSeriesEntries: Array, pointIds: Array<string>, totalVolumePreleve: number|null}}
  */
 const convertExtractedSeries = (prelevementType, seriesInput) => {
-  const seriesTypePrefix = prelevementType === 'camion-citerne' ? 'camion' : 'aep'
+  const prefixMap = {
+    'camion-citerne': 'camion',
+    'aep-zre': 'aep',
+    'template-file': 'template',
+    'extract-aquasys': 'aquasys',
+    'gidaf': 'gidaf'
+  }
+  const seriesTypePrefix = prefixMap[prelevementType] || 'aep'
   const aggregates = {
     series: [],
     localSeriesEntries: [],
@@ -255,27 +268,27 @@ const convertExtractedSeries = (prelevementType, seriesInput) => {
       aggregates.pointIds.add(pointId)
     }
 
-    const {
-      localValues,
-      numberOfValues,
-      hasSubDaily
-    } = buildLocalSeriesValues(serie.data)
+      const {
+        localValues,
+        numberOfValues,
+        hasSubDaily
+      } = buildLocalSeriesValues(serie.data)
 
-    const seriesId = `${LOCAL_SERIES_PREFIX}${seriesTypePrefix}:${index}`
+      const seriesId = `${LOCAL_SERIES_PREFIX}${seriesTypePrefix}:${index}`
 
-    aggregates.localSeriesEntries.push({id: seriesId, values: localValues})
-    aggregates.series.push(createSeriesEntry({
-      serie,
-      seriesId,
-      pointId,
-      index,
-      localValues,
-      numberOfValues,
-      hasSubDaily
-    }))
+      aggregates.localSeriesEntries.push({id: seriesId, values: localValues})
+      aggregates.series.push(createSeriesEntry({
+        serie,
+        seriesId,
+        pointId,
+        index,
+        localValues,
+        numberOfValues,
+        hasSubDaily
+      }))
 
-    maybeAccumulateVolume({serie, localValues, hasSubDaily}, aggregates)
-  }
+      maybeAccumulateVolume({serie, localValues, hasSubDaily}, aggregates)
+    }
 
   return {
     series: aggregates.series,
@@ -314,31 +327,57 @@ const ValidateurPage = () => {
 
     try {
       const buffer = await selectedFile.arrayBuffer()
-      const extractFn = prelevementType === 'aep-zre'
-        ? extractMultiParamFile
-        : extractCamionCiterne
+      let extractFn
+      
+      switch (prelevementType) {
+        case 'aep-zre':
+          extractFn = extractMultiParamFile
+          break
+        case 'camion-citerne':
+          extractFn = extractCamionCiterne
+          break
+        case 'template-file':
+          extractFn = extractTemplateFile
+          break
+        case 'extract-aquasys':
+          extractFn = extractAquasys
+          break
+        case 'gidaf':
+          extractFn = extractGidaf
+          break
+        default:
+          throw new Error(`Type de fichier non supporté: ${prelevementType}`)
+      }
 
       const result = await extractFn(buffer)
+      console.log(result)
       const errors = Array.isArray(result?.errors) ? result.errors : []
 
       registryRef.current.clear(LOCAL_SERIES_PREFIX)
       const conversion = convertExtractedSeries(prelevementType, result?.data)
       registryRef.current.register(conversion.localSeriesEntries)
 
-      const uniquePointIds = conversion.pointIds
-      if (uniquePointIds.length > 0) {
-        const fetchedResults = await Promise.all(uniquePointIds.map(async id => {
-          try {
-            const result = await getPointPrelevementAction(id)
-            return result.success ? result.data : null
-          } catch {
-            return null
-          }
-        }))
-
-        setPointsPrelevement(fetchedResults.filter(Boolean))
-      } else {
+      // Ne pas vérifier l'existence des points pour template-file, aquasys et gidaf
+      const skipPointCheck = ['template-file', 'extract-aquasys', 'gidaf'].includes(prelevementType)
+      
+      if (skipPointCheck) {
         setPointsPrelevement([])
+      } else {
+        const uniquePointIds = conversion.pointIds
+        if (uniquePointIds.length > 0) {
+          const fetchedResults = await Promise.all(uniquePointIds.map(async id => {
+            try {
+              const result = await getPointPrelevementAction(id)
+              return result.success ? result.data : null
+            } catch {
+              return null
+            }
+          }))
+
+          setPointsPrelevement(fetchedResults.filter(Boolean))
+        } else {
+          setPointsPrelevement([])
+        }
       }
 
       setValidationResult({

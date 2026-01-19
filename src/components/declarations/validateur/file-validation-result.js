@@ -170,6 +170,7 @@ const FileValidationResult = ({
                   pointPrelevement={section.pointPrelevement}
                   volumePreleveTotal={totalVolumePreleve}
                   status={status}
+                  typePrelevement={typePrelevement}
                   handleSelect={() => handleSelectAccordion(section.accordionId)}
                 >
                   <DeclarationFileDetails
