@@ -18,7 +18,7 @@
     "@emotion/react": "^11.14.0",
     "@emotion/server": "^11.11.0",
     "@emotion/styled": "^11.14.1",
-    "@fabnum/prelevements-deau-timeseries-parsers": "^0.0.11",
+    "@fabnum/prelevements-deau-timeseries-parsers": "github:MTES-MCT/prelevements-deau-api.git#workspace=@fabnum/prelevements-deau-timeseries-parsers&head=testing",
     "date-fns": "^4.1.0",
     "flexsearch": "^0.7.43",
     "lodash-es": "^4.17.21",
