@@ -13,7 +13,6 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL
 
 const AuthContext = createContext({
   user: null,
-  mainRole: null,
   isAuthenticated: false,
   isLoading: true,
   async login() {},
@@ -34,24 +33,13 @@ export const AuthProvider = ({children}) => {
 
     return {
       id: session.user.id || 'anonymous',
-      nom: session.user.nom || null,
-      prenom: session.user.prenom || null,
+      nom: session.user.firstName || null,
+      prenom: session.user.lastName || null,
       email: session.user.email || null,
       structure: session.user.structure || null,
-      roles: session.user.roles,
+      role: session.user.role,
     }
   }, [session])
-
-  /**
-   * Get main role
-   */
-  const mainRole = useMemo(() => {
-    if (!user?.roles || !Array.isArray(user.roles) || user.roles.length === 0) {
-      return null
-    }
-
-    return user.roles[0]?.role ?? null
-  }, [user])
 
   /**
    * Login with magic link token
@@ -108,14 +96,13 @@ export const AuthProvider = ({children}) => {
   const value = useMemo(
     () => ({
       user,
-      mainRole,
       isAuthenticated: Boolean(session?.user),
       isLoading: status === 'loading',
       login,
       logout,
       refreshUser
     }),
-    [user, mainRole, session, status, login, logout, refreshUser]
+    [user, session, status, login, logout, refreshUser]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

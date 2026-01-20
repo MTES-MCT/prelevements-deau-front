@@ -9,15 +9,15 @@ import {usePathname, useRouter} from 'next/navigation'
 import {useAuth} from '@/contexts/auth-context.js'
 
 const ROLE_LABELS = {
-  declarant: 'Déclarant',
-  instructeur: 'Instructeur',
-  admin: 'Administrateur'
+  DECLARANT: 'Déclarant',
+  INSTRUCTEUR: 'Instructeur',
+  ADMIN: 'Administrateur'
 }
 
 const ROLE_COLORS = {
-  declarant: 'var(--artwork-decorative-blue-france)',
-  instructeur: 'var(--artwork-decorative-purple-glycine)',
-  admin: 'var(--artwork-decorative-purple-glycine)',
+  DECLARANT: 'var(--artwork-decorative-blue-france)',
+  INSTRUCTEUR: 'var(--artwork-decorative-purple-glycine)',
+  ADMIN: 'var(--artwork-decorative-purple-glycine)',
 }
 
 const NAV_ITEMS = [
@@ -34,7 +34,7 @@ const NAV_ITEMS = [
       target: '_self'
     },
     text: 'Mes déclarations',
-    roles: ['declarant']
+    roles: ['DECLARANT']
   },
   {
     linkProps: {
@@ -42,7 +42,7 @@ const NAV_ITEMS = [
       target: '_self'
     },
     text: 'Déclarations',
-    roles: ['instructeur', 'admin']
+    roles: ['INSTRUCTEUR', 'ADMIN']
   },
   {
     linkProps: {
@@ -50,7 +50,7 @@ const NAV_ITEMS = [
       target: '_self'
     },
     text: 'Points de prélèvement',
-    roles: ['instructeur', 'admin']
+    roles: ['INSTRUCTEUR', 'ADMIN']
   },
   {
     linkProps: {
@@ -58,7 +58,7 @@ const NAV_ITEMS = [
       target: '_self'
     },
     text: 'Préleveurs',
-    roles: ['instructeur', 'admin']
+    roles: ['INSTRUCTEUR', 'ADMIN']
   },
   {
     linkProps: {
@@ -71,7 +71,7 @@ const NAV_ITEMS = [
 
 
 const HeaderComponent = () => {
-  const {user, logout, isLoading: isLoadingUser, mainRole} = useAuth()
+  const {user, logout, isLoading: isLoadingUser} = useAuth()
   const router = useRouter()
   const pathname = usePathname()
 
@@ -97,7 +97,7 @@ const HeaderComponent = () => {
       if (!item.roles) {
         return true;
       }
-      return item.roles.includes(mainRole);
+      return item.roles.includes(user?.role);
     })
 
     return navigation.map(item => ({
@@ -127,8 +127,8 @@ const HeaderComponent = () => {
 
     // User name with role badge (non-interactive element)
     const userName = `${user.prenom || ''} ${user.nom || ''}`.trim()
-    const roleLabel = mainRole ? ROLE_LABELS[mainRole] : null
-    const roleColor = mainRole ? ROLE_COLORS[mainRole] : null
+    const roleLabel = user.role ? ROLE_LABELS[user.role] : null
+    const roleColor = user.role ? ROLE_COLORS[user.role] : null
 
     if (userName) {
       items.push(
@@ -146,15 +146,6 @@ const HeaderComponent = () => {
               }}
             />
           )}
-        </span>
-      )
-    }
-
-    // Territory information (non-interactive element)
-    if (user.territoire?.nom) {
-      items.push(
-        <span key='territoire' className='fr-btn fr-icon-map-pin-2-line' style={{cursor: 'default', pointerEvents: 'none'}}>
-          {user.territoire.nom}
         </span>
       )
     }
