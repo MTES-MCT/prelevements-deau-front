@@ -304,6 +304,7 @@ const ValidateurPage = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [validationResult, setValidationResult] = useState(null)
   const [pointsPrelevement, setPointsPrelevement] = useState([])
+  const [preleveurs, setPreleveurs] = useState([])
 
   const registryRef = useRef(createLocalSeriesRegistry())
 
@@ -317,42 +318,59 @@ const ValidateurPage = () => {
     setTypePrelevement(null)
     setValidationResult(null)
     setPointsPrelevement([])
+    setPreleveurs([])
     registryRef.current.clear(LOCAL_SERIES_PREFIX)
   }
 
-  const submit = async (selectedFile, prelevementType) => {
+  const submit = async (selectedFileOrFiles, prelevementType) => {
     setTypePrelevement(prelevementType)
-    setFile(selectedFile)
+    setFile(selectedFileOrFiles)
     setIsLoading(true)
 
     try {
-      const buffer = await selectedFile.arrayBuffer()
       let extractFn
-      
+      let result
+
       switch (prelevementType) {
         case 'aep-zre':
           extractFn = extractMultiParamFile
+          const buffer = await selectedFileOrFiles.arrayBuffer()
+          result = await extractFn(buffer)
           break
         case 'camion-citerne':
           extractFn = extractCamionCiterne
+          const buffer2 = await selectedFileOrFiles.arrayBuffer()
+          result = await extractFn(buffer2)
           break
         case 'template-file':
           extractFn = extractTemplateFile
+          const buffer3 = await selectedFileOrFiles.arrayBuffer()
+          result = await extractFn(buffer3)
           break
         case 'extract-aquasys':
           extractFn = extractAquasys
+          const buffer4 = await selectedFileOrFiles.arrayBuffer()
+          result = await extractFn(buffer4)
           break
         case 'gidaf':
           extractFn = extractGidaf
+          // Pour GIDAF, selectedFileOrFiles est un objet avec {cadresFile, prelevementsFile}
+          if (!selectedFileOrFiles || !selectedFileOrFiles.cadresFile || !selectedFileOrFiles.prelevementsFile) {
+            throw new Error('Les deux fichiers (Cadres et Prelevements) sont requis pour GIDAF')
+          }
+          const cadresBuffer = await selectedFileOrFiles.cadresFile.arrayBuffer()
+          const prelevementsBuffer = await selectedFileOrFiles.prelevementsFile.arrayBuffer()
+          result = await extractFn(cadresBuffer, prelevementsBuffer)
           break
         default:
           throw new Error(`Type de fichier non supporté: ${prelevementType}`)
       }
 
-      const result = await extractFn(buffer)
-      console.log(result)
       const errors = Array.isArray(result?.errors) ? result.errors : []
-
+      const metadataPoints = result?.data?.metadata?.pointsPrelevement || []
+      const metadataPreleveurs = result?.data?.metadata?.preleveurs || []
+      setPreleveurs(metadataPreleveurs)
+      
       registryRef.current.clear(LOCAL_SERIES_PREFIX)
       const conversion = convertExtractedSeries(prelevementType, result?.data)
       registryRef.current.register(conversion.localSeriesEntries)
@@ -361,7 +379,8 @@ const ValidateurPage = () => {
       const skipPointCheck = ['template-file', 'extract-aquasys', 'gidaf'].includes(prelevementType)
       
       if (skipPointCheck) {
-        setPointsPrelevement([])
+        setPointsPrelevement(metadataPoints)
+        
       } else {
         const uniquePointIds = conversion.pointIds
         if (uniquePointIds.length > 0) {
@@ -378,6 +397,7 @@ const ValidateurPage = () => {
         } else {
           setPointsPrelevement([])
         }
+        setPreleveurs([])
       }
 
       setValidationResult({
@@ -419,6 +439,7 @@ const ValidateurPage = () => {
             fileName={file.name}
             typePrelevement={typePrelevement}
             pointsPrelevement={pointsPrelevement}
+            preleveurs={preleveurs}
             series={validationResult.series}
             integrations={[]}
             validationStatus={validationResult.validationStatus}

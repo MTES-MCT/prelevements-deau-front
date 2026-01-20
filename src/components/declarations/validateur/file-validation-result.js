@@ -13,6 +13,8 @@ import DeclarationFileDetails from '../dossier/prelevements/declaration-file-det
 import PrelevementsAccordion from '@/components/declarations/dossier/prelevements/prelevements-accordion.js'
 import FileValidationErrors from '@/components/declarations/file-validation-errors.js'
 import {normalizePointId, getPointPrelevementName} from '@/utils/point-prelevement.js'
+import {coerceNumericValue} from '@/utils/number.js'
+import {normalizeString} from '@/utils/string.js'
 
 const findPointById = (points = [], pointId) => {
   if (pointId === null || pointId === undefined) {
@@ -22,7 +24,82 @@ const findPointById = (points = [], pointId) => {
   return points.find(point => (
     point.id_point === pointId
     || String(point.id_point) === String(pointId)
+    || point.id_point_de_prelevement_ou_rejet === pointId
+    || String(point.id_point_de_prelevement_ou_rejet) === String(pointId)
+    || point.id_point_de_prelevement === pointId
+    || String(point.id_point_de_prelevement) === String(pointId)
   )) || null
+}
+
+const getPointSiret = point => {
+  if (!point || typeof point !== 'object') {
+    return null
+  }
+
+  return point.siret || point.siret_preleveur || null
+}
+
+const getPreleveurKey = (preleveur, index) => {
+  if (!preleveur || typeof preleveur !== 'object') {
+    return `preleveur-${index + 1}`
+  }
+
+  return preleveur.siret || preleveur.raison_sociale || `preleveur-${index + 1}`
+}
+
+const formatPreleveurLabel = preleveur => {
+  if (!preleveur || typeof preleveur !== 'object') {
+    return 'Préleveur inconnu'
+  }
+
+  const name = preleveur.raison_sociale || 'Préleveur'
+  return preleveur.siret ? `${name} (${preleveur.siret})` : name
+}
+
+const isVolumePreleveParameter = parameter => {
+  if (typeof parameter !== 'string') {
+    return false
+  }
+
+  const normalized = normalizeString(parameter) ?? ''
+  return normalized.includes('volume') && normalized.includes('prelev')
+}
+
+const isVolumeRejeteParameter = parameter => {
+  if (typeof parameter !== 'string') {
+    return false
+  }
+
+  const normalized = normalizeString(parameter) ?? ''
+  return normalized.includes('volume') && normalized.includes('rejet')
+}
+
+const sumSeriesVolume = (series = [], getSeriesValues, predicate) => async () => {
+  let total = 0
+  let hasValue = false
+
+  for (const serie of series) {
+    if (typeof predicate === 'function' && !predicate(serie?.parameter)) {
+      continue
+    }
+
+    const valuesResult = typeof getSeriesValues === 'function'
+      ? await getSeriesValues(serie._id)
+      : null
+    const values = valuesResult?.values || serie?.data || []
+
+    for (const entry of values) {
+      const value = coerceNumericValue(entry?.value)
+      if (value === null || value === undefined) {
+        continue
+      }
+
+      total += value
+      hasValue = true
+    }
+  }
+
+  return hasValue ? total : null
 }
 
 const FileValidationResult = ({
@@ -30,6 +107,7 @@ const FileValidationResult = ({
   fileName,
   typePrelevement,
   pointsPrelevement = [],
+  preleveurs = [],
   series = [],
   integrations = [],
   validationStatus,
@@ -132,6 +210,77 @@ const FileValidationResult = ({
   }, [scrollIntoView, pointSections])
 
   const hasDataToDisplay = pointSections.length > 0
+  const [volumeByPoint, setVolumeByPoint] = useState(new Map())
+
+  useEffect(() => {
+    let cancelled = false
+    const computeTotals = async () => {
+      const nextMap = new Map()
+
+      for (const section of pointSections) {
+        const key = section.pointId ?? section.accordionId
+        const computePreleve = sumSeriesVolume(section.series, getSeriesValues, isVolumePreleveParameter)
+        const computeRejete = sumSeriesVolume(section.series, getSeriesValues, isVolumeRejeteParameter)
+        const [totalPreleve, totalRejete] = await Promise.all([computePreleve(), computeRejete()])
+        nextMap.set(key, {totalPreleve, totalRejete})
+      }
+
+      if (!cancelled) {
+        setVolumeByPoint(nextMap)
+      }
+    }
+
+    if (pointSections.length > 0) {
+      computeTotals()
+    } else {
+      setVolumeByPoint(new Map())
+    }
+
+    return () => {
+      cancelled = true
+    }
+  }, [pointSections, getSeriesValues])
+
+  const preleveurSections = useMemo(() => {
+    if (!Array.isArray(preleveurs) || preleveurs.length === 0) {
+      return [{key: 'all', label: null, sections: pointSections}]
+    }
+
+    const preleveurMap = new Map()
+    for (const [index, preleveur] of preleveurs.entries()) {
+      const key = getPreleveurKey(preleveur, index)
+      preleveurMap.set(key, {
+        key,
+        preleveur,
+        label: formatPreleveurLabel(preleveur),
+        sections: []
+      })
+    }
+
+    const unknownKey = '__unknown__'
+    preleveurMap.set(unknownKey, {
+      key: unknownKey,
+      preleveur: null,
+      label: 'Préleveur inconnu',
+      sections: []
+    })
+    for (const section of pointSections) {
+      const siret = getPointSiret(section.pointPrelevement)
+      const target = [...preleveurMap.values()].find(group => group.preleveur?.siret && group.preleveur.siret === siret)
+      if (target) {
+        target.sections.push(section)
+      } else {
+        preleveurMap.get(unknownKey).sections.push(section)
+      }
+    }
+
+    const ordered = [...preleveurMap.values()].filter(group => group.sections.length > 0)
+    return orderBy(
+      ordered,
+      [group => String(group.label ?? '').toLowerCase()],
+      ['asc']
+    )
+  }, [preleveurs, pointSections])
 
   return (
     <Box className='flex flex-col gap-4'>
@@ -157,33 +306,43 @@ const FileValidationResult = ({
 
         <div className='mt-1'>
           {hasDataToDisplay ? (
-            pointSections.map(section => (
-              <div
-                key={section.accordionId}
-                ref={element => {
-                  pointRefs.current[section.accordionId] = element
-                }}
-              >
-                <PrelevementsAccordion
-                  isOpen={selectedAccordionId === section.accordionId}
-                  idPoint={section.pointId}
-                  pointPrelevement={section.pointPrelevement}
-                  volumePreleveTotal={totalVolumePreleve}
-                  status={status}
-                  typePrelevement={typePrelevement}
-                  handleSelect={() => handleSelectAccordion(section.accordionId)}
-                >
-                  <DeclarationFileDetails
-                    pointId={section.pointId}
-                    series={section.series}
-                    typePrelevement={typePrelevement}
-                    getSeriesValues={getSeriesValues}
-                  />
+            preleveurSections.map(group => (
+              <div key={group.key} className='flex flex-col gap-2'>
+                {group.label && (
+                  <div className='rounded-md bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700'>
+                    {group.label}
+                  </div>
+                )}
+                {group.sections.map(section => (
+                  <div
+                    key={section.accordionId}
+                    ref={element => {
+                      pointRefs.current[section.accordionId] = element
+                    }}
+                  >
+                    <PrelevementsAccordion
+                      isOpen={selectedAccordionId === section.accordionId}
+                      idPoint={section.pointId}
+                      pointPrelevement={section.pointPrelevement}
+                      volumePreleveTotal={volumeByPoint.get(section.pointId ?? section.accordionId)?.totalPreleve ?? null}
+                      volumeRejeteTotal={volumeByPoint.get(section.pointId ?? section.accordionId)?.totalRejete ?? null}
+                      status={status}
+                      typePrelevement={typePrelevement}
+                      handleSelect={() => handleSelectAccordion(section.accordionId)}
+                    >
+                      <DeclarationFileDetails
+                        pointId={section.pointId}
+                        series={section.series}
+                        typePrelevement={typePrelevement}
+                        getSeriesValues={getSeriesValues}
+                      />
 
-                  {errors.length > 0 && (
-                    <FileValidationErrors errors={errors} />
-                  )}
-                </PrelevementsAccordion>
+                      {errors.length > 0 && (
+                        <FileValidationErrors errors={errors} />
+                      )}
+                    </PrelevementsAccordion>
+                  </div>
+                ))}
               </div>
             ))
           ) : (
