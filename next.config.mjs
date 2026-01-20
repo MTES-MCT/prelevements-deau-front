@@ -12,7 +12,7 @@ const nextConfig = {
       bodySizeLimit: '50mb'
     }
   },
-  transpilePackages: ['next-auth', '@fabnum/prelevements-deau-timeseries-parsers'],
+  transpilePackages: ['next-auth'],
   webpack(config) {
     config.module.rules.push({
       test: /\.woff2$/,
