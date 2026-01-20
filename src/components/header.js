@@ -9,22 +9,56 @@ import {usePathname, useRouter} from 'next/navigation'
 import {useAuth} from '@/contexts/auth-context.js'
 
 const ROLE_LABELS = {
-  editor: 'Instructeur',
-  reader: 'Invité'
+  declarant: 'Déclarant',
+  instructeur: 'Instructeur',
+  admin: 'Administrateur'
 }
 
 const ROLE_COLORS = {
-  editor: 'var(--artwork-decorative-blue-france)',
-  reader: 'var(--artwork-decorative-purple-glycine)'
+  declarant: 'var(--artwork-decorative-blue-france)',
+  instructeur: 'var(--artwork-decorative-purple-glycine)',
+  admin: 'var(--artwork-decorative-purple-glycine)',
 }
 
-const defaultNavigation = [
+const NAV_ITEMS = [
   {
     linkProps: {
       href: '/',
       target: '_self'
     },
-    text: 'Accueil'
+    text: 'Accueil',
+  },
+  {
+    linkProps: {
+      href: '/mes-declarations',
+      target: '_self'
+    },
+    text: 'Mes déclarations',
+    roles: ['declarant']
+  },
+  {
+    linkProps: {
+      href: '/declarations',
+      target: '_self'
+    },
+    text: 'Déclarations',
+    roles: ['instructeur', 'admin']
+  },
+  {
+    linkProps: {
+      href: '/points-prelevement',
+      target: '_self'
+    },
+    text: 'Points de prélèvement',
+    roles: ['instructeur', 'admin']
+  },
+  {
+    linkProps: {
+      href: '/preleveurs',
+      target: '_self'
+    },
+    text: 'Préleveurs',
+    roles: ['instructeur', 'admin']
   },
   {
     linkProps: {
@@ -35,56 +69,9 @@ const defaultNavigation = [
   }
 ]
 
-const adminNavigation = [
-  {
-    linkProps: {
-      href: '/',
-      target: '_self'
-    },
-    text: 'Accueil'
-  },
-  {
-    linkProps: {
-      href: '/points-prelevement',
-      target: '_self'
-    },
-    text: 'Points de prélèvement'
-  },
-  {
-    linkProps: {
-      href: '/preleveurs',
-      target: '_self'
-    },
-    text: 'Préleveurs'
-  },
-  {
-    menuLinks: [
-      {
-        linkProps: {
-          href: '/dossiers'
-        },
-        text: 'Dossiers déposés'
-      },
-      {
-        linkProps: {
-          href: '/validateur'
-        },
-        text: 'Validateur de fichier'
-      }
-    ],
-    text: 'Déclarations'
-  },
-  {
-    linkProps: {
-      href: '/statistiques',
-      target: '_self'
-    },
-    text: 'Statistiques'
-  }
-]
 
 const HeaderComponent = () => {
-  const {user, logout, isLoading: isLoadingUser} = useAuth()
+  const {user, logout, isLoading: isLoadingUser, mainRole} = useAuth()
   const router = useRouter()
   const pathname = usePathname()
 
@@ -103,14 +90,16 @@ const HeaderComponent = () => {
         return pathname === '/'
       }
 
-      if (href === '/dossiers') {
-        return pathname === '/dossiers' || pathname === '/validateur'
-      }
-
-      return pathname.startsWith(href) // Correspondance partielle pour les autres chemins
+      return pathname.startsWith(href)
     }
 
-    const navigation = user ? adminNavigation : defaultNavigation
+    const navigation = NAV_ITEMS.filter((item) => {
+      if (!item.roles) {
+        return true;
+      }
+      return item.roles.includes(mainRole);
+    })
+
     return navigation.map(item => ({
       ...item,
       isActive: isActive(item.linkProps?.href || item.menuLinks?.[0].linkProps.href)
@@ -138,8 +127,8 @@ const HeaderComponent = () => {
 
     // User name with role badge (non-interactive element)
     const userName = `${user.prenom || ''} ${user.nom || ''}`.trim()
-    const roleLabel = user.role ? ROLE_LABELS[user.role] : null
-    const roleColor = user.role ? ROLE_COLORS[user.role] : null
+    const roleLabel = mainRole ? ROLE_LABELS[mainRole] : null
+    const roleColor = mainRole ? ROLE_COLORS[mainRole] : null
 
     if (userName) {
       items.push(

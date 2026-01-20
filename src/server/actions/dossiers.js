@@ -26,6 +26,14 @@ export async function getDossiersByStatusAction(status) {
 }
 
 /**
+ * Get user dossiers
+ * @returns {Promise<Object>} - Result object
+ */
+export async function getMyDossiers() {
+  return withErrorHandling(async () => fetchJSON(`api/dossiers/me`))
+}
+
+/**
  * Get dossiers statistics
  * @returns {Promise<Object>} - Result object
  */
