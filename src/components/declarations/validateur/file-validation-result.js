@@ -102,6 +102,8 @@ const sumSeriesVolume = (series = [], getSeriesValues, predicate) => async () =>
   return hasValue ? total : null
 }
 
+const PRELEVEUR_PAGE_SIZE = 10
+
 const FileValidationResult = ({
   attachmentId,
   fileName,
@@ -210,77 +212,130 @@ const FileValidationResult = ({
   }, [scrollIntoView, pointSections])
 
   const hasDataToDisplay = pointSections.length > 0
-  const [volumeByPoint, setVolumeByPoint] = useState(new Map())
-
-  useEffect(() => {
-    let cancelled = false
-    const computeTotals = async () => {
-      const nextMap = new Map()
-
-      for (const section of pointSections) {
-        const key = section.pointId ?? section.accordionId
-        const computePreleve = sumSeriesVolume(section.series, getSeriesValues, isVolumePreleveParameter)
-        const computeRejete = sumSeriesVolume(section.series, getSeriesValues, isVolumeRejeteParameter)
-        const [totalPreleve, totalRejete] = await Promise.all([computePreleve(), computeRejete()])
-        nextMap.set(key, {totalPreleve, totalRejete})
-      }
-
-      if (!cancelled) {
-        setVolumeByPoint(nextMap)
-      }
-    }
-
-    if (pointSections.length > 0) {
-      computeTotals()
-    } else {
-      setVolumeByPoint(new Map())
-    }
-
-    return () => {
-      cancelled = true
-    }
-  }, [pointSections, getSeriesValues])
-
-  const preleveurSections = useMemo(() => {
+  const [currentPage, setCurrentPage] = useState(1)
+  const preleveurIndex = useMemo(() => {
     if (!Array.isArray(preleveurs) || preleveurs.length === 0) {
-      return [{key: 'all', label: null, sections: pointSections}]
+      return null
     }
 
-    const preleveurMap = new Map()
+    const bySiret = new Map()
     for (const [index, preleveur] of preleveurs.entries()) {
-      const key = getPreleveurKey(preleveur, index)
-      preleveurMap.set(key, {
-        key,
+      if (!preleveur?.siret) {
+        continue
+      }
+      bySiret.set(preleveur.siret, {
+        key: getPreleveurKey(preleveur, index),
         preleveur,
-        label: formatPreleveurLabel(preleveur),
-        sections: []
+        label: formatPreleveurLabel(preleveur)
       })
     }
 
-    const unknownKey = '__unknown__'
-    preleveurMap.set(unknownKey, {
-      key: unknownKey,
-      preleveur: null,
-      label: 'Préleveur inconnu',
-      sections: []
-    })
-    for (const section of pointSections) {
-      const siret = getPointSiret(section.pointPrelevement)
-      const target = [...preleveurMap.values()].find(group => group.preleveur?.siret && group.preleveur.siret === siret)
-      if (target) {
-        target.sections.push(section)
-      } else {
-        preleveurMap.get(unknownKey).sections.push(section)
+    return {
+      bySiret,
+      unknown: {
+        key: '__unknown__',
+        preleveur: null,
+        label: 'Préleveur inconnu'
       }
     }
+  }, [preleveurs])
 
-    const ordered = [...preleveurMap.values()].filter(group => group.sections.length > 0)
+  const preleveurSections = useMemo(() => {
+    if (!preleveurIndex) {
+      return [{key: 'all', label: null, sections: pointSections}]
+    }
+
+    const grouped = new Map()
+
+    for (const section of pointSections) {
+      const siret = getPointSiret(section.pointPrelevement)
+      const info = siret ? preleveurIndex.bySiret.get(siret) : null
+      const target = info ?? preleveurIndex.unknown
+      if (!grouped.has(target.key)) {
+        grouped.set(target.key, {...target, sections: []})
+      }
+      grouped.get(target.key).sections.push(section)
+    }
+
+    const ordered = [...grouped.values()]
     return orderBy(
       ordered,
       [group => String(group.label ?? '').toLowerCase()],
       ['asc']
     )
-  }, [preleveurs, pointSections])
+  }, [preleveurIndex, pointSections])
+
+  const totalPages = Math.max(1, Math.ceil(preleveurSections.length / PRELEVEUR_PAGE_SIZE))
+  const safePage = Math.min(currentPage, totalPages)
+  const visiblePreleveurSections = useMemo(() => {
+    const startIndex = (safePage - 1) * PRELEVEUR_PAGE_SIZE
+    return preleveurSections.slice(startIndex, startIndex + PRELEVEUR_PAGE_SIZE)
+  }, [preleveurSections, safePage])
+  const visiblePointSections = useMemo(() => (
+    visiblePreleveurSections.flatMap(group => group.sections)
+  ), [visiblePreleveurSections])
+  const [volumeByPoint, setVolumeByPoint] = useState(new Map())
+
+  const volumeCacheRef = useRef(new Map())
+
+  useEffect(() => {
+    volumeCacheRef.current = new Map()
+    setVolumeByPoint(new Map())
+  }, [pointSections])
+
+  useEffect(() => {
+    let cancelled = false
+    const computeTotals = async () => {
+      const nextCache = new Map(volumeCacheRef.current)
+
+      for (const section of visiblePointSections) {
+        const key = section.pointId ?? section.accordionId
+        if (nextCache.has(key)) {
+          continue
+        }
+
+        const computePreleve = sumSeriesVolume(section.series, getSeriesValues, isVolumePreleveParameter)
+        const computeRejete = sumSeriesVolume(section.series, getSeriesValues, isVolumeRejeteParameter)
+        const [totalPreleve, totalRejete] = await Promise.all([computePreleve(), computeRejete()])
+        nextCache.set(key, {totalPreleve, totalRejete})
+      }
+
+      if (!cancelled) {
+        volumeCacheRef.current = nextCache
+        setVolumeByPoint(new Map(nextCache))
+      }
+    }
+
+    if (visiblePointSections.length > 0) {
+      let idleHandle
+      const schedule = typeof window !== 'undefined' && 'requestIdleCallback' in window
+        ? window.requestIdleCallback
+        : (cb => setTimeout(cb, 0))
+
+      const cancel = typeof window !== 'undefined' && 'cancelIdleCallback' in window
+        ? window.cancelIdleCallback
+        : (handle => clearTimeout(handle))
+
+      idleHandle = schedule(() => {
+        computeTotals()
+      })
+
+      return () => {
+        cancelled = true
+        cancel(idleHandle)
+      }
+    }
+
+    return () => {
+      cancelled = true
+    }
+  }, [visiblePointSections, getSeriesValues])
+
+  useEffect(() => {
+    if (currentPage !== safePage) {
+      setCurrentPage(safePage)
+    }
+  }, [currentPage, safePage])
 
   return (
     <Box className='flex flex-col gap-4'>
@@ -306,7 +361,7 @@ const FileValidationResult = ({
 
         <div className='mt-1'>
           {hasDataToDisplay ? (
-            preleveurSections.map(group => (
+            visiblePreleveurSections.map(group => (
               <div key={group.key} className='flex flex-col gap-2'>
                 {group.label && (
                   <div className='rounded-md bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700'>
@@ -330,15 +385,19 @@ const FileValidationResult = ({
                       typePrelevement={typePrelevement}
                       handleSelect={() => handleSelectAccordion(section.accordionId)}
                     >
-                      <DeclarationFileDetails
-                        pointId={section.pointId}
-                        series={section.series}
-                        typePrelevement={typePrelevement}
-                        getSeriesValues={getSeriesValues}
-                      />
+                      {selectedAccordionId === section.accordionId && (
+                        <>
+                          <DeclarationFileDetails
+                            pointId={section.pointId}
+                            series={section.series}
+                            typePrelevement={typePrelevement}
+                            getSeriesValues={getSeriesValues}
+                          />
 
-                      {errors.length > 0 && (
-                        <FileValidationErrors errors={errors} />
+                          {errors.length > 0 && (
+                            <FileValidationErrors errors={errors} />
+                          )}
+                        </>
                       )}
                     </PrelevementsAccordion>
                   </div>
@@ -360,6 +419,34 @@ const FileValidationResult = ({
             </div>
           )}
         </div>
+
+        {hasDataToDisplay && preleveurSections.length > PRELEVEUR_PAGE_SIZE && (
+          <div className='mt-3 flex flex-wrap items-center justify-between gap-2'>
+            <span className='text-sm text-slate-600'>
+              Page {safePage} / {totalPages} — {preleveurSections.length} préleveur(s), {pointSections.length} point(s)
+            </span>
+            <div className='flex gap-2'>
+              <Button
+                priority='secondary'
+                disabled={safePage <= 1}
+                onClick={() => {
+                  setCurrentPage(page => Math.max(1, page - 1))
+                }}
+              >
+                Précédent
+              </Button>
+              <Button
+                priority='secondary'
+                disabled={safePage >= totalPages}
+                onClick={() => {
+                  setCurrentPage(page => Math.min(totalPages, page + 1))
+                }}
+              >
+                Suivant
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
     </Box>
   )
