@@ -1,40 +1,86 @@
 import {CallOut} from '@codegouvfr/react-dsfr/CallOut'
+import {Button} from '@codegouvfr/react-dsfr/Button'
+import {fr} from '@codegouvfr/react-dsfr'
+import Link from 'next/link'
 
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {getMyDossiers} from "@/server/actions/dossiers.js";
-import DossierCard from "@/components/declarations/dossier/dossier-card.js";
-import {getDossierURL} from "@/lib/urls.js";
+import {getMyDeclarationsAction} from '@/server/actions/declarations.js'
+import {getDeclarationURL} from "@/lib/urls.js";
+import moment from "moment";
+import 'moment/locale/fr'
+moment.locale("fr")
 
 export const dynamic = 'force-dynamic'
 
 const Dossiers = async () => {
-    const result = await getMyDossiers();
-    const dossiers = result?.success ? result.data : []
+    const result = await getMyDeclarationsAction()
+    const dossiers = result?.success ? result.data.data : []
 
     return (
         <>
             <StartDsfrOnHydration/>
 
-            <div className='fr-container mt-4'>
-                <CallOut
-                    iconId='ri-information-line'
-                    title='Mes déclarations'
-                >
-                    Retrouvez toutes vos déclarations de prélèvements d’eau.
-                </CallOut>
+            <div
+                className='fr-mt-4w fr-mb-4w'
+                style={{
+                    backgroundColor: fr.colors.decisions.background.alt.blueFrance.default
+                }}
+            >
+                <div className='fr-container fr-py-6w text-center'>
+                    <h2 className='fr-h3 fr-mb-2w'>
+                        Déclarez vos prélèvements d’eau
+                    </h2>
 
-                {dossiers?.map((d, idx) => (
-                    <DossierCard
-                        key={d._id}
-                        background={idx % 2 === 0 ? 'primary' : 'secondary'}
-                        className='fr-mb-2w'
-                        dossier={d}
-                        url={getDossierURL(d)}
-                    />
-                ))}
+                    <p className='fr-text fr-mb-3w'>
+                        Déposez vos fichiers de déclaration après validation automatique.
+                    </p>
+
+                    <Button
+                        size='large'
+                        priority='primary'
+                        iconId='fr-icon-add-line'
+                        iconPosition='left'
+                        linkProps={{
+                            href: '/mes-declarations/new',
+                        }}
+                        title='Déposer une nouvelle déclaration'
+                    >
+                        Déposer une nouvelle déclaration
+                    </Button>
+                </div>
+            </div>
+
+            <div className='fr-container fr-mt-6w'>
+                <h2 className='fr-h4 fr-mb-1w'>
+                    Mes déclarations
+                </h2>
+
+                <p className='fr-text--sm fr-mb-4w'>
+                    Retrouvez toutes vos déclarations de prélèvements d’eau.
+                </p>
+
+                {dossiers.length === 0 ? (
+                    <CallOut
+                        iconId='ri-information-line'
+                        title='Aucune déclaration'
+                    >
+                        Vous n’avez pas encore déposé de déclaration de prélèvements d’eau.
+                    </CallOut>
+                ) : (
+                    <ul>
+                        { dossiers.map((d) => (
+                                <li key={d.id}>
+                                    <Link href={getDeclarationURL(d)}>
+                                        Dossier #{d.id} - {moment(d.createdAt).format('LLL')}
+                                    </Link>
+                                </li>
+                            ))
+                        }
+                    </ul>
+                )}
             </div>
         </>
-    );
+    )
 }
 
 export default Dossiers

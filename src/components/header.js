@@ -60,13 +60,6 @@ const NAV_ITEMS = [
     text: 'Préleveurs',
     roles: ['INSTRUCTEUR', 'ADMIN']
   },
-  {
-    linkProps: {
-      href: '/validateur',
-      target: '_self'
-    },
-    text: 'Validateur'
-  }
 ]
 
 

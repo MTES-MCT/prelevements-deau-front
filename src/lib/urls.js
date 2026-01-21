@@ -30,6 +30,14 @@ export function getPointsPrelevementURL() {
   return '/points-prelevement'
 }
 
+export function getDeclarationsURL() {
+  return '/mes-declarations'
+}
+
+export function getDeclarationURL(declaration) {
+    return `/mes-declarations/${declaration.id}`
+}
+
 export function getPointPrelevementURL(point) {
   return `/points-prelevement/${point.id_point}`
 }
