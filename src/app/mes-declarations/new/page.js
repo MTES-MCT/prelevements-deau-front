@@ -609,7 +609,7 @@ const NouvelleDeclarationPage = () => {
         message: 'Déclaration soumise avec succès.'
       })
 
-      window.location.href = getDeclarationURL(result.data)
+      window.location.href = getDeclarationURL(result.data.data)
     } catch (error) {
       console.error(error)
       setSubmitResult({
