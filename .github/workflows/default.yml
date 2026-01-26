@@ -13,6 +13,7 @@ jobs:
     environment: production
     env:
       NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+      TZ: Europe/Paris
 
     strategy:
       matrix:
