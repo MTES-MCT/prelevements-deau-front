@@ -105,12 +105,6 @@ const Home = async () => {
           </Link>
         )}
       />
-
-      <SidedSection>
-        <Link href='/statistiques' className='fr-btn fr-btn--secondary'>
-          Afficher plus de statistiques
-        </Link>
-      </SidedSection>
     </>
   )
 }
