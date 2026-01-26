@@ -1,9 +1,9 @@
+import moment from 'moment'
+import Link from 'next/link'
 import {notFound} from 'next/navigation'
 
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {getDeclarationAction} from "@/server/actions/declarations.js";
-import Link from 'next/link'
-import moment from "moment";
+import {getDeclarationAction} from '@/server/actions/declarations.js'
 
 const Page = async ({params}) => {
   const {id} = await params
@@ -13,7 +13,7 @@ const Page = async ({params}) => {
     notFound()
   }
 
-  const declaration = result.data.data;
+  const declaration = result.data.data
 
   return (
     <>
@@ -38,24 +38,25 @@ const Page = async ({params}) => {
           <dt>Type de déclaration</dt>
           <dd>{ declaration.waterWithdrawalType }</dd>
 
-          <dt>Numéro d'AOT</dt>
+          <dt>Numéro AOT</dt>
           <dd>{ declaration.aotDecreeNumber }</dd>
 
           <dt>Commentaire</dt>
-          <dd style={{ whiteSpace: 'pre-line'}}>{ declaration.comment }</dd>
+          <dd style={{whiteSpace: 'pre-line'}}>{ declaration.comment }</dd>
 
           <dt>Fichiers</dt>
           <dd>
             <ul>
-                { declaration.files.map((file) => (
-                    <li key={file.id}>
-                      <Link
-                        href={file.url}
-                        download>
-                        {file.filename}
-                      </Link>
-                    </li>
-                )) }
+              { declaration.files.map(file => (
+                <li key={file.id}>
+                  <Link
+                    download
+                    href={file.url}
+                  >
+                    {file.filename}
+                  </Link>
+                </li>
+              )) }
             </ul>
           </dd>
         </dl>

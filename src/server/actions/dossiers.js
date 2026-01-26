@@ -30,7 +30,7 @@ export async function getDossiersByStatusAction(status) {
  * @returns {Promise<Object>} - Result object
  */
 export async function getMyDossiers() {
-  return withErrorHandling(async () => fetchJSON(`api/dossiers/me`))
+  return withErrorHandling(async () => fetchJSON('api/dossiers/me'))
 }
 
 /**

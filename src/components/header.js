@@ -17,7 +17,7 @@ const ROLE_LABELS = {
 const ROLE_COLORS = {
   DECLARANT: 'var(--artwork-decorative-blue-france)',
   INSTRUCTEUR: 'var(--artwork-decorative-purple-glycine)',
-  ADMIN: 'var(--artwork-decorative-purple-glycine)',
+  ADMIN: 'var(--artwork-decorative-purple-glycine)'
 }
 
 const NAV_ITEMS = [
@@ -26,7 +26,7 @@ const NAV_ITEMS = [
       href: '/',
       target: '_self'
     },
-    text: 'Accueil',
+    text: 'Accueil'
   },
   {
     linkProps: {
@@ -59,9 +59,8 @@ const NAV_ITEMS = [
     },
     text: 'Préleveurs',
     roles: ['INSTRUCTEUR', 'ADMIN']
-  },
+  }
 ]
-
 
 const HeaderComponent = () => {
   const {user, logout, isLoading: isLoadingUser} = useAuth()
@@ -86,11 +85,12 @@ const HeaderComponent = () => {
       return pathname.startsWith(href)
     }
 
-    const navigation = NAV_ITEMS.filter((item) => {
+    const navigation = NAV_ITEMS.filter(item => {
       if (!item.roles) {
-        return true;
+        return true
       }
-      return item.roles.includes(user?.role);
+
+      return item.roles.includes(user?.role)
     })
 
     return navigation.map(item => ({

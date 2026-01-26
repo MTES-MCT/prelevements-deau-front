@@ -17,7 +17,7 @@ const PrelevementsAccordion = ({idPoint, pointPrelevement, volumePreleveTotal = 
   const isRejetDefined = typeof volumeRejeteTotal === 'number' && !Number.isNaN(volumeRejeteTotal)
   const hasAnyVolume = isVolumeDefined || isRejetDefined
   const hasPointId = idPoint !== null && idPoint !== undefined && idPoint !== ''
-  
+
   // Ne pas afficher de warning pour les types qui ne vérifient pas l'existence des points
   const skipPointCheck = ['template-file', 'extract-aquasys', 'gidaf'].includes(typePrelevement)
 
@@ -60,7 +60,7 @@ const PrelevementsAccordion = ({idPoint, pointPrelevement, volumePreleveTotal = 
                 }} />
                 {hasPointId
                   ? `Le point de prélèvement ${idPoint} n'est pas reconnu`
-                  : "Aucun point de prélèvement n'est renseigné pour ces prélèvements"}
+                  : 'Aucun point de prélèvement n\'est renseigné pour ces prélèvements'}
               </Typography>
             )}
           </Box>

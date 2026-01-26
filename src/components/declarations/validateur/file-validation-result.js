@@ -1,3 +1,4 @@
+/* eslint-disable no-await-in-loop */
 import {
   useCallback, useEffect, useMemo, useRef, useState
 } from 'react'
@@ -12,8 +13,8 @@ import DeclarationFileDetails from '../dossier/prelevements/declaration-file-det
 
 import PrelevementsAccordion from '@/components/declarations/dossier/prelevements/prelevements-accordion.js'
 import FileValidationErrors from '@/components/declarations/file-validation-errors.js'
-import {normalizePointId, getPointPrelevementName} from '@/utils/point-prelevement.js'
 import {coerceNumericValue} from '@/utils/number.js'
+import {normalizePointId, getPointPrelevementName} from '@/utils/point-prelevement.js'
 import {normalizeString} from '@/utils/string.js'
 
 const findPointById = (points = [], pointId) => {
@@ -114,7 +115,6 @@ const FileValidationResult = ({
   integrations = [],
   validationStatus,
   errors = [],
-  totalVolumePreleve,
   scrollIntoView,
   downloadFile,
   getSeriesValues
@@ -223,6 +223,7 @@ const FileValidationResult = ({
       if (!preleveur?.siret) {
         continue
       }
+
       bySiret.set(preleveur.siret, {
         key: getPreleveurKey(preleveur, index),
         preleveur,
@@ -254,6 +255,7 @@ const FileValidationResult = ({
       if (!grouped.has(target.key)) {
         grouped.set(target.key, {...target, sections: []})
       }
+
       grouped.get(target.key).sections.push(section)
     }
 
@@ -307,7 +309,6 @@ const FileValidationResult = ({
     }
 
     if (visiblePointSections.length > 0) {
-      let idleHandle
       const schedule = typeof window !== 'undefined' && 'requestIdleCallback' in window
         ? window.requestIdleCallback
         : (cb => setTimeout(cb, 0))
@@ -316,7 +317,7 @@ const FileValidationResult = ({
         ? window.cancelIdleCallback
         : (handle => clearTimeout(handle))
 
-      idleHandle = schedule(() => {
+      const idleHandle = schedule(() => {
         computeTotals()
       })
 

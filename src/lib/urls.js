@@ -35,7 +35,7 @@ export function getDeclarationsURL() {
 }
 
 export function getDeclarationURL(declaration) {
-    return `/mes-declarations/${declaration.id}`
+  return `/mes-declarations/${declaration.id}`
 }
 
 export function getPointPrelevementURL(point) {

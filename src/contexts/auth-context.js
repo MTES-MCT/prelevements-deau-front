@@ -37,7 +37,7 @@ export const AuthProvider = ({children}) => {
       prenom: session.user.lastName || null,
       email: session.user.email || null,
       structure: session.user.structure || null,
-      role: session.user.role,
+      role: session.user.role
     }
   }, [session])
 

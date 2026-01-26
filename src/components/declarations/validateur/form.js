@@ -34,6 +34,7 @@ const FileValidateurForm = ({isLoading, resetForm, handleSubmit}) => {
       setCadresFile(null)
       return
     }
+
     if (file.size > 10 * 1024 * 1024) { // 10 Mo
       setInputError('Le fichier Cadres dépasse la taille maximale autorisée (10 Mo)')
       setCadresFile(null)
@@ -50,6 +51,7 @@ const FileValidateurForm = ({isLoading, resetForm, handleSubmit}) => {
       setPrelevementsFile(null)
       return
     }
+
     if (file.size > 10 * 1024 * 1024) { // 10 Mo
       setInputError('Le fichier Prelevements dépasse la taille maximale autorisée (10 Mo)')
       setPrelevementsFile(null)
