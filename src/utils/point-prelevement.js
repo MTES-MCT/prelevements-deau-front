@@ -3,7 +3,7 @@ export function getPointPrelevementName(pointPrelevement) {
     return ''
   }
 
-  return pointPrelevement.nom
+  return pointPrelevement.name
     || pointPrelevement.autresNoms
     || ''
 }

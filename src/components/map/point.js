@@ -18,15 +18,15 @@ const Point = ({point, index}) => (
     }}
   >
     <Typography variant='body1' component='div'>
-      {point.id_point} - {point.nom}
+      {point.name}
     </Typography>
     <Box className='flex gap-1 flex-wrap justify-end'>
-      {point.typeMilieu && (
+      {point.waterBodyType && (
         <Chip
-          label={point.typeMilieu}
+          label={point.waterBodyType}
           sx={{
-            backgroundColor: getTypeMilieuColor(point.typeMilieu).background,
-            color: getTypeMilieuColor(point.typeMilieu).textColor
+            backgroundColor: getTypeMilieuColor(point.waterBodyType).background,
+            color: getTypeMilieuColor(point.waterBodyType).textColor
           }}
         />
       )}

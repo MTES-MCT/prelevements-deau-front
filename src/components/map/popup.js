@@ -10,13 +10,13 @@ import formatDate from '@/lib/format-date.js'
 
 const Popup = ({point}) => {
   const theme = useTheme()
-  const {nom, autresNoms, preleveurs, exploitationsStatus, exploitationsStartDate, usages, type_milieu: typeMilieu, zre, reservoir_biologique: reservoirBiologique} = point
+  const {name, autresNoms, preleveurs, exploitationsStatus, exploitationsStartDate, usages, type_milieu: typeMilieu, zre, reservoir_biologique: reservoirBiologique} = point
 
   return (
     // TODO : Utiliser le theme DSFR
     <Box className='flex flex-col gap-2' sx={{color: theme.palette.text.primary}}>
       <Typography variant='h6' sx={{color: theme.palette.text.primary}}>
-        {point.id_point} - {nom || 'Pas de nom renseigné'}
+        {name || 'Pas de nom renseigné'}
       </Typography>
 
       <Typography variant='caption'>
@@ -27,7 +27,7 @@ const Popup = ({point}) => {
         {preleveurs.length > 0 ? (
           preleveurs.length < 4 ? (
             preleveurs.map(preleveur => (
-              <Box key={preleveur.id_preleveur} className='flex items-center gap-1'>
+              <Box key={preleveur.id} className='flex items-center gap-1'>
                 <Person /> {preleveur?.raison_sociale || preleveur?.sigle || preleveur?.nom}
               </Box>
             ))

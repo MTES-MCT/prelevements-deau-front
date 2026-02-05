@@ -39,7 +39,7 @@ export function getDeclarationURL(declaration) {
 }
 
 export function getPointPrelevementURL(point) {
-  return `/points-prelevement/${point.id_point}`
+  return `/points-prelevement/${point.id}`
 }
 
 export function getNewExploitationURL(params) {

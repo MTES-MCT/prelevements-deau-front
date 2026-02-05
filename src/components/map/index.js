@@ -34,19 +34,19 @@ function updateHighlightedPoint(map, selectedPoint, showLabels = true) {
     // Exclure le point sélectionné de la couche de labels standard
     if (map.getLayer('points-prelevement-nom')) {
       // On applique un filtre pour ne pas afficher le point avec l'id sélectionné
-      map.setFilter('points-prelevement-nom', ['!=', 'id_point', selectedPoint.id_point])
+      map.setFilter('points-prelevement-nom', ['!=', 'id', selectedPoint.id])
     }
 
     // Ajouter (ou mettre à jour) la couche de mise en surbrillance pour le point sélectionné
     if (map.getLayer('selected-point-prelevement-nom')) {
       // Mettre à jour le filtre si la couche existe déjà
-      map.setFilter('selected-point-prelevement-nom', ['==', 'id_point', selectedPoint.id_point])
+      map.setFilter('selected-point-prelevement-nom', ['==', 'id', selectedPoint.id])
     } else {
       map.addLayer({
         id: 'selected-point-prelevement-nom',
         type: 'symbol',
         source: SOURCE_ID, // La source doit contenir tous les points
-        filter: ['==', 'id_point', selectedPoint.id_point],
+        filter: ['==', 'id', selectedPoint.id],
         layout: {
           'text-field': ['get', 'nom'],
           'text-size': 20,
@@ -95,7 +95,7 @@ function loadMap(map, points, showLabels = true) {
   // --- Préparation des marqueurs sous forme de couche symbol ---
   // On enrichit chaque feature d'une propriété "icon" unique.
   const markersFeatures = geojson.features.map(feature => {
-    const id = feature.properties.id_point
+    const id = feature.properties.id
     feature.properties.icon = 'marker-' + id
     return feature
   })
@@ -189,8 +189,8 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
     const mapConfig = {
       container: mapContainerRef.current,
       style: stylesMap[mapStyle],
-      center: [55.55, -21.13],
-      zoom: 10,
+      center: [2.5, 46.5],
+      zoom: 5,
       hash: options.hash ?? false,
       cooperativeGestures: options.cooperativeGestures ?? true,
       locale: {
@@ -206,13 +206,13 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
 
     if (points && points.length > 0) {
       const coordinates = points
-        .map(point => point.geom?.coordinates || point.coordinates)
+        .map(point => point.coordinates?.coordinates)
         .filter(Boolean)
 
       if (coordinates.length === 1) {
         mapConfig.center = coordinates[0]
       } else if (coordinates.length > 1) {
-        const bounds = new maplibre.LngLatBounds(coordinates[0], coordinates[0])
+        const bounds = new maplibre.LngLatBounds(coordinates[0], coordinates[1])
         for (const coord of coordinates) {
           bounds.extend(coord)
         }
@@ -251,8 +251,8 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
       map.getCanvas().style.cursor = 'pointer'
       if (e.features && e.features.length > 0) {
         const feature = e.features[0]
-        const pointId = feature.properties.id_point
-        const hoveredPoint = pointsRef.current.find(point => point.id_point === pointId)
+        const pointId = feature.properties.id
+        const hoveredPoint = pointsRef.current.find(point => point.id === pointId)
         const popupContainer = document.createElement('div')
         const root = createRoot(popupContainer)
         root.render(<Popup point={hoveredPoint} />)
@@ -308,7 +308,7 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
       return
     }
 
-    const visiblePoints = points.filter(pt => filteredPoints.includes(pt.id_point))
+    const visiblePoints = points.filter(pt => filteredPoints.includes(pt.id))
     if (mapRef.current.getSource(SOURCE_ID)) {
       mapRef.current.getSource(SOURCE_ID).setData(createPointPrelevementFeatures(visiblePoints))
     }
@@ -316,7 +316,7 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
     if (mapRef.current.getSource('points-markers')) {
       const baseGeojson = createPointPrelevementFeatures(visiblePoints)
       const markersFeatures = baseGeojson.features.map(feature => {
-        const id = feature.properties.id_point
+        const id = feature.properties.id
         feature.properties.icon = 'marker-' + id
         return feature
       })
@@ -348,9 +348,7 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
   useEffect(() => {
     const map = mapRef.current
     if (selectedPoint) {
-      const coords
-      = selectedPoint.coordinates
-      || (selectedPoint.geom && selectedPoint.geom.coordinates)
+      const coords = selectedPoint.coordinates.coordinates
       if (coords) {
         map.flyTo({
           center: coords,

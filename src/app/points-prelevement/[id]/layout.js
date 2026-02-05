@@ -16,7 +16,7 @@ const Layout = async ({params, children}) => {
 
   const pointPrelevement = result.data
 
-  const pointLabel = getPointPrelevementLabel({idPoint: pointPrelevement.id_point, pointPrelevement})
+  const pointLabel = getPointPrelevementLabel({pointPrelevement})
 
   return (
     <>

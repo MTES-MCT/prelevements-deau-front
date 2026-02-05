@@ -17,12 +17,14 @@ const PointLocalisation = ({pointPrelevement}) =>
   (
     <>
       <div>
+      { pointPrelevement.commune && (
         <Typography
           gutterBottom
           variant='h5'
         >
           {pointPrelevement.commune.nom} - {pointPrelevement.commune.code}
         </Typography>
+      ) }
         <LabelValue label='Détails de localisation' value={pointPrelevement.detail_localisation} />
         <LabelValue label='Précision géométrique' value={pointPrelevement.precision_geom} />
         {pointPrelevement.type_milieu === 'Eau souterraine' && (

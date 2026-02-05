@@ -107,7 +107,7 @@ const Page = () => {
 
         // Normalisation des valeurs à comparer
         const normalizedName = point.nom ? deburr(point.nom.toLowerCase().trim()) : ''
-        const idPointStr = String(point.id_point).toLowerCase()
+        const idPointStr = String(point.id).toLowerCase()
         const preleveurMatches = point.preleveurs.some(preleveur => {
           const normalizedRaisonSociale = preleveur.raison_sociale ? deburr(preleveur.raison_sociale.toLowerCase().trim()) : ''
           const normalizedSigle = preleveur.sigle ? deburr(preleveur.sigle.toLowerCase().trim()) : ''
@@ -149,11 +149,11 @@ const Page = () => {
       return matches
     })
 
-    setFilteredPoints(filtered.map(point => point.id_point))
+    setFilteredPoints(filtered.map(point => point.id))
   }, [filters, points])
 
   const exportPointsList = () => {
-    const result = points.filter(p => filteredPoints.includes(p.id_point))
+    const result = points.filter(p => filteredPoints.includes(p.id))
 
     downloadCsv(result, 'points-prelevements-export.csv')
   }
@@ -180,7 +180,7 @@ const Page = () => {
         panelContent={
           <PointsList
             isLoading={loading}
-            points={points.filter(pt => filteredPoints.includes(pt.id_point))}
+            points={points.filter(pt => filteredPoints.includes(pt.id))}
           />
         }
       >
@@ -191,7 +191,7 @@ const Page = () => {
           <Map
             points={points}
             filteredPoints={filteredPoints}
-            selectedPoint={selectedPointId ? points.find(point => selectedPointId === point.id_point) : null}
+            selectedPoint={selectedPointId ? points.find(point => selectedPointId === point.id) : null}
             handleSelectedPoint={handleSelectedPoint}
             mapStyle={style}
             options={{hash: true, cooperativeGestures: false}}

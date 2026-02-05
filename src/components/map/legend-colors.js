@@ -12,8 +12,8 @@ export const legendColors = {
     {text: 'Non renseigné', color: 'var(--artwork-motif-grey)', textColor: defaultTextColor}
   ],
   typesMilieu: [
-    {text: 'Eau de surface', color: 'var(--artwork-minor-blue-france)', textColor: lightTextColor},
-    {text: 'Eau souterraine', color: 'var(--artwork-minor-green-menthe)', textColor: lightTextColor}
+    {text: 'SURFACE', color: 'var(--artwork-minor-blue-france)', textColor: lightTextColor},
+    {text: 'SOUTERRAIN', color: 'var(--artwork-minor-green-menthe)', textColor: lightTextColor}
   ]
 }
 

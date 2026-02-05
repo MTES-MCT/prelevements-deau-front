@@ -19,7 +19,7 @@ const Page = async ({params}) => {
 
   const pointPrelevement = pointResult.data
 
-  const seriesResult = await getAggregatedSeriesOptionsAction({pointIds: [pointPrelevement._id]})
+  const seriesResult = await getAggregatedSeriesOptionsAction({pointIds: [pointPrelevement.id]})
   const seriesOptions = seriesResult.data
   const exploitationsResult = await getExploitationsByPointIdAction(id)
   const exploitations = exploitationsResult.data || []
@@ -44,7 +44,7 @@ const Page = async ({params}) => {
         <ExploitationsList
           exploitations={exploitations}
           preleveurs={pointPrelevement.preleveurs}
-          createHref={getNewExploitationURL({idPoint: pointPrelevement._id})}
+          createHref={getNewExploitationURL({idPoint: pointPrelevement.id})}
         />
       </div>
     </>

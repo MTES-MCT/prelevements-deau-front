@@ -10,13 +10,13 @@ import {useAuth} from '@/contexts/auth-context.js'
 
 const ROLE_LABELS = {
   DECLARANT: 'Déclarant',
-  INSTRUCTEUR: 'Instructeur',
+  INSTRUCTOR: 'Instructeur',
   ADMIN: 'Administrateur'
 }
 
 const ROLE_COLORS = {
   DECLARANT: 'var(--artwork-decorative-blue-france)',
-  INSTRUCTEUR: 'var(--artwork-decorative-purple-glycine)',
+  INSTRUCTOR: 'var(--artwork-decorative-purple-glycine)',
   ADMIN: 'var(--artwork-decorative-purple-glycine)'
 }
 
@@ -42,7 +42,7 @@ const NAV_ITEMS = [
       target: '_self'
     },
     text: 'Déclarations',
-    roles: ['INSTRUCTEUR', 'ADMIN']
+    roles: ['INSTRUCTOR', 'ADMIN']
   },
   {
     linkProps: {
@@ -50,7 +50,7 @@ const NAV_ITEMS = [
       target: '_self'
     },
     text: 'Points de prélèvement',
-    roles: ['INSTRUCTEUR', 'ADMIN']
+    roles: ['INSTRUCTOR', 'ADMIN']
   },
   {
     linkProps: {
@@ -58,7 +58,7 @@ const NAV_ITEMS = [
       target: '_self'
     },
     text: 'Préleveurs',
-    roles: ['INSTRUCTEUR', 'ADMIN']
+    roles: ['INSTRUCTOR', 'ADMIN']
   }
 ]
 
