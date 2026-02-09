@@ -589,7 +589,7 @@ const NouvelleDeclarationPage = () => {
       const {files, fileTypes} = buildUploadPayload(file, typePrelevement)
 
       const result = await createDeclarationAction({
-        typePrelevement,
+        type: typePrelevement,
         files,
         fileTypes,
         startMonth: start,

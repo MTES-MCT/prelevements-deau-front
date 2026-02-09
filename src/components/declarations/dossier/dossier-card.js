@@ -116,8 +116,8 @@ const DossierCard = ({dossier, background, url}) => (
       tags={tags[dossier.status]
         ? [tags[dossier.status]]
         : []}
-      rightIcons={dossier.type
-        ? [rightIcons[dossier.type]]
+      rightIcons={dossier.waterWithdrawalType
+        ? [rightIcons[dossier.waterWithdrawalType]]
         : []}
       metas={metas(dossier)}
     />
