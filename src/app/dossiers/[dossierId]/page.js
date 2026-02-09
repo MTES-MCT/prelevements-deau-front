@@ -36,15 +36,15 @@ const DossierPage = async ({params}) => {
       <StartDsfrOnHydration />
 
       <DossierHeader
-        numero={dossier.ds.dossierNumber}
+        numero={dossier.id}
         status={dossier.status}
-        dateDepot={dossier.dateDepot}
+        dateDepot={dossier.createdAt}
         periodLabel={periodLabel}
         dsUrl={getDossierDSURL(dossier)}
       />
 
       <DossierDetails
-        dossier={dossier}
+        declaration={dossier}
         files={files}
         preleveur={preleveur}
         idPoints={idPoints}

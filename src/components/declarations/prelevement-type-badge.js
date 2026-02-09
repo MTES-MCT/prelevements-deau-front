@@ -1,10 +1,11 @@
 import {Badge} from '@codegouvfr/react-dsfr/Badge'
 
+// @TODO: review labels
 const labels = {
   'aep-zre': {severity: 'new', label: 'AEP ou en ZRE'},
   'icpe-hors-zre': {severity: 'info', label: 'ICPE hors ZRE'},
   'camion-citerne': {severity: 'warning', label: 'Camion citerne'},
-  autre: {severity: 'success', label: 'Autre'}
+  unknown: {severity: 'success', label: 'Autre'}
 }
 
 const PrelevementTypeBadge = ({value}) => {

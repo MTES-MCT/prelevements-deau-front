@@ -1,5 +1,6 @@
-import {format, isValid} from 'date-fns'
-import {fr} from 'date-fns/locale'
+import moment from 'moment'
+import 'moment/locale/fr'
+moment.locale('fr')
 import {flatMap} from 'lodash-es'
 
 import {getFileAction, getFileSeriesAction, getFileIntegrationsAction} from '@/server/actions/index.js'
@@ -11,47 +12,46 @@ export const validationStatus = {
   failed: 'Échec'
 }
 
-function parseDeclarationMonth(value) {
-  if (typeof value !== 'string') {
+function parseMonth(value) {
+  if (!value) {
     return null
   }
 
-  const match = value.match(/^(\d{4})-(\d{2})$/)
-  if (!match) {
-    return null
-  }
-
-  const [, yearStr, monthStr] = match
-  const year = Number.parseInt(yearStr, 10)
-  const month = Number.parseInt(monthStr, 10)
-
-  if (Number.isNaN(year) || Number.isNaN(month) || month < 1 || month > 12) {
-    return null
-  }
-
-  const date = new Date(year, month - 1, 1)
-  return isValid(date) ? date : null
+  const m = moment.utc(value)
+  return m.isValid() ? m.startOf('month') : null
 }
 
-function coercePeriodBounds(start, end) {
-  const hasStart = Boolean(start)
-  const hasEnd = Boolean(end)
+export function getDossierPeriod({ startMonth, endMonth } = {}) {
+  const start = parseMonth(startMonth)
+  const end = parseMonth(endMonth)
 
-  if (hasStart && hasEnd) {
-    return start.getTime() <= end.getTime()
-      ? {start, end}
-      : {start: end, end: start}
+  if (!start && !end) {
+    return {start: null, end: null}
+  }
+  if (!start) {
+    return {start: end.toDate(), end: end.toDate()}
+  }
+  if (!end) {
+    return {start: start.toDate(), end: start.toDate()}
   }
 
-  if (hasStart) {
-    return {start, end: start}
+  const [from, to] = start.isSameOrBefore(end) ? [start, end] : [end, start]
+  return { start: from.toDate(), end: to.toDate() }
+}
+
+export function getDossierPeriodLabel(dossier) {
+  const { start, end } = getDossierPeriod(dossier)
+  if (!start && !end) {
+    return null
   }
 
-  if (hasEnd) {
-    return {start: end, end}
-  }
+  const from = moment.utc(start ?? end)
+  const to = moment.utc(end ?? start)
 
-  return {start: null, end: null}
+  const fromLabel = from.format('MMMM YYYY')
+  const toLabel = to.format('MMMM YYYY')
+
+  return from.isSame(to, 'month') ? fromLabel : `${fromLabel} à ${toLabel}`
 }
 
 export function getFileNameFromStorageKey(storageKey) {
@@ -93,9 +93,9 @@ export async function getDossierFiles(dossier) {
 
   const enriched = await Promise.all(dossier.files.map(async file => {
     const [detailsResult, seriesResult, integrationsResult] = await Promise.all([
-      getFileAction(dossier._id, file._id),
-      getFileSeriesAction(dossier._id, file._id, {withPoint: true}),
-      getFileIntegrationsAction(dossier._id, file._id, {withPoint: true})
+      getFileAction(dossier.id, file.id),
+      getFileSeriesAction(dossier.id, file.id, {withPoint: true}),
+      getFileIntegrationsAction(dossier.id, file.id, {withPoint: true})
     ])
 
     if (!detailsResult.success || !detailsResult.data) {
@@ -110,54 +110,33 @@ export async function getDossierFiles(dossier) {
       ...details,
       series,
       integrations,
-      attachmentId: file._id
+      attachmentId: file.id
     }
   }))
 
   return enriched.filter(Boolean)
 }
 
-export function getDossierPeriod(dossier) {
-  if (!dossier || typeof dossier !== 'object') {
-    return {start: null, end: null}
+export function getPersonnePhysiqueFullName(
+    { civility, user: { lastName, firstName } = {} } = {}
+) {
+  if (!lastName || !firstName) {
+    return 'Nom et prénom non renseignés'
   }
 
-  const start = parseDeclarationMonth(dossier.moisDebutDeclaration)
-  const end = parseDeclarationMonth(dossier.moisFinDeclaration)
-
-  if (start || end) {
-    return coercePeriodBounds(start, end)
-  }
-
-  const singleMonth = parseDeclarationMonth(dossier.moisDeclaration)
-  if (singleMonth) {
-    return {start: singleMonth, end: singleMonth}
-  }
-
-  return {start: null, end: null}
+  return civility
+      ? `${civility}. ${lastName} ${firstName}`
+      : `${lastName} ${firstName}`
 }
 
-export function getDossierPeriodLabel(dossier) {
-  const {start, end} = getDossierPeriod(dossier)
-  if (!start && !end) {
-    return null
-  }
 
-  const from = start ?? end
-  const to = end ?? start
+export function formatFullAddress({addressLine1, addressLine2, poBox, postalCode, city} = {}) {
+  const parts = [
+    addressLine1,
+    addressLine2,
+    poBox,
+    [postalCode, city].filter(Boolean).join(' ')
+  ]
 
-  const fromLabel = from ? format(from, 'MMMM yyyy', {locale: fr}) : null
-  const toLabel = to ? format(to, 'MMMM yyyy', {locale: fr}) : null
-
-  if (from && to && (from.getFullYear() !== to.getFullYear() || from.getMonth() !== to.getMonth())) {
-    return `${fromLabel} à ${toLabel}`
-  }
-
-  return fromLabel ?? toLabel
-}
-
-export function getPersonnePhysiqueFullName({civilite, nom, prenom}) {
-  return nom && prenom
-    ? `${civilite}. ${nom || ''} ${prenom || ''}`
-    : 'Nom et prénom non renseignés'
+  return parts.filter(Boolean).join(', ')
 }

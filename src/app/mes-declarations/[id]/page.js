@@ -4,6 +4,9 @@ import {notFound} from 'next/navigation'
 
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getDeclarationAction} from '@/server/actions/declarations.js'
+import {getDossierFiles, getDossierPeriodLabel, getPointsPrelementIdFromDossier} from "@/lib/dossier.js";
+import DossierHeader from "@/components/declarations/dossier/dossier-header.js";
+import DossierDetails from "@/components/declarations/dossier-details.js";
 
 const Page = async ({params}) => {
   const {id} = await params
@@ -14,37 +17,30 @@ const Page = async ({params}) => {
   }
 
   const declaration = result.data.data
+  const files = await getDossierFiles(declaration)
+  const idPoints = getPointsPrelementIdFromDossier(declaration, files)
+  const periodLabel = getDossierPeriodLabel(declaration)
 
   return (
     <>
       <StartDsfrOnHydration />
 
+      <DossierHeader
+          numero={declaration.code}
+          status={declaration.status}
+          dateDepot={declaration.createdAt}
+          periodLabel={periodLabel}
+      />
+
+      <DossierDetails
+          declaration={declaration}
+          files={files}
+          idPoints={idPoints}
+      />
+
       <div className='flex flex-col gap-8 mb-16'>
         <dl>
-          <dt>Date dépôt</dt>
-          <dd>{ moment(declaration.createdAt).format('LLL')}</dd>
-
-          <dt>Statut</dt>
-          <dd>{ declaration.status }</dd>
-
-          <dt>Dates</dt>
-          <dd>
-            { moment(declaration.startMonth).format('MMMM YYYY') } - { moment(declaration.endMonth).format('MMMM YYYY') }
-          </dd>
-
-          <dt>Source de donnée</dt>
-          <dd>{ declaration.dataSourceType }</dd>
-
-          <dt>Type de déclaration</dt>
-          <dd>{ declaration.waterWithdrawalType }</dd>
-
-          <dt>Numéro AOT</dt>
-          <dd>{ declaration.aotDecreeNumber }</dd>
-
-          <dt>Commentaire</dt>
-          <dd style={{whiteSpace: 'pre-line'}}>{ declaration.comment }</dd>
-
-          <dt>Fichiers</dt>
+          <dt>Fichiers (pour débug)</dt>
           <dd>
             <ul>
               { declaration.files.map(file => (

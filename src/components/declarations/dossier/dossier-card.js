@@ -30,7 +30,7 @@ const rightIcons = {
     icon: LocalDrinkOutlined,
     label: 'Prélèvement AEP ou en ZRE'
   },
-  autre: {
+  unknown: {
     icon: InterestsOutlined,
     label: 'Autre type de prélèvement'
   }
@@ -56,15 +56,15 @@ const tags = {
 }
 
 const typeDonnees = typeDonnees => {
-  if (typeDonnees === 'saisie-manuelle') {
+  if (typeDonnees === 'MANUAL') {
     return 'Saisie manuelle'
   }
 
-  if (typeDonnees === 'tableur') {
+  if (typeDonnees === 'SPREADSHEET') {
     return 'Saisie par fichier'
   }
 
-  if (typeDonnees === 'vide') {
+  if (typeDonnees === 'NONE') {
     return 'Aucun fichier transmis'
   }
 
@@ -73,8 +73,8 @@ const typeDonnees = typeDonnees => {
 
 const metas = dossier => {
   const periodLabel = getDossierPeriodLabel(dossier)
-  const dateDepot = dossier.dateDepot
-    ? format(new Date(dossier.dateDepot), 'dd/MM/yyyy', {locale: fr})
+  const dateDepot = dossier.createdAt
+    ? format(new Date(dossier.createdAt), 'dd/MM/yyyy', {locale: fr})
     : 'Non renseignée'
 
   return [
@@ -88,7 +88,7 @@ const metas = dossier => {
     },
     {
       icon: TableRowsOutlined,
-      content: typeDonnees(dossier.typeDonnees)
+      content: typeDonnees(dossier.dataSourceType)
     },
     {
       icon: WaterDropOutlined,
@@ -108,16 +108,16 @@ const DossierCard = ({dossier, background, url}) => (
   <Link href={url || ''} style={{textDecoration: 'none'}}>
     <ListItem
       border
-      title={dossier?.declarant?.raisonSociale
-        ?? `${dossier.demandeur?.nom} ${dossier.demandeur?.prenom}`}
-      subtitle={dossier.ds.dossierNumber}
+      title={dossier?.declarant?.socialReason
+        ?? `${dossier.declarant?.user?.lastName} ${dossier.declarant?.user?.firstName}`}
+      subtitle={'n°' + dossier.code}
       subtitleIcon={ArticleOutlined}
       background={background}
-      tags={tags[dossier.validationStatus]
-        ? [tags[dossier.validationStatus]]
+      tags={tags[dossier.status]
+        ? [tags[dossier.status]]
         : []}
-      rightIcons={dossier.typePrelevement
-        ? [rightIcons[dossier.typePrelevement]]
+      rightIcons={dossier.type
+        ? [rightIcons[dossier.type]]
         : []}
       metas={metas(dossier)}
     />

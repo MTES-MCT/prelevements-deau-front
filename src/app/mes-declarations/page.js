@@ -5,9 +5,10 @@ import moment from 'moment'
 import Link from 'next/link'
 
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {getDeclarationURL} from '@/lib/urls.js'
+import {getDeclarationURL, getDossierURL} from '@/lib/urls.js'
 import {getMyDeclarationsAction} from '@/server/actions/declarations.js'
 import 'moment/locale/fr'
+import DossierCard from "@/components/declarations/dossier/dossier-card.js";
 
 moment.locale('fr')
 
@@ -51,7 +52,7 @@ const Dossiers = async () => {
         </div>
       </div>
 
-      <div className='fr-container fr-mt-6w'>
+      <div className='fr-container fr-mt-6w fr-mb-6w'>
         <h2 className='fr-h4 fr-mb-1w'>
           Mes déclarations
         </h2>
@@ -68,15 +69,17 @@ const Dossiers = async () => {
             Vous n’avez pas encore déposé de déclaration de prélèvements d’eau.
           </CallOut>
         ) : (
-          <ul>
-            { dossiers.map(d => (
-              <li key={d.id}>
-                <Link href={getDeclarationURL(d)}>
-                  Dossier #{d.id} - {moment(d.createdAt).format('LLL')}
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <div>
+            { dossiers.map(((d, idx) => (
+                <DossierCard
+                    key={d.id}
+                    background={idx % 2 === 0 ? 'primary' : 'secondary'}
+                    className='fr-mb-2w'
+                    dossier={d}
+                    url={getDeclarationURL(d)}
+                />
+            ))) }
+          </div>
         )}
       </div>
     </>

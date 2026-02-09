@@ -2,8 +2,9 @@
 import {Badge} from '@codegouvfr/react-dsfr/Badge'
 
 const labels = {
-  tableur: {severity: 'success', label: 'Tableur'},
-  'saisie-manuelle': {severity: 'new', label: 'Manuelle'},
+  SPREADSHEET: {severity: 'success', label: 'Tableur'},
+  MANUAL: {severity: 'new', label: 'Manuelle'},
+  API: {severity: 'warning', label: 'API'},
   vide: {severity: 'info', label: 'Vide'}
 }
 

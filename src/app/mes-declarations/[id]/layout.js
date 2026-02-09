@@ -21,7 +21,7 @@ const Layout = async ({params, children}) => {
       <div className='fr-container mt-4'>
 
         <Breadcrumb
-          currentPageLabel={'Déclaration : #' + declaration.id}
+          currentPageLabel={'Déclaration n°' + declaration.code}
           segments={[{
             label: 'Mes déclarations',
             linkProps: {

@@ -6,25 +6,25 @@ import PrelevementTypeBadge from '@/components/declarations/prelevement-type-bad
 import TypeSaisieBadge from '@/components/declarations/type-saisie-badge.js'
 import LabelValue from '@/components/ui/LabelValue/index.js'
 
-const DossierInfos = ({numeroArreteAot, typePrelevement, typeDonnees, commentaires}) => (
+const DossierInfos = ({aotDecreeNumber, waterWithdrawalType, dataSourceType, comment}) => (
   <Box className='flex flex-col gap-2 my-4'>
     <LabelValue label='Numéro AOT'>
-      {numeroArreteAot ? (
-        <Tag>{numeroArreteAot}</Tag>
+      {aotDecreeNumber ? (
+        <Tag>{aotDecreeNumber}</Tag>
       ) : (
         <i>Non renseigné</i>
       )}
     </LabelValue>
     <LabelValue label='Type de prélèvement'>
-      <PrelevementTypeBadge value={typePrelevement} />
+      <PrelevementTypeBadge value={waterWithdrawalType} />
     </LabelValue>
     <LabelValue label='Type de saisie'>
-      <TypeSaisieBadge value={typeDonnees} />
+      <TypeSaisieBadge value={dataSourceType} />
     </LabelValue>
 
-    {commentaires && (
+    {comment && (
       <Notice
-        description={commentaires}
+        description={comment}
         severity='info'
       />
     )}

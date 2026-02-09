@@ -30,6 +30,7 @@ function normalizeMonthInput(value, fieldName) {
  * Create a declaration with files (multipart/form-data)
  *
  * Expects:
+ * - type: string
  * - files: File[]
  * - fileTypes: string[] (1 type métier par fichier, même ordre, unique par déclaration)
  * - comment?: string
@@ -43,6 +44,7 @@ function normalizeMonthInput(value, fieldName) {
  * - waterWithdrawalType = "Inconnu"
  */
 export async function createDeclarationAction({
+  type,
   files = [],
   fileTypes = [],
   comment,
@@ -77,6 +79,7 @@ export async function createDeclarationAction({
 
     const formData = new FormData()
 
+    formData.append('type', type)
     formData.append('startMonth', start)
     formData.append('endMonth', end)
 
