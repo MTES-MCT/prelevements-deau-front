@@ -4,7 +4,7 @@ const labels = {
   SUBMITTED: {severity: 'info', label: 'Soumise'},
   IN_INSTRUCTION: {severity: 'warning', label: 'En instruction'},
   VALIDATED: {severity: 'sucess', label: 'En instruction'},
-  REJECTED: {severity: 'warning', label: 'Rejetée'},
+  REJECTED: {severity: 'warning', label: 'Rejetée'}
 }
 
 const DossierStateBadge = ({value}) => {

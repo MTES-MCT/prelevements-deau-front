@@ -95,7 +95,7 @@ function loadMap(map, points, showLabels = true) {
   // --- Préparation des marqueurs sous forme de couche symbol ---
   // On enrichit chaque feature d'une propriété "icon" unique.
   const markersFeatures = geojson.features.map(feature => {
-    const id = feature.properties.id
+    const {id} = feature.properties
     feature.properties.icon = 'marker-' + id
     return feature
   })
@@ -316,7 +316,7 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
     if (mapRef.current.getSource('points-markers')) {
       const baseGeojson = createPointPrelevementFeatures(visiblePoints)
       const markersFeatures = baseGeojson.features.map(feature => {
-        const id = feature.properties.id
+        const {id} = feature.properties
         feature.properties.icon = 'marker-' + id
         return feature
       })

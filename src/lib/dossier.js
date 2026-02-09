@@ -1,9 +1,10 @@
+import {flatMap} from 'lodash-es'
 import moment from 'moment'
 import 'moment/locale/fr'
-moment.locale('fr')
-import {flatMap} from 'lodash-es'
 
 import {getFileAction, getFileSeriesAction, getFileIntegrationsAction} from '@/server/actions/index.js'
+
+moment.locale('fr')
 
 export const validationStatus = {
   success: 'Succès',
@@ -21,26 +22,28 @@ function parseMonth(value) {
   return m.isValid() ? m.startOf('month') : null
 }
 
-export function getDossierPeriod({ startMonth, endMonth } = {}) {
+export function getDossierPeriod({startMonth, endMonth} = {}) {
   const start = parseMonth(startMonth)
   const end = parseMonth(endMonth)
 
   if (!start && !end) {
     return {start: null, end: null}
   }
+
   if (!start) {
     return {start: end.toDate(), end: end.toDate()}
   }
+
   if (!end) {
     return {start: start.toDate(), end: start.toDate()}
   }
 
   const [from, to] = start.isSameOrBefore(end) ? [start, end] : [end, start]
-  return { start: from.toDate(), end: to.toDate() }
+  return {start: from.toDate(), end: to.toDate()}
 }
 
 export function getDossierPeriodLabel(dossier) {
-  const { start, end } = getDossierPeriod(dossier)
+  const {start, end} = getDossierPeriod(dossier)
   if (!start && !end) {
     return null
   }
@@ -118,17 +121,16 @@ export async function getDossierFiles(dossier) {
 }
 
 export function getPersonnePhysiqueFullName(
-    { civility, user: { lastName, firstName } = {} } = {}
+  {civility, user: {lastName, firstName} = {}} = {}
 ) {
   if (!lastName || !firstName) {
     return 'Nom et prénom non renseignés'
   }
 
   return civility
-      ? `${civility}. ${lastName} ${firstName}`
-      : `${lastName} ${firstName}`
+    ? `${civility}. ${lastName} ${firstName}`
+    : `${lastName} ${firstName}`
 }
-
 
 export function formatFullAddress({addressLine1, addressLine2, poBox, postalCode, city} = {}) {
   const parts = [

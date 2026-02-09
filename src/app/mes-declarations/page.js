@@ -2,13 +2,12 @@ import {fr} from '@codegouvfr/react-dsfr'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {CallOut} from '@codegouvfr/react-dsfr/CallOut'
 import moment from 'moment'
-import Link from 'next/link'
 
+import DossierCard from '@/components/declarations/dossier/dossier-card.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {getDeclarationURL, getDossierURL} from '@/lib/urls.js'
+import {getDeclarationURL} from '@/lib/urls.js'
 import {getMyDeclarationsAction} from '@/server/actions/declarations.js'
 import 'moment/locale/fr'
-import DossierCard from "@/components/declarations/dossier/dossier-card.js";
 
 moment.locale('fr')
 
@@ -71,13 +70,13 @@ const Dossiers = async () => {
         ) : (
           <div>
             { dossiers.map(((d, idx) => (
-                <DossierCard
-                    key={d.id}
-                    background={idx % 2 === 0 ? 'primary' : 'secondary'}
-                    className='fr-mb-2w'
-                    dossier={d}
-                    url={getDeclarationURL(d)}
-                />
+              <DossierCard
+                key={d.id}
+                background={idx % 2 === 0 ? 'primary' : 'secondary'}
+                className='fr-mb-2w'
+                dossier={d}
+                url={getDeclarationURL(d)}
+              />
             ))) }
           </div>
         )}

@@ -1,12 +1,11 @@
-import moment from 'moment'
 import Link from 'next/link'
 import {notFound} from 'next/navigation'
 
+import DossierHeader from '@/components/declarations/dossier/dossier-header.js'
+import DossierDetails from '@/components/declarations/dossier-details.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
+import {getDossierFiles, getDossierPeriodLabel, getPointsPrelementIdFromDossier} from '@/lib/dossier.js'
 import {getDeclarationAction} from '@/server/actions/declarations.js'
-import {getDossierFiles, getDossierPeriodLabel, getPointsPrelementIdFromDossier} from "@/lib/dossier.js";
-import DossierHeader from "@/components/declarations/dossier/dossier-header.js";
-import DossierDetails from "@/components/declarations/dossier-details.js";
 
 const Page = async ({params}) => {
   const {id} = await params
@@ -26,16 +25,16 @@ const Page = async ({params}) => {
       <StartDsfrOnHydration />
 
       <DossierHeader
-          numero={declaration.code}
-          status={declaration.status}
-          dateDepot={declaration.createdAt}
-          periodLabel={periodLabel}
+        numero={declaration.code}
+        status={declaration.status}
+        dateDepot={declaration.createdAt}
+        periodLabel={periodLabel}
       />
 
       <DossierDetails
-          declaration={declaration}
-          files={files}
-          idPoints={idPoints}
+        declaration={declaration}
+        files={files}
+        idPoints={idPoints}
       />
 
       <div className='flex flex-col gap-8 mb-16'>

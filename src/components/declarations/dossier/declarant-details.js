@@ -1,4 +1,3 @@
-import {Tag} from '@codegouvfr/react-dsfr/Tag'
 import {Box, Typography} from '@mui/material'
 
 import LabelWithIcon from '@/components/ui/LabelWithIcon/index.js'
@@ -15,12 +14,12 @@ const DeclarantDetails = ({declarant}) => (
       variant='h4'
     >
       <Typography
-          color='primary'
-          variant='h4'
+        color='primary'
+        variant='h4'
       >
         {declarant.declarantType === 'NATURAL_PERSON'
-            ? getPersonnePhysiqueFullName(declarant)
-            : declarant.socialReason}
+          ? getPersonnePhysiqueFullName(declarant)
+          : declarant.socialReason}
       </Typography>
     </Typography>
 
