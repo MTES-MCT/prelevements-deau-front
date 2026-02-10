@@ -50,7 +50,7 @@ const NAV_ITEMS = [
       target: '_self'
     },
     text: 'Points de prélèvement',
-    roles: ['INSTRUCTOR', 'ADMIN']
+    roles: ['DECLARANT', 'INSTRUCTOR', 'ADMIN']
   },
   {
     linkProps: {

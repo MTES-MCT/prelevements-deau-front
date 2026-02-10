@@ -39,11 +39,9 @@ export function isPreleveurPhysique(preleveur) {
  */
 export function getPreleveurTitle(preleveur) {
   if (isPreleveurPhysique(preleveur)) {
-    // Physical person: civilite, nom, prenom
-    const parts = [preleveur?.civilite, preleveur?.nom, preleveur?.prenom].filter(Boolean)
+    const parts = [preleveur?.civility, preleveur?.lastName, preleveur?.firstName].filter(Boolean)
     return parts.length > 0 ? parts.join(' ') : 'Non renseigné'
   }
 
-  // Moral person: sigle or raison_sociale
-  return preleveur.raison_sociale || preleveur.sigle || 'Non renseigné'
+  return preleveur.socialReason || 'Non renseigné'
 }
