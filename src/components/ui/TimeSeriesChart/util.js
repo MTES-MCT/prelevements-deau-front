@@ -1047,6 +1047,8 @@ const parseFrequencyToMs = frequency => {
  */
 const normalizeToCalendarPeriodStart = (timestamp, unit) => {
   const date = new Date(timestamp)
+  // Intentionally local-calendar based: upstream date parsing uses local civil dates
+  // (YYYY-MM-DD without timezone semantics), so bucket boundaries must follow the same rule.
 
   switch (unit) {
     case 'month': {
@@ -1069,6 +1071,80 @@ const normalizeToCalendarPeriodStart = (timestamp, unit) => {
       return timestamp
     }
   }
+}
+
+const hasNumericValue = value => value !== null && value !== undefined && !Number.isNaN(value)
+
+const shouldReplaceBucketPoint = (existingPoint, candidatePoint) => {
+  const existingHasValue = hasNumericValue(existingPoint.y)
+  const candidateHasValue = hasNumericValue(candidatePoint.y)
+
+  // Prefer real numeric values over empty values.
+  if (!existingHasValue && candidateHasValue) {
+    return true
+  }
+
+  if (existingHasValue && !candidateHasValue) {
+    return false
+  }
+
+  const existingIsSynthetic = Boolean(existingPoint.synthetic)
+  const candidateIsSynthetic = Boolean(candidatePoint.synthetic)
+
+  // Prefer real points over synthetic threshold crossings.
+  if (existingIsSynthetic !== candidateIsSynthetic) {
+    return existingIsSynthetic && !candidateIsSynthetic
+  }
+
+  // Same "quality" bucket: keep the latest source point in the period.
+  return candidatePoint.sourceTimestamp >= existingPoint.sourceTimestamp
+}
+
+/**
+ * Normalize series timestamps to calendar period starts (month/quarter/year).
+ * This prevents duplicate bucket labels (e.g. two points in the same month)
+ * when data points are not already aligned on bucket boundaries.
+ *
+ * @param {Map<number, object>} pointMap - Map of timestamp -> chart point
+ * @param {string|null} frequency - Series native frequency
+ * @returns {Map<number, object>} Normalized point map
+ */
+const normalizePointMapToCalendarPeriods = (pointMap, frequency) => {
+  const parsed = parseFrequency(frequency)
+  if (!parsed || !isCalendarBasedUnit(parsed.unit)) {
+    return pointMap
+  }
+
+  const normalizedMap = new Map()
+  const entries = [...pointMap.entries()].sort((a, b) => a[0] - b[0])
+
+  for (const [timestamp, point] of entries) {
+    const normalizedTimestamp = normalizeToCalendarPeriodStart(timestamp, parsed.unit)
+    const normalizedPoint = {
+      ...point,
+      x: normalizedTimestamp,
+      sourceTimestamp: timestamp
+    }
+
+    const existing = normalizedMap.get(normalizedTimestamp)
+    if (!existing) {
+      normalizedMap.set(normalizedTimestamp, normalizedPoint)
+      continue
+    }
+
+    if (shouldReplaceBucketPoint(existing, normalizedPoint)) {
+      normalizedMap.set(normalizedTimestamp, normalizedPoint)
+    }
+  }
+
+  const finalizedMap = new Map()
+  for (const [timestamp, point] of normalizedMap.entries()) {
+    const cleanPoint = {...point}
+    delete cleanPoint.sourceTimestamp
+    finalizedMap.set(timestamp, cleanPoint)
+  }
+
+  return finalizedMap
 }
 
 /**
@@ -1102,7 +1178,12 @@ const generateLinearTimelineFromTimestamps = (startTs, endTs, frequency) => {
     const timeline = []
     let currentDate = new Date(normalizedStart)
 
-    while (currentDate.getTime() <= endTs && timeline.length < MAX_TIMELINE_POINTS) {
+    while (currentDate.getTime() <= endTs) {
+      if (timeline.length >= MAX_TIMELINE_POINTS) {
+        // Return empty to fall back to non-linear mode when the range is too wide.
+        return []
+      }
+
       timeline.push(currentDate.getTime())
       currentDate = addCalendarIncrement(currentDate, value, unit)
     }
@@ -1230,12 +1311,17 @@ const processSeriesWithDecimation = (series, options) => {
       ? computeThresholdCrossings(processed.filteredPoints, processed.thresholdEvaluator)
       : []
 
-    // Build unified point map
-    const pointMap = buildPointMap(processed.filteredPoints, crossings, xValuesSet)
-
     // Store native frequency for potential resampling
     const nativeFrequency = inputSeries.frequency
       || detectNativeFrequency(processed.filteredPoints)
+
+    // Build and normalize the per-series point map before contributing to the global X axis.
+    const rawPointMap = buildPointMap(processed.filteredPoints, crossings, new Set())
+    const pointMap = normalizePointMapToCalendarPeriods(rawPointMap, nativeFrequency)
+
+    for (const timestamp of pointMap.keys()) {
+      xValuesSet.add(timestamp)
+    }
 
     const seriesItem = {
       id: processed.id,
@@ -1366,9 +1452,8 @@ export const buildSeriesModel = ({
   }
 
   // Step 2: Compute unified x-axis
-  // Pass null for timelineFrequency to prevent linear grid generation when we're using real timestamps
-  const effectiveTimelineFrequency = finestSeriesTimestamps ? null : timelineFrequency
-  const {xValues, xAxisDates} = computeUnifiedXAxis(updatedXValuesSet, effectiveTimelineFrequency, timelineRange)
+  // Keep timelineFrequency active so the X axis stays continuous (including empty periods).
+  const {xValues, xAxisDates} = computeUnifiedXAxis(updatedXValuesSet, timelineFrequency, timelineRange)
 
   // Step 3: Align all series to unified x-axis and update statistics
   const {metaBySeries, pointBySeries, alignedData} = alignSeriesToXAxis(
