@@ -951,6 +951,207 @@ test('buildSeriesModel creates correct Y-axis configuration', t => {
   t.is(rightAxis.position, 'right')
 })
 
+test('buildSeriesModel creates a continuous monthly x-axis and normalizes month-end points', t => {
+  const series = [
+    {
+      id: 'volume',
+      label: 'Volume (m³)',
+      axis: 'left',
+      color: '#2563eb',
+      frequency: '1 month',
+      data: [
+        {x: new Date(2025, 0, 31), y: 10},
+        {x: new Date(2025, 3, 30), y: 40}
+      ]
+    }
+  ]
+
+  const model = buildSeriesModel({
+    series,
+    locale: 'fr-FR',
+    theme: baseTheme,
+    exposeAllMarks: false,
+    timelineFrequency: '1 month',
+    timelineRange: {
+      start: new Date(2025, 0, 1),
+      end: new Date(2025, 3, 30)
+    }
+  })
+
+  t.deepEqual(
+    model.xAxisDates.map(date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`),
+    ['2025-01', '2025-02', '2025-03', '2025-04']
+  )
+
+  const alignedPoints = model.pointBySeries.get('volume')
+  t.truthy(alignedPoints)
+  t.deepEqual(alignedPoints.map(point => point.y), [10, null, null, 40])
+})
+
+test('buildSeriesModel keeps latest real point when multiple points fall in the same monthly bucket', t => {
+  const series = [
+    {
+      id: 'volume',
+      label: 'Volume (m³)',
+      axis: 'left',
+      color: '#2563eb',
+      frequency: '1 month',
+      data: [
+        {x: new Date(2025, 0, 1), y: 100},
+        {x: new Date(2025, 0, 31), y: 250},
+        {x: new Date(2025, 1, 28), y: 300}
+      ]
+    }
+  ]
+
+  const model = buildSeriesModel({
+    series,
+    locale: 'fr-FR',
+    theme: baseTheme,
+    exposeAllMarks: false,
+    timelineFrequency: '1 month',
+    timelineRange: {
+      start: new Date(2025, 0, 1),
+      end: new Date(2025, 1, 28)
+    }
+  })
+
+  const alignedPoints = model.pointBySeries.get('volume')
+  t.truthy(alignedPoints)
+  t.deepEqual(alignedPoints.map(point => point.y), [250, 300])
+})
+
+test('buildSeriesModel prefers real points over synthetic crossings in the same monthly bucket', t => {
+  const series = [
+    {
+      id: 'volume',
+      label: 'Volume (m³)',
+      axis: 'left',
+      color: '#2563eb',
+      frequency: '1 month',
+      threshold: 15,
+      data: [
+        {x: new Date(2025, 0, 1), y: 10},
+        {x: new Date(2025, 1, 1), y: 20}
+      ]
+    }
+  ]
+
+  const model = buildSeriesModel({
+    series,
+    locale: 'fr-FR',
+    theme: baseTheme,
+    exposeAllMarks: false,
+    timelineFrequency: '1 month',
+    timelineRange: {
+      start: new Date(2025, 0, 1),
+      end: new Date(2025, 1, 1)
+    }
+  })
+
+  const alignedPoints = model.pointBySeries.get('volume')
+  t.truthy(alignedPoints)
+  t.deepEqual(alignedPoints.map(point => point.y), [10, 20])
+})
+
+test('buildSeriesModel keeps latest real point in the same quarterly bucket', t => {
+  const series = [
+    {
+      id: 'volume-quarter',
+      label: 'Volume trimestriel (m³)',
+      axis: 'left',
+      color: '#2563eb',
+      frequency: '1 quarter',
+      data: [
+        {x: new Date(2025, 0, 10), y: 100},
+        {x: new Date(2025, 2, 20), y: 240}, // Same Q1 bucket, later point
+        {x: new Date(2025, 8, 10), y: 410}
+      ]
+    }
+  ]
+
+  const model = buildSeriesModel({
+    series,
+    locale: 'fr-FR',
+    theme: baseTheme,
+    exposeAllMarks: false,
+    timelineFrequency: '1 quarter',
+    timelineRange: {
+      start: new Date(2025, 0, 1),
+      end: new Date(2025, 11, 31)
+    }
+  })
+
+  const alignedPoints = model.pointBySeries.get('volume-quarter')
+  t.truthy(alignedPoints)
+  t.deepEqual(alignedPoints.map(point => point.y), [240, null, 410, null])
+})
+
+test('buildSeriesModel keeps latest real point in the same yearly bucket', t => {
+  const series = [
+    {
+      id: 'volume-year',
+      label: 'Volume annuel (m³)',
+      axis: 'left',
+      color: '#2563eb',
+      frequency: '1 year',
+      data: [
+        {x: new Date(2024, 0, 10), y: 1_200_000},
+        {x: new Date(2024, 11, 20), y: 1_450_000}, // Same year, later point
+        {x: new Date(2026, 5, 1), y: 1_900_000}
+      ]
+    }
+  ]
+
+  const model = buildSeriesModel({
+    series,
+    locale: 'fr-FR',
+    theme: baseTheme,
+    exposeAllMarks: false,
+    timelineFrequency: '1 year',
+    timelineRange: {
+      start: new Date(2024, 0, 1),
+      end: new Date(2026, 11, 31)
+    }
+  })
+
+  const alignedPoints = model.pointBySeries.get('volume-year')
+  t.truthy(alignedPoints)
+  t.deepEqual(alignedPoints.map(point => point.y), [1_450_000, null, 1_900_000])
+})
+
+test('buildSeriesModel buckets ISO timestamps with explicit offsets on calendar frequency', t => {
+  const series = [
+    {
+      id: 'volume-offset',
+      label: 'Volume (m³)',
+      axis: 'left',
+      color: '#2563eb',
+      frequency: '1 month',
+      data: [
+        {x: new Date('2025-01-15T12:00:00+04:00'), y: 10},
+        {x: new Date('2025-03-15T12:00:00+04:00'), y: 30}
+      ]
+    }
+  ]
+
+  const model = buildSeriesModel({
+    series,
+    locale: 'fr-FR',
+    theme: baseTheme,
+    exposeAllMarks: false,
+    timelineFrequency: '1 month',
+    timelineRange: {
+      start: new Date(2025, 0, 1),
+      end: new Date(2025, 2, 31)
+    }
+  })
+
+  const alignedPoints = model.pointBySeries.get('volume-offset')
+  t.truthy(alignedPoints)
+  t.deepEqual(alignedPoints.map(point => point.y), [10, null, 30])
+})
+
 // Resampling tests
 test('detectNativeFrequency detects daily frequency correctly', t => {
   const MS_PER_DAY = 24 * 60 * 60 * 1000
@@ -1175,4 +1376,3 @@ test('resampleSeriesData returns original map when frequencies cannot be parsed'
 
   t.is(result, pointMap)
 })
-
