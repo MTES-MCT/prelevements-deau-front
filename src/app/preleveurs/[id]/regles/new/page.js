@@ -6,10 +6,10 @@ import RegleCreationForm from '@/components/form/regle-creation-form.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {
   getPreleveurAction,
-  getExploitationFromPreleveurAction,
   getDocumentsFromPreleveurAction,
   getPointPrelevementAction
 } from '@/server/actions/index.js'
+import {getExploitationFromPreleveurViaPointsAction} from '@/server/actions/preleveurs.js'
 import {displayPreleveur} from '@/utils/preleveurs.js'
 
 const DynamicBreadcrumb = nextDynamic(
@@ -28,7 +28,7 @@ const Page = async ({params}) => {
 
   const preleveur = preleveurResult.data
 
-  const exploitationsResult = await getExploitationFromPreleveurAction(id)
+  const exploitationsResult = await getExploitationFromPreleveurViaPointsAction(id)
   const exploitations = exploitationsResult.data || []
   const documentsResult = await getDocumentsFromPreleveurAction(id)
   const documents = documentsResult.data || []
