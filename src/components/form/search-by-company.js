@@ -28,7 +28,7 @@ const SearchByCompany = ({setPreleveur}) => {
       setPreleveur(prev => ({
         ...prev,
         raison_sociale: value.nom_raison_sociale,
-        code_siren: value.siren,
+        siret: value?.siege?.siret,
         nom: value?.dirigeants?.[0]?.nom || '',
         prenom: value?.dirigeants?.[0]?.prenoms || '',
         adresse_1: `${value.siege.numero_voie || ''} ${value.siege.type_voie || ''} ${value.siege.libelle_voie || ''}`,
@@ -47,17 +47,17 @@ const SearchByCompany = ({setPreleveur}) => {
           <SearchAutocomplete
             noOptionsText='Pas de résultat'
             options={companies}
-            getOptionLabel={company => `${company.nom_complet} (${company.siren})`}
-            getOptionKey={c => c.siren}
+            getOptionLabel={company => `${company.nom_complet} (${company?.siege?.siret})`}
+            getOptionKey={c => c?.siege?.siret}
             renderOption={(props, company) => {
               const {key, ...otherProps} = props
               return (
-                <div key={company.siren} {...otherProps} className='p-3 even:bg-[#f5f5fe]'>
+                <div key={company?.siege?.siret} {...otherProps} className='p-3 even:bg-[#f5f5fe]'>
                   <div className='flex flex-cols justify-between'>
                     <p>{company.nom_complet}</p>
                     <p>{company.siege.code_postal} - {company.siege.libelle_commune}</p>
                   </div>
-                  <small className='text-gray-500'>SIREN {company.siren}</small>
+                  <small className='text-gray-500'>SIRET {company?.siege?.siret}</small>
                 </div>
               )
             }}

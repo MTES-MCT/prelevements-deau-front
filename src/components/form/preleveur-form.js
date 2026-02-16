@@ -33,7 +33,7 @@ const COMMON_FIELDS = [
 
 // Fields specific to personne morale
 const MORAL_ONLY_FIELDS = [
-  'code_siren',
+  'siret',
   'raison_sociale',
   'sigle'
 ]
@@ -61,7 +61,7 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
     code_postal: '',
     commune: '',
     numero_telephone: '',
-    code_siren: '',
+    siret: '',
     ...initialPreleveur
   })
 
