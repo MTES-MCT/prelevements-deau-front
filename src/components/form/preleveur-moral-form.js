@@ -31,11 +31,11 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
           <SearchByCompany setPreleveur={setPreleveur} />
         </div>
         <Input
-          label='Code SIREN'
+          label='Code SIRET'
           nativeInputProps={{
-            placeholder: 'Entrer le code SIREN',
-            defaultValue: preleveur?.code_siren || '',
-            onChange: e => setPreleveur(prev => ({...prev, code_siren: e.target.value}))
+            placeholder: 'Entrer le code SIRET',
+            defaultValue: preleveur?.siret || '',
+            onChange: e => setPreleveur(prev => ({...prev, siret: e.target.value}))
           }}
         />
       </div>

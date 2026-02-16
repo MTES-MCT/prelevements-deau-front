@@ -14,7 +14,7 @@ export const PRELEVEUR_TYPE_ICONS = {
  * @returns {string} The icon ID to use
  */
 export function getPreleveurTypeIcon(preleveur) {
-  // If code_siren exists, it's a "personne morale"
+  // If siret exists, it's a "personne morale"
   if (isPreleveurPhysique(preleveur)) {
     return PRELEVEUR_TYPE_ICONS.physique
   }
@@ -28,8 +28,8 @@ export function getPreleveurTypeIcon(preleveur) {
  * @returns {boolean} True if physical person, false if moral person
  */
 export function isPreleveurPhysique(preleveur) {
-  // Considered "morale" if code_siren OR raison_sociale OR sigle is defined
-  return !(preleveur?.code_siren || preleveur?.raison_sociale || preleveur?.sigle)
+  // Considered "morale" if siret OR raison_sociale OR sigle is defined
+  return !(preleveur?.siret || preleveur?.raison_sociale || preleveur?.sigle)
 }
 
 /**
