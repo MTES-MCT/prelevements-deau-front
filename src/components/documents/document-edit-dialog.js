@@ -22,7 +22,7 @@ const buildExploitationLabelsMap = exploitations => {
   const map = {}
   for (const exploitation of exploitations) {
     const pointName = exploitation.point?.nom || exploitation.point?.id_point || 'Point inconnu'
-    map[exploitation._id] = pointName
+    map[exploitation._id] = exploitation.id_exploitation + ' - ' + pointName
   }
 
   return map

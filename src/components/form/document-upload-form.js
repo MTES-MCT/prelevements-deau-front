@@ -50,7 +50,7 @@ const buildExploitationOptions = (exploitations, labelsById) => {
     const statut = exploitation.statut || 'Non renseigné'
     grouped[statut] ||= []
 
-    const label = labelsById[exploitation._id]
+    const label = exploitation.id_exploitation + ' - ' + labelsById[exploitation._id]
     const dateText = `Depuis le ${formatFullDateFr(exploitation.date_debut)}${exploitation.date_fin ? ` jusqu'au ${formatFullDateFr(exploitation.date_fin)}` : ''}`
 
     grouped[statut].push({

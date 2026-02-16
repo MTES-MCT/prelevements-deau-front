@@ -105,3 +105,12 @@ export async function getPointsFromPreleveurAction(idPreleveur) {
 export async function getExploitationFromPreleveurAction(idPreleveur) {
   return withErrorHandling(async () => fetchJSON(`api/preleveurs/${idPreleveur}/exploitations`))
 }
+
+/**
+ * Get exploitations for a préleveur via points
+ * @param {string} idPreleveur - Préleveur ID
+ * @returns {Promise<Object>} - Result object
+ */
+export async function getExploitationFromPreleveurViaPointsAction(idPreleveur) {
+  return withErrorHandling(async () => fetchJSON(`api/preleveurs/${idPreleveur}/exploitations-via-points`))
+}

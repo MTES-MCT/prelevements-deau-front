@@ -6,9 +6,9 @@ import DocumentUploadForm from '@/components/form/document-upload-form.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {
   getPreleveurAction,
-  getExploitationFromPreleveurAction,
   getPointPrelevementAction
 } from '@/server/actions/index.js'
+import {getExploitationFromPreleveurViaPointsAction} from '@/server/actions/preleveurs.js'
 import {displayPreleveur} from '@/utils/preleveurs.js'
 
 const DynamicBreadcrumb = dynamic(
@@ -25,7 +25,7 @@ const Page = async ({params}) => {
 
   const preleveur = preleveurResult.data
 
-  const exploitationsResult = await getExploitationFromPreleveurAction(id)
+  const exploitationsResult = await getExploitationFromPreleveurViaPointsAction(id)
   const exploitations = exploitationsResult.data || []
 
   // Fetch points for each exploitation to get their names

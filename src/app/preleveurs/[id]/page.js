@@ -18,7 +18,11 @@ import {getPreleveurTitle, getPreleveurTypeIcon} from '@/lib/preleveurs.js'
 import {getNewExploitationURL} from '@/lib/urls.js'
 import {getDocumentsFromPreleveurAction} from '@/server/actions/documents.js'
 import {getPointPrelevementAction} from '@/server/actions/points-prelevement.js'
-import {getPreleveurAction, getExploitationFromPreleveurAction} from '@/server/actions/preleveurs.js'
+import {
+  getPreleveurAction,
+  getExploitationFromPreleveurAction,
+  getExploitationFromPreleveurViaPointsAction
+} from '@/server/actions/preleveurs.js'
 import {getReglesFromPreleveurAction} from '@/server/actions/regles.js'
 import {getAggregatedSeriesOptionsAction} from '@/server/actions/series.js'
 
@@ -80,6 +84,7 @@ const Page = async ({params}) => {
 
   const documentsResult = await getDocumentsFromPreleveurAction(id)
   const exploitationsResult = await getExploitationFromPreleveurAction(id)
+  const exploitationsViaPointsResult = await getExploitationFromPreleveurViaPointsAction(id)
   const reglesResult = await getReglesFromPreleveurAction(preleveur._id)
   const seriesResult = await getAggregatedSeriesOptionsAction({preleveurId: id})
 
@@ -97,6 +102,12 @@ const Page = async ({params}) => {
     if (pointResult.success && pointResult.data) {
       pointsPrelevement.push(pointResult.data)
     }
+
+    return {...exploitation, point: pointResult.success ? pointResult.data : null}
+  }))
+
+  const exploitationsViaPointsWithPoints = await Promise.all(exploitationsViaPointsResult.data.map(async exploitation => {
+    const pointResult = await getPointPrelevementAction(exploitation.point)
 
     return {...exploitation, point: pointResult.success ? pointResult.data : null}
   }))
@@ -149,7 +160,7 @@ const Page = async ({params}) => {
         <DocumentsList
           idPreleveur={id}
           documents={documents}
-          exploitations={exploitationsWithPoints}
+          exploitations={exploitationsViaPointsWithPoints}
         />
         <ReglesListCard
           hasExploitations={exploitations.length > 0}
