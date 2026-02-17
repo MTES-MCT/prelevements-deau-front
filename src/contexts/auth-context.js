@@ -33,8 +33,8 @@ export const AuthProvider = ({children}) => {
 
     return {
       id: session.user.id || 'anonymous',
-      nom: session.user.firstName || null,
-      prenom: session.user.lastName || null,
+      firstName: session.user.firstName || null,
+      lastName: session.user.lastName || null,
       email: session.user.email || null,
       structure: session.user.structure || null,
       role: session.user.role

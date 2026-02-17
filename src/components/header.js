@@ -119,13 +119,13 @@ const HeaderComponent = () => {
     const items = []
 
     // User name with role badge (non-interactive element)
-    const userName = `${user.prenom || ''} ${user.nom || ''}`.trim()
+    const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim()
     const roleLabel = user.role ? ROLE_LABELS[user.role] : null
     const roleColor = user.role ? ROLE_COLORS[user.role] : null
 
     if (userName) {
       items.push(
-        <span key='user' className='fr-btn ri-account-circle-fill flex items-center gap-2' style={{cursor: 'default', pointerEvents: 'none'}}>
+        <span key='user' className='fr-btn flex items-center gap-2' style={{cursor: 'default', pointerEvents: 'none'}}>
           {userName}
           {roleLabel && (
             <Chip
@@ -143,8 +143,14 @@ const HeaderComponent = () => {
       )
     }
 
-    // Logout button
+    // Mon compte button
     items.push({
+      iconId: 'ri-account-circle-fill',
+      text: 'Mon compte',
+      linkProps: {
+        href: '/mon-compte'
+      }
+    }, {
       iconId: 'ri-logout-box-r-line',
       text: 'Se déconnecter',
       buttonProps: {

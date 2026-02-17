@@ -74,3 +74,7 @@ export {
 export {
   getStatsAction
 } from './stats.js'
+
+export {
+  getZonesActions
+} from './zones.js'
