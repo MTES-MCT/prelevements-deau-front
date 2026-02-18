@@ -38,7 +38,7 @@ const Page = async ({params}) => {
           pointPrelevement={pointPrelevement}
         />
         <SeriesExplorer
-          pointIds={[pointPrelevement.id_point]}
+          pointIds={[pointPrelevement.id]}
           seriesOptions={seriesOptions}
         />
         <ExploitationsList

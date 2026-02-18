@@ -21,7 +21,7 @@ import {getAggregatedSeriesAction} from '@/server/actions/index.js'
 import {pickAvailableFrequency} from '@/utils/frequency.js'
 
 const DEFAULT_FREQUENCY = '1 day'
-const DEFAULT_PARAMETER = 'volume prélevé'
+const DEFAULT_PARAMETER = 'Volume prélevé'
 const FALLBACK_VOLUME_TEMPORAL_OPERATORS = ['sum', 'mean', 'min', 'max']
 const FALLBACK_STANDARD_TEMPORAL_OPERATORS = ['mean', 'min', 'max']
 
@@ -74,8 +74,8 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
     () => (seriesOptions?.parameters ?? []).map(param => {
       const metadata = getParameterMetadata(param.name)
       return {
-        value: param.name,
-        label: param.name,
+        value: param.metricTypeCode ?? param.code ?? param.name,
+        label: param.label ?? param.name,
         unit: param.unit ?? metadata?.unit ?? '',
         valueType: param.valueType ?? metadata?.valueType ?? metadata?.type ?? null
       }
@@ -129,7 +129,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
     )
   }, [seriesOptions])
 
-  // Prioritize 'volume prélevé' as default parameter if available
+  // Prioritize 'volume prélevé' as default metricTypeCode if available
   const derivedDefaultParameters = useMemo(() => {
     // Priority 1: Check if 'volume prélevé' is available
     const volumeParameter = parameterOptions.find(
@@ -140,7 +140,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
       return [volumeParameter.value]
     }
 
-    // Priority 2: Fallback to first available parameter
+    // Priority 2: Fallback to first available metricTypeCode
     return parameterOptions[0]?.value ? [parameterOptions[0].value] : []
   }, [parameterOptions])
 
@@ -172,7 +172,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
       return null
     }
 
-    // Priority 1: Use the default operator from the parameter definition (API or metadata)
+    // Priority 1: Use the default operator from the metricTypeCode definition (API or metadata)
     if (parameterDefinition.defaultTemporalOperator) {
       return parameterDefinition.defaultTemporalOperator
     }
@@ -245,10 +245,10 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
     [buildTemporalOperatorsForParameters, selectedParameters]
   )
 
-  const fetchAggregatedSeries = useCallback(async (parameter, temporalOperator, frequency) => {
+  const fetchAggregatedSeries = useCallback(async (metricTypeCode, temporalOperator, frequency) => {
     const params = {
       aggregationFrequency: frequency,
-      parameter,
+      metricTypeCode,
       temporalOperator
     }
 
@@ -315,7 +315,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
       try {
         const promises = selectedParameters.map(async param => {
           const temporalOperator = resolvedTemporalOperatorsByParameter[param]
-          // Skip fetch if temporalOperator cannot be resolved for this parameter
+          // Skip fetch if temporalOperator cannot be resolved for this metricTypeCode
           if (!temporalOperator) {
             return [param, null]
           }

@@ -258,7 +258,7 @@ const {statusByDate: STATUS_BY_DATE}
 const SERIES_CONFIGS = [
   {
     id: 'series-volume',
-    parameter: 'Volume prélevé',
+    parameter: 'volume prélevé',
     unit: 'm³',
     frequency: 'daily',
     valueType: 'cumulative',
@@ -272,7 +272,7 @@ const SERIES_CONFIGS = [
   },
   {
     id: 'series-volume-2',
-    parameter: 'Volume prélevé',
+    parameter: 'volume prélevé',
     unit: 'm³',
     frequency: 'daily',
     valueType: 'cumulative',

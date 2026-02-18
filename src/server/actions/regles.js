@@ -13,13 +13,13 @@ import {
 
 /**
  * Get règles for a préleveur
- * @param {string} idPreleveur - Préleveur ID
+ * @param {string} declarantId - Préleveur ID
  * @returns {Promise<Object>} - Result object
  */
-export async function getReglesFromPreleveurAction(idPreleveur) {
+export async function getReglesFromPreleveurAction(declarantId) {
   return withErrorHandling(async () => {
     try {
-      return await fetchJSON(`api/preleveurs/${idPreleveur}/regles`)
+      return await fetchJSON(`api/preleveurs/${declarantId}/regles`)
     } catch (error) {
       // Return empty array on error (consistent with original behavior)
       if (error.code === 404) {

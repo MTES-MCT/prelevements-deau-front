@@ -811,9 +811,9 @@ test('indexDuplicateParameters preserves parameter name when no duplicates', t =
 
 test('indexDuplicateParameters adds index to duplicate parameters', t => {
   const seriesList = [
-    {id: 'series-1', parameter: 'Volume prélevé', unit: 'm³'},
+    {id: 'series-1', parameter: 'volume prélevé', unit: 'm³'},
     {id: 'series-2', parameter: 'Température', unit: '°C'},
-    {id: 'series-3', parameter: 'Volume prélevé', unit: 'm³'}
+    {id: 'series-3', parameter: 'volume prélevé', unit: 'm³'}
   ]
 
   const result = indexDuplicateParameters(seriesList)

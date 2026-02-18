@@ -60,10 +60,9 @@ export async function getSeriesValuesAction(seriesId, {start, end, withPoint = f
  * @param {string} [params.pointId] - Point ID
  * @param {string} [params.from] - Start date
  * @param {string} [params.to] - End date
- * @param {boolean} [params.onlyIntegratedDays] - Only include integrated days
  * @returns {Promise<Object>} - Result object
  */
-export async function searchSeriesAction({preleveurId, pointId, from, to, onlyIntegratedDays} = {}) {
+export async function searchSeriesAction({preleveurId, pointId, from, to, sourceId, metricTypeCode} = {}) {
   return withErrorHandling(async () => {
     const params = new URLSearchParams()
 
@@ -75,16 +74,20 @@ export async function searchSeriesAction({preleveurId, pointId, from, to, onlyIn
       params.set('pointId', pointId)
     }
 
+    if (sourceId) {
+      params.set('sourceId', sourceId)
+    }
+
+    if (metricTypeCode) {
+      params.set('metricTypeCode', metricTypeCode)
+    }
+
     if (from) {
       params.set('from', from)
     }
 
     if (to) {
       params.set('to', to)
-    }
-
-    if (onlyIntegratedDays) {
-      params.set('onlyIntegratedDays', onlyIntegratedDays ? '1' : '0')
     }
 
     const query = params.toString() ? `?${params.toString()}` : ''
@@ -153,8 +156,8 @@ export async function buildAggregatedSeriesQuery(params = {}) {
   const {
     pointIds,
     preleveurId,
-    attachmentId,
-    parameter,
+    sourceId,
+    metricTypeCode,
     temporalOperator,
     aggregationFrequency,
     startDate,
@@ -167,14 +170,14 @@ export async function buildAggregatedSeriesQuery(params = {}) {
 
   const normalizedPointIds = normalizeIdentifierList(pointIds)
   const normalizedPreleveurId = normalizeIdentifier(preleveurId)
-  const normalizedAttachmentId = normalizeIdentifier(attachmentId)
+  const normalizedSourceId = normalizeIdentifier(sourceId)
 
-  if (!normalizedPointIds && !normalizedPreleveurId && !normalizedAttachmentId) {
-    throw new Error('La récupération de séries agrégées nécessite au moins un identifiant de point (pointIds), un identifiant de préleveur (preleveurId) ou un identifiant de fichier (attachmentId).')
+  if (!normalizedPointIds && !normalizedPreleveurId && !normalizedSourceId) {
+    throw new Error('La récupération de séries agrégées nécessite au moins un identifiant de point (pointIds), un identifiant de préleveur (preleveurId) ou un identifiant de source (sourceId).')
   }
 
-  if (!parameter) {
-    throw new Error('Le paramètre "parameter" est obligatoire pour l\'agrégation.')
+  if (!metricTypeCode) {
+    throw new Error('Le paramètre "metricTypeCode" est obligatoire pour l\'agrégation.')
   }
 
   if (!aggregationFrequency) {
@@ -189,11 +192,11 @@ export async function buildAggregatedSeriesQuery(params = {}) {
     queryParams.set('preleveurId', normalizedPreleveurId)
   }
 
-  if (normalizedAttachmentId) {
-    queryParams.set('attachmentId', normalizedAttachmentId)
+  if (normalizedSourceId) {
+    queryParams.set('sourceid', normalizedSourceId)
   }
 
-  queryParams.set('parameter', parameter)
+  queryParams.set('metricTypeCode', metricTypeCode)
   queryParams.set('aggregationFrequency', aggregationFrequency)
 
   if (temporalOperator) {
@@ -241,12 +244,12 @@ export async function getAggregatedSeriesAction(params = {}) {
 /**
  * Get aggregated series options (available parameters and date ranges)
  * @param {Object} params
- * @param {string|number|Array<string|number>} [params.pointIds] - Point IDs
- * @param {string|number} [params.preleveurId] - Préleveur ID
- * @param {string|number} [params.attachmentId] - Attachment ID
+ * @param {string|Array<string>} [params.pointIds] - Point IDs
+ * @param {string} [params.preleveurId] - Préleveur ID
+ * @param {string} [params.sourceId] - Source ID
  * @returns {Promise<Object>} - Result object
  */
-export async function getAggregatedSeriesOptionsAction({pointIds, preleveurId, attachmentId} = {}) {
+export async function getAggregatedSeriesOptionsAction({pointIds, preleveurId, sourceId} = {}) {
   return withErrorHandling(async () => {
     const params = new URLSearchParams()
 
@@ -256,11 +259,11 @@ export async function getAggregatedSeriesOptionsAction({pointIds, preleveurId, a
     }
 
     if (preleveurId !== undefined && preleveurId !== null) {
-      params.set('preleveurId', String(preleveurId))
+      params.set('preleveurId', preleveurId)
     }
 
-    if (attachmentId !== undefined && attachmentId !== null) {
-      params.set('attachmentId', String(attachmentId))
+    if (sourceId !== undefined && sourceId !== null) {
+      params.set('sourceId', sourceId)
     }
 
     const query = params.toString() ? `?${params.toString()}` : ''

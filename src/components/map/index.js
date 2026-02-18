@@ -116,7 +116,7 @@ function loadMap(map, points, showLabels = true) {
   for (const feature of markersFeatures) {
     const markerId = feature.properties.icon
     if (!map.hasImage(markerId)) {
-      const el = createUsagePieChart(feature.properties.usages)
+      const el = createUsagePieChart(feature.properties.usages || [])
       const dataURL = createSVGDataURL(el)
       const img = new Image()
       img.src = dataURL
