@@ -1,4 +1,5 @@
 import {getServerAuthSession} from '@/server/auth.js'
+import {forbidden} from "next/navigation";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL
 
@@ -188,6 +189,7 @@ export async function withErrorHandling(fn) {
     }
 
     if (error.code === 403) {
+      forbidden()
       return {
         success: false,
         error: 'INSUFFICIENT_PERMISSIONS',

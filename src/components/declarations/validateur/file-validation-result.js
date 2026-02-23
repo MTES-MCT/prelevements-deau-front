@@ -16,6 +16,7 @@ import FileValidationErrors from '@/components/declarations/file-validation-erro
 import {coerceNumericValue} from '@/utils/number.js'
 import {normalizePointId, getPointPrelevementName} from '@/utils/point-prelevement.js'
 import {normalizeString} from '@/utils/string.js'
+import {getPreleveurTitle} from "@/lib/preleveurs.js";
 
 const findPointById = (points = [], pointId) => {
   if (pointId === null || pointId === undefined) {
@@ -45,16 +46,7 @@ const getPreleveurKey = (preleveur, index) => {
     return `preleveur-${index + 1}`
   }
 
-  return preleveur.siret || preleveur.raison_sociale || `preleveur-${index + 1}`
-}
-
-const formatPreleveurLabel = preleveur => {
-  if (!preleveur || typeof preleveur !== 'object') {
-    return 'Préleveur inconnu'
-  }
-
-  const name = preleveur.raison_sociale || 'Préleveur'
-  return preleveur.siret ? `${name} (${preleveur.siret})` : name
+  return preleveur.siret || preleveur.socialReason || `preleveur-${index + 1}`
 }
 
 const isVolumePreleveParameter = parameter => {
@@ -227,7 +219,7 @@ const FileValidationResult = ({
       bySiret.set(preleveur.siret, {
         key: getPreleveurKey(preleveur, index),
         preleveur,
-        label: formatPreleveurLabel(preleveur)
+        label: getPreleveurTitle(preleveur)
       })
     }
 

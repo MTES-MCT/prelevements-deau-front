@@ -34,8 +34,6 @@ function normalizeMonthInput(value, fieldName) {
  * - files: File[]
  * - fileTypes: string[] (1 type métier par fichier, même ordre, unique par déclaration)
  * - comment?: string
- * - startMonth: "YYYY-MM-DD" (toujours le 1er du mois)
- * - endMonth: "YYYY-MM-DD" (toujours le 1er du mois, >= startMonth)
  * - aotDecreeNumber?: string
  *
  * Côté API :
@@ -48,8 +46,6 @@ export async function createDeclarationAction({
   files = [],
   fileTypes = [],
   comment,
-  startMonth,
-  endMonth,
   aotDecreeNumber
 } = {}) {
   return withErrorHandling(async () => {
@@ -70,18 +66,9 @@ export async function createDeclarationAction({
       throw new Error('Chaque type doit être unique dans une déclaration.')
     }
 
-    const start = normalizeMonthInput(startMonth, 'startMonth')
-    const end = normalizeMonthInput(endMonth, 'endMonth')
-
-    if (moment.utc(start).isAfter(moment.utc(end))) {
-      throw new Error('startMonth doit être antérieur ou égal à endMonth.')
-    }
-
     const formData = new FormData()
 
     formData.append('type', type)
-    formData.append('startMonth', start)
-    formData.append('endMonth', end)
 
     if (typeof comment === 'string' && comment.trim()) {
       formData.append('comment', comment.trim())

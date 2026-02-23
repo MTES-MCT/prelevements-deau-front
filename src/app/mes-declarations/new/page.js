@@ -1,7 +1,7 @@
 'use client'
 
 import {
-  useCallback, useMemo, useRef, useState
+  useCallback, useRef, useState
 } from 'react'
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
@@ -347,19 +347,6 @@ const buildUploadPayload = (fileOrFiles, prelevementType) => {
   }
 }
 
-function normalizeMonthPickerValue(value) {
-  const s = String(value ?? '').trim()
-  if (!s) {
-    return null
-  }
-
-  const m = moment.utc(s, ['YYYY-MM', 'YYYY-MM-DD'], true)
-  if (!m.isValid()) {
-    return null
-  }
-
-  return m.startOf('month').format('YYYY-MM-DD')
-}
 
 const NouvelleDeclarationPage = () => {
   const [file, setFile] = useState(null)
@@ -368,8 +355,6 @@ const NouvelleDeclarationPage = () => {
   const [validationResult, setValidationResult] = useState(null)
   const [pointsPrelevement, setPointsPrelevement] = useState([])
   const [preleveurs, setPreleveurs] = useState([])
-  const [startMonth, setStartMonth] = useState('') // "YYYY-MM"
-  const [endMonth, setEndMonth] = useState('') // "YYYY-MM"
   const [comment, setComment] = useState('')
   const [aotDecreeNumber, setAotDecreeNumber] = useState('')
 
@@ -391,10 +376,20 @@ const NouvelleDeclarationPage = () => {
     setPreleveurs([])
     setIsSubmitting(false)
     setSubmitResult(null)
-    setStartMonth('')
-    setEndMonth('')
     setComment('')
     setAotDecreeNumber('')
+
+    registryRef.current.clear(LOCAL_SERIES_PREFIX)
+  }
+
+  const resetFileForm = () => {
+    setFile(null)
+    setTypePrelevement(null)
+    setValidationResult(null)
+    setPointsPrelevement([])
+    setPreleveurs([])
+    setIsSubmitting(false)
+    setSubmitResult(null)
 
     registryRef.current.clear(LOCAL_SERIES_PREFIX)
   }
@@ -536,21 +531,6 @@ const NouvelleDeclarationPage = () => {
     }
   }
 
-  const monthRangeError = useMemo(() => {
-    const start = normalizeMonthPickerValue(startMonth)
-    const end = normalizeMonthPickerValue(endMonth)
-
-    if (!start || !end) {
-      return null
-    }
-
-    if (moment.utc(start).isAfter(moment.utc(end))) {
-      return 'La période est invalide : le mois de début doit être antérieur ou égal au mois de fin.'
-    }
-
-    return null
-  }, [startMonth, endMonth])
-
   const canSubmitDeclaration
         = !isLoading
         && !isSubmitting
@@ -558,9 +538,6 @@ const NouvelleDeclarationPage = () => {
         && Boolean(typePrelevement)
         && validationResult?.validationStatus
         && validationResult.validationStatus !== 'error'
-        && Boolean(normalizeMonthPickerValue(startMonth))
-        && Boolean(normalizeMonthPickerValue(endMonth))
-        && !monthRangeError
 
   const submitDeclaration = useCallback(async () => {
     setIsSubmitting(true)
@@ -575,25 +552,12 @@ const NouvelleDeclarationPage = () => {
         throw new Error('Le fichier n’est pas valide. Corrige les erreurs avant de soumettre.')
       }
 
-      const start = normalizeMonthPickerValue(startMonth)
-      const end = normalizeMonthPickerValue(endMonth)
-
-      if (!start || !end) {
-        throw new Error('Veuillez renseigner la période (mois de début et mois de fin).')
-      }
-
-      if (moment.utc(start).isAfter(moment.utc(end))) {
-        throw new Error('La période est invalide : le mois de début doit être <= au mois de fin.')
-      }
-
       const {files, fileTypes} = buildUploadPayload(file, typePrelevement)
 
       const result = await createDeclarationAction({
         type: typePrelevement,
         files,
         fileTypes,
-        startMonth: start,
-        endMonth: end,
         comment,
         aotDecreeNumber
       })
@@ -620,7 +584,7 @@ const NouvelleDeclarationPage = () => {
     } finally {
       setIsSubmitting(false)
     }
-  }, [file, typePrelevement, validationResult, startMonth, endMonth, comment, aotDecreeNumber])
+  }, [file, typePrelevement, validationResult, comment, aotDecreeNumber])
 
   return (
     <>
@@ -628,71 +592,36 @@ const NouvelleDeclarationPage = () => {
         <div className='fr-grid-row fr-grid-row--gutters'>
           <div className='fr-col-12 fr-col-md-6'>
             <Input
-              required
-              label='Mois de début'
-              nativeInputProps={{
-                type: 'month',
-                value: startMonth,
-                onChange: e => setStartMonth(e.target.value)
-              }}
-              hintText='Choisir le mois de début'
+                label='Numéro d’arrêté AOT'
+                nativeInputProps={{
+                  value: aotDecreeNumber,
+                  onChange: e => setAotDecreeNumber(e.target.value)
+                }}
+                hintText='Facultatif'
             />
           </div>
 
           <div className='fr-col-12 fr-col-md-6'>
             <Input
-              required
-              label='Mois de fin'
-              nativeInputProps={{
-                type: 'month',
-                value: endMonth,
-                onChange: e => setEndMonth(e.target.value)
-              }}
-              hintText='Choisir le mois de fin'
-            />
-          </div>
-
-          {monthRangeError && (
-            <div className='fr-col-12 fr-mt-1w'>
-              <Alert
-                severity='error'
-                title='Période invalide'
-                description={monthRangeError}
-              />
-            </div>
-          )}
-
-          <div className='fr-col-12 fr-col-md-6'>
-            <Input
-              label='Numéro d’arrêté AOT'
-              nativeInputProps={{
-                value: aotDecreeNumber,
-                onChange: e => setAotDecreeNumber(e.target.value)
-              }}
-              hintText='Facultatif'
-            />
-          </div>
-
-          <div className='fr-col-12 fr-col-md-6'>
-            <Input
-              textArea
-              label='Commentaire'
-              nativeTextAreaProps={{
-                value: comment,
-                onChange: e => setComment(e.target.value),
-                rows: 3
-              }}
-              hintText='Facultatif'
+                textArea
+                label='Commentaire'
+                nativeTextAreaProps={{
+                  value: comment,
+                  onChange: e => setComment(e.target.value),
+                  rows: 3
+                }}
+                hintText='Facultatif'
             />
           </div>
         </div>
-      </div>
 
-      <ValidateurForm
-        isLoading={isLoading}
-        resetForm={resetForm}
-        handleSubmit={submit}
-      />
+        <ValidateurForm
+            isLoading={isLoading}
+            resetForm={resetFileForm}
+            handleSubmit={submit}
+        />
+
+      </div>
 
       {validationResult && file && (
         <>

@@ -99,6 +99,7 @@ const FileValidateurForm = ({isLoading, resetForm, handleSubmit}) => {
       {isGidaf ? (
         <>
           <Upload
+            key={`cadres-${fileType}`}
             label='Fichier Cadres'
             hint='Déposez le fichier Cadres (métadonnées des points de prélèvement)'
             state={inputError ? 'error' : 'default'}
@@ -109,6 +110,7 @@ const FileValidateurForm = ({isLoading, resetForm, handleSubmit}) => {
             }}
           />
           <Upload
+            key={`prelevements-${fileType}`}
             label='Fichier Prelevements'
             hint='Déposez le fichier Prelevements (données de volumes)'
             state={inputError ? 'error' : 'default'}
@@ -121,7 +123,8 @@ const FileValidateurForm = ({isLoading, resetForm, handleSubmit}) => {
         </>
       ) : (
         <Upload
-          hint='Déposé le fichier que vous souhaitez valider'
+          key={`single-${fileType}`}
+          hint='Déposé le fichier   que vous souhaitez valider'
           state={inputError ? 'error' : 'default'}
           stateRelatedMessage={inputError}
           nativeInputProps={{
