@@ -62,31 +62,11 @@ export function getFileNameFromStorageKey(storageKey) {
   return fileName.join('-')
 }
 
-export function getPointsPrelementIdFromDossier(dossier, files) {
-  const {pointPrelevement, donneesPrelevements} = dossier
+export function getPointsPrelevementIdsFromDeclaration(declaration) {
+  const source = declaration.source
+  const chunks = source?.chunks || []
 
-  if (pointPrelevement) {
-    return [pointPrelevement]
-  }
-
-  if (donneesPrelevements) {
-    return dossier.donneesPrelevements.flatMap(({pointsPrelevements}) => flatMap(pointsPrelevements))
-  }
-
-  const pointIds = []
-  for (const file of files) {
-    if (!Array.isArray(file?.series)) {
-      continue
-    }
-
-    for (const serie of file.series) {
-      if (serie?.pointInfo?.id_point && !pointIds.includes(serie.pointInfo.id_point)) {
-        pointIds.push(serie.pointInfo.id_point)
-      }
-    }
-  }
-
-  return pointIds
+  return chunks.map(chunk => chunk.pointPrelevementId).filter(Boolean)
 }
 
 export async function getDossierFiles(dossier) {

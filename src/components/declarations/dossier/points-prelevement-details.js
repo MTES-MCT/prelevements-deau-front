@@ -6,7 +6,7 @@ import PointsPrelevementsMap from '@/components/map/points-prelevements-map.js'
 import SectionCard from '@/components/ui/SectionCard/index.js'
 
 const PointsPrelevementDetails = ({pointsPrelevementId, pointsPrelevement, handleClick, disabledPointIds, pointsStatus}) => {
-  const pointsWithoutData = pointsPrelevementId.filter(id => !pointsPrelevement?.some(point => point.id_point === id))
+  const pointsWithoutData = pointsPrelevementId.filter(id => !pointsPrelevement?.some(point => point.id === id))
   const usePlural = pointsWithoutData.length > 1
   return (
     <SectionCard title='Points de prélèvement' icon='fr-icon-map-pin-2-line'>

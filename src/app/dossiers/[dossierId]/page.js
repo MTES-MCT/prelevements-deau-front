@@ -3,7 +3,7 @@ import {notFound} from 'next/navigation'
 import DossierHeader from '@/components/declarations/dossier/dossier-header.js'
 import DossierDetails from '@/components/declarations/dossier-details.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {getDossierFiles, getPointsPrelementIdFromDossier, getDossierPeriodLabel} from '@/lib/dossier.js'
+import {getDossierFiles, getPointsPrelevementIdsFromDeclaration, getDossierPeriodLabel} from '@/lib/dossier.js'
 import {getDossierDSURL} from '@/lib/urls.js'
 import {getDossierAction, getPreleveurAction} from '@/server/actions/index.js'
 
@@ -17,7 +17,7 @@ const DossierPage = async ({params}) => {
 
   const dossier = dossierResult.data
   const files = await getDossierFiles(dossier)
-  const idPoints = getPointsPrelementIdFromDossier(dossier, files)
+  const idPoints = getPointsPrelevementIdsFromDeclaration(dossier, files)
   const periodLabel = getDossierPeriodLabel(dossier)
 
   let preleveur = dossier?.demandeur
