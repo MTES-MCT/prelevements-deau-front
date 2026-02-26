@@ -139,12 +139,12 @@ const Page = async ({params}) => {
         {pointsPrelevement.length > 0 && (
           <PreleveurMap points={pointsPrelevement} />
         )}
-        <SeriesExplorer preleveurId={preleveur.id_preleveur} seriesOptions={seriesOptions} />
+        <SeriesExplorer preleveurId={preleveur.id} seriesOptions={seriesOptions} />
         <ExploitationsList
           hidePreleveur
           exploitations={exploitationsWithPoints}
           preleveurs={[preleveur]}
-          createHref={getNewExploitationURL({idPreleveur: preleveur._id})}
+          createHref={getNewExploitationURL({idPreleveur: preleveur.id})}
         />
         <DocumentsList
           idPreleveur={id}

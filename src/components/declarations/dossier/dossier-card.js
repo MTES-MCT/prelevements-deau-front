@@ -1,7 +1,6 @@
 import {
   ArticleOutlined,
   EventOutlined,
-  CalendarTodayOutlined,
   InterestsOutlined,
   LocalDrinkOutlined,
   LocalShippingOutlined,
@@ -14,7 +13,6 @@ import {fr} from 'date-fns/locale'
 import Link from 'next/link'
 
 import ListItem from '@/components/ui/ListItem/index.js'
-import {getDossierPeriodLabel} from '@/lib/dossier.js'
 import {formatNumber} from '@/utils/number.js'
 
 const rightIcons = {
@@ -72,7 +70,6 @@ const typeDonnees = typeDonnees => {
 }
 
 const metas = dossier => {
-  const periodLabel = getDossierPeriodLabel(dossier)
   const dateDepot = dossier.createdAt
     ? format(new Date(dossier.createdAt), 'dd/MM/yyyy', {locale: fr})
     : 'Non renseignée'
@@ -83,19 +80,15 @@ const metas = dossier => {
       content: `Date de dépôt : ${dateDepot}`
     },
     {
-      icon: CalendarTodayOutlined,
-      content: `Période concernée : ${periodLabel ?? 'Non renseignée'}`
-    },
-    {
       icon: TableRowsOutlined,
       content: typeDonnees(dossier.dataSourceType)
     },
     {
       icon: WaterDropOutlined,
-      content: dossier.result?.totalVolumePreleve
+      content: dossier.source?.metadata?.totalWaterVolumeWithdrawn
         ? (
           <>
-            Volume prélevé : {formatNumber(dossier.result.totalVolumePreleve)}{' '}
+            Volume prélevé : {formatNumber(dossier.source?.metadata?.totalWaterVolumeWithdrawn)}{' '}
             <span aria-label='mètres cubes' role='text'>m³</span>
           </>
         )

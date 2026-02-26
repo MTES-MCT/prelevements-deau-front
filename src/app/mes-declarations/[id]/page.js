@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import {notFound} from 'next/navigation'
 
 import DossierHeader from '@/components/declarations/dossier/dossier-header.js'
@@ -36,26 +35,6 @@ const Page = async ({params}) => {
         files={files}
         idPoints={idPoints}
       />
-
-      <div className='flex flex-col gap-8 mb-16'>
-        <dl>
-          <dt>Fichiers (pour débug)</dt>
-          <dd>
-            <ul>
-              { declaration.files.map(file => (
-                <li key={file.id}>
-                  <Link
-                    download
-                    href={file.url}
-                  >
-                    {file.filename}
-                  </Link>
-                </li>
-              )) }
-            </ul>
-          </dd>
-        </dl>
-      </div>
     </>
   )
 }

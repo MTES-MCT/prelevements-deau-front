@@ -8,20 +8,11 @@ export function getPointPrelevementName(pointPrelevement) {
     || ''
 }
 
-export function getPointPrelevementLabel({idPoint, pointPrelevement, fallback = 'Point de prélèvement'}) {
+export function getPointPrelevementLabel({pointPrelevement, fallback = 'Point de prélèvement'}) {
   const pointName = getPointPrelevementName(pointPrelevement)
-  const hasPointId = idPoint !== null && idPoint !== undefined && idPoint !== ''
-
-  if (pointName && hasPointId) {
-    return `${idPoint} - ${pointName}`
-  }
 
   if (pointName) {
     return pointName
-  }
-
-  if (hasPointId) {
-    return `Point ${idPoint}`
   }
 
   return fallback

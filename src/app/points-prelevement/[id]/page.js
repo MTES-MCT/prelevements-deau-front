@@ -43,7 +43,6 @@ const Page = async ({params}) => {
         />
         <ExploitationsList
           exploitations={exploitations}
-          preleveurs={pointPrelevement.preleveurs}
           createHref={getNewExploitationURL({idPoint: pointPrelevement.id})}
         />
       </div>

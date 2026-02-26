@@ -347,7 +347,6 @@ const buildUploadPayload = (fileOrFiles, prelevementType) => {
   }
 }
 
-
 const NouvelleDeclarationPage = () => {
   const [file, setFile] = useState(null)
   const [typePrelevement, setTypePrelevement] = useState(null)
@@ -592,33 +591,33 @@ const NouvelleDeclarationPage = () => {
         <div className='fr-grid-row fr-grid-row--gutters'>
           <div className='fr-col-12 fr-col-md-6'>
             <Input
-                label='Numéro d’arrêté AOT'
-                nativeInputProps={{
-                  value: aotDecreeNumber,
-                  onChange: e => setAotDecreeNumber(e.target.value)
-                }}
-                hintText='Facultatif'
+              label='Numéro d’arrêté AOT'
+              nativeInputProps={{
+                value: aotDecreeNumber,
+                onChange: e => setAotDecreeNumber(e.target.value)
+              }}
+              hintText='Facultatif'
             />
           </div>
 
           <div className='fr-col-12 fr-col-md-6'>
             <Input
-                textArea
-                label='Commentaire'
-                nativeTextAreaProps={{
-                  value: comment,
-                  onChange: e => setComment(e.target.value),
-                  rows: 3
-                }}
-                hintText='Facultatif'
+              textArea
+              label='Commentaire'
+              nativeTextAreaProps={{
+                value: comment,
+                onChange: e => setComment(e.target.value),
+                rows: 3
+              }}
+              hintText='Facultatif'
             />
           </div>
         </div>
 
         <ValidateurForm
-            isLoading={isLoading}
-            resetForm={resetFileForm}
-            handleSubmit={submit}
+          isLoading={isLoading}
+          resetForm={resetFileForm}
+          handleSubmit={submit}
         />
 
       </div>

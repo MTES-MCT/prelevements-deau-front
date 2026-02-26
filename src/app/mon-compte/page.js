@@ -11,8 +11,10 @@ moment.locale('fr')
 
 const InfoLine = ({label, value}) => (
   <Box className='flex flex-wrap gap-2 items-center'>
-    <b>{label} :</b>
-    <span>{value || '—'}</span>
+    <Typography fontWeight='medium' className='fr-text--sm'>{label}</Typography>
+    <Box className='flex gap-1'>
+      <Typography fontWeight='light' className='fr-text--sm'>{value || '-'}</Typography>
+    </Box>
   </Box>
 )
 
@@ -21,8 +23,12 @@ const MonComptePage = async () => {
   const user = userResult?.data?.user ?? null
   const role = userResult?.data?.role ?? null
 
-  const zonesResult = await getZonesActions()
-  const zones = zonesResult?.data || []
+  let zones = []
+
+  if (role === 'INSTRUCTOR') {
+    const zonesResult = await getZonesActions()
+    zones = zonesResult?.data || []
+  }
 
   return (
     <>

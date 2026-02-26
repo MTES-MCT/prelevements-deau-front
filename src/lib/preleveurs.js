@@ -39,7 +39,7 @@ export function isPreleveurPhysique(preleveur) {
  */
 export function getPreleveurTitle(preleveur) {
   if (isPreleveurPhysique(preleveur)) {
-    const parts = [preleveur?.civility, preleveur?.lastName, preleveur?.firstName].filter(Boolean)
+    const parts = [preleveur?.civility, preleveur?.user?.firstName, preleveur?.user?.lastName].filter(Boolean)
     return parts.length > 0 ? parts.join(' ') : 'Non renseigné'
   }
 

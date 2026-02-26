@@ -19,8 +19,8 @@ const LinkWithIcon = ({label, href}) => (
 )
 
 const PointIdentification = ({pointPrelevement, lienBss, lienBnpe}) => {
-  const {id_point: idPoint} = pointPrelevement
-  const pointLabel = getPointPrelevementLabel({idPoint, pointPrelevement})
+  const {id: idPoint} = pointPrelevement
+  const pointLabel = getPointPrelevementLabel({pointPrelevement})
 
   return (
     <div className='flex flex-col gap-4'>

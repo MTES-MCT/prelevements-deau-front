@@ -11,7 +11,7 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '50mb'
     },
-    authInterrupts: true,
+    authInterrupts: true
   },
   transpilePackages: ['next-auth'],
   webpack(config) {

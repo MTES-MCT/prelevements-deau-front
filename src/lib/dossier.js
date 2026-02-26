@@ -1,4 +1,3 @@
-import {flatMap} from 'lodash-es'
 import moment from 'moment'
 import 'moment/locale/fr'
 
@@ -63,7 +62,7 @@ export function getFileNameFromStorageKey(storageKey) {
 }
 
 export function getPointsPrelevementIdsFromDeclaration(declaration) {
-  const source = declaration.source
+  const {source} = declaration
   const chunks = source?.chunks || []
 
   return chunks.map(chunk => chunk.pointPrelevementId).filter(Boolean)
@@ -98,18 +97,6 @@ export async function getDossierFiles(dossier) {
   }))
 
   return enriched.filter(Boolean)
-}
-
-export function getPersonnePhysiqueFullName(
-  {civility, user: {lastName, firstName} = {}} = {}
-) {
-  if (!lastName || !firstName) {
-    return 'Nom et prénom non renseignés'
-  }
-
-  return civility
-    ? `${civility}. ${lastName} ${firstName}`
-    : `${lastName} ${firstName}`
 }
 
 export function formatFullAddress({addressLine1, addressLine2, poBox, postalCode, city} = {}) {

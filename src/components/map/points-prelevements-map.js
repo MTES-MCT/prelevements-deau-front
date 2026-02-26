@@ -32,11 +32,11 @@ const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector'
 
     const pointsWithStatus = pointsPrelevement.map(p => ({
       ...p,
-      status: pointsStatus[p.id_point] || 'unknown'
+      status: pointsStatus[p.id] || 'unknown'
     }))
 
     // Compute center from coordinates
-    const coords = pointsWithStatus.map(p => p.geom.coordinates)
+    const coords = pointsWithStatus.map(p => p.coordinates.coordinates)
     const lons = coords.map(c => c[0])
     const lats = coords.map(c => c[1])
     const center = [
@@ -72,7 +72,7 @@ const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector'
             fr.colors.getHex({isDark}).decisions.background.actionHigh.warning.default,
             ['==', ['get', 'status'], 'error'],
             fr.colors.getHex({isDark}).decisions.background.actionHigh.redMarianne.default,
-            fr.colors.getHex({isDark}).decisions.background.disabled.grey.default
+            fr.colors.getHex({isDark}).decisions.background.actionHigh.success.default
           ],
           'circle-stroke-width': 2,
           'circle-stroke-color': '#ffffff'
@@ -85,7 +85,7 @@ const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector'
         type: 'symbol',
         source: 'points-prelevement',
         layout: {
-          'text-field': ['concat', ['get', 'id_point'], ' - ', ['get', 'nom']],
+          'text-field': ['concat', ['get', 'name']],
           'text-anchor': 'bottom',
           'text-offset': ['get', 'textOffset']
         },
@@ -108,7 +108,7 @@ const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector'
         map.getCanvas().style.cursor = feature.properties.status === 'unknown' ? '' : 'pointer'
         const text = feature.properties.status === 'unknown'
           ? 'Aucun prélèvement n’est disponible pour ce point'
-          : feature.properties.nom
+          : feature.properties.name
         popup.setLngLat(coordinates).setText(text).addTo(map)
       })
 
@@ -122,7 +122,7 @@ const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector'
         if (e.features && e.features.length > 0) {
           const feature = e.features[0]
           if (feature.properties.status !== 'unknown') {
-            handleClick(feature.properties.id_point)
+            handleClick(feature.properties.id)
           }
         }
       })

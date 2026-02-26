@@ -1,30 +1,8 @@
 'use server'
 
-import moment from 'moment'
 import {revalidatePath} from 'next/cache'
 
 import {fetchJSON, withErrorHandling} from '@/server/api-wrapper.js'
-
-function normalizeMonthInput(value, fieldName) {
-  if (!value) {
-    throw new Error(`${fieldName} est obligatoire.`)
-  }
-
-  const m
-        = value instanceof Date
-          ? moment.utc(value)
-          : moment.utc(String(value).trim(), 'YYYY-MM-DD', true)
-
-  if (!m.isValid()) {
-    throw new Error(`${fieldName} doit être une date valide au format YYYY-MM-DD.`)
-  }
-
-  if (m.date() !== 1) {
-    throw new Error(`${fieldName} doit correspondre au 1er du mois (YYYY-MM-01).`)
-  }
-
-  return m.format('YYYY-MM-DD')
-}
 
 /**
  * Create a declaration with files (multipart/form-data)

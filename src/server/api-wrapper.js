@@ -1,5 +1,6 @@
+import {forbidden} from 'next/navigation'
+
 import {getServerAuthSession} from '@/server/auth.js'
-import {forbidden} from "next/navigation";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL
 

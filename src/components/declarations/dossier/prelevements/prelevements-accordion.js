@@ -12,7 +12,7 @@ import {
 import {formatNumber} from '@/utils/number.js'
 import {getPointPrelevementLabel} from '@/utils/point-prelevement.js'
 
-const PrelevementsAccordion = ({idPoint, pointPrelevement, volumePreleveTotal = null, volumeRejeteTotal = null, status, isOpen, handleSelect, typePrelevement, children}) => {
+const PrelevementsAccordion = ({idPoint, pointPrelevement, fallbackPointPrelevementName, volumePreleveTotal = null, volumeRejeteTotal = null, status, isOpen, handleSelect, typePrelevement, children}) => {
   const isVolumeDefined = typeof volumePreleveTotal === 'number' && !Number.isNaN(volumePreleveTotal)
   const isRejetDefined = typeof volumeRejeteTotal === 'number' && !Number.isNaN(volumeRejeteTotal)
   const hasAnyVolume = isVolumeDefined || isRejetDefined
@@ -21,7 +21,7 @@ const PrelevementsAccordion = ({idPoint, pointPrelevement, volumePreleveTotal = 
   // Ne pas afficher de warning pour les types qui ne vérifient pas l'existence des points
   const skipPointCheck = ['template-file', 'extract-aquasys', 'gidaf'].includes(typePrelevement)
 
-  const pointLabel = getPointPrelevementLabel({idPoint, pointPrelevement})
+  const pointLabel = getPointPrelevementLabel({pointPrelevement, fallback: fallbackPointPrelevementName})
 
   return (
     <Accordion
@@ -33,6 +33,16 @@ const PrelevementsAccordion = ({idPoint, pointPrelevement, volumePreleveTotal = 
           <Box>
             {pointPrelevement || skipPointCheck ? (
               <Box>
+                { hasPointId && (
+                  <Box component='span' className='fr-icon-map-pin-2-line' sx={{color: fr.colors.decisions.background.flat.success.default}}>
+                    Point identifié
+                  </Box>
+                )}
+                { !hasPointId && (
+                  <Box component='span' className='fr-icon-warning-fill' sx={{color: fr.colors.decisions.background.flat.warning.default}}>
+                    Point non identifié
+                  </Box>
+                )}
                 <Typography fontWeight='bold' className='flex gap-2'>
                   {pointLabel}
                 </Typography>

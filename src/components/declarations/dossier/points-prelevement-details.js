@@ -5,12 +5,10 @@ import {Box} from '@mui/system'
 import PointsPrelevementsMap from '@/components/map/points-prelevements-map.js'
 import SectionCard from '@/components/ui/SectionCard/index.js'
 
-const PointsPrelevementDetails = ({pointsPrelevementId, pointsPrelevement, handleClick, disabledPointIds, pointsStatus}) => {
-  const pointsWithoutData = pointsPrelevementId.filter(id => !pointsPrelevement?.some(point => point.id === id))
-  const usePlural = pointsWithoutData.length > 1
-  return (
-    <SectionCard title='Points de prélèvement' icon='fr-icon-map-pin-2-line'>
-      {pointsPrelevementId.length > 0 ? (
+const PointsPrelevementDetails = ({pointsPrelevementId, pointsPrelevement, handleClick, pointsStatus}) => (
+  <SectionCard title='Points de prélèvement' icon='fr-icon-map-pin-2-line'>
+    {
+      pointsPrelevementId.length > 0 ? (
         pointsPrelevement ? (
           <Box className='flex flex-col gap-2'>
             <Alert
@@ -25,19 +23,7 @@ const PointsPrelevementDetails = ({pointsPrelevementId, pointsPrelevement, handl
               <PointsPrelevementsMap
                 pointsPrelevement={pointsPrelevement}
                 handleClick={handleClick}
-                disabledPointIds={disabledPointIds}
                 pointsStatus={pointsStatus}
-              />
-            )}
-
-            {pointsWithoutData.length > 0 && (
-              <Alert
-                severity='warning'
-                description={
-                  usePlural
-                    ? `Aucune déclaration n’a été faite pour les points de prélèvement suivants : ${pointsWithoutData.join(', ')}.`
-                    : `Aucune déclaration n’a été faite pour le point de prélèvement ${pointsWithoutData[0]}.`
-                }
               />
             )}
           </Box>
@@ -46,9 +32,9 @@ const PointsPrelevementDetails = ({pointsPrelevementId, pointsPrelevement, handl
         )
       ) : (
         <Alert severity='warning' description='Aucun point de prélèvement n’a pu être identifié.' />
-      )}
-    </SectionCard>
-  )
-}
+      )
+    }
+  </SectionCard>
+)
 
 export default PointsPrelevementDetails

@@ -294,7 +294,7 @@ const statusFromErrors = (errors = []) => {
 const buildBaseStatus = pointsPrelevement => {
   const statuses = {}
   for (const pointPrelevement of pointsPrelevement) {
-    statuses[pointPrelevement.id_point] = 'unknown'
+    statuses[pointPrelevement.id] = 'unknown'
   }
 
   return statuses
@@ -345,23 +345,14 @@ const statusesFromCamionFiles = files => {
 
 /* ---------- 2. Soumissions sans fichier ---------- */
 
-const statusesFromManualEntries = (dossier, pointsPrelevement) => {
-  const hasData = (dossier.relevesIndex?.length ?? 0) > 0
-                  || (dossier.volumesPompes?.length ?? 0) > 0
-
-  if (!hasData || pointsPrelevement.length === 0) {
-    return {}
-  }
-
-  return Object.fromEntries(
-    pointsPrelevement
-      .map(pt => [pt.id_point, 'success'])
-  )
-}
+const statusesFromManualEntries = (dossier, pointsPrelevement) => Object.fromEntries(
+  pointsPrelevement
+    .map(pt => [pt.id, 'success'])
+)
 
 /* ---------- Fonction principale appelée par le composant ---------- */
 
-export const computePointsStatus = ({dossier, files = [], pointsPrelevement}) => {
+export const computePointsStatus = ({declaration, files = [], pointsPrelevement}) => {
   if (!pointsPrelevement) {
     return {}
   }
@@ -370,14 +361,14 @@ export const computePointsStatus = ({dossier, files = [], pointsPrelevement}) =>
 
   if (files.length > 0) {
     Object.assign(statuses,
-      dossier.typePrelevement === 'aep-zre'
+      declaration.type === 'aep-zre'
         ? statusesFromAepZreFiles(files)
-        : (dossier.typePrelevement === 'camion-citerne'
+        : (declaration.type === 'camion-citerne'
           ? statusesFromCamionFiles(files)
           : {})
     )
   } else {
-    Object.assign(statuses, statusesFromManualEntries(dossier, pointsPrelevement))
+    Object.assign(statuses, statusesFromManualEntries(declaration, pointsPrelevement))
   }
 
   return statuses

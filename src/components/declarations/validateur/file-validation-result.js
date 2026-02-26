@@ -13,10 +13,10 @@ import DeclarationFileDetails from '../dossier/prelevements/declaration-file-det
 
 import PrelevementsAccordion from '@/components/declarations/dossier/prelevements/prelevements-accordion.js'
 import FileValidationErrors from '@/components/declarations/file-validation-errors.js'
+import {getPreleveurTitle} from '@/lib/preleveurs.js'
 import {coerceNumericValue} from '@/utils/number.js'
 import {normalizePointId, getPointPrelevementName} from '@/utils/point-prelevement.js'
 import {normalizeString} from '@/utils/string.js'
-import {getPreleveurTitle} from "@/lib/preleveurs.js";
 
 const findPointById = (points = [], pointId) => {
   if (pointId === null || pointId === undefined) {

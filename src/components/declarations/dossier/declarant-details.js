@@ -2,8 +2,8 @@ import {Box, Typography} from '@mui/material'
 
 import LabelWithIcon from '@/components/ui/LabelWithIcon/index.js'
 import SectionCard from '@/components/ui/SectionCard/index.js'
-import {formatFullAddress, getPersonnePhysiqueFullName} from '@/lib/dossier.js'
-import {getPreleveurTitle} from "@/lib/preleveurs.js";
+import {formatFullAddress} from '@/lib/dossier.js'
+import {getPreleveurTitle} from '@/lib/preleveurs.js'
 
 const DeclarantDetails = ({declarant}) => (
   <SectionCard
