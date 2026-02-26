@@ -819,7 +819,7 @@ test('indexDuplicateParameters adds index to duplicate parameters', t => {
   const result = indexDuplicateParameters(seriesList)
 
   t.is(result.length, 3)
-  t.is(result[0].parameterLabel, 'Volume prélevé #1')
+  t.is(result[0].parameterLabel, 'volume prélevé #1')
   t.is(result[1].parameterLabel, 'Température')
-  t.is(result[2].parameterLabel, 'Volume prélevé #2')
+  t.is(result[2].parameterLabel, 'volume prélevé #2')
 })
