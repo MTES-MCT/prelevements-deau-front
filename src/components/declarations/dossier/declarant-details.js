@@ -3,7 +3,7 @@ import {Box, Typography} from '@mui/material'
 import LabelWithIcon from '@/components/ui/LabelWithIcon/index.js'
 import SectionCard from '@/components/ui/SectionCard/index.js'
 import {formatFullAddress} from '@/lib/dossier.js'
-import {getPreleveurTitle} from '@/lib/preleveurs.js'
+import {getDeclarantTitleFromDeclarant} from '@/lib/preleveurs.js'
 
 const DeclarantDetails = ({declarant}) => (
   <SectionCard
@@ -14,7 +14,7 @@ const DeclarantDetails = ({declarant}) => (
       color='primary'
       variant='h4'
     >
-      { getPreleveurTitle(declarant) }
+      { getDeclarantTitleFromDeclarant(declarant) }
     </Typography>
 
     <Box className='flex flex-col gap-1 my-2'>

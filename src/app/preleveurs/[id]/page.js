@@ -14,7 +14,7 @@ import Icon from '@/components/ui/Icon/index.js'
 import SectionCard from '@/components/ui/SectionCard/index.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {usageIcons} from '@/lib/points-prelevement.js'
-import {getPreleveurTitle, getPreleveurTypeIcon} from '@/lib/preleveurs.js'
+import {getDeclarantTitleFromDeclarant, getPreleveurTypeIcon} from '@/lib/preleveurs.js'
 import {getNewExploitationURL} from '@/lib/urls.js'
 import {getDocumentsFromPreleveurAction} from '@/server/actions/documents.js'
 import {getPointPrelevementAction} from '@/server/actions/points-prelevement.js'
@@ -101,7 +101,7 @@ const Page = async ({params}) => {
     return {...exploitation, point: pointResult.success ? pointResult.data : null}
   }))
 
-  const title = getPreleveurTitle(preleveur)
+  const title = getDeclarantTitleFromDeclarant(preleveur)
 
   return (
     <>

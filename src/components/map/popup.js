@@ -7,6 +7,7 @@ import {
 } from '@mui/material'
 
 import formatDate from '@/lib/format-date.js'
+import {getDeclarantTitleFromUser} from '@/lib/preleveurs.js'
 
 const Popup = ({point}) => {
   const theme = useTheme()
@@ -28,7 +29,7 @@ const Popup = ({point}) => {
           preleveurs.length < 4 ? (
             preleveurs.map(preleveur => (
               <Box key={preleveur.id} className='flex items-center gap-1'>
-                <Person /> {preleveur?.raison_sociale || preleveur?.sigle || preleveur?.nom}
+                <Person /> { getDeclarantTitleFromUser(preleveur) }
               </Box>
             ))
           ) : (
@@ -45,9 +46,12 @@ const Popup = ({point}) => {
         <Box className='flex items-center gap-1'>
           <WaterDropOutlined />Statut de l’exploitation : {exploitationsStatus || 'non renseigné'}
         </Box>
-        <Box className='flex items-center gap-1'>
-          Exploité depuis le {formatDate(exploitationsStartDate)}
-        </Box>
+        { exploitationsStartDate && (
+
+          <Box className='flex items-center gap-1'>
+            Exploité depuis le {formatDate(exploitationsStartDate)}
+          </Box>
+        ) }
         <Box>
           Zonage réglementaire : <Typography variant='caption' display='inline'>
             {zre ? 'Zone de répartition des eaux' : (reservoirBiologique ? 'Réservoir biologique' : ' - ')}

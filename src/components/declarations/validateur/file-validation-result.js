@@ -13,7 +13,7 @@ import DeclarationFileDetails from '../dossier/prelevements/declaration-file-det
 
 import PrelevementsAccordion from '@/components/declarations/dossier/prelevements/prelevements-accordion.js'
 import FileValidationErrors from '@/components/declarations/file-validation-errors.js'
-import {getPreleveurTitle} from '@/lib/preleveurs.js'
+import {getDeclarantTitleFromDeclarant} from '@/lib/preleveurs.js'
 import {coerceNumericValue} from '@/utils/number.js'
 import {normalizePointId, getPointPrelevementName} from '@/utils/point-prelevement.js'
 import {normalizeString} from '@/utils/string.js'
@@ -219,7 +219,7 @@ const FileValidationResult = ({
       bySiret.set(preleveur.siret, {
         key: getPreleveurKey(preleveur, index),
         preleveur,
-        label: getPreleveurTitle(preleveur)
+        label: getDeclarantTitleFromDeclarant(preleveur)
       })
     }
 

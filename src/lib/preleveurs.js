@@ -28,8 +28,7 @@ export function getPreleveurTypeIcon(preleveur) {
  * @returns {boolean} True if physical person, false if moral person
  */
 export function isPreleveurPhysique(preleveur) {
-  // Considered "morale" if code_siren OR raison_sociale OR sigle is defined
-  return !(preleveur?.code_siren || preleveur?.raison_sociale || preleveur?.sigle)
+  return !preleveur?.socialReason
 }
 
 /**
@@ -37,11 +36,24 @@ export function isPreleveurPhysique(preleveur) {
  * @param {object} preleveur - The preleveur object
  * @returns {string} The formatted title
  */
-export function getPreleveurTitle(preleveur) {
+export function getDeclarantTitleFromDeclarant(preleveur) {
   if (isPreleveurPhysique(preleveur)) {
     const parts = [preleveur?.civility, preleveur?.user?.firstName, preleveur?.user?.lastName].filter(Boolean)
     return parts.length > 0 ? parts.join(' ') : 'Non renseigné'
   }
 
   return preleveur.socialReason || 'Non renseigné'
+}
+
+/**
+ * @param user
+ */
+export function getDeclarantTitleFromUser(user) {
+  if (user?.declarant?.socialReason) {
+    return user.declarant.socialReason
+  }
+
+  const parts = [user?.civility, user?.firstName, user?.lastName].filter(Boolean)
+
+  return parts.length > 0 ? parts.join(' ') : 'Non renseigné'
 }

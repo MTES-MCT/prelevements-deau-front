@@ -19,7 +19,7 @@ const PreleveurMap = ({points}) => {
     <Box className='h-[360px]'>
       <Map
         points={points}
-        filteredPoints={points.map(p => p.id_point)}
+        filteredPoints={points.map(p => p.id)}
         handleSelectedPoint={handleSelectedPoint}
         mapStyle='plan-ign'
       />
