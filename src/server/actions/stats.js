@@ -11,13 +11,11 @@ import {
 
 /**
  * Get statistics, optionally for a specific territoire
- * @param {string} [territoire] - Optional territoire code
  * @returns {Promise<Object>} - Result object
  */
-export async function getStatsAction(territoire) {
+export async function getStatsAction() {
   return withErrorHandling(async () => {
-    const path = territoire ? `api/stats/${territoire}` : 'api/stats'
-    const response = await authenticatedFetch(path, {requireAuth: false})
+    const response = await authenticatedFetch('api/stats', {requireAuth: false})
     return response.json()
   })
 }

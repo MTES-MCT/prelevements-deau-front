@@ -163,12 +163,22 @@ const HeaderComponent = () => {
 
   return (
     <DSFRHeader
-      brandTop={<>Préfet<br />de la Réunion</>}
-      serviceTitle='Suivi des prélèvements d’eau'
+      brandTop={<>
+        Ministères
+        <br />
+        transition écologique
+        <br />
+        aménagement du territoire
+        <br />
+        transports
+        <br />
+        ville et logement
+      </>}
+      serviceTitle='Partageons l’eau'
       homeLinkProps={{
         href: '/',
         // eslint-disable-next-line quotes
-        title: "Accueil - Suivi des prélèvements d’eau"
+        title: "Accueil - Partageons l’Eau"
       }}
       quickAccessItems={quickAccessItems}
       navigation={navigation}
