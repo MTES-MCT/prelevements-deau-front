@@ -8,6 +8,14 @@ export function getDossierDSURL(dossier) {
   return `https://demarche.numerique.gouv.fr/procedures/${process.env.NEXT_PUBLIC_PROCEDURE_DS_ID}/a-suivre/dossiers/${dossier.ds.dossierNumber}`
 }
 
+export function getInstructionURL() {
+  return '/instruction'
+}
+
+export function getInstructionDetailsURL(sourceId) {
+  return `/instruction/${sourceId}`
+}
+
 export function getDossiersURL() {
   return '/dossiers'
 }
