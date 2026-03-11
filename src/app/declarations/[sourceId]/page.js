@@ -8,7 +8,6 @@ import {
   getPointsPrelevementIdsFromSource
 } from '@/lib/declaration.js'
 import {getAvailablePointsPrelevementsForDeclarationAction} from '@/server/actions/declarations.js'
-import {getPointsPrelevementOptionsAction} from '@/server/actions/points-prelevement.js'
 import {getMySourceAction} from '@/server/actions/sources.js'
 
 const SourcePage = async ({params}) => {

@@ -1,8 +1,6 @@
 import moment from 'moment'
 import 'moment/locale/fr'
 
-import {getFileAction, getFileSeriesAction, getFileIntegrationsAction} from '@/server/actions/index.js'
-
 moment.locale('fr')
 
 export const sourceStateLabels = {

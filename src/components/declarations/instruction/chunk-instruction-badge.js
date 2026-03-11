@@ -60,12 +60,6 @@ const ChunkInstructionBadge = ({
   instructedBy,
   displayTooltip
 }) => {
-  const statusConfig = instructionStatus ? CHUNK_STATUS[instructionStatus] : null
-
-  if (!statusConfig) {
-    return null
-  }
-
   const instructedByName = useMemo(() => {
     if (!instructedBy) {
       return null
@@ -83,6 +77,12 @@ const ChunkInstructionBadge = ({
 
     return moment(instructedAt).format('LLL')
   }, [instructedAt])
+
+  const statusConfig = instructionStatus ? CHUNK_STATUS[instructionStatus] : null
+
+  if (!statusConfig) {
+    return null
+  }
 
   const tooltipContent = (
     <Box sx={{p: 1}}>

@@ -10,7 +10,6 @@ import {
   FALLBACK_PARAMETER_COLOR,
   PARAMETER_COLOR_MAP
 } from './constants/colors.js'
-import {indexDuplicateParameters} from './utils/index.js'
 import {
   formatValueTypeLabel,
   normalizeUnitLabel

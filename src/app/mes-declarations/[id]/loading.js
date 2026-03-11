@@ -19,7 +19,7 @@ const Loading = () => {
   return (
     <Box className='flex flex-col w-full h-full justify-center items-center gap-4'>
       <Typography>
-        La déclaration est en cours d'importation...
+        La déclaration est en cours d’importation...
       </Typography>
 
       <CircularProgress />

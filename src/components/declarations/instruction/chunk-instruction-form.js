@@ -21,7 +21,7 @@ import {
 import {useRouter} from 'next/navigation'
 
 import {CHUNK_STATUS} from '@/components/declarations/instruction/chunk-instruction-badge.js'
-import {instructChunkAction} from '@/server/actions/chunks'
+import {instructChunkAction} from '@/server/actions/chunks.js'
 
 const filterOptions = createFilterOptions({
   limit: 50

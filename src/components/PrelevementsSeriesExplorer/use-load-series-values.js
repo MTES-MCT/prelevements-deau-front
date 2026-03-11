@@ -10,10 +10,7 @@
 
 import {useEffect, useState, useMemo} from 'react'
 
-import {format} from 'date-fns'
 import moment from 'moment'
-
-import {indexDuplicateParameters} from './utils/index.js'
 
 import {buildDailyAndTimelineData} from '@/components/PrelevementsSeriesExplorer/utils/aggregation.js'
 
@@ -54,7 +51,7 @@ export function useLoadSeriesValues({seriesList, selectedPeriods, selectedParams
               value: serie.value,
               date: moment(serie.date).format('YYYY-MM-DD')
             }
-            acc[serie.metricTypeCode] = acc[serie.metricTypeCode] || []
+            acc[serie.metricTypeCode] ??= []
             acc[serie.metricTypeCode].push(value)
             return acc
           }, {})

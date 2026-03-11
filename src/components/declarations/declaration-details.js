@@ -28,7 +28,6 @@ const DeclarationDetails = ({
   availablePoints = []
 }) => {
   const [pointsPrelevement, setPointsPrelevement] = useState(null)
-  const [focusedPointId, setFocusedPointId] = useState(null)
   const [selectedAccordionId, setSelectedAccordionId] = useState(null)
 
   const handleSelectAccordion = useCallback(accordionId => {
@@ -53,20 +52,11 @@ const DeclarationDetails = ({
   }, [idPoints])
 
   const onClickPointPrelevementMarker = useCallback(id => {
-    setFocusedPointId(id)
     const ref = listRefs.current[id]
     if (ref) {
       ref.scrollIntoView({behavior: 'smooth', block: 'start'})
     }
   }, [])
-
-  const pointsById = useMemo(() => {
-    if (!pointsPrelevement) {
-      return new Map()
-    }
-
-    return new Map(pointsPrelevement.map(point => [point.id, point]))
-  }, [pointsPrelevement])
 
   const pointsStatus = useMemo(
     () => computePointsStatus({declaration, pointsPrelevement}),

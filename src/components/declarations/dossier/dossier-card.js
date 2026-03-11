@@ -35,25 +35,6 @@ const rightIcons = {
   }
 }
 
-const tags = {
-  error: {
-    label: 'Erreur',
-    severity: 'error'
-  },
-  warning: {
-    label: 'Avertissement',
-    severity: 'warning'
-  },
-  success: {
-    label: 'Validé',
-    severity: 'success'
-  },
-  info: {
-    label: 'En attente',
-    severity: 'info'
-  }
-}
-
 const typeDonnees = typeDonnees => {
   if (typeDonnees === 'MANUAL') {
     return 'Saisie manuelle'

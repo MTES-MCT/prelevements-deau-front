@@ -12,8 +12,7 @@ import moment from 'moment'
 import {
   clamp,
   computeSliderMarks,
-  fillDateGaps,
-  parseLocalDate
+  fillDateGaps
 } from './utils/index.js'
 
 /**

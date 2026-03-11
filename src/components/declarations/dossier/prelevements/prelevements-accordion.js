@@ -1,5 +1,4 @@
 import {fr} from '@codegouvfr/react-dsfr'
-import Badge from '@codegouvfr/react-dsfr/Badge'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import OpacityOutlinedIcon from '@mui/icons-material/OpacityOutlined'
 import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined'

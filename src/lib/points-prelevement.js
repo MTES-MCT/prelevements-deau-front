@@ -5,7 +5,7 @@ import {
   LocalDrinkOutlined,
   LocalShippingOutlined
 } from '@mui/icons-material'
-import {some, mapValues} from 'lodash-es'
+import {some} from 'lodash-es'
 
 import {legendColors} from '@/components/map/legend-colors.js'
 
@@ -299,51 +299,6 @@ const buildBaseStatus = pointsPrelevement => {
 
   return statuses
 }
-
-/* ---------- 1. Soumissions avec fichiers ---------- */
-
-/**
- * Cas typePrelevement === 'aep-zre'
- * Un fichier ⇢ un point ⇢ potentiellement plusieurs erreurs.
- */
-const statusesFromAepZreFiles = files => {
-  const groupedErrors = {}
-
-  for (const file of files.filter(f => !f.processingError && Array.isArray(f.series) && f.series.length > 0)) {
-    const points = [...new Set(file.series.map(s => s.pointPrelevement).filter(Boolean))]
-    for (const pointId of points) {
-      groupedErrors[pointId] ||= []
-      if (file.result.errors) {
-        groupedErrors[pointId].push(...file.result.errors)
-      }
-    }
-  }
-
-  return mapValues(groupedErrors, statusFromErrors)
-}
-
-/**
- * Cas typePrelevement === 'camion-citerne'
- * Un fichier ⇢ plusieurs points.
- */
-const statusesFromCamionFiles = files => {
-  const statusPerPoint = {}
-
-  for (const file of files
-    .filter(f => !f.processingError && Array.isArray(f.series) && f.series.length > 0)) {
-    const points = [...new Set(file.series
-      .map(s => s.pointPrelevement)
-      .filter(Boolean))]
-    const fileStatus = statusFromErrors(file.result.errors)
-    for (const id of points) {
-      statusPerPoint[id] = fileStatus
-    }
-  }
-
-  return statusPerPoint
-}
-
-/* ---------- 2. Soumissions sans fichier ---------- */
 
 const statusesFromManualEntries = (dossier, pointsPrelevement) => Object.fromEntries(
   pointsPrelevement
