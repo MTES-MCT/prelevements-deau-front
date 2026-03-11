@@ -8,12 +8,12 @@ export function getDossierDSURL(dossier) {
   return `https://demarche.numerique.gouv.fr/procedures/${process.env.NEXT_PUBLIC_PROCEDURE_DS_ID}/a-suivre/dossiers/${dossier.ds.dossierNumber}`
 }
 
-export function getInstructionURL() {
-  return '/instruction'
+export function getDeclarationsURL() {
+  return '/declarations'
 }
 
-export function getInstructionDetailsURL(sourceId) {
-  return `/instruction/${sourceId}`
+export function getDeclarationURL(sourceId) {
+  return `/declarations/${sourceId}`
 }
 
 export function getDossiersURL() {
@@ -38,11 +38,11 @@ export function getPointsPrelevementURL() {
   return '/points-prelevement'
 }
 
-export function getDeclarationsURL() {
+export function getMyDeclarationsURL() {
   return '/mes-declarations'
 }
 
-export function getDeclarationURL(declaration) {
+export function getMyDeclarationURL(declaration) {
   return `/mes-declarations/${declaration.id}`
 }
 

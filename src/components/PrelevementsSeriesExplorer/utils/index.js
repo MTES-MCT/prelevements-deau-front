@@ -5,6 +5,7 @@
 import {
   addDays, differenceInCalendarDays, isSameDay, startOfDay, parseISO
 } from 'date-fns'
+import moment from 'moment'
 
 import {CALENDAR_STATUS_COLORS} from '../constants/colors.js'
 
@@ -31,35 +32,21 @@ const COLOR_PRIORITY = {
  * @returns {{minDate: Date, maxDate: Date}|null}
  */
 export function getGlobalDateBounds(seriesList) {
-  if (!seriesList || seriesList.length === 0) {
+  if (!seriesList?.length) {
     return null
   }
 
-  const dates = []
-
-  for (const serie of seriesList) {
-    if (serie?.minDate) {
-      const parsedMin = parseLocalDate(serie.minDate)
-      if (parsedMin) {
-        dates.push(parsedMin)
-      }
-    }
-
-    if (serie?.maxDate) {
-      const parsedMax = parseLocalDate(serie.maxDate)
-      if (parsedMax) {
-        dates.push(parsedMax)
-      }
-    }
-  }
+  const dates = seriesList
+    .map(s => s?.date && moment(s.date))
+    .filter(m => m && m.isValid())
 
   if (dates.length === 0) {
     return null
   }
 
   return {
-    minDate: new Date(Math.min(...dates)),
-    maxDate: new Date(Math.max(...dates))
+    minDate: moment.min(dates).toDate(),
+    maxDate: moment.max(dates).toDate()
   }
 }
 
@@ -93,22 +80,6 @@ function selectPriorityColor(colors) {
   }
 
   return bestColor
-}
-
-/**
- * Builds a map of series metadata indexed by parameter name
- * @param {Array} seriesList - Array of series objects with metadata
- * @returns {Map} Map of parameter name to series metadata
- */
-export function buildSeriesMetadataMap(seriesList) {
-  const map = new Map()
-  for (const serie of seriesList) {
-    if (serie.parameter) {
-      map.set(serie.parameter, serie)
-    }
-  }
-
-  return map
 }
 
 /**
@@ -176,7 +147,7 @@ export function buildCalendarEntriesFromMetadata(seriesList, dateRange, _formatF
         date: monthIsoDate,
         color: serie.color ?? statusColors.present,
         status: 'present',
-        parameter: serie.parameter
+        parameter: serie.metricTypeCode
       })
 
       // Move to first day of next month
@@ -553,7 +524,7 @@ export function validateParameterSelection(selectedParams, parameters, maxUnits 
 
   const paramMap = new Map()
   for (const param of parameters) {
-    paramMap.set(param.parameter, param)
+    paramMap.set(param.metricTypeCode, param)
   }
 
   const selectedUnits = new Set()
@@ -664,7 +635,7 @@ export function transformSeriesToData(seriesList) {
 
     // Add parameter info
     parameters.push({
-      parameter: series.parameter,
+      parameter: series.metricTypeCode,
       unit: series.unit,
       color: series.color || '#0078f3',
       frequency: series.frequency,
@@ -730,30 +701,30 @@ export function indexDuplicateParameters(seriesList) {
 
   // Count occurrences of each parameter
   for (const series of seriesList) {
-    const count = parameterCounts.get(series.parameter) || 0
-    parameterCounts.set(series.parameter, count + 1)
+    const count = parameterCounts.get(series.metricTypeCode) || 0
+    parameterCounts.set(series.metricTypeCode, count + 1)
   }
 
   // Add indices to duplicates
   return seriesList.map(series => {
-    const count = parameterCounts.get(series.parameter)
+    const count = parameterCounts.get(series.metricTypeCode)
 
     // No duplicates - use parameter name as-is
     if (count === 1) {
       return {
         ...series,
-        parameterLabel: series.parameter
+        parameterLabel: series.metricTypeCode
       }
     }
 
     // Duplicates found - add index
-    const currentIndex = parameterIndices.get(series.parameter) || 0
+    const currentIndex = parameterIndices.get(series.metricTypeCode) || 0
     const nextIndex = currentIndex + 1
-    parameterIndices.set(series.parameter, nextIndex)
+    parameterIndices.set(series.metricTypeCode, nextIndex)
 
     return {
       ...series,
-      parameterLabel: `${series.parameter} #${nextIndex}`
+      parameterLabel: `${series.metricTypeCode} #${nextIndex}`
     }
   })
 }

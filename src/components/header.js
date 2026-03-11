@@ -38,10 +38,10 @@ const NAV_ITEMS = [
   },
   {
     linkProps: {
-      href: '/instruction',
+      href: '/declarations',
       target: '_self'
     },
-    text: 'Instruction',
+    text: 'Déclarations',
     roles: ['INSTRUCTOR', 'ADMIN']
   },
   {

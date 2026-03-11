@@ -13,6 +13,7 @@ import {fr} from 'date-fns/locale'
 import Link from 'next/link'
 
 import ListItem from '@/components/ui/ListItem/index.js'
+import {sourceStateLabels} from '@/lib/declaration.js'
 import {formatNumber} from '@/utils/number.js'
 
 const rightIcons = {
@@ -101,14 +102,10 @@ const DossierCard = ({dossier, background, url}) => (
   <Link href={url || ''} style={{textDecoration: 'none'}}>
     <ListItem
       border
-      title={dossier?.declarant?.socialReason
-        ?? `${dossier.declarant?.user?.lastName} ${dossier.declarant?.user?.firstName}`}
-      subtitle={'n°' + dossier.code}
+      title={'Déclaration n°' + dossier.code}
       subtitleIcon={ArticleOutlined}
       background={background}
-      tags={tags[dossier.status]
-        ? [tags[dossier.status]]
-        : []}
+      tags={[sourceStateLabels[dossier?.source?.globalInstructionStatus]]}
       rightIcons={dossier.waterWithdrawalType
         ? [rightIcons[dossier.waterWithdrawalType]]
         : []}

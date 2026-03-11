@@ -7,15 +7,13 @@ import PrelevementTypeBadge from '@/components/declarations/prelevement-type-bad
 import TypeSaisieBadge from '@/components/declarations/type-saisie-badge.js'
 import LabelValue from '@/components/ui/LabelValue/index.js'
 
-const DossierInfos = ({aotDecreeNumber, type, dataSourceType, comment, files}) => (
+const DeclarationInfos = ({aotDecreeNumber, type, dataSourceType, comment, files = []}) => (
   <Box className='flex flex-col gap-2 my-4'>
-    <LabelValue label='Numéro AOT'>
-      {aotDecreeNumber ? (
+    { aotDecreeNumber && (
+      <LabelValue label='Numéro AOT'>
         <Tag>{aotDecreeNumber}</Tag>
-      ) : (
-        <i>Non renseigné</i>
-      )}
-    </LabelValue>
+      </LabelValue>
+    )}
     <LabelValue label='Type de déclaration'>
       <PrelevementTypeBadge value={type} />
     </LabelValue>
@@ -40,9 +38,10 @@ const DossierInfos = ({aotDecreeNumber, type, dataSourceType, comment, files}) =
       <Notice
         description={comment}
         severity='info'
+        title='Commentaire du déclarant'
       />
     )}
   </Box>
 )
 
-export default DossierInfos
+export default DeclarationInfos

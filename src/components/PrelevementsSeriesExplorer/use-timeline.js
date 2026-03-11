@@ -7,6 +7,7 @@ import {
 } from 'react'
 
 import {format, addDays} from 'date-fns'
+import moment from 'moment'
 
 import {
   clamp,
@@ -53,7 +54,7 @@ export function useTimeline(timelineSamples, showRangeSlider, rangeOverride = nu
 
     return [...uniqueDates]
       .sort()
-      .map(date => parseLocalDate(date))
+      .map(date => moment(date).toDate())
       .filter(Boolean)
   }, [rangeOverride?.end, rangeOverride?.start, timelineSamples])
 

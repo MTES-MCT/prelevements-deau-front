@@ -12,11 +12,19 @@ import {
 // ============================================================================
 
 /**
- * Get all points de prélèvement
+ * Get all enriched points de prélèvement
  * @returns {Promise<Object>} - Result object
  */
 export async function getPointsPrelevementAction() {
   return withErrorHandling(async () => fetchJSON('api/points-prelevement'))
+}
+
+/**
+ * Get all light points de prélèvement
+ * @returns {Promise<Object>} - Result object
+ */
+export async function getPointsPrelevementOptionsAction() {
+  return withErrorHandling(async () => fetchJSON('api/points-prelevement/options'))
 }
 
 /**

@@ -48,6 +48,7 @@ export function determineColors(values, fifteenMinutesValues, dailyParameters, p
  * Each sub-array corresponds to a month calendar (mode "month") containing day entries.
  * Days without data are omitted (calendar renders them as inactive grey cells).
  * @param {object} data Raw API object containing dailyValues & dailyParameters
+ * @param palette
  * @returns {Array<Array<{date: string, color: string, values: number[], fifteenMinutesValues?: any}>>}
  */
 export function buildCalendars(data, palette = DEFAULT_PALETTE) {

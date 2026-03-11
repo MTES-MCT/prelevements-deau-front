@@ -371,12 +371,14 @@ const FileValidationResult = ({
                     <PrelevementsAccordion
                       isOpen={selectedAccordionId === section.accordionId}
                       idPoint={section.pointId}
-                      pointPrelevement={section.pointPrelevement}
+                      suggestedPointPrelevementName={section.pointId}
                       volumePreleveTotal={volumeByPoint.get(section.pointId ?? section.accordionId)?.totalPreleve ?? null}
                       volumeRejeteTotal={volumeByPoint.get(section.pointId ?? section.accordionId)?.totalRejete ?? null}
                       status={status}
                       typePrelevement={typePrelevement}
                       handleSelect={() => handleSelectAccordion(section.accordionId)}
+                      canShowVolumeData={false}
+                      showPointPrelevementIdentificationHint={false}
                     >
                       {selectedAccordionId === section.accordionId && (
                         <>

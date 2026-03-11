@@ -10,39 +10,17 @@ import {fr} from 'date-fns/locale'
 import Link from 'next/link'
 
 import ListItem from '@/components/ui/ListItem/index.js'
+import {sourceStateLabels} from '@/lib/declaration.js'
 import {formatNumber} from '@/utils/number.js'
 
 const rightIcons = {
-  'DECLARATION': {
+  DECLARATION: {
     icon: DescriptionOutlined,
     label: 'Déclaration'
   },
   unknown: {
     icon: InterestsOutlined,
     label: 'Autre'
-  }
-}
-
-const tags = {
-  'TO_INSTRUCT': {
-    label: 'À instruire',
-    severity: 'info'
-  },
-  'VALIDATED': {
-    label: 'Validé',
-    severity: 'success'
-  },
-  'REJECTED': {
-    label: 'Rejeté',
-    severity: 'error'
-  },
-  'PARTIALLY_VALIDATED': {
-    label: 'Partiellement validé',
-    severity: 'warning'
-  },
-  'INSTRUCTION_IN_PROGRESS': {
-    label: 'Instruction en cours',
-    severity: 'info'
   }
 }
 
@@ -58,7 +36,7 @@ const metas = source => {
     },
     {
       icon: LocationOnOutlined,
-      content: `${source._count.chunks} point${source._count.chunks > 1 ? 's' : ''} de prélèvement`,
+      content: `${source._count.chunks} point${source._count.chunks > 1 ? 's' : ''} de prélèvement`
     },
     {
       icon: WaterDropOutlined,
@@ -74,7 +52,7 @@ const metas = source => {
   ]
 }
 
-const InstructionCard = ({source, background, url}) => (
+const DeclarationItemCard = ({source, background, url}) => (
   <Link href={url || ''} style={{textDecoration: 'none'}}>
     <ListItem
       border
@@ -83,11 +61,11 @@ const InstructionCard = ({source, background, url}) => (
       subtitle={'n° ' + source?.declaration?.code}
       subtitleIcon={ArticleOutlined}
       background={background}
-      tags={[tags[source.globalInstructionStatus]]}
+      tags={[sourceStateLabels[source.globalInstructionStatus]]}
       rightIcons={[rightIcons[source.type || 'unknown']]}
       metas={metas(source)}
     />
   </Link>
 )
 
-export default InstructionCard
+export default DeclarationItemCard

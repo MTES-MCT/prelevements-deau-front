@@ -4,18 +4,18 @@ import {useEffect, useMemo, useState} from 'react'
 
 import {deburr, toLower} from 'lodash-es'
 
+import DeclarationItemCard from '@/components/declarations/instruction/declaration-item-card.js'
 import SimpleLoading from '@/components/ui/SimpleLoading/index.js'
-import {getDossierPeriod, getDossierPeriodLabel} from '@/lib/dossier.js'
-import {getMySourcesAction} from "@/server/actions/sources.js";
-import InstructionCard from "@/components/instruction/instruction-card.js";
-import {getInstructionDetailsURL} from "@/lib/urls.js";
+import {getDeclarationPeriod, getDeclarationPeriodLabel} from '@/lib/declaration.js'
+import {getDeclarationURL} from '@/lib/urls.js'
+import {getMySourcesAction} from '@/server/actions/sources.js'
 
 const tabStatusMap = {
   'a-traiter': ['TO_INSTRUCT', 'INSTRUCTION_IN_PROGRESS'],
-  'traites': ['VALIDATED', 'REJECTED', 'PARTIALLY_VALIDATED'],
+  traites: ['VALIDATED', 'REJECTED', 'PARTIALLY_VALIDATED']
 }
 
-const InstructionList = ({status, filters, onAvailablePeriodsChange}) => {
+const DeclarationList = ({status, filters, onAvailablePeriodsChange}) => {
   const [mounted, setMounted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [sources, setSources] = useState()
@@ -62,7 +62,7 @@ const InstructionList = ({status, filters, onAvailablePeriodsChange}) => {
 
     if (filters.periode && filters.periode !== 'all') {
       filtered = filtered.filter(s => {
-        const label = getDossierPeriodLabel(s.declaration) ?? 'Non renseignée'
+        const label = getDeclarationPeriodLabel(s.declaration) ?? 'Non renseignée'
         return label === filters.periode
       })
     }
@@ -79,14 +79,14 @@ const InstructionList = ({status, filters, onAvailablePeriodsChange}) => {
     const periods = new Set()
 
     for (const source of sources) {
-      const declaration = source.declaration
-      const label = getDossierPeriodLabel(declaration) ?? 'Non renseignée'
+      const {declaration} = source
+      const label = getDeclarationPeriodLabel(declaration) ?? 'Non renseignée'
       if (periods.has(label)) {
         continue
       }
 
       periods.add(label)
-      const {start, end} = getDossierPeriod(declaration)
+      const {start, end} = getDeclarationPeriod(declaration)
       const sortKey = start?.getTime() ?? end?.getTime() ?? Number.POSITIVE_INFINITY
       results.push({value: label, label, sortKey})
     }
@@ -114,7 +114,7 @@ const InstructionList = ({status, filters, onAvailablePeriodsChange}) => {
   }
 
   if (filteredSources.length === 0) {
-    return <p><i>Aucun dossier ne correspond à ces paramètres</i></p>
+    return <p><i>Aucune déclaration ne correspond à ces paramètres</i></p>
   }
 
   return (
@@ -122,21 +122,21 @@ const InstructionList = ({status, filters, onAvailablePeriodsChange}) => {
       <div className='fr-p-1w text-right'>
         {filteredSources.length !== sources.length && (
           filteredSources.length === 1
-            ? <i>1 source correspond à cette recherche</i>
-            : <i>{`${filteredSources.length} sources correspondent à cette recherche`}</i>
+            ? <i>1 déclaration correspond à cette recherche</i>
+            : <i>{`${filteredSources.length} déclarations correspondent à cette recherche`}</i>
         )}
       </div>
       {filteredSources?.map((s, idx) => (
-        <InstructionCard
+        <DeclarationItemCard
           key={s.id}
           background={idx % 2 === 0 ? 'primary' : 'secondary'}
           className='fr-mb-2w'
           source={s}
-          url={getInstructionDetailsURL(s.id)}
+          url={getDeclarationURL(s.id)}
         />
       ))}
     </div>
   )
 }
 
-export default InstructionList
+export default DeclarationList

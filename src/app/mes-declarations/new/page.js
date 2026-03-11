@@ -21,7 +21,7 @@ import 'moment/locale/fr'
 import FileValidationResult from '@/components/declarations/validateur/file-validation-result.js'
 import ValidateurForm from '@/components/declarations/validateur/form.js'
 import {createLocalSeriesRegistry} from '@/lib/local-series-registry.js'
-import {getDeclarationURL} from '@/lib/urls.js'
+import {getMyDeclarationURL} from '@/lib/urls.js'
 import {createDeclarationAction, revalidateDeclarationPaths} from '@/server/actions/declarations.js'
 import {getPointPrelevementAction} from '@/server/actions/index.js'
 import {coerceNumericValue} from '@/utils/number.js'
@@ -204,7 +204,7 @@ const createSeriesEntry = ({
   const {minDate, maxDate} = resolveBounds(serie, localValues)
 
   return {
-    _id: seriesId,
+    id: seriesId,
     pointPrelevement: pointId,
     parameter: serie.parameter ?? `Paramètre ${index + 1}`,
     unit: serie.unit ?? '',
@@ -573,7 +573,7 @@ const NouvelleDeclarationPage = () => {
         message: 'Déclaration soumise avec succès.'
       })
 
-      window.location.href = getDeclarationURL(result.data.data)
+      window.location.href = getMyDeclarationURL(result.data.data)
     } catch (error) {
       console.error(error)
       setSubmitResult({

@@ -5,23 +5,23 @@ import {revalidatePath} from 'next/cache'
 import {fetchJSON, withErrorHandling} from '@/server/api-wrapper.js'
 
 function buildStatusesSearch(statuses = []) {
-    if (!Array.isArray(statuses) || statuses.length === 0) {
-        return ''
-    }
+  if (!Array.isArray(statuses) || statuses.length === 0) {
+    return ''
+  }
 
-    const filteredStatuses = [...new Set(statuses.map(status => String(status).trim()).filter(Boolean))]
+  const filteredStatuses = [...new Set(statuses.map(status => String(status).trim()).filter(Boolean))]
 
-    if (filteredStatuses.length === 0) {
-        return ''
-    }
+  if (filteredStatuses.length === 0) {
+    return ''
+  }
 
-    const searchParams = new URLSearchParams()
+  const searchParams = new URLSearchParams()
 
-    for (const status of filteredStatuses) {
-        searchParams.append('statuses', status)
-    }
+  for (const status of filteredStatuses) {
+    searchParams.append('statuses', status)
+  }
 
-    return `?${searchParams.toString()}`
+  return `?${searchParams.toString()}`
 }
 
 /**
@@ -31,10 +31,10 @@ function buildStatusesSearch(statuses = []) {
  * @returns {Promise<Object>} Result object
  */
 export async function getMySourcesAction({statuses = []} = {}) {
-    return withErrorHandling(async () => {
-        const search = buildStatusesSearch(statuses)
-        return fetchJSON(`api/sources/me${search}`)
-    })
+  return withErrorHandling(async () => {
+    const search = buildStatusesSearch(statuses)
+    return fetchJSON(`api/sources/me${search}`)
+  })
 }
 
 /**
@@ -43,7 +43,7 @@ export async function getMySourcesAction({statuses = []} = {}) {
  * @returns {Promise<Object>} Result object
  */
 export async function getMySourceAction(sourceId) {
-    return withErrorHandling(async () => fetchJSON(`api/sources/${sourceId}`))
+  return withErrorHandling(async () => fetchJSON(`api/sources/${sourceId}`))
 }
 
 /**
@@ -51,9 +51,9 @@ export async function getMySourceAction(sourceId) {
  * @param {string} [sourceId] - Optional source ID
  */
 export async function revalidateSourcePaths(sourceId) {
-    revalidatePath('/sources')
+  revalidatePath('/sources')
 
-    if (sourceId) {
-        revalidatePath(`/sources/${sourceId}`)
-    }
+  if (sourceId) {
+    revalidatePath(`/sources/${sourceId}`)
+  }
 }

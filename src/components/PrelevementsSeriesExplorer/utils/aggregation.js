@@ -195,6 +195,8 @@ export function buildDailyAndTimelineData({
     timelineMap
   }
 
+  // Debugger
+
   for (const [paramIndex, paramLabel] of selectedParams.entries()) {
     const values = loadedValues[paramLabel] ?? []
 

@@ -5,8 +5,8 @@ import {useCallback, useState} from 'react'
 import dynamic from 'next/dynamic.js'
 import {useRouter, usePathname, useSearchParams} from 'next/navigation'
 
-import InstructionFilters from "@/components/instruction/instruction-filters.js";
-import InstructionList from "@/components/instruction/instruction-list.js";
+import DeclarationFilters from '@/components/declarations/instruction/declaration-filters.js'
+import DeclarationList from '@/components/declarations/instruction/declaration-list.js'
 
 const DynamicTabs = dynamic(
   () => import('@codegouvfr/react-dsfr/Tabs'),
@@ -14,10 +14,10 @@ const DynamicTabs = dynamic(
 )
 const tabConfig = [
   {tabId: 'a-traiter', label: 'À traiter', statsKey: 'en-instruction'},
-  {tabId: 'traites', label: 'Traités', statsKey: 'traites'},
+  {tabId: 'traites', label: 'Traités', statsKey: 'traites'}
 ]
 
-const InstructionTabs = () => {
+const DeclarationTabs = () => {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -74,12 +74,12 @@ const InstructionTabs = () => {
       }))}
       onTabChange={handleTabChange}
     >
-      <InstructionFilters
+      <DeclarationFilters
         filters={filters}
         setFilters={handleSetFilters}
         periodOptions={periodOptions}
       />
-      <InstructionList
+      <DeclarationList
         status={activeTab}
         filters={filters}
         onAvailablePeriodsChange={handleAvailablePeriodsChange}
@@ -88,4 +88,4 @@ const InstructionTabs = () => {
   )
 }
 
-export default InstructionTabs
+export default DeclarationTabs

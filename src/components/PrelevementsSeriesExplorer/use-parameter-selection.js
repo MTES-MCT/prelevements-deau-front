@@ -42,35 +42,31 @@ const ParameterOptionContent = ({label, frequencyLabel, valueTypeLabel}) => (
  */
 export function useParameterMetadata(seriesList) {
   return useMemo(() => {
-    // Index duplicate parameters to add display labels
-    const indexedSeries = indexDuplicateParameters(seriesList)
-
-    // Assign colors based on unique parameter names
-    const colorMap = new Map()
-    for (const series of indexedSeries) {
-      if (!series?.parameter || colorMap.has(series.parameter)) {
-        continue
+    const parameters = seriesList.reduce((acc, series) => {
+      if (!series?.metricTypeCode) {
+        return acc
       }
 
-      const normalized = normalizeString(series.parameter)
+      const normalized = normalizeString(series.metricTypeCode)
+
+      const groupByKey = `${series.chunkId}-${normalized}`
+
       const resolvedColor = series.color
-        ?? PARAMETER_COLOR_MAP.get(normalized)
-        ?? FALLBACK_PARAMETER_COLOR
+            ?? PARAMETER_COLOR_MAP.get(normalized)
+            ?? FALLBACK_PARAMETER_COLOR
 
-      colorMap.set(series.parameter, resolvedColor)
-    }
-
-    // Build parameter metadata with parameterLabel as unique identifier
-    const parameters = indexedSeries.map(s => ({
-      parameter: s.parameter,
-      parameterLabel: s.parameterLabel,
-      unit: s.unit,
-      color: colorMap.get(s.parameter),
-      frequency: s.frequency,
-      valueType: s.valueType,
-      seriesId: s._id,
-      extras: s.extras
-    }))
+      acc.set(groupByKey, {
+        parameter: series.metricTypeCode,
+        parameterLabel: series.metricTypeCode,
+        unit: series.unit,
+        color: resolvedColor,
+        frequency: series.frequency,
+        valueType: series.valueType,
+        seriesId: series.chunkId,
+        extras: series.extras
+      })
+      return acc
+    }, new Map()).values().toArray()
 
     // Use parameterLabel as key for direct lookup
     const parameterMap = new Map(parameters.map(param => [param.parameterLabel, param]))

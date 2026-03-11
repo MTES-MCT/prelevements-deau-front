@@ -9,7 +9,7 @@ const DynamicSelect = dynamic(
 
 const DEFAULT_PERIOD_OPTIONS = [{value: 'all', label: 'Tout'}]
 
-const InstructionFilters = ({filters, setFilters, periodOptions}) => {
+const DeclarationFilters = ({filters, setFilters, periodOptions}) => {
   const options = periodOptions?.length ? periodOptions : DEFAULT_PERIOD_OPTIONS
 
   return (
@@ -47,4 +47,4 @@ const InstructionFilters = ({filters, setFilters, periodOptions}) => {
   )
 }
 
-export default InstructionFilters
+export default DeclarationFilters

@@ -1,8 +1,7 @@
 'use client'
 
 import {
-  useCallback, useEffect, useState, useRef,
-  useMemo
+  useCallback, useEffect, useState, useRef, useMemo
 } from 'react'
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
@@ -11,22 +10,33 @@ import {orderBy} from 'lodash-es'
 
 import PrelevementsAccordion from './dossier/prelevements/prelevements-accordion.js'
 
+import DeclarationInfos from '@/components/declarations/declaration-infos.js'
 import DeclarantDetails from '@/components/declarations/dossier/declarant-details.js'
-import DossierInfos from '@/components/declarations/dossier/infos.js'
 import PointsPrelevementDetails from '@/components/declarations/dossier/points-prelevement-details.js'
+import DeclarationFileDetails from '@/components/declarations/dossier/prelevements/declaration-file-details.js'
 import SectionCard from '@/components/ui/SectionCard/index.js'
 import {computePointsStatus} from '@/lib/points-prelevement.js'
-import {getFileBlobAction, getPointPrelevementAction} from '@/server/actions/index.js'
+import {getPointPrelevementAction} from '@/server/actions/index.js'
 import {formatNumber} from '@/utils/number.js'
 import {getPointPrelevementName} from '@/utils/point-prelevement.js'
 
-const DossierDetails = ({declaration, files = [], idPoints}) => {
+const DeclarationDetails = ({
+  declaration,
+  idPoints,
+  source,
+  isInstructor,
+  availablePoints = []
+}) => {
   const [pointsPrelevement, setPointsPrelevement] = useState(null)
   const [focusedPointId, setFocusedPointId] = useState(null)
+  const [selectedAccordionId, setSelectedAccordionId] = useState(null)
+
+  const handleSelectAccordion = useCallback(accordionId => {
+    setSelectedAccordionId(prevId => prevId === accordionId ? null : accordionId)
+  }, [])
 
   const listRefs = useRef({})
 
-  // Récupération des points de prélèvement
   useEffect(() => {
     const fetchPointsPrelevement = async () => {
       const results = await Promise.all(idPoints.map(idPoint => getPointPrelevementAction(idPoint)))
@@ -41,24 +51,6 @@ const DossierDetails = ({declaration, files = [], idPoints}) => {
 
     fetchPointsPrelevement()
   }, [idPoints])
-
-  const downloadFile = useCallback(async attachmentId => {
-    const {storageKey} = files.find(f => f.id === attachmentId) || {}
-    const [, ...filenameParts] = storageKey.split('-')
-    const filename = filenameParts.join('-')
-    try {
-      const result = await getFileBlobAction(declaration.id, attachmentId)
-      const file = result.data
-      const url = URL.createObjectURL(file)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch (error) {
-      console.error('Failed to download file', error)
-    }
-  }, [files, declaration.id])
 
   const onClickPointPrelevementMarker = useCallback(id => {
     setFocusedPointId(id)
@@ -76,29 +68,51 @@ const DossierDetails = ({declaration, files = [], idPoints}) => {
     return new Map(pointsPrelevement.map(point => [point.id, point]))
   }, [pointsPrelevement])
 
-  const pointsStatus = useMemo(() => computePointsStatus({declaration, files, pointsPrelevement}),
-    [declaration, files, pointsPrelevement]
+  const pointsStatus = useMemo(
+    () => computePointsStatus({declaration, pointsPrelevement}),
+    [declaration, pointsPrelevement]
   )
 
   const prelevementItems = useMemo(() => {
-    const chunks = declaration.source?.chunks || []
     const items = []
 
-    for (const chunk of chunks) {
+    for (const chunk of source.chunks) {
+      const accordionId = `chunk-${chunk.id}`
+
       items.push({
-        key: `chunk-${chunk.id}`,
+        key: accordionId,
         sortName: chunk.pointPrelevementName,
         content: (
           <PrelevementsAccordion
-            isOpen
-            idPoint={chunk.pointPrelevement?.id}
+            canShowVolumeData
+            showPointPrelevementIdentificationHint
+            isOpen={selectedAccordionId === accordionId}
+            pointPrelevementId={chunk.pointPrelevement?.id}
+            pointPrelevementName={chunk.pointPrelevement?.name}
+            suggestedPointPrelevementName={chunk.pointPrelevementName}
             pointPrelevement={chunk.pointPrelevement}
             volumePreleveTotal={chunk.metadata?.totalWaterVolumeWithdrawn}
             volumeRejeteTotal={chunk.metadata?.totalWaterVolumeRejected}
             fallbackPointPrelevementName={chunk.pointPrelevementName}
-            status={chunk.metadata?.totalWaterVolumeWithdrawn > 0 ? 'success' : 'error'}
+            instructionStatus={chunk.instructionStatus}
+            instructionComment={chunk.instructionComment}
+            instructedAt={chunk.instructedAt}
+            instructedBy={chunk.instructedByInstructor?.user}
             typePrelevement={declaration.type}
-          />
+            handleSelectAccordion={() => handleSelectAccordion(accordionId)}
+            chunkId={chunk.id}
+            sourceId={source.id}
+            canInstruct={isInstructor && chunk.canInstruct}
+            availablePoints={availablePoints}
+          >
+            {selectedAccordionId === accordionId && (
+              <DeclarationFileDetails
+                pointId={chunk.pointPrelevementId}
+                series={chunk.chunkValues}
+                typePrelevement={declaration.type}
+              />
+            )}
+          </PrelevementsAccordion>
         )
       })
     }
@@ -109,19 +123,16 @@ const DossierDetails = ({declaration, files = [], idPoints}) => {
       ['asc']
     )
   }, [
-    declaration,
-    downloadFile,
-    files,
-    focusedPointId,
-    pointsById,
-    pointsPrelevement
+    declaration.type,
+    source,
+    selectedAccordionId
   ])
 
   const {totalWaterVolumeWithdrawn, totalWaterVolumeDischarged} = declaration?.source?.metadata ?? {}
 
   return (
     <Box className='flex flex-col gap-2 mb-4'>
-      <DossierInfos
+      <DeclarationInfos
         numeroArreteAot={declaration.aotDecreeNumber}
         type={declaration.type}
         dataSourceType='SPREADSHEET'
@@ -131,9 +142,7 @@ const DossierDetails = ({declaration, files = [], idPoints}) => {
 
       <div className='flex flex-wrap gap-2'>
         {declaration.declarant && (
-          <DeclarantDetails
-            declarant={declaration.declarant}
-          />
+          <DeclarantDetails declarant={declaration.declarant} />
         )}
       </div>
 
@@ -144,7 +153,7 @@ const DossierDetails = ({declaration, files = [], idPoints}) => {
         pointsStatus={pointsStatus}
       />
 
-      { pointsPrelevement && (
+      {pointsPrelevement && (
         <SectionCard title='Prélèvements' icon='fr-icon-drop-line'>
           {totalWaterVolumeWithdrawn > 0 && (
             <Alert
@@ -157,6 +166,7 @@ const DossierDetails = ({declaration, files = [], idPoints}) => {
               }
             />
           )}
+
           {totalWaterVolumeDischarged > 0 && (
             <Alert
               severity='info'
@@ -170,13 +180,13 @@ const DossierDetails = ({declaration, files = [], idPoints}) => {
           )}
 
           {prelevementItems.length > 0 && (
-            <div className='flex flex-col gap-4'>
+            <Box className='flex flex-col gap-4'>
               {prelevementItems.map(item => (
                 <div key={item.key}>
                   {item.content}
                 </div>
               ))}
-            </div>
+            </Box>
           )}
         </SectionCard>
       )}
@@ -184,4 +194,4 @@ const DossierDetails = ({declaration, files = [], idPoints}) => {
   )
 }
 
-export default DossierDetails
+export default DeclarationDetails

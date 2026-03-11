@@ -1,19 +1,5 @@
 // Server Actions - Centralized exports
 // All server actions for API calls with NextAuth authentication
-
-export {
-  getDossiersAction,
-  getDossiersByStatusAction,
-  getDossiersStatsAction,
-  getDossierAction,
-  getFileAction,
-  getFileSeriesAction,
-  getFileIntegrationsAction,
-  getFileBlobAction,
-  validateFileAction,
-  revalidateDossierPaths
-} from './dossiers.js'
-
 export {
   getPointsPrelevementAction,
   getPointPrelevementAction,

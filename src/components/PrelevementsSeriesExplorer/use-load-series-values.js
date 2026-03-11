@@ -11,6 +11,7 @@
 import {useEffect, useState, useMemo} from 'react'
 
 import {format} from 'date-fns'
+import moment from 'moment'
 
 import {indexDuplicateParameters} from './utils/index.js'
 
@@ -45,31 +46,18 @@ export function useLoadSeriesValues({seriesList, selectedPeriods, selectedParams
       setLoadError(null)
 
       try {
-        // Build index of series by parameterLabel (handling duplicates)
-        const indexedSeries = indexDuplicateParameters(seriesList)
-
-        // Find series by parameterLabel
-        const seriesToLoad = selectedParams
-          .map(paramLabel => indexedSeries.find(s => s.parameterLabel === paramLabel))
-          .filter(Boolean)
-
-        // Load values for each series in parallel
-        const valuesPromises = seriesToLoad.map(async serie => {
-          const result = await getSeriesValues(serie._id, {
-            start: format(dateRange.start, 'yyyy-MM-dd'),
-            end: format(dateRange.end, 'yyyy-MM-dd')
-          })
-          return {parameterLabel: serie.parameterLabel, values: result?.values ?? []}
-        })
-
-        const results = await Promise.all(valuesPromises)
+        const seriesToLoad = seriesList.filter(s => selectedParams.includes(s.metricTypeCode))
 
         if (!cancelled) {
-          const valuesMap = {}
-          for (const result of results) {
-            valuesMap[result.parameterLabel] = result.values
-          }
-
+          const valuesMap = seriesToLoad.reduce((acc, serie) => {
+            const value = {
+              value: serie.value,
+              date: moment(serie.date).format('YYYY-MM-DD')
+            }
+            acc[serie.metricTypeCode] = acc[serie.metricTypeCode] || []
+            acc[serie.metricTypeCode].push(value)
+            return acc
+          }, {})
           setLoadedValues(valuesMap)
           setIsLoadingValues(false)
         }

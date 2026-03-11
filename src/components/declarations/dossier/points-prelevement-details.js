@@ -15,7 +15,7 @@ const PointsPrelevementDetails = ({pointsPrelevementId, pointsPrelevement, handl
               severity='info'
               description={
                 <>
-                  <b>{pointsPrelevement.length}</b> point{pointsPrelevement.length > 1 ? 's' : ''} de prélèvement identifié{pointsPrelevement.length > 1 ? 's' : ''}
+                  <b>{pointsPrelevement.length}</b> point{pointsPrelevement.length > 1 ? 's' : ''} de prélèvement déjà identifié{pointsPrelevement.length > 1 ? 's' : ''}
                 </>
               }
             />
@@ -31,7 +31,7 @@ const PointsPrelevementDetails = ({pointsPrelevementId, pointsPrelevement, handl
           <Skeleton variant='rectangular' height={300} />
         )
       ) : (
-        <Alert severity='warning' description='Aucun point de prélèvement n’a pu être identifié.' />
+        <Alert severity='warning' description='Aucun point de prélèvement n’est pour l’instant identifié.' />
       )
     }
   </SectionCard>

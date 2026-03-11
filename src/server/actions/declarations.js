@@ -15,7 +15,6 @@ import {fetchJSON, withErrorHandling} from '@/server/api-wrapper.js'
  * - aotDecreeNumber?: string
  *
  * Côté API :
- * - status = défaut (SUBMITTED)
  * - dataSourceType = SPREADSHEET
  * - waterWithdrawalType = "Inconnu"
  */
@@ -89,6 +88,19 @@ export async function getDeclarationAction(declarationId) {
     }
 
     return fetchJSON(`api/declarations/${declarationId}`)
+  })
+}
+
+/**
+ * Get available points prelevements for declaration
+ */
+export async function getAvailablePointsPrelevementsForDeclarationAction(declarationId) {
+  return withErrorHandling(async () => {
+    if (!declarationId) {
+      throw new Error('declarationId est requis.')
+    }
+
+    return fetchJSON(`api/declarations/${declarationId}/available-points-prelevements`)
   })
 }
 

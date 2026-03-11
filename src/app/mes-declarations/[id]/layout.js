@@ -2,7 +2,7 @@ import Breadcrumb from '@codegouvfr/react-dsfr/Breadcrumb'
 import {notFound} from 'next/navigation'
 
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {getDeclarationsURL} from '@/lib/urls.js'
+import {getMyDeclarationsURL} from '@/lib/urls.js'
 import {getDeclarationAction} from '@/server/actions/declarations.js'
 
 const Layout = async ({params, children}) => {
@@ -25,7 +25,7 @@ const Layout = async ({params, children}) => {
           segments={[{
             label: 'Mes déclarations',
             linkProps: {
-              href: getDeclarationsURL()
+              href: getMyDeclarationsURL()
             }
           }]}
         />

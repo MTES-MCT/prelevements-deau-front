@@ -1,9 +1,10 @@
 import {notFound} from 'next/navigation'
 
-import DossierHeader from '@/components/declarations/dossier/dossier-header.js'
-import DossierDetails from '@/components/declarations/dossier-details.js'
+import Loading from '@/app/mes-declarations/[id]/loading.js'
+import DeclarationDetails from '@/components/declarations/declaration-details.js'
+import DeclarationHeader from '@/components/declarations/declaration-header.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {getDossierFiles, getDossierPeriodLabel, getPointsPrelevementIdsFromDeclaration} from '@/lib/dossier.js'
+import {getDeclarationPeriodLabel, getPointsPrelevementIdsFromDeclaration} from '@/lib/declaration.js'
 import {getDeclarationAction} from '@/server/actions/declarations.js'
 
 const Page = async ({params}) => {
@@ -15,25 +16,30 @@ const Page = async ({params}) => {
   }
 
   const declaration = result.data.data
-  const files = await getDossierFiles(declaration)
-  const idPoints = getPointsPrelevementIdsFromDeclaration(declaration, files)
-  const periodLabel = getDossierPeriodLabel(declaration)
+  const source = declaration?.source
+  const idPoints = getPointsPrelevementIdsFromDeclaration(declaration)
+  const periodLabel = getDeclarationPeriodLabel(declaration)
+
+  if (!source) {
+    return <Loading />
+  }
 
   return (
     <>
       <StartDsfrOnHydration />
 
-      <DossierHeader
+      <DeclarationHeader
         numero={declaration.code}
-        status={declaration.status}
+        status={source.globalInstructionStatus}
         dateDepot={declaration.createdAt}
         periodLabel={periodLabel}
       />
 
-      <DossierDetails
+      <DeclarationDetails
         declaration={declaration}
-        files={files}
         idPoints={idPoints}
+        source={source}
+        isInstructor={false}
       />
     </>
   )

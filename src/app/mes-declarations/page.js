@@ -5,7 +5,7 @@ import moment from 'moment'
 
 import DossierCard from '@/components/declarations/dossier/dossier-card.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {getDeclarationURL} from '@/lib/urls.js'
+import {getMyDeclarationURL} from '@/lib/urls.js'
 import {getMyDeclarationsAction} from '@/server/actions/declarations.js'
 import 'moment/locale/fr'
 
@@ -75,7 +75,7 @@ const Dossiers = async () => {
                 background={idx % 2 === 0 ? 'primary' : 'secondary'}
                 className='fr-mb-2w'
                 dossier={d}
-                url={getDeclarationURL(d)}
+                url={getMyDeclarationURL(d)}
               />
             ))) }
           </div>

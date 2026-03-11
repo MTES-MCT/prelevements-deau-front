@@ -352,24 +352,13 @@ const statusesFromManualEntries = (dossier, pointsPrelevement) => Object.fromEnt
 
 /* ---------- Fonction principale appelée par le composant ---------- */
 
-export const computePointsStatus = ({declaration, files = [], pointsPrelevement}) => {
+export const computePointsStatus = ({declaration, pointsPrelevement}) => {
   if (!pointsPrelevement) {
     return {}
   }
 
   const statuses = buildBaseStatus(pointsPrelevement)
-
-  if (files.length > 0) {
-    Object.assign(statuses,
-      declaration.type === 'aep-zre'
-        ? statusesFromAepZreFiles(files)
-        : (declaration.type === 'camion-citerne'
-          ? statusesFromCamionFiles(files)
-          : {})
-    )
-  } else {
-    Object.assign(statuses, statusesFromManualEntries(declaration, pointsPrelevement))
-  }
+  Object.assign(statuses, statusesFromManualEntries(declaration, pointsPrelevement))
 
   return statuses
 }

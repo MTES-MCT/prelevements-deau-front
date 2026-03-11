@@ -1,14 +1,14 @@
 import {Typography} from '@mui/material'
 import {Box} from '@mui/system'
 
-import DossierStateBadge from '@/components/declarations/dossier-state-badge.js'
+import SourceStateBadge from '@/components/declarations/source-state-badge.js'
 
-const DossierHeader = ({numero, status, dateDepot, periodLabel}) => (
+const DeclarationHeader = ({numero, status, dateDepot, periodLabel}) => (
   <Box className='flex flex-col gap-2'>
     <Box className='flex justify-between gap-4 flex-wrap'>
       <Box className='flex gap-4 items-center flex-wrap'>
         <Typography variant='h3' className='pb-0'>Déclaration n°{numero}</Typography>
-        <DossierStateBadge value={status} />
+        <SourceStateBadge value={status} />
       </Box>
     </Box>
 
@@ -30,4 +30,4 @@ const DossierHeader = ({numero, status, dateDepot, periodLabel}) => (
   </Box>
 )
 
-export default DossierHeader
+export default DeclarationHeader
