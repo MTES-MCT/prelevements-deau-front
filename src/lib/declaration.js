@@ -26,37 +26,25 @@ export const sourceStateLabels = {
   }
 }
 
-function parseMonth(value) {
-  if (!value) {
-    return null
-  }
+export function getSourcePeriod(source) {
+  const chunks = source?.chunks ?? []
 
-  const m = moment.utc(value)
-  return m.isValid() ? m.startOf('month') : null
-}
+  const dates = chunks.flatMap(c => [c?.minDate, c?.maxDate].filter(Boolean))
 
-export function getDeclarationPeriod({startMonth, endMonth} = {}) {
-  const start = parseMonth(startMonth)
-  const end = parseMonth(endMonth)
-
-  if (!start && !end) {
+  if (dates.length === 0) {
     return {start: null, end: null}
   }
 
-  if (!start) {
-    return {start: end.toDate(), end: end.toDate()}
-  }
+  const moments = dates.map(d => moment(d))
 
-  if (!end) {
-    return {start: start.toDate(), end: start.toDate()}
+  return {
+    start: moment.min(moments).toDate(),
+    end: moment.max(moments).toDate()
   }
-
-  const [from, to] = start.isSameOrBefore(end) ? [start, end] : [end, start]
-  return {start: from.toDate(), end: to.toDate()}
 }
 
-export function getDeclarationPeriodLabel(declaration) {
-  const {start, end} = getDeclarationPeriod(declaration)
+export function getSourcePeriodLabel(source) {
+  const {start, end} = getSourcePeriod(source)
   if (!start && !end) {
     return null
   }
@@ -64,8 +52,8 @@ export function getDeclarationPeriodLabel(declaration) {
   const from = moment.utc(start ?? end)
   const to = moment.utc(end ?? start)
 
-  const fromLabel = from.format('MMMM YYYY')
-  const toLabel = to.format('MMMM YYYY')
+  const fromLabel = from.format('MMM YYYY')
+  const toLabel = to.format('MMM YYYY')
 
   return from.isSame(to, 'month') ? fromLabel : `${fromLabel} à ${toLabel}`
 }

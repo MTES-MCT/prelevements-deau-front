@@ -3,15 +3,17 @@ import {
   EventOutlined,
   InterestsOutlined,
   WaterDropOutlined,
-  DescriptionOutlined, LocationOnOutlined
+  DescriptionOutlined,
+  LocationOnOutlined,
+  CalendarTodayOutlined
 } from '@mui/icons-material'
-import {format} from 'date-fns'
-import {fr} from 'date-fns/locale'
+import moment from 'moment'
 import Link from 'next/link'
 
 import ListItem from '@/components/ui/ListItem/index.js'
-import {sourceStateLabels} from '@/lib/declaration.js'
+import {getSourcePeriodLabel, sourceStateLabels} from '@/lib/declaration.js'
 import {formatNumber} from '@/utils/number.js'
+import 'moment/locale/fr'
 
 const rightIcons = {
   DECLARATION: {
@@ -25,9 +27,8 @@ const rightIcons = {
 }
 
 const metas = source => {
-  const dateDepot = source.createdAt
-    ? format(new Date(source.createdAt), 'dd/MM/yyyy', {locale: fr})
-    : 'Non renseignée'
+  const dateDepot = source.createdAt ? moment(source.createdAt).format('LL') : 'Non renseigné'
+  const periodLabel = getSourcePeriodLabel(source)
 
   return [
     {
@@ -35,8 +36,12 @@ const metas = source => {
       content: `Date de dépôt : ${dateDepot}`
     },
     {
+      icon: CalendarTodayOutlined,
+      content: `Période concernée : ${periodLabel ?? 'Non renseignée'}`
+    },
+    {
       icon: LocationOnOutlined,
-      content: `${source._count.chunks} point${source._count.chunks > 1 ? 's' : ''} de prélèvement`
+      content: `${source._count.chunks} point${source._count.chunks > 1 ? 's' : ''}`
     },
     {
       icon: WaterDropOutlined,

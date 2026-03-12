@@ -11,7 +11,7 @@ import {getDeclarantTitleFromUser} from '@/lib/preleveurs.js'
 
 const Popup = ({point}) => {
   const theme = useTheme()
-  const {name, autresNoms, preleveurs, exploitationsStatus, exploitationsStartDate, usages, type_milieu: typeMilieu, zre, reservoir_biologique: reservoirBiologique} = point
+  const {name, autresNoms, preleveurs, exploitationsStatus, exploitationsStartDate, usages, type_milieu: typeMilieu} = point
 
   return (
     // TODO : Utiliser le theme DSFR
@@ -52,11 +52,6 @@ const Popup = ({point}) => {
             Exploité depuis le {formatDate(exploitationsStartDate)}
           </Box>
         ) }
-        <Box>
-          Zonage réglementaire : <Typography variant='caption' display='inline'>
-            {zre ? 'Zone de répartition des eaux' : (reservoirBiologique ? 'Réservoir biologique' : ' - ')}
-          </Typography>
-        </Box>
       </Box>
 
       <Box className='flex flex-col gap-1'>

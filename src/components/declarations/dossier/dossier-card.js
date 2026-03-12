@@ -6,15 +6,15 @@ import {
   LocalShippingOutlined,
   TableRowsOutlined,
   FactoryOutlined,
-  WaterDropOutlined
+  WaterDropOutlined, CalendarTodayOutlined
 } from '@mui/icons-material'
-import {format} from 'date-fns'
-import {fr} from 'date-fns/locale'
+import moment from 'moment'
 import Link from 'next/link'
 
 import ListItem from '@/components/ui/ListItem/index.js'
-import {sourceStateLabels} from '@/lib/declaration.js'
+import {getSourcePeriodLabel, sourceStateLabels} from '@/lib/declaration.js'
 import {formatNumber} from '@/utils/number.js'
+import 'moment/locale/fr'
 
 const rightIcons = {
   'camion-citerne': {
@@ -52,14 +52,17 @@ const typeDonnees = typeDonnees => {
 }
 
 const metas = dossier => {
-  const dateDepot = dossier.createdAt
-    ? format(new Date(dossier.createdAt), 'dd/MM/yyyy', {locale: fr})
-    : 'Non renseignée'
+  const dateDepot = dossier.createdAt ? moment(dossier.createdAt).format('LL') : 'Non renseigné'
+  const periodLabel = getSourcePeriodLabel(dossier?.source)
 
   return [
     {
       icon: EventOutlined,
       content: `Date de dépôt : ${dateDepot}`
+    },
+    {
+      icon: CalendarTodayOutlined,
+      content: `Période concernée : ${periodLabel ?? 'Non renseignée'}`
     },
     {
       icon: TableRowsOutlined,

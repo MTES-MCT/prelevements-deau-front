@@ -4,7 +4,7 @@ import DeclarationDetails from '@/components/declarations/declaration-details.js
 import DeclarationHeader from '@/components/declarations/declaration-header.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {
-  getDeclarationPeriodLabel,
+  getSourcePeriodLabel,
   getPointsPrelevementIdsFromSource
 } from '@/lib/declaration.js'
 import {getAvailablePointsPrelevementsForDeclarationAction} from '@/server/actions/declarations.js'
@@ -21,7 +21,7 @@ const SourcePage = async ({params}) => {
   const source = result.data.data
   const {declaration} = source
   const idPoints = getPointsPrelevementIdsFromSource(source)
-  const periodLabel = getDeclarationPeriodLabel(declaration)
+  const periodLabel = getSourcePeriodLabel(source)
 
   const availablePointsResult = await getAvailablePointsPrelevementsForDeclarationAction(declaration.id)
   if (!availablePointsResult.success || !availablePointsResult.data) {

@@ -6,7 +6,7 @@ import {deburr, toLower} from 'lodash-es'
 
 import DeclarationItemCard from '@/components/declarations/instruction/declaration-item-card.js'
 import SimpleLoading from '@/components/ui/SimpleLoading/index.js'
-import {getDeclarationPeriod, getDeclarationPeriodLabel} from '@/lib/declaration.js'
+import {getSourcePeriod, getSourcePeriodLabel} from '@/lib/declaration.js'
 import {getDeclarationURL} from '@/lib/urls.js'
 import {getMySourcesAction} from '@/server/actions/sources.js'
 
@@ -62,7 +62,7 @@ const DeclarationList = ({status, filters, onAvailablePeriodsChange}) => {
 
     if (filters.periode && filters.periode !== 'all') {
       filtered = filtered.filter(s => {
-        const label = getDeclarationPeriodLabel(s.declaration) ?? 'Non renseignée'
+        const label = getSourcePeriodLabel(s) ?? 'Non renseignée'
         return label === filters.periode
       })
     }
@@ -80,13 +80,13 @@ const DeclarationList = ({status, filters, onAvailablePeriodsChange}) => {
 
     for (const source of sources) {
       const {declaration} = source
-      const label = getDeclarationPeriodLabel(declaration) ?? 'Non renseignée'
+      const label = getSourcePeriodLabel(source) ?? 'Non renseignée'
       if (periods.has(label)) {
         continue
       }
 
       periods.add(label)
-      const {start, end} = getDeclarationPeriod(declaration)
+      const {start, end} = getSourcePeriod(declaration)
       const sortKey = start?.getTime() ?? end?.getTime() ?? Number.POSITIVE_INFINITY
       results.push({value: label, label, sortKey})
     }
