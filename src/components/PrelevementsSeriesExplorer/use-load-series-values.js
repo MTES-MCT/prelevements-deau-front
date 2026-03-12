@@ -46,15 +46,17 @@ export function useLoadSeriesValues({seriesList, selectedPeriods, selectedParams
         const seriesToLoad = seriesList.filter(s => selectedParams.includes(s.metricTypeCode))
 
         if (!cancelled) {
-          const valuesMap = seriesToLoad.reduce((acc, serie) => {
+          const valuesMap = {}
+
+          for (const serie of seriesToLoad) {
             const value = {
               value: serie.value,
               date: moment(serie.date).format('YYYY-MM-DD')
             }
-            acc[serie.metricTypeCode] ??= []
-            acc[serie.metricTypeCode].push(value)
-            return acc
-          }, {})
+            valuesMap[serie.metricTypeCode] ??= []
+            valuesMap[serie.metricTypeCode].push(value)
+          }
+
           setLoadedValues(valuesMap)
           setIsLoadingValues(false)
         }

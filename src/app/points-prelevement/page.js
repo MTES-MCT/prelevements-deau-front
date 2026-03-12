@@ -154,12 +154,12 @@ const Page = () => {
 
   const exportPointsList = () => {
     const result = points
-        .filter(p => filteredPoints.includes(p.id))
-        .map(p => ({
-          id: p.id,
-          name: p.name,
-          typeMilieu: p.waterBodyType,
-        }))
+      .filter(p => filteredPoints.includes(p.id))
+      .map(p => ({
+        id: p.id,
+        name: p.name,
+        typeMilieu: p.waterBodyType
+      }))
 
     downloadCsv(result, 'points-prelevements-export.csv')
   }

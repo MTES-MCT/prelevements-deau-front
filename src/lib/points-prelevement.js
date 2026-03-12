@@ -5,7 +5,6 @@ import {
   LocalDrinkOutlined,
   LocalShippingOutlined
 } from '@mui/icons-material'
-import {some} from 'lodash-es'
 
 import {legendColors} from '@/components/map/legend-colors.js'
 
@@ -270,22 +269,6 @@ export function createSVGDataURL(container) {
   const svgMarkup = svgElement.outerHTML
   const encoded = encodeURIComponent(svgMarkup)
   return `data:image/svg+xml;charset=utf8,${encoded}`
-}
-
-/**
- * Détermine un statut ('success' | 'warning' | 'error' | 'unknown')
- * à partir d'un tableau d'erreurs éventuellement vide.
- */
-const statusFromErrors = (errors = []) => {
-  if (some(errors, {severity: 'error'})) {
-    return 'error'
-  }
-
-  if (some(errors, {severity: 'warning'})) {
-    return 'warning'
-  }
-
-  return 'success'
 }
 
 /**

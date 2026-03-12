@@ -41,20 +41,22 @@ const ParameterOptionContent = ({label, frequencyLabel, valueTypeLabel}) => (
  */
 export function useParameterMetadata(seriesList) {
   return useMemo(() => {
-    const parameters = seriesList.reduce((acc, series) => {
+    const parametersMap = new Map()
+
+    for (const series of seriesList) {
       if (!series?.metricTypeCode) {
-        return acc
+        continue
       }
 
       const normalized = normalizeString(series.metricTypeCode)
-
       const groupByKey = `${series.chunkId}-${normalized}`
 
-      const resolvedColor = series.color
-            ?? PARAMETER_COLOR_MAP.get(normalized)
-            ?? FALLBACK_PARAMETER_COLOR
+      const resolvedColor
+          = series.color
+          ?? PARAMETER_COLOR_MAP.get(normalized)
+          ?? FALLBACK_PARAMETER_COLOR
 
-      acc.set(groupByKey, {
+      parametersMap.set(groupByKey, {
         parameter: series.metricTypeCode,
         parameterLabel: series.metricTypeCode,
         unit: series.unit,
@@ -64,11 +66,13 @@ export function useParameterMetadata(seriesList) {
         seriesId: series.chunkId,
         extras: series.extras
       })
-      return acc
-    }, new Map()).values().toArray()
+    }
 
-    // Use parameterLabel as key for direct lookup
-    const parameterMap = new Map(parameters.map(param => [param.parameterLabel, param]))
+    const parameters = [...parametersMap.values()]
+
+    const parameterMap = new Map(
+      parameters.map(p => [p.parameterLabel, p])
+    )
 
     return {parameters, parameterMap}
   }, [seriesList])

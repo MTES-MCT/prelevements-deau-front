@@ -16,7 +16,6 @@ import {
   computeSliderMarks,
   transformSeriesToData,
   extractDefaultPeriodsFromSeries,
-  indexDuplicateParameters,
   parseLocalDate
 } from './utils/index.js'
 
@@ -229,7 +228,7 @@ test('buildCalendarData assigns colors based on data presence', t => {
 test('buildCalendarEntriesFromMetadata generates monthly entries from minDate/maxDate', t => {
   const seriesList = [
     {
-      parameter: 'temperature',
+      metricTypeCode: 'temperature',
       minDate: '2023-01-15',
       maxDate: '2023-03-20',
       color: '#ff0000'
@@ -399,9 +398,9 @@ test('validateParameterSelection allows up to 2 units', t => {
 
 test('validateParameterSelection rejects more than 2 units', t => {
   const parameters = [
-    {parameter: 'temp', unit: '°C'},
-    {parameter: 'pressure', unit: 'bar'},
-    {parameter: 'flow', unit: 'm³/h'}
+    {metricTypeCode: 'temp', unit: '°C'},
+    {metricTypeCode: 'pressure', unit: 'bar'},
+    {metricTypeCode: 'flow', unit: 'm³/h'}
   ]
 
   const result = validateParameterSelection(['temp', 'pressure', 'flow'], parameters)
@@ -543,7 +542,7 @@ test('transformSeriesToData handles multiple series', t => {
   const series = [
     {
       series: {
-        parameter: 'Temp',
+        metricTypeCode: 'Temp',
         unit: '°C',
         hasSubDaily: false
       },
@@ -551,7 +550,7 @@ test('transformSeriesToData handles multiple series', t => {
     },
     {
       series: {
-        parameter: 'Flow',
+        metricTypeCode: 'Flow',
         unit: 'm³/h',
         hasSubDaily: false
       },
@@ -668,14 +667,20 @@ test('extractDefaultPeriodsFromSeries returns empty array when no dates present'
 test('extractDefaultPeriodsFromSeries returns year periods for multiple years', t => {
   const seriesList = [
     {
-      parameter: 'temperature',
-      minDate: '2023-01-15',
-      maxDate: '2023-12-20'
+      metricTypeCode: 'temperature',
+      date: '2023-01-15'
     },
     {
-      parameter: 'flow',
-      minDate: '2024-03-10',
-      maxDate: '2024-11-15'
+      metricTypeCode: 'temperature',
+      date: '2023-12-20'
+    },
+    {
+      metricTypeCode: 'flow',
+      date: '2024-03-10'
+    },
+    {
+      metricTypeCode: 'flow',
+      date: '2024-11-15'
     }
   ]
 
@@ -689,9 +694,12 @@ test('extractDefaultPeriodsFromSeries returns year periods for multiple years', 
 test('extractDefaultPeriodsFromSeries returns month periods for single year', t => {
   const seriesList = [
     {
-      parameter: 'temperature',
-      minDate: '2024-01-15',
-      maxDate: '2024-03-20'
+      metricTypeCode: 'temperature',
+      date: '2024-01-15'
+    },
+    {
+      metricTypeCode: 'temperature',
+      date: '2024-03-20'
     }
   ]
 
@@ -706,9 +714,8 @@ test('extractDefaultPeriodsFromSeries returns month periods for single year', t 
 test('extractDefaultPeriodsFromSeries handles single month in single year', t => {
   const seriesList = [
     {
-      parameter: 'flow',
-      minDate: '2024-05-01',
-      maxDate: '2024-05-31'
+      metricTypeCode: 'flow',
+      date: '2024-05-01'
     }
   ]
 
@@ -721,19 +728,28 @@ test('extractDefaultPeriodsFromSeries handles single month in single year', t =>
 test('extractDefaultPeriodsFromSeries uses global min/max across all series', t => {
   const seriesList = [
     {
-      parameter: 'temp',
-      minDate: '2023-06-01',
-      maxDate: '2023-08-31'
+      metricTypeCode: 'temp',
+      date: '2023-06-01'
     },
     {
-      parameter: 'pressure',
-      minDate: '2023-01-01',
-      maxDate: '2023-12-31'
+      metricTypeCode: 'temp',
+      date: '2023-08-31'
     },
     {
-      parameter: 'flow',
-      minDate: '2023-03-15',
-      maxDate: '2023-09-20'
+      metricTypeCode: 'pressure',
+      date: '2023-01-01'
+    },
+    {
+      metricTypeCode: 'pressure',
+      date: '2023-12-31'
+    },
+    {
+      metricTypeCode: 'flow',
+      date: '2023-03-15'
+    },
+    {
+      metricTypeCode: 'flow',
+      date: '2023-09-20'
     }
   ]
 
@@ -748,9 +764,12 @@ test('extractDefaultPeriodsFromSeries uses global min/max across all series', t 
 test('extractDefaultPeriodsFromSeries handles year boundary correctly', t => {
   const seriesList = [
     {
-      parameter: 'temperature',
-      minDate: '2023-12-15',
-      maxDate: '2024-01-15'
+      metricTypeCode: 'temperature',
+      date: '2023-12-15'
+    },
+    {
+      metricTypeCode: 'temperature',
+      date: '2024-01-15'
     }
   ]
 
@@ -765,18 +784,20 @@ test('extractDefaultPeriodsFromSeries handles year boundary correctly', t => {
 test('extractDefaultPeriodsFromSeries ignores series without dates', t => {
   const seriesList = [
     {
-      parameter: 'temp',
-      minDate: '2024-01-01',
-      maxDate: '2024-02-28'
+      metricTypeCode: 'temp',
+      date: '2024-01-01'
     },
     {
-      parameter: 'flow'
+      metricTypeCode: 'temp',
+      date: '2024-02-28'
+    },
+    {
+      metricTypeCode: 'flow'
       // No dates
     },
     {
-      parameter: 'pressure',
-      minDate: null,
-      maxDate: null
+      metricTypeCode: 'pressure',
+      date: null
     }
   ]
 
@@ -786,40 +807,4 @@ test('extractDefaultPeriodsFromSeries ignores series without dates', t => {
   t.is(result.length, 2) // January and February
   t.deepEqual(result[0], {type: 'month', year: 2024, month: 0})
   t.deepEqual(result[1], {type: 'month', year: 2024, month: 1})
-})
-
-// indexDuplicateParameters tests
-test('indexDuplicateParameters returns empty array for empty input', t => {
-  const result = indexDuplicateParameters([])
-  t.deepEqual(result, [])
-})
-
-test('indexDuplicateParameters preserves parameter name when no duplicates', t => {
-  const seriesList = [
-    {id: 'series-1', parameter: 'Débit', unit: 'm³/h'},
-    {id: 'series-2', parameter: 'Température', unit: '°C'},
-    {id: 'series-3', parameter: 'Pression', unit: 'bar'}
-  ]
-
-  const result = indexDuplicateParameters(seriesList)
-
-  t.is(result.length, 3)
-  t.is(result[0].parameterLabel, 'Débit')
-  t.is(result[1].parameterLabel, 'Température')
-  t.is(result[2].parameterLabel, 'Pression')
-})
-
-test('indexDuplicateParameters adds index to duplicate parameters', t => {
-  const seriesList = [
-    {id: 'series-1', parameter: 'volume prélevé', unit: 'm³'},
-    {id: 'series-2', parameter: 'Température', unit: '°C'},
-    {id: 'series-3', parameter: 'volume prélevé', unit: 'm³'}
-  ]
-
-  const result = indexDuplicateParameters(seriesList)
-
-  t.is(result.length, 3)
-  t.is(result[0].parameterLabel, 'volume prélevé #1')
-  t.is(result[1].parameterLabel, 'Température')
-  t.is(result[2].parameterLabel, 'volume prélevé #2')
 })

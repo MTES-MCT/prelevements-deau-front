@@ -69,15 +69,17 @@ const Dossiers = async () => {
           </CallOut>
         ) : (
           <div>
-            { dossiers.map(((d, idx) => (
-              <DossierCard
-                key={d.id}
-                background={idx % 2 === 0 ? 'primary' : 'secondary'}
-                className='fr-mb-2w'
-                dossier={d}
-                url={getMyDeclarationURL(d)}
-              />
-            ))) }
+            { dossiers
+              .filter(dossier => dossier.source)
+              .map(((d, idx) => (
+                <DossierCard
+                  key={d.id}
+                  background={idx % 2 === 0 ? 'primary' : 'secondary'}
+                  className='fr-mb-2w'
+                  dossier={d}
+                  url={getMyDeclarationURL(d)}
+                />
+              ))) }
           </div>
         )}
       </div>

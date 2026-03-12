@@ -58,7 +58,7 @@ const DeclarationItemCard = ({source, background, url}) => (
       border
       title={source?.declaration?.declarant?.socialReason
         ?? `${source?.declaration?.declarant?.user?.lastName} ${source?.declaration?.declarant?.user?.firstName}`}
-      subtitle={'n° ' + source?.declaration?.code}
+      subtitle={`n° ${source?.declaration?.code ?? ''}`}
       subtitleIcon={ArticleOutlined}
       background={background}
       tags={[sourceStateLabels[source.globalInstructionStatus]]}

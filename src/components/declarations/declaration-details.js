@@ -114,8 +114,12 @@ const DeclarationDetails = ({
     )
   }, [
     declaration.type,
-    source,
-    selectedAccordionId
+    source.id,
+    source.chunks,
+    selectedAccordionId,
+    availablePoints,
+    handleSelectAccordion,
+    isInstructor
   ])
 
   const {totalWaterVolumeWithdrawn, totalWaterVolumeDischarged} = declaration?.source?.metadata ?? {}
