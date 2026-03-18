@@ -9,13 +9,13 @@ export const PRELEVEUR_TYPE_ICONS = {
 }
 
 /**
- * Returns the appropriate icon ID based on preleveur type
- * @param {object} preleveur - The preleveur object
+ * Returns the appropriate icon ID based on declarant type
+ * @param {object} declarant - The declarant object
  * @returns {string} The icon ID to use
  */
-export function getPreleveurTypeIcon(preleveur) {
+export function getDeclarantTypeIcon(declarant) {
   // If code_siren exists, it's a "personne morale"
-  if (isPreleveurPhysique(preleveur)) {
+  if (isDeclarantPhysique(declarant)) {
     return PRELEVEUR_TYPE_ICONS.physique
   }
 
@@ -23,26 +23,26 @@ export function getPreleveurTypeIcon(preleveur) {
 }
 
 /**
- * Returns whether the preleveur is a physical person
- * @param {object} preleveur - The preleveur object
+ * Returns whether the declarant is a physical person
+ * @param {object} declarant - The declarant object
  * @returns {boolean} True if physical person, false if moral person
  */
-export function isPreleveurPhysique(preleveur) {
-  return !preleveur?.socialReason
+export function isDeclarantPhysique(declarant) {
+  return !declarant?.socialReason
 }
 
 /**
- * Returns the display title for a preleveur
- * @param {object} preleveur - The preleveur object
+ * Returns the display title for a declarant
+ * @param {object} declarant - The declarant object
  * @returns {string} The formatted title
  */
-export function getDeclarantTitleFromDeclarant(preleveur) {
-  if (isPreleveurPhysique(preleveur)) {
-    const parts = [preleveur?.civility, preleveur?.user?.firstName, preleveur?.user?.lastName].filter(Boolean)
+export function getDeclarantTitleFromDeclarant(declarant) {
+  if (isDeclarantPhysique(declarant)) {
+    const parts = [declarant?.civility, declarant?.user?.firstName, declarant?.user?.lastName].filter(Boolean)
     return parts.length > 0 ? parts.join(' ') : 'Non renseigné'
   }
 
-  return preleveur.socialReason || 'Non renseigné'
+  return declarant.socialReason || 'Non renseigné'
 }
 
 /**

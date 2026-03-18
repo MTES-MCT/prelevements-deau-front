@@ -13,7 +13,7 @@ import {useRouter} from 'next/navigation'
 import PreleveurMoralForm from './preleveur-moral-form.js'
 import PreleveurPhysiqueForm from './preleveur-physique-form.js'
 
-import {isPreleveurPhysique as checkIsPreleveurPhysique, PRELEVEUR_TYPE_ICONS} from '@/lib/preleveurs.js'
+import {isDeclarantPhysique as checkIsPreleveurPhysique, PRELEVEUR_TYPE_ICONS} from '@/lib/declarants.js'
 import {createPreleveurAction, updatePreleveurAction} from '@/server/actions/index.js'
 import {emptyStringToNull} from '@/utils/string.js'
 

@@ -35,17 +35,6 @@ export function extractUsages(points) {
   return [...usagesSet]
 }
 
-export function extractCommunes(points) {
-  const communesSet = new Set()
-  for (const point of points) {
-    if (point.commune && point.commune.nom && point.commune.code) {
-      communesSet.add(`${point.commune.nom} - ${point.commune.code}`)
-    }
-  }
-
-  return [...communesSet].sort((a, b) => a.localeCompare(b, 'fr', {sensitivity: 'base'}))
-}
-
 export function extractStatus(points) {
   const statusSet = new Set()
   for (const point of points) {
@@ -57,18 +46,16 @@ export function extractStatus(points) {
   return [...statusSet]
 }
 
-export function extractTypeMilieu(points) {
+export function extractWaterBodyType(points) {
   const typeMilieuSet = new Set()
   for (const point of points) {
-    if (point.type_milieu) { // Filter undefined values
-      typeMilieuSet.add(point.type_milieu)
+    if (point.waterBodyType) {
+      typeMilieuSet.add(point.waterBodyType)
     }
   }
 
   return [...typeMilieuSet]
 }
-
-export const colors = ['#007cbf', '#00a6a6', '#f0f0f0']
 
 export function createPointPrelevementFeatures(points) {
   return {

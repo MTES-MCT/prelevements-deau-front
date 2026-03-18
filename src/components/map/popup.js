@@ -6,8 +6,8 @@ import {
   useTheme
 } from '@mui/material'
 
+import {getDeclarantTitleFromUser} from '@/lib/declarants.js'
 import formatDate from '@/lib/format-date.js'
-import {getDeclarantTitleFromUser} from '@/lib/preleveurs.js'
 
 const Popup = ({point}) => {
   const theme = useTheme()

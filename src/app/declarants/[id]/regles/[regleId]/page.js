@@ -2,10 +2,11 @@ import {Typography} from '@mui/material'
 import nextDynamic from 'next/dynamic'
 import {notFound} from 'next/navigation'
 
-import RegleCreationForm from '@/components/form/regle-creation-form.js'
+import RegleEditionForm from '@/components/form/regle-edition-form.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {
-  getPreleveurAction,
+  getDeclarantAction,
+  getRegleAction,
   getExploitationFromPreleveurAction,
   getDocumentsFromPreleveurAction,
   getPointPrelevementAction
@@ -19,14 +20,22 @@ const DynamicBreadcrumb = nextDynamic(
 export const dynamic = 'force-dynamic'
 
 const Page = async ({params}) => {
-  const {id} = await params
-  const preleveurResult = await getPreleveurAction(id)
+  const {id, regleId} = await params
+  const preleveurResult = await getDeclarantAction(id)
 
   if (!preleveurResult.success || !preleveurResult.data) {
     notFound()
   }
 
   const preleveur = preleveurResult.data
+
+  const regleResult = await getRegleAction(regleId)
+
+  if (!regleResult.success || !regleResult.data) {
+    notFound()
+  }
+
+  const regle = regleResult.data
 
   const exploitationsResult = await getExploitationFromPreleveurAction(id)
   const exploitations = exploitationsResult.data || []
@@ -47,7 +56,7 @@ const Page = async ({params}) => {
 
       <div className='fr-container mt-4'>
         <DynamicBreadcrumb
-          currentPageLabel="Création d'une règle"
+          currentPageLabel='Édition de la règle'
           segments={[
             {
               label: 'Préleveurs',
@@ -64,10 +73,11 @@ const Page = async ({params}) => {
           ]}
         />
         <Typography variant='h3' sx={{pb: 3}}>
-          Création d&apos;une règle
+          Édition de la règle
         </Typography>
-        <RegleCreationForm
+        <RegleEditionForm
           preleveur={preleveur}
+          regle={regle}
           exploitations={enrichedExploitations}
           documents={documents || []}
         />

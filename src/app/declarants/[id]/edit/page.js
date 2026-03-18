@@ -4,7 +4,7 @@ import {notFound} from 'next/navigation'
 import PreleveurDeleteSection from '@/components/form/preleveur-delete-section.js'
 import PreleveurForm from '@/components/form/preleveur-form.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {getPreleveurAction} from '@/server/actions/index.js'
+import {getDeclarantAction} from '@/server/actions/index.js'
 
 const DynamicBreadcrumb = dynamic(
   () => import('@codegouvfr/react-dsfr/Breadcrumb')
@@ -12,7 +12,7 @@ const DynamicBreadcrumb = dynamic(
 
 const Page = async ({params}) => {
   const {id} = await params
-  const preleveurResult = await getPreleveurAction(id)
+  const preleveurResult = await getDeclarantAction(id)
 
   if (!preleveurResult.success || !preleveurResult.data) {
     notFound()

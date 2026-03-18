@@ -7,18 +7,18 @@ import {Box} from '@mui/material'
 
 import FlexSearch from '../../../node_modules/flexsearch/dist/flexsearch.bundle.module.min.js'
 
-import Preleveur from '@/components/preleveurs/preleveur.js'
+import Declarant from '@/components/declarants/declarant.js'
 import {normalizeString} from '@/utils/string.js'
 
-const PreleveursList = ({preleveurs}) => {
-  const [filteredPreleveurs, setFilteredPreleveurs] = useState(preleveurs)
+const DeclarantsList = ({declarants}) => {
+  const [filteredDeclarants, setFilteredDeclarants] = useState(declarants)
   const index = useRef(null)
 
   useEffect(() => {
     index.current = new FlexSearch.Document({
       document: {
-        id: 'id_preleveur',
-        index: ['nom', 'prenom', 'raison_sociale', 'sigle'],
+        id: 'id',
+        index: ['lastName', 'firstName', 'socialReason'],
         store: true
       },
       tokenize: 'full',
@@ -26,27 +26,26 @@ const PreleveursList = ({preleveurs}) => {
       depth: 2
     })
 
-    for (const preleveur of preleveurs) {
+    for (const declarant of declarants) {
       index.current.add(
-        preleveur.id_preleveur,
+        declarant.id,
         {
-          idPreleveur: preleveur.id_preleveur.toString(),
-          nom: normalizeString(preleveur.nom),
-          prenom: normalizeString(preleveur.prenom),
-          raison_sociale: normalizeString(preleveur.raison_sociale), // eslint-disable-line camelcase
-          sigle: normalizeString(preleveur.sigle)
+          id: declarant.id,
+          lastName: normalizeString(declarant.lastName),
+          firstName: normalizeString(declarant.firstName),
+          socialReason: normalizeString(declarant?.declarant?.socialReason)
         }
       )
     }
 
-    setFilteredPreleveurs(preleveurs)
-  }, [preleveurs])
+    setFilteredDeclarants(declarants)
+  }, [declarants])
 
   const handleFilter = e => {
     const query = normalizeString(e.target.value)
 
     if (query.length === 0) {
-      setFilteredPreleveurs(preleveurs)
+      setFilteredDeclarants(declarants)
       return
     }
 
@@ -59,25 +58,25 @@ const PreleveursList = ({preleveurs}) => {
     })
 
     if (results.length === 0) {
-      setFilteredPreleveurs([])
+      setFilteredDeclarants([])
       return
     }
 
-    const newPreleveurs = []
+    const newDeclarants = []
     const seenIds = new Set()
 
     for (const r of results) {
       for (const doc of r.result) {
-        const newPreleveur = preleveurs.find(p => p.id_preleveur === doc.id)
+        const newDeclarant = declarants.find(p => p.id === doc.id)
 
-        if (newPreleveur && !seenIds.has(newPreleveur.id_preleveur)) {
-          newPreleveurs.push(newPreleveur)
-          seenIds.add(newPreleveur.id_preleveur)
+        if (newDeclarant && !seenIds.has(newDeclarant.id)) {
+          newDeclarants.push(newDeclarant)
+          seenIds.add(newDeclarant.id)
         }
       }
     }
 
-    setFilteredPreleveurs(newPreleveurs)
+    setFilteredDeclarants(newDeclarants)
   }
 
   return (
@@ -96,10 +95,10 @@ const PreleveursList = ({preleveurs}) => {
         )}
       />
       <div>
-        {filteredPreleveurs.length > 0 && filteredPreleveurs.map((preleveur, index) => (
-          <Preleveur key={preleveur.id_preleveur} preleveur={preleveur} index={index} />
+        {filteredDeclarants.length > 0 && filteredDeclarants.map((declarant, index) => (
+          <Declarant key={declarant.id} declarant={declarant} index={index} />
         ))}
-        {filteredPreleveurs.length === 0 && (
+        {filteredDeclarants.length === 0 && (
           <Box className='p-3'>Aucun résultat</Box>
         )}
       </div>
@@ -107,4 +106,4 @@ const PreleveursList = ({preleveurs}) => {
   )
 }
 
-export default PreleveursList
+export default DeclarantsList

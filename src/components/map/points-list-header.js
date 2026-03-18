@@ -4,7 +4,7 @@ import {Typography} from '@mui/material'
 import MapFilters from '@/components/map/map-filters.js'
 import {RequireEditor} from '@/components/permissions/index.js'
 
-const PointsListHeader = ({filters, resultsCount, typeMilieuOptions, usagesOptions, statusOptions, communesOptions, onFilter, exportList}) => (
+const PointsListHeader = ({filters, resultsCount, typeMilieuOptions, usagesOptions, statusOptions, onFilter, exportList}) => (
   <div className='flex flex-col gap-2'>
     <Typography variant='h6'>Liste des points de prélèvement</Typography>
     <div className='inline-flex justify-end w-full'>
@@ -27,7 +27,6 @@ const PointsListHeader = ({filters, resultsCount, typeMilieuOptions, usagesOptio
       typeMilieuOptions={typeMilieuOptions}
       usagesOptions={usagesOptions}
       statusOptions={statusOptions}
-      communesOptions={communesOptions}
       onFilterChange={onFilter}
       onClearFilters={() =>
         onFilter({

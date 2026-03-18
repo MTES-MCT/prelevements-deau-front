@@ -15,14 +15,14 @@ export {
 } from './points-prelevement.js'
 
 export {
-  getPreleveursAction,
-  getPreleveurAction,
+  getDeclarantsAction,
+  getDeclarantAction,
   createPreleveurAction,
   updatePreleveurAction,
   deletePreleveurAction,
   getPointsFromPreleveurAction,
   getExploitationFromPreleveurAction
-} from './preleveurs.js'
+} from './declarants.js'
 
 export {
   getExploitationAction,

@@ -10,7 +10,7 @@ import {useAuth} from '@/contexts/auth-context.js'
 
 const ROLE_LABELS = {
   DECLARANT: 'Déclarant',
-  INSTRUCTOR: 'Instructeur',
+  INSTRUCTOR: 'Agent',
   ADMIN: 'Administrateur'
 }
 
@@ -54,10 +54,10 @@ const NAV_ITEMS = [
   },
   {
     linkProps: {
-      href: '/preleveurs',
+      href: '/declarants',
       target: '_self'
     },
-    text: 'Préleveurs',
+    text: 'Déclarants',
     roles: ['INSTRUCTOR', 'ADMIN']
   }
 ]

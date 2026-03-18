@@ -1,13 +1,5 @@
 const STORAGE_URL = process.env.NEXT_PUBLIC_STORAGE_URL
 
-export function getDossierURL(dossier) {
-  return `/dossiers/${dossier._id}`
-}
-
-export function getDossierDSURL(dossier) {
-  return `https://demarche.numerique.gouv.fr/procedures/${process.env.NEXT_PUBLIC_PROCEDURE_DS_ID}/a-suivre/dossiers/${dossier.ds.dossierNumber}`
-}
-
 export function getDeclarationsURL() {
   return '/declarations'
 }
@@ -16,22 +8,12 @@ export function getDeclarationURL(sourceId) {
   return `/declarations/${sourceId}`
 }
 
-export function getDossiersURL() {
-  return '/dossiers'
+export function getDeclarantsURL() {
+  return '/declarations'
 }
 
-export function getPreleveurURL(preleveur) {
-  return `/preleveurs/${preleveur.id_preleveur}`
-}
-
-export function getNewPreleveurURL(params) {
-  const url = '/preleveurs/new'
-  if (params) {
-    const query = new URLSearchParams(params).toString()
-    return `${url}?${query}`
-  }
-
-  return url
+export function getDeclarantURL(declarant) {
+  return `/declarants/${declarant.id}`
 }
 
 export function getPointsPrelevementURL() {
@@ -58,10 +40,6 @@ export function getNewExploitationURL(params) {
   }
 
   return url
-}
-
-export function getExploitationURL(exploitation) {
-  return `/exploitations/${exploitation._id}`
 }
 
 export function getDeclarationTemplateAEP() {

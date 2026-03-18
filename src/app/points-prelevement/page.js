@@ -26,9 +26,8 @@ import useEvent from '@/hook/use-event.js'
 import {downloadCsv} from '@/lib/export-csv.js'
 import {
   extractStatus,
-  extractTypeMilieu,
-  extractUsages,
-  extractCommunes
+  extractWaterBodyType,
+  extractUsages
 } from '@/lib/points-prelevement.js'
 import {getPointPrelevementURL} from '@/lib/urls.js'
 import {getPointsPrelevementAction} from '@/server/actions/points-prelevement.js'
@@ -48,7 +47,6 @@ const Page = () => {
     name: '',
     typeMilieu: '',
     status: '',
-    communes: [],
     usages: []
   })
   const [filteredPoints, setFilteredPoints] = useState([])
@@ -73,17 +71,15 @@ const Page = () => {
   }, [])
 
   // Calculer les options pour les filtres dès que les données sont disponibles
-  const {typeMilieuOptions, usagesOptions, statusOptions, communesOptions} = useMemo(() => {
-    const typeMilieuOptions = points ? extractTypeMilieu(points) : []
+  const {waterBodyTypeOptions, usagesOptions, statusOptions} = useMemo(() => {
+    const waterBodyTypeOptions = points ? extractWaterBodyType(points) : []
     const usagesOptions = points ? extractUsages(points) : []
     const statusOptions = points ? extractStatus(points) : []
-    const communesOptions = points ? extractCommunes(points) : []
 
     return {
-      typeMilieuOptions,
+      waterBodyTypeOptions,
       usagesOptions,
-      statusOptions,
-      communesOptions
+      statusOptions
     }
   }, [points])
 
@@ -106,19 +102,17 @@ const Page = () => {
         const normalizedSearch = deburr(filters.name.toLowerCase().trim())
 
         // Normalisation des valeurs à comparer
-        const normalizedName = point.nom ? deburr(point.nom.toLowerCase().trim()) : ''
+        const normalizedName = point.name ? deburr(point.name.toLowerCase().trim()) : ''
         const idPointStr = String(point.id).toLowerCase()
         const preleveurMatches = point.preleveurs.some(preleveur => {
-          const normalizedRaisonSociale = preleveur.raison_sociale ? deburr(preleveur.raison_sociale.toLowerCase().trim()) : ''
-          const normalizedSigle = preleveur.sigle ? deburr(preleveur.sigle.toLowerCase().trim()) : ''
-          const normalizedNom = preleveur.nom ? deburr(preleveur.nom.toLowerCase().trim()) : ''
-          const normalizedPrenom = preleveur.prenom ? deburr(preleveur.prenom.toLowerCase().trim()) : ''
+          const normalizedSocialReason = preleveur?.declarant?.socialReason ? deburr(preleveur?.declarant?.socialReason?.toLowerCase().trim()) : ''
+          const normalizedLastName = preleveur.lastName ? deburr(preleveur.lastName.toLowerCase().trim()) : ''
+          const normalizedFirstName = preleveur.firstName ? deburr(preleveur.firstName.toLowerCase().trim()) : ''
 
           return (
-            normalizedRaisonSociale.includes(normalizedSearch)
-              || normalizedSigle.includes(normalizedSearch)
-              || normalizedNom.includes(normalizedSearch)
-              || normalizedPrenom.includes(normalizedSearch)
+            normalizedSocialReason.includes(normalizedSearch)
+              || normalizedLastName.includes(normalizedSearch)
+              || normalizedFirstName.includes(normalizedSearch)
           )
         })
 
@@ -127,23 +121,12 @@ const Page = () => {
           || preleveurMatches
       }
 
-      if (filters.typeMilieu) {
-        matches &&= point.type_milieu === filters.typeMilieu
+      if (filters.waterBodyType) {
+        matches &&= point.waterBodyType === filters.waterBodyType
       }
 
       if (filters.status) {
         matches &&= point.exploitationsStatus === filters.status
-      }
-
-      if (filters.usages && filters.usages.length > 0) {
-        matches &&= filters.usages.some(usage => point.usages.includes(usage))
-      }
-
-      if (filters.communes && filters.communes.length > 0) {
-        const communeStr = point.commune && point.commune.nom && point.commune.code
-          ? `${point.commune.nom} - ${point.commune.code}`
-          : null
-        matches &&= communeStr ? filters.communes.includes(communeStr) : false
       }
 
       return matches
@@ -158,7 +141,7 @@ const Page = () => {
       .map(p => ({
         id: p.id,
         name: p.name,
-        typeMilieu: p.waterBodyType
+        waterBodyType: p.waterBodyType
       }))
 
     downloadCsv(result, 'points-prelevements-export.csv')
@@ -173,10 +156,9 @@ const Page = () => {
           <PointsListHeader
             resultsCount={loading ? null : filteredPoints.length}
             filters={filters}
-            typeMilieuOptions={typeMilieuOptions}
+            typeMilieuOptions={waterBodyTypeOptions}
             usagesOptions={usagesOptions}
             statusOptions={statusOptions}
-            communesOptions={communesOptions}
             exportList={exportPointsList}
             onFilter={handleFilter}
           />
@@ -224,6 +206,7 @@ const Page = () => {
               <Select
                 value={style}
                 label='Style de la carte'
+                variant='filled'
                 onChange={e => setStyle(e.target.value)}
               >
                 <MenuItem value='vector'>Plan OpenMapTiles</MenuItem>

@@ -8,24 +8,24 @@ import {
 } from '@/server/api-wrapper.js'
 
 // ============================================================================
-// Préleveurs
+// Déclarants
 // ============================================================================
 
 /**
- * Get all préleveurs
+ * Get all declarants
  * @returns {Promise<Object>} - Result object
  */
-export async function getPreleveursAction() {
-  return withErrorHandling(async () => fetchJSON('api/preleveurs'))
+export async function getDeclarantsAction() {
+  return withErrorHandling(async () => fetchJSON('api/declarants'))
 }
 
 /**
- * Get a single préleveur by ID
- * @param {string} id - Préleveur ID
+ * Get a single déclarant by ID
+ * @param {string} id - Déclarant ID
  * @returns {Promise<Object>} - Result object
  */
-export async function getPreleveurAction(id) {
-  return withErrorHandling(async () => fetchJSON(`api/preleveurs/${id}`))
+export async function getDeclarantAction(id) {
+  return withErrorHandling(async () => fetchJSON(`api/declarants/${id}`))
 }
 
 /**

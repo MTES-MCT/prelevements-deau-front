@@ -103,7 +103,7 @@ const PointForm = ({
       />
       <Input
         textArea
-        label='Remarque interne (Visible uniquement par les instructeurs)'
+        label='Remarque interne (Visible uniquement par les agents)'
         nativeTextAreaProps={{
           placeholder: 'Entrer une remarque interne',
           defaultValue: point?.remarque_interne
