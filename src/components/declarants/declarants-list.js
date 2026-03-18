@@ -1,17 +1,22 @@
 'use client'
 
-import {useEffect, useRef, useState} from 'react'
+import {
+  useEffect, useMemo, useRef, useState
+} from 'react'
 
 import SearchBar from '@codegouvfr/react-dsfr/SearchBar'
-import {Box} from '@mui/material'
+import {Box, Button} from '@mui/material'
 
 import FlexSearch from '../../../node_modules/flexsearch/dist/flexsearch.bundle.module.min.js'
 
 import Declarant from '@/components/declarants/declarant.js'
 import {normalizeString} from '@/utils/string.js'
 
+const PAGE_SIZE = 10
+
 const DeclarantsList = ({declarants}) => {
   const [filteredDeclarants, setFilteredDeclarants] = useState(declarants)
+  const [page, setPage] = useState(1)
   const index = useRef(null)
 
   useEffect(() => {
@@ -27,22 +32,22 @@ const DeclarantsList = ({declarants}) => {
     })
 
     for (const declarant of declarants) {
-      index.current.add(
-        declarant.id,
-        {
-          id: declarant.id,
-          lastName: normalizeString(declarant.lastName),
-          firstName: normalizeString(declarant.firstName),
-          socialReason: normalizeString(declarant?.declarant?.socialReason)
-        }
-      )
+      index.current.add(declarant.id, {
+        id: declarant.id,
+        lastName: normalizeString(declarant.lastName),
+        firstName: normalizeString(declarant.firstName),
+        socialReason: normalizeString(declarant?.declarant?.socialReason)
+      })
     }
 
     setFilteredDeclarants(declarants)
+    setPage(1)
   }, [declarants])
 
   const handleFilter = e => {
     const query = normalizeString(e.target.value)
+
+    setPage(1)
 
     if (query.length === 0) {
       setFilteredDeclarants(declarants)
@@ -51,7 +56,6 @@ const DeclarantsList = ({declarants}) => {
 
     const results = index.current.search(query, {
       suggest: true,
-      limit: 10,
       enrich: true,
       bool: 'or',
       threshold: 5
@@ -79,6 +83,14 @@ const DeclarantsList = ({declarants}) => {
     setFilteredDeclarants(newDeclarants)
   }
 
+  const totalPages = Math.ceil(filteredDeclarants.length / PAGE_SIZE)
+
+  const paginatedDeclarants = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE
+    const end = start + PAGE_SIZE
+    return filteredDeclarants.slice(start, end)
+  }, [filteredDeclarants, page])
+
   return (
     <Box className='flex flex-col gap-2 my-8 w-full'>
       <SearchBar
@@ -94,14 +106,47 @@ const DeclarantsList = ({declarants}) => {
           />
         )}
       />
+
+      {filteredDeclarants.length > 0 && totalPages > 1 && (
+        <Box className='flex items-center justify-between mt-4'>
+          <span>
+            Page {page} / {totalPages} — {filteredDeclarants.length} résultat{filteredDeclarants.length > 1 ? 's' : ''}
+          </span>
+
+          <Box className='flex gap-2'>
+            <Button
+              variant='outlined'
+              disabled={page === 1}
+              onClick={() => setPage(p => p - 1)}
+            >
+              Précédent
+            </Button>
+
+            <Button
+              variant='outlined'
+              disabled={page === totalPages}
+              onClick={() => setPage(p => p + 1)}
+            >
+              Suivant
+            </Button>
+          </Box>
+        </Box>
+      )}
+
       <div>
-        {filteredDeclarants.length > 0 && filteredDeclarants.map((declarant, index) => (
-          <Declarant key={declarant.id} declarant={declarant} index={index} />
+        {paginatedDeclarants.length > 0 && paginatedDeclarants.map((declarant, index) => (
+          <Declarant
+            key={declarant.id}
+            declarant={declarant}
+            index={((page - 1) * PAGE_SIZE) + index}
+          />
         ))}
+
         {filteredDeclarants.length === 0 && (
           <Box className='p-3'>Aucun résultat</Box>
         )}
       </div>
+
     </Box>
   )
 }
