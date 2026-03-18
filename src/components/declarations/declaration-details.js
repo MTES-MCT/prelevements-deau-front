@@ -16,7 +16,7 @@ import PointsPrelevementDetails from '@/components/declarations/dossier/points-p
 import DeclarationFileDetails from '@/components/declarations/dossier/prelevements/declaration-file-details.js'
 import SectionCard from '@/components/ui/SectionCard/index.js'
 import {computePointsStatus} from '@/lib/points-prelevement.js'
-import {getPointPrelevementAction} from '@/server/actions/index.js'
+import {getPointsPrelevementBatchAction} from '@/server/actions/points-prelevement.js'
 import {formatNumber} from '@/utils/number.js'
 import {getPointPrelevementName} from '@/utils/point-prelevement.js'
 
@@ -38,17 +38,27 @@ const DeclarationDetails = ({
 
   useEffect(() => {
     const fetchPointsPrelevement = async () => {
-      const results = await Promise.all(idPoints.map(idPoint => getPointPrelevementAction(idPoint)))
-      const points = results.filter(r => r.success).map(r => r.data)
+      const result = await getPointsPrelevementBatchAction(idPoints)
+
+      if (!result.success) {
+        setPointsPrelevement([])
+        return
+      }
+
       const sortedPoints = orderBy(
-        points,
+        result.data,
         point => String(getPointPrelevementName(point)).toLowerCase(),
         'asc'
       )
+
       setPointsPrelevement(sortedPoints)
     }
 
-    fetchPointsPrelevement()
+    if (idPoints?.length > 0) {
+      fetchPointsPrelevement()
+    } else {
+      setPointsPrelevement([])
+    }
   }, [idPoints])
 
   const onClickPointPrelevementMarker = useCallback(id => {

@@ -36,6 +36,13 @@ export async function getPointPrelevementAction(id) {
   return withErrorHandling(async () => fetchJSON(`api/points-prelevement/${id}`))
 }
 
+export async function getPointsPrelevementBatchAction(ids) {
+  return withErrorHandling(async () => fetchJSON('api/points-prelevement/batch', {
+    method: 'POST',
+    body: {ids}
+  }))
+}
+
 /**
  * Create a new point de prélèvement
  * @param {Object} payload - Point data

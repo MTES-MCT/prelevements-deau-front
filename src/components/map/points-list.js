@@ -22,7 +22,7 @@ const PointsList = ({points, isLoading}) => {
   return (
     <div className='flex flex-col gap-2'>
       <List>
-        {orderBy(points, 'nom').map((point, index) => (
+        {orderBy(points, 'name').map((point, index) => (
           <Link key={point.id} href={getPointPrelevementURL(point)}>
             <Point
               point={point}

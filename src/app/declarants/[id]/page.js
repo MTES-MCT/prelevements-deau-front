@@ -16,7 +16,7 @@ import {getDeclarantTitleFromDeclarant, getDeclarantTypeIcon} from '@/lib/declar
 import {formatFullAddress} from '@/lib/declaration.js'
 import {getNewExploitationURL} from '@/lib/urls.js'
 import {getDeclarantAction} from '@/server/actions/declarants.js'
-import {getPointPrelevementAction} from '@/server/actions/points-prelevement.js'
+import {getPointsPrelevementBatchAction} from '@/server/actions/points-prelevement.js'
 import {getAggregatedSeriesOptionsAction} from '@/server/actions/series.js'
 
 const iconColorStyle = {color: fr.colors.decisions.text.label.blueFrance.default}
@@ -74,18 +74,30 @@ const Page = async ({params}) => {
   const regles = reglesResult.data || []
   const seriesOptions = seriesResult.data
 
-  const pointsPrelevement = []
+  const pointIds = [
+    ...new Set(exploitations.map(exploitation => exploitation.pointPrelevement?.id).filter(Boolean))
+  ]
 
-  const exploitationsWithPoints = await Promise.all(exploitations.map(async exploitation => {
-    const pointResult = await getPointPrelevementAction(exploitation.pointPrelevement.id)
+  let pointsById = new Map()
 
-    // Only push point if the request was successful
-    if (pointResult.success && pointResult.data) {
-      pointsPrelevement.push(pointResult.data)
+  if (pointIds.length > 0) {
+    const pointResults = await getPointsPrelevementBatchAction(pointIds)
+
+    if (pointResults.success && Array.isArray(pointResults.data)) {
+      pointsById = new Map(pointResults.data.map(point => [point.id, point]))
     }
+  }
 
-    return {...exploitation, point: pointResult.success ? pointResult.data : null}
-  }))
+  const exploitationsWithPoints = exploitations.map(exploitation => {
+    const pointId = exploitation.pointPrelevement?.id
+
+    return {
+      ...exploitation,
+      point: pointId ? (pointsById.get(pointId) ?? null) : null
+    }
+  })
+
+  const pointsPrelevement = [...pointsById.values()]
 
   const title = getDeclarantTitleFromDeclarant(declarant)
 
