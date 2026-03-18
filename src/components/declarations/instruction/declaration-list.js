@@ -47,16 +47,19 @@ const DeclarationList = ({status, filters, onAvailablePeriodsChange}) => {
 
     if (filters.declarant) {
       const searchTerm = toLower(deburr(filters.declarant || ''))
-
       filtered = filtered.filter(d => {
-        const raisonSociale = d?.declarant?.socialReason
-          ? toLower(deburr(d.declarant.socialReason))
+        const raisonSociale = d?.declaration?.declarant?.socialReason
+          ? toLower(deburr(d.declaration?.declarant.socialReason))
           : ''
-        const nomDemandeur = d?.declarant?.user?.lastName
-          ? toLower(deburr(d.declarant.user.lastName))
+        const lastName = d?.declaration?.declarant?.user?.lastName
+          ? toLower(deburr(d.declaration?.declarant.user.lastName))
           : ''
 
-        return raisonSociale.includes(searchTerm) || nomDemandeur.includes(searchTerm)
+        const firstName = d?.declaration?.declarant?.user?.firstName
+          ? toLower(deburr(d.declaration?.declarant.user.firstName))
+          : ''
+
+        return raisonSociale.includes(searchTerm) || lastName.includes(searchTerm) || firstName.includes(searchTerm)
       })
     }
 
