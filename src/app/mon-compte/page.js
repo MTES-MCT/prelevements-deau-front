@@ -1,4 +1,3 @@
-
 import {
   Box,
   Chip,
@@ -18,6 +17,41 @@ import {getCurrentUser} from '@/server/actions/user.js'
 import {getZonesActions} from '@/server/actions/zones.js'
 
 moment.locale('fr')
+
+const formatZonePeriod = (startDate, endDate) => {
+  const start = startDate ? moment(startDate) : null
+  const end = endDate ? moment(endDate) : null
+
+  if (start && end) {
+    return `Du ${start.format('DD MMMM YYYY')} au ${end.format('DD MMMM YYYY')}`
+  }
+
+  if (start && !end) {
+    return `Depuis le ${start.format('DD MMMM YYYY')}`
+  }
+
+  if (!start && end) {
+    return `Jusqu’au ${end.format('DD MMMM YYYY')}`
+  }
+
+  return 'Permanent'
+}
+
+const formatRole = role => {
+  switch (role) {
+    case 'DECLARANT': {
+      return 'Déclarant'
+    }
+
+    case 'INSTRUCTOR': {
+      return 'Agent'
+    }
+
+    default: {
+      return role
+    }
+  }
+}
 
 const InfoLine = ({label, value}) => (
   <Box className='flex flex-wrap gap-2 items-center'>
@@ -64,7 +98,7 @@ const MonComptePage = async () => {
                 <InfoLine label='Prénom' value={user?.firstName} />
                 <InfoLine label='Nom' value={user?.lastName} />
                 <InfoLine label='Email' value={user?.email} />
-                <InfoLine label='Rôle' value={role} />
+                <InfoLine label='Rôle' value={formatRole(role)} />
               </div>
 
               {user?.role && (
@@ -126,19 +160,18 @@ const MonComptePage = async () => {
                             <TableCell>
                               <div className='flex flex-col'>
                                 <span className='fr-text--bold'>{z.name}</span>
-                                <span className='fr-hint-text'>Code : {z.code}</span>
                               </div>
                             </TableCell>
                             <TableCell>
-                              {z.startDate ? moment(z.startDate).format('DD/MM/YYYY') : '—'}{' '}
-                              →{' '}
-                              {z.endDate ? moment(z.endDate).format('DD/MM/YYYY') : '∞'}
+                              { formatZonePeriod(z.startDate, z.endDate) }
                             </TableCell>
                             <TableCell>
-                              <Chip
-                                label='Admin'
-                                size='small'
-                              />
+                              { z.isAdmin && (
+                                <Chip
+                                  label='Admin'
+                                  size='small'
+                                />
+                              ) }
                             </TableCell>
                           </TableRow>
                         ))}
