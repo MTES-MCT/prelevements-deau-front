@@ -8,8 +8,12 @@ import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getNewExploitationURL} from '@/lib/urls.js'
 import {getPointPrelevementAction, getExploitationsByPointIdAction} from '@/server/actions/points-prelevement.js'
 import {getAggregatedSeriesOptionsAction} from '@/server/actions/series.js'
+import {getCurrentUser} from '@/server/actions/user.js'
 
 const Page = async ({params}) => {
+  const userResult = await getCurrentUser()
+  const role = userResult?.data?.role ?? null
+
   const {id} = (await params)
 
   const pointResult = await getPointPrelevementAction(id)
@@ -41,10 +45,12 @@ const Page = async ({params}) => {
           pointIds={[pointPrelevement.id]}
           seriesOptions={seriesOptions}
         />
-        <ExploitationsList
-          exploitations={exploitations}
-          createHref={getNewExploitationURL({idPoint: pointPrelevement.id})}
-        />
+        { role === 'INSTRUCTOR' && (
+          <ExploitationsList
+            exploitations={exploitations}
+            createHref={getNewExploitationURL({idPoint: pointPrelevement.id})}
+          />
+        ) }
       </div>
     </>
   )

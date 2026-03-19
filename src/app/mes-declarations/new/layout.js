@@ -1,9 +1,8 @@
 import {fr} from '@codegouvfr/react-dsfr'
-import {Download} from '@codegouvfr/react-dsfr/Download'
 import {Typography, Box} from '@mui/material'
 
+import DeclarationTemplateDownload from '@/components/declarations/declaration-template-download.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {getDeclarationTemplateAEP, getDeclarationTemplateTableauSuivi} from '@/lib/urls.js'
 
 const NouvelleDeclaration = async ({children}) => (
   <>
@@ -32,20 +31,7 @@ const NouvelleDeclaration = async ({children}) => (
         <h3 className='fr-h5'>
           Besoin du template de déclaration ?
         </h3>
-        <Download
-          details='XLSX – 318 ko'
-          label='Télécharger le template « Données standardisées »'
-          linkProps={{
-            href: getDeclarationTemplateAEP()
-          }}
-        />
-        <Download
-          details='XLSX – 7 ko'
-          label='Télécharger le template « Tableau de suivi »'
-          linkProps={{
-            href: getDeclarationTemplateTableauSuivi()
-          }}
-        />
+        <DeclarationTemplateDownload />
       </div>
     </Box>
   </>

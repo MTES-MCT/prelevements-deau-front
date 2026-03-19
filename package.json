@@ -27,7 +27,8 @@
     "next": "^15.5.7",
     "next-auth": "^4.24.13",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "xlsx-populate": "^1.21.0"
   },
   "devDependencies": {
     "@codegouvfr/react-dsfr": "^1.29.0",
