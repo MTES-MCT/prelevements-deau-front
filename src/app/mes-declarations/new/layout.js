@@ -1,6 +1,5 @@
 import {fr} from '@codegouvfr/react-dsfr'
 import {Download} from '@codegouvfr/react-dsfr/Download'
-import {Notice} from '@codegouvfr/react-dsfr/Notice'
 import {Typography, Box} from '@mui/material'
 
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
@@ -9,25 +8,13 @@ import {getDeclarationTemplateAEP, getDeclarationTemplateTableauSuivi} from '@/l
 const NouvelleDeclaration = async ({children}) => (
   <>
     <StartDsfrOnHydration />
-    <Notice
-      className='mb-4'
-      severity='info'
-      title='Cet outil est en cours de développement.'
-      description='Merci de nous signaler tout problème à l’adresse :'
-      link={{
-        linkProps: {
-          href: 'mailto:prelevements-deau@beta.gouv.fr?subject=Retour%20d%27utilisation%20du%20validateur%20de%20déclaration'
-        },
-        text: 'prelevements-deau@beta.gouv.fr'
-      }}
-    />
 
     <div className='fr-container flex flex-col my-4 gap-10'>
       <Typography variant='h3'>
         Dépôt d’un fichier de déclaration de prélèvements
       </Typography>
       <p>
-        Cet outil vous permet de valider la conformité de vos fichiers de déclaration de prélèvements avant de les soumettre sur Démarche Numérique.
+        Cet outil vous permet de soumettre vos fichiers de déclaration de prélèvements.
       </p>
 
       {children}

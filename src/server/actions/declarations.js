@@ -12,7 +12,6 @@ import {fetchJSON, withErrorHandling} from '@/server/api-wrapper.js'
  * - files: File[]
  * - fileTypes: string[] (1 type métier par fichier, même ordre, unique par déclaration)
  * - comment?: string
- * - aotDecreeNumber?: string
  *
  * Côté API :
  * - dataSourceType = SPREADSHEET
@@ -22,8 +21,7 @@ export async function createDeclarationAction({
   type,
   files = [],
   fileTypes = [],
-  comment,
-  aotDecreeNumber
+  comment
 } = {}) {
   return withErrorHandling(async () => {
     if (!Array.isArray(files) || files.length === 0) {
@@ -51,10 +49,6 @@ export async function createDeclarationAction({
       formData.append('comment', comment.trim())
     }
 
-    if (typeof aotDecreeNumber === 'string' && aotDecreeNumber.trim()) {
-      formData.append('aotDecreeNumber', aotDecreeNumber.trim())
-    }
-
     for (const [i, file] of files.entries()) {
       formData.append('files', file)
       formData.append('fileTypes', fileTypes[i])
@@ -65,7 +59,7 @@ export async function createDeclarationAction({
       body: formData
     })
 
-    revalidateDeclarationPaths(data?.data?.id)
+    await revalidateDeclarationPaths(data?.data?.id)
 
     return data
   })

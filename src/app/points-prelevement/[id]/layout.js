@@ -26,7 +26,7 @@ const Layout = async ({params, children}) => {
         <Breadcrumb
           currentPageLabel={pointLabel}
           segments={[{
-            label: 'Points de prélèvement',
+            label: 'Mes points de prélèvement',
             linkProps: {
               href: getPointsPrelevementURL()
             }

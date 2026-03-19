@@ -49,7 +49,7 @@ const NAV_ITEMS = [
       href: '/points-prelevement',
       target: '_self'
     },
-    text: 'Points de prélèvement',
+    text: 'Mes points de prélèvement',
     roles: ['DECLARANT', 'INSTRUCTOR', 'ADMIN']
   },
   {
