@@ -32,7 +32,7 @@ const Point = ({point, index}) => (
       )}
       {point.usages && point.usages.map(usage => (
         <Chip
-          key={`${point._id}-${usage}`}
+          key={`${point.id}-${usage}`}
           label={usage}
           sx={{
             backgroundColor: getUsageColor(usage).background,

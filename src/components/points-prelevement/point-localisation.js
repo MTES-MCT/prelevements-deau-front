@@ -1,74 +1,98 @@
-import {Box, Typography} from '@mui/material'
-
 import Map from '@/components/map/index.js'
 
-const LabelValue = ({label, value}) => {
-  if (value) {
+const LabelValue = ({label, value, children}) => {
+    if (!value && !children) {
+        return null
+    }
+
     return (
-      <li className='ml-5'>
-        <b>{label} : </b>
-        <i>{value}</i>
-      </li>
+        <li className='ml-5'>
+            <b>{label} : </b>
+            {value ? <i>{value}</i> : children}
+        </li>
     )
-  }
 }
 
-const PointLocalisation = ({pointPrelevement}) =>
-  (
-    <>
-      <div>
-        { pointPrelevement.commune && (
-          <Typography
-            gutterBottom
-            variant='h5'
-          >
-            {pointPrelevement.commune.nom} - {pointPrelevement.commune.code}
-          </Typography>
-        ) }
-        <LabelValue label='Détails de localisation' value={pointPrelevement.detail_localisation} />
-        <LabelValue label='Précision géométrique' value={pointPrelevement.precision_geom} />
-        {pointPrelevement.type_milieu === 'Eau souterraine' && (
-          <>
-            {pointPrelevement.profondeur && (
-              <Box>
-                <b>Profondeur : </b>
-                <i>{pointPrelevement.profondeur} m</i>
-              </Box>
+const getGeoportailUrl = coordinates => {
+    if (!Array.isArray(coordinates) || coordinates.length !== 2) {
+        return null
+    }
+
+    const [lon, lat] = coordinates
+
+    const params = new URLSearchParams({
+        c: `${lon},${lat}`,
+        z: '15',
+        l0: 'GEOGRAPHICALGRIDSYSTEMS.MAPS::GEOPORTAIL:OGC:WMTS(1)',
+        permalink: 'yes'
+    })
+
+    return `https://www.geoportail.gouv.fr/carte?${params.toString()}`
+}
+
+const codeFields = [
+    {key: 'codeEUMasseDEau', label: 'Code masse d’eau (EU)'},
+    {key: 'codePTP', label: 'Code point de prélèvement (PTP)'},
+    {key: 'codeOPR', label: 'Code ouvrage de prélèvement (OPR)'},
+    {key: 'codeBDLISA', label: 'Code BDLISA (entité hydrogéologique)'},
+    {key: 'codeBSS', label: 'Code BSS (Banque du Sous-Sol)'},
+    {key: 'codeAIOT', label: 'Code AIOT'},
+    {key: 'codeBDCarthage', label: 'Code BD Carthage (hydrographie)'},
+    {key: 'codeBDTopage', label: 'Code BD Topage'},
+    {key: 'codeSISPEA', label: 'Code SISPEA (collectivité)'}
+]
+
+const PointLocalisation = ({pointPrelevement}) => {
+    const coordinates = pointPrelevement.coordinates?.coordinates
+    const geoportailUrl = getGeoportailUrl(coordinates)
+
+    const hasCoordinates = Array.isArray(coordinates) && coordinates.length === 2
+    const [lon, lat] = hasCoordinates ? coordinates : []
+
+    return (
+        <>
+            <ul>
+                {hasCoordinates && (
+                    <LabelValue label='Coordonnées'>
+                        <i>{lat}, {lon}</i>
+                        {geoportailUrl && (
+                            <>
+                                {' '}
+                                (
+                                <a
+                                    href={geoportailUrl}
+                                    target='_blank'
+                                    rel='noopener noreferrer'
+                                >
+                                    voir sur Géoportail
+                                </a>
+                                )
+                            </>
+                        )}
+                    </LabelValue>
+                )}
+
+                {codeFields.map(({key, label}) => (
+                    <LabelValue
+                        key={key}
+                        label={label}
+                        value={pointPrelevement[key]}
+                    />
+                ))}
+            </ul>
+
+            {hasCoordinates && (
+                <div className='h-[360px]'>
+                    <Map
+                        showLabels={false}
+                        points={[pointPrelevement]}
+                        filteredPoints={[pointPrelevement]}
+                        selectedPoint={pointPrelevement}
+                    />
+                </div>
             )}
-            {pointPrelevement.meso && (
-              <Box>
-                <b>Masse d’eau souterraine (DCE) : </b>
-                <span>{pointPrelevement.meso.code} - {pointPrelevement.meso.nom}</span>
-              </Box>
-            )}
-            <LabelValue label='Zone de répartition des eaux' value={pointPrelevement.zre ? 'oui' : null} />
-          </>
-        )}
-        {pointPrelevement.type_milieu === 'Eau de surface' && (
-          <>
-            {pointPrelevement.meContinentalesBv && (
-              <Box>
-                <b>Masse d’eau cours d’eau (DCE) : </b>
-                <span>{pointPrelevement.meContinentalesBv.code} - {pointPrelevement.meContinentalesBv.nom}</span>
-              </Box>
-            )}
-            <LabelValue label='Cours d’eau (BD Carthage)' value={pointPrelevement.bvBdCarthage?.nom} />
-            <LabelValue label='Cours d’eau indiqué dans l’autorisation' value={pointPrelevement.cours_eau} />
-            <LabelValue label='Autres noms' value={pointPrelevement.autresNoms} />
-            <LabelValue label='Zone de répartition des eaux' value={pointPrelevement.zre ? 'oui' : null} />
-            <LabelValue label='Réservoir biologique' value={pointPrelevement.reservoir_biologique ? 'oui' : null} />
-          </>
-        )}
-      </div>
-      <div className='h-[360px]'>
-        <Map
-          showLabels={false}
-          points={[pointPrelevement]}
-          filteredPoints={[pointPrelevement]}
-          selectedPoint={pointPrelevement}
-        />
-      </div>
-    </>
-  )
+        </>
+    )
+}
 
 export default PointLocalisation
