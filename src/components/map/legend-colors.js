@@ -1,3 +1,17 @@
+import {HomeOutlined} from '@mui/icons-material'
+import AgricultureOutlined from '@mui/icons-material/AgricultureOutlined'
+import BoltOutlined from '@mui/icons-material/BoltOutlined'
+import DeviceThermostatOutlined from '@mui/icons-material/DeviceThermostatOutlined'
+import EditOffOutlined from '@mui/icons-material/EditOffOutlined'
+import FactoryOutlined from '@mui/icons-material/FactoryOutlined'
+import InterestsOutlined from '@mui/icons-material/InterestsOutlined'
+import LiquorOutlined from '@mui/icons-material/LiquorOutlined'
+import LocalDrinkOutlined from '@mui/icons-material/LocalDrinkOutlined'
+import LocalShippingOutlined from '@mui/icons-material/LocalShippingOutlined'
+import ParkOutlined from '@mui/icons-material/ParkOutlined'
+import WaterOutlined from '@mui/icons-material/WaterOutlined'
+import WhatshotOutlined from '@mui/icons-material/WhatshotOutlined'
+
 const defaultTextColor = 'var(--text-default-grey)'
 const lightTextColor = 'var(--text-inverted-grey)'
 
@@ -21,11 +35,31 @@ export const usageLabels = {
   DOMESTIQUE: 'Usage domestique'
 }
 
+export const usageIcons = {
+  AEP: LocalDrinkOutlined,
+  AGRICULTURE_ELEVAGE: AgricultureOutlined,
+  IRRIGATION: ParkOutlined,
+  INDUSTRIE: FactoryOutlined,
+  ENERGIE: BoltOutlined,
+  EMBOUTEILLAGE: LiquorOutlined,
+  DEFENSE_INCENDIE: WhatshotOutlined,
+  REALIMENTATION_EAU: WaterOutlined,
+  CANAUX: WaterOutlined,
+  ETIAGE: WaterOutlined,
+  ALIMENTATION_SOUTIEN_CANAL: WaterOutlined,
+  THERMALISME_THALASSO: DeviceThermostatOutlined,
+  LOISIRS: InterestsOutlined,
+  DOMESTIQUE: HomeOutlined,
+  ENTRETIEN_VOIRIES: LocalShippingOutlined,
+  PAS_D_USAGE: EditOffOutlined,
+  INCONNU: EditOffOutlined
+}
+
 export const legendColors = {
   usages: [
     {key: 'AEP', color: 'var(--background-flat-blue-france)', textColor: lightTextColor},
     {key: 'AGRICULTURE_ELEVAGE', color: 'var(--background-flat-green-archipel)', textColor: lightTextColor},
-    {key: 'IRRIGATION', color: 'var(--background-flat-green-menthe)', textColor: defaultTextColor},
+    {key: 'IRRIGATION', color: 'var(--background-flat-green-menthe)', textColor: lightTextColor},
     {key: 'INDUSTRIE', color: 'var(--artwork-major-red-marianne-active)', textColor: lightTextColor},
     {key: 'ENERGIE', color: 'var(--background-flat-yellow-tournesol)', textColor: defaultTextColor},
     {key: 'LOISIRS', color: 'var(--background-flat-pink-macaron)', textColor: defaultTextColor},
@@ -46,12 +80,13 @@ export const legendColors = {
   ]
 }
 
-
 export const usageColors = Object.fromEntries(
-    legendColors.usages.map(({key, color}) => [key, color])
+  legendColors.usages.map(({key, color, textColor, icon}) => [
+    key,
+    {
+      color,
+      textColor,
+      icon
+    }
+  ])
 )
-
-
-export function getUsagesColors(usage) {
-  return legendColors.usages.find(u => u.text === usage)
-}

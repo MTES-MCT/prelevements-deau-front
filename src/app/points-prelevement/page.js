@@ -125,6 +125,10 @@ const Page = () => {
         matches &&= point.waterBodyType === filters.waterBodyType
       }
 
+      if (filters.usages && filters.usages.length > 0) {
+        matches &&= filters.usages.some(usage => point.usages.includes(usage))
+      }
+
       if (filters.status) {
         matches &&= point.exploitationsStatus === filters.status
       }

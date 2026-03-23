@@ -4,11 +4,12 @@ import {
   Box, ListItem, Chip, Typography
 } from '@mui/material'
 
-import {getUsageColor, getTypeMilieuColor} from '@/lib/points-prelevement.js'
+import {usageColors} from '@/components/map/legend-colors.js'
+import {getTypeMilieuColor} from '@/lib/points-prelevement.js'
 
 const Point = ({point, index}) => (
   <ListItem
-    key={point._id}
+    key={point.id}
     sx={{
       backgroundColor: index % 2 === 0 ? fr.colors.decisions.background.default.grey.default : fr.colors.decisions.background.alt.blueFrance.default,
       justifyContent: 'space-between',
@@ -35,8 +36,8 @@ const Point = ({point, index}) => (
           key={`${point.id}-${usage}`}
           label={usage}
           sx={{
-            backgroundColor: getUsageColor(usage).background,
-            color: getUsageColor(usage).textColor
+            backgroundColor: usageColors[usage].color,
+            color: usageColors[usage].textColor
           }}
         />
       ))}

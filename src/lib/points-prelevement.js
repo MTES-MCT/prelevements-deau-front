@@ -1,18 +1,4 @@
-import {
-  AgricultureOutlined, BoltOutlined, DeviceThermostatOutlined, EditOffOutlined, FactoryOutlined,
-  InterestsOutlined,
-  LiquorOutlined,
-  LocalDrinkOutlined,
-  LocalShippingOutlined
-} from '@mui/icons-material'
-
-import {legendColors} from '@/components/map/legend-colors.js'
-
-// Fonction utilitaire pour récupérer la couleur associée à un usage
-export const getUsageColor = usage => {
-  const {color: background, textColor} = legendColors.usages.find(u => u.text === usage) || {}
-  return {background, textColor}
-}
+import {legendColors, usageColors} from '@/components/map/legend-colors.js'
 
 // Fonction utilitaire pour récupérer la couleur associée au type de milieu
 export const getTypeMilieuColor = typeMilieu => {
@@ -72,27 +58,26 @@ export function createPointPrelevementFeatures(points) {
   }
 }
 
-export const usageColors = {
-  'Camion citerne': '#8a2be2',
-  'Eau potable': '#007cbf',
-  Agriculture: '#00a6a6',
-  Hydroélectricité: '#FFCC00',
-  Autre: '#f0f0f0',
-  'Eau embouteillée': '#ffa6c9',
-  Industrie: '#ff6347',
-  'Non renseigné': '#ccc'
-}
+function resolveCssColor(color) {
+  if (!color) {
+    return color
+  }
 
-export const usageIcons = {
-  'Eau potable': LocalDrinkOutlined,
-  Agriculture: AgricultureOutlined,
-  Autre: InterestsOutlined,
-  'Camion citerne': LocalShippingOutlined,
-  'Eau embouteillée': LiquorOutlined,
-  Hydroélectricité: BoltOutlined,
-  Industrie: FactoryOutlined,
-  'non-renseignée': EditOffOutlined,
-  Thermalisme: DeviceThermostatOutlined
+  if (color.startsWith('--')) {
+    return getComputedStyle(document.documentElement)
+      .getPropertyValue(color)
+      .trim()
+  }
+
+  if (color.startsWith('var(') && color.endsWith(')')) {
+    const variableName = color.slice(4, -1).trim()
+
+    return getComputedStyle(document.documentElement)
+      .getPropertyValue(variableName)
+      .trim()
+  }
+
+  return color
 }
 
 /**
@@ -137,7 +122,7 @@ export function createUsagePieChart(usages) {
 
   for (let i = 0; i < count; i++) {
     const usageName = usages[i]
-    const color = usageColors[usageName] || '#ccc'
+    const color = usageColors[usageName]?.color || '#ccc'
     const start = i / count
     const end = (i + 1) / count
     const segmentPath = createPieSegment(cx, cy, radius, start, end, color)
@@ -184,7 +169,7 @@ function createPieSegment(cx, cy, r, start, end, color) {
 
   const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
   path.setAttribute('d', d)
-  path.setAttribute('fill', color)
+  path.setAttribute('fill', resolveCssColor(color))
 
   return path
 }
