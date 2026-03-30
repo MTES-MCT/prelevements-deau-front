@@ -55,7 +55,7 @@ const metas = dossier => {
   const dateDepot = dossier.createdAt ? moment(dossier.createdAt).format('LL') : 'Non renseigné'
   const periodLabel = getSourcePeriodLabel(dossier?.source)
 
-  return [
+  const metas = [
     {
       icon: EventOutlined,
       content: `Date de dépôt : ${dateDepot}`
@@ -67,19 +67,34 @@ const metas = dossier => {
     {
       icon: TableRowsOutlined,
       content: typeDonnees(dossier.dataSourceType)
-    },
-    {
-      icon: WaterDropOutlined,
-      content: dossier.source?.metadata?.totalWaterVolumeWithdrawn
-        ? (
-          <>
-            Volume prélevé : {formatNumber(dossier.source?.metadata?.totalWaterVolumeWithdrawn)}{' '}
-            <span aria-label='mètres cubes' role='text'>m³</span>
-          </>
-        )
-        : 'Aucun volume prélevé déclaré'
     }
   ]
+
+  if (dossier.source?.metadata?.totalWaterVolumeWithdrawn) {
+    metas.push({
+      icon: WaterDropOutlined,
+      content: (
+        <>
+          Volume prélevé : {formatNumber(dossier.source?.metadata?.totalWaterVolumeWithdrawn)}{' '}
+          <span aria-label='mètres cubes' role='text'>m³</span>
+        </>
+      )
+    })
+  }
+
+  if (dossier.source?.metadata?.totalWaterVolumeDischarged) {
+    metas.push({
+      icon: WaterDropOutlined,
+      content: (
+        <>
+          Volume rejeté : {formatNumber(dossier.source?.metadata?.totalWaterVolumeDischarged)}{' '}
+          <span aria-label='mètres cubes' role='text'>m³</span>
+        </>
+      )
+    })
+  }
+
+  return metas
 }
 
 const DossierCard = ({dossier, background, url}) => (

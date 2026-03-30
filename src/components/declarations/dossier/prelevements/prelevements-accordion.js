@@ -151,7 +151,7 @@ const PrelevementsAccordion = ({
                 direction={{xs: 'column', sm: 'row'}}
                 spacing={{xs: 0.75, sm: 2}}
               >
-                {isVolumeDefined && (
+                {isVolumeDefined && volumePreleveTotal > 0 && (
                   <Box
                     sx={{
                       display: 'inline-flex',
@@ -183,7 +183,7 @@ const PrelevementsAccordion = ({
                   </Box>
                 )}
 
-                {isRejetDefined && (
+                {isRejetDefined && volumeRejeteTotal > 0 && (
                   <Box
                     sx={{
                       display: 'inline-flex',

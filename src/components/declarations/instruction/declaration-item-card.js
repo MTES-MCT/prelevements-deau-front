@@ -30,7 +30,7 @@ const metas = source => {
   const dateDepot = source.createdAt ? moment(source.createdAt).format('LL') : 'Non renseigné'
   const periodLabel = getSourcePeriodLabel(source)
 
-  return [
+  const metas = [
     {
       icon: EventOutlined,
       content: `Date de dépôt : ${dateDepot}`
@@ -42,19 +42,34 @@ const metas = source => {
     {
       icon: LocationOnOutlined,
       content: `${source._count.chunks} point${source._count.chunks > 1 ? 's' : ''}`
-    },
-    {
-      icon: WaterDropOutlined,
-      content: source?.metadata?.totalWaterVolumeWithdrawn
-        ? (
-          <>
-            Volume prélevé : {formatNumber(source?.metadata?.totalWaterVolumeWithdrawn)}{' '}
-            <span aria-label='mètres cubes' role='text'>m³</span>
-          </>
-        )
-        : 'Aucun volume prélevé déclaré'
     }
   ]
+
+  if (source?.metadata?.totalWaterVolumeWithdrawn) {
+    metas.push({
+      icon: WaterDropOutlined,
+      content: (
+        <>
+          Volume prélevé : {formatNumber(source?.metadata?.totalWaterVolumeWithdrawn)}{' '}
+          <span aria-label='mètres cubes' role='text'>m³</span>
+        </>
+      )
+    })
+  }
+
+  if (source?.metadata?.totalWaterVolumeDischarged) {
+    metas.push({
+      icon: WaterDropOutlined,
+      content: (
+        <>
+          Volume rejeté : {formatNumber(source?.metadata?.totalWaterVolumeDischarged)}{' '}
+          <span aria-label='mètres cubes' role='text'>m³</span>
+        </>
+      )
+    })
+  }
+
+  return metas
 }
 
 const DeclarationItemCard = ({source, background, url}) => (
