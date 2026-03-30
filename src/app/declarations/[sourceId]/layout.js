@@ -22,7 +22,7 @@ const SourceLayout = async ({params, children}) => {
         <Breadcrumb
           currentPageLabel={`Déclaration n°${code}`}
           segments={[{
-            label: 'Instruction',
+            label: 'Déclarations',
             linkProps: {
               href: getDeclarationsURL()
             }
