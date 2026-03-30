@@ -11,6 +11,7 @@ import {legendColors, usageColors, usageLabels} from '@/components/map/legend-co
 
 const MAIN_USAGES = new Set([
   'AEP',
+  'AQUACULTURE',
   'INDUSTRIE',
   'IRRIGATION',
   'INCONNU'

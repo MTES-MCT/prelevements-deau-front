@@ -20,6 +20,7 @@ export const usageLabels = {
   PAS_D_USAGE: 'Pas d’usage',
   IRRIGATION: 'Irrigation',
   AGRICULTURE_ELEVAGE: 'Agriculture / élevage',
+  AQUACULTURE: 'Aquaculture',
   INDUSTRIE: 'Industrie',
   AEP: 'Alimentation eau potable (AEP)',
   ENERGIE: 'Énergie / hydroélectricité',
@@ -38,6 +39,7 @@ export const usageLabels = {
 export const usageIcons = {
   AEP: LocalDrinkOutlined,
   AGRICULTURE_ELEVAGE: AgricultureOutlined,
+  AQUACULTURE: WaterOutlined,
   IRRIGATION: ParkOutlined,
   INDUSTRIE: FactoryOutlined,
   ENERGIE: BoltOutlined,
@@ -59,6 +61,7 @@ export const legendColors = {
   usages: [
     {key: 'AEP', color: 'var(--background-flat-blue-france)', textColor: lightTextColor},
     {key: 'AGRICULTURE_ELEVAGE', color: 'var(--background-flat-green-archipel)', textColor: lightTextColor},
+    {key: 'AQUACULTURE', color: 'var(--background-flat-blue-ecume)', textColor: lightTextColor},
     {key: 'IRRIGATION', color: 'var(--background-flat-green-menthe)', textColor: lightTextColor},
     {key: 'INDUSTRIE', color: 'var(--artwork-major-red-marianne-active)', textColor: lightTextColor},
     {key: 'ENERGIE', color: 'var(--background-flat-yellow-tournesol)', textColor: defaultTextColor},
