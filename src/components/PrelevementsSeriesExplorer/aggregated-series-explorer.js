@@ -406,7 +406,6 @@ const AggregatedSeriesExplorer = ({
 
     const maxUnitsReached = selectedUnits.size >= MAX_DIFFERENT_UNITS
 
-    // Apply disabled state
     const optionsWithDisabled = parameterOptionsNormalized.map(option => {
       const isEnabled = !maxUnitsReached
         || currentParameters.includes(option.value)
@@ -418,17 +417,9 @@ const AggregatedSeriesExplorer = ({
       }
     })
 
-    // Separate "volume prélevé" to put it first
-    const volumePreleveOption = optionsWithDisabled.find(
-      opt => opt.value.toLowerCase() === DEFAULT_PARAMETER.toLowerCase()
-    )
-    const otherOptions = optionsWithDisabled.filter(
-      opt => opt.value.toLowerCase() !== DEFAULT_PARAMETER.toLowerCase()
-    )
-
-    // Group other options by valueType
     const groupedByValueType = new Map()
-    for (const option of otherOptions) {
+
+    for (const option of optionsWithDisabled) {
       const valueTypeLabel = formatValueTypeLabel(option.valueType) ?? 'Non spécifié'
       if (!groupedByValueType.has(valueTypeLabel)) {
         groupedByValueType.set(valueTypeLabel, [])
@@ -437,32 +428,31 @@ const AggregatedSeriesExplorer = ({
       groupedByValueType.get(valueTypeLabel).push(option)
     }
 
-    // Build final structure with groups
-    const groups = []
-
-    // Add "volume prélevé" first as a single-item group if it exists
-    if (volumePreleveOption) {
-      groups.push({
-        label: formatValueTypeLabel(volumePreleveOption.valueType) ?? 'Non spécifié',
-        options: [volumePreleveOption]
-      })
-    }
-
-    // Add other groups sorted by label
     const sortedValueTypes = [...groupedByValueType.keys()].sort()
-    for (const valueTypeLabel of sortedValueTypes) {
-      // Skip if already added as volume prélevé group
-      if (volumePreleveOption && formatValueTypeLabel(volumePreleveOption.valueType) === valueTypeLabel) {
-        continue
-      }
 
-      groups.push({
-        label: valueTypeLabel,
-        options: groupedByValueType.get(valueTypeLabel)
+    return sortedValueTypes.map(valueTypeLabel => {
+      const options = groupedByValueType.get(valueTypeLabel)
+
+      options.sort((a, b) => {
+        const aIsDefault = a.value.toLowerCase() === DEFAULT_PARAMETER.toLowerCase()
+        const bIsDefault = b.value.toLowerCase() === DEFAULT_PARAMETER.toLowerCase()
+
+        if (aIsDefault && !bIsDefault) {
+          return -1
+        }
+
+        if (!aIsDefault && bIsDefault) {
+          return 1
+        }
+
+        return a.label.localeCompare(b.label, 'fr')
       })
-    }
 
-    return groups
+      return {
+        label: valueTypeLabel,
+        options
+      }
+    })
   }, [parameterOptionsNormalized, currentParameters, parameterOptionMap])
 
   // Series is expected to be a Map of parameter -> series data
