@@ -95,7 +95,7 @@ const AuthCallbackPage = () => {
                   <Alert
                     severity='success'
                     title='Connexion réussie'
-                    description={'Vous allez être redirigé vers la page d\'accueil...'}
+                    description='Veuillez patienter quelques instants...'
                   />
                 )}
 

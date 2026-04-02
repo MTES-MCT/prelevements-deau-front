@@ -105,3 +105,13 @@ export async function getPointsFromPreleveurAction(idPreleveur) {
 export async function getExploitationFromPreleveurAction(idPreleveur) {
   return withErrorHandling(async () => fetchJSON(`api/preleveurs/${idPreleveur}/exploitations`))
 }
+
+export async function sendDeclarationReminderAction(declarantId) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(`api/declarants/${declarantId}/send-reminder`, {
+      method: 'POST'
+    })
+    revalidatePath(`/preleveurs/${declarantId}`)
+    return result
+  })
+}

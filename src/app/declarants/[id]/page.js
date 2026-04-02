@@ -5,6 +5,7 @@ import {
 import {notFound} from 'next/navigation'
 
 import PreleveurMap from '@/components/declarants/preleveur-map.js'
+import DeclarationReminderCard from '@/components/declarations/declaration-reminder-card.js'
 import DocumentsList from '@/components/documents/documents-list.js'
 import ExploitationsList from '@/components/exploitations/exploitations-list.js'
 import SeriesExplorer from '@/components/points-prelevement/series-explorer.js'
@@ -128,6 +129,7 @@ const Page = async ({params}) => {
         ]}
       />
       <InfoCard declarant={declarant} />
+      <DeclarationReminderCard declarant={declarant} />
       {pointsPrelevement.length > 0 && (
         <PreleveurMap points={pointsPrelevement} />
       )}

@@ -23,13 +23,6 @@ const ROLE_COLORS = {
 const NAV_ITEMS = [
   {
     linkProps: {
-      href: '/',
-      target: '_self'
-    },
-    text: 'Accueil'
-  },
-  {
-    linkProps: {
       href: '/mes-declarations',
       target: '_self'
     },

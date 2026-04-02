@@ -15,41 +15,45 @@ export const dynamic = 'force-dynamic'
 
 const Dossiers = async () => {
   const result = await getMyDeclarationsAction()
-  const dossiers = result?.success ? result.data.data : []
+  const response = result?.success ? result.data : null
+  const dossiers = response?.data ?? []
+  const canCreateDeclaration = response?.meta?.canCreateDeclaration ?? false
 
   return (
     <>
       <StartDsfrOnHydration />
 
-      <div
-        className='fr-mt-4w fr-mb-4w'
-        style={{
-          backgroundColor: fr.colors.decisions.background.alt.blueFrance.default
-        }}
-      >
-        <div className='fr-container fr-py-6w text-center'>
-          <h2 className='fr-h3 fr-mb-2w'>
-            Déclarez vos prélèvements d’eau
-          </h2>
+      {canCreateDeclaration && (
+        <div
+          className='fr-mt-4w fr-mb-4w'
+          style={{
+            backgroundColor: fr.colors.decisions.background.alt.blueFrance.default
+          }}
+        >
+          <div className='fr-container fr-py-6w text-center'>
+            <h2 className='fr-h3 fr-mb-2w'>
+              Déclarez vos prélèvements d’eau
+            </h2>
 
-          <p className='fr-text fr-mb-3w'>
-            Déposez vos fichiers de déclaration après validation automatique.
-          </p>
+            <p className='fr-text fr-mb-3w'>
+              Déposez vos fichiers de déclaration après validation automatique.
+            </p>
 
-          <Button
-            size='large'
-            priority='primary'
-            iconId='fr-icon-add-line'
-            iconPosition='left'
-            linkProps={{
-              href: '/mes-declarations/new'
-            }}
-            title='Déposer une nouvelle déclaration'
-          >
-            Déposer une nouvelle déclaration
-          </Button>
+            <Button
+              size='large'
+              priority='primary'
+              iconId='fr-icon-add-line'
+              iconPosition='left'
+              linkProps={{
+                href: '/mes-declarations/new'
+              }}
+              title='Déposer une nouvelle déclaration'
+            >
+              Déposer une nouvelle déclaration
+            </Button>
+          </div>
         </div>
-      </div>
+      ) }
 
       <div className='fr-container fr-mt-6w fr-mb-6w'>
         <h2 className='fr-h4 fr-mb-1w'>
@@ -69,17 +73,17 @@ const Dossiers = async () => {
           </CallOut>
         ) : (
           <div>
-            { dossiers
+            {dossiers
               .filter(dossier => dossier.source)
-              .map(((d, idx) => (
+              .map((dossier, idx) => (
                 <DossierCard
-                  key={d.id}
+                  key={dossier.id}
                   background={idx % 2 === 0 ? 'primary' : 'secondary'}
                   className='fr-mb-2w'
-                  dossier={d}
-                  url={getMyDeclarationURL(d)}
+                  dossier={dossier}
+                  url={getMyDeclarationURL(dossier)}
                 />
-              ))) }
+              ))}
           </div>
         )}
       </div>
