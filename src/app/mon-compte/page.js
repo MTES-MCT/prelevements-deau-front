@@ -53,6 +53,14 @@ const formatRole = role => {
   }
 }
 
+const formatLastLoginAt = lastLoginAt => {
+  if (!lastLoginAt) {
+    return '-'
+  }
+
+  return moment(lastLoginAt).format('LLL')
+}
+
 const InfoLine = ({label, value}) => (
   <Box className='flex flex-wrap gap-2 items-center'>
     <Typography fontWeight='medium' className='fr-text--sm'>{label}</Typography>
@@ -99,6 +107,7 @@ const MonComptePage = async () => {
                 <InfoLine label='Nom' value={user?.lastName} />
                 <InfoLine label='Email' value={user?.email} />
                 <InfoLine label='Rôle' value={formatRole(role)} />
+                <InfoLine label='Date dernière connexion' value={formatLastLoginAt(user?.lastLoginAt)} />
               </div>
 
               {user?.role && (
