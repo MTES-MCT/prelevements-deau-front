@@ -130,7 +130,7 @@ const DeclarationReminderCard = ({declarant}) => {
   const statusClassName = STATUS_CLASS_NAMES[status.type] ?? STATUS_CLASS_NAMES.info
 
   return (
-    <SectionCard title='Relance déclaration'>
+    <SectionCard title='Suivi déclaration'>
       <div className='fr-grid-row fr-grid-row--gutters fr-grid-row--middle'>
         <div className='fr-col-12 fr-col-lg-8'>
           <div className='fr-mb-2w'>
