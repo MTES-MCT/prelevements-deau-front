@@ -9,7 +9,7 @@ export function getDeclarationURL(sourceId) {
 }
 
 export function getDeclarantsURL() {
-  return '/declarations'
+  return '/declarants'
 }
 
 export function getDeclarantURL(declarant) {
