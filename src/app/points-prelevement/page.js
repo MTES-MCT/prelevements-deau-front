@@ -24,11 +24,7 @@ import LoadingOverlay from '@/components/ui/LoadingOverlay/index.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import useEvent from '@/hook/use-event.js'
 import {downloadCsv} from '@/lib/export-csv.js'
-import {
-  extractStatus,
-  extractWaterBodyType,
-  extractUsages
-} from '@/lib/points-prelevement.js'
+import {extractWaterBodyType, extractUsages} from '@/lib/points-prelevement.js'
 import {getPointPrelevementURL} from '@/lib/urls.js'
 import {getPointsPrelevementAction} from '@/server/actions/points-prelevement.js'
 
@@ -46,7 +42,6 @@ const Page = () => {
   const [filters, setFilters] = useState({
     name: '',
     typeMilieu: '',
-    status: '',
     usages: []
   })
   const [filteredPoints, setFilteredPoints] = useState([])
@@ -71,15 +66,13 @@ const Page = () => {
   }, [])
 
   // Calculer les options pour les filtres dès que les données sont disponibles
-  const {waterBodyTypeOptions, usagesOptions, statusOptions} = useMemo(() => {
+  const {waterBodyTypeOptions, usagesOptions} = useMemo(() => {
     const waterBodyTypeOptions = points ? extractWaterBodyType(points) : []
     const usagesOptions = points ? extractUsages(points) : []
-    const statusOptions = points ? extractStatus(points) : []
 
     return {
       waterBodyTypeOptions,
-      usagesOptions,
-      statusOptions
+      usagesOptions
     }
   }, [points])
 
@@ -129,10 +122,6 @@ const Page = () => {
         matches &&= filters.usages.some(usage => point.usages.includes(usage))
       }
 
-      if (filters.status) {
-        matches &&= point.exploitationsStatus === filters.status
-      }
-
       return matches
     })
 
@@ -162,7 +151,6 @@ const Page = () => {
             filters={filters}
             typeMilieuOptions={waterBodyTypeOptions}
             usagesOptions={usagesOptions}
-            statusOptions={statusOptions}
             exportList={exportPointsList}
             onFilter={handleFilter}
           />

@@ -1,4 +1,4 @@
-import {Person, WaterDropOutlined} from '@mui/icons-material'
+import {Person} from '@mui/icons-material'
 import {
   Box,
   Chip,
@@ -7,11 +7,10 @@ import {
 } from '@mui/material'
 
 import {getDeclarantTitleFromUser} from '@/lib/declarants.js'
-import formatDate from '@/lib/format-date.js'
 
 const Popup = ({point}) => {
   const theme = useTheme()
-  const {name, autresNoms, preleveurs, exploitationsStatus, exploitationsStartDate, usages, type_milieu: typeMilieu} = point
+  const {name, autresNoms, preleveurs, usages} = point
 
   return (
     // TODO : Utiliser le theme DSFR
@@ -42,18 +41,6 @@ const Popup = ({point}) => {
         )}
       </Box>
 
-      <Box>
-        <Box className='flex items-center gap-1'>
-          <WaterDropOutlined />Statut de l’exploitation : {exploitationsStatus || 'non renseigné'}
-        </Box>
-        { exploitationsStartDate && (
-
-          <Box className='flex items-center gap-1'>
-            Exploité depuis le {formatDate(exploitationsStartDate)}
-          </Box>
-        ) }
-      </Box>
-
       <Box className='flex flex-col gap-1'>
         <Box className='flex flex-wrap gap-1'>
           {usages.map(usage => (
@@ -64,7 +51,6 @@ const Popup = ({point}) => {
               variant='outlined' />
           ))}
         </Box>
-        <Chip label={typeMilieu} size='small' />
       </Box>
     </Box>
   )

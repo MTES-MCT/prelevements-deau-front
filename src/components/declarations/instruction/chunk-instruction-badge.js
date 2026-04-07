@@ -17,8 +17,8 @@ import 'moment/locale/fr'
 
 export const CHUNK_STATUS = {
   PENDING: {
-    label: 'Volumes à instruire',
-    instructionLabel: 'À instruire',
+    label: 'Volumes à valider',
+    instructionLabel: 'À valider',
     severity: 'info',
     icon: ScheduleOutlinedIcon,
     color: fr.colors.decisions.border.plain.info.default,
