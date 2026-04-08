@@ -206,7 +206,7 @@ const ChunkInstructionForm = ({
               multiline
               minRows={3}
               value={instructionComment}
-              placeholder='Ajouter un commentaire d’instruction'
+              placeholder='Ajouter un commentaire de validation'
               disabled={isSubmitting}
               onChange={event => setInstructionComment(event.target.value)}
             />
@@ -220,7 +220,7 @@ const ChunkInstructionForm = ({
               disabled={isSubmitting}
               variant='contained'
             >
-              {isSubmitting ? 'Validation…' : 'Instruire les données'}
+              {isSubmitting ? 'Validation…' : 'Valider les données'}
             </Button>
           </Box>
         </Grid>

@@ -21,7 +21,7 @@ export const sourceStateLabels = {
     severity: 'warning'
   },
   INSTRUCTION_IN_PROGRESS: {
-    label: 'Instruction en cours',
+    label: 'Validation en cours',
     severity: 'info'
   }
 }
