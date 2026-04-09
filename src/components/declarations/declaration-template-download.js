@@ -7,7 +7,7 @@ import XlsxPopulate from 'xlsx-populate/browser/xlsx-populate'
 
 import {getPointsPrelevementOptionsAction} from '@/server/actions/points-prelevement.js'
 
-const TEMPLATE_PATH = '/images/assets/template_declaration_prelevements.xlsx'
+const TEMPLATE_PATH = '/images/assets/modele_declaration_volumes.xlsx'
 const SHEET_NAME = 'point_de_prelevement'
 const TARGET_COLUMN_NAME = 'id_point_de_prelevement_ou_rejet'
 const OUTPUT_FILE_NAME = 'template_declaration_prelevements_enrichi.xlsx'
@@ -44,7 +44,7 @@ const DeclarationTemplateDownload = () => {
       ])
 
       if (!templateResponse.ok) {
-        throw new Error('Impossible de récupérer le template.')
+        throw new Error('Impossible de récupérer le modèle.')
       }
 
       if (!result?.success) {
@@ -103,8 +103,8 @@ const DeclarationTemplateDownload = () => {
   return (
     <div>
       <Download
-        details={isLoading ? 'Préparation du fichier…' : 'XLSX – template enrichi avec vos points de prélèvement'}
-        label='Télécharger le template « Données standardisées »'
+        details={isLoading ? 'Préparation du fichier…' : 'XLSX – modèle de déclaration de volumes enrichi avec vos points de prélèvement'}
+        label='Télécharger le modèle de déclaration de volumes enrichi'
         linkProps={{
           href: TEMPLATE_PATH,
           onClick: handleDownload,

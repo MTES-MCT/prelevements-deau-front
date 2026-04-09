@@ -1,5 +1,3 @@
-const STORAGE_URL = process.env.NEXT_PUBLIC_STORAGE_URL
-
 export function getDeclarationsURL() {
   return '/declarations'
 }
@@ -40,12 +38,4 @@ export function getNewExploitationURL(params) {
   }
 
   return url
-}
-
-export function getDeclarationTemplateAEP() {
-  return `${STORAGE_URL}/declaration-templates/donnees-standardisees_v2.10.xlsx`
-}
-
-export function getDeclarationTemplateTableauSuivi() {
-  return `${STORAGE_URL}/declaration-templates/tableau-de-suivi_v2.xlsx`
 }
