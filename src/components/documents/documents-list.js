@@ -1,6 +1,6 @@
 'use client'
 
-import {useState} from 'react'
+import {useMemo, useState} from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
@@ -33,6 +33,13 @@ const DocumentsList = ({idPreleveur, documents: initialDocuments, exploitations 
     setError(null)
     setIsEditDialogOpen(true)
   }
+
+  const sortedDocuments = useMemo(() => [...documentsList].sort((a, b) => {
+    const dateA = new Date(a.createdAt || 0).getTime()
+    const dateB = new Date(b.createdAt || 0).getTime()
+
+    return dateB - dateA
+  }), [documentsList])
 
   const handleDocumentUpdated = updatedDocument => {
     setDocumentsList(prev => prev.map(d => (
@@ -86,7 +93,7 @@ const DocumentsList = ({idPreleveur, documents: initialDocuments, exploitations 
           }
         }}
       >
-        {documentsList.length > 0 ? documentsList.map((d, index) => (
+        {sortedDocuments.length > 0 ? sortedDocuments.map((d, index) => (
           <div
             key={d._id}
             className='flex w-full'

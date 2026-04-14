@@ -7,6 +7,7 @@ import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Input} from '@codegouvfr/react-dsfr/Input'
 import {Select} from '@codegouvfr/react-dsfr/SelectNext'
 
+import {getPreleveurInfo} from '@/components/exploitations/exploitations-list-item.js'
 import DayMonthSelector from '@/components/form/day-month-selector.js'
 import DividerSection from '@/components/ui/DividerSection/index.js'
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
@@ -57,13 +58,17 @@ const contrainteOptions = [
   ...contraintes.map(c => ({value: c.value, label: c.label}))
 ]
 
+// Build reverse map from label to ID
 // Build a map from exploitation ID to display label
 const buildExploitationLabelsMap = exploitations => {
   const map = {}
+
   for (const exploitation of exploitations) {
     const pointName = exploitation.point?.nom || exploitation.point?.id_point || 'Point inconnu'
     const usagesText = exploitation.usages?.join(', ') || 'Usage non renseigné'
-    map[exploitation._id] = `${pointName} - ${usagesText}`
+    const preleveurName = getPreleveurInfo(exploitation.preleveur)
+
+    map[exploitation._id] = `${exploitation.id_exploitation} - ${pointName} (${preleveurName}) - ${usagesText}`
   }
 
   return map
@@ -72,6 +77,7 @@ const buildExploitationLabelsMap = exploitations => {
 // Build reverse map from label to ID
 const buildIdByLabelMap = labelsById => {
   const idByLabel = {}
+
   for (const [id, label] of Object.entries(labelsById)) {
     idByLabel[label] = id
   }
@@ -80,7 +86,6 @@ const buildIdByLabelMap = labelsById => {
 }
 
 // Group exploitations by statut for the multiselect
-// Uses the display label as value since GroupedMultiselect displays values directly
 const buildExploitationOptions = (exploitations, labelsById) => {
   const statutOrder = ['En activité', 'Terminée', 'Abandonnée', 'Non renseigné']
   const grouped = {}
@@ -89,17 +94,23 @@ const buildExploitationOptions = (exploitations, labelsById) => {
     const statut = exploitation.statut || 'Non renseigné'
     grouped[statut] ||= []
 
-    const label = exploitation.id_exploitation + ' - ' + labelsById[exploitation._id]
+    const label = labelsById[exploitation._id]
     const dateText = `Depuis le ${formatFullDateFr(exploitation.date_debut)}${exploitation.date_fin ? ` jusqu'au ${formatFullDateFr(exploitation.date_fin)}` : ''}`
 
     grouped[statut].push({
       value: label,
       content: label,
-      title: dateText
+      title: dateText,
+      sortKey: exploitation.point?.nom || ''
     })
   }
 
-  // Return groups in order, filtering out empty groups
+  for (const options of Object.values(grouped)) {
+    options.sort((a, b) =>
+      a.sortKey.localeCompare(b.sortKey, 'fr', {sensitivity: 'base'})
+    )
+  }
+
   return statutOrder
     .filter(statut => grouped[statut]?.length > 0)
     .map(statut => ({
@@ -298,7 +309,6 @@ const RegleForm = ({regle, setRegle, exploitations, documents, validationErrors 
 const RegleFormFields = ({regle, setRegle, exploitations, documents, validationErrors}) => {
   const fieldError = field => getFieldError(validationErrors, field)
 
-  // Build ID <-> label mappings
   const exploitationLabelsById = useMemo(
     () => buildExploitationLabelsMap(exploitations || []),
     [exploitations]
@@ -309,7 +319,6 @@ const RegleFormFields = ({regle, setRegle, exploitations, documents, validationE
     [exploitationLabelsById]
   )
 
-  // Build options using labels as values (for display in GroupedMultiselect)
   const exploitationOptions = useMemo(
     () => buildExploitationOptions(exploitations || [], exploitationLabelsById),
     [exploitations, exploitationLabelsById]
@@ -320,14 +329,18 @@ const RegleFormFields = ({regle, setRegle, exploitations, documents, validationE
     [documents]
   )
 
-  // Convert selected IDs to display labels for the multiselect
-  const selectedLabels = useMemo(() =>
-    (regle.exploitations || []).map(id => exploitationLabelsById[id] || id),
-  [regle.exploitations, exploitationLabelsById])
+  const selectedLabels = useMemo(
+    () => (regle.exploitations || [])
+      .map(id => exploitationLabelsById[id])
+      .filter(Boolean),
+    [regle.exploitations, exploitationLabelsById]
+  )
 
-  // Handle selection change - convert labels back to IDs
   const handleExploitationsChange = newLabels => {
-    const newIds = newLabels.map(label => idByLabel[label] || label)
+    const newIds = newLabels
+      .map(label => idByLabel[label])
+      .filter(Boolean)
+
     setRegle(prev => ({...prev, exploitations: newIds}))
   }
 
@@ -335,6 +348,7 @@ const RegleFormFields = ({regle, setRegle, exploitations, documents, validationE
     <div className='flex flex-col gap-4'>
       <div className={fieldError('exploitations') ? 'fr-input-group--error' : ''}>
         <GroupedMultiselect
+          searchable
           label='Exploitations associées *'
           hint="Sélectionnez au moins une exploitation à laquelle cette règle s'applique"
           placeholder='Sélectionner des exploitations'

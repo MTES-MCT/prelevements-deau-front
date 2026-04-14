@@ -3,7 +3,9 @@ import {
 } from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
-import {Box, List, ListItem} from '@mui/material'
+import {
+  Box, List, ListItem, IconButton, InputBase
+} from '@mui/material'
 import {xor} from 'lodash-es'
 
 import './index.css'
@@ -23,12 +25,14 @@ const GroupedMultiselect = ({
   placeholder,
   options = [],
   onChange,
-  disabled
+  disabled,
+  searchable = false
 }) => {
   const [open, setOpen] = useState(false)
   const [showMore, setShowMore] = useState(false)
   const [hiddenCount, setHiddenCount] = useState(0)
   const [focusedIndex, setFocusedIndex] = useState(-1)
+  const [search, setSearch] = useState('')
 
   const ref = useRef(null)
   const selectRef = useRef(null)
@@ -40,12 +44,16 @@ const GroupedMultiselect = ({
       if (ref.current && !ref.current.contains(e.target)) {
         setOpen(false)
         setFocusedIndex(-1)
+
+        if (searchable) {
+          setSearch('')
+        }
       }
     }
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  }, [searchable])
 
   // Calcule combien d’éléments sélectionnés peuvent être affichés sans dépasser la largeur du composant
   useEffect(() => {
@@ -70,10 +78,12 @@ const GroupedMultiselect = ({
 
     let left = 0
     let right = value.length
+
     while (left < right) {
       const mid = Math.ceil((left + right) / 2)
       let text = value.slice(0, mid).join(', ')
       const hidden = value.length - mid
+
       if (hidden > 0) {
         text += ` + ${hidden} autre${hidden > 1 ? 's' : ''}`
       }
@@ -104,14 +114,39 @@ const GroupedMultiselect = ({
 
   const normalizedOptions = useMemo(() => normalizeOptions(options), [options])
 
+  const filteredOptions = useMemo(() => {
+    if (!searchable) {
+      return normalizedOptions
+    }
+
+    const query = search.trim().toLowerCase()
+
+    if (!query) {
+      return normalizedOptions
+    }
+
+    return normalizedOptions
+      .map(group => ({
+        ...group,
+        options: group.options.filter(option => {
+          const content = String(getOptionContent(option) || '').toLowerCase()
+          const title = String(getOptionTitle(option) || '').toLowerCase()
+          const optionValue = String(getOptionValue(option) || '').toLowerCase()
+
+          return content.includes(query) || title.includes(query) || optionValue.includes(query)
+        })
+      }))
+      .filter(group => group.options.length > 0)
+  }, [normalizedOptions, search, searchable])
+
   // Liste plate des options pour navigation clavier
   const flatOptions = useMemo(() =>
-    normalizedOptions.flatMap(group =>
+    filteredOptions.flatMap(group =>
       group.options.map(option => ({
         label: group.label,
         option
       }))
-    ), [normalizedOptions])
+    ), [filteredOptions])
 
   // Gestion du focus clavier
   const handleKeyDown = useCallback(e => {
@@ -151,6 +186,11 @@ const GroupedMultiselect = ({
       case 'Escape': {
         setOpen(false)
         setFocusedIndex(-1)
+
+        if (searchable) {
+          setSearch('')
+        }
+
         e.preventDefault()
         break
       }
@@ -159,7 +199,7 @@ const GroupedMultiselect = ({
         break
       }
     }
-  }, [open, toggleOption, flatOptions, focusedIndex])
+  }, [open, toggleOption, flatOptions, focusedIndex, searchable])
 
   // Focus sur l'option sélectionnée + scrollIntoView
   useEffect(() => {
@@ -170,7 +210,15 @@ const GroupedMultiselect = ({
     }
   }, [open, focusedIndex])
 
-  const totalOptionsCount = useMemo(() => normalizedOptions.reduce((acc, group) => acc + group.options.length, 0), [normalizedOptions])
+  useEffect(() => {
+    optionRefs.current = []
+    setFocusedIndex(flatOptions.length > 0 ? 0 : -1)
+  }, [flatOptions.length, search])
+
+  const totalOptionsCount = useMemo(
+    () => normalizedOptions.reduce((acc, group) => acc + group.options.length, 0),
+    [normalizedOptions]
+  )
 
   return (
     <div
@@ -212,13 +260,65 @@ const GroupedMultiselect = ({
             border: `1px solid ${fr.colors.decisions.background.contrast.grey.default}`,
             zIndex: 10,
             padding: 0,
-            maxHeight: 200,
+            maxHeight: 260,
             overflowY: 'auto'
           }}
           role='listbox'
           tabIndex={-1}
         >
-          {normalizedOptions.map((group, groupIdx) => (
+          {searchable && (
+            <Box
+              sx={{
+                position: 'sticky',
+                top: 0,
+                zIndex: 1,
+                p: 1,
+                borderBottom: `1px solid ${fr.colors.decisions.background.contrast.grey.default}`,
+                backgroundColor: fr.colors.decisions.background.default.grey.default
+              }}
+            >
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1
+                }}
+              >
+                <InputBase
+                  autoFocus
+                  value={search}
+                  placeholder='Rechercher...'
+                  sx={{
+                    flex: 1,
+                    px: 1.5,
+                    py: 1,
+                    border: `1px solid ${fr.colors.decisions.background.contrast.grey.default}`,
+                    backgroundColor: '#fff'
+                  }}
+                  onChange={e => setSearch(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                />
+
+                {search && (
+                  <IconButton
+                    size='small'
+                    aria-label='Effacer la recherche'
+                    onClick={() => setSearch('')}
+                  >
+                    ×
+                  </IconButton>
+                )}
+              </Box>
+            </Box>
+          )}
+
+          {filteredOptions.length === 0 && (
+            <ListItem tabIndex={-1}>
+              Aucun résultat
+            </ListItem>
+          )}
+
+          {filteredOptions.map((group, groupIdx) => (
             <Box key={group.label || 'no-label'}>
               {group?.label && (
                 <ListItem
@@ -232,8 +332,9 @@ const GroupedMultiselect = ({
                   {group.label}
                 </ListItem>
               )}
+
               {group.options.map((option, optIdx) => {
-                const flatIdx = normalizedOptions
+                const flatIdx = filteredOptions
                   .slice(0, groupIdx)
                   .reduce((acc, g) => acc + g.options.length, 0) + optIdx
                 const optionValue = getOptionValue(option)

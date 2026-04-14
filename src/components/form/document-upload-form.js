@@ -9,6 +9,7 @@ import {Button} from '@codegouvfr/react-dsfr/Button'
 import {format} from 'date-fns'
 import {useRouter} from 'next/navigation'
 
+import {getPreleveurInfo} from '@/components/exploitations/exploitations-list-item.js'
 import DocumentForm from '@/components/form/document-form.js'
 import DividerSection from '@/components/ui/DividerSection/index.js'
 import FileDropzone from '@/components/ui/FileDropzone/index.js'
@@ -25,7 +26,8 @@ const buildExploitationLabelsMap = exploitations => {
   const map = {}
   for (const exploitation of exploitations) {
     const pointName = exploitation.point?.nom || exploitation.point?.id_point || 'Point inconnu'
-    map[exploitation._id] = pointName
+    const preleveurName = getPreleveurInfo(exploitation.preleveur)
+    map[exploitation._id] = `${exploitation.id_exploitation} - ${pointName} (${preleveurName})`
   }
 
   return map
@@ -50,14 +52,21 @@ const buildExploitationOptions = (exploitations, labelsById) => {
     const statut = exploitation.statut || 'Non renseigné'
     grouped[statut] ||= []
 
-    const label = exploitation.id_exploitation + ' - ' + labelsById[exploitation._id]
+    const label = labelsById[exploitation._id]
     const dateText = `Depuis le ${formatFullDateFr(exploitation.date_debut)}${exploitation.date_fin ? ` jusqu'au ${formatFullDateFr(exploitation.date_fin)}` : ''}`
 
     grouped[statut].push({
       value: label,
       content: label,
-      title: dateText
+      title: dateText,
+      sortKey: exploitation.point?.nom || ''
     })
+  }
+
+  for (const options of Object.values(grouped)) {
+    options.sort((a, b) =>
+      a.sortKey.localeCompare(b.sortKey, 'fr', {sensitivity: 'base'})
+    )
   }
 
   // Return groups in order, filtering out empty groups
@@ -96,13 +105,15 @@ const DocumentUploadForm = ({preleveur, exploitations = []}) => {
   )
 
   // Convert selected IDs to display labels for the multiselect
-  const selectedLabels = useMemo(() =>
-    selectedExploitations.map(id => exploitationLabelsById[id] || id),
-  [selectedExploitations, exploitationLabelsById])
+  const selectedLabels = selectedExploitations
+    .map(id => exploitationLabelsById[id])
+    .filter(Boolean)
 
   // Handle selection change - convert labels back to IDs
   const handleExploitationsChange = newLabels => {
-    const newIds = newLabels.map(label => idByLabel[label] || label)
+    const newIds = newLabels
+      .map(label => idByLabel[label])
+      .filter(Boolean)
     setSelectedExploitations(newIds)
   }
 
@@ -209,6 +220,7 @@ const DocumentUploadForm = ({preleveur, exploitations = []}) => {
       {exploitations.length > 0 && (
         <DividerSection title='Exploitations associées'>
           <GroupedMultiselect
+            searchable
             label='Associer à des exploitations'
             hint='Sélectionnez les exploitations auxquelles ce document est lié (optionnel)'
             placeholder='Sélectionner des exploitations'

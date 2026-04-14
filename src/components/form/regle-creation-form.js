@@ -52,6 +52,7 @@ const RegleCreationForm = ({preleveur, exploitations, documents}) => {
         ...regle,
         valeur: Number(regle.valeur)
       })
+
       const response = await createRegleAction(preleveur._id, payload)
       if (!response.success) {
         throw response
