@@ -32,6 +32,26 @@ export async function getReglesFromPreleveurAction(idPreleveur) {
 }
 
 /**
+ * Get règles for an exploitation
+ * @param {string} idExploitation - Exploitation ID
+ * @returns {Promise<Object>} - Result object
+ */
+export async function getReglesFromExploitationsAction(idExploitation) {
+  return withErrorHandling(async () => {
+    try {
+      return await fetchJSON(`api/exploitations/${idExploitation}/regles`)
+    } catch (error) {
+      // Return empty array on error (consistent with original behavior)
+      if (error.code === 404) {
+        return []
+      }
+
+      throw error
+    }
+  })
+}
+
+/**
  * Get a single règle by ID
  * @param {string} regleId - Règle ID
  * @returns {Promise<Object>} - Result object
