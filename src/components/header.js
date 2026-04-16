@@ -73,6 +73,13 @@ const adminNavigation = [
       }
     ],
     text: 'Déclarations'
+  },
+  {
+    linkProps: {
+      href: '/exports',
+      target: '_self'
+    },
+    text: 'Exports'
   }
 ]
 

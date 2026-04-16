@@ -5,6 +5,20 @@ import ListItem from '@/components/ui/ListItem/index.js'
 import {usageIcons} from '@/lib/points-prelevement.js'
 import {getPreleveurTypeIcon} from '@/lib/preleveurs.js'
 
+export const getPreleveurLabel = preleveur => {
+  const hasSociete = preleveur.raison_sociale || preleveur.sigle
+
+  if (hasSociete) {
+    return [preleveur.sigle, preleveur.raison_sociale]
+      .filter(Boolean)
+      .join(' ')
+  }
+
+  return [preleveur.civilite, preleveur.nom, preleveur.prenom]
+    .filter(Boolean)
+    .join(' ')
+}
+
 const Preleveur = ({preleveur, index}) =>
   (
     <Link href={`preleveurs/${preleveur.id_preleveur}`}>
@@ -18,9 +32,7 @@ const Preleveur = ({preleveur, index}) =>
               style={{color: fr.colors.decisions.text.label.blueFrance.default}}
             />
             <span>
-              {preleveur.raison_sociale
-                ? `${preleveur.sigle || ''} ${preleveur.raison_sociale}`.trim()
-                : `${preleveur.civilite || ''} ${preleveur.nom || ''} ${preleveur.prenom || ''}`.trim()}
+              {getPreleveurLabel(preleveur)}
             </span>
           </>
         }

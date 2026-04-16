@@ -83,7 +83,7 @@ export async function searchSeriesAction({preleveurId, pointId, from, to, onlyIn
       params.set('to', to)
     }
 
-    if (onlyIntegratedDays) {
+    if (onlyIntegratedDays !== undefined) {
       params.set('onlyIntegratedDays', onlyIntegratedDays ? '1' : '0')
     }
 
