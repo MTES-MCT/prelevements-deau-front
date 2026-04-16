@@ -11,13 +11,20 @@ const Preleveur = ({preleveur, index}) =>
       <ListItem
         border
         background={index % 2 === 0 ? 'primary' : 'secondary'}
-        title={<>
-          <span
-            className={`mr-2 ${getPreleveurTypeIcon(preleveur)}`}
-            style={{color: fr.colors.decisions.text.label.blueFrance.default}}
-          />
-          <span>{preleveur.civilite} {preleveur.nom} {preleveur.prenom} {preleveur.sigle || ''} {preleveur.raison_sociale || ''}</span>
-        </>}
+        title={
+          <>
+            <span
+              className={`mr-2 ${getPreleveurTypeIcon(preleveur)}`}
+              style={{color: fr.colors.decisions.text.label.blueFrance.default}}
+            />
+            <span>
+              {preleveur.raison_sociale
+                ? `${preleveur.sigle || ''} ${preleveur.raison_sociale}`.trim()
+                : `${preleveur.civilite || ''} ${preleveur.nom || ''} ${preleveur.prenom || ''}`.trim()
+              }
+            </span>
+          </>
+        }
         subtitle={<>
           <span className='font-bold mr-1'>{preleveur.exploitations.length}</span> {preleveur.exploitations.length > 1 ? 'exploitations en vigueur' : 'exploitation en vigueur'}
         </>}
