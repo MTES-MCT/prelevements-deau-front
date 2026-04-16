@@ -103,21 +103,23 @@ const OptionalPointFieldsForm = (
       Localisation : Informations complémentaires
     </Typography>
     <Select
+      key={point?.meso?.code}
       label='Masse d’eau souterraine (DCE)'
       placeholder='Sélectionner le code MESO'
       nativeSelectProps={{
-        defaultValue: point?.meso?.nom,
-        onChange: e => setPoint(prev =>
-          ({
-            ...prev,
-            meso: mesoList.find(() => e.target.value).code
-          })
-        )
+        defaultValue: point?.meso?.code,
+        onChange: e => setPoint(prev => ({
+          ...prev,
+          meso: e.target.value
+        }))
       }}
-      options={mesoList.map(meso => ({
-        value: meso.nom_provis,
-        label: `${meso.code} - ${meso.nom_provis}`
-      }))}
+      options={[
+        {value: '', label: ' - Aucune masse d’eau souterraine - '},
+        ...mesoList.map(meso => ({
+          value: meso.code,
+          label: `${meso.code} - ${meso.nom_provis}`
+        }))
+      ]}
     />
     <div className='pb-5'>
       <p className='pb-2'>Masse d’eau de surface continentale (DCE)</p>
