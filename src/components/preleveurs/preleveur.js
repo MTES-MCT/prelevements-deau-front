@@ -20,8 +20,7 @@ const Preleveur = ({preleveur, index}) =>
             <span>
               {preleveur.raison_sociale
                 ? `${preleveur.sigle || ''} ${preleveur.raison_sociale}`.trim()
-                : `${preleveur.civilite || ''} ${preleveur.nom || ''} ${preleveur.prenom || ''}`.trim()
-              }
+                : `${preleveur.civilite || ''} ${preleveur.nom || ''} ${preleveur.prenom || ''}`.trim()}
             </span>
           </>
         }
