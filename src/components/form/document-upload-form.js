@@ -26,8 +26,9 @@ const buildExploitationLabelsMap = exploitations => {
   const map = {}
   for (const exploitation of exploitations) {
     const pointName = exploitation.point?.nom || exploitation.point?.id_point || 'Point inconnu'
+    const usagesText = exploitation.usages?.join(', ') || 'Usage non renseigné'
     const preleveurName = getPreleveurInfo(exploitation.preleveur)
-    map[exploitation._id] = `${exploitation.id_exploitation} - ${pointName} (${preleveurName})`
+    map[exploitation._id] = `${exploitation.id_exploitation} - ${pointName} (${preleveurName}) - ${usagesText}`
   }
 
   return map
