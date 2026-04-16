@@ -52,6 +52,14 @@ const NAV_ITEMS = [
     },
     text: 'Déclarants',
     roles: ['INSTRUCTOR', 'ADMIN']
+  },
+  {
+    linkProps: {
+      href: '/exports',
+      target: '_self'
+    },
+    text: 'Exports',
+    roles: ['INSTRUCTOR', 'ADMIN']
   }
 ]
 

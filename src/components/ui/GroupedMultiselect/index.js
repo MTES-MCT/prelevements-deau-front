@@ -17,14 +17,14 @@ import {
 } from './utils.js'
 
 const GroupedMultiselect = ({
-  value = [],
-  label,
-  hint,
-  placeholder,
-  options = [],
-  onChange,
-  disabled
-}) => {
+                              value = [],
+                              label,
+                              hint,
+                              placeholder,
+                              options = [],
+                              onChange,
+                              disabled
+                            }) => {
   const [open, setOpen] = useState(false)
   const [showMore, setShowMore] = useState(false)
   const [hiddenCount, setHiddenCount] = useState(0)
@@ -34,7 +34,28 @@ const GroupedMultiselect = ({
   const selectRef = useRef(null)
   const optionRefs = useRef([])
 
-  // Ferme la liste si clic en dehors du composant
+  const normalizedOptions = useMemo(() => normalizeOptions(options), [options])
+
+  const valueLabelMap = useMemo(() => {
+    const map = new Map()
+
+    for (const group of normalizedOptions) {
+      for (const option of group.options || []) {
+        map.set(
+          getOptionValue(option),
+          getOptionContent(option)
+        )
+      }
+    }
+
+    return map
+  }, [normalizedOptions])
+
+  const selectedDisplayValues = useMemo(
+    () => value.map(selectedValue => valueLabelMap.get(selectedValue) ?? selectedValue),
+    [value, valueLabelMap]
+  )
+
   useEffect(() => {
     const handleClickOutside = e => {
       if (ref.current && !ref.current.contains(e.target)) {
@@ -55,7 +76,7 @@ const GroupedMultiselect = ({
       return
     }
 
-    if (value.length <= 1) {
+    if (selectedDisplayValues.length <= 1) {
       setHiddenCount(0)
       setShowMore(false)
       return
@@ -66,14 +87,23 @@ const GroupedMultiselect = ({
     const font = computedStyle.font || `${computedStyle.fontSize} ${computedStyle.fontFamily}`
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')
+
+    if (!ctx) {
+      setHiddenCount(0)
+      setShowMore(false)
+      return
+    }
+
     ctx.font = font
 
     let left = 0
-    let right = value.length
+    let right = selectedDisplayValues.length
+
     while (left < right) {
       const mid = Math.ceil((left + right) / 2)
-      let text = value.slice(0, mid).join(', ')
-      const hidden = value.length - mid
+      let text = selectedDisplayValues.slice(0, mid).join(', ')
+      const hidden = selectedDisplayValues.length - mid
+
       if (hidden > 0) {
         text += ` + ${hidden} autre${hidden > 1 ? 's' : ''}`
       }
@@ -86,12 +116,11 @@ const GroupedMultiselect = ({
     }
 
     const visibleCount = left
-    const hidden = value.length - visibleCount
+    const hidden = selectedDisplayValues.length - visibleCount
     setHiddenCount(hidden)
     setShowMore(hidden > 0)
-  }, [value])
+  }, [selectedDisplayValues])
 
-  // Ajoute ou retire une option de la sélection
   const toggleOption = useCallback(option => {
     if (getOptionDisabled(option)) {
       return
@@ -101,8 +130,6 @@ const GroupedMultiselect = ({
     const newValue = xor(value, [optionValue])
     onChange?.(newValue)
   }, [value, onChange])
-
-  const normalizedOptions = useMemo(() => normalizeOptions(options), [options])
 
   // Liste plate des options pour navigation clavier
   const flatOptions = useMemo(() =>
@@ -170,7 +197,10 @@ const GroupedMultiselect = ({
     }
   }, [open, focusedIndex])
 
-  const totalOptionsCount = useMemo(() => normalizedOptions.reduce((acc, group) => acc + group.options.length, 0), [normalizedOptions])
+  const totalOptionsCount = useMemo(
+    () => normalizedOptions.reduce((acc, group) => acc + group.options.length, 0),
+    [normalizedOptions]
+  )
 
   return (
     <div
@@ -197,7 +227,7 @@ const GroupedMultiselect = ({
         onKeyDown={disabled || totalOptionsCount === 0 ? undefined : handleKeyDown}
       >
         <Box sx={{overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
-          {renderSelectedText(value, placeholder, showMore, hiddenCount)}
+          {renderSelectedText(selectedDisplayValues, placeholder, showMore, hiddenCount)}
         </Box>
       </Box>
 
@@ -219,7 +249,7 @@ const GroupedMultiselect = ({
           tabIndex={-1}
         >
           {normalizedOptions.map((group, groupIdx) => (
-            <Box key={group.label || 'no-label'}>
+            <Box key={group.label || `group-${groupIdx}`}>
               {group?.label && (
                 <ListItem
                   sx={{
@@ -232,10 +262,12 @@ const GroupedMultiselect = ({
                   {group.label}
                 </ListItem>
               )}
+
               {group.options.map((option, optIdx) => {
                 const flatIdx = normalizedOptions
                   .slice(0, groupIdx)
                   .reduce((acc, g) => acc + g.options.length, 0) + optIdx
+
                 const optionValue = getOptionValue(option)
                 const isSelected = value.includes(optionValue)
                 const isDisabled = getOptionDisabled(option)
@@ -253,7 +285,7 @@ const GroupedMultiselect = ({
                     role='option'
                     tabIndex={-1}
                     title={tooltip}
-                    onClick={isDisabled ? () => {} : () => toggleOption(option)}
+                    onClick={isDisabled ? undefined : () => toggleOption(option)}
                     onKeyDown={handleKeyDown}
                   >
                     {isSelected && (

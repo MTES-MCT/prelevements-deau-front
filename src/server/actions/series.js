@@ -90,6 +90,10 @@ export async function searchSeriesAction({preleveurId, pointId, from, to, source
       params.set('to', to)
     }
 
+    if (onlyIntegratedDays !== undefined) {
+      params.set('onlyIntegratedDays', onlyIntegratedDays ? '1' : '0')
+    }
+
     const query = params.toString() ? `?${params.toString()}` : ''
     return fetchJSON(`api/series${query}`)
   })
