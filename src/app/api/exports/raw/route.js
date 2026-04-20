@@ -208,7 +208,8 @@ export async function GET(request) {
     const result = await searchSeriesAction({
       pointId,
       from: startDate,
-      to: endDate
+      to: endDate,
+      onlyIntegratedDays: true
     })
 
     const series = result?.data?.series || result?.series || []
@@ -222,7 +223,8 @@ export async function GET(request) {
     const result = await searchSeriesAction({
       preleveurId,
       from: startDate,
-      to: endDate
+      to: endDate,
+      onlyIntegratedDays: true
     })
 
     const series = result?.data?.series || result?.series || []

@@ -201,6 +201,14 @@ const GroupedMultiselect = ({
 
       case 'Enter':
       case ' ': {
+        const isSearchInput
+          = searchable
+          && (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)
+
+        if (isSearchInput) {
+          return
+        }
+
         if (focusedIndex >= 0 && flatOptions[focusedIndex]) {
           toggleOption(flatOptions[focusedIndex].option)
         }
