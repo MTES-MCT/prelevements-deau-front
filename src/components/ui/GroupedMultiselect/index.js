@@ -45,7 +45,10 @@ const GroupedMultiselect = ({
 
     for (const group of normalizedOptions) {
       for (const option of group.options || []) {
-        map.set(getOptionValue(option), getOptionContent(option))
+        map.set(
+          getOptionValue(option),
+          getOptionTitle(option) || getOptionValue(option)
+        )
       }
     }
 
