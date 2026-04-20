@@ -162,6 +162,7 @@ export function useParameterSelection(parameters, parameterMap, onParameterChang
       const valueTypeLabel = formatValueTypeLabel(param.valueType)
       const option = {
         value: param.parameterLabel,
+        title: param.parameterLabel,
         content: (
           <ParameterOptionContent
             label={param.parameterLabel}
