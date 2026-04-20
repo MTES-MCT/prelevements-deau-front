@@ -2,18 +2,18 @@ import {Box, Typography} from '@mui/material'
 
 import ExportForm from '@/components/export/export-form.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {getPointsPrelevementAction, getPreleveursAction} from '@/server/actions/index.js'
+import {getPointsPrelevementAction, getDeclarantsAction} from '@/server/actions/index.js'
 
 export const dynamic = 'force-dynamic'
 
 const Page = async () => {
-  const [pointsResult, preleveursResult] = await Promise.all([
+  const [pointsResult, declarantsResults] = await Promise.all([
     getPointsPrelevementAction(),
-    getPreleveursAction()
+    getDeclarantsAction()
   ])
 
   const points = pointsResult?.data || []
-  const preleveurs = preleveursResult?.data || []
+  const declarants = declarantsResults?.data || []
 
   return (
     <>
@@ -24,7 +24,7 @@ const Page = async () => {
 
         <ExportForm
           points={points}
-          preleveurs={preleveurs}
+          declarants={declarants}
         />
       </Box>
     </>

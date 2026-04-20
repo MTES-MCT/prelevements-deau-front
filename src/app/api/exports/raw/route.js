@@ -19,9 +19,8 @@ function buildPointNameMap(points) {
   const map = new Map()
 
   for (const point of points || []) {
-    const label = point.nom || ''
-    addMapValue(map, point._id, label)
-    addMapValue(map, point.id_point, label)
+    const label = point.name || ''
+    addMapValue(map, point.id, label)
   }
 
   return map
@@ -31,7 +30,7 @@ function mergeSeriesEntries(entries) {
   const map = new Map()
 
   for (const entry of entries) {
-    const seriesId = String(entry.series?._id || '')
+    const seriesId = String(entry.series?.id || '')
     if (!seriesId) {
       continue
     }
@@ -67,7 +66,7 @@ function flattenSeriesValues(series, payload, {pointNameById}) {
     const baseRow = {
       pointId,
       pointNom,
-      parameter: series.parameter || '',
+      metricTypeCode: series.metricTypeCode || '',
       unit: series.unit || '',
       frequency: series.frequency || '',
       valueType: series.valueType || '',
@@ -156,7 +155,7 @@ function buildCsv(rows) {
   const headers = [
     'pointId',
     'pointNom',
-    'parameter',
+    'metricTypeCode',
     'unit',
     'frequency',
     'valueType',
@@ -186,7 +185,7 @@ export async function GET(request) {
 
   if (pointIds.length === 0 && preleveurIds.length === 0) {
     return NextResponse.json(
-      {error: 'Veuillez fournir au moins un point ou un préleveur.'},
+      {error: 'Veuillez fournir au moins un point ou un déclarant.'},
       {status: 400}
     )
   }
@@ -207,8 +206,8 @@ export async function GET(request) {
   for (const pointId of pointIds) {
     const result = await searchSeriesAction({
       pointId,
-      from: startDate,
-      to: endDate
+      startDate,
+      endDate
     })
 
     const series = result?.data?.series || result?.series || []
@@ -221,8 +220,8 @@ export async function GET(request) {
   for (const preleveurId of preleveurIds) {
     const result = await searchSeriesAction({
       preleveurId,
-      from: startDate,
-      to: endDate
+      startDate,
+      endDate
     })
 
     const series = result?.data?.series || result?.series || []
@@ -237,9 +236,9 @@ export async function GET(request) {
   const allRows = []
 
   for (const {series} of mergedSeriesEntries) {
-    const valuesResult = await getSeriesValuesAction(series._id, {
-      start: startDate,
-      end: endDate
+    const valuesResult = await getSeriesValuesAction(series.id, {
+      startDate,
+      endDate
     })
 
     const payload = valuesResult?.data || valuesResult

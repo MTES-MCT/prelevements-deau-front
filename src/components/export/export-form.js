@@ -7,8 +7,8 @@ import Button from '@codegouvfr/react-dsfr/Button'
 import Input from '@codegouvfr/react-dsfr/Input'
 import {Box, Link} from '@mui/material'
 
-import {getPreleveurLabel} from '@/components/preleveurs/preleveur.js'
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
+import {getDeclarantTitleFromUser} from '@/lib/declarants.js'
 
 const sortOptionsByContent = options =>
   [...(options || [])].sort((a, b) =>
@@ -20,23 +20,23 @@ const buildPointOptions = points => [
     label: 'Points de prélèvement',
     options: sortOptionsByContent(
       (points || []).map(point => ({
-        value: point._id,
-        content: point.nom,
-        title: point.nom
+        value: point.id,
+        content: point.name,
+        title: point.name
       }))
     )
   }
 ]
 
-const buildPreleveurOptions = preleveurs => [
+const buildDeclarantOptions = declarants => [
   {
-    label: 'Préleveurs',
+    label: 'Déclarants',
     options: sortOptionsByContent(
-      (preleveurs || []).map(preleveur => {
-        const label = getPreleveurLabel(preleveur)
+      (declarants || []).map(declarant => {
+        const label = getDeclarantTitleFromUser(declarant)
 
         return {
-          value: preleveur._id,
+          value: declarant.id,
           content: label,
           title: label
         }
@@ -45,24 +45,24 @@ const buildPreleveurOptions = preleveurs => [
   }
 ]
 
-const ExportForm = ({points = [], preleveurs = []}) => {
+const ExportForm = ({points = [], declarants = []}) => {
   const [selectedPointIds, setSelectedPointIds] = useState([])
-  const [selectedPreleveurIds, setSelectedPreleveurIds] = useState([])
+  const [selectedDeclarantIds, setSelectedDeclarantIds] = useState([])
   const [dateDebut, setDateDebut] = useState('')
   const [dateFin, setDateFin] = useState('')
   const [error, setError] = useState(null)
   const [submittedUrl, setSubmittedUrl] = useState(null)
 
   const pointOptions = useMemo(() => buildPointOptions(points), [points])
-  const preleveurOptions = useMemo(() => buildPreleveurOptions(preleveurs), [preleveurs])
+  const declarantOptions = useMemo(() => buildDeclarantOptions(declarants), [declarants])
 
   const handleSubmit = event => {
     event.preventDefault()
     setError(null)
     setSubmittedUrl(null)
 
-    if (selectedPointIds.length === 0 && selectedPreleveurIds.length === 0) {
-      setError('Veuillez sélectionner au moins un point ou un préleveur.')
+    if (selectedPointIds.length === 0 && selectedDeclarantIds.length === 0) {
+      setError('Veuillez sélectionner au moins un point ou un déclarant.')
       return
     }
 
@@ -77,8 +77,8 @@ const ExportForm = ({points = [], preleveurs = []}) => {
       params.append('pointIds', pointId)
     }
 
-    for (const preleveurId of selectedPreleveurIds) {
-      params.append('preleveurIds', preleveurId)
+    for (const declarantId of selectedDeclarantIds) {
+      params.append('declarantIds', declarantId)
     }
 
     if (dateDebut) {
@@ -123,12 +123,12 @@ const ExportForm = ({points = [], preleveurs = []}) => {
 
       <GroupedMultiselect
         searchable
-        label='Préleveurs'
+        label='Déclarants'
         hint='Optionnel'
-        placeholder='Rechercher un préleveur'
-        options={preleveurOptions}
-        value={selectedPreleveurIds}
-        onChange={setSelectedPreleveurIds}
+        placeholder='Rechercher un déclarant'
+        options={declarantOptions}
+        value={selectedDeclarantIds}
+        onChange={setSelectedDeclarantIds}
       />
 
       <Box className='grid grid-cols-1 md:grid-cols-2 gap-4'>

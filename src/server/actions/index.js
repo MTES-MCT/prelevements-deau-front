@@ -51,10 +51,7 @@ export {
 export {
   getSeriesMetadataAction,
   getSeriesValuesAction,
-  searchSeriesAction,
-  buildAggregatedSeriesQuery,
-  getAggregatedSeriesAction,
-  getAggregatedSeriesOptionsAction
+  searchSeriesAction
 } from './series.js'
 
 export {

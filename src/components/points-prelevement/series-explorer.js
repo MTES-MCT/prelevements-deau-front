@@ -17,7 +17,7 @@ import {
   calculateSelectablePeriodsFromDateRange,
   extractDefaultPeriodsFromDateRange
 } from '@/components/PrelevementsSeriesExplorer/utils/date-range-periods.js'
-import {getAggregatedSeriesAction} from '@/server/actions/index.js'
+import {getAggregatedSeriesAction} from '@/server/actions/series.js'
 import {pickAvailableFrequency} from '@/utils/frequency.js'
 
 const DEFAULT_FREQUENCY = '1 day'

@@ -6,46 +6,22 @@ import {
 } from '@/server/api-wrapper.js'
 import {normalizeDate} from '@/utils/time.js'
 
-// ============================================================================
-// Series
-// ============================================================================
-
-/**
- * Get series metadata
- * @param {string} seriesId - Series ID
- * @param {Object} options - Options
- * @param {boolean} [options.withPoint=false] - Include point info
- * @returns {Promise<Object>} - Result object
- */
-export async function getSeriesMetadataAction(seriesId, {withPoint = false} = {}) {
-  return withErrorHandling(async () => {
-    const search = withPoint ? '?withPoint=1' : ''
-    return fetchJSON(`api/series/${seriesId}${search}`)
-  })
+export async function getSeriesMetadataAction(seriesId) {
+  return withErrorHandling(async () => fetchJSON(`api/series/${seriesId}`))
 }
 
-/**
- * Get series values
- * @param {string} seriesId - Series ID
- * @param {Object} options - Options
- * @param {string} [options.start] - Start date
- * @param {string} [options.end] - End date
- * @param {boolean} [options.withPoint=false] - Include point info
- * @returns {Promise<Object>} - Result object
- */
-export async function getSeriesValuesAction(seriesId, {start, end, withPoint = false} = {}) {
+export async function getSeriesValuesAction(seriesId, {startDate, endDate} = {}) {
   return withErrorHandling(async () => {
     const params = new URLSearchParams()
-    if (start) {
-      params.set('start', start)
+
+    const normalizedStartDate = normalizeDate(startDate)
+    if (normalizedStartDate) {
+      params.set('startDate', normalizedStartDate)
     }
 
-    if (end) {
-      params.set('end', end)
-    }
-
-    if (withPoint) {
-      params.set('withPoint', '1')
+    const normalizedEndDate = normalizeDate(endDate)
+    if (normalizedEndDate) {
+      params.set('endDate', normalizedEndDate)
     }
 
     const query = params.toString() ? `?${params.toString()}` : ''
@@ -53,16 +29,14 @@ export async function getSeriesValuesAction(seriesId, {start, end, withPoint = f
   })
 }
 
-/**
- * Search series
- * @param {Object} params - Search parameters
- * @param {string} [params.preleveurId] - Préleveur ID
- * @param {string} [params.pointId] - Point ID
- * @param {string} [params.from] - Start date
- * @param {string} [params.to] - End date
- * @returns {Promise<Object>} - Result object
- */
-export async function searchSeriesAction({preleveurId, pointId, from, to, sourceId, metricTypeCode} = {}) {
+export async function searchSeriesAction({
+  preleveurId,
+  pointId,
+  sourceId,
+  metricTypeCode,
+  startDate,
+  endDate
+} = {}) {
   return withErrorHandling(async () => {
     const params = new URLSearchParams()
 
@@ -82,16 +56,14 @@ export async function searchSeriesAction({preleveurId, pointId, from, to, source
       params.set('metricTypeCode', metricTypeCode)
     }
 
-    if (from) {
-      params.set('from', from)
+    const normalizedStartDate = normalizeDate(startDate)
+    if (normalizedStartDate) {
+      params.set('startDate', normalizedStartDate)
     }
 
-    if (to) {
-      params.set('to', to)
-    }
-
-    if (onlyIntegratedDays !== undefined) {
-      params.set('onlyIntegratedDays', onlyIntegratedDays ? '1' : '0')
+    const normalizedEndDate = normalizeDate(endDate)
+    if (normalizedEndDate) {
+      params.set('endDate', normalizedEndDate)
     }
 
     const query = params.toString() ? `?${params.toString()}` : ''
