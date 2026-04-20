@@ -15,7 +15,8 @@ import {
   getOptionValue,
   getOptionContent,
   getOptionDisabled,
-  getOptionTitle
+  getOptionTitle,
+  getOptionTooltip
 } from './utils.js'
 
 const GroupedMultiselect = ({
@@ -365,7 +366,7 @@ const GroupedMultiselect = ({
                 const optionValue = getOptionValue(option)
                 const isSelected = value.includes(optionValue)
                 const isDisabled = getOptionDisabled(option)
-                const tooltip = getOptionTitle(option)
+                const tooltip = getOptionTooltip(option)
 
                 return (
                   <ListItem

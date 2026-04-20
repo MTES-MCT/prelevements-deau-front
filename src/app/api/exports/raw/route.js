@@ -74,6 +74,26 @@ function flattenSeriesValues(series, payload, {pointNameById}) {
       date: entry.date || ''
     }
 
+    // Back: pour les séries journalières, payload.values contient déjà :
+    // [{ date, value, remark?, originalValue?, originalDate?, originalFrequency?, daysCovered? }]
+    if (series.frequency === '1 day') {
+      rows.push({
+        ...baseRow,
+        time: '',
+        dateHeure: buildDateHeure(baseRow.date, ''),
+        value: entry.value ?? '',
+        remark: entry.remark || '',
+        originalValue: entry.originalValue ?? '',
+        originalDate: entry.originalDate || '',
+        originalFrequency: entry.originalFrequency || '',
+        daysCovered: entry.daysCovered ?? ''
+      })
+
+      continue
+    }
+
+    // Back: pour les autres fréquences, payload.values contient :
+    // [{ date, values: [...] }] pour l'infra-journalier
     if (Array.isArray(entry.values)) {
       for (const subValue of entry.values) {
         const time = subValue.time || ''
@@ -82,53 +102,30 @@ function flattenSeriesValues(series, payload, {pointNameById}) {
           ...baseRow,
           time,
           dateHeure: buildDateHeure(baseRow.date, time),
-          metric: 'value',
           value: subValue.value ?? '',
-          remark: subValue.remark || ''
+          remark: subValue.remark || '',
+          originalValue: '',
+          originalDate: '',
+          originalFrequency: '',
+          daysCovered: ''
         })
       }
 
       continue
     }
 
-    const entryWithoutDate = {...entry}
-    delete entryWithoutDate.date
-
-    const metricEntries = Object.entries(entryWithoutDate)
-
-    if (metricEntries.length === 0) {
-      rows.push({
-        ...baseRow,
-        time: '',
-        dateHeure: buildDateHeure(baseRow.date, ''),
-        metric: '',
-        value: '',
-        remark: ''
-      })
-      continue
-    }
-
-    for (const [metricName, metricValue] of metricEntries) {
-      if (metricValue && typeof metricValue === 'object' && !Array.isArray(metricValue)) {
-        rows.push({
-          ...baseRow,
-          time: '',
-          dateHeure: buildDateHeure(baseRow.date, ''),
-          metric: metricName,
-          value: metricValue.value ?? '',
-          remark: metricValue.remark || ''
-        })
-      } else {
-        rows.push({
-          ...baseRow,
-          time: '',
-          dateHeure: buildDateHeure(baseRow.date, ''),
-          metric: metricName,
-          value: metricValue ?? '',
-          remark: ''
-        })
-      }
-    }
+    // Fallback
+    rows.push({
+      ...baseRow,
+      time: '',
+      dateHeure: buildDateHeure(baseRow.date, ''),
+      value: '',
+      remark: '',
+      originalValue: '',
+      originalDate: '',
+      originalFrequency: '',
+      daysCovered: ''
+    })
   }
 
   return rows
@@ -163,9 +160,12 @@ function buildCsv(rows) {
     'date',
     'time',
     'dateHeure',
-    'metric',
     'value',
-    'remark'
+    'remark',
+    'originalValue',
+    'originalDate',
+    'originalFrequency',
+    'daysCovered'
   ]
 
   const lines = [

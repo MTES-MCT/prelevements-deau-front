@@ -29,7 +29,15 @@ export const getOptionTitle = opt => {
     return undefined
   }
 
-  return opt.disabledReason ?? opt.title ?? opt.tooltip
+  return opt.disabledReason ?? opt.title
+}
+
+export const getOptionTooltip = opt => {
+  if (!isOptionObject(opt)) {
+    return undefined
+  }
+
+  return opt.disabledReason ?? opt.tooltip
 }
 
 // Affiche le texte des éléments sélectionnés, avec "+ n autres" si besoin

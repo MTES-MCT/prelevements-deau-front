@@ -59,7 +59,8 @@ const buildExploitationOptions = (exploitations, labelsById) => {
     grouped[statut].push({
       value: label,
       content: label,
-      title: dateText,
+      title: label,
+      tooltip: dateText,
       sortKey: exploitation.point?.nom || ''
     })
   }
