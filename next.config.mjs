@@ -11,7 +11,8 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '50mb'
     },
-    authInterrupts: true
+    authInterrupts: true,
+    middlewareClientMaxBodySize: '50mb'
   },
   transpilePackages: ['next-auth'],
   webpack(config) {
