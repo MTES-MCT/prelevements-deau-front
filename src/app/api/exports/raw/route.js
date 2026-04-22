@@ -56,81 +56,6 @@ function buildDateHeure(date, time) {
   return `${date} ${time}`
 }
 
-function flattenSeriesValues(series, payload, {pointNameById}) {
-  const rows = []
-  const values = payload?.values || []
-
-  const pointId = series.pointPrelevement ?? ''
-  const pointNom = pointNameById.get(String(pointId)) || ''
-
-  for (const entry of values) {
-    const baseRow = {
-      pointId,
-      pointNom,
-      parameter: series.parameter || '',
-      unit: series.unit || '',
-      frequency: series.frequency || '',
-      valueType: series.valueType || '',
-      date: entry.date || ''
-    }
-
-    // Back: pour les séries journalières, payload.values contient déjà :
-    // [{ date, value, remark?, originalValue?, originalDate?, originalFrequency?, daysCovered? }]
-    if (series.frequency === '1 day') {
-      rows.push({
-        ...baseRow,
-        time: '',
-        dateHeure: buildDateHeure(baseRow.date, ''),
-        value: entry.value ?? '',
-        remark: entry.remark || '',
-        originalValue: entry.originalValue ?? '',
-        originalDate: entry.originalDate || '',
-        originalFrequency: entry.originalFrequency || '',
-        daysCovered: entry.daysCovered ?? ''
-      })
-
-      continue
-    }
-
-    // Back: pour les autres fréquences, payload.values contient :
-    // [{ date, values: [...] }] pour l'infra-journalier
-    if (Array.isArray(entry.values)) {
-      for (const subValue of entry.values) {
-        const time = subValue.time || ''
-
-        rows.push({
-          ...baseRow,
-          time,
-          dateHeure: buildDateHeure(baseRow.date, time),
-          value: subValue.value ?? '',
-          remark: subValue.remark || '',
-          originalValue: '',
-          originalDate: '',
-          originalFrequency: '',
-          daysCovered: ''
-        })
-      }
-
-      continue
-    }
-
-    // Fallback
-    rows.push({
-      ...baseRow,
-      time: '',
-      dateHeure: buildDateHeure(baseRow.date, ''),
-      value: '',
-      remark: '',
-      originalValue: '',
-      originalDate: '',
-      originalFrequency: '',
-      daysCovered: ''
-    })
-  }
-
-  return rows
-}
-
 function escapeCsvValue(value) {
   if (value === null || value === undefined) {
     return ''
@@ -149,31 +74,93 @@ function escapeCsvValue(value) {
   return stringValue
 }
 
-function buildCsv(rows) {
-  const headers = [
-    'pointId',
-    'pointNom',
-    'parameter',
-    'unit',
-    'frequency',
-    'valueType',
-    'date',
-    'time',
-    'dateHeure',
-    'value',
-    'remark',
-    'originalValue',
-    'originalDate',
-    'originalFrequency',
-    'daysCovered'
-  ]
+const HEADERS = [
+  'pointId',
+  'pointNom',
+  'parameter',
+  'unit',
+  'frequency',
+  'valueType',
+  'date',
+  'time',
+  'dateHeure',
+  'value',
+  'remark',
+  'originalValue',
+  'originalDate',
+  'originalFrequency',
+  'daysCovered'
+]
 
-  const lines = [
-    headers.join(';'),
-    ...rows.map(row => headers.map(header => escapeCsvValue(row[header])).join(';'))
-  ]
+function rowToCsvLine(row) {
+  return HEADERS.map(header => escapeCsvValue(row[header])).join(';')
+}
 
-  return lines.join('\n')
+function * iterFlattenSeriesValues(series, payload, {pointNameById}) {
+  const values = payload?.values || []
+
+  const pointId = series.pointPrelevement ?? ''
+  const pointNom = pointNameById.get(String(pointId)) || ''
+
+  for (const entry of values) {
+    const baseRow = {
+      pointId,
+      pointNom,
+      parameter: series.parameter || '',
+      unit: series.unit || '',
+      frequency: series.frequency || '',
+      valueType: series.valueType || '',
+      date: entry.date || ''
+    }
+
+    if (series.frequency === '1 day') {
+      yield {
+        ...baseRow,
+        time: '',
+        dateHeure: buildDateHeure(baseRow.date, ''),
+        value: entry.value ?? '',
+        remark: entry.remark || '',
+        originalValue: entry.originalValue ?? '',
+        originalDate: entry.originalDate || '',
+        originalFrequency: entry.originalFrequency || '',
+        daysCovered: entry.daysCovered ?? ''
+      }
+
+      continue
+    }
+
+    if (Array.isArray(entry.values)) {
+      for (const subValue of entry.values) {
+        const time = subValue.time || ''
+
+        yield {
+          ...baseRow,
+          time,
+          dateHeure: buildDateHeure(baseRow.date, time),
+          value: subValue.value ?? '',
+          remark: subValue.remark || '',
+          originalValue: '',
+          originalDate: '',
+          originalFrequency: '',
+          daysCovered: ''
+        }
+      }
+
+      continue
+    }
+
+    yield {
+      ...baseRow,
+      time: '',
+      dateHeure: buildDateHeure(baseRow.date, ''),
+      value: '',
+      remark: '',
+      originalValue: '',
+      originalDate: '',
+      originalFrequency: '',
+      daysCovered: ''
+    }
+  }
 }
 
 export async function GET(request) {
@@ -236,24 +223,6 @@ export async function GET(request) {
 
   const mergedSeriesEntries = mergeSeriesEntries(seriesEntries)
 
-  const allRows = []
-
-  for (const {series} of mergedSeriesEntries) {
-    const valuesResult = await getSeriesValuesAction(series._id, {
-      start: startDate,
-      end: endDate
-    })
-
-    const payload = valuesResult?.data || valuesResult
-    const rows = flattenSeriesValues(series, payload, {
-      pointNameById
-    })
-
-    allRows.push(...rows)
-  }
-
-  const csv = buildCsv(allRows)
-
   const fileNameParts = ['export-series-brutes']
   if (startDate) {
     fileNameParts.push(`from-${startDate}`)
@@ -265,11 +234,41 @@ export async function GET(request) {
 
   const fileName = `${fileNameParts.join('-')}.csv`
 
-  return new NextResponse(csv, {
+  const encoder = new TextEncoder()
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        controller.enqueue(encoder.encode(`${HEADERS.join(';')}\n`))
+
+        for (const {series} of mergedSeriesEntries) {
+          const valuesResult = await getSeriesValuesAction(series._id, {
+            start: startDate,
+            end: endDate
+          })
+
+          const payload = valuesResult?.data || valuesResult
+
+          for (const row of iterFlattenSeriesValues(series, payload, {
+            pointNameById
+          })) {
+            controller.enqueue(encoder.encode(`${rowToCsvLine(row)}\n`))
+          }
+        }
+
+        controller.close()
+      } catch (error) {
+        controller.error(error)
+      }
+    }
+  })
+
+  return new NextResponse(stream, {
     status: 200,
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="${fileName}"`
+      'Content-Disposition': `attachment; filename="${fileName}"`,
+      'Cache-Control': 'no-store'
     }
   })
 }
