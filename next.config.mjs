@@ -9,7 +9,8 @@ const nextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: '50mb'
-    }
+    },
+    middlewareClientMaxBodySize: '50mb'
   },
   transpilePackages: ['next-auth'],
   webpack(config) {
