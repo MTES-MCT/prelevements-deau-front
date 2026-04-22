@@ -9,7 +9,8 @@ import {Button} from '@codegouvfr/react-dsfr/Button'
 import {format} from 'date-fns'
 import {useRouter} from 'next/navigation'
 
-import {getPreleveurInfo} from '@/components/exploitations/exploitations-list-item.js'
+import {displayPreleveur} from '../../utils/preleveurs.js'
+
 import DocumentForm from '@/components/form/document-form.js'
 import DividerSection from '@/components/ui/DividerSection/index.js'
 import FileDropzone from '@/components/ui/FileDropzone/index.js'
@@ -27,7 +28,7 @@ const buildExploitationLabelsMap = exploitations => {
   for (const exploitation of exploitations) {
     const pointName = exploitation.point?.nom || exploitation.point?.id_point || 'Point inconnu'
     const usagesText = exploitation.usages?.join(', ') || 'Usage non renseigné'
-    const preleveurName = getPreleveurInfo(exploitation.preleveur)
+    const preleveurName = displayPreleveur(exploitation.preleveur)
     map[exploitation._id] = `${exploitation.id_exploitation} - ${pointName} (${preleveurName}) - ${usagesText}`
   }
 

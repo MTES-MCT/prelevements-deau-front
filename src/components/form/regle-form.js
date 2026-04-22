@@ -7,11 +7,11 @@ import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Input} from '@codegouvfr/react-dsfr/Input'
 import {Select} from '@codegouvfr/react-dsfr/SelectNext'
 
-import {getPreleveurInfo} from '@/components/exploitations/exploitations-list-item.js'
 import DayMonthSelector from '@/components/form/day-month-selector.js'
 import DividerSection from '@/components/ui/DividerSection/index.js'
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import {formatFullDateFr} from '@/lib/format-date.js'
+import {displayPreleveur} from '@/utils/preleveurs.js'
 
 const contraintes = [
   {value: 'min', label: 'Minimum (>)'},
@@ -66,7 +66,7 @@ const buildExploitationLabelsMap = exploitations => {
   for (const exploitation of exploitations) {
     const pointName = exploitation.point?.nom || exploitation.point?.id_point || 'Point inconnu'
     const usagesText = exploitation.usages?.join(', ') || 'Usage non renseigné'
-    const preleveurName = getPreleveurInfo(exploitation.preleveur)
+    const preleveurName = displayPreleveur(exploitation.preleveur)
 
     map[exploitation._id] = `${exploitation.id_exploitation} - ${pointName} (${preleveurName}) - ${usagesText}`
   }
