@@ -1,19 +1,25 @@
 import {Badge} from '@codegouvfr/react-dsfr/Badge'
 
-// @TODO: review labels
-const labels = {
-  'aep-zre': {severity: 'new', label: 'AEP ou en ZRE'},
-  'icpe-hors-zre': {severity: 'info', label: 'ICPE hors ZRE'},
-  'camion-citerne': {severity: 'warning', label: 'Camion citerne'},
-  'template-file': {severity: 'info', label: 'Fichier type'},
-  'extract-aquasys': {severity: 'info', label: 'Extraction Aquasys'},
-  gidaf: {severity: 'info', label: 'Extraction Gidaf'},
-  unknown: {severity: 'success', label: 'Autre'}
+import {getDeclarationTypeLabel} from '@/lib/declaration-types.js'
+
+const badgeMetadata = {
+  'aep-zre': {severity: 'new'},
+  'icpe-hors-zre': {severity: 'info'},
+  'camion-citerne': {severity: 'warning'},
+  'template-file': {severity: 'info'},
+  'extract-aquasys': {severity: 'info'},
+  gidaf: {severity: 'info'},
+  unknown: {severity: 'success'}
 }
 
-const PrelevementTypeBadge = ({value}) => {
-  const label = labels[value]
-  return <Badge noIcon severity={label?.severity}>{label?.label}</Badge>
+const PrelevementTypeBadge = ({value, declarationType}) => {
+  const metadata = badgeMetadata[value] ?? badgeMetadata.unknown
+
+  return (
+    <Badge noIcon severity={metadata.severity}>
+      {getDeclarationTypeLabel(value, declarationType)}
+    </Badge>
+  )
 }
 
 export default PrelevementTypeBadge

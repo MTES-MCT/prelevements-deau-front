@@ -17,7 +17,11 @@ const Dossiers = async () => {
   const result = await getMyDeclarationsAction()
   const response = result?.success ? result.data : null
   const dossiers = response?.data ?? []
-  const canCreateDeclaration = response?.meta?.canCreateDeclaration ?? false
+  const allowedDeclarationTypes = response?.meta?.allowedDeclarationTypes ?? []
+  const canCreateDeclaration = allowedDeclarationTypes.length > 0
+  const allowedDeclarationTypesLabel = allowedDeclarationTypes
+    .map(declarationType => declarationType.name)
+    .join(', ')
 
   return (
     <>
@@ -37,6 +41,9 @@ const Dossiers = async () => {
 
             <p className='fr-text fr-mb-3w'>
               Déposez vos fichiers de déclaration après validation automatique.
+              {allowedDeclarationTypesLabel ? (
+                <> Types autorisés : {allowedDeclarationTypesLabel}.</>
+              ) : null}
             </p>
 
             <Button
@@ -74,7 +81,6 @@ const Dossiers = async () => {
         ) : (
           <div>
             {dossiers
-              .filter(dossier => dossier.source)
               .map((dossier, idx) => (
                 <DossierCard
                   key={dossier.id}
