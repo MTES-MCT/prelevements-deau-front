@@ -13,8 +13,8 @@ import moment from 'moment'
 import Link from 'next/link'
 
 import ListItem from '@/components/ui/ListItem/index.js'
-import {getSourcePeriodLabel, sourceStateLabels} from '@/lib/declaration.js'
 import {getDeclarationTypeLabel} from '@/lib/declaration-types.js'
+import {getSourcePeriodLabel, sourceStateLabels} from '@/lib/declaration.js'
 import {formatNumber} from '@/utils/number.js'
 import 'moment/locale/fr'
 

@@ -25,9 +25,9 @@ const FileValidateurForm = ({
     declarationType => declarationType.code === selectedDeclarationTypeCode
   )
 
-  const inputError = fileInputError || (!selectedDeclarationTypeCode
-    ? 'Sélectionne d’abord un type de déclaration.'
-    : null)
+  const inputError = fileInputError || (selectedDeclarationTypeCode
+    ? null
+    : 'Sélectionne d’abord un type de déclaration.')
 
   const handleFileChange = useCallback(event => {
     const selectedFiles = [...(event.target.files ?? [])]

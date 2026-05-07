@@ -283,9 +283,9 @@ const NewDeclarationForm = ({allowedDeclarationTypes = []}) => {
           isLoading={isLoading}
           resetForm={resetFileForm}
           selectedDeclarationTypeCode={declarationTypeCode}
+          handleSubmit={submit}
           onCommentChange={setComment}
           onDeclarationTypeChange={handleDeclarationTypeChange}
-          handleSubmit={submit}
         />
       </div>
 
