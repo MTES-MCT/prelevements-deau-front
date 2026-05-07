@@ -11,11 +11,13 @@ const FileValidationResult = ({
   const hasError = validationStatus === 'error' || errors.some(({severity}) => severity === 'error')
   const hasWarning = validationStatus === 'warning' || errors.some(({severity}) => severity === 'warning')
   const status = hasError ? 'error' : (hasWarning ? 'warning' : 'success')
+  const isMultipleSelection = String(fileName ?? '').includes('fichiers sélectionnés')
+  const subject = isMultipleSelection ? 'La sélection' : 'Le fichier'
   const subtitle = hasError
-    ? `Le fichier contient ${errors.length} erreur${errors.length > 1 ? 's' : ''}`
+    ? `${subject} contient ${errors.length} erreur${errors.length > 1 ? 's' : ''}`
     : (hasWarning
-      ? `Le fichier contient ${errors.length} avertissement${errors.length > 1 ? 's' : ''}`
-      : 'Le fichier est valide'
+      ? `${subject} contient ${errors.length} avertissement${errors.length > 1 ? 's' : ''}`
+      : `${subject} est valide`
     )
 
   return (

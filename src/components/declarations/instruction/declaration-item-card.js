@@ -14,6 +14,7 @@ import Link from 'next/link'
 
 import ListItem from '@/components/ui/ListItem/index.js'
 import {getSourcePeriodLabel, sourceStateLabels} from '@/lib/declaration.js'
+import {getDeclarationTypeLabel} from '@/lib/declaration-types.js'
 import {formatNumber} from '@/utils/number.js'
 import 'moment/locale/fr'
 
@@ -36,7 +37,7 @@ const connectorLabels = new Map([
   ['orange_live_objects', 'Orange Live Objects'],
   ['willie', 'Willie'],
   ['aquasys', 'Aquasys'],
-  ['template_file', 'Fichier modèle']
+  ['template_file', 'Modèle de déclaration de volumes']
 ])
 
 const getConnectorLabel = source => {
@@ -134,6 +135,13 @@ const metas = source => {
       content: `${source?._count?.chunks ?? 0} point${(source?._count?.chunks ?? 0) > 1 ? 's' : ''}`
     }
   ]
+
+  if (!isApiSource) {
+    items.push({
+      icon: DescriptionOutlined,
+      content: `Type de déclaration : ${getDeclarationTypeLabel(source?.declaration?.type, source?.declaration?.declarationType)}`
+    })
+  }
 
   if (isApiSource) {
     items.push({

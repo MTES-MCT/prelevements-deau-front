@@ -82,14 +82,13 @@ const DeclarationList = ({status, filters, onAvailablePeriodsChange}) => {
     const periods = new Set()
 
     for (const source of sources) {
-      const {declaration} = source
       const label = getSourcePeriodLabel(source) ?? 'Non renseignée'
       if (periods.has(label)) {
         continue
       }
 
       periods.add(label)
-      const {start, end} = getSourcePeriod(declaration)
+      const {start, end} = getSourcePeriod(source)
       const sortKey = start?.getTime() ?? end?.getTime() ?? Number.POSITIVE_INFINITY
       results.push({value: label, label, sortKey})
     }

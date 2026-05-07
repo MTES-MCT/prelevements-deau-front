@@ -139,7 +139,8 @@ const DeclarationDetails = ({
       <DeclarationInfos
         numeroArreteAot={declaration.aotDecreeNumber}
         type={declaration.type}
-        dataSourceType='SPREADSHEET'
+        declarationType={declaration.declarationType}
+        dataSourceType={declaration.dataSourceType ?? 'SPREADSHEET'}
         comment={declaration.comment}
         files={declaration.files}
       />

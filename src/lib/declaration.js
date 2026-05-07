@@ -4,6 +4,10 @@ import 'moment/locale/fr'
 moment.locale('fr')
 
 export const sourceStateLabels = {
+  PROCESSING: {
+    label: 'Traitement en cours',
+    severity: 'info'
+  },
   TO_INSTRUCT: {
     label: 'À instruire',
     severity: 'info'
