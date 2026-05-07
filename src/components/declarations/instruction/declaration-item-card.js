@@ -155,6 +155,16 @@ const metas = source => {
         content: `Identifiant source : ${source.metadata.sourcePointId}`
       })
     }
+
+    if (hasMetadataNumber(source?.metadata?.connectorRate)) {
+      items.push({
+        icon: WaterDropOutlined,
+        content: `Répartition appliquée : ${source.metadata.connectorRate.toLocaleString(
+          'fr-FR',
+          {maximumFractionDigits: 2}
+        )} %`
+      })
+    }
   }
 
   if (hasMetadataNumber(source?.metadata?.totalWaterVolumeWithdrawn)) {
