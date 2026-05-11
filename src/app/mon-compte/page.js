@@ -74,6 +74,7 @@ const MonComptePage = async () => {
   const userResult = await getCurrentUser()
   const user = userResult?.data?.user ?? null
   const role = userResult?.data?.role ?? null
+  const emailAliases = user?.emailAliases ?? []
 
   let zones = []
 
@@ -105,7 +106,29 @@ const MonComptePage = async () => {
               <div className='flex flex-col gap-2'>
                 <InfoLine label='Prénom' value={user?.firstName} />
                 <InfoLine label='Nom' value={user?.lastName} />
-                <InfoLine label='Email' value={user?.email} />
+                <InfoLine label='Email principal' value={user?.email} />
+
+                <div className='flex flex-wrap gap-2 items-center'>
+                  <Typography fontWeight='medium' className='fr-text--sm'>
+                    Emails alternatifs
+                  </Typography>
+
+                  {emailAliases.length === 0 ? (
+                    <Typography fontWeight='light' className='fr-text--sm'>
+                      -
+                    </Typography>
+                  ) : (
+                    <Box className='flex flex-wrap gap-1'>
+                      {emailAliases.map(alias => (
+                        <Chip
+                          key={alias.id ?? alias.email}
+                          label={alias.email}
+                          size='small'
+                        />
+                      ))}
+                    </Box>
+                  )}
+                </div>
                 <InfoLine label='Rôle' value={formatRole(role)} />
                 <InfoLine label='Date dernière connexion' value={formatLastLoginAt(user?.lastLoginAt)} />
               </div>
