@@ -1,4 +1,3 @@
-
 import {Input} from '@codegouvfr/react-dsfr/Input'
 import {Select} from '@codegouvfr/react-dsfr/SelectNext'
 
@@ -15,20 +14,27 @@ const naturesDocument = [
 
 const DocumentForm = ({document, setDocument}) => (
   <>
+    <Input
+      label='Titre'
+      nativeInputProps={{
+        value: document?.title || '',
+        onChange: event => setDocument(previous => ({...previous, title: event.target.value}))
+      }}
+    />
     <div className='grid grid-cols-2 gap-4'>
       <Input
         label='Référence'
         nativeInputProps={{
-          defaultValue: document?.reference,
-          onChange: e => setDocument(prev => ({...prev, reference: e.target.value}))
+          value: document?.reference || '',
+          onChange: event => setDocument(previous => ({...previous, reference: event.target.value}))
         }}
       />
       <Select
         label='Nature *'
         placeholder='Sélectionner la nature du document'
         nativeSelectProps={{
-          defaultValue: document?.nature,
-          onChange: e => setDocument(prev => ({...prev, nature: e.target.value}))
+          value: document?.nature || '',
+          onChange: event => setDocument(previous => ({...previous, nature: event.target.value}))
         }}
         options={naturesDocument.map(nature => ({
           value: nature,
@@ -41,25 +47,25 @@ const DocumentForm = ({document, setDocument}) => (
         label='Date de signature *'
         nativeInputProps={{
           type: 'date',
-          defaultValue: document?.signatureDate,
-          onChange: e => setDocument(prev => ({...prev, signatureDate: e.target.value}))
+          value: document?.signatureDate || '',
+          onChange: event => setDocument(previous => ({...previous, signatureDate: event.target.value}))
         }}
       />
       <Input
         label='Date de fin de validité'
         nativeInputProps={{
           type: 'date',
-          defaultValue: document?.validityEndDate,
-          onChange: e => setDocument(prev => ({...prev, validityEndDate: e.target.value}))
+          value: document?.validityEndDate || '',
+          onChange: event => setDocument(previous => ({...previous, validityEndDate: event.target.value}))
         }}
       />
     </div>
     <Input
       textArea
-      label='Remarque'
+      label='Commentaire'
       nativeTextAreaProps={{
-        defaultValue: document?.comment,
-        onChange: e => setDocument(prev => ({...prev, comment: e.target.value}))
+        value: document?.comment || '',
+        onChange: event => setDocument(previous => ({...previous, comment: event.target.value}))
       }}
     />
   </>

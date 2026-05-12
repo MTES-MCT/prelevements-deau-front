@@ -1,7 +1,5 @@
 import {fr} from '@codegouvfr/react-dsfr'
-import {
-  Box
-} from '@mui/material'
+import {Box} from '@mui/material'
 import {notFound} from 'next/navigation'
 
 import PreleveurMap from '@/components/declarants/preleveur-map.js'
@@ -16,11 +14,21 @@ import SectionCard from '@/components/ui/SectionCard/index.js'
 import {getDeclarantTitleFromDeclarant, getDeclarantTypeIcon} from '@/lib/declarants.js'
 import {formatFullAddress} from '@/lib/declaration.js'
 import {getNewExploitationURL} from '@/lib/urls.js'
-import {getDeclarantAction} from '@/server/actions/declarants.js'
+import {
+  getDeclarantAction,
+  getDocumentsFromPreleveurAction,
+  getReglesFromPreleveurAction
+} from '@/server/actions/index.js'
 import {getPointsPrelevementBatchAction} from '@/server/actions/points-prelevement.js'
 import {getAggregatedSeriesOptionsAction} from '@/server/actions/series.js'
 
 const iconColorStyle = {color: fr.colors.decisions.text.label.blueFrance.default}
+
+export const dynamic = 'force-dynamic'
+
+function getDeclarantId(declarant) {
+  return declarant.userId || declarant.id
+}
 
 const InfoCard = ({declarant}) => {
   if (!declarant.email && !declarant.phoneNumber && !declarant.addressLine1) {
@@ -65,18 +73,25 @@ const Page = async ({params}) => {
   }
 
   const declarant = declarantResult.data
-  const exploitations = declarant.pointPrelevements
+  const declarantId = getDeclarantId(declarant)
+  const exploitations = declarant.pointPrelevements || []
 
-  const documentsResult = (async () => ({data: []})) // @TODO: getDocumentsFromPreleveurAction(id)
-  const reglesResult = (async () => ({data: []})) // @TODO: getReglesFromPreleveurAction(declarant.userId)
-  const seriesResult = await getAggregatedSeriesOptionsAction({preleveurId: id})
+  const [documentsResult, reglesResult, seriesResult] = await Promise.all([
+    getDocumentsFromPreleveurAction(declarantId),
+    getReglesFromPreleveurAction(declarantId),
+    getAggregatedSeriesOptionsAction({preleveurId: declarantId})
+  ])
 
   const documents = documentsResult.data || []
   const regles = reglesResult.data || []
   const seriesOptions = seriesResult.data
 
   const pointIds = [
-    ...new Set(exploitations.map(exploitation => exploitation.pointPrelevement?.id).filter(Boolean))
+    ...new Set(
+      exploitations
+        .map(exploitation => exploitation.pointPrelevement?.id)
+        .filter(Boolean)
+    )
   ]
 
   let pointsById = new Map()
@@ -94,12 +109,13 @@ const Page = async ({params}) => {
 
     return {
       ...exploitation,
-      point: pointId ? (pointsById.get(pointId) ?? null) : null
+      pointPrelevement: pointId
+        ? (pointsById.get(pointId) ?? exploitation.pointPrelevement)
+        : exploitation.pointPrelevement
     }
   })
 
   const pointsPrelevement = [...pointsById.values()]
-
   const title = getDeclarantTitleFromDeclarant(declarant)
 
   return (
@@ -113,45 +129,51 @@ const Page = async ({params}) => {
         }
         hrefButtons={[
           {
-            label: 'Éditer le declarant',
+            label: 'Éditer le déclarant',
             icon: 'fr-icon-edit-line',
             alt: '',
             priority: 'secondary',
-            href: `/declarants/${declarant.userId}/edit`,
-            hidden: !declarant.right?.canEdit
+            href: `/declarants/${declarantId}/edit`,
+            requireEditor: true
           }
         ]}
         metas={[
           {
             iconId: 'ri-map-pin-user-line',
-            content: <>{declarant.pointPrelevements.length} exploitation{declarant.pointPrelevements.length > 0 ? 's' : ''}</>
+            content: <>{exploitations.length} exploitation{exploitations.length > 1 ? 's' : ''}</>
           }
         ]}
       />
+
       <InfoCard declarant={declarant} />
+
       <DeclarationReminderCard declarant={declarant} />
+
       {pointsPrelevement.length > 0 && (
         <PreleveurMap points={pointsPrelevement} />
       )}
+
       <SeriesExplorer
-        preleveurId={declarant.userId}
+        preleveurId={declarantId}
         seriesOptions={seriesOptions}
       />
+
       <ExploitationsList
         hidePreleveur
         exploitations={exploitationsWithPoints}
         preleveurs={[declarant]}
-        createHref={getNewExploitationURL({idPreleveur: declarant.userId})}
-        canCreate={declarant.right?.canEdit}
+        createHref={getNewExploitationURL({idPreleveur: declarantId})}
       />
+
       <DocumentsList
-        idPreleveur={id}
+        idPreleveur={declarantId}
         documents={documents}
         exploitations={exploitationsWithPoints}
       />
+
       <ReglesListCard
         hasExploitations={exploitations.length > 0}
-        preleveurId={id}
+        preleveurId={declarantId}
         regles={regles}
       />
     </Box>

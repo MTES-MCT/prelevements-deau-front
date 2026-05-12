@@ -14,75 +14,73 @@ import {
 import DocumentForm from '@/components/form/document-form.js'
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import {formatFullDateFr} from '@/lib/format-date.js'
-import {updateDocumentAction, updateExploitationAction} from '@/server/actions/index.js'
+import {updateDocumentAction} from '@/server/actions/index.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
-// Build a map from exploitation ID to display label (point name only)
+const statusLabels = {
+  EN_ACTIVITE: 'En activité',
+  TERMINEE: 'Terminée',
+  ABANDONNEE: 'Abandonnée',
+  NON_RENSEIGNE: 'Non renseigné'
+}
+
 const buildExploitationLabelsMap = exploitations => {
   const map = {}
+
   for (const exploitation of exploitations) {
-    const pointName = exploitation.point?.nom || exploitation.point?.id_point || 'Point inconnu'
-    map[exploitation._id] = pointName
+    const pointName = exploitation.point?.name || exploitation.pointPrelevement?.name || 'Point inconnu'
+    const label = `${pointName}${exploitation.type ? ` — ${exploitation.type}` : ''}`
+    map[exploitation.id] = label
   }
 
   return map
 }
 
-// Build reverse map from label to ID
-const buildIdByLabelMap = labelsById => {
-  const idByLabel = {}
-  for (const [id, label] of Object.entries(labelsById)) {
-    idByLabel[label] = id
-  }
+const buildIdByLabelMap = labelsById => Object.fromEntries(
+  Object.entries(labelsById).map(([id, label]) => [label, id])
+)
 
-  return idByLabel
-}
-
-// Group exploitations by statut for the multiselect
 const buildExploitationOptions = (exploitations, labelsById) => {
-  const statutOrder = ['En activité', 'Terminée', 'Abandonnée', 'Non renseigné']
+  const statusOrder = ['EN_ACTIVITE', 'TERMINEE', 'ABANDONNEE', 'NON_RENSEIGNE']
   const grouped = {}
 
   for (const exploitation of exploitations) {
-    const statut = exploitation.statut || 'Non renseigné'
-    grouped[statut] ||= []
+    const status = exploitation.status || 'NON_RENSEIGNE'
+    grouped[status] ||= []
 
-    const label = labelsById[exploitation._id]
-    const dateText = `Depuis le ${formatFullDateFr(exploitation.date_debut)}${exploitation.date_fin ? ` jusqu'au ${formatFullDateFr(exploitation.date_fin)}` : ''}`
+    const label = labelsById[exploitation.id]
+    const dateText = `${exploitation.startDate ? `Depuis le ${formatFullDateFr(exploitation.startDate)}` : 'Début non renseigné'}${exploitation.endDate ? ` jusqu'au ${formatFullDateFr(exploitation.endDate)}` : ''}`
 
-    grouped[statut].push({
+    grouped[status].push({
       value: label,
       content: label,
       title: dateText
     })
   }
 
-  // Return groups in order, filtering out empty groups
-  return statutOrder
-    .filter(statut => grouped[statut]?.length > 0)
-    .map(statut => ({
-      label: statut,
-      options: grouped[statut]
+  return statusOrder
+    .filter(status => grouped[status]?.length > 0)
+    .map(status => ({
+      label: statusLabels[status] || status,
+      options: grouped[status]
     }))
 }
 
 const DocumentEditDialog = ({
+  declarantId,
   document,
   exploitations,
   isOpen,
   onClose,
-  onDocumentUpdated,
-  onExploitationsUpdated
+  onDocumentUpdated
 }) => {
   const [payload, setPayload] = useState({})
   const [selectedExploitations, setSelectedExploitations] = useState([])
   const [error, setError] = useState(null)
   const [validationErrors, setValidationErrors] = useState([])
-  const [isInitialized, setIsInitialized] = useState(false)
 
-  // Build ID <-> label mappings
   const exploitationLabelsById = useMemo(
-    () => buildExploitationLabelsMap(exploitations),
+    () => buildExploitationLabelsMap(exploitations || []),
     [exploitations]
   )
 
@@ -92,35 +90,26 @@ const DocumentEditDialog = ({
   )
 
   const exploitationOptions = useMemo(
-    () => buildExploitationOptions(exploitations, exploitationLabelsById),
+    () => buildExploitationOptions(exploitations || [], exploitationLabelsById),
     [exploitations, exploitationLabelsById]
   )
 
-  // Initialize selected exploitations when dialog opens
   useEffect(() => {
-    if (isOpen && document && !isInitialized) {
-      const currentExploitationIds = exploitations
-        .filter(e => e.documents?.some(d => (d._id || d) === document._id))
-        .map(e => e._id)
-      setSelectedExploitations(currentExploitationIds)
+    if (isOpen && document) {
+      setSelectedExploitations(document.declarantPointPrelevementId ? [document.declarantPointPrelevementId] : [])
       setPayload({})
       setError(null)
       setValidationErrors([])
-      setIsInitialized(true)
-    } else if (!isOpen) {
-      setIsInitialized(false)
     }
-  }, [isOpen, document, exploitations, isInitialized])
+  }, [isOpen, document])
 
-  // Convert selected IDs to display labels for the multiselect
   const selectedLabels = useMemo(() =>
     selectedExploitations.map(id => exploitationLabelsById[id] || id),
   [selectedExploitations, exploitationLabelsById])
 
-  // Handle selection change - convert labels back to IDs
   const handleExploitationsChange = newLabels => {
     const newIds = newLabels.map(label => idByLabel[label] || label)
-    setSelectedExploitations(newIds)
+    setSelectedExploitations(newIds.slice(-1))
   }
 
   const handleSave = async () => {
@@ -128,59 +117,24 @@ const DocumentEditDialog = ({
     setValidationErrors([])
 
     try {
-      let updatedDocument = document
+      const cleanedPayload = emptyStringToNull({
+        ...payload,
+        declarantPointPrelevementId: selectedExploitations[0] || null
+      })
 
-      // Update document metadata if changed
-      if (Object.keys(payload).length > 0) {
-        const cleanedPayload = emptyStringToNull(payload)
-        const response = await updateDocumentAction(document._id, cleanedPayload)
+      const response = await updateDocumentAction(document.id, cleanedPayload, declarantId)
 
-        if (!response.success) {
-          if (response.validationErrors) {
-            setValidationErrors(response.validationErrors)
-          } else {
-            setError(response.error)
-          }
-
-          return
+      if (!response.success) {
+        if (response.validationErrors) {
+          setValidationErrors(response.validationErrors)
+        } else {
+          setError(response.error)
         }
 
-        updatedDocument = response.data
-        onDocumentUpdated(updatedDocument)
+        return
       }
 
-      // Update exploitations assignments
-      const currentExploitationIds = exploitations
-        .filter(e => e.documents?.some(d => (d._id || d) === document._id))
-        .map(e => e._id)
-
-      const toAdd = selectedExploitations.filter(id => !currentExploitationIds.includes(id))
-      const toRemove = currentExploitationIds.filter(id => !selectedExploitations.includes(id))
-
-      // Add document to new exploitations
-      const addPromises = toAdd.map(async exploitationId => {
-        const exploitation = exploitations.find(e => e._id === exploitationId)
-        const currentDocIds = exploitation.documents?.map(d => d._id || d) || []
-        const updatedDocIds = [...currentDocIds, document._id]
-
-        return updateExploitationAction(exploitationId, {documents: updatedDocIds})
-      })
-
-      // Remove document from unselected exploitations
-      const removePromises = toRemove.map(async exploitationId => {
-        const exploitation = exploitations.find(e => e._id === exploitationId)
-        const updatedDocIds = exploitation.documents
-          ?.map(d => d._id || d)
-          .filter(id => id !== document._id) || []
-
-        return updateExploitationAction(exploitationId, {documents: updatedDocIds})
-      })
-
-      await Promise.all([...addPromises, ...removePromises])
-
-      // Notify parent of exploitation changes
-      onExploitationsUpdated(toAdd, toRemove, document._id)
-
+      onDocumentUpdated(response.data)
       onClose()
     } catch (error_) {
       setError(error_?.message || 'Une erreur est survenue lors de la sauvegarde')
@@ -206,7 +160,7 @@ const DocumentEditDialog = ({
     >
       <DialogTitle>
         <InfoOutlined className='mr-3' />
-        Édition du document : {document.nom_fichier}
+        Édition du document : {document.title || document.filename}
       </DialogTitle>
       <DialogContent>
         <DocumentForm
@@ -214,14 +168,13 @@ const DocumentEditDialog = ({
           setDocument={setPayload}
         />
 
-        {/* Exploitations selection */}
         {exploitations.length > 0 && (
           <div className='mt-4'>
             <GroupedMultiselect
-              hint='Sélectionnez les exploitations auxquelles ce document est lié'
-              label='Exploitations associées'
+              hint='Un document peut être associé à une exploitation.'
+              label='Exploitation associée'
               options={exploitationOptions}
-              placeholder='Sélectionner des exploitations'
+              placeholder='Sélectionner une exploitation'
               value={selectedLabels}
               onChange={handleExploitationsChange}
             />

@@ -7,30 +7,23 @@ import {Box, Typography} from '@mui/material'
 import {RequireEditor} from '@/components/permissions/index.js'
 import formatDate from '@/lib/format-date.js'
 
-// Format exploitations count for display
-const formatExploitationsCount = exploitations => {
-  if (!exploitations || exploitations.length === 0) {
+const formatExploitation = exploitation => {
+  if (!exploitation) {
     return null
   }
 
-  if (exploitations.length === 1) {
-    const exploitation = exploitations[0]
-    return exploitation.point?.nom || exploitation.point?.id_point || '1 exploitation'
-  }
-
-  return `${exploitations.length} exploitations`
+  return exploitation.point?.name || exploitation.pointPrelevement?.name || '1 exploitation'
 }
 
 const Document = ({document, exploitations = [], handleDelete, handleEdit, ...props}) => {
-  // Find exploitations that reference this document
-  const linkedExploitations = exploitations.filter(e =>
-    e.documents?.some(d => (d._id || d) === document._id)
+  const linkedExploitation = exploitations.find(exploitation =>
+    exploitation.id === document.declarantPointPrelevementId
   )
-  const exploitationsText = formatExploitationsCount(linkedExploitations)
+  const exploitationText = formatExploitation(linkedExploitation)
 
   return (
     <Box
-      key={document._id}
+      key={document.id}
       {...props}
       sx={{
         display: 'flex',
@@ -47,24 +40,33 @@ const Document = ({document, exploitations = [], handleDelete, handleEdit, ...pr
               color: fr.colors.decisions.text.actionHigh.blueFrance.default
             }}
           />
-          {document.nature} {document.reference ? `- n°${document.reference}` : ''} du {formatDate(document.date_signature)}
-          {document.remarque && (
+          {document.nature} {document.reference ? `- n°${document.reference}` : ''} du {formatDate(document.signatureDate)}
+          {document.comment && (
             <span style={{padding: '.5em'}}>
-              <Tooltip kind='hover' title={document.remarque} />
+              <Tooltip kind='hover' title={document.comment} />
             </span>
           )}
         </Typography>
-        {document.date_fin_validite && (
+
+        {document.validityEndDate && (
           <Typography variant='caption' sx={{pl: 2}}>
-            <i>(Fin de validité : {formatDate(document.date_fin_validite)})</i>
+            <i>(Fin de validité : {formatDate(document.validityEndDate)})</i>
           </Typography>
         )}
-        {exploitationsText && (
+
+        {exploitationText && (
           <Typography variant='caption' sx={{pl: 2, display: 'block'}}>
-            <i>{exploitationsText}</i>
+            <i>{exploitationText}</i>
+          </Typography>
+        )}
+
+        {(document.title || document.filename) && (
+          <Typography variant='caption' sx={{pl: 2, display: 'block'}}>
+            <i>{document.title || document.filename}</i>
           </Typography>
         )}
       </Box>
+
       <Box
         sx={{
           display: 'flex',
@@ -80,7 +82,7 @@ const Document = ({document, exploitations = [], handleDelete, handleEdit, ...pr
                 iconId='fr-icon-edit-line'
                 priority='tertiary no outline'
                 size='small'
-                onClick={() => handleEdit(document._id)}
+                onClick={() => handleEdit(document.id)}
               />
             )}
             {handleDelete && (
@@ -89,7 +91,7 @@ const Document = ({document, exploitations = [], handleDelete, handleEdit, ...pr
                 priority='tertiary no outline'
                 size='small'
                 style={{color: fr.colors.decisions.text.active.redMarianne.default}}
-                onClick={() => handleDelete(document._id)}
+                onClick={() => handleDelete(document.id)}
               />
             )}
           </RequireEditor>

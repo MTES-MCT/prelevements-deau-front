@@ -1,38 +1,38 @@
 import {Typography} from '@mui/material'
-import dynamic from 'next/dynamic'
+import nextDynamic from 'next/dynamic'
 import {notFound} from 'next/navigation'
 
 import DocumentUploadForm from '@/components/form/document-upload-form.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {
   getDeclarantAction,
-  getExploitationFromPreleveurAction,
-  getPointPrelevementAction
+  getExploitationFromPreleveurAction
 } from '@/server/actions/index.js'
 import {displayPreleveur} from '@/utils/preleveurs.js'
 
-const DynamicBreadcrumb = dynamic(
+const DynamicBreadcrumb = nextDynamic(
   () => import('@codegouvfr/react-dsfr/Breadcrumb')
 )
 
+export const dynamic = 'force-dynamic'
+
+function getDeclarantId(declarant) {
+  return declarant.userId || declarant.id
+}
+
 const Page = async ({params}) => {
   const {id} = await params
-  const preleveurResult = await getDeclarantAction(id)
+  const declarantResult = await getDeclarantAction(id)
 
-  if (!preleveurResult.success || !preleveurResult.data) {
+  if (!declarantResult.success || !declarantResult.data) {
     notFound()
   }
 
-  const preleveur = preleveurResult.data
+  const declarant = declarantResult.data
+  const declarantId = getDeclarantId(declarant)
 
-  const exploitationsResult = await getExploitationFromPreleveurAction(id)
+  const exploitationsResult = await getExploitationFromPreleveurAction(declarantId)
   const exploitations = exploitationsResult.data || []
-
-  // Fetch points for each exploitation to get their names
-  const exploitationsWithPoints = await Promise.all(exploitations.map(async exploitation => {
-    const pointResult = await getPointPrelevementAction(exploitation.point)
-    return {...exploitation, point: pointResult.success ? pointResult.data : null}
-  }))
 
   return (
     <>
@@ -43,25 +43,27 @@ const Page = async ({params}) => {
           currentPageLabel='Nouveau document'
           segments={[
             {
-              label: 'Préleveurs',
+              label: 'Déclarants',
               linkProps: {
-                href: '/preleveurs'
+                href: '/declarants'
               }
             },
             {
-              label: displayPreleveur(preleveur),
+              label: displayPreleveur(declarant),
               linkProps: {
-                href: `/preleveurs/${preleveur.id_preleveur}`
+                href: `/declarants/${declarantId}`
               }
             }
           ]}
         />
+
         <Typography variant='h3' sx={{mb: 3}}>
           Ajouter un document
         </Typography>
+
         <DocumentUploadForm
-          exploitations={exploitationsWithPoints}
-          preleveur={preleveur}
+          exploitations={exploitations}
+          preleveur={declarant}
         />
       </div>
     </>

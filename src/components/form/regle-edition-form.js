@@ -1,4 +1,3 @@
-/* eslint-disable camelcase */
 'use client'
 
 import {useState} from 'react'
@@ -19,23 +18,27 @@ import useFormSubmit from '@/hook/use-form-submit.js'
 import {updateRegleAction, deleteRegleAction} from '@/server/actions/index.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
-/**
- * Transform API regle to form state
- * Converts exploitations from decorated objects to array of IDs
- */
+function dateToInputValue(value) {
+  if (!value) {
+    return ''
+  }
+
+  return String(value).slice(0, 10)
+}
+
 const transformRegleForForm = regle => ({
-  exploitations: regle.exploitations?.map(e => e._id || e) || [],
-  document: regle.document?._id || regle.document || null,
-  parametre: regle.parametre || '',
-  frequence: regle.frequence || '',
-  unite: regle.unite || '',
-  valeur: regle.valeur ?? '',
-  contrainte: regle.contrainte || '',
-  debut_validite: regle.debut_validite?.split('T')[0] || '',
-  fin_validite: regle.fin_validite?.split('T')[0] || '',
-  debut_periode: regle.debut_periode?.split('T')[0] || '',
-  fin_periode: regle.fin_periode?.split('T')[0] || '',
-  remarque: regle.remarque || ''
+  exploitationIds: regle.exploitationIds || regle.exploitations?.map(exploitation => exploitation.id || exploitation) || [],
+  documentId: regle.document?.id || regle.documentId || null,
+  parameter: regle.parameter || '',
+  frequency: regle.frequency || '',
+  unit: regle.unit || '',
+  value: regle.value ?? '',
+  constraint: regle.constraint || '',
+  validityStartDate: dateToInputValue(regle.validityStartDate),
+  validityEndDate: dateToInputValue(regle.validityEndDate),
+  annualPeriodStartDate: dateToInputValue(regle.annualPeriodStartDate),
+  annualPeriodEndDate: dateToInputValue(regle.annualPeriodEndDate),
+  comment: regle.comment || ''
 })
 
 const RegleEditionForm = ({preleveur, regle, exploitations, documents}) => {
@@ -46,24 +49,26 @@ const RegleEditionForm = ({preleveur, regle, exploitations, documents}) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // Parameters that require a unit selection
-  const parametresRequiringUnite = ['Débit prélevé', 'Débit réservé']
-  const isUniteRequired = parametresRequiringUnite.includes(formData.parametre)
+  const parametersRequiringUnit = ['débit prélevé', 'débit réservé']
+  const isUnitRequired = parametersRequiringUnit.includes(formData.parameter)
+  const isFrequencyRequired = formData.parameter === 'volume prélevé'
+  const declarantId = preleveur.userId || preleveur.id
 
-  const isFormValid = formData.exploitations?.length > 0
-    && formData.parametre
-    && formData.valeur !== ''
-    && formData.contrainte
-    && formData.debut_validite
-    && (!isUniteRequired || formData.unite)
+  const isFormValid = formData.exploitationIds?.length > 0
+    && formData.parameter
+    && formData.value !== ''
+    && formData.constraint
+    && formData.validityStartDate
+    && (!isUnitRequired || formData.unit)
+    && (!isFrequencyRequired || formData.frequency)
 
   const handleSubmit = withSubmit(
     async () => {
       const payload = emptyStringToNull({
         ...formData,
-        valeur: Number(formData.valeur)
+        value: Number(formData.value)
       })
-      const response = await updateRegleAction(regle._id, payload)
+      const response = await updateRegleAction(regle.id, payload)
       if (!response.success) {
         throw response
       }
@@ -71,8 +76,8 @@ const RegleEditionForm = ({preleveur, regle, exploitations, documents}) => {
       return response.data
     },
     {
-      successIndicator: '_id',
-      onSuccess: () => router.push(`/preleveurs/${preleveur.id_preleveur}`)
+      successIndicator: 'id',
+      onSuccess: () => router.push(`/declarants/${declarantId}`)
     }
   )
 
@@ -81,10 +86,10 @@ const RegleEditionForm = ({preleveur, regle, exploitations, documents}) => {
     setIsDeleting(true)
 
     try {
-      const response = await deleteRegleAction(regle._id)
+      const response = await deleteRegleAction(regle.id, declarantId)
 
       if (response.success) {
-        router.push(`/preleveurs/${preleveur.id_preleveur}`)
+        router.push(`/declarants/${declarantId}`)
       } else {
         setError(response.error)
         setIsDialogOpen(false)
@@ -138,14 +143,7 @@ const RegleEditionForm = ({preleveur, regle, exploitations, documents}) => {
           </DialogTitle>
           <DialogContent>
             <p>Êtes-vous sûr de vouloir supprimer cette règle ?</p>
-            <p className='mt-3'>
-              <strong>Conséquences :</strong>
-            </p>
-            <ul className='list-disc ml-5 mt-2'>
-              <li>Cette règle sera définitivement supprimée.</li>
-              <li>Les exploitations associées ne seront plus soumises à cette contrainte.</li>
-              <li>Cette action est irréversible.</li>
-            </ul>
+            <p className='mt-3'>Cette action est irréversible.</p>
           </DialogContent>
           <DialogActions className='m-3'>
             <Button
@@ -167,7 +165,7 @@ const RegleEditionForm = ({preleveur, regle, exploitations, documents}) => {
 
       <FormErrors
         error={error}
-        validationErrors={validationErrors.filter(e => !e.path)}
+        validationErrors={validationErrors.filter(error => !error.path)}
         onClose={resetErrors}
       />
 

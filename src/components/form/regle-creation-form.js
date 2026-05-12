@@ -1,4 +1,3 @@
-/* eslint-disable camelcase */
 'use client'
 
 import {useState} from 'react'
@@ -13,18 +12,18 @@ import {createRegleAction} from '@/server/actions/index.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
 const emptyRegle = {
-  exploitations: [],
-  document: null,
-  parametre: '',
-  unite: '',
-  valeur: '',
-  contrainte: '',
-  frequence: null,
-  debut_validite: '',
-  fin_validite: '',
-  debut_periode: '',
-  fin_periode: '',
-  remarque: ''
+  exploitationIds: [],
+  documentId: null,
+  parameter: '',
+  unit: '',
+  value: '',
+  constraint: '',
+  frequency: null,
+  validityStartDate: '',
+  validityEndDate: '',
+  annualPeriodStartDate: '',
+  annualPeriodEndDate: '',
+  comment: ''
 }
 
 const RegleCreationForm = ({preleveur, exploitations, documents}) => {
@@ -33,26 +32,27 @@ const RegleCreationForm = ({preleveur, exploitations, documents}) => {
 
   const [regle, setRegle] = useState(emptyRegle)
 
-  // Parameters that require a unit selection
-  const parametresRequiringUnite = ['débit prélevé', 'débit réservé']
-  const isUniteRequired = parametresRequiringUnite.includes(regle.parametre)
-  const isFrequenceRequired = regle.parametre === 'volume prélevé'
+  const parametersRequiringUnit = ['débit prélevé', 'débit réservé']
+  const isUnitRequired = parametersRequiringUnit.includes(regle.parameter)
+  const isFrequencyRequired = regle.parameter === 'volume prélevé'
 
-  const isFormValid = regle.exploitations?.length > 0
-    && regle.parametre
-    && regle.valeur !== ''
-    && regle.contrainte
-    && regle.debut_validite
-    && (!isUniteRequired || regle.unite)
-    && (!isFrequenceRequired || regle.frequence)
+  const isFormValid = regle.exploitationIds?.length > 0
+    && regle.parameter
+    && regle.value !== ''
+    && regle.constraint
+    && regle.validityStartDate
+    && (!isUnitRequired || regle.unit)
+    && (!isFrequencyRequired || regle.frequency)
+
+  const declarantId = preleveur.userId || preleveur.id
 
   const handleSubmit = withSubmit(
     async () => {
       const payload = emptyStringToNull({
         ...regle,
-        valeur: Number(regle.valeur)
+        value: Number(regle.value)
       })
-      const response = await createRegleAction(preleveur._id, payload)
+      const response = await createRegleAction(declarantId, payload)
       if (!response.success) {
         throw response
       }
@@ -60,8 +60,8 @@ const RegleCreationForm = ({preleveur, exploitations, documents}) => {
       return response.data
     },
     {
-      successIndicator: '_id',
-      onSuccess: () => router.push(`/preleveurs/${preleveur.id_preleveur}`)
+      successIndicator: 'id',
+      onSuccess: () => router.push(`/declarants/${declarantId}`)
     }
   )
 
@@ -79,7 +79,7 @@ const RegleCreationForm = ({preleveur, exploitations, documents}) => {
 
       <FormErrors
         error={error}
-        validationErrors={validationErrors.filter(e => !e.path)}
+        validationErrors={validationErrors.filter(error => !error.path)}
         onClose={resetErrors}
       />
 
