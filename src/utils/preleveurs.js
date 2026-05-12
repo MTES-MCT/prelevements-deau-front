@@ -1,17 +1,13 @@
 export function displayPreleveur(preleveur) {
-  if (!preleveur) {
-    return
+  const socialReason = preleveur?.socialReason || preleveur?.declarant?.socialReason
+
+  if (socialReason) {
+    return socialReason
   }
 
-  if (preleveur.sigle) {
-    return preleveur.sigle
-  }
+  const firstName = preleveur?.firstName || preleveur?.user?.firstName || ''
+  const lastName = preleveur?.lastName || preleveur?.user?.lastName || ''
+  const fullName = `${firstName} ${lastName}`.trim()
 
-  if (preleveur.raison_sociale) {
-    return preleveur.raison_sociale
-  }
-
-  if (preleveur.nom) {
-    return [preleveur.civilite, preleveur.nom, preleveur.prenom].filter(Boolean).join(' ')
-  }
+  return fullName || preleveur?.email || preleveur?.user?.email || 'Déclarant sans nom'
 }

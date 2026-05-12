@@ -45,7 +45,7 @@ export async function createDocumentAction(idPreleveur, payload, document) {
       body: formData
     })
 
-    revalidatePath(`/preleveurs/${idPreleveur}`)
+    revalidatePath(`/declarants/${idPreleveur}`)
     return result
   })
 }
@@ -66,7 +66,7 @@ export async function uploadDocumentAction(idPreleveur, document) {
       body: formData
     })
 
-    revalidatePath(`/preleveurs/${idPreleveur}`)
+    revalidatePath(`/declarants/${idPreleveur}`)
     return result
   })
 }
@@ -100,7 +100,7 @@ export async function deleteDocumentAction(idDocument, preleveurId) {
     })
 
     if (preleveurId) {
-      revalidatePath(`/preleveurs/${preleveurId}`)
+      revalidatePath(`/declarants/${preleveurId}`)
     }
 
     // Return response status

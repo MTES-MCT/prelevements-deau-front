@@ -16,13 +16,16 @@ const stylesMap = {
   orthophoto: photo
 }
 
+const DEFAULT_CENTER = [2.213_749, 46.227_638]
+const DEFAULT_ZOOM = 5
+
 const MiniMapForm = ({geom, setGeom}) => {
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
   const currentStyleRef = useRef('plan-ign')
   const [style, setStyle] = useState(currentStyleRef.current)
   const [coordinates, setCoordinates] = useState(
-    geom ? [...geom.coordinates] : [55.55, -21.13]
+    geom ? [...geom.coordinates] : DEFAULT_CENTER
   )
   const geojson = useRef({
     type: 'FeatureCollection',
@@ -57,7 +60,6 @@ const MiniMapForm = ({geom, setGeom}) => {
     })
   }
 
-  // Synchronisation entre la carte et les inputs
   const updateGeometry = newCoords => {
     geojson.current.features[0].geometry.coordinates = [...newCoords]
     setGeom({
@@ -81,8 +83,8 @@ const MiniMapForm = ({geom, setGeom}) => {
     const map = new maplibre.Map({
       container: mapContainerRef.current,
       style: stylesMap[style],
-      center: geom ? geom.coordinates : [55.55, -21.13],
-      zoom: 11,
+      center: geom ? geom.coordinates : DEFAULT_CENTER,
+      zoom: geom ? 11 : DEFAULT_ZOOM,
       attributionControl: {compact: true}
     })
 
@@ -130,6 +132,7 @@ const MiniMapForm = ({geom, setGeom}) => {
         geojson.current.features[0].geometry.coordinates = newCoords
 
         map.getSource('point').setData(geojson.current)
+        setCoordinates(newCoords)
 
         setGeom({
           type: 'Point',
@@ -144,6 +147,8 @@ const MiniMapForm = ({geom, setGeom}) => {
 
         map.on('mousemove', onMove)
         map.once('mouseup', () => {
+          const newCoords = geojson.current.features[0].geometry.coordinates
+          setCoordinates([...newCoords])
           setGeom(geojson.current.features[0].geometry)
           map.off('mousemove', onMove)
         })
@@ -155,7 +160,6 @@ const MiniMapForm = ({geom, setGeom}) => {
     }
   }, [])
 
-  // Mise à jour du style de la carte
   useEffect(() => {
     const map = mapRef.current
 
@@ -212,14 +216,14 @@ const MiniMapForm = ({geom, setGeom}) => {
         <Input
           label='Longitude'
           nativeInputProps={{
-            value: geojson.current.features[0].geometry.coordinates[0],
+            value: coordinates[0],
             onChange: e => handleCoordinate(e.target.value, 'longitude')
           }}
         />
         <Input
           label='Latitude'
           nativeInputProps={{
-            value: geojson.current.features[0].geometry.coordinates[1],
+            value: coordinates[1],
             onChange: e => handleCoordinate(e.target.value, 'latitude')
           }}
         />

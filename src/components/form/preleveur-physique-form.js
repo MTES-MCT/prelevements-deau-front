@@ -30,12 +30,12 @@ const PreleveurPhysiqueForm = ({preleveur, setPreleveur}) => {
           placeholder='Choisir la civilité'
           nativeSelectProps={{
             placeholder: 'Choisir la civilité',
-            defaultValue: preleveur?.civilite || '',
-            onChange: e => setPreleveur(prev => ({...prev, civilite: e.target.value}))
+            defaultValue: preleveur?.civility || '',
+            onChange: e => setPreleveur(prev => ({...prev, civility: e.target.value}))
           }}
           options={[
-            {value: 'M.', label: 'M.'},
-            {value: 'Mme', label: 'Mme'},
+            {value: 'MR', label: 'M.'},
+            {value: 'MRS', label: 'Mme'},
             {value: '', label: 'Non indiqué'}
           ]}
         />
@@ -43,16 +43,16 @@ const PreleveurPhysiqueForm = ({preleveur, setPreleveur}) => {
           label='Nom *'
           nativeInputProps={{
             placeholder: 'Entrer le nom',
-            defaultValue: preleveur?.nom || '',
-            onChange: e => setPreleveur(prev => ({...prev, nom: e.target.value}))
+            defaultValue: preleveur?.lastName || '',
+            onChange: e => setPreleveur(prev => ({...prev, lastName: e.target.value}))
           }}
         />
         <Input
           label='Prénom *'
           nativeInputProps={{
             placeholder: 'Entrer le prénom',
-            defaultValue: preleveur?.prenom || '',
-            onChange: e => setPreleveur(prev => ({...prev, prenom: e.target.value}))
+            defaultValue: preleveur?.firstName || '',
+            onChange: e => setPreleveur(prev => ({...prev, firstName: e.target.value}))
           }}
         />
       </div>

@@ -1,209 +1,205 @@
-/* eslint-disable camelcase */
+'use client'
 
 import Input from '@codegouvfr/react-dsfr/Input'
-import SearchBar from '@codegouvfr/react-dsfr/SearchBar'
-import Select from '@codegouvfr/react-dsfr/SelectNext'
-import {Tooltip} from '@codegouvfr/react-dsfr/Tooltip'
 import {Typography} from '@mui/material'
 import dynamic from 'next/dynamic'
-
-import SearchAutocomplete from '@/components/form/search-autocomplete.js'
 
 const DynamicCheckbox = dynamic(
   () => import('@codegouvfr/react-dsfr/Checkbox'),
   {ssr: false}
 )
 
-const OptionalPointFieldsForm = (
-  {
-    point,
-    setPoint,
-    bnpeList,
-    bssList,
-    bvBdCarthageList,
-    mesoList,
-    meContinentalesBvList
-  }
-) => (
+const OptionalPointFieldsForm = ({point, setPoint}) => (
   <div>
     <Typography variant='h5' sx={{pb: 5}}>
       Informations d’identification
     </Typography>
+
     <Input
-      label={(
-        <>
-          <span className='pr-1'>Autres noms</span>
-          <Tooltip
-            kind='hover'
-            title='Autres noms utilisés pour ce point de prélèvement dans d’autres systèmes d’information'
-          />
-        </>
-      )}
+      label='Autres noms'
+      hintText='Autres noms utilisés pour ce point de prélèvement dans d’autres systèmes d’information'
       nativeInputProps={{
-        defaultValue: point?.autresNoms,
+        defaultValue: point?.otherNames || '',
         placeholder: 'Entrer les autres noms, séparés par une virgule',
-        onChange: e => setPoint(prev => ({...prev, autresNoms: e.target.value}))
+        onChange: e => setPoint(prev => ({...prev, otherNames: e.target.value}))
       }}
     />
-    <div className='pb-5'>
-      <p className='pb-2'>Code point BNPE</p>
-      <SearchBar
-        label='Rechercher dans la Banque nationale des prélèvements d’eau'
-        renderInput={({className, id, placeholder, type}) => (
-          <SearchAutocomplete
-            options={bnpeList.map(bnpe => ({
-              bnpe,
-              label: `${bnpe.nom_ouvrage} (${bnpe.code_point_prelevement})`
-            }))}
-            defaultValue={point?.bnpe?.nom || point?.bnpe?.point}
-            className={className}
-            id={id}
-            placeholder={placeholder}
-            type={type}
-            onChange={(e, value) => setPoint(prev => ({
-              ...prev,
-              bnpe: value?.bnpe?.code_point_prelevement
-            }))}
-          />
-        )}
-      />
-    </div>
-    <div className='pb-5'>
-      <p className='pb-2'>Code BSS (nouveau)</p>
-      <SearchBar
-        label='Code national du point d’eau dans la Banque Nationale du Sous-Sol (code "nouveau" commençant par BSS...)'
-        renderInput={({className, id, placeholder, type}) => (
-          <SearchAutocomplete
-            options={bssList.map(bss => ({
-              bss,
-              label: `${bss.id_bss} (${bss.lien_infoterre})`
-            }))}
-            defaultValue={point?.bss?.nom || point?.bss?.point}
-            className={className}
-            id={id}
-            placeholder={placeholder}
-            type={type}
-            onChange={(e, value) => setPoint(prev => ({
-              ...prev,
-              bss: value?.bss?.id_bss
-            }))}
-          />
-        )}
-      />
-    </div>
+
+    <Input
+      label='Code BSS'
+      nativeInputProps={{
+        defaultValue: point?.codeBSS || '',
+        placeholder: 'Entrer le code BSS',
+        onChange: e => setPoint(prev => ({...prev, codeBSS: e.target.value}))
+      }}
+    />
+
+    <Input
+      label='Code BNPE'
+      nativeInputProps={{
+        defaultValue: point?.codeBNPE || '',
+        placeholder: 'Entrer le code BNPE',
+        onChange: e => setPoint(prev => ({...prev, codeBNPE: e.target.value}))
+      }}
+    />
+
     <Input
       label='Code AIOT'
       nativeInputProps={{
-        defaultValue: point?.code_aiot,
+        defaultValue: point?.codeAIOT || '',
         placeholder: 'Entrer le code AIOT',
-        onChange: e => setPoint(prev => ({...prev, code_aiot: e.target.value}))
+        onChange: e => setPoint(prev => ({...prev, codeAIOT: e.target.value}))
       }}
     />
+
+    <Input
+      label='Code masse d’eau souterraine'
+      nativeInputProps={{
+        defaultValue: point?.codeMESO || '',
+        placeholder: 'Entrer le code MESO',
+        onChange: e => setPoint(prev => ({...prev, codeMESO: e.target.value}))
+      }}
+    />
+
+    <Input
+      label='Code masse d’eau de surface continentale'
+      nativeInputProps={{
+        defaultValue: point?.codeMEContinentalesBV || '',
+        placeholder: 'Entrer le code masse d’eau continentale',
+        onChange: e => setPoint(prev => ({...prev, codeMEContinentalesBV: e.target.value}))
+      }}
+    />
+
+    <Input
+      label='Code bassin versant BD Carthage'
+      nativeInputProps={{
+        defaultValue: point?.codeBDCarthage || '',
+        placeholder: 'Entrer le code bassin versant BD Carthage',
+        onChange: e => setPoint(prev => ({...prev, codeBDCarthage: e.target.value}))
+      }}
+    />
+
+    <Input
+      label='Code EU masse d’eau'
+      nativeInputProps={{
+        defaultValue: point?.codeEUMasseDEau || '',
+        placeholder: 'Entrer le code EU masse d’eau',
+        onChange: e => setPoint(prev => ({...prev, codeEUMasseDEau: e.target.value}))
+      }}
+    />
+
+    <Input
+      label='Code PTP'
+      nativeInputProps={{
+        defaultValue: point?.codePTP || '',
+        placeholder: 'Entrer le code PTP',
+        onChange: e => setPoint(prev => ({...prev, codePTP: e.target.value}))
+      }}
+    />
+
+    <Input
+      label='Code OPR'
+      nativeInputProps={{
+        defaultValue: point?.codeOPR || '',
+        placeholder: 'Entrer le code OPR',
+        onChange: e => setPoint(prev => ({...prev, codeOPR: e.target.value}))
+      }}
+    />
+
+    <Input
+      label='Code BDLISA'
+      nativeInputProps={{
+        defaultValue: point?.codeBDLISA || '',
+        placeholder: 'Entrer le code BDLISA',
+        onChange: e => setPoint(prev => ({...prev, codeBDLISA: e.target.value}))
+      }}
+    />
+
+    <Input
+      label='Code BD Topage'
+      nativeInputProps={{
+        defaultValue: point?.codeBDTopage || '',
+        placeholder: 'Entrer le code BD Topage',
+        onChange: e => setPoint(prev => ({...prev, codeBDTopage: e.target.value}))
+      }}
+    />
+
+    <Input
+      label='Code SISPEA'
+      nativeInputProps={{
+        defaultValue: point?.codeSISPEA || '',
+        placeholder: 'Entrer le code SISPEA',
+        onChange: e => setPoint(prev => ({...prev, codeSISPEA: e.target.value}))
+      }}
+    />
+
     <Typography variant='h5' sx={{py: 5}}>
-      Localisation : Informations complémentaires
+      Localisation : informations complémentaires
     </Typography>
-    <Select
-      label='Masse d’eau souterraine (DCE)'
-      placeholder='Sélectionner le code MESO'
-      nativeSelectProps={{
-        defaultValue: point?.meso?.nom,
-        onChange: e => setPoint(prev =>
-          ({
-            ...prev,
-            meso: mesoList.find(() => e.target.value).code
-          })
-        )
+
+    <Input
+      label='Code commune'
+      nativeInputProps={{
+        defaultValue: point?.communeCode || '',
+        placeholder: 'Entrer le code commune',
+        onChange: e => setPoint(prev => ({...prev, communeCode: e.target.value}))
       }}
-      options={mesoList.map(meso => ({
-        value: meso.nom_provis,
-        label: `${meso.code} - ${meso.nom_provis}`
-      }))}
     />
-    <div className='pb-5'>
-      <p className='pb-2'>Masse d’eau de surface continentale (DCE)</p>
-      <SearchBar
-        label='Rechercher le code masse d’eau continentale'
-        renderInput={({className, id, placeholder, type}) => (
-          <SearchAutocomplete
-            options={meContinentalesBvList.map(meContinentales => ({
-              meContinentales,
-              label: `${meContinentales.code_dce} - ${meContinentales.nom}`
-            }))}
-            defaultValue={point?.meContinentalesBv?.nom}
-            className={className}
-            id={id}
-            placeholder={placeholder}
-            type={type}
-            onChange={(e, value) => setPoint(prev => ({
-              ...prev,
-              meContinentalesBv: value?.meContinentales?.code_dce
-            }))}
-          />
-        )}
-      />
-    </div>
-    <div className='pb-5'>
-      <p className='pb-2'>Bassin versant BD Carthage</p>
-      <SearchBar
-        label='Rechercher un BV BD Carthage'
-        renderInput={({className, id, placeholder, type}) => (
-          <SearchAutocomplete
-            options={bvBdCarthageList.map(bvBdCarthage => ({
-              bvBdCarthage,
-              label: `${bvBdCarthage.code_cours} - ${bvBdCarthage.toponyme_t}`
-            }))}
-            defaultValue={point?.bvBdCarthage?.nom}
-            className={className}
-            id={id}
-            placeholder={placeholder}
-            type={type}
-            onChange={(e, value) => setPoint(prev => ({
-              ...prev,
-              bvBdCarthage: value?.bvBdCarthage?.code_cours
-            }))}
-          />
-        )}
-      />
-    </div>
-    <div className='w-full grid grid-cols-2 gap-4'>
-      <Input
-        label='Cours d’eau'
-        nativeInputProps={{
-          defaultValue: point?.cours_eau,
-          placeholder: 'Entrer le nom du cours d’eau',
-          onChange: e => setPoint(prev => ({...prev, cours_eau: e.target.value}))
-        }}
-      />
-      <Input
-        label='Profondeur'
-        type='number'
-        nativeInputProps={{
-          type: 'number',
-          defaultValue: point?.profondeur,
-          placeholder: 'Entrer la profondeur en m (pour les puits et forages)',
-          onChange: e => setPoint(prev => ({...prev, profondeur: Number(e.target.value)}))
-        }}
-      />
-    </div>
+
+    <Input
+      label='Nom de la commune'
+      nativeInputProps={{
+        defaultValue: point?.communeName || '',
+        placeholder: 'Entrer le nom de la commune',
+        onChange: e => setPoint(prev => ({...prev, communeName: e.target.value}))
+      }}
+    />
+
+    <Input
+      label='Cours d’eau'
+      nativeInputProps={{
+        defaultValue: point?.streamName || '',
+        placeholder: 'Entrer le nom du cours d’eau',
+        onChange: e => setPoint(prev => ({...prev, streamName: e.target.value}))
+      }}
+    />
+
+    <Input
+      label='Profondeur'
+      nativeInputProps={{
+        type: 'number',
+        defaultValue: point?.depth ?? '',
+        placeholder: 'Entrer la profondeur en m',
+        onChange: e => setPoint(prev => ({
+          ...prev,
+          depth: e.target.value === '' ? null : Number(e.target.value)
+        }))
+      }}
+    />
+
     <div className='w-full grid grid-cols-2 gap-4 py-5'>
       <DynamicCheckbox
         options={[
           {
             label: 'Zone de répartition des eaux',
             nativeInputProps: {
-              defaultChecked: point.zre || false,
-              onChange: e => setPoint(prev => ({...prev, zre: e.target.checked}))
+              defaultChecked: point?.isZre || false,
+              onChange: e => setPoint(prev => ({...prev, isZre: e.target.checked}))
             }
           }
         ]}
       />
+
       <DynamicCheckbox
         options={[
           {
             label: 'Réservoir biologique',
             nativeInputProps: {
-              defaultChecked: point.reservoir_biologique || false,
-              onChange: e => setPoint(prev => ({...prev, reservoir_biologique: e.target.checked}))
+              defaultChecked: point?.isBiologicalReservoir || false,
+              onChange: e => setPoint(prev => ({
+                ...prev,
+                isBiologicalReservoir: e.target.checked
+              }))
             }
           }
         ]}

@@ -35,7 +35,7 @@ export async function getDeclarantAction(id) {
  */
 export async function createPreleveurAction(payload) {
   return withErrorHandling(async () => {
-    const result = await fetchJSON('api/preleveurs', {
+    const result = await fetchJSON('api/declarants', {
       method: 'POST',
       body: payload
     })
@@ -52,12 +52,12 @@ export async function createPreleveurAction(payload) {
  */
 export async function updatePreleveurAction(idPreleveur, payload) {
   return withErrorHandling(async () => {
-    const result = await fetchJSON(`api/preleveurs/${idPreleveur}`, {
+    const result = await fetchJSON(`api/declarants/${idPreleveur}`, {
       method: 'PUT',
       body: payload
     })
-    revalidatePath('/preleveurs')
-    revalidatePath(`/preleveurs/${idPreleveur}`)
+    revalidatePath('/declarants')
+    revalidatePath(`/declarants/${idPreleveur}`)
     return result
   })
 }
@@ -69,10 +69,10 @@ export async function updatePreleveurAction(idPreleveur, payload) {
  */
 export async function deletePreleveurAction(idPreleveur) {
   return withErrorHandling(async () => {
-    const result = await fetchJSON(`api/preleveurs/${idPreleveur}`, {
+    const result = await fetchJSON(`api/declarants/${idPreleveur}`, {
       method: 'DELETE'
     })
-    revalidatePath('/preleveurs')
+    revalidatePath('/declarants')
     return result
   })
 }
@@ -111,7 +111,7 @@ export async function sendDeclarationReminderAction(declarantId) {
     const result = await fetchJSON(`api/declarants/${declarantId}/send-reminder`, {
       method: 'POST'
     })
-    revalidatePath(`/preleveurs/${declarantId}`)
+    revalidatePath(`/declarants/${declarantId}`)
     return result
   })
 }

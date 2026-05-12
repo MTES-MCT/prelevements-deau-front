@@ -52,7 +52,7 @@ export function createPointPrelevementFeatures(points) {
       id: point.id,
       properties: {
         ...point,
-        textOffset: [0, 1.5 + (0.07 * Math.min(point.nom?.length || 0, 50))]
+        textOffset: [0, 1.5 + (0.07 * Math.min(point.name?.length || 0, 50))]
       }
     }))
   }

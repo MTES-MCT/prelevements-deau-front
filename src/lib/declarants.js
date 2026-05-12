@@ -28,7 +28,7 @@ export function getDeclarantTypeIcon(declarant) {
  * @returns {boolean} True if physical person, false if moral person
  */
 export function isDeclarantPhysique(declarant) {
-  return !declarant?.socialReason
+  return declarant?.declarantType !== 'LEGAL_PERSON' && !declarant?.socialReason && !declarant?.declarant?.socialReason
 }
 
 /**
@@ -38,11 +38,11 @@ export function isDeclarantPhysique(declarant) {
  */
 export function getDeclarantTitleFromDeclarant(declarant) {
   if (isDeclarantPhysique(declarant)) {
-    const parts = [declarant?.civility, declarant?.user?.firstName, declarant?.user?.lastName].filter(Boolean)
+    const parts = [declarant?.civility, declarant?.firstName ?? declarant?.user?.firstName, declarant?.lastName ?? declarant?.user?.lastName].filter(Boolean)
     return parts.length > 0 ? parts.join(' ') : 'Non renseigné'
   }
 
-  return declarant.socialReason || 'Non renseigné'
+  return declarant.socialReason || declarant?.declarant?.socialReason || 'Non renseigné'
 }
 
 /**
@@ -53,7 +53,7 @@ export function getDeclarantTitleFromUser(user) {
     return user.declarant.socialReason
   }
 
-  const parts = [user?.civility, user?.firstName, user?.lastName].filter(Boolean)
+  const parts = [user?.civility, user?.firstName ?? user?.user?.firstName, user?.lastName ?? user?.user?.lastName].filter(Boolean)
 
   return parts.length > 0 ? parts.join(' ') : 'Non renseigné'
 }

@@ -3,7 +3,6 @@ import Article from '@mui/icons-material/Article'
 import Launch from '@mui/icons-material/Launch'
 import {Box, Chip, Typography} from '@mui/material'
 
-import {RequireEditor} from '@/components/permissions/index.js'
 import {getTypeMilieuColor} from '@/lib/points-prelevement.js'
 import {getPointPrelevementLabel} from '@/utils/point-prelevement.js'
 
@@ -32,7 +31,7 @@ const PointIdentification = ({pointPrelevement, lienBss, lienBnpe}) => {
             )}
           </div>
         </Typography>
-        <RequireEditor>
+        {pointPrelevement.right?.canEdit && (
           <Button
             priority='secondary'
             iconId='fr-icon-edit-line'
@@ -42,18 +41,18 @@ const PointIdentification = ({pointPrelevement, lienBss, lienBnpe}) => {
           >
             Éditer
           </Button>
-        </RequireEditor>
+        )}
       </div>
 
-      {pointPrelevement.type_milieu && (
+      {pointPrelevement.waterBodyType && (
         <Box className='flex items-center gap-1'>
           <b>Type de milieu :</b>
           <Chip
             size='small'
-            label={pointPrelevement.type_milieu}
+            label={pointPrelevement.waterBodyType}
             sx={{
-              backgroundColor: getTypeMilieuColor(pointPrelevement.type_milieu).background,
-              color: getTypeMilieuColor(pointPrelevement.type_milieu).textColor
+              backgroundColor: getTypeMilieuColor(pointPrelevement.waterBodyType).background,
+              color: getTypeMilieuColor(pointPrelevement.waterBodyType).textColor
             }}
           />
         </Box>

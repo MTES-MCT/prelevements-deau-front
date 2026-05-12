@@ -19,6 +19,9 @@ const Page = async ({params}) => {
   }
 
   const preleveur = preleveurResult.data
+  if (!preleveur.right?.canEdit) {
+    notFound()
+  }
 
   return (
     <>
@@ -32,9 +35,9 @@ const Page = async ({params}) => {
           }}
           segments={[
             {
-              label: 'Préleveurs',
+              label: 'Déclarants',
               linkProps: {
-                href: '/preleveurs'
+                href: '/declarants'
               }
             }
           ]}

@@ -25,7 +25,7 @@ const EntityHeader = ({
 
   // Filter out buttons that require editor permission if user can't edit
   const visibleButtons = uniqHrefButtons.filter(
-    button => !button.requireEditor || canEdit
+    button => !button.hidden && (!button.requireEditor || canEdit)
   )
 
   return (

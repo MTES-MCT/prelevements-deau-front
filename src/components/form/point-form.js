@@ -1,4 +1,4 @@
-/* eslint-disable camelcase */
+'use client'
 
 import {useState} from 'react'
 
@@ -10,34 +10,35 @@ import MiniMapForm from '@/components/form/mini-map-form.js'
 import OptionalPointFieldsForm from '@/components/form/optional-point-fields-form.js'
 import AccordionCentered from '@/components/ui/AccordionCentered/index.js'
 
+const waterBodyTypes = [
+  {value: 'SURFACE', label: 'Eau de surface'},
+  {value: 'SOUTERRAIN', label: 'Eau souterraine'},
+  {value: 'TRANSITION', label: 'Eau de transition'}
+]
+
+const precisionsGeom = [
+  'Coordonnées précises',
+  'Coordonnées estimées (précision du kilomètre)',
+  'Coordonnées du centroïde de la commune',
+  'Coordonnées précises (AP)',
+  'Coordonnées précises (ARS)',
+  'Coordonnées précises (ARS 2013)',
+  'Coordonnées précises (BSS)',
+  'Coordonnées précises (BNPE – accès restreint)',
+  'Coordonnées précises (BNPE)',
+  'Coordonnées précises (DEAL)',
+  'Coordonnées précises (DLE)',
+  'Coordonnées précises (rapport HGA)',
+  'Précision inconnue',
+  'Repérage carte'
+]
+
 const PointForm = ({
   point,
   setPoint,
-  handleSetGeom,
-  bnpeList,
-  bssList,
-  bvBdCarthageList,
-  meContinentalesBvList,
-  mesoList
+  handleSetGeom
 }) => {
   const [isExpanded, setIsExpanded] = useState(false)
-  const typesDeMilieu = ['Eau de surface', 'Eau souterraine', 'Eau de transition']
-  const precisionsGeom = [
-    'Coordonnées précises',
-    'Coordonnées estimées (précision du kilomètre)',
-    'Coordonnées du centroïde de la commune',
-    'Coordonnées précises (AP)',
-    'Coordonnées précises (ARS)',
-    'Coordonnées précises (ARS 2013)',
-    'Coordonnées précises (BSS)',
-    'Coordonnées précises (BNPE – accès restreint)',
-    'Coordonnées précises (BNPE)',
-    'Coordonnées précises (DEAL)',
-    'Coordonnées précises (DLE)',
-    'Coordonnées précises (rapport HGA)',
-    'Précision inconnue',
-    'Repérage carte'
-  ]
 
   return (
     <>
@@ -46,22 +47,21 @@ const PointForm = ({
         label='Nom du point de prélèvement *'
         nativeInputProps={{
           placeholder: 'Entrer le nom du point de prélèvement',
-          defaultValue: point.nom,
-          onChange: e => setPoint(prev => ({...prev, nom: e.target.value}))
+          defaultValue: point.name || '',
+          onChange: e => setPoint(prev => ({...prev, name: e.target.value}))
         }}
       />
+
       <Select
         label='Type de milieu *'
         placeholder='Sélectionner le type de milieu'
         nativeSelectProps={{
-          defaultValue: point.type_milieu,
-          onChange: e => setPoint(prev => ({...prev, type_milieu: e.target.value}))
+          defaultValue: point.waterBodyType || '',
+          onChange: e => setPoint(prev => ({...prev, waterBodyType: e.target.value}))
         }}
-        options={typesDeMilieu.map(type => ({
-          value: type,
-          label: type
-        }))}
+        options={waterBodyTypes}
       />
+
       <div className='pb-5'>
         <Typography variant='h5'>
           Localisation
@@ -69,47 +69,53 @@ const PointForm = ({
         <p>Sélectionner l&apos;emplacement du point sur la carte <small><i>(Cliquer ou déplacer le point)</i></small></p>
         <p>Ou renseigner les coordonnées manuellement sous la carte</p>
       </div>
+
       <div style={{height: '600px', marginBottom: '2rem'}}>
-        <MiniMapForm geom={point.geom} setGeom={handleSetGeom} />
+        <MiniMapForm geom={point.coordinates} setGeom={handleSetGeom} />
       </div>
+
       <Input
         label='Détails sur la localisation'
         nativeInputProps={{
           placeholder: 'Entrer les détails sur la localisation',
-          defaultValue: point.detail_localisation,
-          onChange: e => setPoint(prev => ({...prev, detail_localisation: e.target.value}))
+          defaultValue: point.locationDescription || '',
+          onChange: e => setPoint(prev => ({...prev, locationDescription: e.target.value}))
         }}
       />
+
       <Select
         label='Précision géométrique'
         placeholder='Sélectionner une précision géométrique'
         nativeSelectProps={{
-          defaultValue: point.precision_geom,
-          onChange: e => setPoint(prev => ({...prev, precision_geom: e.target.value}))
+          defaultValue: point.geometryPrecision || '',
+          onChange: e => setPoint(prev => ({...prev, geometryPrecision: e.target.value}))
         }}
         options={precisionsGeom.map(precision => ({
           value: precision,
           label: precision
         }))}
       />
+
       <Input
         textArea
         label='Remarque'
         nativeTextAreaProps={{
           placeholder: 'Entrer une remarque',
-          defaultValue: point?.remarque
+          defaultValue: point?.comment || '',
+          onChange: e => setPoint(prev => ({...prev, comment: e.target.value}))
         }}
-        onChange={e => setPoint(prev => ({...prev, remarque: e.target.value}))}
       />
+
       <Input
         textArea
-        label='Remarque interne (Visible uniquement par les agents)'
+        label='Remarque interne (visible uniquement par les agents)'
         nativeTextAreaProps={{
           placeholder: 'Entrer une remarque interne',
-          defaultValue: point?.remarque_interne
+          defaultValue: point?.internalComment || '',
+          onChange: e => setPoint(prev => ({...prev, internalComment: e.target.value}))
         }}
-        onChange={e => setPoint(prev => ({...prev, remarque_interne: e.target.value}))}
       />
+
       <AccordionCentered
         isExpanded={isExpanded}
         setIsExpanded={setIsExpanded}
@@ -118,11 +124,6 @@ const PointForm = ({
         <OptionalPointFieldsForm
           point={point}
           setPoint={setPoint}
-          bnpeList={bnpeList}
-          bssList={bssList}
-          bvBdCarthageList={bvBdCarthageList}
-          mesoList={mesoList}
-          meContinentalesBvList={meContinentalesBvList}
         />
       </AccordionCentered>
     </>

@@ -13,18 +13,10 @@ import {
 import {useRouter} from 'next/navigation'
 
 import PointForm from '@/components/form/point-form.js'
-import {getCommuneFromCoords} from '@/lib/communes.js'
 import {editPointPrelevementAction, deletePointPrelevementAction} from '@/server/actions/index.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
-const PointEditionForm = ({
-  pointPrelevement,
-  bssList,
-  bnpeList,
-  bvBdCarthageList,
-  mesoList,
-  meContinentalesBvList
-}) => {
+const PointEditionForm = ({pointPrelevement}) => {
   const router = useRouter()
   const [payload, setPayload] = useState({})
   const point = {...pointPrelevement}
@@ -37,23 +29,23 @@ const PointEditionForm = ({
     setValidationErrors([])
 
     if (Object.keys(payload).length === 0) {
-      router.push(`/points-prelevement/${point.id_point}`)
+      router.push(`/points-prelevement/${point.id}`)
       return
     }
 
     try {
       const cleanedPayload = emptyStringToNull(payload)
-      const response = await editPointPrelevementAction(point._id, cleanedPayload)
+      const response = await editPointPrelevementAction(point.id, cleanedPayload)
 
       if (response.success) {
-        router.push(`/points-prelevement/${response.data.id_point}`)
+        router.push(`/points-prelevement/${response.data.id}`)
       } else if (response.validationErrors) {
         setValidationErrors(response.validationErrors)
       } else {
         setError(response.error)
       }
-    } catch (error) {
-      setError(error.message)
+    } catch (error_) {
+      setError(error_.message)
     }
   }
 
@@ -61,7 +53,7 @@ const PointEditionForm = ({
     setError(null)
 
     try {
-      const response = await deletePointPrelevementAction(point._id)
+      const response = await deletePointPrelevementAction(point.id)
 
       if (!response.success) {
         setIsDialogOpen(false)
@@ -70,43 +62,24 @@ const PointEditionForm = ({
       }
 
       router.push('/points-prelevement')
-    } catch (error) {
-      setError(error.message)
+    } catch (error_) {
+      setError(error_.message)
     }
   }
 
-  const handleSetGeom = async geom => {
-    try {
-      const commune = await getCommuneFromCoords(
-        {
-          lon: geom.coordinates[0],
-          lat: geom.coordinates[1]
-        }
-      )
-
-      if (!commune) {
-        setError('Cette commune est introuvable.')
-        return
-      }
-
-      setPayload(prev => ({...prev, commune: commune.code, geom}))
-    } catch (error) {
-      setError(error.message)
-    }
+  const handleSetGeom = coordinates => {
+    setError(null)
+    setPayload(prev => ({...prev, coordinates}))
   }
 
   return (
     <div>
       <PointForm
-        point={point}
+        point={{...point, ...payload}}
         setPoint={setPayload}
         handleSetGeom={handleSetGeom}
-        bnpeList={bnpeList}
-        bssList={bssList}
-        bvBdCarthageList={bvBdCarthageList}
-        meContinentalesBvList={meContinentalesBvList}
-        mesoList={mesoList}
       />
+
       <div className='border border-red-500 rounded-sm p-5'>
         <div className='text-red-500'>
           <InfoOutlined className='mr-3' />
@@ -152,24 +125,26 @@ const PointEditionForm = ({
           </DialogActions>
         </Dialog>
       </div>
+
       {error && (
         <div className='text-center p-5 pt-10 text-red-500'>
           <p><b>Un problème est survenu :</b></p>
           {error}
         </div>
       )}
+
       {validationErrors?.length > 0 && (
         <div className='text-center p-5 text-red-500'>
           <p><b>{validationErrors.length === 1 ? 'Problème de validation :' : 'Problèmes de validation :'}</b></p>
           {validationErrors.map(err => (
             <p key={err.message}>{err.message}</p>
-          )
-          )}
+          ))}
         </div>
       )}
+
       <div className='w-full flex justify-center p-5 my-5'>
         <Button onClick={handleSubmit}>
-          Valider les modifications sur le point de prélèvement {point.nom}
+          Valider les modifications sur le point de prélèvement {point.name}
         </Button>
       </div>
     </div>

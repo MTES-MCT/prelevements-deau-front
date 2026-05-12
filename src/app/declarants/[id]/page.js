@@ -117,8 +117,8 @@ const Page = async ({params}) => {
             icon: 'fr-icon-edit-line',
             alt: '',
             priority: 'secondary',
-            href: `/preleveurs/${declarant.userId}/edit`,
-            requireEditor: true
+            href: `/declarants/${declarant.userId}/edit`,
+            hidden: !declarant.right?.canEdit
           }
         ]}
         metas={[
@@ -142,6 +142,7 @@ const Page = async ({params}) => {
         exploitations={exploitationsWithPoints}
         preleveurs={[declarant]}
         createHref={getNewExploitationURL({idPreleveur: declarant.userId})}
+        canCreate={declarant.right?.canEdit}
       />
       <DocumentsList
         idPreleveur={id}

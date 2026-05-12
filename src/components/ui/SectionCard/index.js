@@ -23,7 +23,7 @@ const SectionCard = ({title, icon, buttonProps, editorOnly = true, children}) =>
           </Box>
         </Typography>
 
-        {buttonProps && (editorOnly ? (
+        {buttonProps && !buttonProps.hidden && (editorOnly ? (
           <RequireEditor>
             <Button {...buttonProps} />
           </RequireEditor>

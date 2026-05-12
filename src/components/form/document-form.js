@@ -1,4 +1,3 @@
-/* eslint-disable camelcase */
 
 import {Input} from '@codegouvfr/react-dsfr/Input'
 import {Select} from '@codegouvfr/react-dsfr/SelectNext'
@@ -42,16 +41,16 @@ const DocumentForm = ({document, setDocument}) => (
         label='Date de signature *'
         nativeInputProps={{
           type: 'date',
-          defaultValue: document?.date_signature,
-          onChange: e => setDocument(prev => ({...prev, date_signature: e.target.value}))
+          defaultValue: document?.signatureDate,
+          onChange: e => setDocument(prev => ({...prev, signatureDate: e.target.value}))
         }}
       />
       <Input
         label='Date de fin de validité'
         nativeInputProps={{
           type: 'date',
-          defaultValue: document?.date_fin_validite,
-          onChange: e => setDocument(prev => ({...prev, date_fin_validite: e.target.value}))
+          defaultValue: document?.validityEndDate,
+          onChange: e => setDocument(prev => ({...prev, validityEndDate: e.target.value}))
         }}
       />
     </div>
@@ -59,8 +58,8 @@ const DocumentForm = ({document, setDocument}) => (
       textArea
       label='Remarque'
       nativeTextAreaProps={{
-        defaultValue: document?.remarque,
-        onChange: e => setDocument(prev => ({...prev, remarque: e.target.value}))
+        defaultValue: document?.comment,
+        onChange: e => setDocument(prev => ({...prev, comment: e.target.value}))
       }}
     />
   </>

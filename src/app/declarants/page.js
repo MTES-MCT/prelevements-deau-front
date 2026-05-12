@@ -27,9 +27,9 @@ const Page = async () => {
               linkProps={{
                 href: '/declarants/new'
               }}
-              title='Ajouter un nouveau préleveur'
+              title='Ajouter un nouveau déclarant'
             >
-              Ajouter un nouveau préleveur
+              Ajouter un nouveau déclarant
             </Button>
           </RequireEditor>
         </div>

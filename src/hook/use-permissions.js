@@ -15,15 +15,15 @@ import {useAuth} from '@/contexts/auth-context.js'
 export const usePermissions = () => {
   const {user, isAuthenticated, isLoading} = useAuth()
 
-  const userRoles = user?.roles || []
+  const role = user?.role || null
 
-  const canRead = userRoles.includes('reader') || userRoles.includes('editor')
-  const canEdit = userRoles.includes('editor')
+  const canRead = Boolean(role)
+  const canEdit = role === 'INSTRUCTOR' || role === 'ADMIN'
 
   return {
     canRead,
     canEdit,
-    userRoles,
+    role,
     isLoading,
     isAuthenticated
   }

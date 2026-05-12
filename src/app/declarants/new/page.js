@@ -19,9 +19,9 @@ const Page = () => (
         }}
         segments={[
           {
-            label: 'Préleveurs',
+            label: 'Déclarants',
             linkProps: {
-              href: '/preleveurs'
+              href: '/declarants'
             }
           }
         ]}

@@ -1,4 +1,3 @@
-/* eslint-disable camelcase */
 
 'use client'
 
@@ -6,7 +5,6 @@ import {useEffect, useMemo, useState} from 'react'
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Button} from '@codegouvfr/react-dsfr/Button'
-import {format} from 'date-fns'
 import {useRouter} from 'next/navigation'
 
 import DocumentForm from '@/components/form/document-form.js'
@@ -17,15 +15,15 @@ import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import SimpleLoading from '@/components/ui/SimpleLoading/index.js'
 import useFormSubmit from '@/hook/use-form-submit.js'
 import {formatFullDateFr} from '@/lib/format-date.js'
-import {createDocumentAction, updateExploitationAction} from '@/server/actions/index.js'
+import {createDocumentAction} from '@/server/actions/index.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
 // Build a map from exploitation ID to display label (point name only)
 const buildExploitationLabelsMap = exploitations => {
   const map = {}
   for (const exploitation of exploitations) {
-    const pointName = exploitation.point?.nom || exploitation.point?.id_point || 'Point inconnu'
-    map[exploitation._id] = pointName
+    const pointName = exploitation.point?.name || exploitation.pointPrelevement?.name || 'Point inconnu'
+    map[exploitation.id] = pointName
   }
 
   return map
@@ -43,15 +41,21 @@ const buildIdByLabelMap = labelsById => {
 
 // Group exploitations by statut for the multiselect
 const buildExploitationOptions = (exploitations, labelsById) => {
-  const statutOrder = ['En activité', 'Terminée', 'Abandonnée', 'Non renseigné']
+  const statutOrder = ['EN_ACTIVITE', 'TERMINEE', 'ABANDONNEE', 'NON_RENSEIGNE']
+  const statusLabels = {
+    EN_ACTIVITE: 'En activité',
+    TERMINEE: 'Terminée',
+    ABANDONNEE: 'Abandonnée',
+    NON_RENSEIGNE: 'Non renseigné'
+  }
   const grouped = {}
 
   for (const exploitation of exploitations) {
-    const statut = exploitation.statut || 'Non renseigné'
+    const statut = exploitation.status || 'NON_RENSEIGNE'
     grouped[statut] ||= []
 
-    const label = labelsById[exploitation._id]
-    const dateText = `Depuis le ${formatFullDateFr(exploitation.date_debut)}${exploitation.date_fin ? ` jusqu'au ${formatFullDateFr(exploitation.date_fin)}` : ''}`
+    const label = labelsById[exploitation.id]
+    const dateText = `Depuis le ${formatFullDateFr(exploitation.startDate)}${exploitation.endDate ? ` jusqu'au ${formatFullDateFr(exploitation.endDate)}` : ''}`
 
     grouped[statut].push({
       value: label,
@@ -64,7 +68,7 @@ const buildExploitationOptions = (exploitations, labelsById) => {
   return statutOrder
     .filter(statut => grouped[statut]?.length > 0)
     .map(statut => ({
-      label: statut,
+      label: statusLabels[statut] || statut,
       options: grouped[statut]
     }))
 }
@@ -108,39 +112,19 @@ const DocumentUploadForm = ({preleveur, exploitations = []}) => {
 
   const handleDocument = withSubmit(
     async () => {
-      const cleanedDocument = emptyStringToNull(document)
-      const response = await createDocumentAction(preleveur._id, cleanedDocument, filesList[0])
+      const cleanedDocument = emptyStringToNull({
+        ...document,
+        declarantPointPrelevementId: selectedExploitations[0] || null
+      })
+      const response = await createDocumentAction(preleveur.userId || preleveur.id, cleanedDocument, filesList[0])
 
       if (!response.success) {
         throw response
       }
 
       const createdDoc = response.data
-
-      // If document created successfully and exploitations selected, assign them
-      if (createdDoc._id && selectedExploitations.length > 0) {
-        const assignmentPromises = selectedExploitations.map(async exploitationId => {
-          const exploitation = exploitations.find(e => e._id === exploitationId)
-
-          if (!exploitation) {
-            throw new Error(`Exploitation ${exploitationLabelsById[exploitationId]} introuvable`)
-          }
-
-          const currentDocIds = exploitation.documents?.map(d => d._id || d) || []
-          const updatedDocIds = [...currentDocIds, createdDoc._id]
-
-          const updateResponse = await updateExploitationAction(exploitationId, {
-            documents: updatedDocIds
-          })
-
-          if (!updateResponse.success) {
-            throw new Error(`Échec de l'assignation à ${exploitationLabelsById[exploitationId]}: ${updateResponse.error || 'erreur inconnue'}`)
-          }
-
-          return exploitationId
-        })
-
-        const results = await Promise.allSettled(assignmentPromises)
+      if (selectedExploitations.length > 1) {
+        const results = [{status: 'rejected', reason: new Error('Un document ne peut être associé qu’à une exploitation à la création. Créez un second document pour les autres exploitations.')}]
         const assignmentErrors = results
           .filter(r => r.status === 'rejected')
           .map(r => r.reason?.message)
@@ -155,8 +139,8 @@ const DocumentUploadForm = ({preleveur, exploitations = []}) => {
       return createdDoc
     },
     {
-      successIndicator: '_id',
-      onSuccess: () => router.push(`/preleveurs/${preleveur.id_preleveur}`)
+      successIndicator: 'id',
+      onSuccess: () => router.push(`/declarants/${preleveur.userId || preleveur.id}`)
     }
   )
 
@@ -164,13 +148,12 @@ const DocumentUploadForm = ({preleveur, exploitations = []}) => {
     if (filesList && filesList.length > 0) {
       setDocument(prev => ({
         ...prev,
-        nom_fichier: filesList[0].name,
-        date_ajout: format(new Date(), 'yyyy-MM-dd')
+        title: filesList[0].name
       }))
     }
   }, [filesList])
 
-  const isDisabled = !(document?.date_signature
+  const isDisabled = !(document?.signatureDate
     && document?.nature
     && filesList?.length > 0)
 

@@ -1,4 +1,3 @@
-/* eslint-disable camelcase */
 'use client'
 
 import {useEffect, useState} from 'react'
@@ -8,22 +7,15 @@ import {Typography} from '@mui/material'
 import {useRouter} from 'next/navigation'
 
 import PointForm from '@/components/form/point-form.js'
-import {getCommuneFromCoords} from '@/lib/communes.js'
 import {createPointPrelevementAction} from '@/server/actions/points-prelevement.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
-const PointCreationForm = ({
-  bnpeList,
-  bssList,
-  bvBdCarthageList,
-  mesoList,
-  meContinentalesBvList
-}) => {
+const PointCreationForm = () => {
   const router = useRouter()
   const [point, setPoint] = useState({
-    nom: '',
-    type_milieu: '',
-    precision_geom: ''
+    name: '',
+    waterBodyType: '',
+    geometryPrecision: ''
   })
   const [isDisabled, setIsDisabled] = useState(true)
   const [validationErrors, setValidationErrors] = useState([])
@@ -38,41 +30,24 @@ const PointCreationForm = ({
       const result = await createPointPrelevementAction(cleanedPoint)
 
       if (result.success) {
-        router.push(`/points-prelevement/${result.data.id_point}`)
+        router.push(`/points-prelevement/${result.data.id}`)
       } else if (result.validationErrors) {
         setValidationErrors(result.validationErrors)
       } else {
         setError(result.error)
       }
-    } catch (error) {
-      setError(error.message)
+    } catch (error_) {
+      setError(error_.message)
     }
   }
 
-  const handleSetGeom = async geom => {
+  const handleSetGeom = coordinates => {
     setError(null)
-
-    try {
-      const commune = await getCommuneFromCoords(
-        {
-          lon: geom.coordinates[0],
-          lat: geom.coordinates[1]
-        }
-      )
-
-      if (!commune) {
-        setError('Cette commune est introuvable.')
-        return
-      }
-
-      setPoint(prev => ({...prev, commune: commune.code, geom}))
-    } catch (error) {
-      setError(error.message)
-    }
+    setPoint(prev => ({...prev, coordinates}))
   }
 
   useEffect(() => {
-    setIsDisabled(!(point.nom && point.type_milieu && point.geom))
+    setIsDisabled(!(point.name && point.waterBodyType && point.coordinates))
   }, [point])
 
   return (
@@ -80,31 +55,29 @@ const PointCreationForm = ({
       <Typography variant='h3' sx={{pb: 5}}>
         Création d&apos;un point de prélèvement
       </Typography>
+
       <PointForm
         point={point}
         setPoint={setPoint}
         handleSetGeom={handleSetGeom}
-        bnpeList={bnpeList}
-        bssList={bssList}
-        bvBdCarthageList={bvBdCarthageList}
-        meContinentalesBvList={meContinentalesBvList}
-        mesoList={mesoList}
       />
+
       {error && (
         <div className='text-center p-5 text-red-500'>
           <p><b>Un problème est survenu :</b></p>
           {error}
         </div>
       )}
+
       {validationErrors?.length > 0 && (
         <div className='text-center p-5 text-red-500'>
           <p><b>{validationErrors.length === 1 ? 'Problème de validation :' : 'Problèmes de validation :'}</b></p>
           {validationErrors.map(err => (
             <p key={err.message}>{err.message}</p>
-          )
-          )}
+          ))}
         </div>
       )}
+
       <div className='w-full flex justify-center p-5 mb-8'>
         <Button disabled={isDisabled} onClick={handleSubmit}>
           Valider la création du point de prélèvement

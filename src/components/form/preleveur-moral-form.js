@@ -1,4 +1,4 @@
-/* eslint-disable camelcase */
+
 'use client'
 
 import {useEffect, useState} from 'react'
@@ -31,11 +31,11 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
           <SearchByCompany setPreleveur={setPreleveur} />
         </div>
         <Input
-          label='Code SIREN'
+          label='SIRET'
           nativeInputProps={{
-            placeholder: 'Entrer le code SIREN',
-            defaultValue: preleveur?.code_siren || '',
-            onChange: e => setPreleveur(prev => ({...prev, code_siren: e.target.value}))
+            placeholder: 'Entrer le SIRET',
+            defaultValue: preleveur?.siret || '',
+            onChange: e => setPreleveur(prev => ({...prev, siret: e.target.value}))
           }}
         />
       </div>
@@ -44,17 +44,17 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
         hintText='Nom officiel de l’entreprise'
         nativeInputProps={{
           placeholder: 'Entrer la raison sociale',
-          defaultValue: preleveur?.raison_sociale || '',
-          onChange: e => setPreleveur(prev => ({...prev, raison_sociale: e.target.value}))
+          defaultValue: preleveur?.socialReason || '',
+          onChange: e => setPreleveur(prev => ({...prev, socialReason: e.target.value}))
         }}
       />
       <Input
-        label='Sigle'
-        hintText='Abréviation ou acronyme de l’entreprise'
+        label='Fonction du contact'
+        hintText='Fonction ou service du contact'
         nativeInputProps={{
-          placeholder: 'Entrer le sigle',
-          defaultValue: preleveur?.sigle || '',
-          onChange: e => setPreleveur(prev => ({...prev, sigle: e.target.value}))
+          placeholder: 'Entrer la fonction',
+          defaultValue: preleveur?.jobTitle || '',
+          onChange: e => setPreleveur(prev => ({...prev, jobTitle: e.target.value}))
         }}
       />
       <div className='w-full grid grid-cols-[1fr_2fr_2fr] gap-4 pb-5'>
@@ -62,12 +62,12 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
           label='Civilité du contact'
           placeholder='Choisir la civilité'
           nativeSelectProps={{
-            defaultValue: preleveur?.civilite || '',
-            onChange: e => setPreleveur(prev => ({...prev, civilite: e.target.value}))
+            defaultValue: preleveur?.civility || '',
+            onChange: e => setPreleveur(prev => ({...prev, civility: e.target.value}))
           }}
           options={[
-            {value: 'M.', label: 'M. '},
-            {value: 'Mme', label: 'Mme'},
+            {value: 'MR', label: 'M. '},
+            {value: 'MRS', label: 'Mme'},
             {value: '', label: 'Non indiqué'}
           ]}
         />
@@ -75,16 +75,16 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
           label='Nom du contact *'
           nativeInputProps={{
             placeholder: 'Entrer le nom',
-            defaultValue: preleveur?.nom || '',
-            onChange: e => setPreleveur(prev => ({...prev, nom: e.target.value}))
+            defaultValue: preleveur?.lastName || '',
+            onChange: e => setPreleveur(prev => ({...prev, lastName: e.target.value}))
           }}
         />
         <Input
           label='Prénom du contact *'
           nativeInputProps={{
             placeholder: 'Entrer le prénom',
-            defaultValue: preleveur?.prenom || '',
-            onChange: e => setPreleveur(prev => ({...prev, prenom: e.target.value}))
+            defaultValue: preleveur?.firstName || '',
+            onChange: e => setPreleveur(prev => ({...prev, firstName: e.target.value}))
           }}
         />
       </div>

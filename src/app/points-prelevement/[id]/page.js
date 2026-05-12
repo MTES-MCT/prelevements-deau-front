@@ -35,8 +35,6 @@ const Page = async ({params}) => {
       <div className='flex flex-col gap-8 mb-16'>
         <PointIdentification
           pointPrelevement={pointPrelevement}
-          lienBss={pointPrelevement.bss?.lien || ''}
-          lienBnpe={pointPrelevement.bnpe?.lien || ''}
         />
         <PointLocalisation
           pointPrelevement={pointPrelevement}
@@ -49,6 +47,7 @@ const Page = async ({params}) => {
           <ExploitationsList
             exploitations={exploitations}
             createHref={getNewExploitationURL({idPoint: pointPrelevement.id})}
+            canCreate={pointPrelevement.right?.canEdit}
           />
         ) }
       </div>

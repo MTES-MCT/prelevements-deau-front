@@ -18,7 +18,7 @@ const Declarant = ({declarant, index}) =>
           <span>{ getDeclarantTitleFromUser(declarant) } </span>
         </>}
         subtitle={<>
-          <span className='font-bold mr-1'>{declarant.declarant._count.pointPrelevements}</span> {declarant.declarant._count.pointPrelevements > 1 ? 'exploitations' : 'exploitation'}
+          <span className='font-bold mr-1'>{declarant.declarant?._count?.pointPrelevements ?? 0}</span> {(declarant.declarant?._count?.pointPrelevements ?? 0) > 1 ? 'exploitations' : 'exploitation'}
         </>}
       />
     </Link>

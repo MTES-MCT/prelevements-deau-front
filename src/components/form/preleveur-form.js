@@ -1,4 +1,3 @@
-/* eslint-disable camelcase */
 
 'use client'
 
@@ -17,64 +16,83 @@ import {isDeclarantPhysique as checkIsPreleveurPhysique, PRELEVEUR_TYPE_ICONS} f
 import {createPreleveurAction, updatePreleveurAction} from '@/server/actions/index.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
-// Fields common to both preleveur types
 const COMMON_FIELDS = [
-  'civilite',
-  'nom',
-  'prenom',
+  'declarantType',
+  'civility',
+  'lastName',
+  'firstName',
   'email',
-  'adresse_1',
-  'adresse_2',
-  'bp',
-  'code_postal',
-  'commune',
-  'numero_telephone'
+  'jobTitle',
+  'addressLine1',
+  'addressLine2',
+  'poBox',
+  'postalCode',
+  'city',
+  'phoneNumber'
 ]
 
-// Fields specific to personne morale
 const MORAL_ONLY_FIELDS = [
-  'code_siren',
-  'raison_sociale',
-  'sigle'
+  'socialReason',
+  'siret'
 ]
+
+function normalizeDeclarant(declarant) {
+  return {
+    id: declarant?.userId || declarant?.id,
+    declarantType: declarant?.declarantType || (declarant?.socialReason || declarant?.declarant?.socialReason ? 'LEGAL_PERSON' : 'NATURAL_PERSON'),
+    civility: declarant?.civility || '',
+    firstName: declarant?.firstName || declarant?.user?.firstName || '',
+    lastName: declarant?.lastName || declarant?.user?.lastName || '',
+    email: declarant?.email || declarant?.user?.email || '',
+    jobTitle: declarant?.jobTitle || '',
+    socialReason: declarant?.socialReason || declarant?.declarant?.socialReason || '',
+    addressLine1: declarant?.addressLine1 || '',
+    addressLine2: declarant?.addressLine2 || '',
+    poBox: declarant?.poBox || '',
+    postalCode: declarant?.postalCode || '',
+    city: declarant?.city || '',
+    phoneNumber: declarant?.phoneNumber || '',
+    siret: declarant?.siret || ''
+  }
+}
 
 const PreleveurForm = ({preleveur: initialPreleveur}) => {
   const router = useRouter()
-
-  const isEditing = Boolean(initialPreleveur?._id)
+  const normalizedInitialPreleveur = normalizeDeclarant(initialPreleveur)
+  const isEditing = Boolean(normalizedInitialPreleveur.id)
 
   const [isPreleveurPhysique, setIsPreleveurPhysique] = useState(
-    checkIsPreleveurPhysique(initialPreleveur)
+    checkIsPreleveurPhysique(normalizedInitialPreleveur)
   )
   const [error, setError] = useState(null)
   const [validationErrors, setValidationErrors] = useState([])
   const [preleveur, setPreleveur] = useState({
-    civilite: '',
-    raison_sociale: '',
-    sigle: '',
-    nom: '',
-    prenom: '',
+    declarantType: 'NATURAL_PERSON',
+    civility: '',
+    firstName: '',
+    lastName: '',
     email: '',
-    adresse_1: '',
-    adresse_2: '',
-    bp: '',
-    code_postal: '',
-    commune: '',
-    numero_telephone: '',
-    code_siren: '',
-    ...initialPreleveur
+    jobTitle: '',
+    socialReason: '',
+    addressLine1: '',
+    addressLine2: '',
+    poBox: '',
+    postalCode: '',
+    city: '',
+    phoneNumber: '',
+    siret: '',
+    ...normalizedInitialPreleveur
   })
 
-  // Determine if submit button should be disabled (trim values to handle whitespace-only)
   const isDisabled = isPreleveurPhysique
-    ? !(trim(preleveur.nom) && trim(preleveur.prenom) && trim(preleveur.email))
-    : !(trim(preleveur.raison_sociale) || trim(preleveur.sigle))
+    ? !(trim(preleveur.lastName) && trim(preleveur.firstName) && trim(preleveur.email))
+    : !(trim(preleveur.socialReason) && trim(preleveur.email))
 
   const handleSubmit = async () => {
     setError(null)
     setValidationErrors([])
 
-    if (preleveur.numero_telephone && !/^\d{10}$/.test(preleveur.numero_telephone)) {
+    if (preleveur.phoneNumber && !/^\d{10}$/.test(preleveur.phoneNumber)) {
       setValidationErrors([
         {message: 'Le numéro de téléphone doit être composé de dix chiffres.'}
       ])
@@ -82,7 +100,7 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
       return
     }
 
-    if (preleveur.code_postal && !/^\d{5}$/.test(preleveur.code_postal)) {
+    if (preleveur.postalCode && !/^\d{5}$/.test(preleveur.postalCode)) {
       setValidationErrors([
         {message: 'Le code postal doit être composé de 5 chiffres.'}
       ])
@@ -91,24 +109,24 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
     }
 
     try {
-      // Filter fields based on preleveur type
+      const declarantType = isPreleveurPhysique ? 'NATURAL_PERSON' : 'LEGAL_PERSON'
       const fieldsToSend = isPreleveurPhysique
         ? COMMON_FIELDS
         : [...COMMON_FIELDS, ...MORAL_ONLY_FIELDS]
 
-      const filteredPreleveur = pick(preleveur, fieldsToSend)
+      const filteredPreleveur = pick({...preleveur, declarantType}, fieldsToSend)
       const cleanedPreleveur = emptyStringToNull(filteredPreleveur)
 
       let response
 
       if (isEditing) {
-        response = await updatePreleveurAction(initialPreleveur._id, cleanedPreleveur)
+        response = await updatePreleveurAction(normalizedInitialPreleveur.id, cleanedPreleveur)
       } else {
         response = await createPreleveurAction(cleanedPreleveur)
       }
 
       if (response.success) {
-        router.push(`/preleveurs/${response.data.id_preleveur}`)
+        router.push(`/declarants/${response.data.userId || response.data.id}`)
       } else if (response.validationErrors) {
         setValidationErrors(response.validationErrors)
       } else {
@@ -122,13 +140,13 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
   return (
     <div className='fr-container'>
       <Typography variant='h3' sx={{pb: 5}}>
-        {isEditing ? 'Édition d’un préleveur' : 'Création d’un préleveur'}
+        {isEditing ? 'Édition d’un déclarant' : 'Création d’un déclarant'}
       </Typography>
 
       <div className='flex flex-col gap-4'>
         <SegmentedControl
           className='mb-4'
-          legend='Type de préleveur'
+          legend='Type de déclarant'
           segments={[
             {
               iconId: PRELEVEUR_TYPE_ICONS.physique,
