@@ -10,14 +10,28 @@ import WaterOutlinedIcon from '@mui/icons-material/WaterOutlined'
 
 import {safeParseDate} from '@/lib/format-date.js'
 
-const regleParametres = {
+export const parameterUnits = {
+  'volume prélevé': ['m³'],
+  'relevé d\'index': ['m³'],
+  'débit prélevé': ['L/s', 'm³/h'],
+  'débit réservé': ['L/s', 'm³/h'],
+  chlorures: ['mg/L'],
+  nitrates: ['mg/L'],
+  sulfates: ['mg/L'],
+  température: ['degrés Celsius'],
+  'niveau piézométrique': ['m NGR'],
+  conductivité: ['µS/cm'],
+  pH: []
+}
+
+const ruleParameters = {
   'volume prélevé': {
     '1 day': {label: 'Volume prélevé journalier', icon: <OpacityOutlinedIcon />},
     '1 month': {label: 'Volume prélevé mensuel', icon: <OpacityOutlinedIcon />},
     '1 year': {label: 'Volume prélevé annuel', icon: <OpacityOutlinedIcon />},
     default: {label: 'Volume prélevé', icon: <OpacityOutlinedIcon />}
   },
-  'relevé d\'index': {label: 'Relevé d\'index', icon: <OpacityOutlinedIcon />},
+  'relevé d\'index': {label: 'Relevé d’index', icon: <OpacityOutlinedIcon />},
   'débit prélevé': {label: 'Débit prélevé', icon: <OilBarrelOutlinedIcon />},
   'débit réservé': {label: 'Débit réservé', icon: <WaterOutlinedIcon />},
   'niveau piézométrique': {label: 'Niveau piézométrique', icon: <HeightOutlinedIcon />},
@@ -30,95 +44,70 @@ const regleParametres = {
   turbidité: {label: 'Turbidité', icon: <LocalDrinkOutlinedIcon />}
 }
 
-const regleContrainte = {
-  min: '>',
-  max: '<'
+const ruleConstraint = {
+  MIN: '>',
+  MAX: '<'
 }
 
-export const getParametreInfo = (parametre, frequence) => {
-  const parametreData = regleParametres[parametre]
-  if (!parametreData) {
+export const getParameterInfo = (parameter, frequency) => {
+  const parameterData = ruleParameters[parameter]
+  if (!parameterData) {
     return null
   }
 
-  // Si c'est volume prélevé, utiliser la fréquence pour obtenir le label spécifique
-  if (parametre === 'volume prélevé' && typeof parametreData === 'object' && !parametreData.label) {
-    return parametreData[frequence] || parametreData.default
+  if (parameter === 'volume prélevé' && typeof parameterData === 'object' && !parameterData.label) {
+    return parameterData[frequency] || parameterData.default
   }
 
-  return parametreData
+  return parameterData
 }
 
-export const getRegleContrainte = contrainte => regleContrainte[contrainte]
+export const getParametreInfo = getParameterInfo
 
-/**
- * Check if a date (month/day) falls within a seasonal period.
- * Handles periods that cross the year boundary (e.g., Nov 15 to Mar 15).
- * @param {Date} date - The date to check
- * @param {Date} debutPeriode - Start of the seasonal period
- * @param {Date} finPeriode - End of the seasonal period
- * @returns {boolean} True if the date is within the period
- */
-const isInSeasonalPeriod = (date, debutPeriode, finPeriode) => {
+export const getConstraintLabel = constraint => ruleConstraint[constraint]
+export const getRegleContrainte = getConstraintLabel
+
+const isInSeasonalPeriod = (date, annualPeriodStartDate, annualPeriodEndDate) => {
   const currentMonth = date.getMonth()
   const currentDay = date.getDate()
-  const startMonth = debutPeriode.getMonth()
-  const startDay = debutPeriode.getDate()
-  const endMonth = finPeriode.getMonth()
-  const endDay = finPeriode.getDate()
+  const startMonth = annualPeriodStartDate.getMonth()
+  const startDay = annualPeriodStartDate.getDate()
+  const endMonth = annualPeriodEndDate.getMonth()
+  const endDay = annualPeriodEndDate.getDate()
 
-  // Convert to day-of-year style comparison (month * 100 + day)
   const currentValue = (currentMonth * 100) + currentDay
   const startValue = (startMonth * 100) + startDay
   const endValue = (endMonth * 100) + endDay
 
-  // Period does not cross year boundary (e.g., Apr 1 to Sep 30)
   if (startValue <= endValue) {
     return currentValue >= startValue && currentValue <= endValue
   }
 
-  // Period crosses year boundary (e.g., Nov 15 to Mar 15)
   return currentValue >= startValue || currentValue <= endValue
 }
 
-/**
- * Determine the status of a rule based on validity dates and seasonal period.
- * @param {object} regle - The rule object
- * @param {Date} [today] - Reference date (defaults to now)
- * @returns {'active' | 'hors-saison' | 'a-venir' | 'obsolete'} The rule status
- */
 export const getRegleStatus = (regle, today = new Date()) => {
-  const debutValidite = safeParseDate(regle.debut_validite)
-  const finValidite = safeParseDate(regle.fin_validite)
-  const debutPeriode = safeParseDate(regle.debut_periode)
-  const finPeriode = safeParseDate(regle.fin_periode)
+  const validityStartDate = safeParseDate(regle.validityStartDate)
+  const validityEndDate = safeParseDate(regle.validityEndDate)
+  const annualPeriodStartDate = safeParseDate(regle.annualPeriodStartDate)
+  const annualPeriodEndDate = safeParseDate(regle.annualPeriodEndDate)
 
-  // Check if the rule is obsolete (end validity date has passed)
-  if (finValidite && finValidite < today) {
+  if (validityEndDate && validityEndDate < today) {
     return 'obsolete'
   }
 
-  // Check if the rule is in the future (start validity date not yet reached)
-  if (debutValidite && debutValidite > today) {
+  if (validityStartDate && validityStartDate > today) {
     return 'a-venir'
   }
 
-  // Rule is currently valid, check if it's seasonal
-  if (debutPeriode && finPeriode) {
-    const inSeason = isInSeasonalPeriod(today, debutPeriode, finPeriode)
+  if (annualPeriodStartDate && annualPeriodEndDate) {
+    const inSeason = isInSeasonalPeriod(today, annualPeriodStartDate, annualPeriodEndDate)
     return inSeason ? 'active' : 'hors-saison'
   }
 
-  // Rule is active (no seasonal period or within validity)
   return 'active'
 }
 
-/**
- * Sort rules by status: active > hors-saison > a-venir > obsolete
- * Within each group, sort by debut_validite (most recent first)
- * @param {object[]} regles - Array of rules
- * @returns {object[]} Sorted array of rules
- */
 export const sortReglesByStatus = regles => {
   const statusOrder = {
     active: 0,
@@ -131,14 +120,12 @@ export const sortReglesByStatus = regles => {
     const statusA = getRegleStatus(a)
     const statusB = getRegleStatus(b)
 
-    // First sort by status
     if (statusOrder[statusA] !== statusOrder[statusB]) {
       return statusOrder[statusA] - statusOrder[statusB]
     }
 
-    // Within same status, sort by debut_validite (most recent first)
-    const dateA = safeParseDate(a.debut_validite)
-    const dateB = safeParseDate(b.debut_validite)
+    const dateA = safeParseDate(a.validityStartDate)
+    const dateB = safeParseDate(b.validityStartDate)
 
     if (dateA && dateB) {
       return dateB.getTime() - dateA.getTime()

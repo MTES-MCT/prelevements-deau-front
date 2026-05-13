@@ -21,8 +21,8 @@ import SectionCard from '@/components/ui/SectionCard/index.js'
 import {downloadCsv} from '@/lib/export-csv.js'
 import {formatDateRange, formatFullDateFr} from '@/lib/format-date.js'
 import {
-  getParametreInfo,
-  getRegleContrainte,
+  getParameterInfo,
+  getConstraintLabel,
   getRegleStatus,
   sortReglesByStatus
 } from '@/lib/regles.js'
@@ -40,7 +40,7 @@ const InfoRow = ({label, value, description}) => (
 
 const statusConfig = {
   active: {
-    label: null, // No badge for active rules
+    label: null,
     severity: 'success',
     style: {}
   },
@@ -56,7 +56,7 @@ const statusConfig = {
   },
   obsolete: {
     label: 'Obsolète',
-    severity: null, // Custom grey style
+    severity: null,
     style: {
       opacity: 0.6,
       backgroundColor: fr.colors.decisions.background.disabled.grey.default
@@ -71,7 +71,6 @@ const RegleStatusBadge = ({status}) => {
     return null
   }
 
-  // Custom grey badge for obsolete rules
   if (status === 'obsolete') {
     return (
       <span
@@ -93,10 +92,21 @@ const RegleStatusBadge = ({status}) => {
   )
 }
 
-const RegleHeader = ({parametre, frequence, debutValidite, finValidite, debutPeriode, finPeriode, unite, valeur, contrainte, status}) => {
-  const parametreInfo = getParametreInfo(parametre, frequence)
-  const label = parametreInfo?.label || parametre
-  const icon = parametreInfo?.icon
+const RegleHeader = ({
+  parameter,
+  frequency,
+  validityStartDate,
+  validityEndDate,
+  annualPeriodStartDate,
+  annualPeriodEndDate,
+  unit,
+  value,
+  constraint,
+  status
+}) => {
+  const parameterInfo = getParameterInfo(parameter, frequency)
+  const label = parameterInfo?.label || parameter
+  const icon = parameterInfo?.icon
 
   return (
     <Box className='flex flex-col w-full gap-4'>
@@ -106,7 +116,7 @@ const RegleHeader = ({parametre, frequence, debutValidite, finValidite, debutPer
             {icon}
           </span>
           <Typography fontWeight='bold'>{label}</Typography>
-          <Typography>{`${getRegleContrainte(contrainte) || contrainte} ${formatNumber(valeur)} ${unite}`}</Typography>
+          <Typography>{`${getConstraintLabel(constraint) || constraint} ${formatNumber(value)} ${unit || ''}`}</Typography>
         </Box>
         <RegleStatusBadge status={status} />
       </Box>
@@ -115,13 +125,13 @@ const RegleHeader = ({parametre, frequence, debutValidite, finValidite, debutPer
         <InfoRow
           description="Dates de début et le cas échéant de fin d'application de la règle"
           label='Validité'
-          value={formatDateRange(debutValidite, finValidite)}
+          value={formatDateRange(validityStartDate, validityEndDate)}
         />
 
         <InfoRow
-          description="Période de l'année durant laquelle s'applique la règle (utile dans les cas où un même paramètre est associé à des seuils évoluant selon la saison)"
+          description="Période de l'année durant laquelle s'applique la règle"
           label='Période'
-          value={formatDateRange(debutPeriode, finPeriode)}
+          value={formatDateRange(annualPeriodStartDate, annualPeriodEndDate)}
         />
       </Box>
     </Box>
@@ -139,16 +149,16 @@ const RegleItem = ({regle, preleveurId, status}) => {
     >
       <AccordionSummary expandIcon={<ExpandMoreIcon />}>
         <RegleHeader
-          contrainte={regle.contrainte}
-          debutPeriode={regle.debut_periode}
-          debutValidite={regle.debut_validite}
-          finPeriode={regle.fin_periode}
-          finValidite={regle.fin_validite}
-          frequence={regle.frequence}
-          parametre={regle.parametre}
+          annualPeriodEndDate={regle.annualPeriodEndDate}
+          annualPeriodStartDate={regle.annualPeriodStartDate}
+          constraint={regle.constraint}
+          frequency={regle.frequency}
+          parameter={regle.parameter}
           status={status}
-          unite={regle.unite}
-          valeur={regle.valeur}
+          unit={regle.unit}
+          validityEndDate={regle.validityEndDate}
+          validityStartDate={regle.validityStartDate}
+          value={regle.value}
         />
       </AccordionSummary>
       <AccordionDetails>
@@ -165,16 +175,16 @@ const RegleItem = ({regle, preleveurId, status}) => {
                   rel='noreferrer'
                   target='_blank'
                 >
-                  {`${regle.document.nature} ${regle.document.reference || ''} du ${formatFullDateFr(regle.document.date_signature)}`}
+                  {`${regle.document.nature} ${regle.document.reference || ''} du ${formatFullDateFr(regle.document.signatureDate)}`}
                 </a>
               ) : '-'
             }
           />
           <InfoRow label='Exploitations' value={regle.exploitations?.length || 0} />
-          <InfoRow label='Commentaire' value={regle.remarque} />
+          <InfoRow label='Commentaire' value={regle.comment} />
           <RequireEditor>
             <Box className='flex justify-end mt-2'>
-              <Link href={`/preleveurs/${preleveurId}/regles/${regle._id}`}>
+              <Link href={`/declarants/${preleveurId}/regles/${regle.id}`}>
                 <Button
                   iconId='fr-icon-edit-line'
                   priority='tertiary'
@@ -191,8 +201,7 @@ const RegleItem = ({regle, preleveurId, status}) => {
   )
 }
 
-const ReglesListCard = ({regles, preleveurId, hasExploitations}) => {
-  // Sort rules: active > hors-saison > a-venir > obsolete
+const ReglesListCard = ({regles = [], preleveurId, hasExploitations}) => {
   const sortedRegles = useMemo(() => sortReglesByStatus(regles), [regles])
 
   return (
@@ -202,7 +211,7 @@ const ReglesListCard = ({regles, preleveurId, hasExploitations}) => {
         iconId: 'fr-icon-add-line',
         priority: 'secondary',
         linkProps: {
-          href: `/preleveurs/${preleveurId}/regles/new`
+          href: `/declarants/${preleveurId}/regles/new`
         }
       } : undefined}
       icon='fr-icon-scales-3-line'
@@ -233,7 +242,7 @@ const ReglesListCard = ({regles, preleveurId, hasExploitations}) => {
           <Box className='flex flex-col gap-2'>
             {sortedRegles.map(regle => (
               <RegleItem
-                key={regle._id}
+                key={regle.id}
                 preleveurId={preleveurId}
                 regle={regle}
                 status={getRegleStatus(regle)}
@@ -243,7 +252,7 @@ const ReglesListCard = ({regles, preleveurId, hasExploitations}) => {
         </>
       ) : (
         <Typography className='fr-text--sm italic'>
-          Aucune règle définie pour ce préleveur.
+          Aucune règle définie pour ce déclarant.
         </Typography>
       )}
     </SectionCard>

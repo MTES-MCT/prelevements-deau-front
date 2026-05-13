@@ -1,4 +1,3 @@
-/* eslint-disable camelcase */
 'use client'
 
 import {useMemo} from 'react'
@@ -11,158 +10,173 @@ import DayMonthSelector from '@/components/form/day-month-selector.js'
 import DividerSection from '@/components/ui/DividerSection/index.js'
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import {formatFullDateFr} from '@/lib/format-date.js'
+import {getConstraintLabel, getParameterInfo, parameterUnits} from '@/lib/regles.js'
+import {displayPreleveur} from '@/utils/preleveurs.js'
 
-const contraintes = [
-  {value: 'min', label: 'Minimum (>)'},
-  {value: 'max', label: 'Maximum (<)'}
-]
-
-// Mapping of parameters to their valid units
-const parametreUnites = {
-  'volume prélevé': ['m³'],
-  'relevé d\'index': ['m³'],
-  'débit prélevé': ['L/s', 'm³/h'],
-  'débit réservé': ['L/s', 'm³/h'],
-  chlorures: ['mg/L'],
-  nitrates: ['mg/L'],
-  sulfates: ['mg/L'],
-  température: ['degrés Celsius'],
-  'niveau piézométrique': ['m NGR'],
-  conductivité: ['µS/cm'],
-  pH: []
+const defaultRegle = {
+  exploitationIds: [],
+  documentId: null,
+  parameter: '',
+  unit: '',
+  value: '',
+  constraint: '',
+  frequency: null,
+  validityStartDate: '',
+  validityEndDate: '',
+  annualPeriodStartDate: '',
+  annualPeriodEndDate: '',
+  comment: ''
 }
 
-// Build parameter options with unit in label when there's only one unit
-const parametreOptions = [
+const constraints = [
+  {value: 'MIN', label: 'Minimum (>)'},
+  {value: 'MAX', label: 'Maximum (<)'}
+]
+
+const parameterOptions = [
   {value: '', label: '-- Sélectionner --', disabled: true},
-  ...Object.entries(parametreUnites).map(([parametre, unites]) => {
-    // Show unit in label only if there's exactly one unit
-    const label = unites.length === 1 ? `${parametre} (${unites[0]})` : parametre
-    return {value: parametre, label}
+  ...Object.entries(parameterUnits).map(([parameter, units]) => {
+    const label = units.length === 1 ? `${parameter} (${units[0]})` : parameter
+    return {value: parameter, label}
   })
 ]
 
-// Unit options for parameters with multiple units (Débit prélevé, Débit réservé)
-const uniteOptions = [
+const constraintOptions = [
   {value: '', label: '-- Sélectionner --', disabled: true},
-  {value: 'L/s', label: 'L/s'},
-  {value: 'm³/h', label: 'm³/h'}
+  ...constraints.map(constraint => ({value: constraint.value, label: constraint.label}))
 ]
 
-// Check if a parameter requires unit selection (has multiple units)
-const requiresUniteSelection = parametre => (parametreUnites[parametre]?.length || 0) > 1
-
-const contrainteOptions = [
-  {value: '', label: '-- Sélectionner --', disabled: true},
-  ...contraintes.map(c => ({value: c.value, label: c.label}))
-]
-
-// Build a map from exploitation ID to display label
-const buildExploitationLabelsMap = exploitations => {
-  const map = {}
-  for (const exploitation of exploitations) {
-    const pointName = exploitation.point?.nom || exploitation.point?.id_point || 'Point inconnu'
-    const usagesText = exploitation.usages?.join(', ') || 'Usage non renseigné'
-    map[exploitation._id] = `${pointName} - ${usagesText}`
-  }
-
-  return map
+const statusLabels = {
+  EN_ACTIVITE: 'En activité',
+  TERMINEE: 'Terminée',
+  ABANDONNEE: 'Abandonnée',
+  NON_RENSEIGNE: 'Non renseigné'
 }
 
-// Build reverse map from label to ID
-const buildIdByLabelMap = labelsById => {
-  const idByLabel = {}
-  for (const [id, label] of Object.entries(labelsById)) {
-    idByLabel[label] = id
-  }
+function getUnitOptions(parameter) {
+  const units = parameterUnits[parameter] || []
 
-  return idByLabel
+  return [
+    {value: '', label: '-- Sélectionner --', disabled: true},
+    ...units.map(unit => ({value: unit, label: unit}))
+  ]
 }
 
-// Group exploitations by statut for the multiselect
-// Uses the display label as value since GroupedMultiselect displays values directly
-const buildExploitationOptions = (exploitations, labelsById) => {
-  const statutOrder = ['En activité', 'Terminée', 'Abandonnée', 'Non renseigné']
+function hasUnit(parameter) {
+  return (parameterUnits[parameter] || []).length > 0
+}
+
+function getExploitationLabel(exploitation) {
+  const pointName = exploitation.pointPrelevement?.name || 'Point inconnu'
+  const declarantName = displayPreleveur(exploitation.declarant)
+  const usagesText = exploitation.usages?.length > 0
+    ? exploitation.usages.join(', ')
+    : 'Usage non renseigné'
+
+  return `${pointName} (${declarantName}) - ${usagesText}`
+}
+
+function getExploitationTooltip(exploitation) {
+  const start = exploitation.startDate
+    ? `Depuis le ${formatFullDateFr(exploitation.startDate)}`
+    : 'Début non renseigné'
+
+  const end = exploitation.endDate
+    ? ` jusqu’au ${formatFullDateFr(exploitation.endDate)}`
+    : ''
+
+  return `${start}${end}`
+}
+
+function buildExploitationOptions(exploitations) {
   const grouped = {}
 
   for (const exploitation of exploitations) {
-    const statut = exploitation.statut || 'Non renseigné'
-    grouped[statut] ||= []
+    const status = exploitation.status || 'NON_RENSEIGNE'
+    grouped[status] ||= []
 
-    const label = labelsById[exploitation._id]
-    const dateText = `Depuis le ${formatFullDateFr(exploitation.date_debut)}${exploitation.date_fin ? ` jusqu'au ${formatFullDateFr(exploitation.date_fin)}` : ''}`
+    const label = getExploitationLabel(exploitation)
 
-    grouped[statut].push({
-      value: label,
+    grouped[status].push({
+      value: exploitation.id,
       content: label,
-      title: dateText
+      title: label,
+      tooltip: getExploitationTooltip(exploitation),
+      sortKey: exploitation.pointPrelevement?.name || ''
     })
   }
 
-  // Return groups in order, filtering out empty groups
-  return statutOrder
-    .filter(statut => grouped[statut]?.length > 0)
-    .map(statut => ({
-      label: statut,
-      options: grouped[statut]
+  for (const options of Object.values(grouped)) {
+    options.sort((a, b) =>
+      a.sortKey.localeCompare(b.sortKey, 'fr', {sensitivity: 'base'})
+    )
+  }
+
+  const statusOrder = ['EN_ACTIVITE', 'TERMINEE', 'ABANDONNEE', 'NON_RENSEIGNE']
+
+  return statusOrder
+    .filter(status => grouped[status]?.length > 0)
+    .map(status => ({
+      label: statusLabels[status] || status,
+      options: grouped[status]
     }))
 }
 
-// Build document options for the select
-const buildDocumentOptions = documents => [
-  {value: '', label: '-- Aucun document --'},
-  ...documents.map(doc => ({
-    value: doc._id,
-    label: `${doc.nature}${doc.reference ? ` - ${doc.reference}` : ''} (${formatFullDateFr(doc.date_signature)})`
-  }))
-]
+function buildDocumentOptions(documents) {
+  return [
+    {value: '', label: '-- Aucun document --'},
+    ...documents.map(document => ({
+      value: document.id,
+      label: `${document.nature}${document.reference ? ` - ${document.reference}` : ''} (${formatFullDateFr(document.signatureDate)})`
+    }))
+  ]
+}
 
-// Get validation error message for a specific field
-const getFieldError = (validationErrors, field) => {
-  const error = validationErrors.find(e => e.path?.includes(field))
+function getFieldError(validationErrors, field) {
+  const error = validationErrors.find(error => error.path?.includes(field))
   return error?.message
 }
 
-// Parametre and value section component
-const ParametreSection = ({regle, setRegle, fieldError}) => {
-  // Handle parameter change - auto-select unit if only one valid option
-  const handleParametreChange = newParametre => {
-    const validUnites = parametreUnites[newParametre] || []
-    const newUnite = validUnites.length === 1 ? validUnites[0] : ''
+const ParameterSection = ({regle, setRegle, fieldError}) => {
+  const handleParameterChange = parameter => {
+    const units = parameterUnits[parameter] || []
+    const unit = units.length === 1 ? units[0] : ''
 
-    setRegle(prev => ({
-      ...prev,
-      parametre: newParametre,
-      unite: newUnite
+    setRegle(previous => ({
+      ...previous,
+      parameter,
+      unit,
+      frequency: parameter === 'volume prélevé' ? previous.frequency : null
     }))
   }
 
-  const showUniteField = requiresUniteSelection(regle.parametre)
-  const isVolumePreleveParametre = regle.parametre === 'volume prélevé'
+  const showUnitField = hasUnit(regle.parameter)
+  const isVolumeParameter = regle.parameter === 'volume prélevé'
+  const unitOptions = getUnitOptions(regle.parameter)
 
   return (
     <DividerSection title='Paramètre et valeur'>
       <Select
         label='Paramètre *'
         placeholder='Sélectionner un paramètre'
-        state={fieldError('parametre') ? 'error' : 'default'}
-        stateRelatedMessage={fieldError('parametre')}
+        state={fieldError('parameter') ? 'error' : 'default'}
+        stateRelatedMessage={fieldError('parameter')}
         nativeSelectProps={{
-          value: regle.parametre || '',
-          onChange: e => handleParametreChange(e.target.value)
+          value: regle.parameter || '',
+          onChange: event => handleParameterChange(event.target.value)
         }}
-        options={parametreOptions}
+        options={parameterOptions}
       />
 
-      {isVolumePreleveParametre && (
+      {isVolumeParameter && (
         <Select
           label='Fréquence *'
           placeholder='Sélectionner une fréquence'
-          state={fieldError('frequence') ? 'error' : 'default'}
-          stateRelatedMessage={fieldError('frequence')}
+          state={fieldError('frequency') ? 'error' : 'default'}
+          stateRelatedMessage={fieldError('frequency')}
           nativeSelectProps={{
-            value: regle.frequence || '',
-            onChange: e => setRegle(prev => ({...prev, frequence: e.target.value}))
+            value: regle.frequency || '',
+            onChange: event => setRegle(previous => ({...previous, frequency: event.target.value}))
           }}
           options={[
             {value: '', label: '-- Sélectionner --', disabled: true},
@@ -173,31 +187,32 @@ const ParametreSection = ({regle, setRegle, fieldError}) => {
         />
       )}
 
-      <div className={showUniteField ? 'grid grid-cols-2 gap-4' : ''}>
-        {showUniteField && (
+      <div className={showUnitField ? 'grid grid-cols-2 gap-4' : ''}>
+        {showUnitField && (
           <Select
             label='Unité *'
             placeholder='Sélectionner une unité'
-            state={fieldError('unite') ? 'error' : 'default'}
-            stateRelatedMessage={fieldError('unite')}
+            state={fieldError('unit') ? 'error' : 'default'}
+            stateRelatedMessage={fieldError('unit')}
             nativeSelectProps={{
-              value: regle.unite || '',
-              onChange: e => setRegle(prev => ({...prev, unite: e.target.value}))
+              value: regle.unit || '',
+              onChange: event => setRegle(previous => ({...previous, unit: event.target.value}))
             }}
-            options={uniteOptions}
+            options={unitOptions}
           />
         )}
+
         <Input
           label='Valeur *'
-          state={fieldError('valeur') ? 'error' : 'default'}
-          stateRelatedMessage={fieldError('valeur')}
+          state={fieldError('value') ? 'error' : 'default'}
+          stateRelatedMessage={fieldError('value')}
           nativeInputProps={{
             type: 'number',
             step: 'any',
             min: 0,
             placeholder: 'Entrer une valeur',
-            value: regle.valeur ?? '',
-            onChange: e => setRegle(prev => ({...prev, valeur: e.target.value}))
+            value: regle.value ?? '',
+            onChange: event => setRegle(previous => ({...previous, value: event.target.value}))
           }}
         />
       </div>
@@ -205,42 +220,41 @@ const ParametreSection = ({regle, setRegle, fieldError}) => {
       <Select
         label='Contrainte *'
         placeholder='Sélectionner un niveau de contrainte'
-        state={fieldError('contrainte') ? 'error' : 'default'}
-        stateRelatedMessage={fieldError('contrainte')}
+        state={fieldError('constraint') ? 'error' : 'default'}
+        stateRelatedMessage={fieldError('constraint')}
         nativeSelectProps={{
-          value: regle.contrainte || '',
-          onChange: e => setRegle(prev => ({...prev, contrainte: e.target.value}))
+          value: regle.constraint || '',
+          onChange: event => setRegle(previous => ({...previous, constraint: event.target.value}))
         }}
-        options={contrainteOptions}
+        options={constraintOptions}
       />
     </DividerSection>
   )
 }
 
-// Period section component
-const PeriodeSection = ({regle, setRegle, fieldError}) => (
+const PeriodSection = ({regle, setRegle, fieldError}) => (
   <DividerSection title='Période de validité'>
     <div className='grid grid-cols-2 gap-4'>
       <Input
         label='Début de validité *'
         hintText="Date de début d'application de la règle"
-        state={fieldError('debut_validite') ? 'error' : 'default'}
-        stateRelatedMessage={fieldError('debut_validite')}
+        state={fieldError('validityStartDate') ? 'error' : 'default'}
+        stateRelatedMessage={fieldError('validityStartDate')}
         nativeInputProps={{
           type: 'date',
-          value: regle.debut_validite || '',
-          onChange: e => setRegle(prev => ({...prev, debut_validite: e.target.value}))
+          value: regle.validityStartDate || '',
+          onChange: event => setRegle(previous => ({...previous, validityStartDate: event.target.value}))
         }}
       />
       <Input
         label='Fin de validité'
         hintText='Laisser vide si la règle est toujours en vigueur'
-        state={fieldError('fin_validite') ? 'error' : 'default'}
-        stateRelatedMessage={fieldError('fin_validite')}
+        state={fieldError('validityEndDate') ? 'error' : 'default'}
+        stateRelatedMessage={fieldError('validityEndDate')}
         nativeInputProps={{
           type: 'date',
-          value: regle.fin_validite || '',
-          onChange: e => setRegle(prev => ({...prev, fin_validite: e.target.value}))
+          value: regle.validityEndDate || '',
+          onChange: event => setRegle(previous => ({...previous, validityEndDate: event.target.value}))
         }}
       />
     </div>
@@ -248,38 +262,35 @@ const PeriodeSection = ({regle, setRegle, fieldError}) => (
     <div className='grid grid-cols-2 gap-4'>
       <DayMonthSelector
         label='Début de période'
-        toolTip="Début de la période annuelle durant laquelle s'applique la règle (par exemple 01/05 pour une règle saisonnière débutant le 1er mai)"
-        defaultValue={regle.debut_periode}
-        onChange={date => setRegle(prev => ({...prev, debut_periode: date}))}
+        toolTip="Début de la période annuelle durant laquelle s'applique la règle"
+        defaultValue={regle.annualPeriodStartDate}
+        onChange={date => setRegle(previous => ({...previous, annualPeriodStartDate: date}))}
       />
       <DayMonthSelector
         label='Fin de période'
-        toolTip="Fin de la période annuelle durant laquelle s'applique la règle (par exemple 30/09 pour une règle cessant le 30 septembre)"
-        defaultValue={regle.fin_periode}
-        onChange={date => setRegle(prev => ({...prev, fin_periode: date}))}
+        toolTip="Fin de la période annuelle durant laquelle s'applique la règle"
+        defaultValue={regle.annualPeriodEndDate}
+        onChange={date => setRegle(previous => ({...previous, annualPeriodEndDate: date}))}
       />
     </div>
   </DividerSection>
 )
 
-/**
- * Reusable form component for creating/editing a regle
- * @param {Object} regle - Current regle state
- * @param {Function} setRegle - Function to update regle state
- * @param {Array} exploitations - Available exploitations for the preleveur
- * @param {Array} documents - Available documents for the preleveur
- * @param {Array} validationErrors - Validation errors from API
- */
-const RegleForm = ({regle, setRegle, exploitations, documents, validationErrors = []}) => {
-  const hasNoExploitations = !exploitations || exploitations.length === 0
+const RegleForm = ({
+  regle = defaultRegle,
+  setRegle,
+  exploitations = [],
+  documents = [],
+  validationErrors = []
+}) => {
+  const hasNoExploitations = exploitations.length === 0
 
-  // Early return before any hooks if no exploitations
   if (hasNoExploitations) {
     return (
       <Alert
         severity='warning'
         title='Aucune exploitation disponible'
-        description="Vous devez d'abord créer une exploitation pour ce préleveur avant de pouvoir ajouter une règle. Une règle doit obligatoirement être associée à au moins une exploitation."
+        description="Vous devez d'abord créer une exploitation pour ce déclarant avant de pouvoir ajouter une règle. Une règle doit obligatoirement être associée à au moins une exploitation."
       />
     )
   }
@@ -288,62 +299,47 @@ const RegleForm = ({regle, setRegle, exploitations, documents, validationErrors 
     <RegleFormFields
       documents={documents}
       exploitations={exploitations}
-      regle={regle}
+      regle={{...defaultRegle, ...regle}}
       setRegle={setRegle}
       validationErrors={validationErrors}
     />
   )
 }
 
-const RegleFormFields = ({regle, setRegle, exploitations, documents, validationErrors}) => {
+const RegleFormFields = ({
+  regle = defaultRegle,
+  setRegle,
+  exploitations = [],
+  documents = [],
+  validationErrors = []
+}) => {
+  const safeRegle = {...defaultRegle, ...regle}
   const fieldError = field => getFieldError(validationErrors, field)
 
-  // Build ID <-> label mappings
-  const exploitationLabelsById = useMemo(
-    () => buildExploitationLabelsMap(exploitations || []),
+  const exploitationOptions = useMemo(
+    () => buildExploitationOptions(exploitations),
     [exploitations]
   )
 
-  const idByLabel = useMemo(
-    () => buildIdByLabelMap(exploitationLabelsById),
-    [exploitationLabelsById]
-  )
-
-  // Build options using labels as values (for display in GroupedMultiselect)
-  const exploitationOptions = useMemo(
-    () => buildExploitationOptions(exploitations || [], exploitationLabelsById),
-    [exploitations, exploitationLabelsById]
-  )
-
   const documentOptions = useMemo(
-    () => buildDocumentOptions(documents || []),
+    () => buildDocumentOptions(documents),
     [documents]
   )
 
-  // Convert selected IDs to display labels for the multiselect
-  const selectedLabels = useMemo(() =>
-    (regle.exploitations || []).map(id => exploitationLabelsById[id] || id),
-  [regle.exploitations, exploitationLabelsById])
-
-  // Handle selection change - convert labels back to IDs
-  const handleExploitationsChange = newLabels => {
-    const newIds = newLabels.map(label => idByLabel[label] || label)
-    setRegle(prev => ({...prev, exploitations: newIds}))
-  }
-
   return (
     <div className='flex flex-col gap-4'>
-      <div className={fieldError('exploitations') ? 'fr-input-group--error' : ''}>
+      <div className={fieldError('exploitationIds') ? 'fr-input-group--error' : ''}>
         <GroupedMultiselect
+          searchable
           label='Exploitations associées *'
           hint="Sélectionnez au moins une exploitation à laquelle cette règle s'applique"
           placeholder='Sélectionner des exploitations'
           options={exploitationOptions}
-          value={selectedLabels}
-          onChange={handleExploitationsChange}
+          value={safeRegle.exploitationIds || []}
+          onChange={exploitationIds => setRegle(previous => ({...previous, exploitationIds}))}
         />
-        {fieldError('exploitations') && (
-          <p className='fr-error-text'>{fieldError('exploitations')}</p>
+        {fieldError('exploitationIds') && (
+          <p className='fr-error-text'>{fieldError('exploitationIds')}</p>
         )}
       </div>
 
@@ -351,30 +347,32 @@ const RegleFormFields = ({regle, setRegle, exploitations, documents, validationE
         label='Document associé'
         hint='Document administratif dont est issue la règle (optionnel)'
         placeholder='Sélectionner un document'
-        state={fieldError('document') ? 'error' : 'default'}
-        stateRelatedMessage={fieldError('document')}
+        state={fieldError('documentId') ? 'error' : 'default'}
+        stateRelatedMessage={fieldError('documentId')}
         nativeSelectProps={{
-          value: regle.document || '',
-          onChange: e => setRegle(prev => ({...prev, document: e.target.value || null}))
+          value: safeRegle.documentId || '',
+          onChange: event => setRegle(previous => ({...previous, documentId: event.target.value || null}))
         }}
         options={documentOptions}
       />
 
-      <ParametreSection fieldError={fieldError} regle={regle} setRegle={setRegle} />
+      <ParameterSection fieldError={fieldError} regle={safeRegle} setRegle={setRegle} />
 
-      <PeriodeSection fieldError={fieldError} regle={regle} setRegle={setRegle} />
+      <PeriodSection fieldError={fieldError} regle={safeRegle} setRegle={setRegle} />
 
       <Input
         textArea
-        label='Remarque'
-        state={fieldError('remarque') ? 'error' : 'default'}
-        stateRelatedMessage={fieldError('remarque')}
+        label='Commentaire'
+        state={fieldError('comment') ? 'error' : 'default'}
+        stateRelatedMessage={fieldError('comment')}
         nativeTextAreaProps={{
           placeholder: 'Commentaire ou précision sur cette règle',
-          value: regle.remarque || '',
-          onChange: e => setRegle(prev => ({...prev, remarque: e.target.value}))
+          value: safeRegle.comment || '',
+          onChange: event => setRegle(previous => ({...previous, comment: event.target.value}))
         }}
       />
+
+      <input readOnly type='hidden' value={getConstraintLabel(safeRegle.constraint) || getParameterInfo(safeRegle.parameter, safeRegle.frequency)?.label || ''} />
     </div>
   )
 }

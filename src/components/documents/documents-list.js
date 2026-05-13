@@ -18,58 +18,44 @@ import Document from '@/components/documents/document.js'
 import SectionCard from '@/components/ui/SectionCard/index.js'
 import {deleteDocumentAction} from '@/server/actions/index.js'
 
-const DocumentsList = ({idPreleveur, documents: initialDocuments, exploitations = []}) => {
+const DocumentsList = ({idPreleveur, documents: initialDocuments = [], exploitations = []}) => {
   const [documentsList, setDocumentsList] = useState(initialDocuments)
-  const [exploitationsList, setExploitationsList] = useState(exploitations)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [documentToEdit, setDocumentToEdit] = useState(null)
   const [documentToDelete, setDocumentToDelete] = useState(null)
   const [error, setError] = useState(null)
 
-  const handleEdit = idDocument => {
-    const doc = documentsList.find(d => d._id === idDocument)
-    setDocumentToEdit(doc)
+  const handleEdit = documentId => {
+    const document = documentsList.find(document => document.id === documentId)
+    setDocumentToEdit(document)
     setError(null)
     setIsEditDialogOpen(true)
   }
 
   const handleDocumentUpdated = updatedDocument => {
-    setDocumentsList(prev => prev.map(d => (
-      d._id === updatedDocument._id ? updatedDocument : d
+    setDocumentsList(previous => previous.map(document => (
+      document.id === updatedDocument.id ? updatedDocument : document
     )))
   }
 
-  const handleExploitationsUpdated = (toAdd, toRemove, documentId) => {
-    setExploitationsList(prev => prev.map(e => {
-      if (toAdd.includes(e._id)) {
-        return {...e, documents: [...(e.documents || []), {_id: documentId}]}
-      }
-
-      if (toRemove.includes(e._id)) {
-        return {...e, documents: e.documents?.filter(d => (d._id || d) !== documentId) || []}
-      }
-
-      return e
-    }))
-  }
-
-  const handleDeleteClick = idDocument => {
+  const handleDeleteClick = documentId => {
     setError(null)
-    setDocumentToDelete(idDocument)
+    setDocumentToDelete(documentId)
     setIsDeleteDialogOpen(true)
   }
 
   const handleConfirmDelete = async () => {
-    const response = await deleteDocumentAction(documentToDelete)
+    const response = await deleteDocumentAction(documentToDelete, idPreleveur)
 
-    if (response.success) {
-      setDocumentsList(prev => prev.filter(d => d._id !== documentToDelete))
+    if (response.success && response.data?.deleted !== false) {
+      setDocumentsList(previous => previous.filter(document => document.id !== documentToDelete))
       setIsDeleteDialogOpen(false)
-    } else {
-      setError(response.error)
-      setIsDeleteDialogOpen(false)
+      return
     }
+
+    setError(response.error || 'La suppression du document a échoué.')
+    setIsDeleteDialogOpen(false)
   }
 
   return (
@@ -82,13 +68,13 @@ const DocumentsList = ({idPreleveur, documents: initialDocuments, exploitations 
           iconId: 'fr-icon-add-line',
           priority: 'secondary',
           linkProps: {
-            href: `/preleveurs/${idPreleveur}/documents/new`
+            href: `/declarants/${idPreleveur}/documents/new`
           }
         }}
       >
-        {documentsList.length > 0 ? documentsList.map((d, index) => (
+        {documentsList.length > 0 ? documentsList.map((document, index) => (
           <div
-            key={d._id}
+            key={document.id}
             className='flex w-full'
             style={{
               backgroundColor: index % 2 === 1 ? fr.colors.decisions.background.alt.blueEcume.default : undefined
@@ -96,8 +82,8 @@ const DocumentsList = ({idPreleveur, documents: initialDocuments, exploitations 
           >
             <Document
               className='w-full'
-              document={d}
-              exploitations={exploitationsList}
+              document={document}
+              exploitations={exploitations}
               handleDelete={handleDeleteClick}
               handleEdit={handleEdit}
             />
@@ -116,17 +102,15 @@ const DocumentsList = ({idPreleveur, documents: initialDocuments, exploitations 
         />
       )}
 
-      {/* Edit Dialog */}
       <DocumentEditDialog
+        declarantId={idPreleveur}
         document={documentToEdit}
-        exploitations={exploitationsList}
+        exploitations={exploitations}
         isOpen={isEditDialogOpen}
         onClose={() => setIsEditDialogOpen(false)}
         onDocumentUpdated={handleDocumentUpdated}
-        onExploitationsUpdated={handleExploitationsUpdated}
       />
 
-      {/* Delete Confirmation Dialog */}
       <Dialog
         maxWidth='md'
         open={isDeleteDialogOpen}

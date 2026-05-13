@@ -8,8 +8,7 @@ import {
   getDeclarantAction,
   getRegleAction,
   getExploitationFromPreleveurAction,
-  getDocumentsFromPreleveurAction,
-  getPointPrelevementAction
+  getDocumentsFromPreleveurAction
 } from '@/server/actions/index.js'
 import {displayPreleveur} from '@/utils/preleveurs.js'
 
@@ -19,15 +18,20 @@ const DynamicBreadcrumb = nextDynamic(
 
 export const dynamic = 'force-dynamic'
 
+function getDeclarantId(declarant) {
+  return declarant.userId || declarant.id
+}
+
 const Page = async ({params}) => {
   const {id, regleId} = await params
-  const preleveurResult = await getDeclarantAction(id)
+  const declarantResult = await getDeclarantAction(id)
 
-  if (!preleveurResult.success || !preleveurResult.data) {
+  if (!declarantResult.success || !declarantResult.data) {
     notFound()
   }
 
-  const preleveur = preleveurResult.data
+  const declarant = declarantResult.data
+  const declarantId = getDeclarantId(declarant)
 
   const regleResult = await getRegleAction(regleId)
 
@@ -35,20 +39,14 @@ const Page = async ({params}) => {
     notFound()
   }
 
+  const [exploitationsResult, documentsResult] = await Promise.all([
+    getExploitationFromPreleveurAction(declarantId),
+    getDocumentsFromPreleveurAction(declarantId)
+  ])
+
   const regle = regleResult.data
-
-  const exploitationsResult = await getExploitationFromPreleveurAction(id)
   const exploitations = exploitationsResult.data || []
-  const documentsResult = await getDocumentsFromPreleveurAction(id)
   const documents = documentsResult.data || []
-
-  // Enrich exploitations with point details for display
-  const enrichedExploitations = await Promise.all(
-    exploitations.map(async exploitation => {
-      const pointResult = await getPointPrelevementAction(exploitation.point)
-      return {...exploitation, point: pointResult.success ? pointResult.data : null}
-    })
-  )
 
   return (
     <>
@@ -59,27 +57,29 @@ const Page = async ({params}) => {
           currentPageLabel='Édition de la règle'
           segments={[
             {
-              label: 'Préleveurs',
+              label: 'Déclarants',
               linkProps: {
-                href: '/preleveurs'
+                href: '/declarants'
               }
             },
             {
-              label: displayPreleveur(preleveur),
+              label: displayPreleveur(declarant),
               linkProps: {
-                href: `/preleveurs/${preleveur.id_preleveur}`
+                href: `/declarants/${declarantId}`
               }
             }
           ]}
         />
+
         <Typography variant='h3' sx={{pb: 3}}>
           Édition de la règle
         </Typography>
+
         <RegleEditionForm
-          preleveur={preleveur}
+          preleveur={declarant}
           regle={regle}
-          exploitations={enrichedExploitations}
-          documents={documents || []}
+          exploitations={exploitations}
+          documents={documents}
         />
       </div>
     </>

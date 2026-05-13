@@ -1,4 +1,3 @@
-
 'use client'
 
 import {useEffect, useMemo, useState} from 'react'
@@ -18,58 +17,65 @@ import {formatFullDateFr} from '@/lib/format-date.js'
 import {createDocumentAction} from '@/server/actions/index.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
-// Build a map from exploitation ID to display label (point name only)
-const buildExploitationLabelsMap = exploitations => {
-  const map = {}
-  for (const exploitation of exploitations) {
-    const pointName = exploitation.point?.name || exploitation.pointPrelevement?.name || 'Point inconnu'
-    map[exploitation.id] = pointName
-  }
-
-  return map
+const statusLabels = {
+  EN_ACTIVITE: 'En activité',
+  TERMINEE: 'Terminée',
+  ABANDONNEE: 'Abandonnée',
+  NON_RENSEIGNE: 'Non renseigné'
 }
 
-// Build reverse map from label to ID
-const buildIdByLabelMap = labelsById => {
-  const idByLabel = {}
-  for (const [id, label] of Object.entries(labelsById)) {
-    idByLabel[label] = id
-  }
+function getExploitationLabel(exploitation) {
+  const pointName = exploitation.pointPrelevement?.name || 'Point inconnu'
+  const usagesText = exploitation.usages?.length > 0
+    ? exploitation.usages.join(', ')
+    : 'Usage non renseigné'
 
-  return idByLabel
+  return `${pointName} - ${usagesText}`
 }
 
-// Group exploitations by statut for the multiselect
-const buildExploitationOptions = (exploitations, labelsById) => {
-  const statutOrder = ['EN_ACTIVITE', 'TERMINEE', 'ABANDONNEE', 'NON_RENSEIGNE']
-  const statusLabels = {
-    EN_ACTIVITE: 'En activité',
-    TERMINEE: 'Terminée',
-    ABANDONNEE: 'Abandonnée',
-    NON_RENSEIGNE: 'Non renseigné'
-  }
+function getExploitationTooltip(exploitation) {
+  const start = exploitation.startDate
+    ? `Depuis le ${formatFullDateFr(exploitation.startDate)}`
+    : 'Début non renseigné'
+
+  const end = exploitation.endDate
+    ? ` jusqu’au ${formatFullDateFr(exploitation.endDate)}`
+    : ''
+
+  return `${start}${end}`
+}
+
+function buildExploitationOptions(exploitations) {
   const grouped = {}
 
   for (const exploitation of exploitations) {
-    const statut = exploitation.status || 'NON_RENSEIGNE'
-    grouped[statut] ||= []
+    const status = exploitation.status || 'NON_RENSEIGNE'
+    grouped[status] ||= []
 
-    const label = labelsById[exploitation.id]
-    const dateText = `Depuis le ${formatFullDateFr(exploitation.startDate)}${exploitation.endDate ? ` jusqu'au ${formatFullDateFr(exploitation.endDate)}` : ''}`
+    const label = getExploitationLabel(exploitation)
 
-    grouped[statut].push({
-      value: label,
+    grouped[status].push({
+      value: exploitation.id,
       content: label,
-      title: dateText
+      title: label,
+      tooltip: getExploitationTooltip(exploitation),
+      sortKey: exploitation.pointPrelevement?.name || ''
     })
   }
 
-  // Return groups in order, filtering out empty groups
-  return statutOrder
-    .filter(statut => grouped[statut]?.length > 0)
-    .map(statut => ({
-      label: statusLabels[statut] || statut,
-      options: grouped[statut]
+  for (const options of Object.values(grouped)) {
+    options.sort((a, b) =>
+      a.sortKey.localeCompare(b.sortKey, 'fr', {sensitivity: 'base'})
+    )
+  }
+
+  const statusOrder = ['EN_ACTIVITE', 'TERMINEE', 'ABANDONNEE', 'NON_RENSEIGNE']
+
+  return statusOrder
+    .filter(status => grouped[status]?.length > 0)
+    .map(status => ({
+      label: statusLabels[status] || status,
+      options: grouped[status]
     }))
 }
 
@@ -81,33 +87,16 @@ const DocumentUploadForm = ({preleveur, exploitations = []}) => {
   const [document, setDocument] = useState()
   const [uploadMessage, setUploadMessage] = useState()
   const [selectedExploitations, setSelectedExploitations] = useState([])
-  const [assignmentWarning, setAssignmentWarning] = useState(null)
 
-  // Build ID <-> label mappings
-  const exploitationLabelsById = useMemo(
-    () => buildExploitationLabelsMap(exploitations),
+  const declarantId = preleveur.userId || preleveur.id
+
+  const exploitationOptions = useMemo(
+    () => buildExploitationOptions(exploitations),
     [exploitations]
   )
 
-  const idByLabel = useMemo(
-    () => buildIdByLabelMap(exploitationLabelsById),
-    [exploitationLabelsById]
-  )
-
-  const exploitationOptions = useMemo(
-    () => buildExploitationOptions(exploitations, exploitationLabelsById),
-    [exploitations, exploitationLabelsById]
-  )
-
-  // Convert selected IDs to display labels for the multiselect
-  const selectedLabels = useMemo(() =>
-    selectedExploitations.map(id => exploitationLabelsById[id] || id),
-  [selectedExploitations, exploitationLabelsById])
-
-  // Handle selection change - convert labels back to IDs
-  const handleExploitationsChange = newLabels => {
-    const newIds = newLabels.map(label => idByLabel[label] || label)
-    setSelectedExploitations(newIds)
+  const handleExploitationsChange = exploitationIds => {
+    setSelectedExploitations(exploitationIds.slice(-1))
   }
 
   const handleDocument = withSubmit(
@@ -116,38 +105,24 @@ const DocumentUploadForm = ({preleveur, exploitations = []}) => {
         ...document,
         declarantPointPrelevementId: selectedExploitations[0] || null
       })
-      const response = await createDocumentAction(preleveur.userId || preleveur.id, cleanedDocument, filesList[0])
+      const response = await createDocumentAction(declarantId, cleanedDocument, filesList[0])
 
       if (!response.success) {
         throw response
       }
 
-      const createdDoc = response.data
-      if (selectedExploitations.length > 1) {
-        const results = [{status: 'rejected', reason: new Error('Un document ne peut être associé qu’à une exploitation à la création. Créez un second document pour les autres exploitations.')}]
-        const assignmentErrors = results
-          .filter(r => r.status === 'rejected')
-          .map(r => r.reason?.message)
-
-        if (assignmentErrors.length > 0) {
-          setAssignmentWarning(
-            `Le document a été créé mais n'a pas pu être assigné aux exploitations suivantes : ${assignmentErrors.join(', ')}`
-          )
-        }
-      }
-
-      return createdDoc
+      return response.data
     },
     {
       successIndicator: 'id',
-      onSuccess: () => router.push(`/declarants/${preleveur.userId || preleveur.id}`)
+      onSuccess: () => router.push(`/declarants/${declarantId}`)
     }
   )
 
   useEffect(() => {
     if (filesList && filesList.length > 0) {
-      setDocument(prev => ({
-        ...prev,
+      setDocument(previous => ({
+        ...previous,
         title: filesList[0].name
       }))
     }
@@ -174,6 +149,7 @@ const DocumentUploadForm = ({preleveur, exploitations = []}) => {
           />
         )}
       </div>
+
       {uploadMessage && (
         <Alert
           closable
@@ -183,20 +159,21 @@ const DocumentUploadForm = ({preleveur, exploitations = []}) => {
           onClose={() => setUploadMessage(null)}
         />
       )}
+
       <DocumentForm
         document={document}
         setDocument={setDocument}
       />
 
-      {/* Exploitations selection */}
       {exploitations.length > 0 && (
-        <DividerSection title='Exploitations associées'>
+        <DividerSection title='Exploitation associée'>
           <GroupedMultiselect
-            label='Associer à des exploitations'
-            hint='Sélectionnez les exploitations auxquelles ce document est lié (optionnel)'
-            placeholder='Sélectionner des exploitations'
+            searchable
+            label='Associer à une exploitation'
+            hint='Un document peut être associé à une exploitation.'
+            placeholder='Sélectionner une exploitation'
             options={exploitationOptions}
-            value={selectedLabels}
+            value={selectedExploitations}
             onChange={handleExploitationsChange}
           />
         </DividerSection>
@@ -207,23 +184,14 @@ const DocumentUploadForm = ({preleveur, exploitations = []}) => {
         validationErrors={validationErrors}
         onClose={resetErrors}
       />
-      {assignmentWarning && (
-        <Alert
-          closable
-          className='my-5'
-          severity='warning'
-          title='Assignation partielle'
-          description={assignmentWarning}
-          onClose={() => setAssignmentWarning(null)}
-        />
-      )}
+
       <div className='flex justify-end'>
         <Button
           className='my-5'
           disabled={isDisabled || isSubmitting}
           onClick={handleDocument}
         >
-          Associer au préleveur
+          Associer au déclarant
         </Button>
       </div>
     </div>

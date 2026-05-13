@@ -7,21 +7,11 @@ import {
   withErrorHandling
 } from '@/server/api-wrapper.js'
 
-// ============================================================================
-// Règles
-// ============================================================================
-
-/**
- * Get règles for a préleveur
- * @param {string} declarantId - Préleveur ID
- * @returns {Promise<Object>} - Result object
- */
 export async function getReglesFromPreleveurAction(declarantId) {
   return withErrorHandling(async () => {
     try {
       return await fetchJSON(`api/preleveurs/${declarantId}/regles`)
     } catch (error) {
-      // Return empty array on error (consistent with original behavior)
       if (error.code === 404) {
         return []
       }
@@ -31,61 +21,46 @@ export async function getReglesFromPreleveurAction(declarantId) {
   })
 }
 
-/**
- * Get a single règle by ID
- * @param {string} regleId - Règle ID
- * @returns {Promise<Object>} - Result object
- */
 export async function getRegleAction(regleId) {
   return withErrorHandling(async () => fetchJSON(`api/regles/${regleId}`))
 }
 
-/**
- * Create a new règle for a préleveur
- * @param {string} preleveurId - Préleveur ID
- * @param {Object} payload - Règle data
- * @returns {Promise<Object>} - Result object
- */
-export async function createRegleAction(preleveurId, payload) {
+export async function createRegleAction(declarantId, payload) {
   return withErrorHandling(async () => {
-    const result = await fetchJSON(`api/preleveurs/${preleveurId}/regles`, {
+    const result = await fetchJSON(`api/preleveurs/${declarantId}/regles`, {
       method: 'POST',
       body: payload
     })
-    revalidatePath(`/preleveurs/${preleveurId}`)
+    revalidatePath(`/declarants/${declarantId}`)
+    revalidatePath(`/preleveurs/${declarantId}`)
     return result
   })
 }
 
-/**
- * Update a règle
- * @param {string} regleId - Règle ID
- * @param {Object} payload - Updated règle data
- * @returns {Promise<Object>} - Result object
- */
-export async function updateRegleAction(regleId, payload) {
+export async function updateRegleAction(regleId, payload, declarantId) {
   return withErrorHandling(async () => {
     const result = await fetchJSON(`api/regles/${regleId}`, {
       method: 'PUT',
       body: payload
     })
+
+    if (declarantId) {
+      revalidatePath(`/declarants/${declarantId}`)
+      revalidatePath(`/preleveurs/${declarantId}`)
+    }
+
     return result
   })
 }
 
-/**
- * Delete a règle
- * @param {string} regleId - Règle ID
- * @param {string} [preleveurId] - Optional préleveur ID for revalidation
- * @returns {Promise<Object>} - Result object
- */
-export async function deleteRegleAction(regleId, preleveurId) {
+export async function deleteRegleAction(regleId, declarantId) {
   return withErrorHandling(async () => {
     const result = await fetchJSON(`api/regles/${regleId}`, {
       method: 'DELETE'
     })
-    if (preleveurId) {
-      revalidatePath(`/preleveurs/${preleveurId}`)
+    if (declarantId) {
+      revalidatePath(`/declarants/${declarantId}`)
+      revalidatePath(`/preleveurs/${declarantId}`)
     }
 
     return result
