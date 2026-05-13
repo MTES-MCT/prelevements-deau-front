@@ -15,6 +15,7 @@ import {useRouter} from 'next/navigation'
 import RegleForm from '@/components/form/regle-form.js'
 import FormErrors from '@/components/ui/FormErrors/index.js'
 import useFormSubmit from '@/hook/use-form-submit.js'
+import {parameterUnits} from '@/lib/regles.js'
 import {updateRegleAction, deleteRegleAction} from '@/server/actions/index.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
@@ -24,6 +25,10 @@ function dateToInputValue(value) {
   }
 
   return String(value).slice(0, 10)
+}
+
+function isUnitRequired(parameter) {
+  return (parameterUnits[parameter] || []).length > 0
 }
 
 const transformRegleForForm = regle => ({
@@ -49,8 +54,6 @@ const RegleEditionForm = ({preleveur, regle, exploitations, documents}) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  const parametersRequiringUnit = ['débit prélevé', 'débit réservé']
-  const isUnitRequired = parametersRequiringUnit.includes(formData.parameter)
   const isFrequencyRequired = formData.parameter === 'volume prélevé'
   const declarantId = preleveur.userId || preleveur.id
 
@@ -59,7 +62,7 @@ const RegleEditionForm = ({preleveur, regle, exploitations, documents}) => {
     && formData.value !== ''
     && formData.constraint
     && formData.validityStartDate
-    && (!isUnitRequired || formData.unit)
+    && (!isUnitRequired(formData.parameter) || formData.unit)
     && (!isFrequencyRequired || formData.frequency)
 
   const handleSubmit = withSubmit(

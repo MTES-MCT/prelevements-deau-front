@@ -24,39 +24,52 @@ const statusLabels = {
   NON_RENSEIGNE: 'Non renseigné'
 }
 
-const buildExploitationLabelsMap = exploitations => {
-  const map = {}
+function getExploitationLabel(exploitation) {
+  const pointName = exploitation.pointPrelevement?.name || 'Point inconnu'
+  const usagesText = exploitation.usages?.length > 0
+    ? exploitation.usages.join(', ')
+    : 'Usage non renseigné'
 
-  for (const exploitation of exploitations) {
-    const pointName = exploitation.point?.name || exploitation.pointPrelevement?.name || 'Point inconnu'
-    const label = `${pointName}${exploitation.type ? ` — ${exploitation.type}` : ''}`
-    map[exploitation.id] = label
-  }
-
-  return map
+  return `${pointName} - ${usagesText}`
 }
 
-const buildIdByLabelMap = labelsById => Object.fromEntries(
-  Object.entries(labelsById).map(([id, label]) => [label, id])
-)
+function getExploitationTooltip(exploitation) {
+  const start = exploitation.startDate
+    ? `Depuis le ${formatFullDateFr(exploitation.startDate)}`
+    : 'Début non renseigné'
 
-const buildExploitationOptions = (exploitations, labelsById) => {
-  const statusOrder = ['EN_ACTIVITE', 'TERMINEE', 'ABANDONNEE', 'NON_RENSEIGNE']
+  const end = exploitation.endDate
+    ? ` jusqu’au ${formatFullDateFr(exploitation.endDate)}`
+    : ''
+
+  return `${start}${end}`
+}
+
+function buildExploitationOptions(exploitations) {
   const grouped = {}
 
   for (const exploitation of exploitations) {
     const status = exploitation.status || 'NON_RENSEIGNE'
     grouped[status] ||= []
 
-    const label = labelsById[exploitation.id]
-    const dateText = `${exploitation.startDate ? `Depuis le ${formatFullDateFr(exploitation.startDate)}` : 'Début non renseigné'}${exploitation.endDate ? ` jusqu'au ${formatFullDateFr(exploitation.endDate)}` : ''}`
+    const label = getExploitationLabel(exploitation)
 
     grouped[status].push({
-      value: label,
+      value: exploitation.id,
       content: label,
-      title: dateText
+      title: label,
+      tooltip: getExploitationTooltip(exploitation),
+      sortKey: exploitation.pointPrelevement?.name || ''
     })
   }
+
+  for (const options of Object.values(grouped)) {
+    options.sort((a, b) =>
+      a.sortKey.localeCompare(b.sortKey, 'fr', {sensitivity: 'base'})
+    )
+  }
+
+  const statusOrder = ['EN_ACTIVITE', 'TERMINEE', 'ABANDONNEE', 'NON_RENSEIGNE']
 
   return statusOrder
     .filter(status => grouped[status]?.length > 0)
@@ -79,19 +92,9 @@ const DocumentEditDialog = ({
   const [error, setError] = useState(null)
   const [validationErrors, setValidationErrors] = useState([])
 
-  const exploitationLabelsById = useMemo(
-    () => buildExploitationLabelsMap(exploitations || []),
-    [exploitations]
-  )
-
-  const idByLabel = useMemo(
-    () => buildIdByLabelMap(exploitationLabelsById),
-    [exploitationLabelsById]
-  )
-
   const exploitationOptions = useMemo(
-    () => buildExploitationOptions(exploitations || [], exploitationLabelsById),
-    [exploitations, exploitationLabelsById]
+    () => buildExploitationOptions(exploitations || []),
+    [exploitations]
   )
 
   useEffect(() => {
@@ -103,13 +106,8 @@ const DocumentEditDialog = ({
     }
   }, [isOpen, document])
 
-  const selectedLabels = useMemo(() =>
-    selectedExploitations.map(id => exploitationLabelsById[id] || id),
-  [selectedExploitations, exploitationLabelsById])
-
-  const handleExploitationsChange = newLabels => {
-    const newIds = newLabels.map(label => idByLabel[label] || label)
-    setSelectedExploitations(newIds.slice(-1))
+  const handleExploitationsChange = exploitationIds => {
+    setSelectedExploitations(exploitationIds.slice(-1))
   }
 
   const handleSave = async () => {
@@ -171,11 +169,12 @@ const DocumentEditDialog = ({
         {exploitations.length > 0 && (
           <div className='mt-4'>
             <GroupedMultiselect
+              searchable
               hint='Un document peut être associé à une exploitation.'
               label='Exploitation associée'
               options={exploitationOptions}
               placeholder='Sélectionner une exploitation'
-              value={selectedLabels}
+              value={selectedExploitations}
               onChange={handleExploitationsChange}
             />
           </div>

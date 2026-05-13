@@ -31,7 +31,7 @@ const ruleParameters = {
     '1 year': {label: 'Volume prélevé annuel', icon: <OpacityOutlinedIcon />},
     default: {label: 'Volume prélevé', icon: <OpacityOutlinedIcon />}
   },
-  'relevé d\'index': {label: 'Relevé d\'index', icon: <OpacityOutlinedIcon />},
+  'relevé d\'index': {label: 'Relevé d’index', icon: <OpacityOutlinedIcon />},
   'débit prélevé': {label: 'Débit prélevé', icon: <OilBarrelOutlinedIcon />},
   'débit réservé': {label: 'Débit réservé', icon: <WaterOutlinedIcon />},
   'niveau piézométrique': {label: 'Niveau piézométrique', icon: <HeightOutlinedIcon />},

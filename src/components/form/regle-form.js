@@ -11,6 +11,22 @@ import DividerSection from '@/components/ui/DividerSection/index.js'
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import {formatFullDateFr} from '@/lib/format-date.js'
 import {getConstraintLabel, getParameterInfo, parameterUnits} from '@/lib/regles.js'
+import {displayPreleveur} from '@/utils/preleveurs.js'
+
+const defaultRegle = {
+  exploitationIds: [],
+  documentId: null,
+  parameter: '',
+  unit: '',
+  value: '',
+  constraint: '',
+  frequency: null,
+  validityStartDate: '',
+  validityEndDate: '',
+  annualPeriodStartDate: '',
+  annualPeriodEndDate: '',
+  comment: ''
+}
 
 const constraints = [
   {value: 'MIN', label: 'Minimum (>)'},
@@ -25,58 +41,78 @@ const parameterOptions = [
   })
 ]
 
-const unitOptions = [
-  {value: '', label: '-- Sélectionner --', disabled: true},
-  {value: 'L/s', label: 'L/s'},
-  {value: 'm³/h', label: 'm³/h'}
-]
-
-const requiresUnitSelection = parameter => (parameterUnits[parameter]?.length || 0) > 1
-
 const constraintOptions = [
   {value: '', label: '-- Sélectionner --', disabled: true},
   ...constraints.map(constraint => ({value: constraint.value, label: constraint.label}))
 ]
 
-const buildExploitationLabelsMap = exploitations => {
-  const map = {}
-
-  for (const exploitation of exploitations) {
-    const pointName = exploitation.point?.name || exploitation.pointPrelevement?.name || 'Point inconnu'
-    const usagesText = exploitation.usages?.join(', ') || 'Usage non renseigné'
-    map[exploitation.id] = `${pointName} - ${usagesText}`
-  }
-
-  return map
+const statusLabels = {
+  EN_ACTIVITE: 'En activité',
+  TERMINEE: 'Terminée',
+  ABANDONNEE: 'Abandonnée',
+  NON_RENSEIGNE: 'Non renseigné'
 }
 
-const buildIdByLabelMap = labelsById => Object.fromEntries(
-  Object.entries(labelsById).map(([id, label]) => [label, id])
-)
+function getUnitOptions(parameter) {
+  const units = parameterUnits[parameter] || []
 
-const buildExploitationOptions = (exploitations, labelsById) => {
-  const statusOrder = ['EN_ACTIVITE', 'TERMINEE', 'ABANDONNEE', 'NON_RENSEIGNE']
-  const statusLabels = {
-    EN_ACTIVITE: 'En activité',
-    TERMINEE: 'Terminée',
-    ABANDONNEE: 'Abandonnée',
-    NON_RENSEIGNE: 'Non renseigné'
-  }
+  return [
+    {value: '', label: '-- Sélectionner --', disabled: true},
+    ...units.map(unit => ({value: unit, label: unit}))
+  ]
+}
+
+function hasUnit(parameter) {
+  return (parameterUnits[parameter] || []).length > 0
+}
+
+function getExploitationLabel(exploitation) {
+  const pointName = exploitation.pointPrelevement?.name || 'Point inconnu'
+  const declarantName = displayPreleveur(exploitation.declarant)
+  const usagesText = exploitation.usages?.length > 0
+    ? exploitation.usages.join(', ')
+    : 'Usage non renseigné'
+
+  return `${pointName} (${declarantName}) - ${usagesText}`
+}
+
+function getExploitationTooltip(exploitation) {
+  const start = exploitation.startDate
+    ? `Depuis le ${formatFullDateFr(exploitation.startDate)}`
+    : 'Début non renseigné'
+
+  const end = exploitation.endDate
+    ? ` jusqu’au ${formatFullDateFr(exploitation.endDate)}`
+    : ''
+
+  return `${start}${end}`
+}
+
+function buildExploitationOptions(exploitations) {
   const grouped = {}
 
   for (const exploitation of exploitations) {
     const status = exploitation.status || 'NON_RENSEIGNE'
     grouped[status] ||= []
 
-    const label = labelsById[exploitation.id]
-    const dateText = `Depuis le ${formatFullDateFr(exploitation.startDate)}${exploitation.endDate ? ` jusqu'au ${formatFullDateFr(exploitation.endDate)}` : ''}`
+    const label = getExploitationLabel(exploitation)
 
     grouped[status].push({
-      value: label,
+      value: exploitation.id,
       content: label,
-      title: dateText
+      title: label,
+      tooltip: getExploitationTooltip(exploitation),
+      sortKey: exploitation.pointPrelevement?.name || ''
     })
   }
+
+  for (const options of Object.values(grouped)) {
+    options.sort((a, b) =>
+      a.sortKey.localeCompare(b.sortKey, 'fr', {sensitivity: 'base'})
+    )
+  }
+
+  const statusOrder = ['EN_ACTIVITE', 'TERMINEE', 'ABANDONNEE', 'NON_RENSEIGNE']
 
   return statusOrder
     .filter(status => grouped[status]?.length > 0)
@@ -86,33 +122,37 @@ const buildExploitationOptions = (exploitations, labelsById) => {
     }))
 }
 
-const buildDocumentOptions = documents => [
-  {value: '', label: '-- Aucun document --'},
-  ...documents.map(document => ({
-    value: document.id,
-    label: `${document.nature}${document.reference ? ` - ${document.reference}` : ''} (${formatFullDateFr(document.signatureDate)})`
-  }))
-]
+function buildDocumentOptions(documents) {
+  return [
+    {value: '', label: '-- Aucun document --'},
+    ...documents.map(document => ({
+      value: document.id,
+      label: `${document.nature}${document.reference ? ` - ${document.reference}` : ''} (${formatFullDateFr(document.signatureDate)})`
+    }))
+  ]
+}
 
-const getFieldError = (validationErrors, field) => {
+function getFieldError(validationErrors, field) {
   const error = validationErrors.find(error => error.path?.includes(field))
   return error?.message
 }
 
 const ParameterSection = ({regle, setRegle, fieldError}) => {
   const handleParameterChange = parameter => {
-    const validUnits = parameterUnits[parameter] || []
-    const unit = validUnits.length === 1 ? validUnits[0] : ''
+    const units = parameterUnits[parameter] || []
+    const unit = units.length === 1 ? units[0] : ''
 
     setRegle(previous => ({
       ...previous,
       parameter,
-      unit
+      unit,
+      frequency: parameter === 'volume prélevé' ? previous.frequency : null
     }))
   }
 
-  const showUnitField = requiresUnitSelection(regle.parameter)
+  const showUnitField = hasUnit(regle.parameter)
   const isVolumeParameter = regle.parameter === 'volume prélevé'
+  const unitOptions = getUnitOptions(regle.parameter)
 
   return (
     <DividerSection title='Paramètre et valeur'>
@@ -161,6 +201,7 @@ const ParameterSection = ({regle, setRegle, fieldError}) => {
             options={unitOptions}
           />
         )}
+
         <Input
           label='Valeur *'
           state={fieldError('value') ? 'error' : 'default'}
@@ -235,8 +276,14 @@ const PeriodSection = ({regle, setRegle, fieldError}) => (
   </DividerSection>
 )
 
-const RegleForm = ({regle, setRegle, exploitations, documents, validationErrors = []}) => {
-  const hasNoExploitations = !exploitations || exploitations.length === 0
+const RegleForm = ({
+  regle = defaultRegle,
+  setRegle,
+  exploitations = [],
+  documents = [],
+  validationErrors = []
+}) => {
+  const hasNoExploitations = exploitations.length === 0
 
   if (hasNoExploitations) {
     return (
@@ -252,55 +299,44 @@ const RegleForm = ({regle, setRegle, exploitations, documents, validationErrors 
     <RegleFormFields
       documents={documents}
       exploitations={exploitations}
-      regle={regle}
+      regle={{...defaultRegle, ...regle}}
       setRegle={setRegle}
       validationErrors={validationErrors}
     />
   )
 }
 
-const RegleFormFields = ({regle, setRegle, exploitations, documents, validationErrors}) => {
+const RegleFormFields = ({
+  regle = defaultRegle,
+  setRegle,
+  exploitations = [],
+  documents = [],
+  validationErrors = []
+}) => {
+  const safeRegle = {...defaultRegle, ...regle}
   const fieldError = field => getFieldError(validationErrors, field)
 
-  const exploitationLabelsById = useMemo(
-    () => buildExploitationLabelsMap(exploitations || []),
+  const exploitationOptions = useMemo(
+    () => buildExploitationOptions(exploitations),
     [exploitations]
   )
 
-  const idByLabel = useMemo(
-    () => buildIdByLabelMap(exploitationLabelsById),
-    [exploitationLabelsById]
-  )
-
-  const exploitationOptions = useMemo(
-    () => buildExploitationOptions(exploitations || [], exploitationLabelsById),
-    [exploitations, exploitationLabelsById]
-  )
-
   const documentOptions = useMemo(
-    () => buildDocumentOptions(documents || []),
+    () => buildDocumentOptions(documents),
     [documents]
   )
-
-  const selectedLabels = useMemo(() =>
-    (regle.exploitationIds || []).map(id => exploitationLabelsById[id] || id),
-  [regle.exploitationIds, exploitationLabelsById])
-
-  const handleExploitationsChange = newLabels => {
-    const exploitationIds = newLabels.map(label => idByLabel[label] || label)
-    setRegle(previous => ({...previous, exploitationIds}))
-  }
 
   return (
     <div className='flex flex-col gap-4'>
       <div className={fieldError('exploitationIds') ? 'fr-input-group--error' : ''}>
         <GroupedMultiselect
+          searchable
           label='Exploitations associées *'
           hint="Sélectionnez au moins une exploitation à laquelle cette règle s'applique"
           placeholder='Sélectionner des exploitations'
           options={exploitationOptions}
-          value={selectedLabels}
-          onChange={handleExploitationsChange}
+          value={safeRegle.exploitationIds || []}
+          onChange={exploitationIds => setRegle(previous => ({...previous, exploitationIds}))}
         />
         {fieldError('exploitationIds') && (
           <p className='fr-error-text'>{fieldError('exploitationIds')}</p>
@@ -314,15 +350,15 @@ const RegleFormFields = ({regle, setRegle, exploitations, documents, validationE
         state={fieldError('documentId') ? 'error' : 'default'}
         stateRelatedMessage={fieldError('documentId')}
         nativeSelectProps={{
-          value: regle.documentId || '',
+          value: safeRegle.documentId || '',
           onChange: event => setRegle(previous => ({...previous, documentId: event.target.value || null}))
         }}
         options={documentOptions}
       />
 
-      <ParameterSection fieldError={fieldError} regle={regle} setRegle={setRegle} />
+      <ParameterSection fieldError={fieldError} regle={safeRegle} setRegle={setRegle} />
 
-      <PeriodSection fieldError={fieldError} regle={regle} setRegle={setRegle} />
+      <PeriodSection fieldError={fieldError} regle={safeRegle} setRegle={setRegle} />
 
       <Input
         textArea
@@ -331,12 +367,12 @@ const RegleFormFields = ({regle, setRegle, exploitations, documents, validationE
         stateRelatedMessage={fieldError('comment')}
         nativeTextAreaProps={{
           placeholder: 'Commentaire ou précision sur cette règle',
-          value: regle.comment || '',
+          value: safeRegle.comment || '',
           onChange: event => setRegle(previous => ({...previous, comment: event.target.value}))
         }}
       />
 
-      <input readOnly type='hidden' value={getConstraintLabel(regle.constraint) || getParameterInfo(regle.parameter, regle.frequency)?.label || ''} />
+      <input readOnly type='hidden' value={getConstraintLabel(safeRegle.constraint) || getParameterInfo(safeRegle.parameter, safeRegle.frequency)?.label || ''} />
     </div>
   )
 }

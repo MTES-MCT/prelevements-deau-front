@@ -8,6 +8,7 @@ import {useRouter} from 'next/navigation'
 import RegleForm from '@/components/form/regle-form.js'
 import FormErrors from '@/components/ui/FormErrors/index.js'
 import useFormSubmit from '@/hook/use-form-submit.js'
+import {parameterUnits} from '@/lib/regles.js'
 import {createRegleAction} from '@/server/actions/index.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
@@ -26,14 +27,17 @@ const emptyRegle = {
   comment: ''
 }
 
-const RegleCreationForm = ({preleveur, exploitations, documents}) => {
+function isUnitRequired(parameter) {
+  return (parameterUnits[parameter] || []).length > 0
+}
+
+const RegleCreationForm = ({preleveur, exploitations = [], documents = []}) => {
   const router = useRouter()
   const {isSubmitting, error, validationErrors, resetErrors, withSubmit} = useFormSubmit()
 
   const [regle, setRegle] = useState(emptyRegle)
 
-  const parametersRequiringUnit = ['débit prélevé', 'débit réservé']
-  const isUnitRequired = parametersRequiringUnit.includes(regle.parameter)
+  const declarantId = preleveur.userId || preleveur.id
   const isFrequencyRequired = regle.parameter === 'volume prélevé'
 
   const isFormValid = regle.exploitationIds?.length > 0
@@ -41,10 +45,8 @@ const RegleCreationForm = ({preleveur, exploitations, documents}) => {
     && regle.value !== ''
     && regle.constraint
     && regle.validityStartDate
-    && (!isUnitRequired || regle.unit)
+    && (!isUnitRequired(regle.parameter) || regle.unit)
     && (!isFrequencyRequired || regle.frequency)
-
-  const declarantId = preleveur.userId || preleveur.id
 
   const handleSubmit = withSubmit(
     async () => {
@@ -52,7 +54,9 @@ const RegleCreationForm = ({preleveur, exploitations, documents}) => {
         ...regle,
         value: Number(regle.value)
       })
+
       const response = await createRegleAction(declarantId, payload)
+
       if (!response.success) {
         throw response
       }
@@ -65,7 +69,7 @@ const RegleCreationForm = ({preleveur, exploitations, documents}) => {
     }
   )
 
-  const hasNoExploitations = !exploitations || exploitations.length === 0
+  const hasNoExploitations = exploitations.length === 0
 
   return (
     <div>
