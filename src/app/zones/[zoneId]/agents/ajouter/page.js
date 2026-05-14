@@ -1,0 +1,56 @@
+import {Box} from '@mui/material'
+import {notFound} from 'next/navigation'
+
+import ZoneBreadcrumb from '@/components/zones/zone-breadcrumb.js'
+import ZoneHeader from '@/components/zones/zone-header.js'
+import ZoneInstructorForm from '@/components/zones/zone-instructor-form.js'
+import ZoneSubNavigation from '@/components/zones/zone-sub-navigation.js'
+import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
+import {getZoneAction} from '@/server/actions/zones.js'
+
+export const dynamic = 'force-dynamic'
+
+const Page = async ({params}) => {
+  const {zoneId} = await params
+
+  const zoneResult = await getZoneAction(zoneId)
+
+  if (!zoneResult.success || !zoneResult.data) {
+    notFound()
+  }
+
+  const zone = zoneResult.data
+
+  if (!zone.isAdmin) {
+    notFound()
+  }
+
+  return (
+    <>
+      <StartDsfrOnHydration />
+
+      <Box className='fr-container h-full w-full flex flex-col gap-5 mb-8'>
+        <ZoneBreadcrumb
+          zone={zone}
+          currentPageLabel='Ajouter un agent'
+          segments={[
+            {
+              label: 'Agents',
+              linkProps: {
+                href: `/zones/${zone.id}/agents`
+              }
+            }
+          ]}
+        />
+
+        <ZoneHeader zone={zone} currentSection='add-agent' />
+
+        <ZoneSubNavigation zone={zone} current='agents' />
+
+        <ZoneInstructorForm zone={zone} />
+      </Box>
+    </>
+  )
+}
+
+export default Page

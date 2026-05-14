@@ -59,5 +59,12 @@ export {
 } from './stats.js'
 
 export {
+  addZoneInstructorAction,
+  deleteZoneInstructorAction,
+  getZoneAction,
+  getZoneDeclarantsAction,
+  getZoneInstructorAction,
+  getZoneInstructorsAction,
+  getZonesAction,
   getZonesActions
 } from './zones.js'

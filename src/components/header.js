@@ -55,6 +55,14 @@ const NAV_ITEMS = [
   },
   {
     linkProps: {
+      href: '/zones',
+      target: '_self'
+    },
+    text: 'Mes zones',
+    roles: ['INSTRUCTOR']
+  },
+  {
+    linkProps: {
       href: '/exports',
       target: '_self'
     },
