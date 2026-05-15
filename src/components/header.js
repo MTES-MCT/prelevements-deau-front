@@ -59,7 +59,7 @@ const NAV_ITEMS = [
       target: '_self'
     },
     text: 'Mes zones',
-    roles: ['INSTRUCTOR']
+    roles: ['INSTRUCTOR', 'ADMIN']
   },
   {
     linkProps: {
@@ -102,10 +102,15 @@ const HeaderComponent = () => {
       return item.roles.includes(user?.role)
     })
 
-    return navigation.map(item => ({
-      ...item,
-      isActive: isActive(item.linkProps?.href || item.menuLinks?.[0].linkProps.href)
-    }))
+    return navigation.map(item => {
+      const href = item.linkProps?.href || item.menuLinks?.[0].linkProps.href
+
+      return {
+        ...item,
+        text: href === '/zones' && user?.role === 'ADMIN' ? 'Zones' : item.text,
+        isActive: isActive(href)
+      }
+    })
   }, [user, isLoadingUser, pathname])
 
   const quickAccessItems = useMemo(() => {

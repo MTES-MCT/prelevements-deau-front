@@ -5,6 +5,7 @@ import ZoneBreadcrumb from '@/components/zones/zone-breadcrumb.js'
 import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
 import ZonesList from '@/components/zones/zones-list.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
+import {getCurrentUser} from '@/server/actions/user.js'
 import {getZonesAction} from '@/server/actions/zones.js'
 
 export const dynamic = 'force-dynamic'
@@ -14,23 +15,27 @@ function pluralize(count, singular, plural = `${singular}s`) {
 }
 
 const Page = async () => {
-  const result = await getZonesAction()
+  const [result, userResult] = await Promise.all([
+    getZonesAction(),
+    getCurrentUser()
+  ])
   const zones = result.data || []
   const adminZonesCount = zones.filter(zone => zone.isAdmin).length
+  const pageLabel = userResult?.data?.role === 'ADMIN' ? 'Zones' : 'Mes zones'
 
   return (
     <>
       <StartDsfrOnHydration />
 
       <Box className='fr-container h-full w-full flex flex-col gap-5 mb-8'>
-        <ZoneBreadcrumb currentPageLabel='Mes zones' />
+        <ZoneBreadcrumb currentPageLabel={pageLabel} />
 
         <EntityHeader
           title={(
             <>
               <span className={ZONE_ICONS.mapPin2} />
               {' '}
-              Mes zones
+              {pageLabel}
             </>
           )}
           tags={[]}

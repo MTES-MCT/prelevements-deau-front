@@ -43,13 +43,13 @@ const Page = async ({params}) => {
           pointIds={[pointPrelevement.id]}
           seriesOptions={seriesOptions}
         />
-        { role === 'INSTRUCTOR' && (
+        {(role === 'INSTRUCTOR' || role === 'ADMIN') && (
           <ExploitationsList
             exploitations={exploitations}
             createHref={getNewExploitationURL({idPoint: pointPrelevement.id})}
             canCreate={pointPrelevement.right?.canEdit}
           />
-        ) }
+        )}
       </div>
     </>
   )

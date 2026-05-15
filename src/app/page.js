@@ -6,7 +6,7 @@ const Home = async () => {
   const userResult = await getCurrentUser()
   const role = userResult?.data?.role
 
-  if (role === 'INSTRUCTOR') {
+  if (role === 'INSTRUCTOR' || role === 'ADMIN') {
     redirect('/declarations')
   }
 
