@@ -10,6 +10,27 @@ function pluralize(count, singular, plural = `${singular}s`) {
 const ZoneOverviewCards = ({zone}) => (
   <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
     <SectionCard
+      title='Points de prélèvement'
+      icon={ZONE_ICONS.water}
+      editorOnly={false}
+      buttonProps={{
+        priority: 'secondary',
+        iconId: ZONE_ICONS.arrowRight,
+        children: 'Voir les points',
+        linkProps: {
+          href: `/zones/${zone.id}/points-prelevement`
+        }
+      }}
+    >
+      <p className='fr-text--lead fr-mb-1w'>
+        {pluralize(zone.pointsCount || 0, 'point de prélèvement', 'points de prélèvement')}
+      </p>
+      <p className='fr-text--sm fr-mb-0'>
+        Points localisés dans cette zone. Les admins de zone peuvent les créer et les maintenir directement ici.
+      </p>
+    </SectionCard>
+
+    <SectionCard
       title='Déclarants'
       icon={ZONE_ICONS.user}
       editorOnly={false}
@@ -26,7 +47,28 @@ const ZoneOverviewCards = ({zone}) => (
         {pluralize(zone.declarantsCount || 0, 'déclarant')}
       </p>
       <p className='fr-text--sm fr-mb-0'>
-        Déclarants ayant au moins un point de prélèvement rattaché à cette zone.
+        Déclarants ayant au moins une exploitation sur un point de cette zone.
+      </p>
+    </SectionCard>
+
+    <SectionCard
+      title='Exploitations'
+      icon={ZONE_ICONS.briefcase}
+      editorOnly={false}
+      buttonProps={{
+        priority: 'secondary',
+        iconId: ZONE_ICONS.arrowRight,
+        children: 'Voir les exploitations',
+        linkProps: {
+          href: `/zones/${zone.id}/exploitations`
+        }
+      }}
+    >
+      <p className='fr-text--lead fr-mb-1w'>
+        {pluralize(zone.exploitationsCount || 0, 'exploitation')}
+      </p>
+      <p className='fr-text--sm fr-mb-0'>
+        Rattachements entre déclarants et points de prélèvement de cette zone.
       </p>
     </SectionCard>
 
@@ -44,7 +86,7 @@ const ZoneOverviewCards = ({zone}) => (
       }}
     >
       <p className='fr-text--lead fr-mb-1w'>
-        {pluralize(zone.instructorsCount || 0, 'instructeur')}
+        {pluralize(zone.instructorsCount || 0, 'agent')}
       </p>
       <p className='fr-text--sm fr-mb-0'>
         Agents autorisés à consulter ou administrer cette zone.
@@ -53,21 +95,20 @@ const ZoneOverviewCards = ({zone}) => (
 
     {zone.isAdmin && (
       <SectionCard
-        title='Administration'
+        title='Actions rapides'
         icon={ZONE_ICONS.shieldCheck}
         editorOnly={false}
         buttonProps={{
           priority: 'primary',
-          iconId: ZONE_ICONS.addUser,
-          children: 'Ajouter un agent',
+          iconId: ZONE_ICONS.add,
+          children: 'Créer un point',
           linkProps: {
-            href: `/zones/${zone.id}/agents/ajouter`
+            href: `/zones/${zone.id}/points-prelevement/nouveau`
           }
         }}
       >
         <p className='fr-text--sm fr-mb-0'>
-          En tant qu’admin de cette zone, vous pouvez ajouter ou retirer des agents.
-          La suppression retire uniquement le rattachement à la zone, pas le compte utilisateur.
+          Donnez accès à un agent, créez les points de prélèvement de la zone, puis rattachez les déclarants via des exploitations.
         </p>
       </SectionCard>
     )}

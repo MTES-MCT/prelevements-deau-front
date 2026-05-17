@@ -10,7 +10,49 @@ import {
 function revalidateZonePaths(zoneId) {
   revalidatePath('/zones')
   revalidatePath(`/zones/${zoneId}`)
-  revalidatePath(`/zones/${zoneId}/instructeurs`)
+  revalidatePath(`/zones/${zoneId}/agents`)
+  revalidatePath(`/zones/${zoneId}/declarants`)
+  revalidatePath(`/zones/${zoneId}/points-prelevement`)
+  revalidatePath(`/zones/${zoneId}/exploitations`)
+}
+
+function revalidatePointPaths(zoneId, pointId) {
+  revalidateZonePaths(zoneId)
+  revalidatePath('/points-prelevement')
+
+  if (pointId) {
+    revalidatePath(`/points-prelevement/${pointId}`)
+    revalidatePath(`/points-prelevement/${pointId}/edit`)
+  }
+}
+
+function revalidateExploitationPaths(zoneId, exploitationId) {
+  revalidateZonePaths(zoneId)
+  revalidatePath('/exploitations')
+
+  if (exploitationId) {
+    revalidatePath(`/exploitations/${exploitationId}`)
+    revalidatePath(`/exploitations/${exploitationId}/edit`)
+  }
+}
+
+function buildListSearch(options = {}) {
+  const searchParams = new URLSearchParams()
+
+  if (options.page) {
+    searchParams.set('page', String(options.page))
+  }
+
+  if (options.perPage) {
+    searchParams.set('perPage', String(options.perPage))
+  }
+
+  if (options.search) {
+    searchParams.set('search', String(options.search))
+  }
+
+  const search = searchParams.toString()
+  return search ? `?${search}` : ''
 }
 
 export async function getZonesAction() {
@@ -25,8 +67,12 @@ export async function getZoneAction(zoneId) {
   return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}`))
 }
 
-export async function getZoneDeclarantsAction(zoneId) {
-  return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/declarants`))
+export async function getZoneGeometryAction(zoneId) {
+  return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/geometry`))
+}
+
+export async function getZoneDeclarantsAction(zoneId, options = {}) {
+  return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/declarants${buildListSearch(options)}`))
 }
 
 export async function getZoneInstructorsAction(zoneId) {
@@ -60,4 +106,120 @@ export async function deleteZoneInstructorAction(zoneId, instructorUserId) {
 
     return result
   })
+}
+
+export async function getZonePointsPrelevementAction(zoneId, options = {}) {
+  return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/points-prelevement${buildListSearch(options)}`))
+}
+
+export async function getZonePointsPrelevementOptionsAction(zoneId) {
+  return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/points-prelevement/options`))
+}
+
+export async function getZonePointPrelevementAction(zoneId, pointId) {
+  return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/points-prelevement/${pointId}`))
+}
+
+export async function createZonePointPrelevementAction(zoneId, payload) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(`api/zones/${zoneId}/points-prelevement`, {
+      method: 'POST',
+      body: payload
+    })
+
+    revalidatePointPaths(zoneId, result?.id)
+
+    return result
+  })
+}
+
+export async function updateZonePointPrelevementAction(zoneId, pointId, payload) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(`api/zones/${zoneId}/points-prelevement/${pointId}`, {
+      method: 'PUT',
+      body: payload
+    })
+
+    revalidatePointPaths(zoneId, pointId)
+
+    return result
+  })
+}
+
+export async function deleteZonePointPrelevementAction(zoneId, pointId) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(`api/zones/${zoneId}/points-prelevement/${pointId}`, {
+      method: 'DELETE'
+    })
+
+    revalidatePointPaths(zoneId, pointId)
+
+    return result
+  })
+}
+
+export async function getZoneExploitationsAction(zoneId, options = {}) {
+  return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/exploitations${buildListSearch(options)}`))
+}
+
+export async function getZoneExploitationAction(zoneId, exploitationId) {
+  return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/exploitations/${exploitationId}`))
+}
+
+export async function createZoneExploitationAction(zoneId, payload) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(`api/zones/${zoneId}/exploitations`, {
+      method: 'POST',
+      body: payload
+    })
+
+    revalidateExploitationPaths(zoneId, result?.id)
+
+    if (payload.declarantUserId) {
+      revalidatePath(`/declarants/${payload.declarantUserId}`)
+    }
+
+    if (payload.pointPrelevementId) {
+      revalidatePath(`/points-prelevement/${payload.pointPrelevementId}`)
+    }
+
+    return result
+  })
+}
+
+export async function updateZoneExploitationAction(zoneId, exploitationId, payload) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(`api/zones/${zoneId}/exploitations/${exploitationId}`, {
+      method: 'PUT',
+      body: payload
+    })
+
+    revalidateExploitationPaths(zoneId, exploitationId)
+
+    if (payload.declarantUserId) {
+      revalidatePath(`/declarants/${payload.declarantUserId}`)
+    }
+
+    if (payload.pointPrelevementId) {
+      revalidatePath(`/points-prelevement/${payload.pointPrelevementId}`)
+    }
+
+    return result
+  })
+}
+
+export async function deleteZoneExploitationAction(zoneId, exploitationId) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(`api/zones/${zoneId}/exploitations/${exploitationId}`, {
+      method: 'DELETE'
+    })
+
+    revalidateExploitationPaths(zoneId, exploitationId)
+
+    return result
+  })
+}
+
+export async function getZoneDeclarantOptionsAction(zoneId) {
+  return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/exploitations/declarants-options`))
 }

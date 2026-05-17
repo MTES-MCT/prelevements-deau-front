@@ -2,8 +2,8 @@ import {Box} from '@mui/material'
 import {notFound} from 'next/navigation'
 
 import ZoneBreadcrumb from '@/components/zones/zone-breadcrumb.js'
-import ZoneDeclarantsList from '@/components/zones/zone-declarants-list.js'
 import ZoneHeader from '@/components/zones/zone-header.js'
+import ZonePointsList from '@/components/zones/zone-points-list.js'
 import ZoneSubNavigation from '@/components/zones/zone-sub-navigation.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {readListOptions, unwrapPaginatedData} from '@/lib/zone-pagination.js'
@@ -20,19 +20,19 @@ const Page = async ({params, searchParams}) => {
   const {zoneId} = await params
   const listOptions = readListOptions(await searchParams)
 
-  const [zoneResult, declarantsResult, pointsResult, exploitationsResult] = await Promise.all([
+  const [zoneResult, pointsResult, declarantsResult, exploitationsResult] = await Promise.all([
     getZoneAction(zoneId),
-    getZoneDeclarantsAction(zoneId, listOptions),
-    getZonePointsPrelevementAction(zoneId, {perPage: 1}),
+    getZonePointsPrelevementAction(zoneId, listOptions),
+    getZoneDeclarantsAction(zoneId, {perPage: 1}),
     getZoneExploitationsAction(zoneId, {perPage: 1})
   ])
 
-  if (!zoneResult.success || !zoneResult.data || !declarantsResult.success) {
+  if (!zoneResult.success || !zoneResult.data || !pointsResult.success) {
     notFound()
   }
 
-  const declarantsPayload = unwrapPaginatedData(declarantsResult.data)
-  const pointsPayload = pointsResult.success ? unwrapPaginatedData(pointsResult.data) : {meta: {totalAll: 0}}
+  const pointsPayload = unwrapPaginatedData(pointsResult.data)
+  const declarantsPayload = declarantsResult.success ? unwrapPaginatedData(declarantsResult.data) : {meta: {totalAll: 0}}
   const exploitationsPayload = exploitationsResult.success ? unwrapPaginatedData(exploitationsResult.data) : {meta: {totalAll: 0}}
   const zone = {
     ...zoneResult.data,
@@ -46,10 +46,10 @@ const Page = async ({params, searchParams}) => {
       <StartDsfrOnHydration />
 
       <Box className='fr-container h-full w-full flex flex-col gap-5 mb-8'>
-        <ZoneBreadcrumb zone={zone} currentPageLabel='Déclarants' />
-        <ZoneHeader zone={zone} currentSection='declarants' />
-        <ZoneSubNavigation zone={zone} current='declarants' />
-        <ZoneDeclarantsList declarants={declarantsPayload.data} meta={declarantsPayload.meta} zone={zone} />
+        <ZoneBreadcrumb zone={zone} currentPageLabel='Points de prélèvement' />
+        <ZoneHeader zone={zone} currentSection='points' />
+        <ZoneSubNavigation zone={zone} current='points' />
+        <ZonePointsList meta={pointsPayload.meta} points={pointsPayload.data} zone={zone} />
       </Box>
     </>
   )

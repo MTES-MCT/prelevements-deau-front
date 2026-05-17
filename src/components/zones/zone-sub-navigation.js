@@ -10,9 +10,19 @@ const ITEMS = [
     href: zone => `/zones/${zone.id}`
   },
   {
+    key: 'points',
+    label: 'Points de prélèvement',
+    href: zone => `/zones/${zone.id}/points-prelevement`
+  },
+  {
     key: 'declarants',
     label: 'Déclarants',
     href: zone => `/zones/${zone.id}/declarants`
+  },
+  {
+    key: 'exploitations',
+    label: 'Exploitations',
+    href: zone => `/zones/${zone.id}/exploitations`
   },
   {
     key: 'agents',

@@ -1,24 +1,22 @@
 'use client'
 
-import {useMemo, useState} from 'react'
-
-import SearchBar from '@codegouvfr/react-dsfr/SearchBar'
-import {Alert} from '@mui/material'
+import {Button} from '@codegouvfr/react-dsfr/Button'
+import {Alert, Box} from '@mui/material'
 import Link from 'next/link'
 
 import ListItem from '@/components/ui/ListItem/index.js'
 import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
 import {
+  ZonePagination,
+  ZoneResourceToolbar
+} from '@/components/zones/zone-list-tools.js'
+import {
   getDeclarantTitleFromUser,
   isDeclarantPhysique
 } from '@/lib/declarants.js'
 
-function normalizeSearch(value) {
-  return String(value || '')
-    .normalize('NFD')
-    .replaceAll(/[\u0300-\u036F]/g, '')
-    .toLowerCase()
-    .trim()
+function pluralize(count, singular, plural = `${singular}s`) {
+  return `${count} ${count > 1 ? plural : singular}`
 }
 
 function getDeclarantIcon(declarant) {
@@ -37,100 +35,123 @@ function getDeclarantSubtitle(declarant) {
     return 'Aucun point dans cette zone'
   }
 
-  return `${count} point${count > 1 ? 's' : ''} dans la zone — ${names}${suffix}`
+  return `${pluralize(count, 'point')} dans la zone — ${names}${suffix}`
 }
 
-function getDeclarantSearchText(declarant) {
-  return normalizeSearch([
-    declarant.firstName,
-    declarant.lastName,
-    declarant.socialReason,
-    declarant.email,
-    declarant.phoneNumber,
-    declarant.city,
-    ...(declarant.points || []).map(point => point.name)
-  ].filter(Boolean).join(' '))
+function getDeclarantId(declarant) {
+  return declarant.id || declarant.userId || declarant.user?.id
 }
 
-const ZoneDeclarantsList = ({declarants}) => {
-  const [query, setQuery] = useState('')
+const ZoneDeclarantsList = ({zone, declarants, meta}) => {
+  const hasNoDeclarantInZone = (meta?.totalAll ?? declarants.length) === 0
+  const hasNoResult = !hasNoDeclarantInZone && declarants.length === 0
 
-  const filteredDeclarants = useMemo(() => {
-    const normalizedQuery = normalizeSearch(query)
-
-    if (!normalizedQuery) {
-      return declarants
-    }
-
-    return declarants.filter(declarant => getDeclarantSearchText(declarant).includes(normalizedQuery))
-  }, [declarants, query])
-
-  if (declarants.length === 0) {
+  if (hasNoDeclarantInZone) {
     return (
-      <Alert severity='info'>
-        Aucun déclarant n’est rattaché à cette zone.
-      </Alert>
+      <div className='flex flex-col gap-3'>
+        <Alert severity='info'>
+          Aucun déclarant n’est rattaché à cette zone pour le moment.
+        </Alert>
+        {zone.isAdmin && (
+          <div className='flex flex-col md:flex-row gap-3 md:items-center md:justify-between'>
+            <p className='fr-text--sm fr-mb-0'>
+              Créer un déclarant ne le rattache pas automatiquement à la zone. Pour le rattacher, créez ensuite une exploitation sur un point de cette zone.
+            </p>
+            <Button iconId={ZONE_ICONS.addUser} linkProps={{href: `/declarants/new?zoneId=${zone.id}`}}>
+              Créer un déclarant
+            </Button>
+          </div>
+        )}
+      </div>
     )
   }
 
   return (
-    <div className='flex flex-col gap-3'>
-      <SearchBar
-        allowEmptySearch
-        label='Rechercher un déclarant'
-        renderInput={({className, id, placeholder, type}) => (
-          <input
-            className={className}
-            id={id}
-            placeholder={placeholder}
-            type={type}
-            value={query}
-            onChange={event => setQuery(event.target.value)}
-          />
+    <div className='flex flex-col gap-4'>
+      <ZoneResourceToolbar
+        action={zone.isAdmin && (
+          <div className='flex flex-col md:items-end gap-2'>
+            <Button iconId={ZONE_ICONS.addUser} linkProps={{href: `/declarants/new?zoneId=${zone.id}`}}>
+              Créer un déclarant
+            </Button>
+            <p className='fr-text--xs fr-mb-0 max-w-sm md:text-right'>
+              Le déclarant sera global. Il apparaîtra dans cette zone après création d’une exploitation sur un point de la zone.
+            </p>
+          </div>
         )}
+        itemLabel='déclarant'
+        itemPlural='déclarants'
+        meta={meta}
+        searchLabel='Rechercher un déclarant'
+        searchPlaceholder='Nom, raison sociale, email, ville, point…'
       />
 
-      {filteredDeclarants.length === 0 && (
+      {hasNoResult && (
         <Alert severity='info'>
           Aucun déclarant ne correspond à cette recherche.
         </Alert>
       )}
 
-      {filteredDeclarants.map((declarant, index) => (
-        <Link key={declarant.id} href={`/declarants/${declarant.id}`}>
-          <ListItem
-            border
-            background={index % 2 === 0 ? 'primary' : 'secondary'}
-            title={(
-              <>
-                <span className={`${getDeclarantIcon(declarant)} mr-2`} />
-                {getDeclarantTitleFromUser(declarant)}
-              </>
-            )}
-            subtitle={getDeclarantSubtitle(declarant)}
-            tags={[
-              {
-                label: isDeclarantPhysique(declarant) ? 'Personne physique' : 'Personne morale',
-                severity: 'info'
-              }
-            ]}
-            metas={[
-              declarant.email && {
-                iconId: ZONE_ICONS.at,
-                content: declarant.email
-              },
-              declarant.phoneNumber && {
-                iconId: ZONE_ICONS.phone,
-                content: declarant.phoneNumber
-              },
-              declarant.city && {
-                iconId: ZONE_ICONS.mapPin,
-                content: declarant.city
-              }
-            ].filter(Boolean)}
-          />
-        </Link>
-      ))}
+      {declarants.map((declarant, index) => {
+        const declarantId = getDeclarantId(declarant)
+        const pointsCount = declarant.points?.length || 0
+
+        return (
+          <Box key={declarantId} className='flex flex-col md:flex-row gap-2 md:items-stretch'>
+            <Link className='flex-1' href={`/declarants/${declarantId}`}>
+              <ListItem
+                border
+                background={index % 2 === 0 ? 'primary' : 'secondary'}
+                title={(
+                  <>
+                    <span className={`${getDeclarantIcon(declarant)} mr-2`} />
+                    {getDeclarantTitleFromUser(declarant)}
+                  </>
+                )}
+                subtitle={getDeclarantSubtitle(declarant)}
+                tags={[
+                  {
+                    label: isDeclarantPhysique(declarant) ? 'Personne physique' : 'Personne morale',
+                    severity: 'info'
+                  }
+                ]}
+                metas={[
+                  {iconId: ZONE_ICONS.water, content: pluralize(pointsCount, 'point')},
+                  declarant.email && {
+                    iconId: ZONE_ICONS.at,
+                    content: declarant.email
+                  },
+                  declarant.phoneNumber && {
+                    iconId: ZONE_ICONS.phone,
+                    content: declarant.phoneNumber
+                  },
+                  declarant.city && {
+                    iconId: ZONE_ICONS.mapPin,
+                    content: declarant.city
+                  }
+                ].filter(Boolean)}
+              />
+            </Link>
+
+            <div className='flex gap-2 md:items-center md:flex-col md:justify-center'>
+              <Button priority='tertiary no outline' size='small' linkProps={{href: `/declarants/${declarantId}`}}>
+                Ouvrir
+              </Button>
+              {zone.isAdmin && (
+                <Button
+                  priority='tertiary no outline'
+                  size='small'
+                  linkProps={{href: `/zones/${zone.id}/exploitations/nouvelle?declarantId=${declarantId}`}}
+                >
+                  Créer une exploitation
+                </Button>
+              )}
+            </div>
+          </Box>
+        )
+      })}
+
+      <ZonePagination meta={meta} />
     </div>
   )
 }

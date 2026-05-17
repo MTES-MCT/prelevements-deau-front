@@ -1,9 +1,9 @@
 import {Box} from '@mui/material'
-import {notFound} from 'next/navigation'
+import {forbidden, notFound} from 'next/navigation'
 
 import ZoneBreadcrumb from '@/components/zones/zone-breadcrumb.js'
 import ZoneHeader from '@/components/zones/zone-header.js'
-import ZoneOverviewCards from '@/components/zones/zone-overview-cards.js'
+import ZonePointForm from '@/components/zones/zone-point-form.js'
 import ZoneSubNavigation from '@/components/zones/zone-sub-navigation.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {unwrapPaginatedData} from '@/lib/zone-pagination.js'
@@ -11,34 +11,42 @@ import {
   getZoneAction,
   getZoneDeclarantsAction,
   getZoneExploitationsAction,
+  getZoneGeometryAction,
+  getZonePointPrelevementAction,
   getZonePointsPrelevementAction
 } from '@/server/actions/zones.js'
 
 export const dynamic = 'force-dynamic'
 
 const Page = async ({params}) => {
-  const {zoneId} = await params
+  const {zoneId, pointId} = await params
 
-  const [zoneResult, pointsResult, declarantsResult, exploitationsResult] = await Promise.all([
+  const [zoneResult, pointResult, zoneGeometryResult, pointsResult, declarantsResult, exploitationsResult] = await Promise.all([
     getZoneAction(zoneId),
+    getZonePointPrelevementAction(zoneId, pointId),
+    getZoneGeometryAction(zoneId),
     getZonePointsPrelevementAction(zoneId, {perPage: 1}),
     getZoneDeclarantsAction(zoneId, {perPage: 1}),
     getZoneExploitationsAction(zoneId, {perPage: 1})
   ])
 
-  if (!zoneResult.success || !zoneResult.data) {
+  if (!zoneResult.success || !zoneResult.data || !pointResult.success || !pointResult.data) {
     notFound()
   }
 
   const pointsPayload = pointsResult.success ? unwrapPaginatedData(pointsResult.data) : {meta: {totalAll: 0}}
   const declarantsPayload = declarantsResult.success ? unwrapPaginatedData(declarantsResult.data) : {meta: {totalAll: 0}}
   const exploitationsPayload = exploitationsResult.success ? unwrapPaginatedData(exploitationsResult.data) : {meta: {totalAll: 0}}
-
   const zone = {
     ...zoneResult.data,
     pointsCount: pointsPayload.meta.totalAll,
     declarantsCount: declarantsPayload.meta.totalAll,
     exploitationsCount: exploitationsPayload.meta.totalAll
+  }
+  const point = pointResult.data
+
+  if (!zone.isAdmin || !point.right?.canEdit) {
+    forbidden()
   }
 
   return (
@@ -46,13 +54,19 @@ const Page = async ({params}) => {
       <StartDsfrOnHydration />
 
       <Box className='fr-container h-full w-full flex flex-col gap-5 mb-8'>
-        <ZoneBreadcrumb zone={zone} currentPageLabel={zone.name} />
-
-        <ZoneHeader zone={zone} currentSection='overview' />
-
-        <ZoneSubNavigation zone={zone} current='overview' />
-
-        <ZoneOverviewCards zone={zone} />
+        <ZoneBreadcrumb
+          zone={zone}
+          currentPageLabel='Modifier un point de prélèvement'
+          segments={[{label: 'Points de prélèvement', linkProps: {href: `/zones/${zone.id}/points-prelevement`}}]}
+        />
+        <ZoneHeader zone={zone} currentSection='points' />
+        <ZoneSubNavigation zone={zone} current='points' />
+        <ZonePointForm
+          mode='edit'
+          point={point}
+          zone={zone}
+          zoneGeometry={zoneGeometryResult.success ? zoneGeometryResult.data : null}
+        />
       </Box>
     </>
   )

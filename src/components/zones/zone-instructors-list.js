@@ -8,6 +8,9 @@ import {Alert, Box} from '@mui/material'
 
 import ListItem from '@/components/ui/ListItem/index.js'
 import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
+import useDebouncedValue from '@/hook/use-debounced-value.js'
+
+const CLIENT_PAGE_SIZE = 20
 
 function normalizeSearch(value) {
   return String(value || '')
@@ -15,6 +18,10 @@ function normalizeSearch(value) {
     .replaceAll(/[\u0300-\u036F]/g, '')
     .toLowerCase()
     .trim()
+}
+
+function pluralize(count, singular, plural = `${singular}s`) {
+  return `${count} ${count > 1 ? plural : singular}`
 }
 
 function formatDate(date) {
@@ -60,16 +67,22 @@ function getInstructorSearchText(instructor) {
 
 const ZoneInstructorsList = ({zone, instructors}) => {
   const [query, setQuery] = useState('')
+  const [page, setPage] = useState(1)
+  const debouncedQuery = useDebouncedValue(query)
 
   const filteredInstructors = useMemo(() => {
-    const normalizedQuery = normalizeSearch(query)
+    const normalizedQuery = normalizeSearch(debouncedQuery)
 
     if (!normalizedQuery) {
       return instructors
     }
 
     return instructors.filter(instructor => getInstructorSearchText(instructor).includes(normalizedQuery))
-  }, [instructors, query])
+  }, [instructors, debouncedQuery])
+
+  const pages = Math.max(1, Math.ceil(filteredInstructors.length / CLIENT_PAGE_SIZE))
+  const currentPage = Math.min(page, pages)
+  const visibleInstructors = filteredInstructors.slice((currentPage - 1) * CLIENT_PAGE_SIZE, currentPage * CLIENT_PAGE_SIZE)
 
   if (instructors.length === 0) {
     return (
@@ -80,7 +93,23 @@ const ZoneInstructorsList = ({zone, instructors}) => {
   }
 
   return (
-    <div className='flex flex-col gap-3'>
+    <div className='flex flex-col gap-4'>
+      <div className='flex flex-col md:flex-row md:items-end md:justify-between gap-3'>
+        <div>
+          <p className='fr-text--lead fr-mb-0'>
+            {pluralize(visibleInstructors.length, 'agent affiché', 'agents affichés')}
+          </p>
+          <p className='fr-text--sm fr-mb-0'>
+            {debouncedQuery ? `${pluralize(filteredInstructors.length, 'résultat')} pour la recherche, ${pluralize(instructors.length, 'agent')} dans la zone` : `${pluralize(instructors.length, 'agent')} dans la zone`}
+          </p>
+        </div>
+        {zone.isAdmin && (
+          <Button iconId={ZONE_ICONS.addUser} linkProps={{href: `/zones/${zone.id}/agents/ajouter`}}>
+            Ajouter un agent
+          </Button>
+        )}
+      </div>
+
       <SearchBar
         allowEmptySearch
         label='Rechercher un agent'
@@ -91,18 +120,21 @@ const ZoneInstructorsList = ({zone, instructors}) => {
             placeholder={placeholder}
             type={type}
             value={query}
-            onChange={event => setQuery(event.target.value)}
+            onChange={event => {
+              setPage(1)
+              setQuery(event.target.value)
+            }}
           />
         )}
       />
 
-      {filteredInstructors.length === 0 && (
+      {visibleInstructors.length === 0 && (
         <Alert severity='info'>
           Aucun agent ne correspond à cette recherche.
         </Alert>
       )}
 
-      {filteredInstructors.map((instructor, index) => (
+      {visibleInstructors.map((instructor, index) => (
         <Box
           key={instructor.id}
           className='flex flex-col md:flex-row gap-2 md:items-stretch'
@@ -165,6 +197,18 @@ const ZoneInstructorsList = ({zone, instructors}) => {
           )}
         </Box>
       ))}
+
+      {pages > 1 && (
+        <div className='flex gap-2 items-center justify-end'>
+          <Button disabled={currentPage <= 1} priority='tertiary no outline' size='small' onClick={() => setPage(currentPage - 1)}>
+            Précédent
+          </Button>
+          <span className='fr-text--sm fr-mb-0'>Page {currentPage} / {pages}</span>
+          <Button disabled={currentPage >= pages} priority='tertiary no outline' size='small' onClick={() => setPage(currentPage + 1)}>
+            Suivant
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

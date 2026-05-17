@@ -60,11 +60,24 @@ export {
 
 export {
   addZoneInstructorAction,
+  createZoneExploitationAction,
+  createZonePointPrelevementAction,
+  deleteZoneExploitationAction,
   deleteZoneInstructorAction,
+  deleteZonePointPrelevementAction,
   getZoneAction,
+  getZoneDeclarantOptionsAction,
   getZoneDeclarantsAction,
+  getZoneExploitationAction,
+  getZoneExploitationsAction,
+  getZoneGeometryAction,
   getZoneInstructorAction,
   getZoneInstructorsAction,
+  getZonePointPrelevementAction,
+  getZonePointsPrelevementAction,
+  getZonePointsPrelevementOptionsAction,
   getZonesAction,
-  getZonesActions
+  getZonesActions,
+  updateZoneExploitationAction,
+  updateZonePointPrelevementAction
 } from './zones.js'

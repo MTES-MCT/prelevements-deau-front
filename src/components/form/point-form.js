@@ -36,7 +36,8 @@ const precisionsGeom = [
 const PointForm = ({
   point,
   setPoint,
-  handleSetGeom
+  handleSetGeom,
+  boundaryFeature = null
 }) => {
   const [isExpanded, setIsExpanded] = useState(false)
 
@@ -68,10 +69,15 @@ const PointForm = ({
         </Typography>
         <p>Sélectionner l&apos;emplacement du point sur la carte <small><i>(Cliquer ou déplacer le point)</i></small></p>
         <p>Ou renseigner les coordonnées manuellement sous la carte</p>
+        {boundaryFeature && (
+          <p className='fr-text--sm fr-mt-1w fr-mb-0'>
+            La limite de la zone est affichée sur la carte pour faciliter le positionnement.
+          </p>
+        )}
       </div>
 
       <div style={{height: '600px', marginBottom: '2rem'}}>
-        <MiniMapForm geom={point.coordinates} setGeom={handleSetGeom} />
+        <MiniMapForm boundaryFeature={boundaryFeature} geom={point.coordinates} setGeom={handleSetGeom} />
       </div>
 
       <Input
