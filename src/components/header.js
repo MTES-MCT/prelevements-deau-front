@@ -55,6 +55,14 @@ const NAV_ITEMS = [
   },
   {
     linkProps: {
+      href: '/comptes-service',
+      target: '_self'
+    },
+    text: 'Comptes de service',
+    roles: ['ADMIN']
+  },
+  {
+    linkProps: {
       href: '/zones',
       target: '_self'
     },
@@ -70,6 +78,18 @@ const NAV_ITEMS = [
     roles: ['INSTRUCTOR', 'ADMIN']
   }
 ]
+
+function getNavigationText(item, href, role) {
+  if (href === '/zones' && role === 'ADMIN') {
+    return 'Zones'
+  }
+
+  if (href === '/points-prelevement' && role === 'ADMIN') {
+    return 'Points de prélèvement'
+  }
+
+  return item.text
+}
 
 const HeaderComponent = () => {
   const {user, logout, isLoading: isLoadingUser} = useAuth()
@@ -107,7 +127,7 @@ const HeaderComponent = () => {
 
       return {
         ...item,
-        text: href === '/zones' && user?.role === 'ADMIN' ? 'Zones' : item.text,
+        text: getNavigationText(item, href, user?.role),
         isActive: isActive(href)
       }
     })
