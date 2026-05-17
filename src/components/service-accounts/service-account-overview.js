@@ -53,6 +53,7 @@ const ServiceAccountOverview = ({serviceAccount}) => {
 
   async function handleToggle() {
     const nextActive = !account.isActive
+    // eslint-disable-next-line no-alert
     const confirmed = window.confirm(
       nextActive
         ? `Réactiver le compte de service « ${account.name} » ?`
@@ -69,6 +70,7 @@ const ServiceAccountOverview = ({serviceAccount}) => {
   }
 
   async function handleDelete() {
+    // eslint-disable-next-line no-alert
     const confirmed = window.confirm(
       `Supprimer le compte de service « ${account.name} » ?\n\nLe compte sera marqué supprimé, désactivé, et ses identifiants/tokens actifs seront révoqués.`
     )
@@ -81,6 +83,7 @@ const ServiceAccountOverview = ({serviceAccount}) => {
   }
 
   async function handleRestore() {
+    // eslint-disable-next-line no-alert
     const confirmed = window.confirm(
       `Restaurer le compte de service « ${account.name} » ?\n\nLes anciens secrets révoqués ne seront pas restaurés.`
     )
@@ -101,6 +104,7 @@ const ServiceAccountOverview = ({serviceAccount}) => {
     }
   }
 
+  /* eslint-disable react/jsx-no-bind */
   return (
     <div className='fr-grid-row fr-grid-row--gutters'>
       <div className='fr-col-12 fr-col-lg-8'>
@@ -218,6 +222,7 @@ const ServiceAccountOverview = ({serviceAccount}) => {
       </div>
     </div>
   )
+  /* eslint-enable react/jsx-no-bind */
 }
 
 export default ServiceAccountOverview

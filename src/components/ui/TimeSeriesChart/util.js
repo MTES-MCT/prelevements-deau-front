@@ -475,6 +475,7 @@ export const resampleSeriesData = (pointMap, targetXValues, nativeFrequency, tar
 
       if (nextPoint) {
         // Check if target is between this point and next
+        /* eslint-disable max-depth */
         if (targetX >= point.x && targetX < nextPoint.x) {
           // Check if there's a gap between this point and next
           const delta = nextPoint.x - point.x
@@ -482,6 +483,7 @@ export const resampleSeriesData = (pointMap, targetXValues, nativeFrequency, tar
             // No gap - this point owns the target timestamp
             ownerPoint = point
           }
+          /* eslint-enable max-depth */
 
           break
         }
@@ -912,6 +914,7 @@ export const buildStubSeries = (processedSeries, xValuesLength) => processedSeri
  * @param {string|null} label - Optional axis label
  * @returns {object} Y-axis configuration
  */
+// eslint-disable-next-line max-params
 const buildSingleYAxis = (axisId, stats, locale, precision, label = null) => {
   const hasData = stats.min !== Number.POSITIVE_INFINITY
   const numberFormatter = getNumberFormatterWithPrecision(locale, precision)

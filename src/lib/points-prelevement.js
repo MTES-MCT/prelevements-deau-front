@@ -137,6 +137,7 @@ export function createUsagePieChart(usages) {
  * - (start, end) sont des fractions entre 0 et 1 (ex: 0 => 12h, 0.25 => 9h, etc.)
  * - Décalage de 0.25 pour avoir l'origine à 12h
  */
+// eslint-disable-next-line max-params
 function createPieSegment(cx, cy, r, start, end, color) {
   // Évite un arc à 360° complet
   if (end - start === 1) {

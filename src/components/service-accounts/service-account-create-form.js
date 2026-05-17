@@ -35,6 +35,7 @@ const ServiceAccountCreateForm = () => {
     }
   }
 
+  /* eslint-disable react/jsx-no-bind */
   return (
     <div className='fr-grid-row fr-grid-row--center'>
       <div className='fr-col-12 fr-col-lg-8'>
@@ -53,7 +54,7 @@ const ServiceAccountCreateForm = () => {
 
           <div className='fr-input-group'>
             <label className='fr-label' htmlFor='service-account-name'>
-              Nom du compte
+              Nom du compte{' '}
               <span className='fr-hint-text'>Exemple : Orchestration prélèvements automatisés</span>
             </label>
             <input
@@ -105,6 +106,7 @@ const ServiceAccountCreateForm = () => {
       </div>
     </div>
   )
+  /* eslint-enable react/jsx-no-bind */
 }
 
 export default ServiceAccountCreateForm

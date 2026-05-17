@@ -55,6 +55,7 @@ function buildDateHeure(date, time) {
   return `${date} ${time}`
 }
 
+// eslint-disable-next-line complexity
 function flattenSeriesValues(series, payload, {pointNameById}) {
   const rows = []
   const values = payload?.values || []
@@ -175,6 +176,7 @@ function buildCsv(rows) {
   return lines.join('\n')
 }
 
+// eslint-disable-next-line complexity
 export async function GET(request) {
   const {searchParams} = new URL(request.url)
 

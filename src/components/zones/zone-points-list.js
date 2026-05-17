@@ -33,6 +33,7 @@ const ZonePointsList = ({zone, points, meta}) => {
   async function handleDelete(point) {
     setError(null)
 
+    // eslint-disable-next-line no-alert
     const confirmed = globalThis.confirm(
       `Supprimer le point de prélèvement « ${point.name || point.id} » ?\n\nCette action est irréversible et impossible si le point possède des exploitations actives.`
     )

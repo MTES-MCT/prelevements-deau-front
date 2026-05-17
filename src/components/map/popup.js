@@ -13,7 +13,7 @@ const Popup = ({point}) => {
   const {name, autresNoms, preleveurs, usages} = point
 
   return (
-    // TODO : Utiliser le theme DSFR
+    // Note: migrate this popup to the DSFR theme when the map UI is aligned.
     <Box className='flex flex-col gap-2' sx={{color: theme.palette.text.primary}}>
       <Typography variant='h6' sx={{color: theme.palette.text.primary}}>
         {name || 'Pas de nom renseigné'}

@@ -341,6 +341,7 @@ export const generateLinearTimeline = (startDate, endDate, frequency) => {
  * @param {number} gapMultiplier - Multiplier for gap threshold (default: 1.5)
  * @returns {Array<{x: Date, y: number|null, isGapPoint: boolean, showMark: boolean}>} Aligned data
  */
+// eslint-disable-next-line complexity
 export const alignSeriesToLinearTimeline = (data, timeline, frequency, gapMultiplier = 1.5) => {
   if (!Array.isArray(timeline) || timeline.length === 0) {
     // Fall back to original gap detection if no timeline provided

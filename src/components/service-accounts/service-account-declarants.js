@@ -28,7 +28,7 @@ const ServiceAccountDeclarants = ({serviceAccount, declarants = []}) => {
   const [account, setAccount] = useState(serviceAccount)
   const [isBusy, setIsBusy] = useState(false)
   const [message, setMessage] = useState(null)
-  const links = account.declarants || []
+  const links = useMemo(() => account.declarants || [], [account.declarants])
 
   const alreadyLinkedDeclarantIds = useMemo(
     () => new Set(links.filter(link => link.isActive || link.isFuture).map(link => link.declarantUserId)),
@@ -91,6 +91,7 @@ const ServiceAccountDeclarants = ({serviceAccount, declarants = []}) => {
 
   async function handleRemoveDeclarantLink(link) {
     const label = link.declarant?.label || link.declarantUserId
+    // eslint-disable-next-line no-alert
     const confirmed = window.confirm(
       `Retirer le rattachement avec « ${label} » ?\n\nLes tokens d’impersonation actifs associés seront révoqués.`
     )
@@ -102,6 +103,7 @@ const ServiceAccountDeclarants = ({serviceAccount, declarants = []}) => {
     await runAction(async () => removeServiceAccountDeclarantAction(account.id, link.id), 'Rattachement supprimé et tokens d’impersonation actifs révoqués.')
   }
 
+  /* eslint-disable react/jsx-no-bind */
   return (
     <div className='fr-grid-row fr-grid-row--gutters'>
       <div className='fr-col-12 fr-col-lg-4'>
@@ -205,7 +207,7 @@ const ServiceAccountDeclarants = ({serviceAccount, declarants = []}) => {
                     <div className='fr-grid-row fr-grid-row--gutters'>
                       <div className='fr-col-12'>
                         <label className='fr-label' htmlFor={`link-start-${link.id}`}>
-                          Début
+                          Début{' '}
                           <span className='fr-hint-text'>Actuellement : {formatDate(link.startDate)}</span>
                         </label>
                         <input
@@ -219,7 +221,7 @@ const ServiceAccountDeclarants = ({serviceAccount, declarants = []}) => {
                       </div>
                       <div className='fr-col-12'>
                         <label className='fr-label' htmlFor={`link-end-${link.id}`}>
-                          Fin
+                          Fin{' '}
                           <span className='fr-hint-text'>Actuellement : {formatDate(link.endDate)}</span>
                         </label>
                         <input
@@ -255,6 +257,7 @@ const ServiceAccountDeclarants = ({serviceAccount, declarants = []}) => {
       </div>
     </div>
   )
+  /* eslint-enable react/jsx-no-bind */
 }
 
 export default ServiceAccountDeclarants

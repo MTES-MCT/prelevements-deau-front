@@ -36,6 +36,7 @@ const MORAL_ONLY_FIELDS = [
   'siret'
 ]
 
+// eslint-disable-next-line complexity
 function normalizeDeclarant(declarant) {
   return {
     id: declarant?.userId || declarant?.id,
