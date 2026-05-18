@@ -55,6 +55,14 @@ const NAV_ITEMS = [
   },
   {
     linkProps: {
+      href: '/types-declaration',
+      target: '_self'
+    },
+    text: 'Types de déclaration',
+    roles: ['ADMIN']
+  },
+  {
+    linkProps: {
       href: '/comptes-service',
       target: '_self'
     },

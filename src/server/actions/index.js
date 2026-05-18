@@ -59,6 +59,18 @@ export {
 } from './stats.js'
 
 export {
+  addDeclarantDeclarationTypeAction,
+  createDeclarationTypeAction,
+  disableDeclarationTypeAction,
+  getDeclarantDeclarationTypesAction,
+  listDeclarationTypesAction,
+  removeDeclarantDeclarationTypeAction,
+  restoreDeclarationTypeAction,
+  updateDeclarantDeclarationTypeAction,
+  updateDeclarationTypeAction
+} from './declaration-types.js'
+
+export {
   addZoneInstructorAction,
   createZoneExploitationAction,
   createZonePointPrelevementAction,

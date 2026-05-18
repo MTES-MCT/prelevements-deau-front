@@ -2,6 +2,7 @@ import {fr} from '@codegouvfr/react-dsfr'
 import {Box} from '@mui/material'
 import {notFound} from 'next/navigation'
 
+import DeclarantDeclarationTypesCard from '@/components/declarants/declarant-declaration-types-card.js'
 import PreleveurMap from '@/components/declarants/preleveur-map.js'
 import DeclarationReminderCard from '@/components/declarations/declaration-reminder-card.js'
 import DocumentsList from '@/components/documents/documents-list.js'
@@ -17,10 +18,12 @@ import {getNewExploitationURL} from '@/lib/urls.js'
 import {
   getDeclarantAction,
   getDocumentsFromPreleveurAction,
-  getReglesFromPreleveurAction
+  getReglesFromPreleveurAction,
+  getDeclarantDeclarationTypesAction
 } from '@/server/actions/index.js'
 import {getPointsPrelevementBatchAction} from '@/server/actions/points-prelevement.js'
 import {getAggregatedSeriesOptionsAction} from '@/server/actions/series.js'
+import {getCurrentUser} from '@/server/actions/user.js'
 
 const iconColorStyle = {color: fr.colors.decisions.text.label.blueFrance.default}
 
@@ -76,15 +79,25 @@ const Page = async ({params}) => {
   const declarantId = getDeclarantId(declarant)
   const exploitations = declarant.pointPrelevements || []
 
-  const [documentsResult, reglesResult, seriesResult] = await Promise.all([
+  const currentUserResult = await getCurrentUser()
+  const currentRole = currentUserResult?.data?.role
+  const canManageDeclarationTypes = ['INSTRUCTOR', 'ADMIN'].includes(currentRole)
+
+  const [documentsResult, reglesResult, seriesResult, declarationTypesResult] = await Promise.all([
     getDocumentsFromPreleveurAction(declarantId),
     getReglesFromPreleveurAction(declarantId),
-    getAggregatedSeriesOptionsAction({preleveurId: declarantId})
+    getAggregatedSeriesOptionsAction({preleveurId: declarantId}),
+    canManageDeclarationTypes
+      ? getDeclarantDeclarationTypesAction(declarantId)
+      : Promise.resolve({success: true, data: {data: [], meta: {canManage: false, availableDeclarationTypes: []}}})
   ])
 
   const documents = documentsResult.data || []
   const regles = reglesResult.data || []
   const seriesOptions = seriesResult.data
+  const declarationTypesPayload = declarationTypesResult.success
+    ? declarationTypesResult.data
+    : {data: [], meta: {canManage: false, availableDeclarationTypes: []}}
 
   const pointIds = [
     ...new Set(
@@ -141,11 +154,22 @@ const Page = async ({params}) => {
           {
             iconId: 'ri-map-pin-user-line',
             content: <>{exploitations.length} exploitation{exploitations.length > 1 ? 's' : ''}</>
+          },
+          {
+            iconId: 'ri-file-list-3-line',
+            content: <>{declarationTypesPayload.meta?.activeCount || 0} type{(declarationTypesPayload.meta?.activeCount || 0) > 1 ? 's' : ''} autorisé{(declarationTypesPayload.meta?.activeCount || 0) > 1 ? 's' : ''}</>
           }
         ]}
       />
 
       <InfoCard declarant={declarant} />
+
+      {canManageDeclarationTypes && (
+        <DeclarantDeclarationTypesCard
+          declarantId={declarantId}
+          initialPayload={declarationTypesPayload}
+        />
+      )}
 
       <DeclarationReminderCard declarant={declarant} />
 
