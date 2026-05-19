@@ -26,6 +26,148 @@ const COLOR_PRIORITY = {
   [CALENDAR_STATUS_COLORS.notDeclared]: 3
 }
 
+function isRecord(value) {
+  return value && typeof value === 'object' && !Array.isArray(value)
+}
+
+function hasOwn(object, property) {
+  return Object.hasOwn(object, property)
+}
+
+/**
+ * Normalizes any supported series date into YYYY-MM-DD.
+ *
+ * The historical payload used `date`. Current ChunkValue payloads use
+ * `periodStart`/`periodEnd`, and the backend series endpoints expose
+ * `minDate`/`maxDate`. The chart/calendar layer accepts all these shapes so
+ * pages remain compatible during schema transitions.
+ *
+ * @param {string|Date|null|undefined} value
+ * @returns {string|null}
+ */
+export function normalizeSeriesDate(value) {
+  if (!value) {
+    return null
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+
+    if (!trimmed) {
+      return null
+    }
+
+    if (/^\d{4}-q[1-4]$/i.test(trimmed)) {
+      return trimmed.toUpperCase()
+    }
+
+    const dateOnlyMatch = /^\d{4}-\d{2}-\d{2}/.exec(trimmed)
+    if (dateOnlyMatch) {
+      return dateOnlyMatch[0]
+    }
+  }
+
+  const parsed = moment(value)
+
+  if (!parsed.isValid()) {
+    return null
+  }
+
+  return parsed.format('YYYY-MM-DD')
+}
+
+function toMomentDate(value) {
+  const normalized = normalizeSeriesDate(value)
+  if (!normalized || /^\d{4}-q[1-4]$/i.test(normalized)) {
+    return null
+  }
+
+  const parsed = moment(normalized, 'YYYY-MM-DD', true)
+  return parsed.isValid() ? parsed : null
+}
+
+/**
+ * Resolve the metric name regardless of whether data comes from raw ChunkValue
+ * rows or from the series metadata endpoints.
+ * @param {object} series
+ * @returns {string|null}
+ */
+export function getSeriesMetricTypeCode(series) {
+  return series?.metricTypeCode ?? series?.parameter ?? series?.parameterLabel ?? null
+}
+
+function getSeriesBoundaryCandidates(series, boundary) {
+  if (!series) {
+    return []
+  }
+
+  const primaryBoundary = boundary === 'min' ? series.minDate : series.maxDate
+  const fallbackBoundary = boundary === 'min' ? series.periodStart : series.periodEnd
+
+  return [
+    primaryBoundary,
+    series.date,
+    fallbackBoundary,
+    series.periodEnd,
+    series.periodStart
+  ]
+}
+
+/**
+ * Returns normalized min/max dates for any supported series/value shape.
+ * @param {object} series
+ * @returns {{minDate: string|null, maxDate: string|null}}
+ */
+export function getSeriesDateBounds(series) {
+  const minDate = getSeriesBoundaryCandidates(series, 'min')
+    .map(value => normalizeSeriesDate(value))
+    .find(Boolean) ?? null
+
+  const maxDate = getSeriesBoundaryCandidates(series, 'max')
+    .map(value => normalizeSeriesDate(value))
+    .find(Boolean) ?? minDate
+
+  return {minDate, maxDate}
+}
+
+/**
+ * Normalizes a series value entry to the shape consumed by aggregation.js.
+ * It preserves sub-daily `values`, but flattens `{values: {value}}` and raw
+ * ChunkValue `value` fields into a direct `value`.
+ * @param {object} entry
+ * @returns {object|null}
+ */
+export function normalizeSeriesValueEntry(entry) {
+  if (!entry || typeof entry !== 'object') {
+    return null
+  }
+
+  const date = normalizeSeriesDate(entry.date ?? entry.periodEnd ?? entry.periodStart)
+
+  if (!date) {
+    return null
+  }
+
+  const normalized = {
+    ...entry,
+    date
+  }
+
+  if (hasOwn(entry, 'value')) {
+    delete normalized.values
+    normalized.value = entry.value
+    return normalized
+  }
+
+  if (isRecord(entry.values) && hasOwn(entry.values, 'value')) {
+    delete normalized.values
+    normalized.value = entry.values.value
+    return normalized
+  }
+
+  return normalized
+}
+
 /**
  * Extract global min/max dates from series list
  * @param {Array} seriesList
@@ -37,7 +179,11 @@ export function getGlobalDateBounds(seriesList) {
   }
 
   const dates = seriesList
-    .map(s => s?.date && moment(s.date))
+    .flatMap(series => {
+      const {minDate, maxDate} = getSeriesDateBounds(series)
+      return [minDate, maxDate]
+    })
+    .map(value => toMomentDate(value))
     .filter(m => m && m.isValid())
 
   if (dates.length === 0) {
@@ -116,13 +262,14 @@ export function buildCalendarEntriesFromMetadata(seriesList, dateRange, _formatF
   const calendars = []
 
   for (const serie of seriesList) {
-    if (!serie.minDate || !serie.maxDate) {
+    const {minDate, maxDate} = getSeriesDateBounds(serie)
+    if (!minDate || !maxDate) {
       continue
     }
 
     // Generate calendar entries based on series date range
-    const serieStart = parseLocalDate(serie.minDate)
-    const serieEnd = parseLocalDate(serie.maxDate)
+    const serieStart = parseLocalDate(minDate)
+    const serieEnd = parseLocalDate(maxDate)
 
     if (!serieStart || !serieEnd) {
       continue
@@ -147,7 +294,7 @@ export function buildCalendarEntriesFromMetadata(seriesList, dateRange, _formatF
         date: monthIsoDate,
         color: serie.color ?? statusColors.present,
         status: 'present',
-        parameter: serie.metricTypeCode
+        parameter: getSeriesMetricTypeCode(serie)
       })
 
       // Move to first day of next month
@@ -635,7 +782,7 @@ export function transformSeriesToData(seriesList) {
 
     // Add parameter info
     parameters.push({
-      parameter: series.metricTypeCode,
+      parameter: getSeriesMetricTypeCode(series),
       unit: series.unit,
       color: series.color || '#0078f3',
       frequency: series.frequency,
@@ -643,7 +790,12 @@ export function transformSeriesToData(seriesList) {
     })
 
     // Process values
-    for (const dayEntry of values) {
+    for (const rawDayEntry of values) {
+      const dayEntry = normalizeSeriesValueEntry(rawDayEntry)
+      if (!dayEntry) {
+        continue
+      }
+
       if (!dateMap.has(dayEntry.date)) {
         dateMap.set(dayEntry.date, {
           date: dayEntry.date,
@@ -669,7 +821,7 @@ export function transformSeriesToData(seriesList) {
         }
       } else {
         // Single daily value
-        entry.values[seriesIdx] = dayEntry.values ?? null
+        entry.values[seriesIdx] = dayEntry.value ?? dayEntry.values ?? null
       }
     }
   }

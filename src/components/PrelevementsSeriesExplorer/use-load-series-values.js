@@ -10,9 +10,86 @@
 
 import {useEffect, useState, useMemo} from 'react'
 
-import moment from 'moment'
-
 import {buildDailyAndTimelineData} from '@/components/PrelevementsSeriesExplorer/utils/aggregation.js'
+import {
+  getSeriesMetricTypeCode,
+  normalizeSeriesDate,
+  normalizeSeriesValueEntry
+} from '@/components/PrelevementsSeriesExplorer/utils/index.js'
+
+function hasInlineValueEntry(series) {
+  return Boolean(normalizeSeriesValueEntry(series))
+}
+
+function resolveSeriesIdentifier(series) {
+  if (!series) {
+    return null
+  }
+
+  if (!hasInlineValueEntry(series) && series.id) {
+    return series.id
+  }
+
+  const metricTypeCode = getSeriesMetricTypeCode(series)
+  if (series.chunkId && metricTypeCode) {
+    return `${series.chunkId}:${metricTypeCode}`
+  }
+
+  return null
+}
+
+function normalizeFetchedValues(payload) {
+  if (Array.isArray(payload)) {
+    return payload
+  }
+
+  if (Array.isArray(payload?.values)) {
+    return payload.values
+  }
+
+  if (Array.isArray(payload?.data?.values)) {
+    return payload.data.values
+  }
+
+  return []
+}
+
+function isWithinDateRange(entry, dateRange) {
+  if (!dateRange?.start || !dateRange?.end) {
+    return true
+  }
+
+  const date = normalizeSeriesDate(entry?.date)
+
+  if (!date) {
+    return false
+  }
+
+  const startDate = normalizeSeriesDate(dateRange.start)
+  const endDate = normalizeSeriesDate(dateRange.end)
+
+  return (!startDate || date >= startDate) && (!endDate || date <= endDate)
+}
+
+function appendNormalizedValue(valuesMap, metricTypeCode, value) {
+  const normalizedValue = normalizeSeriesValueEntry(value)
+
+  if (!metricTypeCode || !normalizedValue) {
+    return
+  }
+
+  valuesMap[metricTypeCode] ??= []
+  valuesMap[metricTypeCode].push(normalizedValue)
+}
+
+function sortValuesMap(valuesMap) {
+  return Object.fromEntries(
+    Object.entries(valuesMap).map(([metricTypeCode, values]) => [
+      metricTypeCode,
+      [...values].sort((a, b) => a.date.localeCompare(b.date))
+    ])
+  )
+}
 
 /**
  * Loads series values for selected parameters and periods
@@ -43,21 +120,45 @@ export function useLoadSeriesValues({seriesList, selectedPeriods, selectedParams
       setLoadError(null)
 
       try {
-        const seriesToLoad = seriesList.filter(s => selectedParams.includes(s.metricTypeCode))
+        const valuesMap = {}
+        const selectedSeries = seriesList.filter(series => {
+          const metricTypeCode = getSeriesMetricTypeCode(series)
+          return metricTypeCode && selectedParams.includes(metricTypeCode)
+        })
 
-        if (!cancelled) {
-          const valuesMap = {}
+        for (const series of selectedSeries) {
+          const metricTypeCode = getSeriesMetricTypeCode(series)
 
-          for (const serie of seriesToLoad) {
-            const value = {
-              value: serie.value,
-              date: moment(serie.date).format('YYYY-MM-DD')
+          if (hasInlineValueEntry(series)) {
+            const normalizedValue = normalizeSeriesValueEntry(series)
+
+            if (isWithinDateRange(normalizedValue, dateRange)) {
+              appendNormalizedValue(valuesMap, metricTypeCode, normalizedValue)
             }
-            valuesMap[serie.metricTypeCode] ??= []
-            valuesMap[serie.metricTypeCode].push(value)
+
+            continue
           }
 
-          setLoadedValues(valuesMap)
+          const seriesId = resolveSeriesIdentifier(series)
+          if (!seriesId || typeof getSeriesValues !== 'function') {
+            continue
+          }
+
+          // eslint-disable-next-line no-await-in-loop
+          const response = await getSeriesValues(seriesId, {
+            startDate: dateRange.start,
+            endDate: dateRange.end
+          })
+
+          const values = normalizeFetchedValues(response)
+
+          for (const value of values) {
+            appendNormalizedValue(valuesMap, metricTypeCode, value)
+          }
+        }
+
+        if (!cancelled) {
+          setLoadedValues(sortValuesMap(valuesMap))
           setIsLoadingValues(false)
         }
       } catch (error) {
