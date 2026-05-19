@@ -89,4 +89,4 @@ jobs:
           SCW_IMAGE_NAME: ${{ env.SCW_IMAGE_NAME }}
         run: |
           scw container container update "$SCW_SERVERLESS_CONTAINER_ID_TESTING" \
-            registry-image="$SCW_REGISTRY_ENDPOINT/$SCW_IMAGE_NAME:testing-latest"
+            image="$SCW_REGISTRY_ENDPOINT/$SCW_IMAGE_NAME:testing-latest"
