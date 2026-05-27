@@ -139,52 +139,66 @@ const ZonesList = ({zones}) => {
 
       <div className='flex flex-col gap-3'>
         {visibleZones.map((zone, index) => (
-          <Link key={zone.id} href={`/zones/${zone.id}`}>
-            <ListItem
-              border
-              background={index % 2 === 0 ? 'primary' : 'secondary'}
-              title={(
-                <>
-                  <span className={`${ZONE_ICONS.mapPin2} mr-2`} />
-                  {zone.name}
-                </>
-              )}
-              subtitle={`${ZONE_TYPE_LABELS[zone.type] || zone.type} — ${zone.code}`}
-              tags={[
-                zone.isAdmin
-                  ? {
-                    label: 'Administration complète',
-                    severity: 'success'
+          <div key={zone.id} className='flex flex-col md:flex-row gap-2 md:items-stretch'>
+            <Link className='flex-1' href={`/zones/${zone.id}`}>
+              <ListItem
+                border
+                background={index % 2 === 0 ? 'primary' : 'secondary'}
+                title={(
+                  <>
+                    <span className={`${ZONE_ICONS.mapPin2} mr-2`} />
+                    {zone.name}
+                  </>
+                )}
+                subtitle={`${ZONE_TYPE_LABELS[zone.type] || zone.type} — ${zone.code}`}
+                tags={[
+                  zone.isAdmin
+                    ? {
+                      label: 'Administration complète',
+                      severity: 'success'
+                    }
+                    : {
+                      label: 'Consultation',
+                      severity: 'info'
+                    },
+                  getZoneActivityCount(zone) === 0 && {
+                    label: 'Sans déclarant',
+                    severity: 'warning'
                   }
-                  : {
-                    label: 'Consultation',
-                    severity: 'info'
+                ].filter(Boolean)}
+                metas={[
+                  zone.pointsCount !== undefined && {
+                    iconId: ZONE_ICONS.water,
+                    content: pluralize(zone.pointsCount || 0, 'point')
                   },
-                getZoneActivityCount(zone) === 0 && {
-                  label: 'Sans déclarant',
-                  severity: 'warning'
-                }
-              ].filter(Boolean)}
-              metas={[
-                zone.pointsCount !== undefined && {
-                  iconId: ZONE_ICONS.water,
-                  content: pluralize(zone.pointsCount || 0, 'point')
-                },
-                {
-                  iconId: ZONE_ICONS.user,
-                  content: pluralize(zone.declarantsCount || 0, 'déclarant')
-                },
-                zone.exploitationsCount !== undefined && {
-                  iconId: ZONE_ICONS.briefcase,
-                  content: pluralize(zone.exploitationsCount || 0, 'exploitation')
-                },
-                {
-                  iconId: ZONE_ICONS.team,
-                  content: pluralize(zone.instructorsCount || 0, 'agent')
-                }
-              ].filter(Boolean)}
-            />
-          </Link>
+                  {
+                    iconId: ZONE_ICONS.user,
+                    content: pluralize(zone.declarantsCount || 0, 'déclarant')
+                  },
+                  zone.exploitationsCount !== undefined && {
+                    iconId: ZONE_ICONS.briefcase,
+                    content: pluralize(zone.exploitationsCount || 0, 'exploitation')
+                  },
+                  {
+                    iconId: ZONE_ICONS.team,
+                    content: pluralize(zone.instructorsCount || 0, 'agent')
+                  }
+                ].filter(Boolean)}
+              />
+            </Link>
+
+            <div className='flex md:items-center'>
+              <Button
+                priority='tertiary no outline'
+                size='small'
+                linkProps={{
+                  href: `/zones/${zone.id}`
+                }}
+              >
+                Ouvrir la zone
+              </Button>
+            </div>
+          </div>
         ))}
       </div>
 

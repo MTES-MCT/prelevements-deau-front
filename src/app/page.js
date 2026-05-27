@@ -7,7 +7,7 @@ const Home = async () => {
   const role = userResult?.data?.role
 
   if (role === 'INSTRUCTOR' || role === 'ADMIN') {
-    redirect('/declarations')
+    redirect('/zones')
   }
 
   if (role === 'DECLARANT') {

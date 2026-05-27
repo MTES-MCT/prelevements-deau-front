@@ -55,6 +55,35 @@ function buildListSearch(options = {}) {
   return search ? `?${search}` : ''
 }
 
+function dateToInputValue(value) {
+  if (!value) {
+    return null
+  }
+
+  return String(value).slice(0, 10)
+}
+
+function todayAsInputValue() {
+  const now = new Date()
+  const timezoneOffset = now.getTimezoneOffset() * 60_000
+
+  return new Date(now.getTime() - timezoneOffset).toISOString().slice(0, 10)
+}
+
+function buildInstructorPayload(instructor, notificationPayload) {
+  return {
+    email: instructor.email,
+    firstName: instructor.firstName || '',
+    lastName: instructor.lastName || '',
+    phoneNumber: instructor.phoneNumber || '',
+    jobTitle: instructor.jobTitle || '',
+    isAdmin: Boolean(instructor.isAdmin),
+    startDate: dateToInputValue(instructor.startDate) || todayAsInputValue(),
+    endDate: dateToInputValue(instructor.endDate),
+    ...notificationPayload
+  }
+}
+
 export async function getZonesAction() {
   return withErrorHandling(async () => fetchJSON('api/zones'))
 }
@@ -88,6 +117,38 @@ export async function addZoneInstructorAction(zoneId, payload) {
     const result = await fetchJSON(`api/zones/${zoneId}/instructeurs`, {
       method: 'POST',
       body: payload
+    })
+
+    revalidateZonePaths(zoneId)
+
+    return result
+  })
+}
+
+export async function sendZoneInstructorAccountCreationNotificationAction(zoneId, instructor) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(`api/zones/${zoneId}/instructeurs`, {
+      method: 'POST',
+      body: buildInstructorPayload(instructor, {
+        notifyAccountCreation: true,
+        notifyZoneAttachment: false
+      })
+    })
+
+    revalidateZonePaths(zoneId)
+
+    return result
+  })
+}
+
+export async function sendZoneInstructorAttachmentNotificationAction(zoneId, instructor) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(`api/zones/${zoneId}/instructeurs`, {
+      method: 'POST',
+      body: buildInstructorPayload(instructor, {
+        notifyAccountCreation: false,
+        notifyZoneAttachment: true
+      })
     })
 
     revalidateZonePaths(zoneId)

@@ -1,11 +1,10 @@
-
 'use client'
 
 import {useState} from 'react'
 
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {SegmentedControl} from '@codegouvfr/react-dsfr/SegmentedControl'
-import {Typography} from '@mui/material'
+import {Checkbox, FormControlLabel, Typography} from '@mui/material'
 import {pick, trim} from 'lodash-es'
 import {useRouter} from 'next/navigation'
 
@@ -67,6 +66,7 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
   )
   const [error, setError] = useState(null)
   const [validationErrors, setValidationErrors] = useState([])
+  const [notifyAccountCreation, setNotifyAccountCreation] = useState(false)
   const [preleveur, setPreleveur] = useState({
     declarantType: 'NATURAL_PERSON',
     civility: '',
@@ -117,6 +117,10 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
 
       const filteredPreleveur = pick({...preleveur, declarantType}, fieldsToSend)
       const cleanedPreleveur = emptyStringToNull(filteredPreleveur)
+
+      if (!isEditing) {
+        cleanedPreleveur.notifyAccountCreation = notifyAccountCreation
+      }
 
       let response
 
@@ -178,6 +182,19 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
             setPreleveur={setPreleveur}
           />
         )}
+
+        {!isEditing && (
+          <FormControlLabel
+            control={(
+              <Checkbox
+                checked={notifyAccountCreation}
+                onChange={event => setNotifyAccountCreation(event.target.checked)}
+              />
+            )}
+            label='Notifier le déclarant par email de la création de son compte'
+          />
+        )}
+
         {error && (
           <div className='text-center p-5 text-red-500'>
             <p><b>Un problème est survenu :</b></p>

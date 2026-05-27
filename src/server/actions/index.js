@@ -19,6 +19,7 @@ export {
   getDeclarantAction,
   createPreleveurAction,
   updatePreleveurAction,
+  sendDeclarantAccountCreationNotificationAction,
   deletePreleveurAction,
   getPointsFromPreleveurAction,
   getExploitationFromPreleveurAction
@@ -90,6 +91,8 @@ export {
   getZonePointsPrelevementOptionsAction,
   getZonesAction,
   getZonesActions,
+  sendZoneInstructorAccountCreationNotificationAction,
+  sendZoneInstructorAttachmentNotificationAction,
   updateZoneExploitationAction,
   updateZonePointPrelevementAction
 } from './zones.js'

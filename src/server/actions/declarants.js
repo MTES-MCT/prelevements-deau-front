@@ -39,7 +39,7 @@ export async function createPreleveurAction(payload) {
       method: 'POST',
       body: payload
     })
-    revalidatePath('/preleveurs')
+    revalidatePath('/declarants')
     return result
   })
 }
@@ -58,6 +58,20 @@ export async function updatePreleveurAction(idPreleveur, payload) {
     })
     revalidatePath('/declarants')
     revalidatePath(`/declarants/${idPreleveur}`)
+    return result
+  })
+}
+
+export async function sendDeclarantAccountCreationNotificationAction(declarantId) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(`api/declarants/${declarantId}`, {
+      method: 'PUT',
+      body: {
+        notifyAccountCreation: true
+      }
+    })
+    revalidatePath('/declarants')
+    revalidatePath(`/declarants/${declarantId}`)
     return result
   })
 }

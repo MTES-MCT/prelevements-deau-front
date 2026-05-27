@@ -33,7 +33,9 @@ function getInitialForm() {
     jobTitle: '',
     isAdmin: false,
     startDate: todayAsInputValue(),
-    endDate: ''
+    endDate: '',
+    notifyAccountCreation: false,
+    notifyZoneAttachment: false
   }
 }
 
@@ -171,6 +173,30 @@ const ZoneInstructorForm = ({zone}) => {
             label='Admin de la zone'
           />
         </div>
+
+        <Box className='flex flex-col gap-2 fr-background-alt--grey fr-p-3w'>
+          <Typography variant='subtitle2'>Notifications email</Typography>
+
+          <FormControlLabel
+            control={(
+              <Checkbox
+                checked={form.notifyAccountCreation}
+                onChange={event => updateField('notifyAccountCreation', event.target.checked)}
+              />
+            )}
+            label='Notifier l’agent de la création ou disponibilité de son compte'
+          />
+
+          <FormControlLabel
+            control={(
+              <Checkbox
+                checked={form.notifyZoneAttachment}
+                onChange={event => updateField('notifyZoneAttachment', event.target.checked)}
+              />
+            )}
+            label='Notifier l’agent de son rattachement à cette zone'
+          />
+        </Box>
 
         <Box className='flex justify-between items-center gap-3 flex-wrap'>
           <Typography variant='body2'>

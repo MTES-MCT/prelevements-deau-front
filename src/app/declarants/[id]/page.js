@@ -2,6 +2,7 @@ import {fr} from '@codegouvfr/react-dsfr'
 import {Box} from '@mui/material'
 import {notFound} from 'next/navigation'
 
+import AccountCreationNotificationCard from '@/components/accounts/account-creation-notification-card.js'
 import DeclarantDeclarationTypesCard from '@/components/declarants/declarant-declaration-types-card.js'
 import PreleveurMap from '@/components/declarants/preleveur-map.js'
 import DeclarationReminderCard from '@/components/declarations/declaration-reminder-card.js'
@@ -163,6 +164,10 @@ const Page = async ({params}) => {
       />
 
       <InfoCard declarant={declarant} />
+
+      {canManageDeclarationTypes && (
+        <AccountCreationNotificationCard declarant={declarant} />
+      )}
 
       {canManageDeclarationTypes && (
         <DeclarantDeclarationTypesCard
