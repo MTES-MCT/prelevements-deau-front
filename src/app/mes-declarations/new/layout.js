@@ -29,7 +29,7 @@ const NouvelleDeclaration = async ({children}) => (
     >
       <div className='fr-container'>
         <h3 className='fr-h5'>
-          Besoin du template de déclaration ?
+          Besoin du modèle type de déclaration ?
         </h3>
         <DeclarationTemplateDownload />
       </div>
