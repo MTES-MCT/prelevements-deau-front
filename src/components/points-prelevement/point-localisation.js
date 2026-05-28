@@ -1,4 +1,29 @@
+import proj4 from 'proj4'
+
 import Map from '@/components/map/index.js'
+
+const wgs84Projection = 'EPSG:4326'
+const lambert93Projection = 'EPSG:2154'
+
+proj4.defs(
+  wgs84Projection,
+  '+proj=longlat +datum=WGS84 +no_defs +type=crs'
+)
+
+proj4.defs(
+  lambert93Projection,
+  '+proj=lcc +lat_0=46.5 +lon_0=3 +lat_1=49 +lat_2=44 +x_0=700000 +y_0=6600000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs +type=crs'
+)
+
+const formatCoordinate = value => new Intl.NumberFormat('fr-FR', {
+  maximumFractionDigits: 3
+}).format(value)
+
+const getLambert93Label = coordinates => {
+  const [x, y] = proj4(wgs84Projection, lambert93Projection, coordinates)
+
+  return `X ${formatCoordinate(x)} / Y ${formatCoordinate(y)}`
+}
 
 const LabelValue = ({label, value, children}) => {
   if (!value && !children) {
@@ -47,14 +72,13 @@ const PointLocalisation = ({pointPrelevement}) => {
   const geoportailUrl = getGeoportailUrl(coordinates)
 
   const hasCoordinates = Array.isArray(coordinates) && coordinates.length === 2
-  const [lon, lat] = hasCoordinates ? coordinates : []
 
   return (
     <>
       <ul>
         {hasCoordinates && (
           <LabelValue label='Coordonnées'>
-            <i>{lat}, {lon}</i>
+            <i>{getLambert93Label(coordinates)}</i>
             {geoportailUrl && (
               <span>
                 { ' ('}

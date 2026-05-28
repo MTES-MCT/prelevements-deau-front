@@ -181,11 +181,11 @@ export async function GET(request) {
   const {searchParams} = new URL(request.url)
 
   const pointIds = searchParams.getAll('pointIds').filter(Boolean)
-  const preleveurIds = searchParams.getAll('preleveurIds').filter(Boolean)
+  const declarantIds = searchParams.getAll('declarantIds').filter(Boolean)
   const startDate = searchParams.get('startDate') || undefined
   const endDate = searchParams.get('endDate') || undefined
 
-  if (pointIds.length === 0 && preleveurIds.length === 0) {
+  if (pointIds.length === 0 && declarantIds.length === 0) {
     return NextResponse.json(
       {error: 'Veuillez fournir au moins un point ou un déclarant.'},
       {status: 400}
@@ -219,7 +219,7 @@ export async function GET(request) {
     }
   }
 
-  for (const preleveurId of preleveurIds) {
+  for (const preleveurId of declarantIds) {
     const result = await searchSeriesAction({
       preleveurId,
       startDate,
