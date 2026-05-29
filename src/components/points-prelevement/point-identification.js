@@ -39,7 +39,7 @@ const PointIdentification = ({pointPrelevement, lienBss, lienBnpe}) => {
               href: `/points-prelevement/${idPoint}/edit`
             }}
           >
-            Éditer
+            Modifier le point de prélèvement
           </Button>
         )}
       </div>

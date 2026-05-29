@@ -11,7 +11,7 @@ export function getDeclarantsURL() {
 }
 
 export function getDeclarantURL(declarant) {
-  return `/declarants/${declarant.id}`
+  return `/declarants/${declarant.userId}`
 }
 
 export function getPointsPrelevementURL() {
