@@ -2528,10 +2528,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@next/env@npm:15.5.13":
-  version: 15.5.13
-  resolution: "@next/env@npm:15.5.13"
-  checksum: 10c0/288e288fac99377f138dfb64d4d0d3ec9716bf1c21e61a33eff5e02466b21d3ee37cf054276afdd181459f1ee5e5fdb0d207060b713daf07dc99f98de06f1e9e
+"@next/env@npm:15.5.19":
+  version: 15.5.19
+  resolution: "@next/env@npm:15.5.19"
+  checksum: 10c0/9c8c2f737425b506f3195b89cce8e366d44a86667a0e5eac805db99d4ab943023228479bd023853294c880c11cbc23e33b318dac4f810e07724b1743b88289c4
   languageName: node
   linkType: hard
 
@@ -2544,58 +2544,58 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@next/swc-darwin-arm64@npm:15.5.13":
-  version: 15.5.13
-  resolution: "@next/swc-darwin-arm64@npm:15.5.13"
+"@next/swc-darwin-arm64@npm:15.5.19":
+  version: 15.5.19
+  resolution: "@next/swc-darwin-arm64@npm:15.5.19"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
 
-"@next/swc-darwin-x64@npm:15.5.13":
-  version: 15.5.13
-  resolution: "@next/swc-darwin-x64@npm:15.5.13"
+"@next/swc-darwin-x64@npm:15.5.19":
+  version: 15.5.19
+  resolution: "@next/swc-darwin-x64@npm:15.5.19"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
-"@next/swc-linux-arm64-gnu@npm:15.5.13":
-  version: 15.5.13
-  resolution: "@next/swc-linux-arm64-gnu@npm:15.5.13"
+"@next/swc-linux-arm64-gnu@npm:15.5.19":
+  version: 15.5.19
+  resolution: "@next/swc-linux-arm64-gnu@npm:15.5.19"
   conditions: os=linux & cpu=arm64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@next/swc-linux-arm64-musl@npm:15.5.13":
-  version: 15.5.13
-  resolution: "@next/swc-linux-arm64-musl@npm:15.5.13"
+"@next/swc-linux-arm64-musl@npm:15.5.19":
+  version: 15.5.19
+  resolution: "@next/swc-linux-arm64-musl@npm:15.5.19"
   conditions: os=linux & cpu=arm64 & libc=musl
   languageName: node
   linkType: hard
 
-"@next/swc-linux-x64-gnu@npm:15.5.13":
-  version: 15.5.13
-  resolution: "@next/swc-linux-x64-gnu@npm:15.5.13"
+"@next/swc-linux-x64-gnu@npm:15.5.19":
+  version: 15.5.19
+  resolution: "@next/swc-linux-x64-gnu@npm:15.5.19"
   conditions: os=linux & cpu=x64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@next/swc-linux-x64-musl@npm:15.5.13":
-  version: 15.5.13
-  resolution: "@next/swc-linux-x64-musl@npm:15.5.13"
+"@next/swc-linux-x64-musl@npm:15.5.19":
+  version: 15.5.19
+  resolution: "@next/swc-linux-x64-musl@npm:15.5.19"
   conditions: os=linux & cpu=x64 & libc=musl
   languageName: node
   linkType: hard
 
-"@next/swc-win32-arm64-msvc@npm:15.5.13":
-  version: 15.5.13
-  resolution: "@next/swc-win32-arm64-msvc@npm:15.5.13"
+"@next/swc-win32-arm64-msvc@npm:15.5.19":
+  version: 15.5.19
+  resolution: "@next/swc-win32-arm64-msvc@npm:15.5.19"
   conditions: os=win32 & cpu=arm64
   languageName: node
   linkType: hard
 
-"@next/swc-win32-x64-msvc@npm:15.5.13":
-  version: 15.5.13
-  resolution: "@next/swc-win32-x64-msvc@npm:15.5.13"
+"@next/swc-win32-x64-msvc@npm:15.5.19":
+  version: 15.5.19
+  resolution: "@next/swc-win32-x64-msvc@npm:15.5.19"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
@@ -2975,7 +2975,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@storybook/addon-docs@npm:^9.1.16":
+"@storybook/addon-docs@npm:^9.1.20":
   version: 9.1.20
   resolution: "@storybook/addon-docs@npm:9.1.20"
   dependencies:
@@ -3059,7 +3059,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@storybook/nextjs@npm:^9.1.16":
+"@storybook/nextjs@npm:^9.1.20":
   version: 9.1.20
   resolution: "@storybook/nextjs@npm:9.1.20"
   dependencies:
@@ -8671,6 +8671,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"lodash-es@npm:^4.18.1":
+  version: 4.18.1
+  resolution: "lodash-es@npm:4.18.1"
+  checksum: 10c0/35d4dcf87ef07f8d090f409447575800108057e360b445f590d0d25d09e3d1e33a163d2fc100d4d072b0f901d5e2fc533cd7c4bfd8eeb38a06abec693823c8b8
+  languageName: node
+  linkType: hard
+
 "lodash.debounce@npm:^4.0.8":
   version: 4.0.8
   resolution: "lodash.debounce@npm:4.0.8"
@@ -9149,6 +9156,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"nanoid@npm:^3.3.12":
+  version: 3.3.12
+  resolution: "nanoid@npm:3.3.12"
+  bin:
+    nanoid: bin/nanoid.cjs
+  checksum: 10c0/ba142b7b39e11e80c16dd74b0365d407880c87c1cf7e1480956981ae940ee36060fa5b6f092cd1e315184dd19244c657bd017d03327bd3c62247d691c5e8edfb
+  languageName: node
+  linkType: hard
+
 "natural-compare@npm:^1.4.0":
   version: 1.4.0
   resolution: "natural-compare@npm:1.4.0"
@@ -9170,9 +9186,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"next-auth@npm:^4.24.13":
-  version: 4.24.13
-  resolution: "next-auth@npm:4.24.13"
+"next-auth@npm:^4.24.14":
+  version: 4.24.14
+  resolution: "next-auth@npm:4.24.14"
   dependencies:
     "@babel/runtime": "npm:^7.20.13"
     "@panva/hkdf": "npm:^1.0.2"
@@ -9194,23 +9210,23 @@ __metadata:
       optional: true
     nodemailer:
       optional: true
-  checksum: 10c0/33a03d71951c30007aacfdb589afabd361440c95635068e4270108bfcdd155cf76b0ab3f82fa99d8c747888f250f0e6c675a8c4f9a2d80ad7f5bcacd8542a5c6
+  checksum: 10c0/b96d68d723816547c3069a5191c357de11b7ae2ab49a0a6bb985ccc5712abe39d2c33be59b93bc6caae575a31eb92da68cc38edd53659d4edcc283d17471b87f
   languageName: node
   linkType: hard
 
-"next@npm:^15.5.7":
-  version: 15.5.13
-  resolution: "next@npm:15.5.13"
+"next@npm:^15.5.18":
+  version: 15.5.19
+  resolution: "next@npm:15.5.19"
   dependencies:
-    "@next/env": "npm:15.5.13"
-    "@next/swc-darwin-arm64": "npm:15.5.13"
-    "@next/swc-darwin-x64": "npm:15.5.13"
-    "@next/swc-linux-arm64-gnu": "npm:15.5.13"
-    "@next/swc-linux-arm64-musl": "npm:15.5.13"
-    "@next/swc-linux-x64-gnu": "npm:15.5.13"
-    "@next/swc-linux-x64-musl": "npm:15.5.13"
-    "@next/swc-win32-arm64-msvc": "npm:15.5.13"
-    "@next/swc-win32-x64-msvc": "npm:15.5.13"
+    "@next/env": "npm:15.5.19"
+    "@next/swc-darwin-arm64": "npm:15.5.19"
+    "@next/swc-darwin-x64": "npm:15.5.19"
+    "@next/swc-linux-arm64-gnu": "npm:15.5.19"
+    "@next/swc-linux-arm64-musl": "npm:15.5.19"
+    "@next/swc-linux-x64-gnu": "npm:15.5.19"
+    "@next/swc-linux-x64-musl": "npm:15.5.19"
+    "@next/swc-win32-arm64-msvc": "npm:15.5.19"
+    "@next/swc-win32-x64-msvc": "npm:15.5.19"
     "@swc/helpers": "npm:0.5.15"
     caniuse-lite: "npm:^1.0.30001579"
     postcss: "npm:8.4.31"
@@ -9253,7 +9269,7 @@ __metadata:
       optional: true
   bin:
     next: dist/bin/next
-  checksum: 10c0/67b8c31e0bda950de54d37de3ecc7c740207f16cce32a052845e5bd9ec9be1634d48ad782981d114fa930c347b21031116ef0d5dca2abe71e0b67812c3f41163
+  checksum: 10c0/cbb666e43d4215e7908c8f9dd087fddf8758b1831b50fbefaba23e42a2a92acd5ec61be7cb85efd73e59c021a4356a7054161e0fd6b957e03f8ff828e1b9786d
   languageName: node
   linkType: hard
 
@@ -10191,7 +10207,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"postcss@npm:^8.2.14, postcss@npm:^8.4.33, postcss@npm:^8.4.38, postcss@npm:^8.4.47, postcss@npm:^8.5.6":
+"postcss@npm:^8.2.14, postcss@npm:^8.4.33, postcss@npm:^8.4.38, postcss@npm:^8.4.47":
   version: 8.5.8
   resolution: "postcss@npm:8.5.8"
   dependencies:
@@ -10199,6 +10215,17 @@ __metadata:
     picocolors: "npm:^1.1.1"
     source-map-js: "npm:^1.2.1"
   checksum: 10c0/dd918f7127ee7c60a0295bae2e72b3787892296e1d1c3c564d7a2a00c68d8df83cadc3178491259daa19ccc54804fb71ed8c937c6787e08d8bd4bedf8d17044c
+  languageName: node
+  linkType: hard
+
+"postcss@npm:^8.5.10":
+  version: 8.5.15
+  resolution: "postcss@npm:8.5.15"
+  dependencies:
+    nanoid: "npm:^3.3.12"
+    picocolors: "npm:^1.1.1"
+    source-map-js: "npm:^1.2.1"
+  checksum: 10c0/7f2e63ae22fbe43aace1bf652bd99da4e90737c64194d49e51ddc9cd0f9e51ff2861a7d734379b494deffa03a880a5c65eec70bc29ee9ebaa7136dde3eee8f31
   languageName: node
   linkType: hard
 
@@ -10244,22 +10271,22 @@ __metadata:
     "@mui/system": "npm:^6.5.0"
     "@mui/x-charts": "npm:^7.29.1"
     "@mui/x-data-grid": "npm:^7.29.11"
-    "@storybook/addon-docs": "npm:^9.1.16"
-    "@storybook/nextjs": "npm:^9.1.16"
+    "@storybook/addon-docs": "npm:^9.1.20"
+    "@storybook/nextjs": "npm:^9.1.20"
     ava: "npm:^6.4.1"
     date-fns: "npm:^4.1.0"
     eslint-config-xo-nextjs: "npm:^6.3.0"
     flexsearch: "npm:^0.7.43"
-    lodash-es: "npm:^4.17.21"
+    lodash-es: "npm:^4.18.1"
     maplibre-gl: "npm:^5.13.0"
-    next: "npm:^15.5.7"
-    next-auth: "npm:^4.24.13"
-    postcss: "npm:^8.5.6"
+    next: "npm:^15.5.18"
+    next-auth: "npm:^4.24.14"
+    postcss: "npm:^8.5.10"
     react: "npm:^18.3.1"
     react-dom: "npm:^18.3.1"
     sass: "npm:^1.94.2"
     sass-loader: "npm:^16.0.6"
-    storybook: "npm:^9.1.16"
+    storybook: "npm:^9.1.20"
     tailwindcss: "npm:^3.4.18"
     xo: "npm:^0.59.3"
   languageName: unknown
@@ -11542,7 +11569,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"storybook@npm:^9.1.16":
+"storybook@npm:^9.1.20":
   version: 9.1.20
   resolution: "storybook@npm:9.1.20"
   dependencies:
