@@ -17,8 +17,9 @@ const Dossiers = async () => {
   const result = await getMyDeclarationsAction()
   const response = result?.success ? result.data : null
   const dossiers = response?.data ?? []
-  const allowedDeclarationTypes = response?.meta?.allowedDeclarationTypes ?? []
-  const canCreateDeclaration = allowedDeclarationTypes.length > 0
+  const meta = response?.meta ?? {}
+  const allowedDeclarationTypes = meta.allowedDeclarationTypes ?? []
+  const canCreateDeclaration = meta.canCreateDeclaration ?? allowedDeclarationTypes.length > 0
   const allowedDeclarationTypesLabel = allowedDeclarationTypes
     .map(declarationType => declarationType.name)
     .join(', ')
@@ -41,6 +42,9 @@ const Dossiers = async () => {
 
             <p className='fr-text fr-mb-3w'>
               Déposez vos fichiers de déclaration après validation automatique.
+              {meta.declarantRole === 'COLLECTEUR'
+                ? <> Vous sélectionnerez ensuite le préleveur concerné.</>
+                : null}
               {allowedDeclarationTypesLabel ? (
                 <> Types autorisés : {allowedDeclarationTypesLabel}.</>
               ) : null}
@@ -68,7 +72,7 @@ const Dossiers = async () => {
         </h2>
 
         <p className='fr-text--sm fr-mb-4w'>
-          Retrouvez toutes vos déclarations de prélèvements d’eau.
+          Retrouvez toutes les déclarations de prélèvements d’eau visibles depuis votre compte.
         </p>
 
         {dossiers.length === 0 ? (

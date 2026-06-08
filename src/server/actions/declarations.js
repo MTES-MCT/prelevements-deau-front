@@ -4,21 +4,9 @@ import {revalidatePath} from 'next/cache'
 
 import {fetchJSON, withErrorHandling} from '@/server/api-wrapper.js'
 
-/**
- * Create a declaration with files (multipart/form-data)
- *
- * Expects:
- * - type: string
- * - files: File[]
- * - fileTypes: string[] (1 type métier par fichier, même ordre, tous du type sélectionné)
- * - comment?: string
- *
- * Côté API :
- * - dataSourceType = SPREADSHEET
- * - waterWithdrawalType = "Inconnu"
- */
 export async function createDeclarationAction({
   type,
+  declarantUserId,
   files = [],
   fileTypes = [],
   comment
@@ -50,6 +38,10 @@ export async function createDeclarationAction({
 
     formData.append('type', normalizedType)
 
+    if (declarantUserId) {
+      formData.append('declarantUserId', declarantUserId)
+    }
+
     if (typeof comment === 'string' && comment.trim()) {
       formData.append('comment', comment.trim())
     }
@@ -70,23 +62,14 @@ export async function createDeclarationAction({
   })
 }
 
-/**
- * Get user declarations
- */
 export async function getMyDeclarationsAction() {
   return withErrorHandling(async () => fetchJSON('api/declarations/me'))
 }
 
-/**
- * Get declaration types currently allowed for the authenticated declarant
- */
 export async function getAllowedDeclarationTypesAction() {
   return withErrorHandling(async () => fetchJSON('api/declarations/allowed-types'))
 }
 
-/**
- * Get a single declaration by ID (UUID)
- */
 export async function getDeclarationAction(declarationId) {
   return withErrorHandling(async () => {
     if (!declarationId) {
@@ -97,9 +80,6 @@ export async function getDeclarationAction(declarationId) {
   })
 }
 
-/**
- * Get available points prelevements for declaration
- */
 export async function getAvailablePointsPrelevementsForDeclarationAction(declarationId) {
   return withErrorHandling(async () => {
     if (!declarationId) {
@@ -110,9 +90,6 @@ export async function getAvailablePointsPrelevementsForDeclarationAction(declara
   })
 }
 
-/**
- * Revalidate declaration paths after mutations
- */
 export async function revalidateDeclarationPaths(declarationId) {
   revalidatePath('/declarations')
   revalidatePath('/declarations/me')

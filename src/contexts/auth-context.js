@@ -23,9 +23,6 @@ const AuthContext = createContext({
 export const AuthProvider = ({children}) => {
   const {data: session, status, update} = useSession()
 
-  /**
-   * Build user object from NextAuth session
-   */
   const user = useMemo(() => {
     if (!session?.user) {
       return null
@@ -37,15 +34,13 @@ export const AuthProvider = ({children}) => {
       lastName: session.user.lastName || null,
       email: session.user.email || null,
       structure: session.user.structure || null,
-      role: session.user.role
+      role: session.user.role,
+      declarantType: session.user.declarantType || null,
+      declarantRole: session.user.declarantRole || null,
+      socialReason: session.user.socialReason || null
     }
   }, [session])
 
-  /**
-   * Login with magic link token
-   * Uses NextAuth signIn with credentials provider
-   * @param {string} magicLinkToken - Token from magic link URL
-   */
   const login = useCallback(async magicLinkToken => {
     try {
       const result = await signIn('credentials', {
@@ -65,11 +60,7 @@ export const AuthProvider = ({children}) => {
     }
   }, [])
 
-  /**
-   * Logout and clear session
-   */
   const logout = useCallback(async () => {
-    // Optionally call backend logout endpoint
     if (session?.user?.token) {
       try {
         await fetch(`${API_URL}/auth/logout`, {
@@ -86,9 +77,6 @@ export const AuthProvider = ({children}) => {
     await signOut({callbackUrl: '/login'})
   }, [session])
 
-  /**
-   * Refresh session data
-   */
   const refreshUser = useCallback(async () => {
     await update()
   }, [update])

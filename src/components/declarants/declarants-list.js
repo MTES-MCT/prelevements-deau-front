@@ -14,7 +14,7 @@ import {normalizeString} from '@/utils/string.js'
 
 const PAGE_SIZE = 10
 
-const DeclarantsList = ({declarants}) => {
+const DeclarantsList = ({declarants, basePath = '/declarants'}) => {
   const [filteredDeclarants, setFilteredDeclarants] = useState(declarants)
   const [page, setPage] = useState(1)
   const index = useRef(null)
@@ -23,7 +23,7 @@ const DeclarantsList = ({declarants}) => {
     index.current = new FlexSearch.Document({
       document: {
         id: 'id',
-        index: ['lastName', 'firstName', 'socialReason'],
+        index: ['lastName', 'firstName', 'socialReason', 'email'],
         store: true
       },
       tokenize: 'full',
@@ -36,7 +36,8 @@ const DeclarantsList = ({declarants}) => {
         id: declarant.id,
         lastName: normalizeString(declarant.lastName),
         firstName: normalizeString(declarant.firstName),
-        socialReason: normalizeString(declarant?.declarant?.socialReason)
+        socialReason: normalizeString(declarant?.declarant?.socialReason),
+        email: normalizeString(declarant.email)
       })
     }
 
@@ -95,7 +96,7 @@ const DeclarantsList = ({declarants}) => {
     <Box className='flex flex-col gap-2 my-8 w-full'>
       <SearchBar
         allowEmptySearch
-        label='Rechercher par nom, prénom ou raison sociale'
+        label='Rechercher par nom, prénom, raison sociale ou email'
         renderInput={({className, id, placeholder, type}) => (
           <input
             className={className}
@@ -139,6 +140,7 @@ const DeclarantsList = ({declarants}) => {
             key={declarant.id}
             declarant={declarant}
             index={((page - 1) * PAGE_SIZE) + index}
+            basePath={basePath}
           />
         ))}
 

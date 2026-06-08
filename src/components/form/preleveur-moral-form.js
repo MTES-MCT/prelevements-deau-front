@@ -11,7 +11,7 @@ import OptionalPreleveurFieldsForm from '@/components/form/optional-preleveur-fi
 import SearchByCompany from '@/components/form/search-by-company.js'
 import AccordionCentered from '@/components/ui/AccordionCentered/index.js'
 
-const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
+const PreleveurMoralForm = ({preleveur, setPreleveur, emailRequired = false}) => {
   const [isExpanded, setIsExpanded] = useState(false)
 
   useEffect(() => {
@@ -40,7 +40,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
         />
       </div>
       <Input
-        label='Raison sociale'
+        label='Raison sociale *'
         hintText='Nom officiel de l’entreprise'
         nativeInputProps={{
           placeholder: 'Entrer la raison sociale',
@@ -72,7 +72,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
           ]}
         />
         <Input
-          label='Nom du contact *'
+          label='Nom du contact'
           nativeInputProps={{
             placeholder: 'Entrer le nom',
             defaultValue: preleveur?.lastName || '',
@@ -80,7 +80,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
           }}
         />
         <Input
-          label='Prénom du contact *'
+          label='Prénom du contact'
           nativeInputProps={{
             placeholder: 'Entrer le prénom',
             defaultValue: preleveur?.firstName || '',
@@ -89,7 +89,8 @@ const PreleveurMoralForm = ({preleveur, setPreleveur}) => {
         />
       </div>
       <Input
-        label='Adresse email du contact *'
+        label={`Adresse email du contact${emailRequired ? ' *' : ''}`}
+        hintText={emailRequired ? 'Obligatoire pour permettre la connexion ou l’envoi de notification.' : 'Facultative pour un préleveur non déclarant.'}
         nativeInputProps={{
           placeholder: 'Entrer l’adresse email de contact',
           defaultValue: preleveur?.email || '',

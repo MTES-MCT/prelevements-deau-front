@@ -6,7 +6,9 @@ import Link from 'next/link'
 import PrelevementTypeBadge from '@/components/declarations/prelevement-type-badge.js'
 import TypeSaisieBadge from '@/components/declarations/type-saisie-badge.js'
 import LabelValue from '@/components/ui/LabelValue/index.js'
+import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
 import {getDeclarationTypeLabel} from '@/lib/declaration-types.js'
+import {getDeclarantURL} from '@/lib/urls.js'
 
 const fileLabel = (file, declarationType) => {
   if (file.filename) {
@@ -14,6 +16,23 @@ const fileLabel = (file, declarationType) => {
   }
 
   return getDeclarationTypeLabel(file.type, declarationType)
+}
+
+const getDeclarantId = declarant => declarant?.userId || declarant?.id || declarant?.user?.id
+
+const DeclarantLink = ({declarant}) => {
+  if (!declarant) {
+    return 'Non renseigné'
+  }
+
+  const id = getDeclarantId(declarant)
+  const label = getDeclarantTitleFromDeclarant(declarant)
+
+  if (!id) {
+    return label
+  }
+
+  return <Link href={getDeclarantURL({userId: id})}>{label}</Link>
 }
 
 const FileList = ({files, declarationType}) => {
@@ -45,36 +64,55 @@ const FileList = ({files, declarationType}) => {
 
 const DeclarationInfos = ({
   aotDecreeNumber,
+  numeroArreteAot,
   type,
   declarationType,
   dataSourceType,
   comment,
-  files = []
-}) => (
-  <Box className='flex flex-col gap-2 my-4'>
-    { aotDecreeNumber && (
-      <LabelValue label='Numéro AOT'>
-        <Tag>{aotDecreeNumber}</Tag>
-      </LabelValue>
-    )}
-    <LabelValue label='Type de déclaration'>
-      <PrelevementTypeBadge value={type} declarationType={declarationType} />
-    </LabelValue>
-    <LabelValue label='Type de saisie'>
-      <TypeSaisieBadge value={dataSourceType} />
-    </LabelValue>
-    <LabelValue label='Fichiers'>
-      <FileList files={files} declarationType={declarationType} />
-    </LabelValue>
+  files = [],
+  declarant,
+  createdByDeclarant
+}) => {
+  const declarantId = getDeclarantId(declarant)
+  const createdByDeclarantId = getDeclarantId(createdByDeclarant)
+  const showCreatedBy = createdByDeclarant && createdByDeclarantId !== declarantId
 
-    {comment && (
-      <Notice
-        description={comment}
-        severity='info'
-        title='Commentaire du déclarant'
-      />
-    )}
-  </Box>
-)
+  const displayedAotDecreeNumber = aotDecreeNumber || numeroArreteAot
+
+  return (
+    <Box className='flex flex-col gap-2 my-4'>
+      { displayedAotDecreeNumber && (
+        <LabelValue label='Numéro AOT'>
+          <Tag>{displayedAotDecreeNumber}</Tag>
+        </LabelValue>
+      )}
+      <LabelValue label='Type de déclaration'>
+        <PrelevementTypeBadge value={type} declarationType={declarationType} />
+      </LabelValue>
+      <LabelValue label='Type de saisie'>
+        <TypeSaisieBadge value={dataSourceType} />
+      </LabelValue>
+      <LabelValue label='Préleveur concerné'>
+        <DeclarantLink declarant={declarant} />
+      </LabelValue>
+      {showCreatedBy && (
+        <LabelValue label='Déposée par'>
+          <DeclarantLink declarant={createdByDeclarant} />
+        </LabelValue>
+      )}
+      <LabelValue label='Fichiers'>
+        <FileList files={files} declarationType={declarationType} />
+      </LabelValue>
+
+      {comment && (
+        <Notice
+          description={comment}
+          severity='info'
+          title='Commentaire du déclarant'
+        />
+      )}
+    </Box>
+  )
+}
 
 export default DeclarationInfos

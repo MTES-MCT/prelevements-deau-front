@@ -28,6 +28,9 @@ const SESSION_CALLBACKS = {
       session.user.firstName = token.userInfo.firstName
       session.user.email = token.userInfo.email
       session.user.structure = token.userInfo.structure
+      session.user.declarantType = token.userInfo.declarantType
+      session.user.declarantRole = token.userInfo.declarantRole
+      session.user.socialReason = token.userInfo.socialReason
     }
 
     return session
@@ -59,11 +62,6 @@ export async function requestMagicLink(email) {
   return res.json()
 }
 
-/**
- * Fetch user info using session token
- * @param {string} token - Session token from magic link verification
- * @returns {Promise<{user: object, role: string, territoire: object}>}
- */
 async function getInfo(token) {
   const res = await fetch(`${API_URL}/info`, {
     headers: {
@@ -83,20 +81,14 @@ async function getInfo(token) {
   return res.json()
 }
 
-// Cache for authOptions to avoid re-importing on every call
 let cachedAuthOptions = null
 
-/**
- * Get auth options with dynamically imported CredentialsProvider
- * This handles ESM/CJS interop with next-auth v4
- */
 export async function getAuthOptions() {
   if (cachedAuthOptions) {
     return cachedAuthOptions
   }
 
   const credentialsModule = await import('next-auth/providers/credentials')
-  // Handle both ESM default export and CJS module.exports patterns
   const createCredentialsProvider = credentialsModule.default?.default
     || credentialsModule.default
     || credentialsModule
@@ -123,7 +115,6 @@ export async function getAuthOptions() {
       createCredentialsProvider({
         name: 'Credentials',
         credentials: {
-          // Token is passed from /auth/verify page after magic link verification
           token: {label: 'Token', type: 'text'}
         },
         async authorize(credentials) {
@@ -151,8 +142,6 @@ export async function getAuthOptions() {
   return cachedAuthOptions
 }
 
-// Keep backward compatibility with static authOptions export
-// This will be replaced at runtime with the async version
 export const authOptions = {
   session: SESSION_CONFIG,
   cookies: {
@@ -168,7 +157,7 @@ export const authOptions = {
   },
   callbacks: SESSION_CALLBACKS,
   pages: {signIn: '/login'},
-  providers: [] // Will be populated dynamically
+  providers: []
 }
 
 export async function getServerAuthSession() {

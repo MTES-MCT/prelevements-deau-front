@@ -17,6 +17,7 @@ import {emptyStringToNull} from '@/utils/string.js'
 
 const COMMON_FIELDS = [
   'declarantType',
+  'declarantRole',
   'civility',
   'lastName',
   'firstName',
@@ -35,11 +36,11 @@ const MORAL_ONLY_FIELDS = [
   'siret'
 ]
 
-// eslint-disable-next-line complexity
 function normalizeDeclarant(declarant) {
   return {
     id: declarant?.userId || declarant?.id,
     declarantType: declarant?.declarantType || (declarant?.socialReason || declarant?.declarant?.socialReason ? 'LEGAL_PERSON' : 'NATURAL_PERSON'),
+    declarantRole: declarant?.declarantRole || declarant?.declarant?.declarantRole || 'PRELEVEUR',
     civility: declarant?.civility || '',
     firstName: declarant?.firstName || declarant?.user?.firstName || '',
     lastName: declarant?.lastName || declarant?.user?.lastName || '',
@@ -69,6 +70,7 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
   const [notifyAccountCreation, setNotifyAccountCreation] = useState(false)
   const [preleveur, setPreleveur] = useState({
     declarantType: 'NATURAL_PERSON',
+    declarantRole: 'PRELEVEUR',
     civility: '',
     firstName: '',
     lastName: '',
@@ -85,9 +87,12 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
     ...normalizedInitialPreleveur
   })
 
-  const isDisabled = isPreleveurPhysique
-    ? !(trim(preleveur.lastName) && trim(preleveur.firstName) && trim(preleveur.email))
-    : !(trim(preleveur.socialReason) && trim(preleveur.email))
+  const isCollecteur = preleveur.declarantRole === 'COLLECTEUR'
+  const emailRequired = isCollecteur || notifyAccountCreation
+  const hasRequiredIdentity = isPreleveurPhysique
+    ? trim(preleveur.lastName) && trim(preleveur.firstName)
+    : trim(preleveur.socialReason)
+  const isDisabled = !hasRequiredIdentity || (emailRequired && !trim(preleveur.email))
 
   const handleSubmit = async () => {
     setError(null)
@@ -119,7 +124,7 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
       const cleanedPreleveur = emptyStringToNull(filteredPreleveur)
 
       if (!isEditing) {
-        cleanedPreleveur.notifyAccountCreation = notifyAccountCreation
+        cleanedPreleveur.notifyAccountCreation = notifyAccountCreation && Boolean(cleanedPreleveur.email)
       }
 
       let response
@@ -151,7 +156,30 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
       <div className='flex flex-col gap-4'>
         <SegmentedControl
           className='mb-4'
-          legend='Type de déclarant'
+          legend='Rôle du déclarant'
+          segments={[
+            {
+              iconId: 'ri-drop-line',
+              label: 'Préleveur',
+              nativeInputProps: {
+                checked: preleveur.declarantRole === 'PRELEVEUR',
+                onChange: () => setPreleveur(prev => ({...prev, declarantRole: 'PRELEVEUR'}))
+              }
+            },
+            {
+              iconId: 'ri-group-line',
+              label: 'Collecteur',
+              nativeInputProps: {
+                checked: preleveur.declarantRole === 'COLLECTEUR',
+                onChange: () => setPreleveur(prev => ({...prev, declarantRole: 'COLLECTEUR'}))
+              }
+            }
+          ]}
+        />
+
+        <SegmentedControl
+          className='mb-4'
+          legend='Type de personne'
           segments={[
             {
               iconId: PRELEVEUR_TYPE_ICONS.physique,
@@ -175,11 +203,13 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
           <PreleveurPhysiqueForm
             preleveur={preleveur}
             setPreleveur={setPreleveur}
+            emailRequired={emailRequired}
           />
         ) : (
           <PreleveurMoralForm
             preleveur={preleveur}
             setPreleveur={setPreleveur}
+            emailRequired={emailRequired}
           />
         )}
 
@@ -188,6 +218,7 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
             control={(
               <Checkbox
                 checked={notifyAccountCreation}
+                disabled={!preleveur.email}
                 onChange={event => setNotifyAccountCreation(event.target.checked)}
               />
             )}

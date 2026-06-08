@@ -10,7 +10,7 @@ import OptionalPreleveurFieldsForm from './optional-preleveur-fields-form.js'
 
 import AccordionCentered from '@/components/ui/AccordionCentered/index.js'
 
-const PreleveurPhysiqueForm = ({preleveur, setPreleveur}) => {
+const PreleveurPhysiqueForm = ({preleveur, setPreleveur, emailRequired = false}) => {
   const [isExpanded, setIsExpanded] = useState(false)
 
   useEffect(() => {
@@ -57,7 +57,8 @@ const PreleveurPhysiqueForm = ({preleveur, setPreleveur}) => {
         />
       </div>
       <Input
-        label='Adresse e-mail *'
+        label={`Adresse e-mail${emailRequired ? ' *' : ''}`}
+        hintText={emailRequired ? 'Obligatoire pour permettre la connexion ou l’envoi de notification.' : 'Facultative pour un préleveur non déclarant.'}
         nativeInputProps={{
           defaultValue: preleveur?.email || '',
           placeholder: 'Entrez l’adresse e-mail de contact',

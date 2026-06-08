@@ -5,9 +5,17 @@ export const dynamic = 'force-dynamic'
 
 const NouvelleDeclarationPage = async () => {
   const result = await getAllowedDeclarationTypesAction()
-  const allowedDeclarationTypes = result?.success ? result.data?.data ?? [] : []
+  const response = result?.success ? result.data : null
+  const allowedDeclarationTypes = response?.data ?? []
+  const meta = response?.meta ?? {}
 
-  return <NewDeclarationForm allowedDeclarationTypes={allowedDeclarationTypes} />
+  return (
+    <NewDeclarationForm
+      allowedDeclarationTypes={allowedDeclarationTypes}
+      availablePreleveurs={meta.preleveurs ?? []}
+      declarantRole={meta.declarantRole}
+    />
+  )
 }
 
 export default NouvelleDeclarationPage

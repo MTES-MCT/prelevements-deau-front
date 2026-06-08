@@ -20,6 +20,8 @@ import {getPointsPrelevementBatchAction} from '@/server/actions/points-preleveme
 import {formatNumber} from '@/utils/number.js'
 import {getPointPrelevementName} from '@/utils/point-prelevement.js'
 
+const getDeclarantId = declarant => declarant?.userId || declarant?.id || declarant?.user?.id
+
 const DeclarationDetails = ({
   declaration,
   idPoints,
@@ -133,21 +135,29 @@ const DeclarationDetails = ({
   ])
 
   const {totalWaterVolumeWithdrawn, totalWaterVolumeDischarged} = declaration?.source?.metadata ?? {}
+  const declarantId = getDeclarantId(declaration.declarant)
+  const createdByDeclarantId = getDeclarantId(declaration.createdByDeclarant)
+  const hasSeparateDepositor = declaration.createdByDeclarant && createdByDeclarantId !== declarantId
 
   return (
     <Box className='flex flex-col gap-2 mb-4'>
       <DeclarationInfos
-        numeroArreteAot={declaration.aotDecreeNumber}
+        aotDecreeNumber={declaration.aotDecreeNumber}
         type={declaration.type}
         declarationType={declaration.declarationType}
         dataSourceType={declaration.dataSourceType ?? 'SPREADSHEET'}
         comment={declaration.comment}
         files={declaration.files}
+        declarant={declaration.declarant}
+        createdByDeclarant={declaration.createdByDeclarant}
       />
 
       <div className='flex flex-wrap gap-2'>
         {declaration.declarant && (
           <DeclarantDetails declarant={declaration.declarant} />
+        )}
+        {hasSeparateDepositor && (
+          <DeclarantDetails declarant={declaration.createdByDeclarant} />
         )}
       </div>
 

@@ -14,6 +14,11 @@ const ROLE_LABELS = {
   ADMIN: 'Administrateur'
 }
 
+const DECLARANT_ROLE_LABELS = {
+  PRELEVEUR: 'Préleveur',
+  COLLECTEUR: 'Collecteur'
+}
+
 const ROLE_COLORS = {
   DECLARANT: 'var(--artwork-decorative-blue-france)',
   INSTRUCTOR: 'var(--artwork-decorative-purple-glycine)',
@@ -28,6 +33,15 @@ const NAV_ITEMS = [
     },
     text: 'Mes déclarations',
     roles: ['DECLARANT']
+  },
+  {
+    linkProps: {
+      href: '/preleveurs',
+      target: '_self'
+    },
+    text: 'Préleveurs',
+    roles: ['DECLARANT'],
+    declarantRoles: ['COLLECTEUR']
   },
   {
     linkProps: {
@@ -123,11 +137,15 @@ const HeaderComponent = () => {
     }
 
     const navigation = NAV_ITEMS.filter(item => {
-      if (!item.roles) {
-        return true
+      if (item.roles && !item.roles.includes(user?.role)) {
+        return false
       }
 
-      return item.roles.includes(user?.role)
+      if (item.declarantRoles && !item.declarantRoles.includes(user?.declarantRole)) {
+        return false
+      }
+
+      return true
     })
 
     return navigation.map(item => {
@@ -159,10 +177,10 @@ const HeaderComponent = () => {
     }
 
     const items = []
-
-    // User name with role badge (non-interactive element)
-    const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim()
-    const roleLabel = user.role ? ROLE_LABELS[user.role] : null
+    const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.socialReason
+    const roleLabel = user.declarantRole
+      ? DECLARANT_ROLE_LABELS[user.declarantRole]
+      : (user.role ? ROLE_LABELS[user.role] : null)
     const roleColor = user.role ? ROLE_COLORS[user.role] : null
 
     if (userName) {
@@ -185,7 +203,6 @@ const HeaderComponent = () => {
       )
     }
 
-    // Mon compte button
     items.push({
       iconId: 'ri-account-circle-fill',
       text: 'Mon compte',

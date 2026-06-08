@@ -7,12 +7,14 @@ import {
   TableRowsOutlined,
   FactoryOutlined,
   WaterDropOutlined,
-  CalendarTodayOutlined
+  CalendarTodayOutlined,
+  PersonOutlined
 } from '@mui/icons-material'
 import moment from 'moment'
 import Link from 'next/link'
 
 import ListItem from '@/components/ui/ListItem/index.js'
+import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
 import {getDeclarationTypeLabel} from '@/lib/declaration-types.js'
 import {getSourcePeriodLabel, sourceStateLabels} from '@/lib/declaration.js'
 import {formatNumber} from '@/utils/number.js'
@@ -65,6 +67,13 @@ const typeDonnees = typeDonnees => {
   return typeDonnees
 }
 
+function actorsAreDifferent(dossier) {
+  const declarantId = dossier.declarant?.userId || dossier.declarant?.id || dossier.declarantUserId
+  const createdById = dossier.createdByDeclarant?.userId || dossier.createdByDeclarant?.id || dossier.createdByDeclarantUserId
+
+  return declarantId && createdById && declarantId !== createdById
+}
+
 const metas = dossier => {
   const dateDepot = dossier.createdAt ? moment(dossier.createdAt).format('LL') : 'Non renseigné'
   const periodLabel = getSourcePeriodLabel(dossier?.source)
@@ -88,6 +97,20 @@ const metas = dossier => {
       content: typeDonnees(dossier.dataSourceType)
     }
   ]
+
+  if (dossier.declarant) {
+    metas.push({
+      icon: PersonOutlined,
+      content: `Préleveur : ${getDeclarantTitleFromDeclarant(dossier.declarant)}`
+    })
+  }
+
+  if (actorsAreDifferent(dossier)) {
+    metas.push({
+      icon: PersonOutlined,
+      content: `Déposée par : ${getDeclarantTitleFromDeclarant(dossier.createdByDeclarant)}`
+    })
+  }
 
   if (dossier.source?.metadata?.totalWaterVolumeWithdrawn) {
     metas.push({

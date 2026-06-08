@@ -10,8 +10,20 @@ export function getDeclarantsURL() {
   return '/declarants'
 }
 
+export function getDeclarantId(declarant) {
+  return declarant?.userId || declarant?.id || declarant?.user?.id
+}
+
 export function getDeclarantURL(declarant) {
-  return `/declarants/${declarant.userId}`
+  return `/declarants/${getDeclarantId(declarant)}`
+}
+
+export function getPreleveursURL() {
+  return '/preleveurs'
+}
+
+export function getPreleveurURL(declarant) {
+  return `/preleveurs/${getDeclarantId(declarant)}`
 }
 
 export function getPointsPrelevementURL() {

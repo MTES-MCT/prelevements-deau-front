@@ -33,7 +33,7 @@ const Page = async ({params}) => {
           periodLabel={periodLabel}
         />
 
-        <div className='fr-mt-4w fr-mb-6w'>
+        <div className='fr-container fr-mt-4w fr-mb-6w'>
           <Alert
             severity='info'
             title='Traitement en cours'
@@ -41,12 +41,14 @@ const Page = async ({params}) => {
           />
 
           <DeclarationInfos
-            numeroArreteAot={declaration.aotDecreeNumber}
+            aotDecreeNumber={declaration.aotDecreeNumber}
             type={declaration.type}
             declarationType={declaration.declarationType}
             dataSourceType={declaration.dataSourceType ?? 'SPREADSHEET'}
             comment={declaration.comment}
             files={declaration.files}
+            declarant={declaration.declarant}
+            createdByDeclarant={declaration.createdByDeclarant}
           />
         </div>
       </>
@@ -64,12 +66,14 @@ const Page = async ({params}) => {
         periodLabel={periodLabel}
       />
 
-      <DeclarationDetails
-        declaration={declaration}
-        idPoints={idPoints}
-        source={source}
-        isInstructor={false}
-      />
+      <div className='fr-container'>
+        <DeclarationDetails
+          declaration={declaration}
+          idPoints={idPoints}
+          source={source}
+          isInstructor={false}
+        />
+      </div>
     </>
   )
 }
