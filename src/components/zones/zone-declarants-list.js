@@ -8,9 +8,12 @@ import ListItem from '@/components/ui/ListItem/index.js'
 import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
 import {
   ZonePagination,
-  ZoneResourceToolbar
+  ZoneResourceToolbar,
+  ZONE_COLLECTEUR_FILTERS,
+  ZONE_DECLARANT_FILTERS
 } from '@/components/zones/zone-list-tools.js'
 import {
+  getDeclarantRoleLabel,
   getDeclarantTitleFromUser,
   isDeclarantPhysique
 } from '@/lib/declarants.js'
@@ -20,12 +23,51 @@ function pluralize(count, singular, plural = `${singular}s`) {
 }
 
 function getDeclarantIcon(declarant) {
+  if (declarant.declarantRole === 'COLLECTEUR' || declarant.declarant?.declarantRole === 'COLLECTEUR') {
+    return ZONE_ICONS.team
+  }
+
   return isDeclarantPhysique(declarant)
     ? ZONE_ICONS.user
     : ZONE_ICONS.building
 }
 
+function getDeclarantId(declarant) {
+  return declarant.id || declarant.userId || declarant.user?.id
+}
+
+function getDeclarantRole(declarant) {
+  return declarant.declarantRole || declarant.declarant?.declarantRole || 'PRELEVEUR'
+}
+
+function getDistinctPreleveursFromCollecteur(declarant) {
+  const byId = new Map()
+
+  for (const link of declarant.collecteurExploitations ?? []) {
+    if (link.preleveurUserId) {
+      byId.set(link.preleveurUserId, link.preleveurLabel)
+    }
+  }
+
+  return [...byId.values()].filter(Boolean)
+}
+
 function getDeclarantSubtitle(declarant) {
+  const role = getDeclarantRole(declarant)
+
+  if (role === 'COLLECTEUR') {
+    const links = declarant.collecteurExploitations || []
+    const preleveurs = getDistinctPreleveursFromCollecteur(declarant)
+    const preleveurPreview = preleveurs.slice(0, 3).join(', ')
+    const suffix = preleveurs.length > 3 ? `, +${preleveurs.length - 3}` : ''
+
+    if (links.length === 0) {
+      return 'Aucune exploitation accessible dans cette zone'
+    }
+
+    return `${pluralize(links.length, 'exploitation accessible', 'exploitations accessibles')} — ${preleveurPreview}${suffix}`
+  }
+
   const points = declarant.points || []
   const count = points.length
   const names = points.slice(0, 3).map(point => point.name).join(', ')
@@ -38,21 +80,50 @@ function getDeclarantSubtitle(declarant) {
   return `${pluralize(count, 'point')} dans la zone — ${names}${suffix}`
 }
 
-function getDeclarantId(declarant) {
-  return declarant.id || declarant.userId || declarant.user?.id
+function getDeclarantMetas(declarant) {
+  const role = getDeclarantRole(declarant)
+
+  if (role === 'COLLECTEUR') {
+    const links = declarant.collecteurExploitations || []
+    const preleveurs = getDistinctPreleveursFromCollecteur(declarant)
+
+    return [
+      {iconId: ZONE_ICONS.briefcase, content: pluralize(links.length, 'exploitation accessible', 'exploitations accessibles')},
+      {iconId: ZONE_ICONS.user, content: pluralize(preleveurs.length, 'préleveur')},
+      declarant.email && {iconId: ZONE_ICONS.at, content: declarant.email},
+      declarant.phoneNumber && {iconId: ZONE_ICONS.phone, content: declarant.phoneNumber},
+      declarant.city && {iconId: ZONE_ICONS.mapPin, content: declarant.city}
+    ].filter(Boolean)
+  }
+
+  const pointsCount = declarant.points?.length || 0
+  const collectorLinks = (declarant.points || []).flatMap(point => point.collecteurs || [])
+  const collectorIds = new Set(collectorLinks.map(link => link.collecteurUserId || link.collecteur?.userId).filter(Boolean))
+
+  return [
+    {iconId: ZONE_ICONS.water, content: pluralize(pointsCount, 'point')},
+    collectorIds.size > 0 && {iconId: ZONE_ICONS.team, content: pluralize(collectorIds.size, 'collecteur')},
+    declarant.email && {iconId: ZONE_ICONS.at, content: declarant.email},
+    !declarant.email && {iconId: ZONE_ICONS.at, content: 'Sans email'},
+    declarant.phoneNumber && {iconId: ZONE_ICONS.phone, content: declarant.phoneNumber},
+    declarant.city && {iconId: ZONE_ICONS.mapPin, content: declarant.city}
+  ].filter(Boolean)
 }
 
-const ZoneDeclarantsList = ({zone, declarants, meta}) => {
+const ZoneDeclarantsList = ({zone, declarants, meta, collecteursOnly = false}) => {
+  const itemLabel = collecteursOnly ? 'collecteur' : 'déclarant'
+  const itemPlural = collecteursOnly ? 'collecteurs' : 'déclarants'
   const hasNoDeclarantInZone = (meta?.totalAll ?? declarants.length) === 0
   const hasNoResult = !hasNoDeclarantInZone && declarants.length === 0
+  const emptyTitle = collecteursOnly
+    ? 'Aucun collecteur n’est autorisé sur cette zone pour le moment.'
+    : 'Aucun déclarant n’est rattaché à cette zone pour le moment.'
 
   if (hasNoDeclarantInZone) {
     return (
       <div className='flex flex-col gap-3'>
-        <Alert severity='info'>
-          Aucun déclarant n’est rattaché à cette zone pour le moment.
-        </Alert>
-        {zone.isAdmin && (
+        <Alert severity='info'>{emptyTitle}</Alert>
+        {zone.isAdmin && !collecteursOnly && (
           <div className='flex flex-col md:flex-row gap-3 md:items-center md:justify-between'>
             <p className='fr-text--sm fr-mb-0'>
               Créer un déclarant ne le rattache pas automatiquement à la zone. Pour le rattacher, créez ensuite une exploitation sur un point de cette zone.
@@ -69,32 +140,33 @@ const ZoneDeclarantsList = ({zone, declarants, meta}) => {
   return (
     <div className='flex flex-col gap-4'>
       <ZoneResourceToolbar
-        action={zone.isAdmin && (
+        action={zone.isAdmin && !collecteursOnly && (
           <div className='flex flex-col md:items-end gap-2'>
             <Button iconId={ZONE_ICONS.addUser} linkProps={{href: `/declarants/new?zoneId=${zone.id}`}}>
               Créer un déclarant
             </Button>
             <p className='fr-text--xs fr-mb-0 max-w-sm md:text-right'>
-              Le déclarant sera global. Il apparaîtra dans cette zone après création d’une exploitation sur un point de la zone.
+              Un collecteur apparaît ici après association à une exploitation de la zone.
             </p>
           </div>
         )}
-        itemLabel='déclarant'
-        itemPlural='déclarants'
+        filters={collecteursOnly ? ZONE_COLLECTEUR_FILTERS : ZONE_DECLARANT_FILTERS}
+        itemLabel={itemLabel}
+        itemPlural={itemPlural}
         meta={meta}
-        searchLabel='Rechercher un déclarant'
-        searchPlaceholder='Nom, raison sociale, email, ville, point…'
+        searchLabel={`Rechercher un ${itemLabel}`}
+        searchPlaceholder={collecteursOnly ? 'Nom, raison sociale, email, préleveur, point…' : 'Nom, raison sociale, email, ville, point…'}
       />
 
       {hasNoResult && (
         <Alert severity='info'>
-          Aucun déclarant ne correspond à cette recherche.
+          Aucun {itemLabel} ne correspond à cette recherche ou à ces filtres.
         </Alert>
       )}
 
       {declarants.map((declarant, index) => {
         const declarantId = getDeclarantId(declarant)
-        const pointsCount = declarant.points?.length || 0
+        const role = getDeclarantRole(declarant)
 
         return (
           <Box key={declarantId} className='flex flex-col md:flex-row gap-2 md:items-stretch'>
@@ -111,25 +183,19 @@ const ZoneDeclarantsList = ({zone, declarants, meta}) => {
                 subtitle={getDeclarantSubtitle(declarant)}
                 tags={[
                   {
+                    label: getDeclarantRoleLabel(role),
+                    severity: role === 'COLLECTEUR' ? 'info' : 'success'
+                  },
+                  role === 'PRELEVEUR' && {
                     label: isDeclarantPhysique(declarant) ? 'Personne physique' : 'Personne morale',
                     severity: 'info'
-                  }
-                ]}
-                metas={[
-                  {iconId: ZONE_ICONS.water, content: pluralize(pointsCount, 'point')},
-                  declarant.email && {
-                    iconId: ZONE_ICONS.at,
-                    content: declarant.email
                   },
-                  declarant.phoneNumber && {
-                    iconId: ZONE_ICONS.phone,
-                    content: declarant.phoneNumber
-                  },
-                  declarant.city && {
-                    iconId: ZONE_ICONS.mapPin,
-                    content: declarant.city
+                  !declarant.email && {
+                    label: 'Sans email',
+                    severity: 'warning'
                   }
                 ].filter(Boolean)}
+                metas={getDeclarantMetas(declarant)}
               />
             </Link>
 
@@ -137,7 +203,7 @@ const ZoneDeclarantsList = ({zone, declarants, meta}) => {
               <Button priority='tertiary no outline' size='small' linkProps={{href: `/declarants/${declarantId}`}}>
                 Ouvrir
               </Button>
-              {zone.isAdmin && (
+              {zone.isAdmin && role === 'PRELEVEUR' && (
                 <Button
                   priority='tertiary no outline'
                   size='small'

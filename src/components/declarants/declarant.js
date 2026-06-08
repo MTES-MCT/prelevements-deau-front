@@ -4,11 +4,19 @@ import Link from 'next/link'
 import ListItem from '@/components/ui/ListItem/index.js'
 import {getDeclarantTitleFromUser, getDeclarantTypeIcon, getDeclarantRoleLabel} from '@/lib/declarants.js'
 
+function pluralize(count, singular, plural = `${singular}s`) {
+  return `${count} ${count > 1 ? plural : singular}`
+}
+
 const Declarant = ({declarant, index, basePath = '/declarants'}) => {
   const directExploitationsCount = declarant.declarant?._count?.pointPrelevements ?? 0
   const collectorRightsCount = declarant.declarant?._count?.collecteurExploitations ?? declarant.declarant?.collecteurExploitations?.length ?? 0
-  const isCollecteur = declarant.declarant?.declarantRole === 'COLLECTEUR'
+  const role = declarant.declarant?.declarantRole || declarant.declarantRole || 'PRELEVEUR'
+  const isCollecteur = role === 'COLLECTEUR'
   const count = isCollecteur ? collectorRightsCount : directExploitationsCount
+  const countLabel = isCollecteur
+    ? pluralize(count, 'exploitation accessible', 'exploitations accessibles')
+    : pluralize(count, 'exploitation')
 
   return (
     <Link href={`${basePath}/${declarant.id}`}>
@@ -23,9 +31,18 @@ const Declarant = ({declarant, index, basePath = '/declarants'}) => {
           <span>{ getDeclarantTitleFromUser(declarant) } </span>
         </>}
         subtitle={<>
-          <span className='font-bold mr-1'>{count}</span> {count > 1 ? 'exploitations' : 'exploitation'}
+          <span className='font-bold mr-1'>{count}</span> {countLabel.replace(/^\d+\s*/, '')}
         </>}
-        tags={[{label: getDeclarantRoleLabel(declarant.declarant?.declarantRole), severity: isCollecteur ? 'info' : 'success'}]}
+        tags={[
+          {label: getDeclarantRoleLabel(role), severity: isCollecteur ? 'info' : 'success'},
+          !declarant.email && {label: 'Sans email', severity: 'warning'}
+        ].filter(Boolean)}
+        metas={[
+          declarant.email && {iconId: 'ri-at-line', content: declarant.email},
+          isCollecteur
+            ? {iconId: 'ri-shield-user-line', content: countLabel}
+            : {iconId: 'ri-map-pin-user-line', content: countLabel}
+        ].filter(Boolean)}
       />
     </Link>
   )

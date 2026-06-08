@@ -7,11 +7,23 @@ import {
   withErrorHandling
 } from '@/server/api-wrapper.js'
 
+const LIST_FILTER_KEYS = [
+  'declarantRole',
+  'role',
+  'status',
+  'usage',
+  'collecteur',
+  'collector',
+  'email',
+  'emailStatus'
+]
+
 function revalidateZonePaths(zoneId) {
   revalidatePath('/zones')
   revalidatePath(`/zones/${zoneId}`)
   revalidatePath(`/zones/${zoneId}/agents`)
   revalidatePath(`/zones/${zoneId}/declarants`)
+  revalidatePath(`/zones/${zoneId}/collecteurs`)
   revalidatePath(`/zones/${zoneId}/points-prelevement`)
   revalidatePath(`/zones/${zoneId}/exploitations`)
 }
@@ -49,6 +61,12 @@ function buildListSearch(options = {}) {
 
   if (options.search) {
     searchParams.set('search', String(options.search))
+  }
+
+  for (const key of LIST_FILTER_KEYS) {
+    if (options[key]) {
+      searchParams.set(key, String(options[key]))
+    }
   }
 
   const search = searchParams.toString()
@@ -102,6 +120,10 @@ export async function getZoneGeometryAction(zoneId) {
 
 export async function getZoneDeclarantsAction(zoneId, options = {}) {
   return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/declarants${buildListSearch(options)}`))
+}
+
+export async function getZoneCollecteursAction(zoneId, options = {}) {
+  return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/collecteurs${buildListSearch(options)}`))
 }
 
 export async function getZoneInstructorsAction(zoneId) {
@@ -263,6 +285,10 @@ export async function updateZoneExploitationAction(zoneId, exploitationId, paylo
 
     if (payload.pointPrelevementId) {
       revalidatePath(`/points-prelevement/${payload.pointPrelevementId}`)
+    }
+
+    for (const collecteurUserId of payload.collecteurUserIds ?? []) {
+      revalidatePath(`/declarants/${collecteurUserId}`)
     }
 
     return result

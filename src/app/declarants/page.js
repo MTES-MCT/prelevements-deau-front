@@ -17,16 +17,19 @@ const Page = async () => {
       <StartDsfrOnHydration />
 
       <Box className='flex flex-col fr-container h-full w-full'>
-        <div className='flex justify-between items-end'>
-          <Typography variant='h4' className='fr-pt-3w'>Déclarants</Typography>
+        <div className='flex flex-col md:flex-row md:justify-between md:items-end gap-3'>
+          <div>
+            <Typography variant='h4' className='fr-pt-3w'>Déclarants</Typography>
+            <p className='fr-text--sm fr-mb-0'>
+              Retrouvez les préleveurs et les collecteurs. Les préleveurs peuvent être sans email ; les collecteurs doivent avoir un compte connecté.
+            </p>
+          </div>
           <RequireEditor>
             <Button
               priority='secondary'
               iconId='fr-icon-add-line'
               size='small'
-              linkProps={{
-                href: '/declarants/new'
-              }}
+              linkProps={{href: '/declarants/new'}}
               title='Ajouter un nouveau déclarant'
             >
               Ajouter un nouveau déclarant

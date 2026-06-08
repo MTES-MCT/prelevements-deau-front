@@ -53,6 +53,10 @@ const ZoneHeader = ({zone, currentSection = 'overview'}) => (
         content: pluralize(zone.declarantsCount || 0, 'déclarant')
       },
       {
+        iconId: ZONE_ICONS.team,
+        content: pluralize(zone.collecteursCount || 0, 'collecteur')
+      },
+      {
         iconId: ZONE_ICONS.briefcase,
         content: pluralize(zone.exploitationsCount || 0, 'exploitation')
       },
@@ -69,6 +73,14 @@ const ZoneHeader = ({zone, currentSection = 'overview'}) => (
         priority: 'primary',
         href: `/zones/${zone.id}/points-prelevement/nouveau`,
         hidden: !zone.isAdmin || currentSection === 'add-point'
+      },
+      {
+        label: 'Créer une exploitation',
+        icon: ZONE_ICONS.briefcase,
+        alt: '',
+        priority: 'secondary',
+        href: `/zones/${zone.id}/exploitations/nouvelle`,
+        hidden: !zone.isAdmin || currentSection === 'exploitations'
       },
       {
         label: 'Ajouter un agent',

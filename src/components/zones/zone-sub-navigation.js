@@ -20,6 +20,11 @@ const ITEMS = [
     href: zone => `/zones/${zone.id}/declarants`
   },
   {
+    key: 'collecteurs',
+    label: 'Collecteurs',
+    href: zone => `/zones/${zone.id}/collecteurs`
+  },
+  {
     key: 'exploitations',
     label: 'Exploitations',
     href: zone => `/zones/${zone.id}/exploitations`

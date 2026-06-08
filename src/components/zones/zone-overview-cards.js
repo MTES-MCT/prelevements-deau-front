@@ -17,9 +17,7 @@ const ZoneOverviewCards = ({zone}) => (
         priority: 'secondary',
         iconId: ZONE_ICONS.arrowRight,
         children: 'Voir les points',
-        linkProps: {
-          href: `/zones/${zone.id}/points-prelevement`
-        }
+        linkProps: {href: `/zones/${zone.id}/points-prelevement`}
       }}
     >
       <p className='fr-text--lead fr-mb-1w'>
@@ -31,23 +29,40 @@ const ZoneOverviewCards = ({zone}) => (
     </SectionCard>
 
     <SectionCard
-      title='Déclarants'
+      title='Préleveurs'
       icon={ZONE_ICONS.user}
       editorOnly={false}
       buttonProps={{
         priority: 'secondary',
         iconId: ZONE_ICONS.arrowRight,
         children: 'Voir les déclarants',
-        linkProps: {
-          href: `/zones/${zone.id}/declarants`
-        }
+        linkProps: {href: `/zones/${zone.id}/declarants?declarantRole=PRELEVEUR`}
       }}
     >
       <p className='fr-text--lead fr-mb-1w'>
-        {pluralize(zone.declarantsCount || 0, 'déclarant')}
+        {pluralize(zone.preleveursCount ?? zone.declarantsCount ?? 0, 'préleveur')}
       </p>
       <p className='fr-text--sm fr-mb-0'>
-        Déclarants ayant au moins une exploitation sur un point de cette zone.
+        Préleveurs ayant au moins une exploitation sur un point de cette zone.
+      </p>
+    </SectionCard>
+
+    <SectionCard
+      title='Collecteurs'
+      icon={ZONE_ICONS.team}
+      editorOnly={false}
+      buttonProps={{
+        priority: 'secondary',
+        iconId: ZONE_ICONS.arrowRight,
+        children: 'Voir les collecteurs',
+        linkProps: {href: `/zones/${zone.id}/collecteurs`}
+      }}
+    >
+      <p className='fr-text--lead fr-mb-1w'>
+        {pluralize(zone.collecteursCount || 0, 'collecteur')}
+      </p>
+      <p className='fr-text--sm fr-mb-0'>
+        Collecteurs autorisés à déposer des déclarations pour des exploitations de cette zone.
       </p>
     </SectionCard>
 
@@ -59,16 +74,14 @@ const ZoneOverviewCards = ({zone}) => (
         priority: 'secondary',
         iconId: ZONE_ICONS.arrowRight,
         children: 'Voir les exploitations',
-        linkProps: {
-          href: `/zones/${zone.id}/exploitations`
-        }
+        linkProps: {href: `/zones/${zone.id}/exploitations`}
       }}
     >
       <p className='fr-text--lead fr-mb-1w'>
         {pluralize(zone.exploitationsCount || 0, 'exploitation')}
       </p>
       <p className='fr-text--sm fr-mb-0'>
-        Rattachements entre déclarants et points de prélèvement de cette zone.
+        Rattachements préleveur ↔ point de prélèvement. Les collecteurs sont gérés comme droits sur ces exploitations.
       </p>
     </SectionCard>
 
@@ -80,9 +93,7 @@ const ZoneOverviewCards = ({zone}) => (
         priority: 'secondary',
         iconId: ZONE_ICONS.arrowRight,
         children: 'Voir les agents',
-        linkProps: {
-          href: `/zones/${zone.id}/agents`
-        }
+        linkProps: {href: `/zones/${zone.id}/agents`}
       }}
     >
       <p className='fr-text--lead fr-mb-1w'>
@@ -101,14 +112,12 @@ const ZoneOverviewCards = ({zone}) => (
         buttonProps={{
           priority: 'primary',
           iconId: ZONE_ICONS.add,
-          children: 'Créer un point',
-          linkProps: {
-            href: `/zones/${zone.id}/points-prelevement/nouveau`
-          }
+          children: 'Créer une exploitation',
+          linkProps: {href: `/zones/${zone.id}/exploitations/nouvelle`}
         }}
       >
         <p className='fr-text--sm fr-mb-0'>
-          Donnez accès à un agent, créez les points de prélèvement de la zone, puis rattachez les déclarants via des exploitations.
+          Créez ou mettez à jour les exploitations, puis associez les collecteurs aux exploitations concernées.
         </p>
       </SectionCard>
     )}

@@ -1,4 +1,5 @@
 // Server Actions - Centralized exports
+// All server actions for API calls with NextAuth authentication
 export {
   getPointsPrelevementAction,
   getPointPrelevementAction,
@@ -15,7 +16,6 @@ export {
 
 export {
   getDeclarantsAction,
-  getCollecteurPreleveursAction,
   getDeclarantAction,
   createPreleveurAction,
   updatePreleveurAction,
@@ -79,6 +79,7 @@ export {
   deleteZoneInstructorAction,
   deleteZonePointPrelevementAction,
   getZoneAction,
+  getZoneCollecteursAction,
   getZoneDeclarantOptionsAction,
   getZoneDeclarantsAction,
   getZoneExploitationAction,
