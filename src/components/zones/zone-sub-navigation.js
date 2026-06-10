@@ -30,6 +30,11 @@ const ITEMS = [
     href: zone => `/zones/${zone.id}/exploitations`
   },
   {
+    key: 'suivi-declarations',
+    label: 'Suivi déclarations',
+    href: zone => `/zones/${zone.id}/suivi-declarations`
+  },
+  {
     key: 'agents',
     label: 'Agents',
     href: zone => `/zones/${zone.id}/agents`

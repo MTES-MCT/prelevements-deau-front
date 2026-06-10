@@ -7,6 +7,8 @@ import SearchBar from '@codegouvfr/react-dsfr/SearchBar'
 import {Alert, Box} from '@mui/material'
 
 import ListItem from '@/components/ui/ListItem/index.js'
+import ZoneExportButton from '@/components/zones/zone-export-button.js'
+import {ZONE_INSTRUCTORS_EXPORT_COLUMNS} from '@/components/zones/zone-export-columns.js'
 import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
 import ZoneInstructorNotificationActions from '@/components/zones/zone-instructor-notification-actions.js'
 import useDebouncedValue from '@/hook/use-debounced-value.js'
@@ -114,11 +116,21 @@ const ZoneInstructorsList = ({zone, instructors}) => {
             {debouncedQuery ? `${pluralize(filteredInstructors.length, 'résultat')} pour la recherche, ${pluralize(instructors.length, 'agent')} dans la zone` : `${pluralize(instructors.length, 'agent')} dans la zone`}
           </p>
         </div>
-        {zone.isAdmin && (
-          <Button iconId={ZONE_ICONS.addUser} linkProps={{href: `/zones/${zone.id}/agents/ajouter`}}>
-            Ajouter un agent
-          </Button>
-        )}
+
+        <div className='flex flex-wrap gap-2'>
+          <ZoneExportButton
+            columns={ZONE_INSTRUCTORS_EXPORT_COLUMNS}
+            filename={`agents-zone-${zone.code || zone.id}.xlsx`}
+            rows={filteredInstructors}
+            sheetName='Agents'
+          />
+
+          {zone.isAdmin && (
+            <Button iconId={ZONE_ICONS.addUser} linkProps={{href: `/zones/${zone.id}/agents/ajouter`}}>
+              Ajouter un agent
+            </Button>
+          )}
+        </div>
       </div>
 
       <SearchBar

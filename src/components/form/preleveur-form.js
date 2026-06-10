@@ -8,6 +8,7 @@ import {Checkbox, FormControlLabel, Typography} from '@mui/material'
 import {pick, trim} from 'lodash-es'
 import {useRouter} from 'next/navigation'
 
+import PreleveurEmailAliasesForm from './preleveur-email-aliases-form.js'
 import PreleveurMoralForm from './preleveur-moral-form.js'
 import PreleveurPhysiqueForm from './preleveur-physique-form.js'
 
@@ -45,6 +46,7 @@ function normalizeDeclarant(declarant) {
     firstName: declarant?.firstName || declarant?.user?.firstName || '',
     lastName: declarant?.lastName || declarant?.user?.lastName || '',
     email: declarant?.email || declarant?.user?.email || '',
+    emailAliases: declarant?.emailAliases || declarant?.user?.emailAliases || [],
     jobTitle: declarant?.jobTitle || '',
     socialReason: declarant?.socialReason || declarant?.declarant?.socialReason || '',
     addressLine1: declarant?.addressLine1 || '',
@@ -75,6 +77,7 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
     firstName: '',
     lastName: '',
     email: '',
+    emailAliases: [],
     jobTitle: '',
     socialReason: '',
     addressLine1: '',
@@ -199,6 +202,7 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
             }
           ]}
         />
+
         {isPreleveurPhysique ? (
           <PreleveurPhysiqueForm
             preleveur={preleveur}
@@ -210,6 +214,14 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
             preleveur={preleveur}
             setPreleveur={setPreleveur}
             emailRequired={emailRequired}
+          />
+        )}
+
+        {isEditing && (
+          <PreleveurEmailAliasesForm
+            declarantId={normalizedInitialPreleveur.id}
+            initialAliases={normalizedInitialPreleveur.emailAliases}
+            primaryEmail={preleveur.email}
           />
         )}
 

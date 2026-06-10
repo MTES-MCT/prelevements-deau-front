@@ -1,10 +1,19 @@
 'use client'
 
+import {useCallback} from 'react'
+
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Alert, Box} from '@mui/material'
 import Link from 'next/link'
 
 import ListItem from '@/components/ui/ListItem/index.js'
+import ZoneExportButton from '@/components/zones/zone-export-button.js'
+import {getZoneDeclarantExportColumns} from '@/components/zones/zone-export-columns.js'
+import {withDeclarantsEmailAliases} from '@/components/zones/zone-export-email-aliases.js'
+import {
+  resolveAllZoneCollecteurs,
+  resolveAllZoneDeclarants
+} from '@/components/zones/zone-export-resolvers.js'
 import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
 import {
   ZonePagination,
@@ -119,6 +128,14 @@ const ZoneDeclarantsList = ({zone, declarants, meta, collecteursOnly = false}) =
     ? 'Aucun collecteur n’est autorisé sur cette zone pour le moment.'
     : 'Aucun déclarant n’est rattaché à cette zone pour le moment.'
 
+  const resolveExportRows = useCallback(async () => {
+    const rows = collecteursOnly
+      ? await resolveAllZoneCollecteurs(zone.id, meta)
+      : await resolveAllZoneDeclarants(zone.id, meta)
+
+    return withDeclarantsEmailAliases(rows)
+  }, [collecteursOnly, meta, zone.id])
+
   if (hasNoDeclarantInZone) {
     return (
       <div className='flex flex-col gap-3'>
@@ -140,14 +157,29 @@ const ZoneDeclarantsList = ({zone, declarants, meta, collecteursOnly = false}) =
   return (
     <div className='flex flex-col gap-4'>
       <ZoneResourceToolbar
-        action={zone.isAdmin && !collecteursOnly && (
+        action={(
           <div className='flex flex-col md:items-end gap-2'>
-            <Button iconId={ZONE_ICONS.addUser} linkProps={{href: `/declarants/new?zoneId=${zone.id}`}}>
-              Créer un déclarant
-            </Button>
-            <p className='fr-text--xs fr-mb-0 max-w-sm md:text-right'>
-              Un collecteur apparaît ici après association à une exploitation de la zone.
-            </p>
+            <div className='flex flex-wrap gap-2 justify-end'>
+              <ZoneExportButton
+                columns={getZoneDeclarantExportColumns({collecteursOnly})}
+                filename={`${collecteursOnly ? 'collecteurs' : 'declarants'}-zone-${zone.code || zone.id}.xlsx`}
+                resolveRows={resolveExportRows}
+                rows={declarants}
+                sheetName={collecteursOnly ? 'Collecteurs' : 'Déclarants'}
+              />
+
+              {zone.isAdmin && !collecteursOnly && (
+                <Button iconId={ZONE_ICONS.addUser} linkProps={{href: `/declarants/new?zoneId=${zone.id}`}}>
+                  Créer un déclarant
+                </Button>
+              )}
+            </div>
+
+            {zone.isAdmin && !collecteursOnly && (
+              <p className='fr-text--xs fr-mb-0 max-w-sm md:text-right'>
+                Un collecteur apparaît ici après association à une exploitation de la zone.
+              </p>
+            )}
           </div>
         )}
         filters={collecteursOnly ? ZONE_COLLECTEUR_FILTERS : ZONE_DECLARANT_FILTERS}

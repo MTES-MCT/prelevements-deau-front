@@ -4,7 +4,10 @@ import {notFound} from 'next/navigation'
 import PreleveurDeleteSection from '@/components/form/preleveur-delete-section.js'
 import PreleveurForm from '@/components/form/preleveur-form.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {getDeclarantAction} from '@/server/actions/index.js'
+import {
+  getDeclarantAction,
+  listDeclarantEmailAliasesAction
+} from '@/server/actions/index.js'
 
 const DynamicBreadcrumb = dynamic(
   () => import('@codegouvfr/react-dsfr/Breadcrumb')
@@ -18,7 +21,15 @@ const Page = async ({params}) => {
     notFound()
   }
 
-  const preleveur = preleveurResult.data
+  const emailAliasesResult = await listDeclarantEmailAliasesAction(id)
+
+  const preleveur = {
+    ...preleveurResult.data,
+    emailAliases: emailAliasesResult.success
+      ? emailAliasesResult.data?.emailAliases ?? []
+      : []
+  }
+
   if (!preleveur.right?.canEdit) {
     notFound()
   }

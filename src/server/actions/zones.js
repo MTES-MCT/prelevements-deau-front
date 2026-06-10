@@ -24,6 +24,7 @@ function revalidateZonePaths(zoneId) {
   revalidatePath(`/zones/${zoneId}/agents`)
   revalidatePath(`/zones/${zoneId}/declarants`)
   revalidatePath(`/zones/${zoneId}/collecteurs`)
+  revalidatePath(`/zones/${zoneId}/suivi-declarations`)
   revalidatePath(`/zones/${zoneId}/points-prelevement`)
   revalidatePath(`/zones/${zoneId}/exploitations`)
 }
@@ -67,6 +68,21 @@ function buildListSearch(options = {}) {
     if (options[key]) {
       searchParams.set(key, String(options[key]))
     }
+  }
+
+  const search = searchParams.toString()
+  return search ? `?${search}` : ''
+}
+
+function buildMatrixSearch(options = {}) {
+  const searchParams = new URLSearchParams()
+
+  if (options.months) {
+    searchParams.set('months', String(options.months))
+  }
+
+  if (options.to) {
+    searchParams.set('to', String(options.to))
   }
 
   const search = searchParams.toString()
@@ -124,6 +140,10 @@ export async function getZoneDeclarantsAction(zoneId, options = {}) {
 
 export async function getZoneCollecteursAction(zoneId, options = {}) {
   return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/collecteurs${buildListSearch(options)}`))
+}
+
+export async function getZoneDeclarationMonthlyStatusAction(zoneId, options = {}) {
+  return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/suivi-declarations${buildMatrixSearch(options)}`))
 }
 
 export async function getZoneInstructorsAction(zoneId) {
@@ -264,6 +284,10 @@ export async function createZoneExploitationAction(zoneId, payload) {
 
     if (payload.pointPrelevementId) {
       revalidatePath(`/points-prelevement/${payload.pointPrelevementId}`)
+    }
+
+    for (const collecteurUserId of payload.collecteurUserIds ?? []) {
+      revalidatePath(`/declarants/${collecteurUserId}`)
     }
 
     return result

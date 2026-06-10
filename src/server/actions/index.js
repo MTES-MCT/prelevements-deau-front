@@ -22,7 +22,10 @@ export {
   sendDeclarantAccountCreationNotificationAction,
   deletePreleveurAction,
   getPointsFromPreleveurAction,
-  getExploitationFromPreleveurAction
+  getExploitationFromPreleveurAction,
+  listDeclarantEmailAliasesAction,
+  createDeclarantEmailAliasAction,
+  deleteDeclarantEmailAliasAction
 } from './declarants.js'
 
 export {

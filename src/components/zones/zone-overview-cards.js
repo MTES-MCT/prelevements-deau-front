@@ -86,6 +86,25 @@ const ZoneOverviewCards = ({zone}) => (
     </SectionCard>
 
     <SectionCard
+      title='Suivi mensuel des déclarations'
+      icon={ZONE_ICONS.table}
+      editorOnly={false}
+      buttonProps={{
+        priority: 'secondary',
+        iconId: ZONE_ICONS.arrowRight,
+        children: 'Voir la matrice',
+        linkProps: {href: `/zones/${zone.id}/suivi-declarations`}
+      }}
+    >
+      <p className='fr-text--lead fr-mb-1w'>
+        Vue synthétique
+      </p>
+      <p className='fr-text--sm fr-mb-0'>
+        Une matrice compacte affiche mois par mois les déclarations déposées pour chaque exploitation de la zone.
+      </p>
+    </SectionCard>
+
+    <SectionCard
       title='Agents'
       icon={ZONE_ICONS.team}
       editorOnly={false}

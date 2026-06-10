@@ -40,6 +40,7 @@ export async function updatePreleveurAction(idPreleveur, payload) {
     revalidatePath('/declarants')
     revalidatePath('/preleveurs')
     revalidatePath(`/declarants/${idPreleveur}`)
+    revalidatePath(`/declarants/${idPreleveur}/edit`)
     revalidatePath(`/preleveurs/${idPreleveur}`)
     return result
   })
@@ -94,6 +95,41 @@ export async function sendDeclarationReminderAction(declarantId) {
       method: 'POST'
     })
     revalidatePath(`/declarants/${declarantId}`)
+    return result
+  })
+}
+
+export async function listDeclarantEmailAliasesAction(declarantId) {
+  return withErrorHandling(async () => fetchJSON(`api/declarants/${declarantId}/email-aliases`))
+}
+
+export async function createDeclarantEmailAliasAction(declarantId, email) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(`api/declarants/${declarantId}/email-aliases`, {
+      method: 'POST',
+      body: {email}
+    })
+
+    revalidatePath('/declarants')
+    revalidatePath('/mon-compte')
+    revalidatePath(`/declarants/${declarantId}`)
+    revalidatePath(`/declarants/${declarantId}/edit`)
+
+    return result
+  })
+}
+
+export async function deleteDeclarantEmailAliasAction(declarantId, emailAliasId) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(`api/declarants/${declarantId}/email-aliases/${emailAliasId}`, {
+      method: 'DELETE'
+    })
+
+    revalidatePath('/declarants')
+    revalidatePath('/mon-compte')
+    revalidatePath(`/declarants/${declarantId}`)
+    revalidatePath(`/declarants/${declarantId}/edit`)
+
     return result
   })
 }

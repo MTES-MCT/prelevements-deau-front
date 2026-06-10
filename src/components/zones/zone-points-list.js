@@ -8,6 +8,9 @@ import Link from 'next/link'
 import {useRouter} from 'next/navigation'
 
 import ListItem from '@/components/ui/ListItem/index.js'
+import ZoneExportButton from '@/components/zones/zone-export-button.js'
+import {ZONE_POINTS_EXPORT_COLUMNS} from '@/components/zones/zone-export-columns.js'
+import {resolveAllZonePoints} from '@/components/zones/zone-export-resolvers.js'
 import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
 import {
   ZonePagination,
@@ -78,10 +81,22 @@ const ZonePointsList = ({zone, points, meta}) => {
       {error && <Alert severity='error'>{error}</Alert>}
 
       <ZoneResourceToolbar
-        action={zone.isAdmin && (
-          <Button iconId={ZONE_ICONS.add} linkProps={{href: `/zones/${zone.id}/points-prelevement/nouveau`}}>
-            Créer un point
-          </Button>
+        action={(
+          <div className='flex flex-wrap gap-2 justify-end'>
+            <ZoneExportButton
+              columns={ZONE_POINTS_EXPORT_COLUMNS}
+              filename={`points-prelevement-zone-${zone.code || zone.id}.xlsx`}
+              resolveRows={() => resolveAllZonePoints(zone.id, meta)}
+              rows={points}
+              sheetName='Points'
+            />
+
+            {zone.isAdmin && (
+              <Button iconId={ZONE_ICONS.add} linkProps={{href: `/zones/${zone.id}/points-prelevement/nouveau`}}>
+                Créer un point
+              </Button>
+            )}
+          </div>
         )}
         itemLabel='point'
         itemPlural='points'

@@ -7,6 +7,8 @@ import {Alert} from '@mui/material'
 import Link from 'next/link'
 
 import ListItem from '@/components/ui/ListItem/index.js'
+import ZoneExportButton from '@/components/zones/zone-export-button.js'
+import {ZONES_EXPORT_COLUMNS} from '@/components/zones/zone-export-columns.js'
 import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
 import useDebouncedValue from '@/hook/use-debounced-value.js'
 
@@ -115,6 +117,13 @@ const ZonesList = ({zones}) => {
               : `${pluralize(selectedZones.length, 'zone')} dans l’onglet`}
           </p>
         </div>
+
+        <ZoneExportButton
+          columns={ZONES_EXPORT_COLUMNS}
+          filename={`zones-${tab}.xlsx`}
+          rows={filteredZones}
+          sheetName='Zones'
+        />
       </div>
 
       <div className='fr-input-group fr-mb-0'>
