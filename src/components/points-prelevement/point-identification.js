@@ -6,6 +6,30 @@ import {Box, Chip, Typography} from '@mui/material'
 import {getTypeMilieuColor} from '@/lib/points-prelevement.js'
 import {getPointPrelevementLabel} from '@/utils/point-prelevement.js'
 
+const waterBodyTypeLabels = {
+  SURFACE: 'Eau de surface',
+  SUPERFICIELLE: 'Eau superficielle',
+  SOUTERRAIN: 'Eau souterraine',
+  TRANSITION: 'Eau de transition'
+}
+
+const pointNatureLabels = {
+  NAPPE: 'Nappe',
+  NAPPE_ACCOMPAGNEMENT: 'Nappe d’accompagnement',
+  COURS_EAU: 'Cours d’eau',
+  SOURCE: 'Source',
+  PLAN_EAU: 'Plan d’eau'
+}
+
+const withdrawalTypeLabels = {
+  LITTORAL: 'Littoral',
+  CONTINENTAL: 'Continental',
+  SOUTERRAIN: 'Souterrain',
+  STOCKAGE: 'Stockage'
+}
+
+const formatLabel = (labels, value) => labels[value] ?? value
+
 const LinkWithIcon = ({label, href}) => (
   <Box className='flex flex-wrap gap-1'>
     <Article />
@@ -17,9 +41,61 @@ const LinkWithIcon = ({label, href}) => (
   </Box>
 )
 
+const LabelValue = ({label, value, children}) => {
+  if (!value && !children) {
+    return null
+  }
+
+  return (
+    <Box className='flex flex-wrap gap-1'>
+      <b>{label} :</b>
+      {value ? <span>{value}</span> : children}
+    </Box>
+  )
+}
+
+const formatNameEntries = names => {
+  if (!Array.isArray(names)) {
+    return null
+  }
+
+  const values = names
+    .map(name => typeof name === 'string' ? name : name?.value)
+    .filter(Boolean)
+
+  return values.length > 0 ? values.join(', ') : null
+}
+
+const IdentifierList = ({identifiers}) => {
+  if (!identifiers || typeof identifiers !== 'object' || Array.isArray(identifiers)) {
+    return null
+  }
+
+  const entries = Object.entries(identifiers).filter(([, value]) => value)
+
+  if (entries.length === 0) {
+    return null
+  }
+
+  return (
+    <Box className='flex flex-col gap-1'>
+      <b>Identifiants :</b>
+      <ul className='m-0'>
+        {entries.map(([key, value]) => (
+          <li key={key} className='ml-5'>
+            <b>{key} :</b> <span>{value}</span>
+          </li>
+        ))}
+      </ul>
+    </Box>
+  )
+}
+
 const PointIdentification = ({pointPrelevement, lienBss, lienBnpe}) => {
   const {id: idPoint} = pointPrelevement
   const pointLabel = getPointPrelevementLabel({pointPrelevement})
+  const typeMilieuColor = getTypeMilieuColor(pointPrelevement.waterBodyType)
+  const namesLabel = formatNameEntries(pointPrelevement.names)
 
   return (
     <div className='flex flex-col gap-4'>
@@ -44,19 +120,38 @@ const PointIdentification = ({pointPrelevement, lienBss, lienBnpe}) => {
         )}
       </div>
 
-      {pointPrelevement.waterBodyType && (
-        <Box className='flex items-center gap-1'>
-          <b>Type de milieu :</b>
+      <Box className='flex flex-wrap items-center gap-2'>
+        {pointPrelevement.waterBodyType && (
           <Chip
             size='small'
-            label={pointPrelevement.waterBodyType}
+            label={`Type de milieu : ${formatLabel(waterBodyTypeLabels, pointPrelevement.waterBodyType)}`}
             sx={{
-              backgroundColor: getTypeMilieuColor(pointPrelevement.waterBodyType).background,
-              color: getTypeMilieuColor(pointPrelevement.waterBodyType).textColor
+              backgroundColor: typeMilieuColor.background,
+              color: typeMilieuColor.textColor
             }}
           />
-        </Box>
-      )}
+        )}
+
+        {pointPrelevement.nature && (
+          <Chip
+            size='small'
+            label={`Nature : ${formatLabel(pointNatureLabels, pointPrelevement.nature)}`}
+          />
+        )}
+
+        {pointPrelevement.withdrawalType && (
+          <Chip
+            size='small'
+            label={`Type de prélèvement : ${formatLabel(withdrawalTypeLabels, pointPrelevement.withdrawalType)}`}
+          />
+        )}
+      </Box>
+
+      <div className='flex flex-col gap-1'>
+        <LabelValue label='Autres noms' value={pointPrelevement.otherNames} />
+        <LabelValue label='Noms structurés' value={namesLabel} />
+        <IdentifierList identifiers={pointPrelevement.identifiers} />
+      </div>
 
       <div className='flex flex-col gap-1'>
         {lienBss && (

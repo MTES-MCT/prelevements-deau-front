@@ -11,9 +11,25 @@ import OptionalPointFieldsForm from '@/components/form/optional-point-fields-for
 import AccordionCentered from '@/components/ui/AccordionCentered/index.js'
 
 const waterBodyTypes = [
+  {value: 'SUPERFICIELLE', label: 'Eau superficielle'},
   {value: 'SURFACE', label: 'Eau de surface'},
   {value: 'SOUTERRAIN', label: 'Eau souterraine'},
   {value: 'TRANSITION', label: 'Eau de transition'}
+]
+
+const pointNatures = [
+  {value: 'NAPPE', label: 'Nappe'},
+  {value: 'NAPPE_ACCOMPAGNEMENT', label: 'Nappe d’accompagnement'},
+  {value: 'COURS_EAU', label: 'Cours d’eau'},
+  {value: 'SOURCE', label: 'Source'},
+  {value: 'PLAN_EAU', label: 'Plan d’eau'}
+]
+
+const withdrawalTypes = [
+  {value: 'LITTORAL', label: 'Littoral'},
+  {value: 'CONTINENTAL', label: 'Continental'},
+  {value: 'SOUTERRAIN', label: 'Souterrain'},
+  {value: 'STOCKAGE', label: 'Stockage'}
 ]
 
 const precisionsGeom = [
@@ -61,6 +77,26 @@ const PointForm = ({
           onChange: e => setPoint(prev => ({...prev, waterBodyType: e.target.value}))
         }}
         options={waterBodyTypes}
+      />
+
+      <Select
+        label='Nature du point de prélèvement'
+        placeholder='Sélectionner la nature du point'
+        nativeSelectProps={{
+          defaultValue: point.nature || '',
+          onChange: e => setPoint(prev => ({...prev, nature: e.target.value}))
+        }}
+        options={pointNatures}
+      />
+
+      <Select
+        label='Type de prélèvement'
+        placeholder='Sélectionner le type de prélèvement'
+        nativeSelectProps={{
+          defaultValue: point.withdrawalType || '',
+          onChange: e => setPoint(prev => ({...prev, withdrawalType: e.target.value}))
+        }}
+        options={withdrawalTypes}
       />
 
       <div className='pb-5'>

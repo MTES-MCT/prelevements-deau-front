@@ -55,17 +55,37 @@ const getGeoportailUrl = coordinates => {
   return `https://www.geoportail.gouv.fr/carte?${params.toString()}`
 }
 
+const surfaceFields = [
+  {key: 'watershed', label: 'Bassin versant'},
+  {key: 'underWatershed', label: 'Sous-bassin versant'},
+  {key: 'resourceName', label: 'Ressource / cours d’eau'}
+]
+
+const groundwaterFields = [
+  {key: 'managementUnit', label: 'Unité de gestion'},
+  {key: 'managementSubUnit', label: 'Sous-unité de gestion'},
+  {key: 'aquiferName', label: 'Nappe'}
+]
+
 const codeFields = [
   {key: 'codeEUMasseDEau', label: 'Code masse d’eau (EU)'},
+  {key: 'codeSISEAUX', label: 'Code SISEAUX'},
+  {key: 'codeINSEE', label: 'Code INSEE'},
+  {key: 'codeROE', label: 'Code ROE'},
+  {key: 'codeBSS', label: 'Code BSS (Banque du Sous-Sol)'},
   {key: 'codePTP', label: 'Code point de prélèvement (PTP)'},
   {key: 'codeOPR', label: 'Code ouvrage de prélèvement (OPR)'},
   {key: 'codeBDLISA', label: 'Code BDLISA (entité hydrogéologique)'},
-  {key: 'codeBSS', label: 'Code BSS (Banque du Sous-Sol)'},
   {key: 'codeAIOT', label: 'Code AIOT'},
   {key: 'codeBDCarthage', label: 'Code BD Carthage (hydrographie)'},
   {key: 'codeBDTopage', label: 'Code BD Topage'},
-  {key: 'codeSISPEA', label: 'Code SISPEA (collectivité)'}
+  {key: 'codeSISPEA', label: 'Code SISPEA (collectivité)'},
+  {key: 'codeBNPE', label: 'Code BNPE'},
+  {key: 'codeMESO', label: 'Code MESO'},
+  {key: 'codeMEContinentalesBV', label: 'Code masse d’eau de surface continentale'}
 ]
+
+const hasAnyValue = (point, fields) => fields.some(({key}) => point[key])
 
 const PointLocalisation = ({pointPrelevement}) => {
   const coordinates = pointPrelevement.coordinates?.coordinates
@@ -93,6 +113,39 @@ const PointLocalisation = ({pointPrelevement}) => {
               </span>
             )}
           </LabelValue>
+        )}
+
+        <LabelValue label='Commune' value={pointPrelevement.communeName} />
+        <LabelValue label='Code commune' value={pointPrelevement.communeCode} />
+
+        {hasAnyValue(pointPrelevement, surfaceFields) && (
+          <li className='ml-5 list-none mt-3'>
+            <b>Eaux superficielles</b>
+            <ul>
+              {surfaceFields.map(({key, label}) => (
+                <LabelValue
+                  key={key}
+                  label={label}
+                  value={pointPrelevement[key]}
+                />
+              ))}
+            </ul>
+          </li>
+        )}
+
+        {hasAnyValue(pointPrelevement, groundwaterFields) && (
+          <li className='ml-5 list-none mt-3'>
+            <b>Eaux souterraines</b>
+            <ul>
+              {groundwaterFields.map(({key, label}) => (
+                <LabelValue
+                  key={key}
+                  label={label}
+                  value={pointPrelevement[key]}
+                />
+              ))}
+            </ul>
+          </li>
         )}
 
         {codeFields.map(({key, label}) => (

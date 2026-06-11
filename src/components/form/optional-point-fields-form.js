@@ -1,5 +1,7 @@
 'use client'
 
+import {useState} from 'react'
+
 import Input from '@codegouvfr/react-dsfr/Input'
 import {Typography} from '@mui/material'
 import dynamic from 'next/dynamic'
@@ -9,159 +11,316 @@ const DynamicCheckbox = dynamic(
   {ssr: false}
 )
 
+const TextInput = ({point, setPoint, field, label, placeholder, hintText}) => (
+  <Input
+    label={label}
+    hintText={hintText}
+    nativeInputProps={{
+      defaultValue: point?.[field] || '',
+      placeholder,
+      onChange: e => setPoint(prev => ({...prev, [field]: e.target.value}))
+    }}
+  />
+)
+
+const JsonTextarea = ({point, setPoint, field, label, hintText, defaultValue, validate}) => {
+  const [rawValue, setRawValue] = useState(JSON.stringify(point?.[field] ?? defaultValue, null, 2))
+  const [error, setError] = useState(null)
+
+  const handleChange = event => {
+    const {value} = event.target
+    setRawValue(value)
+
+    if (!value.trim()) {
+      setPoint(prev => ({...prev, [field]: defaultValue}))
+      setError(null)
+      return
+    }
+
+    try {
+      const parsed = JSON.parse(value)
+      const validationMessage = validate(parsed)
+
+      if (validationMessage) {
+        setError(validationMessage)
+        return
+      }
+
+      setPoint(prev => ({...prev, [field]: parsed}))
+      setError(null)
+    } catch {
+      setError('Le contenu doit être un JSON valide.')
+    }
+  }
+
+  return (
+    <div>
+      <Input
+        textArea
+        label={label}
+        hintText={hintText}
+        nativeTextAreaProps={{
+          value: rawValue,
+          rows: 6,
+          onChange: handleChange
+        }}
+      />
+      {error && (
+        <p className='fr-error-text fr-mt-n2w'>
+          {error}
+        </p>
+      )}
+    </div>
+  )
+}
+
+const validateNames = value => Array.isArray(value)
+  ? null
+  : 'Le champ names doit être un tableau JSON.'
+
+const validateIdentifiers = value => (
+  value && typeof value === 'object' && !Array.isArray(value)
+    ? null
+    : 'Le champ identifiers doit être un objet JSON.'
+)
+
 const OptionalPointFieldsForm = ({point, setPoint}) => (
   <div>
     <Typography variant='h5' sx={{pb: 5}}>
       Informations d’identification
     </Typography>
 
-    <Input
+    <TextInput
+      point={point}
+      setPoint={setPoint}
+      field='otherNames'
       label='Autres noms'
       hintText='Autres noms utilisés pour ce point de prélèvement dans d’autres systèmes d’information'
-      nativeInputProps={{
-        defaultValue: point?.otherNames || '',
-        placeholder: 'Entrer les autres noms, séparés par une virgule',
-        onChange: e => setPoint(prev => ({...prev, otherNames: e.target.value}))
-      }}
+      placeholder='Entrer les autres noms, séparés par une virgule'
     />
 
-    <Input
+    <JsonTextarea
+      point={point}
+      setPoint={setPoint}
+      field='names'
+      label='Noms structurés (JSON)'
+      hintText='Exemple : [{"type":"NOM_OUVRAGE_PRELEVEMENT","value":"Canal…","source":"BVTECH"}]'
+      defaultValue={[]}
+      validate={validateNames}
+    />
+
+    <JsonTextarea
+      point={point}
+      setPoint={setPoint}
+      field='identifiers'
+      label='Identifiants externes (JSON)'
+      hintText='Exemple : {"DDTM":"C66150008","AERMC":"1666150002","ASA":"39"}'
+      defaultValue={{}}
+      validate={validateIdentifiers}
+    />
+
+    <TextInput
+      point={point}
+      setPoint={setPoint}
+      field='codeBSS'
       label='Code BSS'
-      nativeInputProps={{
-        defaultValue: point?.codeBSS || '',
-        placeholder: 'Entrer le code BSS',
-        onChange: e => setPoint(prev => ({...prev, codeBSS: e.target.value}))
-      }}
+      placeholder='Entrer le code BSS'
     />
 
-    <Input
+    <TextInput
+      point={point}
+      setPoint={setPoint}
+      field='codeBNPE'
       label='Code BNPE'
-      nativeInputProps={{
-        defaultValue: point?.codeBNPE || '',
-        placeholder: 'Entrer le code BNPE',
-        onChange: e => setPoint(prev => ({...prev, codeBNPE: e.target.value}))
-      }}
+      placeholder='Entrer le code BNPE'
     />
 
-    <Input
+    <TextInput
+      point={point}
+      setPoint={setPoint}
+      field='codeAIOT'
       label='Code AIOT'
-      nativeInputProps={{
-        defaultValue: point?.codeAIOT || '',
-        placeholder: 'Entrer le code AIOT',
-        onChange: e => setPoint(prev => ({...prev, codeAIOT: e.target.value}))
-      }}
+      placeholder='Entrer le code AIOT'
     />
 
-    <Input
+    <TextInput
+      point={point}
+      setPoint={setPoint}
+      field='codeMESO'
       label='Code masse d’eau souterraine'
-      nativeInputProps={{
-        defaultValue: point?.codeMESO || '',
-        placeholder: 'Entrer le code MESO',
-        onChange: e => setPoint(prev => ({...prev, codeMESO: e.target.value}))
-      }}
+      placeholder='Entrer le code MESO'
     />
 
-    <Input
+    <TextInput
+      point={point}
+      setPoint={setPoint}
+      field='codeMEContinentalesBV'
       label='Code masse d’eau de surface continentale'
-      nativeInputProps={{
-        defaultValue: point?.codeMEContinentalesBV || '',
-        placeholder: 'Entrer le code masse d’eau continentale',
-        onChange: e => setPoint(prev => ({...prev, codeMEContinentalesBV: e.target.value}))
-      }}
+      placeholder='Entrer le code masse d’eau continentale'
     />
 
-    <Input
+    <TextInput
+      point={point}
+      setPoint={setPoint}
+      field='codeBDCarthage'
       label='Code bassin versant BD Carthage'
-      nativeInputProps={{
-        defaultValue: point?.codeBDCarthage || '',
-        placeholder: 'Entrer le code bassin versant BD Carthage',
-        onChange: e => setPoint(prev => ({...prev, codeBDCarthage: e.target.value}))
-      }}
+      placeholder='Entrer le code bassin versant BD Carthage'
     />
 
-    <Input
+    <TextInput
+      point={point}
+      setPoint={setPoint}
+      field='codeEUMasseDEau'
       label='Code EU masse d’eau'
-      nativeInputProps={{
-        defaultValue: point?.codeEUMasseDEau || '',
-        placeholder: 'Entrer le code EU masse d’eau',
-        onChange: e => setPoint(prev => ({...prev, codeEUMasseDEau: e.target.value}))
-      }}
+      placeholder='Entrer le code EU masse d’eau'
     />
 
-    <Input
+    <TextInput
+      point={point}
+      setPoint={setPoint}
+      field='codePTP'
       label='Code PTP'
-      nativeInputProps={{
-        defaultValue: point?.codePTP || '',
-        placeholder: 'Entrer le code PTP',
-        onChange: e => setPoint(prev => ({...prev, codePTP: e.target.value}))
-      }}
+      placeholder='Entrer le code PTP'
     />
 
-    <Input
+    <TextInput
+      point={point}
+      setPoint={setPoint}
+      field='codeOPR'
       label='Code OPR'
-      nativeInputProps={{
-        defaultValue: point?.codeOPR || '',
-        placeholder: 'Entrer le code OPR',
-        onChange: e => setPoint(prev => ({...prev, codeOPR: e.target.value}))
-      }}
+      placeholder='Entrer le code OPR'
     />
 
-    <Input
+    <TextInput
+      point={point}
+      setPoint={setPoint}
+      field='codeBDLISA'
       label='Code BDLISA'
-      nativeInputProps={{
-        defaultValue: point?.codeBDLISA || '',
-        placeholder: 'Entrer le code BDLISA',
-        onChange: e => setPoint(prev => ({...prev, codeBDLISA: e.target.value}))
-      }}
+      placeholder='Entrer le code BDLISA'
     />
 
-    <Input
+    <TextInput
+      point={point}
+      setPoint={setPoint}
+      field='codeBDTopage'
       label='Code BD Topage'
-      nativeInputProps={{
-        defaultValue: point?.codeBDTopage || '',
-        placeholder: 'Entrer le code BD Topage',
-        onChange: e => setPoint(prev => ({...prev, codeBDTopage: e.target.value}))
-      }}
+      placeholder='Entrer le code BD Topage'
     />
 
-    <Input
+    <TextInput
+      point={point}
+      setPoint={setPoint}
+      field='codeSISPEA'
       label='Code SISPEA'
-      nativeInputProps={{
-        defaultValue: point?.codeSISPEA || '',
-        placeholder: 'Entrer le code SISPEA',
-        onChange: e => setPoint(prev => ({...prev, codeSISPEA: e.target.value}))
-      }}
+      placeholder='Entrer le code SISPEA'
+    />
+
+    <TextInput
+      point={point}
+      setPoint={setPoint}
+      field='codeSISEAUX'
+      label='Code SISEAUX'
+      placeholder='Entrer le code SISEAUX'
+    />
+
+    <TextInput
+      point={point}
+      setPoint={setPoint}
+      field='codeINSEE'
+      label='Code INSEE'
+      placeholder='Entrer le code INSEE'
+    />
+
+    <TextInput
+      point={point}
+      setPoint={setPoint}
+      field='codeROE'
+      label='Code ROE'
+      placeholder='Entrer le code ROE'
     />
 
     <Typography variant='h5' sx={{py: 5}}>
       Localisation : informations complémentaires
     </Typography>
 
-    <Input
+    <TextInput
+      point={point}
+      setPoint={setPoint}
+      field='communeCode'
       label='Code commune'
-      nativeInputProps={{
-        defaultValue: point?.communeCode || '',
-        placeholder: 'Entrer le code commune',
-        onChange: e => setPoint(prev => ({...prev, communeCode: e.target.value}))
-      }}
+      placeholder='Entrer le code commune'
     />
 
-    <Input
+    <TextInput
+      point={point}
+      setPoint={setPoint}
+      field='communeName'
       label='Nom de la commune'
-      nativeInputProps={{
-        defaultValue: point?.communeName || '',
-        placeholder: 'Entrer le nom de la commune',
-        onChange: e => setPoint(prev => ({...prev, communeName: e.target.value}))
-      }}
+      placeholder='Entrer le nom de la commune'
     />
 
-    <Input
+    <TextInput
+      point={point}
+      setPoint={setPoint}
+      field='streamName'
       label='Cours d’eau'
-      nativeInputProps={{
-        defaultValue: point?.streamName || '',
-        placeholder: 'Entrer le nom du cours d’eau',
-        onChange: e => setPoint(prev => ({...prev, streamName: e.target.value}))
-      }}
+      placeholder='Entrer le nom du cours d’eau'
+    />
+
+    <Typography variant='h6' sx={{py: 3}}>
+      Eaux superficielles
+    </Typography>
+
+    <TextInput
+      point={point}
+      setPoint={setPoint}
+      field='watershed'
+      label='Bassin versant'
+      placeholder='Entrer le bassin versant'
+    />
+
+    <TextInput
+      point={point}
+      setPoint={setPoint}
+      field='underWatershed'
+      label='Sous-bassin versant'
+      placeholder='Entrer le sous-bassin versant'
+    />
+
+    <TextInput
+      point={point}
+      setPoint={setPoint}
+      field='resourceName'
+      label='Nom de la ressource'
+      placeholder='Entrer le cours d’eau ou la ressource associée au point'
+    />
+
+    <Typography variant='h6' sx={{py: 3}}>
+      Eaux souterraines
+    </Typography>
+
+    <TextInput
+      point={point}
+      setPoint={setPoint}
+      field='managementUnit'
+      label='Unité de gestion'
+      placeholder='Entrer l’unité de gestion'
+    />
+
+    <TextInput
+      point={point}
+      setPoint={setPoint}
+      field='managementSubUnit'
+      label='Sous-unité de gestion'
+      placeholder='Entrer la sous-unité de gestion'
+    />
+
+    <TextInput
+      point={point}
+      setPoint={setPoint}
+      field='aquiferName'
+      label='Nappe'
+      placeholder='Entrer le nom de la nappe'
     />
 
     <Input
