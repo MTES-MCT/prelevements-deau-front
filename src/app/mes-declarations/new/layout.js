@@ -8,14 +8,10 @@ const NouvelleDeclaration = async ({children}) => (
   <>
     <StartDsfrOnHydration />
 
-    <div className='fr-container flex flex-col my-4 gap-10'>
-      <Typography variant='h3'>
-        Dépôt d’un fichier de déclaration de prélèvements
+    <div className='fr-container flex flex-col my-3 gap-4'>
+      <Typography variant='h4'>
+        Nouvelle déclaration de prélèvements
       </Typography>
-      <p>
-        Cet outil vous permet de soumettre vos fichiers de déclaration de prélèvements.
-      </p>
-
       {children}
 
     </div>
@@ -29,7 +25,7 @@ const NouvelleDeclaration = async ({children}) => (
     >
       <div className='fr-container'>
         <h3 className='fr-h5'>
-          Besoin du modèle type de déclaration ?
+          Besoin du modèle type pour un dépôt de fichier ?
         </h3>
         <DeclarationTemplateDownload />
       </div>

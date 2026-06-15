@@ -133,6 +133,30 @@ function getPreleveurId(preleveur) {
   return preleveur.id || preleveur.userId || preleveur.declarant?.userId
 }
 
+function getUnavailableDeclarationAlertProps({
+  allowedDeclarationTypes,
+  availablePreleveurs,
+  declarantRole
+}) {
+  if (declarantRole === 'COLLECTEUR' && availablePreleveurs.length === 0) {
+    return {
+      severity: 'info',
+      title: 'Aucun préleveur accessible',
+      description: 'Votre compte collecteur n’est rattaché à aucune exploitation.'
+    }
+  }
+
+  if (declarantRole !== 'COLLECTEUR' && allowedDeclarationTypes.length === 0) {
+    return {
+      severity: 'info',
+      title: 'Aucun type de déclaration disponible',
+      description: 'Votre compte déclarant n’est actuellement autorisé à déposer aucun type de déclaration.'
+    }
+  }
+
+  return null
+}
+
 const NewDeclarationForm = ({allowedDeclarationTypes = [], availablePreleveurs = [], declarantRole}) => {
   const initialPreleveurId = availablePreleveurs.length === 1 ? getPreleveurId(availablePreleveurs[0]) : ''
   const [selectedPreleveurId, setSelectedPreleveurId] = useState(initialPreleveurId)
@@ -297,24 +321,14 @@ const NewDeclarationForm = ({allowedDeclarationTypes = [], availablePreleveurs =
     }
   }, [files, selectedDeclarationType, validationResult, comment, selectedPreleveurId, declarantRole])
 
-  if (declarantRole === 'COLLECTEUR' && availablePreleveurs.length === 0) {
-    return (
-      <Alert
-        severity='info'
-        title='Aucun préleveur accessible'
-        description='Votre compte collecteur n’est rattaché à aucune exploitation.'
-      />
-    )
-  }
+  const unavailableAlertProps = getUnavailableDeclarationAlertProps({
+    allowedDeclarationTypes,
+    availablePreleveurs,
+    declarantRole
+  })
 
-  if (declarantRole !== 'COLLECTEUR' && allowedDeclarationTypes.length === 0) {
-    return (
-      <Alert
-        severity='info'
-        title='Aucun type de déclaration disponible'
-        description='Votre compte déclarant n’est actuellement autorisé à déposer aucun type de déclaration.'
-      />
-    )
+  if (unavailableAlertProps) {
+    return <Alert {...unavailableAlertProps} />
   }
 
   return (

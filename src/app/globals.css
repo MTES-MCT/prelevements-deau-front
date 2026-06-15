@@ -21,3 +21,13 @@ main {
 [id^="fr-header-quick-access-item-"][id$="-mobile"] {
   max-width: none !important;
 }
+
+.quick-declaration-field {
+  height: 2.5rem;
+}
+
+.quick-declaration-control {
+  height: 2.5rem !important;
+  min-height: 2.5rem !important;
+  margin-top: 0 !important;
+}

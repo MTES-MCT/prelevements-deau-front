@@ -70,6 +70,65 @@ export async function getAllowedDeclarationTypesAction() {
   return withErrorHandling(async () => fetchJSON('api/declarations/allowed-types'))
 }
 
+export async function getQuickDeclarationContextAction({declarantUserId} = {}) {
+  return withErrorHandling(async () => {
+    const params = new URLSearchParams()
+
+    if (declarantUserId) {
+      params.set('declarantUserId', declarantUserId)
+    }
+
+    const query = params.toString()
+    return fetchJSON(`api/declarations/quick/context${query ? `?${query}` : ''}`)
+  })
+}
+
+export async function createQuickDeclarationAction({
+  type,
+  declarantUserId,
+  readingDate,
+  entries = [],
+  comment
+} = {}) {
+  return withErrorHandling(async () => {
+    const normalizedType = (type || '').trim().toLocaleLowerCase('fr-FR')
+
+    if (!readingDate) {
+      throw new Error('Date de relevé requise.')
+    }
+
+    if (!Array.isArray(entries) || entries.length === 0) {
+      throw new Error('Aucun index saisi.')
+    }
+
+    const payload = {
+      readingDate,
+      entries
+    }
+
+    if (normalizedType) {
+      payload.type = normalizedType
+    }
+
+    if (declarantUserId) {
+      payload.declarantUserId = declarantUserId
+    }
+
+    if (typeof comment === 'string' && comment.trim()) {
+      payload.comment = comment.trim()
+    }
+
+    const data = await fetchJSON('api/declarations/quick', {
+      method: 'POST',
+      body: payload
+    })
+
+    await revalidateDeclarationPaths(data?.data?.id)
+
+    return data
+  })
+}
+
 export async function getDeclarationAction(declarationId) {
   return withErrorHandling(async () => {
     if (!declarationId) {

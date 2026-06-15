@@ -19,6 +19,7 @@ import {emptyStringToNull} from '@/utils/string.js'
 const COMMON_FIELDS = [
   'declarantType',
   'declarantRole',
+  'quickDeclarationEnabled',
   'civility',
   'lastName',
   'firstName',
@@ -37,25 +38,45 @@ const MORAL_ONLY_FIELDS = [
   'siret'
 ]
 
+function firstTruthy(...values) {
+  return values.find(Boolean) || ''
+}
+
+function getDeclarantType(declarant) {
+  const hasSocialReason = Boolean(firstTruthy(declarant?.socialReason, declarant?.declarant?.socialReason))
+  return declarant?.declarantType || (hasSocialReason ? 'LEGAL_PERSON' : 'NATURAL_PERSON')
+}
+
+function getDeclarantRole(declarant) {
+  return firstTruthy(declarant?.declarantRole, declarant?.declarant?.declarantRole, 'PRELEVEUR')
+}
+
+function getQuickDeclarationEnabled(declarant) {
+  return declarant?.quickDeclarationEnabled ?? declarant?.declarant?.quickDeclarationEnabled ?? true
+}
+
 function normalizeDeclarant(declarant) {
+  const user = declarant?.user
+
   return {
-    id: declarant?.userId || declarant?.id,
-    declarantType: declarant?.declarantType || (declarant?.socialReason || declarant?.declarant?.socialReason ? 'LEGAL_PERSON' : 'NATURAL_PERSON'),
-    declarantRole: declarant?.declarantRole || declarant?.declarant?.declarantRole || 'PRELEVEUR',
-    civility: declarant?.civility || '',
-    firstName: declarant?.firstName || declarant?.user?.firstName || '',
-    lastName: declarant?.lastName || declarant?.user?.lastName || '',
-    email: declarant?.email || declarant?.user?.email || '',
-    emailAliases: declarant?.emailAliases || declarant?.user?.emailAliases || [],
-    jobTitle: declarant?.jobTitle || '',
-    socialReason: declarant?.socialReason || declarant?.declarant?.socialReason || '',
-    addressLine1: declarant?.addressLine1 || '',
-    addressLine2: declarant?.addressLine2 || '',
-    poBox: declarant?.poBox || '',
-    postalCode: declarant?.postalCode || '',
-    city: declarant?.city || '',
-    phoneNumber: declarant?.phoneNumber || '',
-    siret: declarant?.siret || ''
+    id: firstTruthy(declarant?.userId, declarant?.id),
+    declarantType: getDeclarantType(declarant),
+    declarantRole: getDeclarantRole(declarant),
+    quickDeclarationEnabled: getQuickDeclarationEnabled(declarant),
+    civility: firstTruthy(declarant?.civility),
+    firstName: firstTruthy(declarant?.firstName, user?.firstName),
+    lastName: firstTruthy(declarant?.lastName, user?.lastName),
+    email: firstTruthy(declarant?.email, user?.email),
+    emailAliases: firstTruthy(declarant?.emailAliases, user?.emailAliases, []),
+    jobTitle: firstTruthy(declarant?.jobTitle),
+    socialReason: firstTruthy(declarant?.socialReason, declarant?.declarant?.socialReason),
+    addressLine1: firstTruthy(declarant?.addressLine1),
+    addressLine2: firstTruthy(declarant?.addressLine2),
+    poBox: firstTruthy(declarant?.poBox),
+    postalCode: firstTruthy(declarant?.postalCode),
+    city: firstTruthy(declarant?.city),
+    phoneNumber: firstTruthy(declarant?.phoneNumber),
+    siret: firstTruthy(declarant?.siret)
   }
 }
 
@@ -73,6 +94,7 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
   const [preleveur, setPreleveur] = useState({
     declarantType: 'NATURAL_PERSON',
     declarantRole: 'PRELEVEUR',
+    quickDeclarationEnabled: true,
     civility: '',
     firstName: '',
     lastName: '',
@@ -216,6 +238,23 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
             emailRequired={emailRequired}
           />
         )}
+
+        <FormControlLabel
+          control={(
+            <Checkbox
+              checked={preleveur.quickDeclarationEnabled !== false}
+              onChange={event => setPreleveur(prev => ({
+                ...prev,
+                quickDeclarationEnabled: event.target.checked
+              }))}
+            />
+          )}
+          label='Activer la saisie rapide des déclarations'
+        />
+
+        <Typography variant='body2' color='text.secondary' sx={{mt: -2}}>
+          Activé par défaut : le déclarant pourra saisir ses index directement dans la plateforme, sans déposer de fichier.
+        </Typography>
 
         {isEditing && (
           <PreleveurEmailAliasesForm

@@ -35,9 +35,11 @@ const DeclarantLink = ({declarant}) => {
   return <Link href={getDeclarantURL({userId: id})}>{label}</Link>
 }
 
-const FileList = ({files, declarationType}) => {
+const FileList = ({files, declarationType, dataSourceType}) => {
   if (!files || files.length === 0) {
-    return 'Aucun fichier associé'
+    return dataSourceType === 'MANUAL'
+      ? 'Saisie rapide : aucun fichier associé'
+      : 'Aucun fichier associé'
   }
 
   return (
@@ -101,7 +103,7 @@ const DeclarationInfos = ({
         </LabelValue>
       )}
       <LabelValue label='Fichiers'>
-        <FileList files={files} declarationType={declarationType} />
+        <FileList files={files} declarationType={declarationType} dataSourceType={dataSourceType} />
       </LabelValue>
 
       {comment && (

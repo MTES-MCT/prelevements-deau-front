@@ -1,4 +1,4 @@
-import NewDeclarationForm from '@/components/declarations/new-declaration-form.js'
+import NewDeclarationEntry from '@/components/declarations/new-declaration-entry.js'
 import {getAllowedDeclarationTypesAction} from '@/server/actions/declarations.js'
 
 export const dynamic = 'force-dynamic'
@@ -10,10 +10,12 @@ const NouvelleDeclarationPage = async () => {
   const meta = response?.meta ?? {}
 
   return (
-    <NewDeclarationForm
+    <NewDeclarationEntry
       allowedDeclarationTypes={allowedDeclarationTypes}
       availablePreleveurs={meta.preleveurs ?? []}
       declarantRole={meta.declarantRole}
+      quickDeclarationEnabled={meta.quickDeclarationEnabled}
+      canCreateQuickDeclaration={meta.canCreateQuickDeclaration}
     />
   )
 }

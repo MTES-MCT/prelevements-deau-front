@@ -3,7 +3,7 @@ import {Badge} from '@codegouvfr/react-dsfr/Badge'
 
 const labels = {
   SPREADSHEET: {severity: 'success', label: 'Tableur'},
-  MANUAL: {severity: 'new', label: 'Manuelle'},
+  MANUAL: {severity: 'new', label: 'Saisie rapide'},
   API: {severity: 'warning', label: 'API'},
   vide: {severity: 'info', label: 'Vide'}
 }

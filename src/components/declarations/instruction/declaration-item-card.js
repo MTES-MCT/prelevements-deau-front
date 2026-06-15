@@ -40,6 +40,17 @@ const connectorLabels = new Map([
   ['template_file', 'Modèle de déclaration de volumes']
 ])
 
+const dataSourceTypeLabels = {
+  MANUAL: 'Saisie rapide',
+  SPREADSHEET: 'Dépôt de fichier',
+  API: 'API',
+  NONE: 'Aucun fichier'
+}
+
+function getDataSourceTypeLabel(value) {
+  return dataSourceTypeLabels[value] ?? value ?? 'Non renseigné'
+}
+
 const getConnectorLabel = source => {
   const connector = source?.metadata?.connector
 
@@ -137,10 +148,16 @@ const metas = source => {
   ]
 
   if (!isApiSource) {
-    items.push({
-      icon: DescriptionOutlined,
-      content: `Type de déclaration : ${getDeclarationTypeLabel(source?.declaration?.type, source?.declaration?.declarationType)}`
-    })
+    items.push(
+      {
+        icon: DescriptionOutlined,
+        content: `Type de déclaration : ${getDeclarationTypeLabel(source?.declaration?.type, source?.declaration?.declarationType)}`
+      },
+      {
+        icon: DescriptionOutlined,
+        content: `Type de saisie : ${getDataSourceTypeLabel(source?.declaration?.dataSourceType)}`
+      }
+    )
   }
 
   if (isApiSource) {

@@ -20,6 +20,7 @@ const Dossiers = async () => {
   const meta = response?.meta ?? {}
   const allowedDeclarationTypes = meta.allowedDeclarationTypes ?? []
   const canCreateDeclaration = meta.canCreateDeclaration ?? allowedDeclarationTypes.length > 0
+  const canCreateQuickDeclaration = meta.canCreateQuickDeclaration ?? false
   const allowedDeclarationTypesLabel = allowedDeclarationTypes
     .map(declarationType => declarationType.name)
     .join(', ')
@@ -41,7 +42,9 @@ const Dossiers = async () => {
             </h2>
 
             <p className='fr-text fr-mb-3w'>
-              Déposez vos fichiers de déclaration après validation automatique.
+              {canCreateQuickDeclaration
+                ? 'Saisissez vos index directement sur la plateforme ou déposez un fichier après validation automatique.'
+                : 'Déposez vos fichiers de déclaration après validation automatique.'}
               {meta.declarantRole === 'COLLECTEUR'
                 ? <> Vous sélectionnerez ensuite le préleveur concerné.</>
                 : null}
@@ -58,9 +61,9 @@ const Dossiers = async () => {
               linkProps={{
                 href: '/mes-declarations/new'
               }}
-              title='Déposer une nouvelle déclaration'
+              title='Créer une nouvelle déclaration'
             >
-              Déposer une nouvelle déclaration
+              Nouvelle déclaration
             </Button>
           </div>
         </div>

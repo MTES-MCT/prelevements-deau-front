@@ -172,7 +172,7 @@ const MatrixCell = ({row, cell}) => {
 }
 
 const ZoneDeclarationMonthlyMatrix = ({payload}) => {
-  const groups = payload?.data?.groups ?? []
+  const groups = useMemo(() => payload?.data?.groups ?? [], [payload?.data?.groups])
   const months = payload?.data?.months ?? []
   const summary = payload?.meta?.summary ?? {}
   const [search, setSearch] = useState('')

@@ -53,7 +53,7 @@ const rightIcons = {
 
 const typeDonnees = typeDonnees => {
   if (typeDonnees === 'MANUAL') {
-    return 'Saisie manuelle'
+    return 'Saisie rapide'
   }
 
   if (typeDonnees === 'SPREADSHEET') {
