@@ -1,6 +1,8 @@
 'use client'
 
-import {useEffect, useMemo, useRef} from 'react'
+import {
+  useCallback, useEffect, useMemo, useRef, useState
+} from 'react'
 
 import maplibre from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -8,7 +10,6 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import planIGN from '@/components/map/styles/plan-ign.json'
 
 const DEFAULT_MAP_ZOOM = 10
-const FOCUSED_POINT_ZOOM = 15
 const FIT_BOUNDS_MAX_ZOOM = 15
 const FIT_BOUNDS_PADDING = {
   top: 40,
@@ -76,7 +77,7 @@ function buildBounds(points) {
   return bounds
 }
 
-function moveToPoints(map, points, {duration = 0, zoom = FOCUSED_POINT_ZOOM} = {}) {
+function moveToPoints(map, points, {duration = 0} = {}) {
   if (!map || points.length === 0) {
     return
   }
@@ -87,7 +88,36 @@ function moveToPoints(map, points, {duration = 0, zoom = FOCUSED_POINT_ZOOM} = {
     if (coordinates) {
       map.easeTo({
         center: coordinates,
-        zoom: Math.max(map.getZoom(), zoom),
+        duration
+      })
+    }
+
+    return
+  }
+
+  const bounds = buildBounds(points)
+
+  if (bounds) {
+    map.fitBounds(bounds, {
+      padding: FIT_BOUNDS_PADDING,
+      maxZoom: FIT_BOUNDS_MAX_ZOOM,
+      duration
+    })
+  }
+}
+
+function fitAllPoints(map, points, {duration = 0} = {}) {
+  if (!map || points.length === 0) {
+    return
+  }
+
+  if (points.length === 1) {
+    const coordinates = getPointCoordinates(points[0])
+
+    if (coordinates) {
+      map.easeTo({
+        center: coordinates,
+        zoom: DEFAULT_MAP_ZOOM,
         duration
       })
     }
@@ -181,6 +211,9 @@ const QuickDeclarationMap = ({
   const mapRef = useRef(null)
   const hoverCallbackRef = useRef(onHoverPoint)
   const focusCallbackRef = useRef(onFocusPoint)
+  const shouldTrackMapMovesRef = useRef(false)
+  const isRecenteringRef = useRef(false)
+  const [hasMapMoved, setHasMapMoved] = useState(false)
   const selectedPointIdSet = useMemo(
     () => new Set(selectedPointIds.map(pointId => normalizePointId(pointId)).filter(Boolean)),
     [selectedPointIds]
@@ -332,22 +365,24 @@ const QuickDeclarationMap = ({
         source: 'quick-declaration-points',
         layout: {
           'text-field': ['get', 'name'],
-          'text-anchor': 'bottom',
-          'text-offset': [0, 1.35],
+          'text-font': ['Source Sans Pro Bold'],
+          'text-anchor': 'top',
+          'text-offset': [0, 1.15],
           'text-size': [
             'case',
             ['==', ['get', 'active'], true],
-            12,
+            14,
             ['==', ['get', 'selected'], true],
-            12,
-            11
+            13,
+            12
           ],
           'text-allow-overlap': true
         },
         paint: {
-          'text-color': '#161616',
+          'text-color': '#000091',
           'text-halo-color': '#ffffff',
-          'text-halo-width': 1.5
+          'text-halo-width': 2.5,
+          'text-halo-blur': 0.25
         }
       })
 
@@ -360,7 +395,23 @@ const QuickDeclarationMap = ({
         )
       )
 
-      map.on('mouseenter', 'quick-declaration-pins', event => {
+      const onMapMoveStart = () => {
+        if (shouldTrackMapMovesRef.current && !isRecenteringRef.current) {
+          setHasMapMoved(true)
+        }
+      }
+
+      map.on('movestart', onMapMoveStart)
+      map.once('idle', () => {
+        shouldTrackMapMovesRef.current = true
+      })
+
+      const interactivePointLayerIds = [
+        'quick-declaration-pins',
+        'quick-declaration-labels'
+      ]
+
+      const onInteractivePointMouseEnter = event => {
         const feature = event.features?.[0]
         const id = feature?.properties?.id
 
@@ -369,33 +420,42 @@ const QuickDeclarationMap = ({
         if (id) {
           hoverCallbackRef.current?.(id)
         }
-      })
+      }
 
-      map.on('mousemove', 'quick-declaration-pins', event => {
+      const onInteractivePointMouseMove = event => {
         const feature = event.features?.[0]
         const id = feature?.properties?.id
 
         if (id) {
           hoverCallbackRef.current?.(id)
         }
-      })
+      }
 
-      map.on('mouseleave', 'quick-declaration-pins', () => {
+      const onInteractivePointMouseLeave = () => {
         map.getCanvas().style.cursor = ''
         hoverCallbackRef.current?.(null)
-      })
+      }
 
-      map.on('click', 'quick-declaration-pins', event => {
+      const onInteractivePointClick = event => {
         const feature = event.features?.[0]
         const id = feature?.properties?.id
 
         if (id) {
           focusCallbackRef.current?.(id)
         }
-      })
+      }
+
+      for (const layerId of interactivePointLayerIds) {
+        map.on('mouseenter', layerId, onInteractivePointMouseEnter)
+        map.on('mousemove', layerId, onInteractivePointMouseMove)
+        map.on('mouseleave', layerId, onInteractivePointMouseLeave)
+        map.on('click', layerId, onInteractivePointClick)
+      }
     })
 
     return () => {
+      shouldTrackMapMovesRef.current = false
+      isRecenteringRef.current = false
       map.remove()
       mapRef.current = null
     }
@@ -428,6 +488,22 @@ const QuickDeclarationMap = ({
     }))
   }, [activePointId, declaredPointIdSet, hoveredPointId, pointsWithCoordinates, selectedPointIdSet])
 
+  const fitVisiblePoints = useCallback(() => {
+    const map = mapRef.current
+
+    if (!map) {
+      return
+    }
+
+    isRecenteringRef.current = true
+    setHasMapMoved(false)
+    fitAllPoints(map, pointsWithCoordinates, {duration: 350})
+    map.once('moveend', () => {
+      isRecenteringRef.current = false
+      setHasMapMoved(false)
+    })
+  }, [pointsWithCoordinates])
+
   if (pointsWithCoordinates.length === 0) {
     return (
       <div className='fr-p-2w text-center bg-white'>
@@ -439,7 +515,17 @@ const QuickDeclarationMap = ({
   }
 
   return (
-    <div className='h-full min-h-[220px] w-full overflow-hidden bg-white'>
+    <div className='relative h-full min-h-[220px] w-full overflow-hidden bg-white'>
+      {hasMapMoved && (
+        <button
+          type='button'
+          className='fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-focus-3-line absolute right-2 top-2 z-10 bg-white shadow-sm'
+          aria-label='Recentrer la carte sur tous les points'
+          onClick={fitVisiblePoints}
+        >
+          Recentrer la carte
+        </button>
+      )}
       <div ref={containerRef} className='h-full min-h-[220px] w-full' />
     </div>
   )

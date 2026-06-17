@@ -509,7 +509,7 @@ const QuickDeclarationEntryRow = ({
         </button>
         {lastReadingLabel && (
           <p className='fr-hint-text fr-mb-0 mt-1 text-[0.72rem] leading-tight'>
-            Dernier : {lastReadingLabel}
+            Dernier index : {lastReadingLabel}
           </p>
         )}
       </div>
