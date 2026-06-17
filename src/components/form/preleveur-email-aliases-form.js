@@ -44,6 +44,7 @@ const PreleveurEmailAliasesForm = ({
   const [aliases, setAliases] = useState(initialAliases)
   const [email, setEmail] = useState('')
   const [error, setError] = useState(null)
+  const [message, setMessage] = useState(null)
   const [validationError, setValidationError] = useState(null)
   const [isAdding, setIsAdding] = useState(false)
   const [deletingAliasId, setDeletingAliasId] = useState(null)
@@ -60,6 +61,7 @@ const PreleveurEmailAliasesForm = ({
 
   const handleAddAlias = useCallback(async () => {
     setError(null)
+    setMessage(null)
     setValidationError(null)
 
     const normalizedEmail = normalizeEmail(email)
@@ -96,6 +98,7 @@ const PreleveurEmailAliasesForm = ({
 
       setAliases(previousAliases => [...previousAliases, response.data])
       setEmail('')
+      setMessage('Alias e-mail ajouté.')
     } catch {
       setError('L’ajout de l’alias a échoué.')
     } finally {
@@ -114,6 +117,7 @@ const PreleveurEmailAliasesForm = ({
 
   const handleDeleteAlias = useCallback(async aliasId => {
     setError(null)
+    setMessage(null)
     setValidationError(null)
     setDeletingAliasId(aliasId)
 
@@ -126,6 +130,7 @@ const PreleveurEmailAliasesForm = ({
       }
 
       setAliases(previousAliases => previousAliases.filter(alias => alias.id !== aliasId))
+      setMessage('Alias e-mail supprimé.')
     } catch {
       setError('La suppression de l’alias a échoué.')
     } finally {
@@ -134,6 +139,7 @@ const PreleveurEmailAliasesForm = ({
   }, [declarantId])
 
   const handleEmailChange = useCallback(event => {
+    setMessage(null)
     setEmail(event.target.value)
   }, [])
 
@@ -161,15 +167,7 @@ const PreleveurEmailAliasesForm = ({
   }
 
   return (
-    <div className='flex flex-col gap-3 fr-mt-4w'>
-      <Typography variant='h5'>
-        Alias e-mail
-      </Typography>
-
-      <Typography variant='body2'>
-        Ces adresses permettent au déclarant de se connecter avec plusieurs e-mails.
-      </Typography>
-
+    <div className='flex flex-col gap-4'>
       {aliases.length > 0 && (
         <div className='flex flex-wrap gap-2'>
           {aliases.map(alias => (
@@ -207,13 +205,19 @@ const PreleveurEmailAliasesForm = ({
             priority='secondary'
             onClick={handleAddAliasClick}
           >
-            Ajouter l’alias
+            Ajouter cet alias
           </Button>
         </div>
       </div>
 
+      {message && (
+        <Alert severity='success' onClose={() => setMessage(null)}>
+          {message}
+        </Alert>
+      )}
+
       {error && (
-        <Alert severity='error'>
+        <Alert severity='error' onClose={() => setError(null)}>
           {error}
         </Alert>
       )}

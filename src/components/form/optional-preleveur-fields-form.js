@@ -30,7 +30,7 @@ const OptionalPreleveurFieldsForm = ({preleveur, setPreleveur}) => (
         onChange: e => setPreleveur(prev => ({...prev, addressLine2: e.target.value}))
       }}
     />
-    <div className='w-full grid grid-cols-3 gap-4'>
+    <div className='w-full grid grid-cols-1 md:grid-cols-3 gap-4'>
       <Input
         label='Boite postale'
         nativeInputProps={{

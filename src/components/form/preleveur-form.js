@@ -55,6 +55,29 @@ function getQuickDeclarationEnabled(declarant) {
   return declarant?.quickDeclarationEnabled ?? declarant?.declarant?.quickDeclarationEnabled ?? true
 }
 
+const FormSection = ({
+  title,
+  description,
+  icon,
+  children
+}) => (
+  <section className='border border-gray-200 p-5 md:p-6'>
+    <div className='mb-5 flex flex-col gap-1'>
+      <Typography component='h2' variant='h5' className='flex items-center gap-2'>
+        {icon && <span aria-hidden='true' className={icon} />}
+        {title}
+      </Typography>
+      {description && (
+        <Typography variant='body2' color='text.secondary'>
+          {description}
+        </Typography>
+      )}
+    </div>
+
+    {children}
+  </section>
+)
+
 function normalizeDeclarant(declarant) {
   const user = declarant?.user
 
@@ -173,130 +196,144 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
   }
 
   return (
-    <div className='fr-container'>
-      <Typography variant='h3' sx={{pb: 5}}>
+    <div className='fr-container mb-8'>
+      <Typography component='h1' variant='h3' sx={{pb: 5}}>
         {isEditing ? 'Édition d’un déclarant' : 'Création d’un déclarant'}
       </Typography>
 
-      <div className='flex flex-col gap-4'>
-        <SegmentedControl
-          className='mb-4'
-          legend='Rôle du déclarant'
-          segments={[
-            {
-              iconId: 'ri-drop-line',
-              label: 'Préleveur',
-              nativeInputProps: {
-                checked: preleveur.declarantRole === 'PRELEVEUR',
-                onChange: () => setPreleveur(prev => ({...prev, declarantRole: 'PRELEVEUR'}))
-              }
-            },
-            {
-              iconId: 'ri-group-line',
-              label: 'Collecteur',
-              nativeInputProps: {
-                checked: preleveur.declarantRole === 'COLLECTEUR',
-                onChange: () => setPreleveur(prev => ({...prev, declarantRole: 'COLLECTEUR'}))
-              }
-            }
-          ]}
-        />
-
-        <SegmentedControl
-          className='mb-4'
-          legend='Type de personne'
-          segments={[
-            {
-              iconId: PRELEVEUR_TYPE_ICONS.physique,
-              label: 'Personne physique',
-              nativeInputProps: {
-                checked: isPreleveurPhysique,
-                onChange: () => setIsPreleveurPhysique(true)
-              }
-            },
-            {
-              iconId: PRELEVEUR_TYPE_ICONS.morale,
-              label: 'Personne morale',
-              nativeInputProps: {
-                checked: !isPreleveurPhysique,
-                onChange: () => setIsPreleveurPhysique(false)
-              }
-            }
-          ]}
-        />
-
-        {isPreleveurPhysique ? (
-          <PreleveurPhysiqueForm
-            preleveur={preleveur}
-            setPreleveur={setPreleveur}
-            emailRequired={emailRequired}
-          />
-        ) : (
-          <PreleveurMoralForm
-            preleveur={preleveur}
-            setPreleveur={setPreleveur}
-            emailRequired={emailRequired}
-          />
-        )}
-
-        <FormControlLabel
-          control={(
-            <Checkbox
-              checked={preleveur.quickDeclarationEnabled !== false}
-              onChange={event => setPreleveur(prev => ({
-                ...prev,
-                quickDeclarationEnabled: event.target.checked
-              }))}
+      <div className='flex flex-col gap-6'>
+        <FormSection
+          title='Informations du déclarant'
+          description='Identité, rôle, contact et options de dépôt.'
+          icon='ri-user-settings-line'
+        >
+          <div className='flex flex-col gap-4'>
+            <SegmentedControl
+              className='mb-4'
+              legend='Rôle du déclarant'
+              segments={[
+                {
+                  iconId: 'ri-drop-line',
+                  label: 'Préleveur',
+                  nativeInputProps: {
+                    checked: preleveur.declarantRole === 'PRELEVEUR',
+                    onChange: () => setPreleveur(prev => ({...prev, declarantRole: 'PRELEVEUR'}))
+                  }
+                },
+                {
+                  iconId: 'ri-group-line',
+                  label: 'Collecteur',
+                  nativeInputProps: {
+                    checked: preleveur.declarantRole === 'COLLECTEUR',
+                    onChange: () => setPreleveur(prev => ({...prev, declarantRole: 'COLLECTEUR'}))
+                  }
+                }
+              ]}
             />
-          )}
-          label='Activer la saisie rapide des déclarations'
-        />
 
-        <Typography variant='body2' color='text.secondary' sx={{mt: -2}}>
-          Activé par défaut : le déclarant pourra saisir ses index directement dans la plateforme, sans déposer de fichier.
-        </Typography>
+            <SegmentedControl
+              className='mb-4'
+              legend='Type de personne'
+              segments={[
+                {
+                  iconId: PRELEVEUR_TYPE_ICONS.physique,
+                  label: 'Personne physique',
+                  nativeInputProps: {
+                    checked: isPreleveurPhysique,
+                    onChange: () => setIsPreleveurPhysique(true)
+                  }
+                },
+                {
+                  iconId: PRELEVEUR_TYPE_ICONS.morale,
+                  label: 'Personne morale',
+                  nativeInputProps: {
+                    checked: !isPreleveurPhysique,
+                    onChange: () => setIsPreleveurPhysique(false)
+                  }
+                }
+              ]}
+            />
 
-        {isEditing && (
-          <PreleveurEmailAliasesForm
-            declarantId={normalizedInitialPreleveur.id}
-            initialAliases={normalizedInitialPreleveur.emailAliases}
-            primaryEmail={preleveur.email}
-          />
-        )}
-
-        {!isEditing && (
-          <FormControlLabel
-            control={(
-              <Checkbox
-                checked={notifyAccountCreation}
-                disabled={!preleveur.email}
-                onChange={event => setNotifyAccountCreation(event.target.checked)}
+            {isPreleveurPhysique ? (
+              <PreleveurPhysiqueForm
+                preleveur={preleveur}
+                setPreleveur={setPreleveur}
+                emailRequired={emailRequired}
+              />
+            ) : (
+              <PreleveurMoralForm
+                preleveur={preleveur}
+                setPreleveur={setPreleveur}
+                emailRequired={emailRequired}
               />
             )}
-            label='Notifier le déclarant par email de la création de son compte'
-          />
-        )}
 
-        {error && (
-          <div className='text-center p-5 text-red-500'>
-            <p><b>Un problème est survenu :</b></p>
-            {error}
-          </div>
-        )}
-        {validationErrors?.length > 0 && (
-          <div className='text-center p-5 text-red-500'>
-            <p><b>{validationErrors.length === 1 ? 'Problème de validation :' : 'Problèmes de validation :'}</b></p>
-            {validationErrors.map(err => (
-              <p key={err.message}>{err.message}</p>
-            )
+            <FormControlLabel
+              control={(
+                <Checkbox
+                  checked={preleveur.quickDeclarationEnabled !== false}
+                  onChange={event => setPreleveur(prev => ({
+                    ...prev,
+                    quickDeclarationEnabled: event.target.checked
+                  }))}
+                />
+              )}
+              label='Activer la saisie rapide des déclarations'
+            />
+
+            <Typography variant='body2' color='text.secondary' sx={{mt: -2}}>
+              Activé par défaut : le déclarant pourra saisir ses index directement dans la plateforme, sans déposer de fichier.
+            </Typography>
+
+            {!isEditing && (
+              <FormControlLabel
+                control={(
+                  <Checkbox
+                    checked={notifyAccountCreation}
+                    disabled={!preleveur.email}
+                    onChange={event => setNotifyAccountCreation(event.target.checked)}
+                  />
+                )}
+                label='Notifier le déclarant par email de la création de son compte'
+              />
             )}
+
+            {error && (
+              <div className='text-center p-5 text-red-500'>
+                <p><b>Un problème est survenu :</b></p>
+                {error}
+              </div>
+            )}
+            {validationErrors?.length > 0 && (
+              <div className='text-center p-5 text-red-500'>
+                <p><b>{validationErrors.length === 1 ? 'Problème de validation :' : 'Problèmes de validation :'}</b></p>
+                {validationErrors.map(err => (
+                  <p key={err.message}>{err.message}</p>
+                )
+                )}
+              </div>
+            )}
+            <div className='w-full flex justify-end pt-2'>
+              <Button disabled={isDisabled} onClick={handleSubmit}>
+                {isEditing ? 'Enregistrer les informations' : 'Créer le déclarant'}
+              </Button>
+            </div>
           </div>
+        </FormSection>
+
+        {isEditing && (
+          <FormSection
+            title='Alias e-mail de connexion'
+            description='Adresses secondaires autorisées pour ce même compte, gérées séparément des informations du déclarant.'
+            icon='ri-at-line'
+          >
+            <PreleveurEmailAliasesForm
+              declarantId={normalizedInitialPreleveur.id}
+              initialAliases={normalizedInitialPreleveur.emailAliases}
+              primaryEmail={preleveur.email}
+            />
+          </FormSection>
         )}
-        <div className='w-full flex justify-end p-5 mb-8'>
-          <Button disabled={isDisabled} onClick={handleSubmit}>
-            {isEditing ? 'Enregistrer' : 'Créer'}
-          </Button>
-        </div>
       </div>
     </div>
   )

@@ -22,10 +22,10 @@ const PreleveurMoralForm = ({preleveur, setPreleveur, emailRequired = false}) =>
 
   return (
     <>
-      <Typography variant='h5' className='pb-5'>
+      <Typography component='h3' variant='h6' className='pb-5'>
         Informations générales
       </Typography>
-      <div className='grid grid-cols-2 gap-4 pb-5'>
+      <div className='grid grid-cols-1 md:grid-cols-2 gap-4 pb-5'>
         <div>
           <p className='pb-2'>Rechercher l’entreprise</p>
           <SearchByCompany setPreleveur={setPreleveur} />
@@ -57,7 +57,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur, emailRequired = false}) =>
           onChange: e => setPreleveur(prev => ({...prev, jobTitle: e.target.value}))
         }}
       />
-      <div className='w-full grid grid-cols-[1fr_2fr_2fr] gap-4 pb-5'>
+      <div className='w-full grid grid-cols-1 md:grid-cols-[1fr_2fr_2fr] gap-4 pb-5'>
         <Select
           label='Civilité du contact'
           placeholder='Choisir la civilité'
