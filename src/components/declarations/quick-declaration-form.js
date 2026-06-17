@@ -210,7 +210,7 @@ function isCompleteNumberInput(value) {
 }
 
 function getDefaultUsage(point) {
-  return point.usages?.find(Boolean) || ''
+  return point.lastKnownUsage || point.usages?.find(Boolean) || ''
 }
 
 function getInitialRow(point) {
@@ -268,8 +268,13 @@ function getWarning({point, row, readingDate}) {
 }
 
 function buildUsageOptionsForPoint(point, globalUsageOptions) {
-  const values = point.usages?.length > 0 ? point.usages : globalUsageOptions
-  return [...new Set(values.filter(Boolean))]
+  return [
+    ...new Set([
+      point.lastKnownUsage,
+      ...(point.usages ?? []),
+      ...globalUsageOptions
+    ].filter(Boolean))
+  ]
 }
 
 function getInitialPreleveurId(availablePreleveurs) {
@@ -824,8 +829,7 @@ const QuickDeclarationForm = ({
   availablePreleveurs = [],
   declarantRole,
   quickDeclarationEnabled = true,
-  canCreateQuickDeclaration = true,
-  onDirtyChange
+  canCreateQuickDeclaration = true
 }) => {
   const {user} = useAuth()
   const initialPreleveurId = getInitialPreleveurId(availablePreleveurs)
@@ -1067,14 +1071,6 @@ const QuickDeclarationForm = ({
     () => Object.values(rows).some(row => row.index !== ''),
     [rows]
   )
-
-  useEffect(() => {
-    onDirtyChange?.(hasAnyIndex)
-
-    return () => {
-      onDirtyChange?.(false)
-    }
-  }, [hasAnyIndex, onDirtyChange])
 
   const canSubmit = canSubmitQuickDeclaration({
     context,
