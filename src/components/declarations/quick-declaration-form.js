@@ -824,7 +824,8 @@ const QuickDeclarationForm = ({
   availablePreleveurs = [],
   declarantRole,
   quickDeclarationEnabled = true,
-  canCreateQuickDeclaration = true
+  canCreateQuickDeclaration = true,
+  onDirtyChange
 }) => {
   const {user} = useAuth()
   const initialPreleveurId = getInitialPreleveurId(availablePreleveurs)
@@ -1066,6 +1067,14 @@ const QuickDeclarationForm = ({
     () => Object.values(rows).some(row => row.index !== ''),
     [rows]
   )
+
+  useEffect(() => {
+    onDirtyChange?.(hasAnyIndex)
+
+    return () => {
+      onDirtyChange?.(false)
+    }
+  }, [hasAnyIndex, onDirtyChange])
 
   const canSubmit = canSubmitQuickDeclaration({
     context,

@@ -1,15 +1,54 @@
 'use client'
 
-import {useMemo, useState} from 'react'
+import {
+  useCallback, useEffect, useMemo, useState
+} from 'react'
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {SegmentedControl} from '@codegouvfr/react-dsfr/SegmentedControl'
+import {useRouter} from 'next/navigation'
 
 import NewDeclarationForm from './new-declaration-form.js'
 import QuickDeclarationForm from './quick-declaration-form.js'
 
 function getPreleveurId(preleveur) {
   return preleveur.id || preleveur.userId || preleveur.declarant?.userId
+}
+
+const UnsavedQuickDeclarationModal = ({
+  close,
+  confirm,
+  open
+}) => {
+  if (!open) {
+    return null
+  }
+
+  return (
+    <div className='fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 px-4' role='presentation'>
+      <div
+        aria-labelledby='quick-declaration-leave-title'
+        aria-modal='true'
+        className='w-full max-w-lg bg-white p-6 shadow-lg'
+        role='dialog'
+      >
+        <h2 id='quick-declaration-leave-title' className='fr-h4 fr-mb-2w'>
+          Quitter la saisie rapide ?
+        </h2>
+        <p className='fr-text--sm fr-mb-4w'>
+          Les index saisis ne seront pas conservés si vous quittez cette page ou changez de mode sans soumettre la déclaration.
+        </p>
+        <div className='flex flex-col gap-2 sm:flex-row sm:justify-end'>
+          <button className='fr-btn fr-btn--secondary' type='button' onClick={close}>
+            Continuer la saisie
+          </button>
+          <button className='fr-btn' type='button' onClick={confirm}>
+            Quitter sans soumettre
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 const NewDeclarationEntry = ({
@@ -19,6 +58,7 @@ const NewDeclarationEntry = ({
   quickDeclarationEnabled = true,
   canCreateQuickDeclaration = true
 }) => {
+  const router = useRouter()
   const quickAvailable = useMemo(() => {
     if (quickDeclarationEnabled === false || !canCreateQuickDeclaration) {
       return false
@@ -40,6 +80,104 @@ const NewDeclarationEntry = ({
   }, [allowedDeclarationTypes, availablePreleveurs, declarantRole])
 
   const [mode, setMode] = useState(quickAvailable ? 'quick' : 'file')
+  const [quickDeclarationDirty, setQuickDeclarationDirty] = useState(false)
+  const shouldConfirmLeaveQuickDeclaration = mode === 'quick' && quickDeclarationDirty
+  const [pendingMode, setPendingMode] = useState(null)
+  const [pendingHref, setPendingHref] = useState(null)
+  const [leaveModalOpen, setLeaveModalOpen] = useState(false)
+
+  const changeMode = useCallback(nextMode => {
+    if (nextMode === mode) {
+      return
+    }
+
+    if (shouldConfirmLeaveQuickDeclaration) {
+      setPendingMode(nextMode)
+      setPendingHref(null)
+      setLeaveModalOpen(true)
+      return
+    }
+
+    setMode(nextMode)
+  }, [mode, shouldConfirmLeaveQuickDeclaration])
+
+  const closeLeaveModal = useCallback(() => {
+    setPendingMode(null)
+    setPendingHref(null)
+    setLeaveModalOpen(false)
+  }, [])
+
+  const confirmLeaveQuickDeclaration = useCallback(() => {
+    const href = pendingHref
+    const nextMode = pendingMode
+
+    setQuickDeclarationDirty(false)
+    setPendingHref(null)
+    setPendingMode(null)
+    setLeaveModalOpen(false)
+
+    if (href) {
+      const url = new URL(href)
+      router.push(`${url.pathname}${url.search}${url.hash}`)
+      return
+    }
+
+    setMode(nextMode ?? 'file')
+  }, [pendingHref, pendingMode, router])
+
+  useEffect(() => {
+    if (!shouldConfirmLeaveQuickDeclaration) {
+      return undefined
+    }
+
+    const handleDocumentClick = event => {
+      if (
+        event.defaultPrevented
+        || event.button !== 0
+        || event.metaKey
+        || event.ctrlKey
+        || event.shiftKey
+        || event.altKey
+      ) {
+        return
+      }
+
+      const anchor = event.target?.closest?.('a[href]')
+
+      if (!anchor) {
+        return
+      }
+
+      const href = anchor.getAttribute('href')
+
+      if (
+        !href
+        || href.startsWith('#')
+        || href.startsWith('mailto:')
+        || href.startsWith('tel:')
+        || (anchor.target && anchor.target !== '_self')
+      ) {
+        return
+      }
+
+      const url = new URL(href, window.location.href)
+
+      if (url.origin !== window.location.origin || url.href === window.location.href) {
+        return
+      }
+
+      event.preventDefault()
+      setPendingMode(null)
+      setPendingHref(url.href)
+      setLeaveModalOpen(true)
+    }
+
+    document.addEventListener('click', handleDocumentClick, true)
+
+    return () => {
+      document.removeEventListener('click', handleDocumentClick, true)
+    }
+  }, [shouldConfirmLeaveQuickDeclaration])
 
   if (!quickAvailable && !fileAvailable) {
     return (
@@ -63,7 +201,7 @@ const NewDeclarationEntry = ({
               label: 'Saisie rapide',
               nativeInputProps: {
                 checked: mode === 'quick',
-                onChange: () => setMode('quick')
+                onChange: () => changeMode('quick')
               }
             },
             {
@@ -71,7 +209,7 @@ const NewDeclarationEntry = ({
               label: 'Dépôt de fichier',
               nativeInputProps: {
                 checked: mode === 'file',
-                onChange: () => setMode('file')
+                onChange: () => changeMode('file')
               }
             }
           ]}
@@ -85,6 +223,7 @@ const NewDeclarationEntry = ({
           declarantRole={declarantRole}
           quickDeclarationEnabled={quickDeclarationEnabled}
           canCreateQuickDeclaration={canCreateQuickDeclaration}
+          onDirtyChange={setQuickDeclarationDirty}
         />
       ) : (
         <>
@@ -103,6 +242,12 @@ const NewDeclarationEntry = ({
           />
         </>
       )}
+
+      <UnsavedQuickDeclarationModal
+        close={closeLeaveModal}
+        confirm={confirmLeaveQuickDeclaration}
+        open={leaveModalOpen}
+      />
     </>
   )
 }
