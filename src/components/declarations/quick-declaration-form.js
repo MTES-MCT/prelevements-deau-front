@@ -9,6 +9,7 @@ import {Button} from '@codegouvfr/react-dsfr/Button'
 
 import QuickDeclarationMap from './quick-declaration-map.js'
 
+import {useAuth} from '@/contexts/auth-context.js'
 import {getDeclarantTitleFromUser} from '@/lib/declarants.js'
 import {getMyDeclarationURL} from '@/lib/urls.js'
 import {
@@ -38,6 +39,8 @@ const USAGE_LABELS = {
   DOMESTIQUE: 'Domestique'
 }
 
+const POINTS_CONTACT_EMAIL = 'contact@partageonsleau.beta.gouv.fr'
+const POINTS_CONTACT_SUBJECT_SUFFIX = 'Modification sur mes points de prélèvements'
 const FALLBACK_USAGE_OPTIONS = Object.keys(USAGE_LABELS)
 const ENTRY_GRID_COLUMNS_CLASS_NAME = 'md:grid-cols-[minmax(150px,1fr)_128px_180px]'
 
@@ -47,6 +50,23 @@ function getPreleveurId(preleveur) {
 
 function getPointId(point) {
   return point.pointPrelevementId || point.id
+}
+
+function getDeclarantContactName(declarant) {
+  const firstName = declarant?.firstName ?? declarant?.user?.firstName
+  const lastName = declarant?.lastName ?? declarant?.user?.lastName
+
+  if (firstName || lastName) {
+    return [lastName, firstName].filter(Boolean).join(' / ')
+  }
+
+  const title = getDeclarantTitleFromUser(declarant)
+  return declarant?.socialReason || declarant?.declarant?.socialReason || (title === 'Non renseigné' ? '' : title)
+}
+
+function buildPointsContactMailto(declarantName) {
+  const subject = `[${declarantName || 'Nom / prénom du déclarant'}] ${POINTS_CONTACT_SUBJECT_SUFFIX}`
+  return `mailto:${POINTS_CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}`
 }
 
 function normalizePointId(pointId) {
@@ -758,6 +778,7 @@ const QuickDeclarationMapPanel = ({
   activePointId,
   context,
   declaredPointIds,
+  declarantName,
   entryPoints,
   focusPoint,
   hoveredPointId,
@@ -769,8 +790,20 @@ const QuickDeclarationMapPanel = ({
     return null
   }
 
+  const pointsContactMailto = buildPointsContactMailto(declarantName)
+
   return (
     <aside className='order-1 xl:order-2 xl:sticky xl:top-3'>
+      <div className='fr-mb-1v text-center'>
+        <a
+          className='fr-link text-xs'
+          href={pointsContactMailto}
+          rel='noreferrer'
+          target='_blank'
+        >
+          Signaler une modification sur mes points
+        </a>
+      </div>
       <div className='h-[220px] sm:h-[260px] xl:h-[calc(100vh-8rem)]'>
         <QuickDeclarationMap
           points={entryPoints}
@@ -793,6 +826,7 @@ const QuickDeclarationForm = ({
   quickDeclarationEnabled = true,
   canCreateQuickDeclaration = true
 }) => {
+  const {user} = useAuth()
   const initialPreleveurId = getInitialPreleveurId(availablePreleveurs)
   const [selectedPreleveurId, setSelectedPreleveurId] = useState(initialPreleveurId)
   const [context, setContext] = useState(null)
@@ -820,6 +854,10 @@ const QuickDeclarationForm = ({
     selectedPreleveur
   })
   const targetDeclarantUserId = getTargetDeclarantUserId(shouldSelectPreleveur, selectedPreleveurId)
+  const contactDeclarantName = useMemo(
+    () => getDeclarantContactName(shouldSelectPreleveur ? selectedPreleveur : user),
+    [selectedPreleveur, shouldSelectPreleveur, user]
+  )
 
   const currentAllowedDeclarationTypes = useMemo(() => {
     if (context?.allowedDeclarationTypes) {
@@ -1142,6 +1180,7 @@ const QuickDeclarationForm = ({
           activePointId={activePointId}
           context={context}
           declaredPointIds={declaredPointIds}
+          declarantName={contactDeclarantName}
           entryPoints={entryPoints}
           focusPoint={focusPoint}
           hoveredPointId={hoveredPointId}
