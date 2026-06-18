@@ -11,10 +11,6 @@ import {useRouter} from 'next/navigation'
 import NewDeclarationForm from './new-declaration-form.js'
 import QuickDeclarationForm from './quick-declaration-form.js'
 
-function getPreleveurId(preleveur) {
-  return preleveur.id || preleveur.userId || preleveur.declarant?.userId
-}
-
 const UnsavedQuickDeclarationModal = ({
   close,
   confirm,
@@ -71,13 +67,7 @@ const NewDeclarationEntry = ({
     return availablePreleveurs.some(preleveur => preleveur.quickDeclarationEnabled !== false && (preleveur.allowedDeclarationTypes ?? []).length > 0)
   }, [allowedDeclarationTypes, availablePreleveurs, canCreateQuickDeclaration, declarantRole, quickDeclarationEnabled])
 
-  const fileAvailable = useMemo(() => {
-    if (declarantRole !== 'COLLECTEUR') {
-      return allowedDeclarationTypes.length > 0
-    }
-
-    return availablePreleveurs.some(preleveur => getPreleveurId(preleveur) && (preleveur.allowedDeclarationTypes ?? []).length > 0)
-  }, [allowedDeclarationTypes, availablePreleveurs, declarantRole])
+  const fileAvailable = useMemo(() => allowedDeclarationTypes.length > 0, [allowedDeclarationTypes])
 
   const [mode, setMode] = useState(quickAvailable ? 'quick' : 'file')
   const [quickDeclarationDirty, setQuickDeclarationDirty] = useState(false)
@@ -237,8 +227,6 @@ const NewDeclarationEntry = ({
           )}
           <NewDeclarationForm
             allowedDeclarationTypes={allowedDeclarationTypes}
-            availablePreleveurs={availablePreleveurs}
-            declarantRole={declarantRole}
           />
         </>
       )}

@@ -6,14 +6,12 @@ import {
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Button} from '@codegouvfr/react-dsfr/Button'
-import {Select} from '@codegouvfr/react-dsfr/SelectNext'
 import {extractTemplateFile} from '@fabnum/prelevements-deau-timeseries-parsers'
 import moment from 'moment'
 import 'moment/locale/fr'
 
 import FileValidationResult from '@/components/declarations/validateur/file-validation-result.js'
 import ValidateurForm from '@/components/declarations/validateur/form.js'
-import {getDeclarantTitleFromUser} from '@/lib/declarants.js'
 import {createLocalSeriesRegistry} from '@/lib/local-series-registry.js'
 import {getMyDeclarationURL} from '@/lib/urls.js'
 import {createDeclarationAction, revalidateDeclarationPaths} from '@/server/actions/declarations.js'
@@ -129,49 +127,23 @@ const validateFiles = async (files, declarationTypeCode) => {
   }
 }
 
-function getPreleveurId(preleveur) {
-  return preleveur.id || preleveur.userId || preleveur.declarant?.userId
-}
-
 function getUnavailableDeclarationAlertProps({
-  allowedDeclarationTypes,
-  availablePreleveurs,
-  declarantRole
+  allowedDeclarationTypes
 }) {
-  if (declarantRole === 'COLLECTEUR' && availablePreleveurs.length === 0) {
-    return {
-      severity: 'info',
-      title: 'Aucun préleveur accessible',
-      description: 'Votre compte collecteur n’est rattaché à aucune exploitation.'
-    }
-  }
-
-  if (declarantRole !== 'COLLECTEUR' && allowedDeclarationTypes.length === 0) {
+  if (allowedDeclarationTypes.length === 0) {
     return {
       severity: 'info',
       title: 'Aucun type de déclaration disponible',
-      description: 'Votre compte déclarant n’est actuellement autorisé à déposer aucun type de déclaration.'
+      description: 'Votre compte déclarant n’est actuellement autorisé à déposer aucun type de déclaration par fichier.'
     }
   }
 
   return null
 }
 
-const NewDeclarationForm = ({allowedDeclarationTypes = [], availablePreleveurs = [], declarantRole}) => {
-  const initialPreleveurId = availablePreleveurs.length === 1 ? getPreleveurId(availablePreleveurs[0]) : ''
-  const [selectedPreleveurId, setSelectedPreleveurId] = useState(initialPreleveurId)
-
-  const currentAllowedDeclarationTypes = useMemo(() => {
-    if (declarantRole !== 'COLLECTEUR') {
-      return allowedDeclarationTypes
-    }
-
-    const selectedPreleveur = availablePreleveurs.find(preleveur => getPreleveurId(preleveur) === selectedPreleveurId)
-    return selectedPreleveur?.allowedDeclarationTypes ?? []
-  }, [allowedDeclarationTypes, availablePreleveurs, declarantRole, selectedPreleveurId])
-
-  const initialDeclarationTypeCode = currentAllowedDeclarationTypes.length === 1
-    ? currentAllowedDeclarationTypes[0].code
+const NewDeclarationForm = ({allowedDeclarationTypes = []}) => {
+  const initialDeclarationTypeCode = allowedDeclarationTypes.length === 1
+    ? allowedDeclarationTypes[0].code
     : ''
   const [declarationTypeCode, setDeclarationTypeCode] = useState(initialDeclarationTypeCode)
   const [files, setFiles] = useState([])
@@ -185,8 +157,8 @@ const NewDeclarationForm = ({allowedDeclarationTypes = [], availablePreleveurs =
   const registryRef = useRef(createLocalSeriesRegistry())
 
   const selectedDeclarationType = useMemo(
-    () => currentAllowedDeclarationTypes.find(type => type.code === declarationTypeCode) ?? null,
-    [currentAllowedDeclarationTypes, declarationTypeCode]
+    () => allowedDeclarationTypes.find(type => type.code === declarationTypeCode) ?? null,
+    [allowedDeclarationTypes, declarationTypeCode]
   )
 
   const resetFileForm = useCallback(() => {
@@ -204,16 +176,6 @@ const NewDeclarationForm = ({allowedDeclarationTypes = [], availablePreleveurs =
     setDeclarationTypeCode(initialDeclarationTypeCode)
   }, [initialDeclarationTypeCode, resetFileForm])
 
-  const handlePreleveurChange = useCallback(value => {
-    setSelectedPreleveurId(value)
-
-    const selectedPreleveur = availablePreleveurs.find(preleveur => getPreleveurId(preleveur) === value)
-    const nextAllowedTypes = selectedPreleveur?.allowedDeclarationTypes ?? []
-    setDeclarationTypeCode(nextAllowedTypes.length === 1 ? nextAllowedTypes[0].code : '')
-
-    resetFileForm()
-  }, [availablePreleveurs, resetFileForm])
-
   const handleDeclarationTypeChange = useCallback(value => {
     setDeclarationTypeCode(value)
     resetFileForm()
@@ -227,10 +189,6 @@ const NewDeclarationForm = ({allowedDeclarationTypes = [], availablePreleveurs =
     setSubmitResult(null)
 
     try {
-      if (declarantRole === 'COLLECTEUR' && !selectedPreleveurId) {
-        throw new Error('Sélectionne le préleveur concerné avant d’ajouter des fichiers.')
-      }
-
       if (!declarationTypeCode) {
         throw new Error('Sélectionne un type de déclaration avant d’ajouter des fichiers.')
       }
@@ -262,7 +220,6 @@ const NewDeclarationForm = ({allowedDeclarationTypes = [], availablePreleveurs =
         = !isLoading
         && !isSubmitting
         && Boolean(declarationTypeCode)
-        && (declarantRole !== 'COLLECTEUR' || Boolean(selectedPreleveurId))
         && files.length > 0
         && validationResult?.validationStatus
         && validationResult.validationStatus !== 'error'
@@ -274,10 +231,6 @@ const NewDeclarationForm = ({allowedDeclarationTypes = [], availablePreleveurs =
     try {
       if (files.length === 0) {
         throw new Error('Aucun fichier à soumettre.')
-      }
-
-      if (declarantRole === 'COLLECTEUR' && !selectedPreleveurId) {
-        throw new Error('Sélectionne le préleveur concerné.')
       }
 
       if (!selectedDeclarationType) {
@@ -292,7 +245,6 @@ const NewDeclarationForm = ({allowedDeclarationTypes = [], availablePreleveurs =
 
       const result = await createDeclarationAction({
         type: selectedDeclarationType.code,
-        declarantUserId: selectedPreleveurId || undefined,
         files: filesToUpload,
         fileTypes,
         comment
@@ -319,12 +271,10 @@ const NewDeclarationForm = ({allowedDeclarationTypes = [], availablePreleveurs =
     } finally {
       setIsSubmitting(false)
     }
-  }, [files, selectedDeclarationType, validationResult, comment, selectedPreleveurId, declarantRole])
+  }, [files, selectedDeclarationType, validationResult, comment])
 
   const unavailableAlertProps = getUnavailableDeclarationAlertProps({
-    allowedDeclarationTypes,
-    availablePreleveurs,
-    declarantRole
+    allowedDeclarationTypes
   })
 
   if (unavailableAlertProps) {
@@ -334,28 +284,8 @@ const NewDeclarationForm = ({allowedDeclarationTypes = [], availablePreleveurs =
   return (
     <>
       <div className='fr-container fr-mt-2w fr-mb-2w'>
-        {declarantRole === 'COLLECTEUR' && (
-          <div className='fr-mb-3w'>
-            <Select
-              label='Préleveur concerné'
-              hint='La déclaration sera rattachée à ce préleveur. Votre compte collecteur restera indiqué comme déposant.'
-              nativeSelectProps={{
-                value: selectedPreleveurId,
-                onChange: event => handlePreleveurChange(event.target.value)
-              }}
-              options={[
-                {value: '', label: 'Sélectionner un préleveur'},
-                ...availablePreleveurs.map(preleveur => ({
-                  value: getPreleveurId(preleveur),
-                  label: getDeclarantTitleFromUser(preleveur)
-                }))
-              ]}
-            />
-          </div>
-        )}
-
         <ValidateurForm
-          allowedDeclarationTypes={currentAllowedDeclarationTypes}
+          allowedDeclarationTypes={allowedDeclarationTypes}
           comment={comment}
           isLoading={isLoading}
           resetForm={resetFileForm}
