@@ -94,7 +94,7 @@ const DeclarationInfos = ({
       <LabelValue label='Type de saisie'>
         <TypeSaisieBadge value={dataSourceType} />
       </LabelValue>
-      <LabelValue label='Préleveur concerné'>
+      <LabelValue label='Déclaration pour'>
         <DeclarantLink declarant={declarant} />
       </LabelValue>
       {showCreatedBy && (

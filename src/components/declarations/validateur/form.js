@@ -27,7 +27,7 @@ const FileValidateurForm = ({
 
   const inputError = fileInputError || (selectedDeclarationTypeCode
     ? null
-    : 'Sélectionne d’abord un type de déclaration.')
+    : 'Sélectionner d’abord un type de déclaration.')
 
   const handleFileChange = useCallback(event => {
     const selectedFiles = [...(event.target.files ?? [])]
@@ -63,16 +63,20 @@ const FileValidateurForm = ({
       ) : (
         <Select
           label='Type de déclaration *'
-          placeholder='Sélectionner un type de déclaration'
           nativeSelectProps={{
             value: selectedDeclarationTypeCode,
             onChange: handleDeclarationTypeChange
           }}
-          options={allowedDeclarationTypes.map(declarationType => ({
-            value: declarationType.code,
-            label: declarationType.name
-          }))}
-        />
+        >
+          <option disabled hidden value=''>
+            Sélectionner un type de déclaration
+          </option>
+          {allowedDeclarationTypes.map(declarationType => (
+            <option key={declarationType.code} value={declarationType.code}>
+              {declarationType.name}
+            </option>
+          ))}
+        </Select>
       )}
 
       <Upload

@@ -342,7 +342,7 @@ function getQuickDeclarationUnavailableAlertProps({
   if (declarantRole === 'COLLECTEUR' && availablePreleveurs.length === 0) {
     return {
       severity: 'info',
-      title: 'Aucun préleveur accessible',
+      title: 'Aucun déclarant accessible',
       description: 'Votre compte collecteur n’est rattaché à aucune exploitation.'
     }
   }
@@ -374,12 +374,11 @@ const QuickDeclarationToolbar = ({
   availablePreleveurs,
   context,
   maxReadingDate,
+  onPreleveurChange,
   pointsCount,
   readingDate,
   selectedPreleveurId,
   setReadingDate,
-  setRows,
-  setSelectedPreleveurId,
   shouldSelectPreleveur
 }) => (
   <div className='fr-mb-2w flex flex-col gap-2 md:flex-row md:items-end md:justify-between'>
@@ -396,17 +395,14 @@ const QuickDeclarationToolbar = ({
     <div className='grid grid-cols-1 gap-2 sm:grid-cols-2 md:flex md:items-end'>
       {shouldSelectPreleveur && (
         <div className='fr-select-group fr-mb-0 min-w-[220px]'>
-          <label className='fr-label' htmlFor='quick-preleveur'>Préleveur</label>
+          <label className='fr-label' htmlFor='quick-preleveur'>Déclarant</label>
           <select
             id='quick-preleveur'
             className='fr-select'
             value={selectedPreleveurId}
-            onChange={event => {
-              setSelectedPreleveurId(event.target.value)
-              setRows({})
-            }}
+            onChange={event => onPreleveurChange(event.target.value)}
           >
-            <option value=''>Sélectionner</option>
+            <option value=''>Sélectionner un déclarant</option>
             {availablePreleveurs.map(preleveur => (
               <option key={getPreleveurId(preleveur)} value={getPreleveurId(preleveur)}>
                 {getDeclarantTitleFromUser(preleveur)}
@@ -463,7 +459,7 @@ const QuickDeclarationStatusAlerts = ({
       <Alert
         className='fr-mb-2w'
         severity='info'
-        title='Sélectionnez un préleveur'
+        title='Sélectionnez un déclarant'
         description='La liste des points et la carte s’afficheront ensuite.'
       />
     )}
@@ -472,8 +468,8 @@ const QuickDeclarationStatusAlerts = ({
       <Alert
         className='fr-mb-2w'
         severity='info'
-        title='Saisie rapide désactivée pour ce préleveur'
-        description='Sélectionnez un autre préleveur ou déposez un fichier.'
+        title='Saisie rapide désactivée pour ce déclarant'
+        description='Sélectionnez un autre déclarant ou déposez un fichier.'
       />
     )}
 
@@ -487,6 +483,42 @@ const QuickDeclarationStatusAlerts = ({
     )}
   </>
 )
+
+const UnsavedPreleveurChangeModal = ({
+  close,
+  confirm,
+  open
+}) => {
+  if (!open) {
+    return null
+  }
+
+  return (
+    <div className='fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 px-4' role='presentation'>
+      <div
+        aria-labelledby='quick-declaration-change-preleveur-title'
+        aria-modal='true'
+        className='w-full max-w-lg bg-white p-6 shadow-lg'
+        role='dialog'
+      >
+        <h2 id='quick-declaration-change-preleveur-title' className='fr-h4 fr-mb-2w'>
+          Changer de déclarant ?
+        </h2>
+        <p className='fr-text--sm fr-mb-4w'>
+          Les index saisis ne seront pas conservés si vous sélectionnez un autre déclarant.
+        </p>
+        <div className='flex flex-col gap-2 sm:flex-row sm:justify-end'>
+          <button className='fr-btn fr-btn--secondary' type='button' onClick={close}>
+            Continuer la saisie
+          </button>
+          <button className='fr-btn' type='button' onClick={confirm}>
+            Changer de déclarant
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const QuickDeclarationEntryRow = ({
   activePointId,
@@ -829,7 +861,8 @@ const QuickDeclarationForm = ({
   availablePreleveurs = [],
   declarantRole,
   quickDeclarationEnabled = true,
-  canCreateQuickDeclaration = true
+  canCreateQuickDeclaration = true,
+  onDirtyChange
 }) => {
   const {user} = useAuth()
   const initialPreleveurId = getInitialPreleveurId(availablePreleveurs)
@@ -844,6 +877,8 @@ const QuickDeclarationForm = ({
   const [hoveredPointId, setHoveredPointId] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitResult, setSubmitResult] = useState(null)
+  const [pendingPreleveurId, setPendingPreleveurId] = useState(null)
+  const [preleveurChangeModalOpen, setPreleveurChangeModalOpen] = useState(false)
   const inputRefs = useRef({})
   const maxReadingDate = useMemo(todayISO, [])
 
@@ -1072,6 +1107,40 @@ const QuickDeclarationForm = ({
     [rows]
   )
 
+  useEffect(() => {
+    onDirtyChange?.(hasAnyIndex)
+  }, [hasAnyIndex, onDirtyChange])
+
+  const applyPreleveurChange = useCallback(nextPreleveurId => {
+    setSelectedPreleveurId(nextPreleveurId)
+    setRows({})
+  }, [])
+
+  const handlePreleveurChange = useCallback(nextPreleveurId => {
+    if (nextPreleveurId === selectedPreleveurId) {
+      return
+    }
+
+    if (hasAnyIndex) {
+      setPendingPreleveurId(nextPreleveurId)
+      setPreleveurChangeModalOpen(true)
+      return
+    }
+
+    applyPreleveurChange(nextPreleveurId)
+  }, [applyPreleveurChange, hasAnyIndex, selectedPreleveurId])
+
+  const closePreleveurChangeModal = useCallback(() => {
+    setPendingPreleveurId(null)
+    setPreleveurChangeModalOpen(false)
+  }, [])
+
+  const confirmPreleveurChange = useCallback(() => {
+    applyPreleveurChange(pendingPreleveurId ?? '')
+    setPendingPreleveurId(null)
+    setPreleveurChangeModalOpen(false)
+  }, [applyPreleveurChange, pendingPreleveurId])
+
   const canSubmit = canSubmitQuickDeclaration({
     context,
     entries,
@@ -1138,9 +1207,8 @@ const QuickDeclarationForm = ({
             readingDate={readingDate}
             selectedPreleveurId={selectedPreleveurId}
             setReadingDate={setReadingDate}
-            setRows={setRows}
-            setSelectedPreleveurId={setSelectedPreleveurId}
             shouldSelectPreleveur={shouldSelectPreleveur}
+            onPreleveurChange={handlePreleveurChange}
           />
 
           <QuickDeclarationStatusAlerts
@@ -1194,6 +1262,12 @@ const QuickDeclarationForm = ({
           setHoveredPointId={setHoveredPointId}
         />
       </div>
+
+      <UnsavedPreleveurChangeModal
+        open={preleveurChangeModalOpen}
+        close={closePreleveurChangeModal}
+        confirm={confirmPreleveurChange}
+      />
     </div>
   )
 }

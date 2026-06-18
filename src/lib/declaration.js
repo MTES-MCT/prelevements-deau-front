@@ -4,9 +4,17 @@ import 'moment/locale/fr'
 moment.locale('fr')
 
 export const sourceStateLabels = {
+  PENDING: {
+    label: 'Traitement en attente',
+    severity: 'info'
+  },
   PROCESSING: {
     label: 'Traitement en cours',
     severity: 'info'
+  },
+  FAILED: {
+    label: 'Traitement en erreur',
+    severity: 'error'
   },
   TO_INSTRUCT: {
     label: 'À instruire',

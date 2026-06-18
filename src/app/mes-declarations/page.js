@@ -46,7 +46,7 @@ const Dossiers = async () => {
                 ? 'Saisissez vos index directement sur la plateforme ou déposez un fichier après validation automatique.'
                 : 'Déposez vos fichiers de déclaration après validation automatique.'}
               {meta.declarantRole === 'COLLECTEUR'
-                ? <> Vous sélectionnerez ensuite le préleveur concerné.</>
+                ? <> Vous sélectionnerez ensuite le déclarant concerné.</>
                 : null}
               {allowedDeclarationTypesLabel ? (
                 <> Types autorisés : {allowedDeclarationTypesLabel}.</>
