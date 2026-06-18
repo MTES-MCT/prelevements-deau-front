@@ -9,6 +9,11 @@ import {
 
 import {useSession, signIn, signOut} from 'next-auth/react'
 
+import {
+  startImpersonationAction,
+  stopImpersonationAction
+} from '@/server/actions/auth.js'
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL
 
 const AuthContext = createContext({
@@ -17,7 +22,9 @@ const AuthContext = createContext({
   isLoading: true,
   async login() {},
   async logout() {},
-  async refreshUser() {}
+  async refreshUser() {},
+  async startImpersonation() {},
+  async stopImpersonation() {}
 })
 
 export const AuthProvider = ({children}) => {
@@ -37,7 +44,8 @@ export const AuthProvider = ({children}) => {
       role: session.user.role,
       declarantType: session.user.declarantType || null,
       declarantRole: session.user.declarantRole || null,
-      socialReason: session.user.socialReason || null
+      socialReason: session.user.socialReason || null,
+      impersonation: session.user.impersonation || null
     }
   }, [session])
 
@@ -81,6 +89,30 @@ export const AuthProvider = ({children}) => {
     await update()
   }, [update])
 
+  const startImpersonation = useCallback(async userId => {
+    const result = await startImpersonationAction(userId)
+
+    if (!result.success || !result.data?.token) {
+      return result
+    }
+
+    await update({token: result.data.token})
+
+    return result
+  }, [update])
+
+  const stopImpersonation = useCallback(async () => {
+    const result = await stopImpersonationAction()
+
+    if (!result.success || !result.data?.token) {
+      return result
+    }
+
+    await update({token: result.data.token})
+
+    return result
+  }, [update])
+
   const value = useMemo(
     () => ({
       user,
@@ -88,9 +120,11 @@ export const AuthProvider = ({children}) => {
       isLoading: status === 'loading',
       login,
       logout,
-      refreshUser
+      refreshUser,
+      startImpersonation,
+      stopImpersonation
     }),
-    [user, session, status, login, logout, refreshUser]
+    [user, session, status, login, logout, refreshUser, startImpersonation, stopImpersonation]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

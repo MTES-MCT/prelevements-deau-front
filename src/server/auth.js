@@ -11,11 +11,22 @@ const SESSION_CONFIG = {
 
 // Session callbacks shared between async and static exports
 const SESSION_CALLBACKS = {
-  async jwt({token, user}) {
+  async jwt({
+    token, user, trigger, session
+  }) {
     if (user) {
       token.token = user.token
       token.role = user.role
       token.userInfo = user.userInfo
+      token.impersonation = user.impersonation || null
+    }
+
+    if (trigger === 'update' && session?.token) {
+      const info = await getInfo(session.token)
+      token.token = session.token
+      token.role = info.role
+      token.userInfo = info.user || null
+      token.impersonation = info.impersonation || null
     }
 
     return token
@@ -23,7 +34,9 @@ const SESSION_CALLBACKS = {
   async session({session, token}) {
     session.user.token = token.token
     session.user.role = token.role
+    session.user.impersonation = token.impersonation || null
     if (token.userInfo) {
+      session.user.id = token.userInfo.id || token.sub || 'anonymous'
       session.user.lastName = token.userInfo.lastName
       session.user.firstName = token.userInfo.firstName
       session.user.email = token.userInfo.email
@@ -67,6 +80,7 @@ async function getInfo(token) {
     headers: {
       Authorization: `Bearer ${token}`
     },
+    cache: 'no-store',
     mode: 'cors'
   })
 
@@ -126,7 +140,8 @@ export async function getAuthOptions() {
                 id: info.user?.id || 'anonymous',
                 token: credentials.token,
                 role: info.role,
-                userInfo: info.user || null
+                userInfo: info.user || null,
+                impersonation: info.impersonation || null
               }
             }
           } catch {

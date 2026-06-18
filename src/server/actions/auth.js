@@ -1,5 +1,9 @@
 'use server'
 
+import {
+  fetchJSON,
+  withErrorHandling
+} from '@/server/api-wrapper.js'
 import {requestMagicLink} from '@/server/auth.js'
 
 /**
@@ -19,4 +23,17 @@ export async function requestMagicLinkAction(email) {
       message: 'Impossible de contacter le serveur'
     }
   }
+}
+
+export async function startImpersonationAction(userId) {
+  return withErrorHandling(async () => fetchJSON('api/admin/impersonations', {
+    method: 'POST',
+    body: {userId}
+  }))
+}
+
+export async function stopImpersonationAction() {
+  return withErrorHandling(async () => fetchJSON('api/auth/impersonation', {
+    method: 'DELETE'
+  }))
 }

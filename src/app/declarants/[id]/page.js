@@ -3,6 +3,7 @@ import {Box} from '@mui/material'
 import {notFound} from 'next/navigation'
 
 import AccountCreationNotificationCard from '@/components/accounts/account-creation-notification-card.js'
+import ImpersonateUserButton from '@/components/auth/impersonate-user-button.js'
 import DeclarantDeclarationTypesCard from '@/components/declarants/declarant-declaration-types-card.js'
 import PreleveurMap from '@/components/declarants/preleveur-map.js'
 import DeclarationReminderCard from '@/components/declarations/declaration-reminder-card.js'
@@ -82,7 +83,10 @@ const Page = async ({params}) => {
 
   const currentUserResult = await getCurrentUser()
   const currentRole = currentUserResult?.data?.role
+  const currentUser = currentUserResult?.data?.user
+  const isImpersonating = currentUserResult?.data?.impersonation?.active
   const canManageDeclarationTypes = ['INSTRUCTOR', 'ADMIN'].includes(currentRole)
+  const canImpersonate = currentRole === 'ADMIN' && !isImpersonating && currentUser?.id !== declarantId
 
   const [documentsResult, reglesResult, seriesResult, declarationTypesResult] = await Promise.all([
     getDocumentsFromPreleveurAction(declarantId),
@@ -162,6 +166,13 @@ const Page = async ({params}) => {
           }
         ]}
       />
+
+      {canImpersonate && (
+        <ImpersonateUserButton
+          targetUserId={declarantId}
+          targetLabel={title}
+        />
+      )}
 
       <InfoCard declarant={declarant} />
 
