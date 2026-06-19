@@ -38,6 +38,10 @@ export function getMyDeclarationURL(declaration) {
   return `/mes-declarations/${declaration.id}`
 }
 
+export function getMyTelemetrySourceURL(source) {
+  return `/mes-declarations/sources/${source.id}`
+}
+
 export function getPointPrelevementURL(point) {
   return `/points-prelevement/${point.id}`
 }

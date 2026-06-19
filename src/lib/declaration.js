@@ -17,25 +17,84 @@ export const sourceStateLabels = {
     severity: 'error'
   },
   TO_INSTRUCT: {
-    label: 'À instruire',
-    severity: 'info'
+    label: 'Points à associer',
+    severity: 'warning'
   },
   VALIDATED: {
-    label: 'Validée',
+    label: 'Points associés',
     severity: 'success'
   },
   REJECTED: {
-    label: 'Rejetée',
-    severity: 'error'
+    label: 'Remplacée',
+    severity: 'info'
   },
   PARTIALLY_VALIDATED: {
-    label: 'Partiellement validée',
+    label: 'Partiellement associée',
     severity: 'warning'
   },
   INSTRUCTION_IN_PROGRESS: {
-    label: 'Validation en cours',
-    severity: 'info'
+    label: 'Association en cours',
+    severity: 'warning'
   }
+}
+
+export const dataSourceTypeLabels = {
+  MANUAL: 'Saisie rapide',
+  SPREADSHEET: 'Fichier',
+  API: 'Télérelève',
+  NONE: 'Aucun fichier'
+}
+
+export const declarationEntryKindLabels = {
+  ALL: 'Toutes',
+  TELEMETRY: 'Télérelève',
+  MANUAL: 'Saisie rapide',
+  SPREADSHEET: 'Fichier',
+  API: 'API',
+  NONE: 'Autres'
+}
+
+export function isTelemetrySource(source, declaration = source?.declaration) {
+  return source?.type === 'API' || declaration?.dataSourceType === 'API'
+}
+
+export function isPointReconciliationRelevant(declaration, source = declaration?.source) {
+  return source?.type === 'DECLARATION' && declaration?.dataSourceType === 'SPREADSHEET'
+}
+
+export function getTelemetrySourceTitle(source) {
+  const connector = source?.metadata?.connector
+  return connector ? `Télérelève ${connector}` : 'Données télérelevées'
+}
+
+export function buildDeclarationViewFromSource(source) {
+  if (source?.declaration) {
+    return source.declaration
+  }
+
+  return {
+    id: source?.id,
+    code: null,
+    title: getTelemetrySourceTitle(source),
+    type: 'telemetry',
+    declarationType: {
+      name: source?.metadata?.connector ?? 'Télérelève'
+    },
+    dataSourceType: 'API',
+    createdAt: source?.createdAt,
+    files: [],
+    declarant: source?.declarant ?? null,
+    createdByDeclarant: null,
+    comment: null
+  }
+}
+
+export function getDeclarationEntryKind(declaration, source = declaration?.source) {
+  if (isTelemetrySource(source, declaration)) {
+    return 'TELEMETRY'
+  }
+
+  return declaration?.dataSourceType ?? 'NONE'
 }
 
 export function getSourcePeriod(source) {
@@ -81,7 +140,15 @@ export function getPointsPrelevementIdsFromSource(source) {
   return chunks.map(chunk => chunk.pointPrelevementId).filter(Boolean)
 }
 
-export function formatFullAddress({addressLine1, addressLine2, poBox, postalCode, city} = {}) {
+export function formatFullAddress(value = {}) {
+  const {
+    addressLine1,
+    addressLine2,
+    poBox,
+    postalCode,
+    city
+  } = value ?? {}
+
   const parts = [
     addressLine1,
     addressLine2,

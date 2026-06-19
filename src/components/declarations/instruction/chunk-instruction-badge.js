@@ -17,8 +17,8 @@ import 'moment/locale/fr'
 
 export const CHUNK_STATUS = {
   PENDING: {
-    label: 'Volumes à valider',
-    instructionLabel: 'À valider',
+    label: 'À rapprocher',
+    instructionLabel: 'À rapprocher',
     severity: 'info',
     icon: ScheduleOutlinedIcon,
     color: fr.colors.decisions.border.plain.info.default,
@@ -26,17 +26,17 @@ export const CHUNK_STATUS = {
     selectable: true
   },
   REJECTED: {
-    label: 'Volumes refusés',
-    instructionLabel: 'Refusé',
-    severity: 'error',
+    label: 'Remplacé',
+    instructionLabel: 'Remplacé',
+    severity: 'info',
     icon: HighlightOffOutlinedIcon,
     color: fr.colors.decisions.border.plain.error.default,
     text: fr.colors.decisions.text.default.error,
     selectable: true
   },
   VALIDATED: {
-    label: 'Volumes validés',
-    instructionLabel: 'Validé',
+    label: 'Rapproché',
+    instructionLabel: 'Rapproché',
     severity: 'success',
     icon: TaskAltOutlinedIcon,
     color: fr.colors.decisions.border.plain.success.default,
@@ -44,7 +44,7 @@ export const CHUNK_STATUS = {
     selectable: true
   },
   AUTOMATICALLY_VALIDATED: {
-    label: 'Volumes validés (auto)',
+    label: 'Rapproché automatiquement',
     severity: 'success',
     icon: TaskAltOutlinedIcon,
     color: fr.colors.decisions.border.plain.success.default,

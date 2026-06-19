@@ -66,6 +66,20 @@ export async function getMyDeclarationsAction() {
   return withErrorHandling(async () => fetchJSON('api/declarations/me'))
 }
 
+export async function getMyTelemetrySourcesAction() {
+  return withErrorHandling(async () => fetchJSON('api/declarations/me/telemetry-sources'))
+}
+
+export async function getMyTelemetrySourceAction(sourceId) {
+  return withErrorHandling(async () => {
+    if (!sourceId) {
+      throw new Error('sourceId est requis.')
+    }
+
+    return fetchJSON(`api/declarations/telemetry-sources/${sourceId}`)
+  })
+}
+
 export async function getAllowedDeclarationTypesAction() {
   return withErrorHandling(async () => fetchJSON('api/declarations/allowed-types'))
 }
@@ -146,6 +160,61 @@ export async function getAvailablePointsPrelevementsForDeclarationAction(declara
     }
 
     return fetchJSON(`api/declarations/${declarationId}/available-points-prelevements`)
+  })
+}
+
+export async function reconcileDeclarationChunkAction({
+  declarationId,
+  chunkId,
+  pointPrelevementId
+} = {}) {
+  return withErrorHandling(async () => {
+    if (!declarationId) {
+      throw new Error('declarationId est requis.')
+    }
+
+    if (!chunkId) {
+      throw new Error('chunkId est requis.')
+    }
+
+    if (pointPrelevementId === undefined) {
+      throw new Error('pointPrelevementId est requis.')
+    }
+
+    const data = await fetchJSON(`api/declarations/${declarationId}/chunks/${chunkId}/reconcile`, {
+      method: 'POST',
+      body: {
+        pointPrelevementId
+      }
+    })
+
+    await revalidateDeclarationPaths(declarationId)
+
+    return data
+  })
+}
+
+export async function requestDeclarationPointsChangeAction({
+  declarationId,
+  message
+} = {}) {
+  return withErrorHandling(async () => {
+    if (!declarationId) {
+      throw new Error('declarationId est requis.')
+    }
+
+    const normalizedMessage = String(message ?? '').trim()
+
+    if (!normalizedMessage) {
+      throw new Error('Le message est requis.')
+    }
+
+    return fetchJSON(`api/declarations/${declarationId}/points-change-request`, {
+      method: 'POST',
+      body: {
+        message: normalizedMessage
+      }
+    })
   })
 }
 

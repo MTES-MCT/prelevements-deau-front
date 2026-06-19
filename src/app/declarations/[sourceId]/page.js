@@ -1,11 +1,14 @@
 import {notFound} from 'next/navigation'
 
 import DeclarationDetails from '@/components/declarations/declaration-details.js'
-import DeclarationHeader from '@/components/declarations/declaration-header.js'
+import DeclarationOverview from '@/components/declarations/declaration-overview.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
+import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
 import {
+  buildDeclarationViewFromSource,
   getSourcePeriodLabel,
-  getPointsPrelevementIdsFromSource
+  getPointsPrelevementIdsFromSource,
+  isPointReconciliationRelevant
 } from '@/lib/declaration.js'
 import {getAvailablePointsPrelevementsForDeclarationAction} from '@/server/actions/declarations.js'
 import {getMySourceAction} from '@/server/actions/sources.js'
@@ -19,26 +22,29 @@ const SourcePage = async ({params}) => {
   }
 
   const source = result.data.data
-  const {declaration} = source
+  const declaration = buildDeclarationViewFromSource(source)
   const idPoints = getPointsPrelevementIdsFromSource(source)
   const periodLabel = getSourcePeriodLabel(source)
+  const shouldLoadAvailablePoints = isPointReconciliationRelevant(declaration, source)
 
-  const availablePointsResult = await getAvailablePointsPrelevementsForDeclarationAction(declaration.id)
-  if (!availablePointsResult.success || !availablePointsResult.data) {
+  const availablePointsResult = shouldLoadAvailablePoints
+    ? await getAvailablePointsPrelevementsForDeclarationAction(declaration.id)
+    : null
+  if (shouldLoadAvailablePoints && (!availablePointsResult.success || !availablePointsResult.data)) {
     notFound()
   }
 
-  const availablePoints = availablePointsResult.data.data
+  const availablePoints = availablePointsResult?.data?.data ?? []
 
   return (
     <>
       <StartDsfrOnHydration />
 
-      <DeclarationHeader
-        numero={declaration.code}
+      <DeclarationOverview
+        declaration={declaration}
         status={source.globalInstructionStatus}
-        dateDepot={declaration.createdAt}
         periodLabel={periodLabel}
+        preleveurName={declaration.declarant ? getDeclarantTitleFromDeclarant(declaration.declarant) : null}
       />
 
       <DeclarationDetails

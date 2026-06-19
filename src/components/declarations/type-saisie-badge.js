@@ -4,7 +4,7 @@ import {Badge} from '@codegouvfr/react-dsfr/Badge'
 const labels = {
   SPREADSHEET: {severity: 'success', label: 'Tableur'},
   MANUAL: {severity: 'new', label: 'Saisie rapide'},
-  API: {severity: 'warning', label: 'API'},
+  API: {severity: 'warning', label: 'Télérelève'},
   vide: {severity: 'info', label: 'Vide'}
 }
 

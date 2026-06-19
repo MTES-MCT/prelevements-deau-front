@@ -6,10 +6,9 @@ import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {CircularProgress} from '@mui/material'
 
 import DeclarationDetails from '@/components/declarations/declaration-details.js'
-import DeclarationHeader from '@/components/declarations/declaration-header.js'
-import DeclarationInfos from '@/components/declarations/declaration-infos.js'
+import DeclarationOverview from '@/components/declarations/declaration-overview.js'
+import DeclarationPointsChangeRequestAction from '@/components/declarations/declaration-points-change-request-action.js'
 import {
-  getPointsPrelevementIdsFromDeclaration,
   getSourcePeriodLabel,
   sourceStateLabels
 } from '@/lib/declaration.js'
@@ -47,7 +46,7 @@ const ProcessingState = ({declaration}) => {
   const isPending = isTreatmentPending(source)
 
   return (
-    <div className='fr-container fr-mt-4w fr-mb-6w'>
+    <div className='fr-mb-6w'>
       <Alert
         severity={statusLabel.severity}
         title={statusLabel.label}
@@ -70,22 +69,11 @@ const ProcessingState = ({declaration}) => {
           </div>
         }
       />
-
-      <DeclarationInfos
-        aotDecreeNumber={declaration.aotDecreeNumber}
-        type={declaration.type}
-        declarationType={declaration.declarationType}
-        dataSourceType={declaration.dataSourceType ?? 'SPREADSHEET'}
-        comment={declaration.comment}
-        files={declaration.files}
-        declarant={declaration.declarant}
-        createdByDeclarant={declaration.createdByDeclarant}
-      />
     </div>
   )
 }
 
-const MyDeclarationDetail = ({initialDeclaration}) => {
+const MyDeclarationDetail = ({availablePoints = [], initialDeclaration}) => {
   const [declaration, setDeclaration] = useState(initialDeclaration)
   const source = declaration?.source
   const displayStatus = getDisplayStatus(source)
@@ -127,26 +115,30 @@ const MyDeclarationDetail = ({initialDeclaration}) => {
   }, [declaration?.id, shouldRefresh])
 
   const periodLabel = useMemo(() => getSourcePeriodLabel(source), [source])
-  const idPoints = useMemo(() => getPointsPrelevementIdsFromDeclaration(declaration), [declaration])
 
   return (
     <>
-      <DeclarationHeader
-        numero={declaration.code}
+      <DeclarationOverview
+        actions={(
+          <DeclarationPointsChangeRequestAction
+            declaration={declaration}
+            periodLabel={periodLabel}
+            status={displayStatus}
+          />
+        )}
+        declaration={declaration}
         status={displayStatus}
-        dateDepot={declaration.createdAt}
         periodLabel={periodLabel}
       />
 
       {source?.status === 'COMPLETED' ? (
-        <div className='fr-container'>
-          <DeclarationDetails
-            declaration={declaration}
-            idPoints={idPoints}
-            source={source}
-            isInstructor={false}
-          />
-        </div>
+        <DeclarationDetails
+          availablePoints={availablePoints}
+          declaration={declaration}
+          source={source}
+          isInstructor={false}
+          onDeclarationChange={setDeclaration}
+        />
       ) : (
         <ProcessingState declaration={declaration} />
       )}

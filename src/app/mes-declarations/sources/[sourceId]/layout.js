@@ -3,37 +3,37 @@ import {notFound} from 'next/navigation'
 
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getTelemetrySourceTitle} from '@/lib/declaration.js'
-import {getDeclarationsURL} from '@/lib/urls.js'
-import {getMySourceAction} from '@/server/actions/sources.js'
+import {getMyDeclarationsURL} from '@/lib/urls.js'
+import {getMyTelemetrySourceAction} from '@/server/actions/declarations.js'
 
-const SourceLayout = async ({params, children}) => {
+const Layout = async ({params, children}) => {
   const {sourceId} = await params
-  const result = await getMySourceAction(sourceId)
-  if (!result.success || !result.data) {
+
+  const result = await getMyTelemetrySourceAction(sourceId)
+  if (!result.success || !result.data?.data) {
     notFound()
   }
 
   const source = result.data.data
-  const code = source?.declaration?.code
-  const title = code ? `Déclaration n°${code}` : getTelemetrySourceTitle(source)
 
   return (
     <>
       <StartDsfrOnHydration />
       <div className='fr-container mt-4'>
         <Breadcrumb
-          currentPageLabel={title}
+          currentPageLabel={getTelemetrySourceTitle(source)}
           segments={[{
-            label: 'Déclarations',
+            label: 'Mes déclarations',
             linkProps: {
-              href: getDeclarationsURL()
+              href: getMyDeclarationsURL()
             }
           }]}
         />
+
         {children}
       </div>
     </>
   )
 }
 
-export default SourceLayout
+export default Layout

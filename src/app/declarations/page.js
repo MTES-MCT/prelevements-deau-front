@@ -14,8 +14,8 @@ const Declarations = async () => (
         iconId='ri-information-line'
         title='Déclarations'
       >
-        Consultez, filtrez et triez les déclarations déposées. Identifiez rapidement les erreurs éventuelles
-        dans les données et accédez à leur détail pour un suivi précis.
+        Consultez les déclarations déposées et suivez le rapprochement des points de prélèvement détectés
+        dans les fichiers.
       </CallOut>
 
       <DeclarationTabs />

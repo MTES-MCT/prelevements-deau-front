@@ -31,3 +31,12 @@ main {
   min-height: 2.5rem !important;
   margin-top: 0 !important;
 }
+
+.declaration-reconciliation-map-shell .maplibregl-map,
+.declaration-reconciliation-map-shell .maplibregl-canvas-container {
+  overflow: visible !important;
+}
+
+.declaration-reconciliation-map-shell .maplibregl-popup {
+  z-index: 30;
+}

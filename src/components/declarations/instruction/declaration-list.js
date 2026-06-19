@@ -4,6 +4,7 @@ import {useEffect, useMemo, useState} from 'react'
 
 import {deburr, toLower} from 'lodash-es'
 
+import {DeclarationSummaryListHeader} from '@/components/declarations/declaration-summary-item.js'
 import DeclarationItemCard from '@/components/declarations/instruction/declaration-item-card.js'
 import SimpleLoading from '@/components/ui/SimpleLoading/index.js'
 import {getSourcePeriod, getSourcePeriodLabel} from '@/lib/declaration.js'
@@ -11,8 +12,7 @@ import {getDeclarationURL} from '@/lib/urls.js'
 import {getMySourcesAction} from '@/server/actions/sources.js'
 
 const tabStatusMap = {
-  'a-traiter': ['TO_INSTRUCT', 'INSTRUCTION_IN_PROGRESS'],
-  traites: ['VALIDATED', 'REJECTED', 'PARTIALLY_VALIDATED']
+  'a-rapprocher': ['TO_INSTRUCT', 'INSTRUCTION_IN_PROGRESS', 'PARTIALLY_VALIDATED']
 }
 
 const DeclarationList = ({status, filters, onAvailablePeriodsChange}) => {
@@ -121,22 +121,23 @@ const DeclarationList = ({status, filters, onAvailablePeriodsChange}) => {
 
   return (
     <div>
-      <div className='fr-p-1w text-right'>
+      <div className='fr-p-1w text-right text-sm text-gray-600'>
         {filteredSources.length !== sources.length && (
           filteredSources.length === 1
-            ? <i>1 déclaration correspond à cette recherche</i>
-            : <i>{`${filteredSources.length} déclarations correspondent à cette recherche`}</i>
+            ? <span>1 déclaration correspond à cette recherche</span>
+            : <span>{`${filteredSources.length} déclarations correspondent à cette recherche`}</span>
         )}
       </div>
-      {filteredSources?.map((s, idx) => (
-        <DeclarationItemCard
-          key={s.id}
-          background={idx % 2 === 0 ? 'primary' : 'secondary'}
-          className='fr-mb-2w'
-          source={s}
-          url={getDeclarationURL(s.id)}
-        />
-      ))}
+      <div className='divide-y divide-gray-200 border border-gray-300 bg-white'>
+        <DeclarationSummaryListHeader />
+        {filteredSources?.map(source => (
+          <DeclarationItemCard
+            key={source.id}
+            source={source}
+            url={getDeclarationURL(source.id)}
+          />
+        ))}
+      </div>
     </div>
   )
 }
