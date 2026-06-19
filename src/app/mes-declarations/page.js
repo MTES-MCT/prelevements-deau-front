@@ -3,6 +3,7 @@ import {Button} from '@codegouvfr/react-dsfr/Button'
 import {CallOut} from '@codegouvfr/react-dsfr/CallOut'
 import moment from 'moment'
 
+import {DeclarationSummaryListHeader} from '@/components/declarations/declaration-summary-item.js'
 import DossierCard from '@/components/declarations/dossier/dossier-card.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getMyDeclarationURL} from '@/lib/urls.js'
@@ -43,8 +44,8 @@ const Dossiers = async () => {
 
             <p className='fr-text fr-mb-3w'>
               {canCreateQuickDeclaration
-                ? 'Saisissez vos index directement sur la plateforme ou déposez un fichier après validation automatique.'
-                : 'Déposez vos fichiers de déclaration après validation automatique.'}
+                ? 'Saisissez vos index directement sur la plateforme ou déposez un fichier après contrôle automatique.'
+                : 'Déposez vos fichiers de déclaration après contrôle automatique.'}
               {meta.declarantRole === 'COLLECTEUR'
                 ? <> Vous sélectionnerez ensuite le déclarant concerné.</>
                 : null}
@@ -86,17 +87,15 @@ const Dossiers = async () => {
             Vous n’avez pas encore déposé de déclaration de prélèvements d’eau.
           </CallOut>
         ) : (
-          <div>
-            {dossiers
-              .map((dossier, idx) => (
-                <DossierCard
-                  key={dossier.id}
-                  background={idx % 2 === 0 ? 'primary' : 'secondary'}
-                  className='fr-mb-2w'
-                  dossier={dossier}
-                  url={getMyDeclarationURL(dossier)}
-                />
-              ))}
+          <div className='divide-y divide-gray-200 border border-gray-300 bg-white'>
+            <DeclarationSummaryListHeader />
+            {dossiers.map(dossier => (
+              <DossierCard
+                key={dossier.id}
+                dossier={dossier}
+                url={getMyDeclarationURL(dossier)}
+              />
+            ))}
           </div>
         )}
       </div>

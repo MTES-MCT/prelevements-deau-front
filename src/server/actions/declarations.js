@@ -149,6 +149,37 @@ export async function getAvailablePointsPrelevementsForDeclarationAction(declara
   })
 }
 
+export async function reconcileDeclarationChunkAction({
+  declarationId,
+  chunkId,
+  pointPrelevementId
+} = {}) {
+  return withErrorHandling(async () => {
+    if (!declarationId) {
+      throw new Error('declarationId est requis.')
+    }
+
+    if (!chunkId) {
+      throw new Error('chunkId est requis.')
+    }
+
+    if (pointPrelevementId === undefined) {
+      throw new Error('pointPrelevementId est requis.')
+    }
+
+    const data = await fetchJSON(`api/declarations/${declarationId}/chunks/${chunkId}/reconcile`, {
+      method: 'POST',
+      body: {
+        pointPrelevementId
+      }
+    })
+
+    await revalidateDeclarationPaths(declarationId)
+
+    return data
+  })
+}
+
 export async function revalidateDeclarationPaths(declarationId) {
   revalidatePath('/declarations')
   revalidatePath('/declarations/me')

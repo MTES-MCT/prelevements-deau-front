@@ -17,24 +17,24 @@ export const sourceStateLabels = {
     severity: 'error'
   },
   TO_INSTRUCT: {
-    label: 'À instruire',
-    severity: 'info'
+    label: 'Points à associer',
+    severity: 'warning'
   },
   VALIDATED: {
-    label: 'Validée',
+    label: 'Points associés',
     severity: 'success'
   },
   REJECTED: {
-    label: 'Rejetée',
-    severity: 'error'
+    label: 'Remplacée',
+    severity: 'info'
   },
   PARTIALLY_VALIDATED: {
-    label: 'Partiellement validée',
+    label: 'Partiellement associée',
     severity: 'warning'
   },
   INSTRUCTION_IN_PROGRESS: {
-    label: 'Validation en cours',
-    severity: 'info'
+    label: 'Association en cours',
+    severity: 'warning'
   }
 }
 

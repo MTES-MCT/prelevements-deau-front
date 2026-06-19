@@ -1,215 +1,51 @@
 'use client'
 
-import {
-  useCallback, useEffect, useState, useRef, useMemo
-} from 'react'
-
-import {Alert} from '@codegouvfr/react-dsfr/Alert'
-import {Box} from '@mui/material'
-import {orderBy} from 'lodash-es'
-
-import PrelevementsAccordion from './dossier/prelevements/prelevements-accordion.js'
-
-import DeclarationInfos from '@/components/declarations/declaration-infos.js'
-import DeclarantDetails from '@/components/declarations/dossier/declarant-details.js'
-import PointsPrelevementDetails from '@/components/declarations/dossier/points-prelevement-details.js'
-import DeclarationFileDetails from '@/components/declarations/dossier/prelevements/declaration-file-details.js'
-import SectionCard from '@/components/ui/SectionCard/index.js'
-import {computePointsStatus} from '@/lib/points-prelevement.js'
-import {getPointsPrelevementBatchAction} from '@/server/actions/points-prelevement.js'
+import PointReconciliationPanel from '@/components/declarations/point-reconciliation-panel.js'
 import {formatNumber} from '@/utils/number.js'
-import {getPointPrelevementName} from '@/utils/point-prelevement.js'
 
-const getDeclarantId = declarant => declarant?.userId || declarant?.id || declarant?.user?.id
+const VolumeSummary = ({metadata}) => {
+  const totalWaterVolumeWithdrawn = metadata?.totalWaterVolumeWithdrawn
+  const totalWaterVolumeDischarged = metadata?.totalWaterVolumeDischarged
 
-const DeclarationDetails = ({
-  declaration,
-  idPoints,
-  source,
-  isInstructor,
-  availablePoints = []
-}) => {
-  const [pointsPrelevement, setPointsPrelevement] = useState(null)
-  const [selectedAccordionId, setSelectedAccordionId] = useState(null)
-
-  const handleSelectAccordion = useCallback(accordionId => {
-    setSelectedAccordionId(prevId => prevId === accordionId ? null : accordionId)
-  }, [])
-
-  const listRefs = useRef({})
-
-  useEffect(() => {
-    const fetchPointsPrelevement = async () => {
-      const result = await getPointsPrelevementBatchAction(idPoints)
-
-      if (!result.success) {
-        setPointsPrelevement([])
-        return
-      }
-
-      const sortedPoints = orderBy(
-        result.data,
-        point => String(getPointPrelevementName(point)).toLowerCase(),
-        'asc'
-      )
-
-      setPointsPrelevement(sortedPoints)
-    }
-
-    if (idPoints?.length > 0) {
-      fetchPointsPrelevement()
-    } else {
-      setPointsPrelevement([])
-    }
-  }, [idPoints])
-
-  const onClickPointPrelevementMarker = useCallback(id => {
-    const ref = listRefs.current[id]
-    if (ref) {
-      ref.scrollIntoView({behavior: 'smooth', block: 'start'})
-    }
-  }, [])
-
-  const pointsStatus = useMemo(
-    () => computePointsStatus({declaration, pointsPrelevement}),
-    [declaration, pointsPrelevement]
-  )
-
-  const prelevementItems = useMemo(() => {
-    const items = []
-
-    for (const chunk of source.chunks) {
-      const accordionId = `chunk-${chunk.id}`
-
-      items.push({
-        key: accordionId,
-        sortName: chunk.pointPrelevementName,
-        content: (
-          <PrelevementsAccordion
-            canShowVolumeData
-            showPointPrelevementIdentificationHint
-            isOpen={selectedAccordionId === accordionId}
-            pointPrelevementId={chunk.pointPrelevement?.id}
-            pointPrelevementName={chunk.pointPrelevement?.name}
-            suggestedPointPrelevementName={chunk.pointPrelevementName}
-            pointPrelevement={chunk.pointPrelevement}
-            volumePreleveTotal={chunk.metadata?.totalWaterVolumeWithdrawn}
-            volumeRejeteTotal={chunk.metadata?.totalWaterVolumeDischarged}
-            indexValue={chunk.metadata?.indexValue}
-            indexUnit={chunk.metadata?.indexUnit}
-            usage={chunk.usage}
-            fallbackPointPrelevementName={chunk.pointPrelevementName}
-            instructionStatus={chunk.instructionStatus}
-            instructionComment={chunk.instructionComment}
-            instructedAt={chunk.instructedAt}
-            instructedBy={chunk.instructedByInstructor?.user}
-            typePrelevement={declaration.type}
-            handleSelectAccordion={() => handleSelectAccordion(accordionId)}
-            chunkId={chunk.id}
-            sourceId={source.id}
-            canInstruct={isInstructor && chunk.canInstruct}
-            availablePoints={availablePoints}
-          >
-            {selectedAccordionId === accordionId && (
-              <DeclarationFileDetails
-                pointId={chunk.pointPrelevementId}
-                series={chunk.chunkValues}
-                typePrelevement={declaration.type}
-              />
-            )}
-          </PrelevementsAccordion>
-        )
-      })
-    }
-
-    return orderBy(
-      items,
-      [item => String(item.sortName ?? '').toLowerCase()],
-      ['asc']
-    )
-  }, [
-    declaration.type,
-    source.id,
-    source.chunks,
-    selectedAccordionId,
-    availablePoints,
-    handleSelectAccordion,
-    isInstructor
-  ])
-
-  const {totalWaterVolumeWithdrawn, totalWaterVolumeDischarged} = declaration?.source?.metadata ?? {}
-  const declarantId = getDeclarantId(declaration.declarant)
-  const createdByDeclarantId = getDeclarantId(declaration.createdByDeclarant)
-  const hasSeparateDepositor = declaration.createdByDeclarant && createdByDeclarantId !== declarantId
+  if (!totalWaterVolumeWithdrawn && !totalWaterVolumeDischarged) {
+    return null
+  }
 
   return (
-    <Box className='flex flex-col gap-2 mb-4'>
-      <DeclarationInfos
-        aotDecreeNumber={declaration.aotDecreeNumber}
-        type={declaration.type}
-        declarationType={declaration.declarationType}
-        dataSourceType={declaration.dataSourceType ?? 'SPREADSHEET'}
-        comment={declaration.comment}
-        files={declaration.files}
-        declarant={declaration.declarant}
-        createdByDeclarant={declaration.createdByDeclarant}
-      />
-
-      <div className='flex flex-wrap gap-2'>
-        {declaration.declarant && (
-          <DeclarantDetails declarant={declaration.declarant} />
-        )}
-        {hasSeparateDepositor && (
-          <DeclarantDetails declarant={declaration.createdByDeclarant} />
-        )}
-      </div>
-
-      <PointsPrelevementDetails
-        pointsPrelevementId={idPoints}
-        pointsPrelevement={pointsPrelevement}
-        handleClick={onClickPointPrelevementMarker}
-        pointsStatus={pointsStatus}
-      />
-
-      {pointsPrelevement && (
-        <SectionCard title='Prélèvements' icon='fr-icon-drop-line'>
-          {totalWaterVolumeWithdrawn > 0 && (
-            <Alert
-              severity='info'
-              className='mb-4'
-              description={
-                <>
-                  Volume total prélevé : <b>{formatNumber(totalWaterVolumeWithdrawn)} m³</b>
-                </>
-              }
-            />
-          )}
-
-          {totalWaterVolumeDischarged > 0 && (
-            <Alert
-              severity='info'
-              className='mb-4'
-              description={
-                <>
-                  Volume total rejeté : <b>{formatNumber(totalWaterVolumeDischarged)} m³</b>
-                </>
-              }
-            />
-          )}
-
-          {prelevementItems.length > 0 && (
-            <Box className='flex flex-col gap-4'>
-              {prelevementItems.map(item => (
-                <div key={item.key}>
-                  {item.content}
-                </div>
-              ))}
-            </Box>
-          )}
-        </SectionCard>
+    <div className='fr-mb-2w flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-700'>
+      {totalWaterVolumeWithdrawn > 0 && (
+        <p className='fr-mb-0'>
+          Volume prélevé : <strong>{formatNumber(totalWaterVolumeWithdrawn)} m³</strong>
+        </p>
       )}
-    </Box>
+
+      {totalWaterVolumeDischarged > 0 && (
+        <p className='fr-mb-0'>
+          Volume rejeté : <strong>{formatNumber(totalWaterVolumeDischarged)} m³</strong>
+        </p>
+      )}
+    </div>
   )
 }
+
+const DeclarationDetails = ({
+  availablePoints = [],
+  declaration,
+  isInstructor,
+  onDeclarationChange,
+  source
+}) => (
+  <div className='fr-mb-4w'>
+    <VolumeSummary metadata={source?.metadata} />
+
+    <PointReconciliationPanel
+      availablePoints={availablePoints}
+      canReconcile={!isInstructor}
+      declaration={declaration}
+      source={source}
+      onDeclarationChange={onDeclarationChange}
+    />
+  </div>
+)
 
 export default DeclarationDetails

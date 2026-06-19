@@ -3,7 +3,7 @@ import {Box} from '@mui/system'
 
 import SourceStateBadge from '@/components/declarations/source-state-badge.js'
 
-const DeclarationHeader = ({numero, status, dateDepot, periodLabel}) => (
+const DeclarationHeader = ({numero, status, dateDepot, periodLabel, preleveurName}) => (
   <Box className='flex flex-col gap-2'>
     <Box className='flex justify-between gap-4 flex-wrap'>
       <Box className='flex gap-4 items-center flex-wrap'>
@@ -13,6 +13,15 @@ const DeclarationHeader = ({numero, status, dateDepot, periodLabel}) => (
     </Box>
 
     <Box className='flex flex-wrap gap-4'>
+      {preleveurName && (
+        <Box className='flex flex-wrap gap-2'>
+          <Box component='span' className='fr-icon-user-line' />
+          <Typography variant='body1'>
+            Préleveur : {preleveurName}
+          </Typography>
+        </Box>
+      )}
+
       <Box className='flex flex-wrap gap-2'>
         <Box component='span' className='ri-inbox-2-line' />
         <Typography variant='body1'>

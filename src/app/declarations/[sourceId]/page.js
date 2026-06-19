@@ -1,8 +1,9 @@
 import {notFound} from 'next/navigation'
 
 import DeclarationDetails from '@/components/declarations/declaration-details.js'
-import DeclarationHeader from '@/components/declarations/declaration-header.js'
+import DeclarationOverview from '@/components/declarations/declaration-overview.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
+import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
 import {
   getSourcePeriodLabel,
   getPointsPrelevementIdsFromSource
@@ -34,11 +35,11 @@ const SourcePage = async ({params}) => {
     <>
       <StartDsfrOnHydration />
 
-      <DeclarationHeader
-        numero={declaration.code}
+      <DeclarationOverview
+        declaration={declaration}
         status={source.globalInstructionStatus}
-        dateDepot={declaration.createdAt}
         periodLabel={periodLabel}
+        preleveurName={getDeclarantTitleFromDeclarant(declaration.declarant)}
       />
 
       <DeclarationDetails
