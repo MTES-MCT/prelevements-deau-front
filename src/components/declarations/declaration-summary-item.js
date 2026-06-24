@@ -7,6 +7,7 @@ import {
   dataSourceTypeLabels,
   getSourcePeriodLabel,
   getTelemetrySourceTitle,
+  isManualQuickDeclarationSource,
   sourceStateLabels
 } from '@/lib/declaration.js'
 import {formatNumber} from '@/utils/number.js'
@@ -93,6 +94,25 @@ function getVolumeLabel(source) {
   return labels.join(' · ')
 }
 
+function getQuickDeclarationReadingsLabel(source) {
+  if (!isManualQuickDeclarationSource(source)) {
+    return null
+  }
+
+  const entriesCount = Number(source?.metadata?.entriesCount)
+  const chunks = source?.chunks ?? []
+  const chunkValuesCount = chunks.reduce((sum, chunk) => sum + (chunk.chunkValues?.length ?? 0), 0)
+  const count = Number.isFinite(entriesCount)
+    ? entriesCount
+    : (chunkValuesCount > 0 ? chunkValuesCount : chunks.length)
+
+  if (count <= 0) {
+    return null
+  }
+
+  return `${count} index relevé${count > 1 ? 's' : ''}`
+}
+
 function getDeclarationType(source, declaration) {
   if (source?.type === 'API') {
     return source.metadata?.connector ?? 'Télérelève'
@@ -128,6 +148,12 @@ function getSummaryMetas({declaration, source, showDeclarant}) {
 
   if (volume) {
     metas.push({label: 'Volume', value: volume})
+  }
+
+  const quickDeclarationReadings = getQuickDeclarationReadingsLabel(source)
+
+  if (quickDeclarationReadings) {
+    metas.push({label: 'Relevés', value: quickDeclarationReadings})
   }
 
   return metas

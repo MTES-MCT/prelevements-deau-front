@@ -21,6 +21,7 @@ const PARAMETER_COLOR_ENTRIES = [
   ['nitrates', '#21AB82'],
   ['sulfates', '#99C221'],
   ['chlorures', '#34B1B5'],
+  ['releve dindex', '#3B87FF'],
   ['releve dindex de compteur', '#3B87FF'],
   ['autre', '#AEA397']
 ]

@@ -6,6 +6,7 @@ const badgeMetadata = {
   'aep-zre': {severity: 'new'},
   'icpe-hors-zre': {severity: 'info'},
   'camion-citerne': {severity: 'warning'},
+  'quick-declaration': {severity: 'info'},
   'template-file': {severity: 'info'},
   'extract-aquasys': {severity: 'info'},
   gidaf: {severity: 'info'},

@@ -310,13 +310,11 @@ function canSubmitQuickDeclaration({
   entries,
   isContextLoading,
   isSubmitting,
-  quickDeclarationTypeAvailable,
   validationErrors
 }) {
   return !isSubmitting
     && !isContextLoading
     && Boolean(context)
-    && quickDeclarationTypeAvailable
     && entries.length > 0
     && validationErrors.length === 0
 }
@@ -857,7 +855,6 @@ const QuickDeclarationMapPanel = ({
 }
 
 const QuickDeclarationForm = ({
-  allowedDeclarationTypes = [],
   availablePreleveurs = [],
   declarantRole,
   quickDeclarationEnabled = true,
@@ -899,18 +896,6 @@ const QuickDeclarationForm = ({
     [selectedPreleveur, shouldSelectPreleveur, user]
   )
 
-  const currentAllowedDeclarationTypes = useMemo(() => {
-    if (context?.allowedDeclarationTypes) {
-      return context.allowedDeclarationTypes
-    }
-
-    if (declarantRole !== 'COLLECTEUR') {
-      return allowedDeclarationTypes
-    }
-
-    return selectedPreleveur?.allowedDeclarationTypes ?? []
-  }, [allowedDeclarationTypes, context, declarantRole, selectedPreleveur])
-
   const points = useMemo(() => context?.points ?? [], [context?.points])
   const entryPoints = useMemo(
     () => [...points].sort(comparePointsForEntry),
@@ -920,7 +905,6 @@ const QuickDeclarationForm = ({
     () => (context?.usageOptions?.length > 0 ? context.usageOptions : FALLBACK_USAGE_OPTIONS),
     [context?.usageOptions]
   )
-  const quickDeclarationTypeAvailable = currentAllowedDeclarationTypes.length > 0
   const pointsCount = points.length
   const selectedPointIds = useMemo(
     () => Object.entries(rows)
@@ -1092,15 +1076,11 @@ const QuickDeclarationForm = ({
       nextValidationErrors.push('La date de relevé ne peut pas être dans le futur.')
     }
 
-    if (!quickDeclarationTypeAvailable) {
-      nextValidationErrors.push('La saisie rapide n’est pas configurée pour ce déclarant.')
-    }
-
     return {
       entries: nextEntries,
       validationErrors: nextValidationErrors
     }
-  }, [entryPoints, maxReadingDate, quickDeclarationTypeAvailable, readingDate, rows])
+  }, [entryPoints, maxReadingDate, readingDate, rows])
 
   const hasAnyIndex = useMemo(
     () => Object.values(rows).some(row => row.index !== ''),
@@ -1146,7 +1126,6 @@ const QuickDeclarationForm = ({
     entries,
     isContextLoading,
     isSubmitting,
-    quickDeclarationTypeAvailable,
     validationErrors
   })
   const submitButtonLabel = getSubmitButtonLabel(isSubmitting, entries.length)

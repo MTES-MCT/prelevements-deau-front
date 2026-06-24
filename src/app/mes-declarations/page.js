@@ -27,15 +27,27 @@ const Dossiers = async () => {
   const allowedDeclarationTypes = meta.allowedDeclarationTypes ?? []
   const canCreateDeclaration = meta.canCreateDeclaration ?? allowedDeclarationTypes.length > 0
   const canCreateQuickDeclaration = meta.canCreateQuickDeclaration ?? false
+  const canCreateAnyDeclaration = canCreateDeclaration || canCreateQuickDeclaration
   const allowedDeclarationTypesLabel = allowedDeclarationTypes
     .map(declarationType => declarationType.name)
     .join(', ')
+  const declarationIntro = (() => {
+    if (canCreateQuickDeclaration && canCreateDeclaration) {
+      return 'Saisissez vos index directement sur la plateforme ou déposez un fichier après contrôle automatique.'
+    }
+
+    if (canCreateQuickDeclaration) {
+      return 'Saisissez vos index directement sur la plateforme.'
+    }
+
+    return 'Déposez vos fichiers de déclaration après contrôle automatique.'
+  })()
 
   return (
     <>
       <StartDsfrOnHydration />
 
-      {canCreateDeclaration && (
+      {canCreateAnyDeclaration && (
         <div
           className='fr-mt-4w fr-mb-4w'
           style={{
@@ -48,9 +60,7 @@ const Dossiers = async () => {
             </h2>
 
             <p className='fr-text fr-mb-3w'>
-              {canCreateQuickDeclaration
-                ? 'Saisissez vos index directement sur la plateforme ou déposez un fichier après contrôle automatique.'
-                : 'Déposez vos fichiers de déclaration après contrôle automatique.'}
+              {declarationIntro}
               {meta.declarantRole === 'COLLECTEUR'
                 ? <> Vous sélectionnerez ensuite le déclarant concerné.</>
                 : null}

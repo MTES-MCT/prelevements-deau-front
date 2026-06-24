@@ -50,6 +50,22 @@ export const AGGREGATED_PARAMETERS = [
     precision: 0
   },
   {
+    parameter: 'relevé d\'index',
+    unit: 'm³',
+    type: 'instantaneous',
+    defaultTemporalOperator: 'max',
+    temporalOperators: STANDARD_TEMPORAL_OPERATORS,
+    precision: 0
+  },
+  {
+    parameter: 'index',
+    unit: 'm³',
+    type: 'instantaneous',
+    defaultTemporalOperator: 'max',
+    temporalOperators: STANDARD_TEMPORAL_OPERATORS,
+    precision: 0
+  },
+  {
     parameter: 'débit prélevé',
     unit: 'L/s',
     type: 'instantaneous',

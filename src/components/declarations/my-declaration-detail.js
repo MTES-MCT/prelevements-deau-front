@@ -9,6 +9,7 @@ import DeclarationDetails from '@/components/declarations/declaration-details.js
 import DeclarationOverview from '@/components/declarations/declaration-overview.js'
 import DeclarationPointsChangeRequestAction from '@/components/declarations/declaration-points-change-request-action.js'
 import {
+  getSourceReadingDateLabel,
   getSourcePeriodLabel,
   sourceStateLabels
 } from '@/lib/declaration.js'
@@ -114,7 +115,11 @@ const MyDeclarationDetail = ({availablePoints = [], initialDeclaration}) => {
     }
   }, [declaration?.id, shouldRefresh])
 
-  const periodLabel = useMemo(() => getSourcePeriodLabel(source), [source])
+  const readingDateLabel = useMemo(() => getSourceReadingDateLabel(source), [source])
+  const periodLabel = useMemo(
+    () => readingDateLabel ?? getSourcePeriodLabel(source),
+    [readingDateLabel, source]
+  )
 
   return (
     <>
@@ -128,6 +133,7 @@ const MyDeclarationDetail = ({availablePoints = [], initialDeclaration}) => {
         )}
         declaration={declaration}
         status={displayStatus}
+        periodTitle={readingDateLabel ? 'Date de relevé' : undefined}
         periodLabel={periodLabel}
       />
 

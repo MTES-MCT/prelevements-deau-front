@@ -114,7 +114,44 @@ export function getSourcePeriod(source) {
   }
 }
 
+export function isManualQuickDeclarationSource(source) {
+  return source?.declaration?.dataSourceType === 'MANUAL'
+    || source?.metadata?.manualQuickDeclaration === true
+}
+
+function formatDateLabel(value) {
+  if (!value) {
+    return null
+  }
+
+  const date = moment.utc(value)
+
+  if (!date.isValid()) {
+    return null
+  }
+
+  return date.format('L')
+}
+
+export function getSourceReadingDateLabel(source) {
+  if (!isManualQuickDeclarationSource(source)) {
+    return null
+  }
+
+  const readingDate = source?.metadata?.readingDate
+    ?? source?.chunks?.find(chunk => chunk?.metadata?.readingDate)?.metadata?.readingDate
+    ?? source?.chunks?.find(chunk => chunk?.maxDate || chunk?.minDate)?.maxDate
+    ?? source?.chunks?.find(chunk => chunk?.maxDate || chunk?.minDate)?.minDate
+
+  return formatDateLabel(readingDate)
+}
+
 export function getSourcePeriodLabel(source) {
+  const readingDateLabel = getSourceReadingDateLabel(source)
+  if (readingDateLabel) {
+    return `Relevé du ${readingDateLabel}`
+  }
+
   const {start, end} = getSourcePeriod(source)
   if (!start && !end) {
     return null

@@ -61,11 +61,11 @@ const NewDeclarationEntry = ({
     }
 
     if (declarantRole !== 'COLLECTEUR') {
-      return allowedDeclarationTypes.length > 0
+      return true
     }
 
-    return availablePreleveurs.some(preleveur => preleveur.quickDeclarationEnabled !== false && (preleveur.allowedDeclarationTypes ?? []).length > 0)
-  }, [allowedDeclarationTypes, availablePreleveurs, canCreateQuickDeclaration, declarantRole, quickDeclarationEnabled])
+    return availablePreleveurs.some(preleveur => preleveur.quickDeclarationEnabled !== false)
+  }, [availablePreleveurs, canCreateQuickDeclaration, declarantRole, quickDeclarationEnabled])
 
   const fileAvailable = useMemo(() => allowedDeclarationTypes.length > 0, [allowedDeclarationTypes])
 
@@ -173,8 +173,8 @@ const NewDeclarationEntry = ({
     return (
       <Alert
         severity='info'
-        title='Aucun type de déclaration disponible'
-        description='Votre compte déclarant n’est actuellement autorisé à déposer aucun type de déclaration.'
+        title='Aucun mode de déclaration disponible'
+        description='La saisie rapide n’est pas activée pour ce déclarant et aucun type de déclaration par fichier n’est autorisé.'
       />
     )
   }

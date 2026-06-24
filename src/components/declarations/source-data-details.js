@@ -11,18 +11,40 @@ const metricTypeLabels = {
   'relevé d\'index': 'Relevé d’index'
 }
 
-function formatDate(value) {
+const indexMetricTypeCodes = new Set(['index', 'relevé d\'index'])
+
+function isIndexMetricType(value) {
+  return indexMetricTypeCodes.has(value)
+}
+
+function isQuickDeclarationSource(source) {
+  return source?.metadata?.manualQuickDeclaration === true
+}
+
+function parseDate(value) {
   if (!value) {
     return null
   }
 
-  const date = new Date(value)
+  const stringValue = String(value)
+  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(stringValue)
+  if (dateOnlyMatch) {
+    const [, year, month, day] = dateOnlyMatch
+    return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)))
+  }
 
-  if (Number.isNaN(date.getTime())) {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+function formatDate(value) {
+  const date = parseDate(value)
+
+  if (!date) {
     return null
   }
 
-  return new Intl.DateTimeFormat('fr-FR').format(date)
+  return new Intl.DateTimeFormat('fr-FR', {timeZone: 'UTC'}).format(date)
 }
 
 function formatDateTime(value) {
@@ -53,6 +75,31 @@ function formatPeriod(start, end) {
   return startLabel || endLabel || 'Non renseignée'
 }
 
+function getValueDate(value) {
+  return parseDate(value?.periodEnd ?? value?.periodStart)
+}
+
+function sortValuesByDate(values) {
+  return [...values].sort((a, b) => {
+    const aDate = getValueDate(a)
+    const bDate = getValueDate(b)
+
+    if (!aDate && !bDate) {
+      return 0
+    }
+
+    if (!aDate) {
+      return -1
+    }
+
+    if (!bDate) {
+      return 1
+    }
+
+    return aDate.getTime() - bDate.getTime()
+  })
+}
+
 function formatMetricType(value) {
   return metricTypeLabels[value] ?? value ?? 'Donnée'
 }
@@ -76,6 +123,55 @@ function getLastValue(chunk) {
   return values.at(-1) ?? null
 }
 
+function getIndexValues(chunk) {
+  return (chunk.chunkValues ?? []).filter(value => isIndexMetricType(value.metricTypeCode))
+}
+
+function getLatestIndexReadings(chunk) {
+  return chunk.latestIndexReadings ?? []
+}
+
+function getLastIndexValue(chunk) {
+  return getIndexValues(chunk).at(-1) ?? null
+}
+
+function getMetricType(chunk) {
+  return getLastIndexValue(chunk)?.metricTypeCode
+    ?? getLastValue(chunk)?.metricTypeCode
+    ?? chunk.chunkValues?.[0]?.metricTypeCode
+}
+
+function getReadingDate(chunk, source) {
+  return chunk?.metadata?.readingDate
+    ?? source?.metadata?.readingDate
+    ?? getLastIndexValue(chunk)?.periodEnd
+    ?? getLastIndexValue(chunk)?.periodStart
+    ?? getLastValue(chunk)?.periodEnd
+    ?? getLastValue(chunk)?.periodStart
+    ?? chunk?.maxDate
+    ?? chunk?.minDate
+}
+
+function getVisibleValues(chunk, source) {
+  const values = chunk.chunkValues ?? []
+  const latestIndexReadings = getLatestIndexReadings(chunk)
+  const indexValues = getIndexValues(chunk)
+
+  if (isQuickDeclarationSource(source) && latestIndexReadings.length > 0) {
+    return latestIndexReadings
+  }
+
+  if (isQuickDeclarationSource(source) && indexValues.length > 0) {
+    return indexValues
+  }
+
+  return values
+}
+
+function shouldShowValuesPreview(chunk, source) {
+  return !isQuickDeclarationSource(source) || getVisibleValues(chunk, source).length > 0
+}
+
 function getSummary(source) {
   const chunks = source?.chunks ?? []
   const pointIds = new Set(chunks.map(chunk => chunk.pointPrelevementId).filter(Boolean))
@@ -95,9 +191,17 @@ const SummaryItem = ({label, value}) => (
   </div>
 )
 
-const ValuesPreview = ({chunk}) => {
-  const values = chunk.chunkValues ?? []
-  const visibleValues = values.slice(-MAX_VISIBLE_VALUES).reverse()
+const ValuesPreview = ({chunk, source}) => {
+  const values = getVisibleValues(chunk, source)
+  const visibleValues = sortValuesByDate(values).slice(-MAX_VISIBLE_VALUES).reverse()
+  const metricType = getMetricType(chunk)
+  const isQuickDeclaration = isQuickDeclarationSource(source)
+  const displayAsIndex = isQuickDeclaration || isIndexMetricType(metricType)
+  let summaryLabel = 'Voir les dernières valeurs'
+
+  if (displayAsIndex) {
+    summaryLabel = isQuickDeclaration ? 'Voir les derniers index connus' : 'Voir les index relevés'
+  }
 
   if (values.length === 0) {
     return (
@@ -110,21 +214,27 @@ const ValuesPreview = ({chunk}) => {
   return (
     <details className='mt-2'>
       <summary className='cursor-pointer text-sm font-medium text-[#000091]'>
-        Voir les dernières valeurs
+        {summaryLabel}
       </summary>
       <div className='mt-2 overflow-x-auto border border-gray-200'>
         <table className='w-full min-w-[420px] text-sm'>
           <thead className='bg-gray-50 text-left text-xs uppercase text-gray-500'>
             <tr>
-              <th className='px-3 py-2 font-medium'>Date</th>
-              <th className='px-3 py-2 text-right font-medium'>Valeur</th>
+              <th className='px-3 py-2 font-medium'>
+                {displayAsIndex ? 'Date de relevé' : 'Date'}
+              </th>
+              <th className='px-3 py-2 text-right font-medium'>
+                {displayAsIndex ? 'Index relevé' : 'Valeur'}
+              </th>
             </tr>
           </thead>
           <tbody className='divide-y divide-gray-100'>
             {visibleValues.map(value => (
               <tr key={value.id}>
                 <td className='px-3 py-2'>
-                  {formatDateTime(value.periodEnd ?? value.periodStart)}
+                  {displayAsIndex
+                    ? formatDate(value.periodEnd ?? value.periodStart) ?? 'Non renseignée'
+                    : formatDateTime(value.periodEnd ?? value.periodStart)}
                 </td>
                 <td className='px-3 py-2 text-right font-medium'>
                   {formatValue(value.value, value.unit)}
@@ -147,6 +257,7 @@ const SourceDataDetails = ({source}) => {
   const chunks = source?.chunks ?? []
   const summary = getSummary(source)
   const isTelemetry = source?.type === 'API'
+  const isQuickDeclaration = isQuickDeclarationSource(source)
   const connector = source?.metadata?.connector
 
   if (chunks.length === 0) {
@@ -173,12 +284,27 @@ const SourceDataDetails = ({source}) => {
       <div className='mb-4 grid gap-3 sm:grid-cols-3'>
         <SummaryItem label='Points' value={summary.pointCount} />
         <SummaryItem label='Séries' value={summary.seriesCount} />
-        <SummaryItem label='Valeurs' value={summary.valuesCount} />
+        <SummaryItem label={isQuickDeclaration ? 'Index déclarés' : 'Valeurs'} value={summary.valuesCount} />
       </div>
 
       <div className='divide-y divide-gray-200 border border-gray-300 bg-white'>
         {chunks.map(chunk => {
           const lastValue = getLastValue(chunk)
+          const metricType = getMetricType(chunk)
+          const displayAsIndex = isQuickDeclaration || isIndexMetricType(metricType)
+          const displayValue = displayAsIndex ? getLastIndexValue(chunk) ?? lastValue : lastValue
+          const dateLabel = displayAsIndex ? 'Date de relevé' : 'Période'
+          const dateValue = displayAsIndex
+            ? formatDate(getReadingDate(chunk, source)) ?? 'Non renseignée'
+            : formatPeriod(chunk.minDate, chunk.maxDate)
+          const visibleValues = getVisibleValues(chunk, source)
+          const countLabel = displayAsIndex ? 'Index connus' : 'Nb. valeurs'
+          const countValue = displayAsIndex ? visibleValues.length : chunk.chunkValues?.length ?? 0
+          let valueLabel = 'Dernière valeur'
+
+          if (displayAsIndex) {
+            valueLabel = isQuickDeclaration ? 'Index déclaré' : 'Index relevé'
+          }
 
           return (
             <article key={chunk.id} className='p-4'>
@@ -188,33 +314,35 @@ const SourceDataDetails = ({source}) => {
                     {getPointName(chunk)}
                   </h3>
                   <p className='fr-text--sm fr-mb-0 text-gray-600'>
-                    {formatMetricType(lastValue?.metricTypeCode ?? chunk.chunkValues?.[0]?.metricTypeCode)}
+                    {formatMetricType(metricType)}
                   </p>
                 </div>
 
                 <div>
-                  <div className='text-xs text-gray-500'>Période</div>
+                  <div className='text-xs text-gray-500'>{dateLabel}</div>
                   <div className='text-sm font-medium'>
-                    {formatPeriod(chunk.minDate, chunk.maxDate)}
+                    {dateValue}
                   </div>
                 </div>
 
                 <div>
-                  <div className='text-xs text-gray-500'>Dernière valeur</div>
+                  <div className='text-xs text-gray-500'>{valueLabel}</div>
                   <div className='text-sm font-medium'>
-                    {lastValue ? formatValue(lastValue.value, lastValue.unit) : 'Non renseignée'}
+                    {displayValue ? formatValue(displayValue.value, displayValue.unit) : 'Non renseignée'}
                   </div>
                 </div>
 
                 <div className='lg:text-right'>
-                  <div className='text-xs text-gray-500'>Nb. valeurs</div>
+                  <div className='text-xs text-gray-500'>{countLabel}</div>
                   <div className='text-sm font-medium'>
-                    {chunk.chunkValues?.length ?? 0}
+                    {countValue}
                   </div>
                 </div>
               </div>
 
-              <ValuesPreview chunk={chunk} />
+              {shouldShowValuesPreview(chunk, source) && (
+                <ValuesPreview chunk={chunk} source={source} />
+              )}
             </article>
           )
         })}

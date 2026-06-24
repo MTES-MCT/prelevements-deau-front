@@ -135,6 +135,7 @@ const DeclarationOverview = ({
   actions = null,
   declaration,
   periodLabel,
+  periodTitle = 'Période concernée',
   preleveurName,
   status
 }) => {
@@ -169,7 +170,7 @@ const DeclarationOverview = ({
               {formatDepositDate(declaration.createdAt)}
             </OverviewItem>
 
-            <OverviewItem icon='fr-icon-calendar-event-fill' label='Période concernée'>
+            <OverviewItem icon='fr-icon-calendar-event-fill' label={periodTitle}>
               {periodLabel ?? 'Non renseignée'}
             </OverviewItem>
 

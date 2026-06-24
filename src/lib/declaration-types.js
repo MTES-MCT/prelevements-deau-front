@@ -2,6 +2,7 @@ const fallbackDeclarationTypeLabels = {
   'aep-zre': 'AEP ou en ZRE',
   'icpe-hors-zre': 'ICPE hors ZRE',
   'camion-citerne': 'Camion citerne',
+  'quick-declaration': 'Saisie rapide',
   'template-file': 'Modèle de déclaration de volumes',
   'extract-aquasys': 'Extraction Aquasys',
   gidaf: 'Extraction Gidaf',
