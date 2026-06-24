@@ -3,11 +3,7 @@ import {Box} from '@mui/material'
 import {notFound} from 'next/navigation'
 
 import {buildPageTitle} from '@/app/metadata-utils.js'
-import AccountCreationNotificationCard from '@/components/accounts/account-creation-notification-card.js'
-import ImpersonateUserButton from '@/components/auth/impersonate-user-button.js'
-import DeclarantDeclarationTypesCard from '@/components/declarants/declarant-declaration-types-card.js'
 import PreleveurMap from '@/components/declarants/preleveur-map.js'
-import DeclarationReminderCard from '@/components/declarations/declaration-reminder-card.js'
 import DocumentsList from '@/components/documents/documents-list.js'
 import ExploitationsList from '@/components/exploitations/exploitations-list.js'
 import SeriesExplorer from '@/components/points-prelevement/series-explorer.js'
@@ -21,12 +17,10 @@ import {getNewExploitationURL} from '@/lib/urls.js'
 import {
   getDeclarantAction,
   getDocumentsFromPreleveurAction,
-  getReglesFromPreleveurAction,
-  getDeclarantDeclarationTypesAction
+  getReglesFromPreleveurAction
 } from '@/server/actions/index.js'
 import {getPointsPrelevementBatchAction} from '@/server/actions/points-prelevement.js'
 import {getAggregatedSeriesOptionsAction} from '@/server/actions/series.js'
-import {getCurrentUser} from '@/server/actions/user.js'
 
 const iconColorStyle = {color: fr.colors.decisions.text.label.blueFrance.default}
 
@@ -89,28 +83,15 @@ const Page = async ({params}) => {
   const declarantId = getDeclarantId(declarant)
   const exploitations = declarant.pointPrelevements || []
 
-  const currentUserResult = await getCurrentUser()
-  const currentRole = currentUserResult?.data?.role
-  const currentUser = currentUserResult?.data?.user
-  const isImpersonating = currentUserResult?.data?.impersonation?.active
-  const canManageDeclarationTypes = ['INSTRUCTOR', 'ADMIN'].includes(currentRole)
-  const canImpersonate = currentRole === 'ADMIN' && !isImpersonating && currentUser?.id !== declarantId
-
-  const [documentsResult, reglesResult, seriesResult, declarationTypesResult] = await Promise.all([
+  const [documentsResult, reglesResult, seriesResult] = await Promise.all([
     getDocumentsFromPreleveurAction(declarantId),
     getReglesFromPreleveurAction(declarantId),
-    getAggregatedSeriesOptionsAction({preleveurId: declarantId}),
-    canManageDeclarationTypes
-      ? getDeclarantDeclarationTypesAction(declarantId)
-      : Promise.resolve({success: true, data: {data: [], meta: {canManage: false, availableDeclarationTypes: []}}})
+    getAggregatedSeriesOptionsAction({preleveurId: declarantId})
   ])
 
   const documents = documentsResult.data || []
   const regles = reglesResult.data || []
   const seriesOptions = seriesResult.data
-  const declarationTypesPayload = declarationTypesResult.success
-    ? declarationTypesResult.data
-    : {data: [], meta: {canManage: false, availableDeclarationTypes: []}}
 
   const pointIds = [
     ...new Set(
@@ -155,11 +136,20 @@ const Page = async ({params}) => {
         }
         hrefButtons={[
           {
+            label: 'Gérer le déclarant',
+            icon: 'fr-icon-settings-5-line',
+            alt: '',
+            priority: 'secondary',
+            href: `/declarants/${declarantId}/gestion`,
+            requireEditor: true
+          },
+          {
             label: 'Éditer le déclarant',
             icon: 'fr-icon-edit-line',
             alt: '',
             priority: 'secondary',
             href: `/declarants/${declarantId}/edit`,
+            hidden: !declarant.right?.canEdit,
             requireEditor: true
           }
         ]}
@@ -167,39 +157,17 @@ const Page = async ({params}) => {
           {
             iconId: 'ri-map-pin-user-line',
             content: <>{exploitations.length} exploitation{exploitations.length > 1 ? 's' : ''}</>
-          },
-          {
-            iconId: 'ri-file-list-3-line',
-            content: <>{declarationTypesPayload.meta?.activeCount || 0} type{(declarationTypesPayload.meta?.activeCount || 0) > 1 ? 's' : ''} autorisé{(declarationTypesPayload.meta?.activeCount || 0) > 1 ? 's' : ''}</>
           }
         ]}
       />
 
-      {canImpersonate && (
-        <ImpersonateUserButton
-          targetUserId={declarantId}
-          targetLabel={title}
-        />
-      )}
+      <div className='grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_420px] xl:items-start'>
+        <InfoCard declarant={declarant} />
 
-      <InfoCard declarant={declarant} />
-
-      {canManageDeclarationTypes && (
-        <AccountCreationNotificationCard declarant={declarant} />
-      )}
-
-      {canManageDeclarationTypes && (
-        <DeclarantDeclarationTypesCard
-          declarantId={declarantId}
-          initialPayload={declarationTypesPayload}
-        />
-      )}
-
-      <DeclarationReminderCard declarant={declarant} />
-
-      {pointsPrelevement.length > 0 && (
-        <PreleveurMap points={pointsPrelevement} />
-      )}
+        {pointsPrelevement.length > 0 && (
+          <PreleveurMap points={pointsPrelevement} />
+        )}
+      </div>
 
       <SeriesExplorer
         preleveurId={declarantId}

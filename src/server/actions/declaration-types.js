@@ -74,6 +74,7 @@ export async function addDeclarantDeclarationTypeAction(declarantId, payload) {
     })
 
     revalidatePath(`/declarants/${declarantId}`)
+    revalidatePath(`/declarants/${declarantId}/gestion`)
     revalidatePath('/mes-declarations')
 
     return result
@@ -88,6 +89,7 @@ export async function updateDeclarantDeclarationTypeAction(declarantId, linkId, 
     })
 
     revalidatePath(`/declarants/${declarantId}`)
+    revalidatePath(`/declarants/${declarantId}/gestion`)
     revalidatePath('/mes-declarations')
 
     return result
@@ -101,6 +103,7 @@ export async function removeDeclarantDeclarationTypeAction(declarantId, linkId) 
     })
 
     revalidatePath(`/declarants/${declarantId}`)
+    revalidatePath(`/declarants/${declarantId}/gestion`)
     revalidatePath('/mes-declarations')
 
     return result

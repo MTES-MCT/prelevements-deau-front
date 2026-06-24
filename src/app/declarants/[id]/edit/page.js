@@ -24,17 +24,19 @@ const Page = async ({params}) => {
     notFound()
   }
 
+  const preleveurData = preleveurResult.data
+
+  if (!preleveurData.right?.canEdit) {
+    notFound()
+  }
+
   const emailAliasesResult = await listDeclarantEmailAliasesAction(id)
 
   const preleveur = {
-    ...preleveurResult.data,
+    ...preleveurData,
     emailAliases: emailAliasesResult.success
       ? emailAliasesResult.data?.emailAliases ?? []
       : []
-  }
-
-  if (!preleveur.right?.canEdit) {
-    notFound()
   }
 
   return (

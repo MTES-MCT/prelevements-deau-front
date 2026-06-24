@@ -56,6 +56,7 @@ export async function sendDeclarantAccountCreationNotificationAction(declarantId
     })
     revalidatePath('/declarants')
     revalidatePath(`/declarants/${declarantId}`)
+    revalidatePath(`/declarants/${declarantId}/gestion`)
     return result
   })
 }
@@ -95,6 +96,7 @@ export async function sendDeclarationReminderAction(declarantId) {
       method: 'POST'
     })
     revalidatePath(`/declarants/${declarantId}`)
+    revalidatePath(`/declarants/${declarantId}/gestion`)
     return result
   })
 }

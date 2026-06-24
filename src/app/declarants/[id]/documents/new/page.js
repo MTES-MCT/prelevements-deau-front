@@ -1,19 +1,13 @@
 import {Typography} from '@mui/material'
-import nextDynamic from 'next/dynamic'
 import {notFound} from 'next/navigation'
 
 import {buildPageTitle} from '@/app/metadata-utils.js'
 import DocumentUploadForm from '@/components/form/document-upload-form.js'
-import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {
   getDeclarantAction,
   getExploitationFromPreleveurAction
 } from '@/server/actions/index.js'
 import {displayPreleveur} from '@/utils/preleveurs.js'
-
-const DynamicBreadcrumb = nextDynamic(
-  () => import('@codegouvfr/react-dsfr/Breadcrumb')
-)
 
 export async function generateMetadata({params}) {
   const {id} = await params
@@ -43,38 +37,16 @@ const Page = async ({params}) => {
   const exploitations = exploitationsResult.data || []
 
   return (
-    <>
-      <StartDsfrOnHydration />
+    <div className='fr-container'>
+      <Typography variant='h3' sx={{mb: 3}}>
+        Ajouter un document
+      </Typography>
 
-      <div className='fr-container'>
-        <DynamicBreadcrumb
-          currentPageLabel='Nouveau document'
-          segments={[
-            {
-              label: 'Déclarants',
-              linkProps: {
-                href: '/declarants'
-              }
-            },
-            {
-              label: displayPreleveur(declarant),
-              linkProps: {
-                href: `/declarants/${declarantId}`
-              }
-            }
-          ]}
-        />
-
-        <Typography variant='h3' sx={{mb: 3}}>
-          Ajouter un document
-        </Typography>
-
-        <DocumentUploadForm
-          exploitations={exploitations}
-          preleveur={declarant}
-        />
-      </div>
-    </>
+      <DocumentUploadForm
+        exploitations={exploitations}
+        preleveur={declarant}
+      />
+    </div>
   )
 }
 

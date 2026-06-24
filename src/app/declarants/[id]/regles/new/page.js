@@ -1,20 +1,14 @@
 import {Typography} from '@mui/material'
-import nextDynamic from 'next/dynamic'
 import {notFound} from 'next/navigation'
 
 import {buildPageTitle} from '@/app/metadata-utils.js'
 import RegleCreationForm from '@/components/form/regle-creation-form.js'
-import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {
   getDeclarantAction,
   getExploitationFromPreleveurAction,
   getDocumentsFromPreleveurAction
 } from '@/server/actions/index.js'
 import {displayPreleveur} from '@/utils/preleveurs.js'
-
-const DynamicBreadcrumb = nextDynamic(
-  () => import('@codegouvfr/react-dsfr/Breadcrumb')
-)
 
 export async function generateMetadata({params}) {
   const {id} = await params
@@ -49,39 +43,17 @@ const Page = async ({params}) => {
   const documents = documentsResult.data || []
 
   return (
-    <>
-      <StartDsfrOnHydration />
+    <div className='fr-container mt-4'>
+      <Typography variant='h3' sx={{pb: 3}}>
+        Création d&apos;une règle
+      </Typography>
 
-      <div className='fr-container mt-4'>
-        <DynamicBreadcrumb
-          currentPageLabel="Création d'une règle"
-          segments={[
-            {
-              label: 'Déclarants',
-              linkProps: {
-                href: '/declarants'
-              }
-            },
-            {
-              label: displayPreleveur(declarant),
-              linkProps: {
-                href: `/declarants/${declarantId}`
-              }
-            }
-          ]}
-        />
-
-        <Typography variant='h3' sx={{pb: 3}}>
-          Création d&apos;une règle
-        </Typography>
-
-        <RegleCreationForm
-          preleveur={declarant}
-          exploitations={exploitations}
-          documents={documents}
-        />
-      </div>
-    </>
+      <RegleCreationForm
+        preleveur={declarant}
+        exploitations={exploitations}
+        documents={documents}
+      />
+    </div>
   )
 }
 

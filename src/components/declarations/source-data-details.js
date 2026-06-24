@@ -27,7 +27,7 @@ function parseDate(value) {
   }
 
   const stringValue = String(value)
-  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(stringValue)
+  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(stringValue)
   if (dateOnlyMatch) {
     const [, year, month, day] = dateOnlyMatch
     return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)))
@@ -62,6 +62,11 @@ function formatDateTime(value) {
     dateStyle: 'short',
     timeStyle: 'short'
   }).format(date)
+}
+
+function formatReadingDate(value, shouldShowTime) {
+  const formatter = shouldShowTime ? formatDateTime : formatDate
+  return formatter(value) ?? 'Non renseignée'
 }
 
 function formatPeriod(start, end) {
@@ -197,6 +202,7 @@ const ValuesPreview = ({chunk, source}) => {
   const metricType = getMetricType(chunk)
   const isQuickDeclaration = isQuickDeclarationSource(source)
   const displayAsIndex = isQuickDeclaration || isIndexMetricType(metricType)
+  const shouldShowIndexTime = displayAsIndex && !isQuickDeclaration
   let summaryLabel = 'Voir les dernières valeurs'
 
   if (displayAsIndex) {
@@ -233,8 +239,8 @@ const ValuesPreview = ({chunk, source}) => {
               <tr key={value.id}>
                 <td className='px-3 py-2'>
                   {displayAsIndex
-                    ? formatDate(value.periodEnd ?? value.periodStart) ?? 'Non renseignée'
-                    : formatDateTime(value.periodEnd ?? value.periodStart)}
+                    ? formatReadingDate(value.periodEnd ?? value.periodStart, shouldShowIndexTime)
+                    : formatDateTime(value.periodEnd ?? value.periodStart) ?? 'Non renseignée'}
                 </td>
                 <td className='px-3 py-2 text-right font-medium'>
                   {formatValue(value.value, value.unit)}
@@ -293,9 +299,10 @@ const SourceDataDetails = ({source}) => {
           const metricType = getMetricType(chunk)
           const displayAsIndex = isQuickDeclaration || isIndexMetricType(metricType)
           const displayValue = displayAsIndex ? getLastIndexValue(chunk) ?? lastValue : lastValue
+          const shouldShowIndexTime = displayAsIndex && !isQuickDeclaration
           const dateLabel = displayAsIndex ? 'Date de relevé' : 'Période'
           const dateValue = displayAsIndex
-            ? formatDate(getReadingDate(chunk, source)) ?? 'Non renseignée'
+            ? formatReadingDate(getReadingDate(chunk, source), shouldShowIndexTime)
             : formatPeriod(chunk.minDate, chunk.maxDate)
           const visibleValues = getVisibleValues(chunk, source)
           const countLabel = displayAsIndex ? 'Index connus' : 'Nb. valeurs'

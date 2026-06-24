@@ -1,10 +1,8 @@
 import {Typography} from '@mui/material'
-import nextDynamic from 'next/dynamic'
 import {notFound} from 'next/navigation'
 
 import {buildPageTitle} from '@/app/metadata-utils.js'
 import RegleEditionForm from '@/components/form/regle-edition-form.js'
-import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {
   getDeclarantAction,
   getRegleAction,
@@ -12,10 +10,6 @@ import {
   getDocumentsFromPreleveurAction
 } from '@/server/actions/index.js'
 import {displayPreleveur} from '@/utils/preleveurs.js'
-
-const DynamicBreadcrumb = nextDynamic(
-  () => import('@codegouvfr/react-dsfr/Breadcrumb')
-)
 
 export async function generateMetadata({params}) {
   const {id} = await params
@@ -57,40 +51,18 @@ const Page = async ({params}) => {
   const documents = documentsResult.data || []
 
   return (
-    <>
-      <StartDsfrOnHydration />
+    <div className='fr-container mt-4'>
+      <Typography variant='h3' sx={{pb: 3}}>
+        Édition de la règle
+      </Typography>
 
-      <div className='fr-container mt-4'>
-        <DynamicBreadcrumb
-          currentPageLabel='Édition de la règle'
-          segments={[
-            {
-              label: 'Déclarants',
-              linkProps: {
-                href: '/declarants'
-              }
-            },
-            {
-              label: displayPreleveur(declarant),
-              linkProps: {
-                href: `/declarants/${declarantId}`
-              }
-            }
-          ]}
-        />
-
-        <Typography variant='h3' sx={{pb: 3}}>
-          Édition de la règle
-        </Typography>
-
-        <RegleEditionForm
-          preleveur={declarant}
-          regle={regle}
-          exploitations={exploitations}
-          documents={documents}
-        />
-      </div>
-    </>
+      <RegleEditionForm
+        preleveur={declarant}
+        regle={regle}
+        exploitations={exploitations}
+        documents={documents}
+      />
+    </div>
   )
 }
 
