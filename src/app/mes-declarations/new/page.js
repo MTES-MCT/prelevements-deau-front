@@ -5,6 +5,10 @@ import DeclarationTemplateDownload from '@/components/declarations/declaration-t
 import NewDeclarationEntry from '@/components/declarations/new-declaration-entry.js'
 import {getAllowedDeclarationTypesAction} from '@/server/actions/declarations.js'
 
+export const metadata = {
+  title: 'Nouvelle déclaration'
+}
+
 export const dynamic = 'force-dynamic'
 
 const TEMPLATE_DECLARATION_TYPE_CODE = 'template-file'

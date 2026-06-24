@@ -6,6 +6,10 @@ import {RequireEditor} from '@/components/permissions/index.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getDeclarantsAction} from '@/server/actions/declarants.js'
 
+export const metadata = {
+  title: 'Déclarants'
+}
+
 export const dynamic = 'force-dynamic'
 
 const Page = async () => {

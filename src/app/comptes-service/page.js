@@ -5,6 +5,10 @@ import ServiceAccountsList from '@/components/service-accounts/service-accounts-
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {listServiceAccountsAction} from '@/server/actions/service-accounts.js'
 
+export const metadata = {
+  title: 'Comptes de service'
+}
+
 export const dynamic = 'force-dynamic'
 
 const Page = async () => {

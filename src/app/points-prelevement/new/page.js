@@ -3,6 +3,10 @@ import {Button} from '@codegouvfr/react-dsfr/Button'
 import PointCreationForm from '@/components/form/point-creation-form.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 
+export const metadata = {
+  title: 'Nouveau point de prélèvement'
+}
+
 const Page = () => (
   <>
     <StartDsfrOnHydration />

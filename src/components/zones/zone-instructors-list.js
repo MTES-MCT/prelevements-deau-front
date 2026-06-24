@@ -6,12 +6,10 @@ import {Button} from '@codegouvfr/react-dsfr/Button'
 import SearchBar from '@codegouvfr/react-dsfr/SearchBar'
 import {Alert, Box} from '@mui/material'
 
-import ImpersonateUserButton from '@/components/auth/impersonate-user-button.js'
 import ListItem from '@/components/ui/ListItem/index.js'
 import ZoneExportButton from '@/components/zones/zone-export-button.js'
 import {ZONE_INSTRUCTORS_EXPORT_COLUMNS} from '@/components/zones/zone-export-columns.js'
 import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
-import ZoneInstructorNotificationActions from '@/components/zones/zone-instructor-notification-actions.js'
 import useDebouncedValue from '@/hook/use-debounced-value.js'
 
 const CLIENT_PAGE_SIZE = 20
@@ -207,27 +205,16 @@ const ZoneInstructorsList = ({zone, instructors}) => {
           </div>
 
           {zone.isAdmin && (
-            <div className='flex flex-col gap-2 md:w-80 md:items-stretch'>
-              {!instructor.isCurrentUser && (
-                <ImpersonateUserButton
-                  targetUserId={instructor.id}
-                  targetLabel={getInstructorName(instructor)}
-                />
-              )}
-
-              <ZoneInstructorNotificationActions zone={zone} instructor={instructor} />
-
-              {!instructor.isCurrentUser && (
-                <Button
-                  priority='tertiary no outline'
-                  size='small'
-                  linkProps={{
-                    href: `/zones/${zone.id}/agents/${instructor.id}/supprimer`
-                  }}
-                >
-                  Retirer de la zone
-                </Button>
-              )}
+            <div className='flex gap-2 md:items-center md:flex-col md:justify-center'>
+              <Button
+                priority='tertiary no outline'
+                size='small'
+                linkProps={{
+                  href: `/zones/${zone.id}/agents/${instructor.id}/modifier`
+                }}
+              >
+                Modifier
+              </Button>
             </div>
           )}
         </Box>

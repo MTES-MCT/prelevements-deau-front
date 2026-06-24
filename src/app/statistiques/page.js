@@ -11,6 +11,10 @@ import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getStatsAction} from '@/server/actions/stats.js'
 
 // Force dynamic rendering - this page fetches user-specific stats
+export const metadata = {
+  title: 'Statistiques'
+}
+
 export const dynamic = 'force-dynamic'
 
 const Page = async () => {

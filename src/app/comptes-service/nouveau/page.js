@@ -2,6 +2,10 @@ import ServiceAccountBreadcrumb from '@/components/service-accounts/service-acco
 import ServiceAccountCreateForm from '@/components/service-accounts/service-account-create-form.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 
+export const metadata = {
+  title: 'Nouveau compte de service'
+}
+
 export const dynamic = 'force-dynamic'
 
 const Page = async () => (

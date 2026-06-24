@@ -70,6 +70,10 @@ const InfoLine = ({label, value}) => (
   </Box>
 )
 
+export const metadata = {
+  title: 'Mon compte'
+}
+
 const MonComptePage = async () => {
   const userResult = await getCurrentUser()
   const user = userResult?.data?.user ?? null

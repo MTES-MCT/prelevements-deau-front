@@ -2,6 +2,10 @@ import {redirect} from 'next/navigation'
 
 import {getCurrentUser} from '@/server/actions/user.js'
 
+export const metadata = {
+  title: 'Accueil'
+}
+
 const Home = async () => {
   const userResult = await getCurrentUser()
   const role = userResult?.data?.role

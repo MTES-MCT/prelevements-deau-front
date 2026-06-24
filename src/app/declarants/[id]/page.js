@@ -2,6 +2,7 @@ import {fr} from '@codegouvfr/react-dsfr'
 import {Box} from '@mui/material'
 import {notFound} from 'next/navigation'
 
+import {buildPageTitle} from '@/app/metadata-utils.js'
 import AccountCreationNotificationCard from '@/components/accounts/account-creation-notification-card.js'
 import ImpersonateUserButton from '@/components/auth/impersonate-user-button.js'
 import DeclarantDeclarationTypesCard from '@/components/declarants/declarant-declaration-types-card.js'
@@ -28,6 +29,13 @@ import {getAggregatedSeriesOptionsAction} from '@/server/actions/series.js'
 import {getCurrentUser} from '@/server/actions/user.js'
 
 const iconColorStyle = {color: fr.colors.decisions.text.label.blueFrance.default}
+
+export async function generateMetadata({params}) {
+  const {id} = await params
+  const result = await getDeclarantAction(id)
+
+  return buildPageTitle([result.success && result.data ? getDeclarantTitleFromDeclarant(result.data) : null], 'Fiche déclarant')
+}
 
 export const dynamic = 'force-dynamic'
 

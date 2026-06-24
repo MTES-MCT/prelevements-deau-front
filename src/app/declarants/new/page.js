@@ -7,6 +7,10 @@ const DynamicBreadcrumb = dynamic(
   () => import('@codegouvfr/react-dsfr/Breadcrumb')
 )
 
+export const metadata = {
+  title: 'Nouveau déclarant'
+}
+
 const Page = () => (
   <>
     <StartDsfrOnHydration />

@@ -4,7 +4,8 @@ import {notFound} from 'next/navigation'
 import {buildPageTitle} from '@/app/metadata-utils.js'
 import ZoneBreadcrumb from '@/components/zones/zone-breadcrumb.js'
 import ZoneHeader from '@/components/zones/zone-header.js'
-import ZoneInstructorDeleteCard from '@/components/zones/zone-instructor-delete-card.js'
+import ZoneInstructorEditActions from '@/components/zones/zone-instructor-edit-actions.js'
+import ZoneInstructorForm from '@/components/zones/zone-instructor-form.js'
 import ZoneSubNavigation from '@/components/zones/zone-sub-navigation.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {
@@ -25,10 +26,10 @@ export async function generateMetadata({params}) {
   ])
 
   return buildPageTitle([
-    'Retirer un agent',
+    'Modifier un agent',
     getInstructorName(instructorResult.success && instructorResult.data),
     zoneResult.success && zoneResult.data?.name
-  ], 'Retirer un agent')
+  ], 'Modifier un agent')
 }
 
 export const dynamic = 'force-dynamic'
@@ -52,7 +53,7 @@ const Page = async ({params}) => {
   const zone = zoneResult.data
   const instructor = instructorResult.data
 
-  if (!zone.isAdmin || instructor.isCurrentUser) {
+  if (!zone.isAdmin) {
     notFound()
   }
 
@@ -63,7 +64,7 @@ const Page = async ({params}) => {
       <Box className='fr-container h-full w-full flex flex-col gap-5 mb-8'>
         <ZoneBreadcrumb
           zone={zone}
-          currentPageLabel='Retirer un agent'
+          currentPageLabel='Modifier un agent'
           segments={[
             {
               label: 'Agents',
@@ -78,7 +79,10 @@ const Page = async ({params}) => {
 
         <ZoneSubNavigation zone={zone} current='agents' />
 
-        <ZoneInstructorDeleteCard zone={zone} instructor={instructor} />
+        <div className='grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start'>
+          <ZoneInstructorForm zone={zone} instructor={instructor} />
+          <ZoneInstructorEditActions zone={zone} instructor={instructor} />
+        </div>
       </Box>
     </>
   )

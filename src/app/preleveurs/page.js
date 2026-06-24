@@ -4,6 +4,10 @@ import DeclarantsList from '@/components/declarants/declarants-list.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getCollecteurPreleveursAction} from '@/server/actions/declarants.js'
 
+export const metadata = {
+  title: 'Préleveurs'
+}
+
 export const dynamic = 'force-dynamic'
 
 const Page = async () => {

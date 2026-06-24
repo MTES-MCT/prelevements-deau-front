@@ -5,6 +5,10 @@ import DeclarationTypesAdmin from '@/components/declaration-types/declaration-ty
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {listDeclarationTypesAction} from '@/server/actions/declaration-types.js'
 
+export const metadata = {
+  title: 'Types de déclaration'
+}
+
 export const dynamic = 'force-dynamic'
 
 const Page = async () => {

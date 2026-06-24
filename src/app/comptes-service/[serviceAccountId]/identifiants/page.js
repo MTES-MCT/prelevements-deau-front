@@ -1,11 +1,19 @@
 import {notFound} from 'next/navigation'
 
+import {buildPageTitle} from '@/app/metadata-utils.js'
 import ServiceAccountBreadcrumb from '@/components/service-accounts/service-account-breadcrumb.js'
 import ServiceAccountCredentials from '@/components/service-accounts/service-account-credentials.js'
 import ServiceAccountHeader from '@/components/service-accounts/service-account-header.js'
 import ServiceAccountSubNavigation from '@/components/service-accounts/service-account-sub-navigation.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getServiceAccountAction} from '@/server/actions/service-accounts.js'
+
+export async function generateMetadata({params}) {
+  const {serviceAccountId} = await params
+  const result = await getServiceAccountAction(serviceAccountId)
+
+  return buildPageTitle(['Identifiants', result.success && result.data?.name], 'Identifiants du compte de service')
+}
 
 export const dynamic = 'force-dynamic'
 

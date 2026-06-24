@@ -2,6 +2,7 @@ import {Typography} from '@mui/material'
 import nextDynamic from 'next/dynamic'
 import {notFound} from 'next/navigation'
 
+import {buildPageTitle} from '@/app/metadata-utils.js'
 import DocumentUploadForm from '@/components/form/document-upload-form.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {
@@ -13,6 +14,13 @@ import {displayPreleveur} from '@/utils/preleveurs.js'
 const DynamicBreadcrumb = nextDynamic(
   () => import('@codegouvfr/react-dsfr/Breadcrumb')
 )
+
+export async function generateMetadata({params}) {
+  const {id} = await params
+  const result = await getDeclarantAction(id)
+
+  return buildPageTitle(['Nouveau document', result.success && result.data && displayPreleveur(result.data)], 'Nouveau document')
+}
 
 export const dynamic = 'force-dynamic'
 

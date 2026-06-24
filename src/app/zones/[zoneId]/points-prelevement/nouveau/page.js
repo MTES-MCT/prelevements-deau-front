@@ -1,6 +1,7 @@
 import {Box} from '@mui/material'
 import {forbidden, notFound} from 'next/navigation'
 
+import {buildPageTitle} from '@/app/metadata-utils.js'
 import ZoneBreadcrumb from '@/components/zones/zone-breadcrumb.js'
 import ZoneHeader from '@/components/zones/zone-header.js'
 import ZonePointForm from '@/components/zones/zone-point-form.js'
@@ -14,6 +15,13 @@ import {
   getZoneGeometryAction,
   getZonePointsPrelevementAction
 } from '@/server/actions/zones.js'
+
+export async function generateMetadata({params}) {
+  const {zoneId} = await params
+  const result = await getZoneAction(zoneId)
+
+  return buildPageTitle(['Nouveau point de prélèvement', result.success && result.data?.name], 'Nouveau point de prélèvement de zone')
+}
 
 export const dynamic = 'force-dynamic'
 

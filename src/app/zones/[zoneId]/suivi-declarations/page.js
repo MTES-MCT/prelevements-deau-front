@@ -1,6 +1,7 @@
 import {Box} from '@mui/material'
 import {notFound} from 'next/navigation'
 
+import {buildPageTitle} from '@/app/metadata-utils.js'
 import ZoneBreadcrumb from '@/components/zones/zone-breadcrumb.js'
 import ZoneDeclarationMonthlyMatrix from '@/components/zones/zone-declaration-monthly-matrix.js'
 import ZoneHeader from '@/components/zones/zone-header.js'
@@ -15,6 +16,13 @@ import {
   getZoneExploitationsAction,
   getZonePointsPrelevementAction
 } from '@/server/actions/zones.js'
+
+export async function generateMetadata({params}) {
+  const {zoneId} = await params
+  const result = await getZoneAction(zoneId)
+
+  return buildPageTitle(['Suivi des déclarations', result.success && result.data?.name], 'Suivi des déclarations')
+}
 
 export const dynamic = 'force-dynamic'
 

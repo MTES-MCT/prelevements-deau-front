@@ -1,5 +1,6 @@
 import {notFound} from 'next/navigation'
 
+import {buildPageTitle} from '@/app/metadata-utils.js'
 import ExploitationsList from '@/components/exploitations/exploitations-list.js'
 import PointIdentification from '@/components/points-prelevement/point-identification.js'
 import PointLocalisation from '@/components/points-prelevement/point-localisation.js'
@@ -9,6 +10,14 @@ import {getNewExploitationURL} from '@/lib/urls.js'
 import {getPointPrelevementAction, getExploitationsByPointIdAction} from '@/server/actions/points-prelevement.js'
 import {getAggregatedSeriesOptionsAction} from '@/server/actions/series.js'
 import {getCurrentUser} from '@/server/actions/user.js'
+import {getPointPrelevementLabel} from '@/utils/point-prelevement.js'
+
+export async function generateMetadata({params}) {
+  const {id} = await params
+  const result = await getPointPrelevementAction(id)
+
+  return buildPageTitle([result.success && result.data ? getPointPrelevementLabel({pointPrelevement: result.data}) : null], 'Point de prélèvement')
+}
 
 const Page = async ({params}) => {
   const userResult = await getCurrentUser()

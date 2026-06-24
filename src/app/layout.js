@@ -17,7 +17,10 @@ import '@codegouvfr/react-dsfr/dsfr/utility/icons/icons.min.css'
 import '@/app/globals.css'
 
 export const metadata = {
-  title: 'Partageons l’Eau',
+  title: {
+    default: 'Partageons l’Eau',
+    template: '%s | Partageons l’Eau'
+  },
   description: 'Suivre les prélèvements d’eau'
 }
 

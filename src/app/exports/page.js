@@ -4,6 +4,10 @@ import ExportForm from '@/components/export/export-form.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getPointsPrelevementAction, getDeclarantsAction} from '@/server/actions/index.js'
 
+export const metadata = {
+  title: 'Exports'
+}
+
 export const dynamic = 'force-dynamic'
 
 const Page = async () => {

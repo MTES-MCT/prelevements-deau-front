@@ -1,5 +1,6 @@
 import {notFound} from 'next/navigation'
 
+import {buildPageTitle} from '@/app/metadata-utils.js'
 import ServiceAccountBreadcrumb from '@/components/service-accounts/service-account-breadcrumb.js'
 import ServiceAccountDeclarants from '@/components/service-accounts/service-account-declarants.js'
 import ServiceAccountHeader from '@/components/service-accounts/service-account-header.js'
@@ -9,6 +10,13 @@ import {
   getServiceAccountAction,
   listServiceAccountDeclarantOptionsAction
 } from '@/server/actions/service-accounts.js'
+
+export async function generateMetadata({params}) {
+  const {serviceAccountId} = await params
+  const result = await getServiceAccountAction(serviceAccountId)
+
+  return buildPageTitle(['Déclarants', result.success && result.data?.name], 'Déclarants du compte de service')
+}
 
 export const dynamic = 'force-dynamic'
 

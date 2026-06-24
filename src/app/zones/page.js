@@ -8,6 +8,10 @@ import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getCurrentUser} from '@/server/actions/user.js'
 import {getZonesAction} from '@/server/actions/zones.js'
 
+export const metadata = {
+  title: 'Zones'
+}
+
 export const dynamic = 'force-dynamic'
 
 function pluralize(count, singular, plural = `${singular}s`) {

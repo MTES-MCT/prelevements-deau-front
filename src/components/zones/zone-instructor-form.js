@@ -24,25 +24,34 @@ function todayAsInputValue() {
   return new Date(now.getTime() - timezoneOffset).toISOString().slice(0, 10)
 }
 
-function getInitialForm() {
+function dateToInputValue(value) {
+  if (!value) {
+    return ''
+  }
+
+  return String(value).slice(0, 10)
+}
+
+function getInitialForm(instructor) {
   return {
-    email: '',
-    firstName: '',
-    lastName: '',
-    phoneNumber: '',
-    jobTitle: '',
-    isAdmin: false,
-    startDate: todayAsInputValue(),
-    endDate: '',
+    email: instructor?.email || '',
+    firstName: instructor?.firstName || '',
+    lastName: instructor?.lastName || '',
+    phoneNumber: instructor?.phoneNumber || '',
+    jobTitle: instructor?.jobTitle || '',
+    isAdmin: Boolean(instructor?.isAdmin),
+    startDate: dateToInputValue(instructor?.startDate) || todayAsInputValue(),
+    endDate: dateToInputValue(instructor?.endDate),
     notifyAccountCreation: false,
     notifyZoneAttachment: false
   }
 }
 
-const ZoneInstructorForm = ({zone}) => {
+const ZoneInstructorForm = ({zone, instructor = null}) => {
   const router = useRouter()
+  const isEditing = Boolean(instructor)
 
-  const [form, setForm] = useState(getInitialForm)
+  const [form, setForm] = useState(() => getInitialForm(instructor))
   const [error, setError] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -77,7 +86,7 @@ const ZoneInstructorForm = ({zone}) => {
       })
 
       if (!result.success) {
-        setError(result.error || 'Impossible d’ajouter cet agent.')
+        setError(result.error || (isEditing ? 'Impossible de modifier cet agent.' : 'Impossible d’ajouter cet agent.'))
         setIsSubmitting(false)
         return
       }
@@ -92,15 +101,17 @@ const ZoneInstructorForm = ({zone}) => {
 
   return (
     <SectionCard
-      title='Ajouter ou mettre à jour un agent'
-      icon={ZONE_ICONS.addUser}
+      title={isEditing ? 'Modifier l’agent' : 'Ajouter ou mettre à jour un agent'}
+      icon={isEditing ? ZONE_ICONS.edit : ZONE_ICONS.addUser}
       editorOnly={false}
     >
       <Box className='flex flex-col gap-4'>
-        <Alert severity='info'>
-          Si l’email correspond déjà à un agent existant sur une autre zone,
-          le compte est réutilisé et seul le rattachement à cette zone est créé ou mis à jour.
-        </Alert>
+        {!isEditing && (
+          <Alert severity='info'>
+            Si l’email correspond déjà à un agent existant sur une autre zone,
+            le compte est réutilisé et seul le rattachement à cette zone est créé ou mis à jour.
+          </Alert>
+        )}
 
         {error && (
           <Alert severity='error'>{error}</Alert>
@@ -109,9 +120,11 @@ const ZoneInstructorForm = ({zone}) => {
         <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
           <TextField
             required
+            disabled={isEditing}
             label='Email'
             type='email'
             value={form.email}
+            helperText={isEditing ? 'L’email identifie le compte agent et ne peut pas être modifié ici.' : undefined}
             onChange={event => updateField('email', event.target.value)}
           />
 
@@ -174,29 +187,31 @@ const ZoneInstructorForm = ({zone}) => {
           />
         </div>
 
-        <Box className='flex flex-col gap-2 fr-background-alt--grey fr-p-3w'>
-          <Typography variant='subtitle2'>Notifications email</Typography>
+        {!isEditing && (
+          <Box className='flex flex-col gap-2 fr-background-alt--grey fr-p-3w'>
+            <Typography variant='subtitle2'>Notifications email</Typography>
 
-          <FormControlLabel
-            control={(
-              <Checkbox
-                checked={form.notifyAccountCreation}
-                onChange={event => updateField('notifyAccountCreation', event.target.checked)}
-              />
-            )}
-            label='Notifier l’agent de la création ou disponibilité de son compte'
-          />
+            <FormControlLabel
+              control={(
+                <Checkbox
+                  checked={form.notifyAccountCreation}
+                  onChange={event => updateField('notifyAccountCreation', event.target.checked)}
+                />
+              )}
+              label='Notifier l’agent de la création ou disponibilité de son compte'
+            />
 
-          <FormControlLabel
-            control={(
-              <Checkbox
-                checked={form.notifyZoneAttachment}
-                onChange={event => updateField('notifyZoneAttachment', event.target.checked)}
-              />
-            )}
-            label='Notifier l’agent de son rattachement à cette zone'
-          />
-        </Box>
+            <FormControlLabel
+              control={(
+                <Checkbox
+                  checked={form.notifyZoneAttachment}
+                  onChange={event => updateField('notifyZoneAttachment', event.target.checked)}
+                />
+              )}
+              label='Notifier l’agent de son rattachement à cette zone'
+            />
+          </Box>
+        )}
 
         <Box className='flex justify-between items-center gap-3 flex-wrap'>
           <Typography variant='body2'>
@@ -214,7 +229,7 @@ const ZoneInstructorForm = ({zone}) => {
             </Button>
 
             <Button disabled={isDisabled} onClick={handleSubmit}>
-              {isSubmitting ? 'Enregistrement…' : 'Enregistrer le rattachement'}
+              {isSubmitting ? 'Enregistrement…' : (isEditing ? 'Enregistrer les modifications' : 'Enregistrer le rattachement')}
             </Button>
           </Box>
         </Box>

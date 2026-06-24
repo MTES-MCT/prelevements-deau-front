@@ -13,6 +13,10 @@ import 'moment/locale/fr'
 
 moment.locale('fr')
 
+export const metadata = {
+  title: 'Mes déclarations'
+}
+
 export const dynamic = 'force-dynamic'
 
 const Dossiers = async () => {

@@ -7,7 +7,13 @@ import {useRouter} from 'next/navigation'
 
 import {useAuth} from '@/contexts/auth-context.js'
 
-const ImpersonateUserButton = ({targetUserId, targetLabel}) => {
+const ImpersonateUserButton = ({
+  targetUserId,
+  targetLabel,
+  label,
+  priority = 'primary',
+  size
+}) => {
   const {
     user,
     startImpersonation
@@ -36,15 +42,19 @@ const ImpersonateUserButton = ({targetUserId, targetLabel}) => {
     return null
   }
 
+  const buttonLabel = isPending ? 'Connexion en cours...' : label || `Prendre la place de ${targetLabel}`
+
   return (
     <div className='flex flex-col items-start sm:items-end gap-2'>
       <Button
         iconId='ri-user-shared-line'
-        priority='primary'
+        priority={priority}
+        size={size}
+        title={buttonLabel}
         disabled={isPending}
         onClick={handleClick}
       >
-        {isPending ? 'Connexion en cours...' : `Prendre la place de ${targetLabel}`}
+        {buttonLabel}
       </Button>
       {error && (
         <p className='fr-error-text fr-mb-0'>{error}</p>
