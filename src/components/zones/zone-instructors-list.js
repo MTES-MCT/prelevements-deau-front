@@ -6,6 +6,7 @@ import {Button} from '@codegouvfr/react-dsfr/Button'
 import SearchBar from '@codegouvfr/react-dsfr/SearchBar'
 import {Alert, Box} from '@mui/material'
 
+import ImpersonateUserButton from '@/components/auth/impersonate-user-button.js'
 import ListItem from '@/components/ui/ListItem/index.js'
 import ZoneExportButton from '@/components/zones/zone-export-button.js'
 import {ZONE_INSTRUCTORS_EXPORT_COLUMNS} from '@/components/zones/zone-export-columns.js'
@@ -207,6 +208,13 @@ const ZoneInstructorsList = ({zone, instructors}) => {
 
           {zone.isAdmin && (
             <div className='flex flex-col gap-2 md:w-80 md:items-stretch'>
+              {!instructor.isCurrentUser && (
+                <ImpersonateUserButton
+                  targetUserId={instructor.id}
+                  targetLabel={getInstructorName(instructor)}
+                />
+              )}
+
               <ZoneInstructorNotificationActions zone={zone} instructor={instructor} />
 
               {!instructor.isCurrentUser && (
