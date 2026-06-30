@@ -14,6 +14,7 @@ import Badge from '@codegouvfr/react-dsfr/Badge'
 
 import PointReconciliationMap from '@/components/declarations/point-reconciliation-map.js'
 import {formatDateRange} from '@/lib/format-date.js'
+import {formatUsageReference, getUsageReferenceLabel} from '@/lib/water-uses.js'
 import {reconcileDeclarationChunkAction} from '@/server/actions/declarations.js'
 import {formatNumber} from '@/utils/number.js'
 
@@ -129,7 +130,9 @@ function getChunkSearchText(chunk, index) {
     getChunkTitle(chunk, index),
     getRawPointName(chunk),
     getChunkPointName(chunk),
-    getAssociationLabel({chunk, isSelected: false})
+    getAssociationLabel({chunk, isSelected: false}),
+    getUsageReferenceLabel(chunk.usage),
+    formatUsageReference(chunk.usage)
   ].join(' '))
 }
 
@@ -234,6 +237,7 @@ const ChunkListItem = ({
   const matched = isChunkMatched(chunk)
   const chunkTitle = getChunkTitle(chunk, index)
   const volumeLabel = getChunkVolumeLabel(chunk)
+  const usageLabel = formatUsageReference(chunk.usage)
 
   return (
     <div ref={itemRef} className={getChunkItemClassName({isSelected, matched})}>
@@ -260,6 +264,12 @@ const ChunkListItem = ({
           >
             {getAssociationLabel({chunk, isSelected})}
           </div>
+
+          {usageLabel && (
+            <div className='mt-2 truncate text-xs text-gray-700' title={usageLabel}>
+              <span className='font-medium'>{getUsageReferenceLabel(chunk.usage)} :</span> {usageLabel}
+            </div>
+          )}
 
           {volumeLabel && (
             <div className='mt-2 text-xs text-gray-600'>

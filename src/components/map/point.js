@@ -4,8 +4,13 @@ import {
   Box, ListItem, Chip, Typography
 } from '@mui/material'
 
-import {usageColors} from '@/components/map/legend-colors.js'
 import {getTypeMilieuColor} from '@/lib/points-prelevement.js'
+import {
+  getUsageColor,
+  getUsageKey,
+  getUsageLabel,
+  getUsageTextColor
+} from '@/lib/water-uses.js'
 
 const Point = ({point, index}) => (
   <ListItem
@@ -33,11 +38,11 @@ const Point = ({point, index}) => (
       )}
       {point.usages && point.usages.map(usage => (
         <Chip
-          key={`${point.id}-${usage}`}
-          label={usage}
+          key={`${point.id}-${getUsageKey(usage)}`}
+          label={getUsageLabel(usage)}
           sx={{
-            backgroundColor: usageColors[usage].color,
-            color: usageColors[usage].textColor
+            backgroundColor: getUsageColor(usage),
+            color: getUsageTextColor(usage)
           }}
         />
       ))}

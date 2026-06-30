@@ -8,6 +8,7 @@ import {Box} from '@mui/system'
 import maplibre from 'maplibre-gl'
 
 import 'maplibre-gl/dist/maplibre-gl.css'
+import {cooperativeGesturesMapOptions} from '@/components/map/cooperative-gestures.js'
 import photo from '@/components/map/styles/photo.json'
 import planIGN from '@/components/map/styles/plan-ign.json'
 
@@ -220,7 +221,8 @@ const MiniMapForm = ({geom, setGeom, boundaryFeature = null}) => {
       style: stylesMap[style],
       center: geom ? geom.coordinates : boundaryBounds?.getCenter()?.toArray?.() || DEFAULT_CENTER,
       zoom: geom ? 11 : DEFAULT_ZOOM,
-      attributionControl: {compact: true}
+      attributionControl: {compact: true},
+      ...cooperativeGesturesMapOptions
     })
 
     const canvas = map.getCanvasContainer()

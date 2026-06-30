@@ -4,24 +4,40 @@ import {revalidatePath} from 'next/cache'
 
 import {fetchJSON, withErrorHandling} from '@/server/api-wrapper.js'
 
-function buildStatusesSearch(statuses = []) {
-  if (!Array.isArray(statuses) || statuses.length === 0) {
-    return ''
-  }
-
-  const filteredStatuses = [...new Set(statuses.map(status => String(status).trim()).filter(Boolean))]
-
-  if (filteredStatuses.length === 0) {
-    return ''
-  }
-
+function buildSourcesSearch({
+  declarant,
+  dossierNumber,
+  endDate,
+  page,
+  pageSize,
+  startDate,
+  statuses = []
+} = {}) {
   const searchParams = new URLSearchParams()
+  const filteredStatuses = Array.isArray(statuses)
+    ? [...new Set(statuses.map(status => String(status).trim()).filter(Boolean))]
+    : []
 
   for (const status of filteredStatuses) {
     searchParams.append('statuses', status)
   }
 
-  return `?${searchParams.toString()}`
+  const values = {
+    declarant,
+    dossierNumber,
+    endDate,
+    page,
+    pageSize,
+    startDate
+  }
+
+  for (const [key, value] of Object.entries(values)) {
+    if (value) {
+      searchParams.set(key, String(value))
+    }
+  }
+
+  return searchParams.size > 0 ? `?${searchParams.toString()}` : ''
 }
 
 /**
@@ -30,9 +46,9 @@ function buildStatusesSearch(statuses = []) {
  * @param {string[]} [options.statuses=[]] - Source statuses
  * @returns {Promise<Object>} Result object
  */
-export async function getMySourcesAction({statuses = []} = {}) {
+export async function getMySourcesAction(options = {}) {
   return withErrorHandling(async () => {
-    const search = buildStatusesSearch(statuses)
+    const search = buildSourcesSearch(options)
     return fetchJSON(`api/sources/me${search}`)
   })
 }

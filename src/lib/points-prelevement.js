@@ -1,4 +1,9 @@
-import {legendColors, usageColors} from '@/components/map/legend-colors.js'
+import {legendColors} from '@/components/map/legend-colors.js'
+import {
+  getUsageColor,
+  getUsageKey,
+  normalizeUsageOption
+} from '@/lib/water-uses.js'
 
 // Fonction utilitaire pour récupérer la couleur associée au type de milieu
 export const getTypeMilieuColor = typeMilieu => {
@@ -7,18 +12,19 @@ export const getTypeMilieuColor = typeMilieu => {
 }
 
 export function extractUsages(points) {
-  const usagesSet = new Set()
+  const usagesByValue = new Map()
   for (const point of points) {
     if (point.usages) {
       for (const usage of point.usages) {
-        if (usage) {
-          usagesSet.add(usage)
+        const option = normalizeUsageOption(usage)
+        if (option.value) {
+          usagesByValue.set(option.value, option)
         }
       }
     }
   }
 
-  return [...usagesSet]
+  return [...usagesByValue.values()]
 }
 
 export function extractStatus(points) {
@@ -121,11 +127,12 @@ export function createUsagePieChart(usages) {
   }
 
   for (let i = 0; i < count; i++) {
-    const usageName = usages[i]
-    const color = usageColors[usageName]?.color || '#ccc'
+    const usage = usages[i]
+    const color = getUsageColor(usage)
     const start = i / count
     const end = (i + 1) / count
     const segmentPath = createPieSegment(cx, cy, radius, start, end, color)
+    segmentPath.dataset.usage = getUsageKey(usage)
     svg.append(segmentPath)
   }
 

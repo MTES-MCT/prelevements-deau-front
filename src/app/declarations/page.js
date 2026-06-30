@@ -13,7 +13,7 @@ const Declarations = async () => (
   <>
     <StartDsfrOnHydration />
 
-    <div className='fr-container mt-4'>
+    <div className='fr-container mt-4 pb-16'>
       <CallOut
         iconId='ri-information-line'
         title='Déclarations'

@@ -194,6 +194,66 @@ export async function reconcileDeclarationChunkAction({
   })
 }
 
+function normalizeDeclarationActionInput(input) {
+  if (typeof input === 'object' && input !== null) {
+    return {
+      declarationId: input.declarationId,
+      sourceId: input.sourceId
+    }
+  }
+
+  return {
+    declarationId: input,
+    sourceId: null
+  }
+}
+
+export async function deleteDeclarationAction(input) {
+  return withErrorHandling(async () => {
+    const {declarationId, sourceId} = normalizeDeclarationActionInput(input)
+
+    if (!declarationId) {
+      throw new Error('declarationId est requis.')
+    }
+
+    const data = await fetchJSON(`api/admin/declarations/${declarationId}`, {
+      method: 'DELETE'
+    })
+
+    revalidatePath('/declarations')
+    revalidatePath('/declarations/me')
+    revalidatePath('/mes-declarations')
+    revalidatePath(`/declarations/${declarationId}`)
+    revalidatePath(`/mes-declarations/${declarationId}`)
+    if (sourceId) {
+      revalidatePath(`/declarations/${sourceId}`)
+    }
+
+    return data
+  })
+}
+
+export async function replayDeclarationAction(input) {
+  return withErrorHandling(async () => {
+    const {declarationId, sourceId} = normalizeDeclarationActionInput(input)
+
+    if (!declarationId) {
+      throw new Error('declarationId est requis.')
+    }
+
+    const data = await fetchJSON(`api/admin/declarations/${declarationId}/replay`, {
+      method: 'POST'
+    })
+
+    await revalidateDeclarationPaths(declarationId)
+    if (sourceId) {
+      revalidatePath(`/declarations/${sourceId}`)
+    }
+
+    return data
+  })
+}
+
 export async function requestDeclarationPointsChangeAction({
   declarationId,
   message

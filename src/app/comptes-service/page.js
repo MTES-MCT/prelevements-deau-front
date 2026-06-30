@@ -26,7 +26,8 @@ const Page = async () => {
               iconId='fr-icon-lock-line'
               title='Comptes de service'
             >
-              Pilotez les accès techniques, leurs identifiants et les déclarants qu’ils peuvent représenter.
+              Pilotez les accès techniques et leurs identifiants.
+              Un compte actif peut traiter tous les déclarants actifs.
               Les comptes supprimés restent visibles pour garder une traçabilité claire.
             </CallOut>
           </div>

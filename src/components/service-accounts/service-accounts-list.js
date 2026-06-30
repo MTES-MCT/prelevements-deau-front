@@ -63,10 +63,9 @@ const ServiceAccountsList = ({serviceAccounts = []}) => {
 
                 <div className='fr-grid-row fr-grid-row--gutters fr-mt-2w'>
                   <div className='fr-col-6'>
-                    <p className='fr-text--xs fr-mb-0'>Déclarants</p>
+                    <p className='fr-text--xs fr-mb-0'>Portée</p>
                     <p className='fr-text--lg fr-mb-0'>
-                      {serviceAccount.counts?.activeDeclarants ?? 0}
-                      <span className='fr-text--xs'> / {serviceAccount.counts?.declarants ?? 0}</span>
+                      {serviceAccount.scopeLabel ?? 'Tous les déclarants'}
                     </p>
                   </div>
                   <div className='fr-col-6'>

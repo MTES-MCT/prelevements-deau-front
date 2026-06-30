@@ -9,14 +9,6 @@ import {
 
 import {legendColors, usageColors, usageLabels} from '@/components/map/legend-colors.js'
 
-const MAIN_USAGES = new Set([
-  'AEP',
-  'AQUACULTURE',
-  'INDUSTRIE',
-  'IRRIGATION',
-  'INCONNU'
-])
-
 const Bubble = ({color, text, textColor}) => (
   <Box className='flex items-center justify-between gap-2'>
     <Box
@@ -25,7 +17,9 @@ const Bubble = ({color, text, textColor}) => (
         color: textColor || 'black',
         px: 1,
         mt: 1,
-        borderRadius: '5px'
+        borderRadius: '5px',
+        whiteSpace: 'normal',
+        lineHeight: 1.2
       }}
     >
       <b><small>{text.toUpperCase()}</small></b>
@@ -35,11 +29,9 @@ const Bubble = ({color, text, textColor}) => (
 
 const Legend = () => {
   const theme = useTheme()
-  const [isOpen, setIsOpen] = useState(true)
+  const [isOpen, setIsOpen] = useState(false)
 
-  const usages = legendColors.usages.filter(u =>
-    MAIN_USAGES.has(u.key)
-  )
+  const usages = legendColors.usages.filter(usage => usage.key !== '0' && usage.key !== '1')
 
   return (
     <Box
@@ -48,11 +40,23 @@ const Legend = () => {
         bottom: 0,
         left: 0,
         p: 1,
-        backgroundColor: alpha(theme.palette.background.default, 0.8)
+        maxWidth: {xs: 'calc(100% - 16px)', sm: 320},
+        maxHeight: '45%',
+        overflow: 'hidden',
+        backgroundColor: alpha(theme.palette.background.default, 0.88),
+        borderTopRightRadius: 1
       }}
     >
       {isOpen && (
-        <Box sx={{p: 1, borderBottom: '1px solid grey'}}>
+        <Box
+          sx={{
+            p: 1,
+            pr: 0.5,
+            borderBottom: '1px solid grey',
+            maxHeight: {xs: 180, sm: 260},
+            overflowY: 'auto'
+          }}
+        >
           {usages.map(usage => (
             <Box key={usage.key}>
               <Bubble

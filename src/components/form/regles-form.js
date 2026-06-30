@@ -11,6 +11,7 @@ import DividerSection from '@/components/ui/DividerSection/index.js'
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import {formatFullDateFr} from '@/lib/format-date.js'
 import {getConstraintLabel, getParameterInfo, parameterUnits} from '@/lib/regles.js'
+import {getUsageLabel} from '@/lib/water-uses.js'
 import {displayPreleveur} from '@/utils/preleveurs.js'
 
 const constraints = [
@@ -49,11 +50,11 @@ const requiresUnitSelection = parameter => (parameterUnits[parameter]?.length ||
 function getExploitationLabel(exploitation) {
   const pointName = exploitation.pointPrelevement?.name || 'Point inconnu'
   const declarantName = displayPreleveur(exploitation.declarant)
-  const usagesText = exploitation.usages?.length > 0
-    ? exploitation.usages.join(', ')
+  const usageText = exploitation.usage
+    ? getUsageLabel(exploitation.usage)
     : 'Usage non renseigné'
 
-  return `${pointName} (${declarantName}) - ${usagesText}`
+  return `${pointName} (${declarantName}) - ${usageText}`
 }
 
 function getExploitationTooltip(exploitation) {

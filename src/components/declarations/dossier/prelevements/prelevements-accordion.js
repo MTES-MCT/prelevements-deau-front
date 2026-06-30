@@ -15,31 +15,11 @@ import {
 
 import ChunkInstructionBadge, {CHUNK_STATUS} from '@/components/declarations/instruction/chunk-instruction-badge.js'
 import ChunkInstructionForm from '@/components/declarations/instruction/chunk-instruction-form.js'
+import {formatUsageReference, getUsageReferenceLabel} from '@/lib/water-uses.js'
 import {formatNumber} from '@/utils/number.js'
 
-const usageLabels = {
-  INCONNU: 'Inconnu',
-  PAS_D_USAGE: 'Pas d’usage',
-  IRRIGATION: 'Irrigation',
-  AGRICULTURE_ELEVAGE: 'Agriculture / élevage',
-  AQUACULTURE: 'Aquaculture',
-  INDUSTRIE: 'Industrie',
-  AEP: 'AEP',
-  ENERGIE: 'Énergie',
-  LOISIRS: 'Loisirs',
-  EMBOUTEILLAGE: 'Embouteillage',
-  THERMALISME_THALASSO: 'Thermalisme / thalasso',
-  DEFENSE_INCENDIE: 'Défense incendie',
-  REALIMENTATION_EAU: 'Réalimentation en eau',
-  CANAUX: 'Canaux',
-  ETIAGE: 'Étiage',
-  ENTRETIEN_VOIRIES: 'Entretien voiries',
-  ALIMENTATION_SOUTIEN_CANAL: 'Alimentation / soutien de canal',
-  DOMESTIQUE: 'Domestique'
-}
-
 function formatUsage(value) {
-  return usageLabels[value] || String(value || '').replaceAll('_', ' ').toLowerCase()
+  return formatUsageReference(value)
 }
 
 function isDefinedNumber(value) {
@@ -182,7 +162,7 @@ const PrelevementsSummary = ({
     usage && {
       key: 'usage',
       Icon: WaterOutlinedIcon,
-      label: 'Usage',
+      label: getUsageReferenceLabel(usage),
       value: formatUsage(usage)
     },
     isPositiveNumber(volumeRejeteTotal) && {

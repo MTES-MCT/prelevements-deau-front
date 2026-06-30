@@ -7,6 +7,7 @@ import {
 import maplibre from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
+import {cooperativeGesturesMapOptions} from '@/components/map/cooperative-gestures.js'
 import planIGN from '@/components/map/styles/plan-ign.json'
 
 const DEFAULT_MAP_ZOOM = 10
@@ -262,7 +263,8 @@ const QuickDeclarationMap = ({
       style: planIGN,
       center: firstCoordinates,
       attributionControl: {compact: true},
-      zoom: DEFAULT_MAP_ZOOM
+      zoom: DEFAULT_MAP_ZOOM,
+      ...cooperativeGesturesMapOptions
     })
 
     mapRef.current = map

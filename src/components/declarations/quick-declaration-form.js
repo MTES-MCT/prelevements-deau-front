@@ -12,37 +12,16 @@ import QuickDeclarationMap from './quick-declaration-map.js'
 import {useAuth} from '@/contexts/auth-context.js'
 import {getDeclarantTitleFromUser} from '@/lib/declarants.js'
 import {getMyDeclarationURL} from '@/lib/urls.js'
+import {normalizeUsageOption} from '@/lib/water-uses.js'
 import {
   createQuickDeclarationAction,
   getQuickDeclarationContextAction
 } from '@/server/actions/declarations.js'
 import {formatNumber} from '@/utils/number.js'
 
-const USAGE_LABELS = {
-  INCONNU: 'Inconnu',
-  PAS_D_USAGE: 'Pas d’usage',
-  IRRIGATION: 'Irrigation',
-  AGRICULTURE_ELEVAGE: 'Agriculture / élevage',
-  AQUACULTURE: 'Aquaculture',
-  INDUSTRIE: 'Industrie',
-  AEP: 'AEP',
-  ENERGIE: 'Énergie',
-  LOISIRS: 'Loisirs',
-  EMBOUTEILLAGE: 'Embouteillage',
-  THERMALISME_THALASSO: 'Thermalisme / thalasso',
-  DEFENSE_INCENDIE: 'Défense incendie',
-  REALIMENTATION_EAU: 'Réalimentation en eau',
-  CANAUX: 'Canaux',
-  ETIAGE: 'Étiage',
-  ENTRETIEN_VOIRIES: 'Entretien voiries',
-  ALIMENTATION_SOUTIEN_CANAL: 'Alimentation / soutien de canal',
-  DOMESTIQUE: 'Domestique'
-}
-
 const POINTS_CONTACT_EMAIL = 'contact@partageonsleau.beta.gouv.fr'
 const POINTS_CONTACT_SUBJECT_SUFFIX = 'Modification sur mes points de prélèvements'
-const FALLBACK_USAGE_OPTIONS = Object.keys(USAGE_LABELS)
-const ENTRY_GRID_COLUMNS_CLASS_NAME = 'md:grid-cols-[minmax(150px,1fr)_128px_180px]'
+const ENTRY_GRID_COLUMNS_CLASS_NAME = 'md:grid-cols-[minmax(150px,1fr)_128px_240px]'
 
 function getPreleveurId(preleveur) {
   return preleveur.id || preleveur.userId || preleveur.declarant?.userId
@@ -102,10 +81,6 @@ function formatDate(value) {
   }
 
   return new Intl.DateTimeFormat('fr-FR').format(date)
-}
-
-function formatUsage(value) {
-  return USAGE_LABELS[value] || String(value || '').replaceAll('_', ' ').toLowerCase()
 }
 
 function classNames(...values) {
@@ -210,18 +185,20 @@ function isCompleteNumberInput(value) {
 }
 
 function getDefaultUsage(point) {
-  return point.lastKnownUsage || point.usages?.find(Boolean) || ''
+  return normalizeUsageOption(point.lastKnownUsage).value
+    || normalizeUsageOption(point.usage).value
+    || ''
 }
 
 function getInitialRow(point) {
   return {
     index: '',
-    usage: getDefaultUsage(point)
+    usageId: getDefaultUsage(point)
   }
 }
 
 function getRowState(rows, pointId) {
-  return rows[pointId] ?? {index: '', usage: ''}
+  return rows[pointId] ?? {index: '', usageId: ''}
 }
 
 function getLastReadingLabel(point) {
@@ -268,13 +245,45 @@ function getWarning({point, row, readingDate}) {
 }
 
 function buildUsageOptionsForPoint(point, globalUsageOptions) {
-  return [
-    ...new Set([
-      point.lastKnownUsage,
-      ...(point.usages ?? []),
-      ...globalUsageOptions
-    ].filter(Boolean))
-  ]
+  const byValue = new Map()
+
+  for (const usage of [
+    point.lastKnownUsage,
+    point.usage,
+    ...(point.declarationUsageOptions ?? point.usageOptions ?? []),
+    ...globalUsageOptions
+  ]) {
+    const option = normalizeUsageOption(usage)
+
+    if (option.value) {
+      byValue.set(option.value, option)
+    }
+  }
+
+  return [...byValue.values()]
+}
+
+function getUsageCodeSortParts(option) {
+  const match = /^(\d+)(.*)$/u.exec(option.code ?? '')
+
+  return {
+    number: match ? Number(match[1]) : Number.MAX_SAFE_INTEGER,
+    suffix: match?.[2] ?? '',
+    label: option.label ?? ''
+  }
+}
+
+function compareUsageOptions(left, right) {
+  const leftParts = getUsageCodeSortParts(left)
+  const rightParts = getUsageCodeSortParts(right)
+
+  return leftParts.number - rightParts.number
+    || leftParts.suffix.localeCompare(rightParts.suffix, 'fr', {numeric: true})
+    || leftParts.label.localeCompare(rightParts.label, 'fr')
+}
+
+function formatUsageOptionLabel(option) {
+  return option.code ? `${option.code} - ${option.label}` : option.label
 }
 
 function getInitialPreleveurId(availablePreleveurs) {
@@ -539,7 +548,7 @@ const QuickDeclarationEntryRow = ({
   const warning = getWarning({point, row, readingDate})
   const lastReadingLabel = getLastReadingLabel(point)
   const isHighlighted = isPointIdEqual(pointId, hoveredPointId) || isPointIdEqual(pointId, activePointId)
-  const usageOptions = buildUsageOptionsForPoint(point, globalUsageOptions)
+  const usageOptions = buildUsageOptionsForPoint(point, globalUsageOptions).sort(compareUsageOptions)
   const pointName = getPointName(point)
 
   return (
@@ -620,13 +629,13 @@ const QuickDeclarationEntryRow = ({
           <select
             id={`quick-usage-${pointId}`}
             className='fr-select quick-declaration-control text-sm'
-            value={row.usage}
+            value={row.usageId}
             onFocus={() => setActivePointId(pointId)}
-            onChange={event => updateRow(pointId, {usage: event.target.value})}
+            onChange={event => updateRow(pointId, {usageId: event.target.value})}
           >
-            <option value=''>Usage</option>
+            <option disabled value=''>Sélectionner</option>
             {usageOptions.map(usage => (
-              <option key={usage} value={usage}>{formatUsage(usage)}</option>
+              <option key={usage.value} value={usage.value}>{formatUsageOptionLabel(usage)}</option>
             ))}
           </select>
         </div>
@@ -902,7 +911,7 @@ const QuickDeclarationForm = ({
     [points]
   )
   const globalUsageOptions = useMemo(
-    () => (context?.usageOptions?.length > 0 ? context.usageOptions : FALLBACK_USAGE_OPTIONS),
+    () => (context?.usageOptions?.length > 0 ? context.usageOptions : []),
     [context?.usageOptions]
   )
   const pointsCount = points.length
@@ -1045,7 +1054,7 @@ const QuickDeclarationForm = ({
       const row = getRowState(rows, pointId)
       const hasIndex = row.index !== ''
       const hasCompleteIndex = isCompleteNumberInput(row.index)
-      const hasUsage = Boolean(row.usage)
+      const hasUsage = Boolean(row.usageId)
 
       if (hasIndex) {
         const index = Number(row.index)
@@ -1062,7 +1071,7 @@ const QuickDeclarationForm = ({
           nextEntries.push({
             pointPrelevementId: pointId,
             index,
-            usage: row.usage
+            usageId: row.usageId
           })
         }
       }

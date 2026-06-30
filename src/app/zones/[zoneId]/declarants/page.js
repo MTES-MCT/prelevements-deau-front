@@ -1,5 +1,5 @@
 import {Box} from '@mui/material'
-import {notFound} from 'next/navigation'
+import {notFound, redirect} from 'next/navigation'
 
 import {buildPageTitle} from '@/app/metadata-utils.js'
 import ZoneBreadcrumb from '@/components/zones/zone-breadcrumb.js'
@@ -25,9 +25,60 @@ export async function generateMetadata({params}) {
 
 export const dynamic = 'force-dynamic'
 
+function appendSearchParam(params, key, value) {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      if (item) {
+        params.append(key, item)
+      }
+    }
+
+    return
+  }
+
+  if (value) {
+    params.set(key, value)
+  }
+}
+
+function removeDeclarantRoleParams(searchParams = {}) {
+  const params = new URLSearchParams()
+
+  for (const [key, value] of Object.entries(searchParams)) {
+    if (key === 'declarantRole' || key === 'role') {
+      continue
+    }
+
+    appendSearchParam(params, key, value)
+  }
+
+  return params
+}
+
+function removeDeclarantRoleFilter(meta = {}) {
+  const {declarantRole, role, ...filters} = meta.filters ?? {}
+
+  return {
+    ...meta,
+    filters
+  }
+}
+
 const Page = async ({params, searchParams}) => {
   const {zoneId} = await params
-  const listOptions = readListOptions(await searchParams)
+  const resolvedSearchParams = await searchParams
+
+  if (resolvedSearchParams.declarantRole || resolvedSearchParams.role) {
+    const cleanParams = removeDeclarantRoleParams(resolvedSearchParams)
+    const cleanQuery = cleanParams.toString()
+
+    redirect(`/zones/${zoneId}/declarants${cleanQuery ? `?${cleanQuery}` : ''}`)
+  }
+
+  const listOptions = {
+    ...readListOptions(resolvedSearchParams),
+    declarantRole: 'PRELEVEUR'
+  }
 
   const [zoneResult, declarantsResult, collecteursResult, pointsResult, exploitationsResult] = await Promise.all([
     getZoneAction(zoneId),
@@ -42,16 +93,15 @@ const Page = async ({params, searchParams}) => {
   }
 
   const declarantsPayload = unwrapPaginatedData(declarantsResult.data)
+  const declarantsMeta = removeDeclarantRoleFilter(declarantsPayload.meta)
   const collecteursPayload = collecteursResult.success ? unwrapPaginatedData(collecteursResult.data) : {meta: {totalAll: 0}}
   const pointsPayload = pointsResult.success ? unwrapPaginatedData(pointsResult.data) : {meta: {totalAll: 0}}
   const exploitationsPayload = exploitationsResult.success ? unwrapPaginatedData(exploitationsResult.data) : {meta: {totalAll: 0}}
   const zone = {
     ...zoneResult.data,
     pointsCount: pointsPayload.meta.totalAll,
-    declarantsCount: declarantsPayload.meta.totalAll,
-    preleveursCount: declarantsPayload.meta.filters?.declarantRole === 'PRELEVEUR'
-      ? declarantsPayload.meta.total
-      : undefined,
+    declarantsCount: declarantsMeta.totalAll,
+    preleveursCount: declarantsMeta.totalAll,
     collecteursCount: collecteursPayload.meta.totalAll,
     exploitationsCount: exploitationsPayload.meta.totalAll
   }
@@ -64,7 +114,7 @@ const Page = async ({params, searchParams}) => {
         <ZoneBreadcrumb zone={zone} currentPageLabel='Déclarants' />
         <ZoneHeader zone={zone} currentSection='declarants' />
         <ZoneSubNavigation zone={zone} current='declarants' />
-        <ZoneDeclarantsList declarants={declarantsPayload.data} meta={declarantsPayload.meta} zone={zone} />
+        <ZoneDeclarantsList declarants={declarantsPayload.data} meta={declarantsMeta} zone={zone} />
       </Box>
     </>
   )

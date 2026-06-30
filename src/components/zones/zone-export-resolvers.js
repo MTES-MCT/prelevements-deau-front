@@ -66,7 +66,9 @@ async function fetchAllZoneRows(fetcher, zoneId, meta, extraOptions = {}) {
 }
 
 export async function resolveAllZoneDeclarants(zoneId, meta) {
-  return fetchAllZoneRows(getZoneDeclarantsAction, zoneId, meta)
+  return fetchAllZoneRows(getZoneDeclarantsAction, zoneId, meta, {
+    declarantRole: 'PRELEVEUR'
+  })
 }
 
 export async function resolveAllZoneCollecteurs(zoneId, meta) {

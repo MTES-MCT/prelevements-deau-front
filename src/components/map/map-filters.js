@@ -19,6 +19,8 @@ import {
 import Badge from '@mui/material/Badge'
 import debounce from 'lodash-es/debounce'
 
+import {normalizeUsageOption} from '@/lib/water-uses.js'
+
 const MapFilters = ({filters, usagesOptions, typeMilieuOptions, onFilterChange, onClearFilters}) => {
   const [expanded, setExpanded] = useState(false)
   const [searchTerm, setSearchTerm] = useState(filters.name || '')
@@ -83,27 +85,30 @@ const MapFilters = ({filters, usagesOptions, typeMilieuOptions, onFilterChange, 
             </Select>
           </FormControl>
           <FormGroup row>
-            {usagesOptions.map(option => (
-              <FormControlLabel
-                key={option}
-                control={
-                  <Checkbox
-                    checked={filters.usages.includes(option)}
-                    onChange={e => {
-                      let newUsages = filters.usages
-                      if (e.target.checked) {
-                        newUsages = [...newUsages, option]
-                      } else {
-                        newUsages = newUsages.filter(u => u !== option)
-                      }
+            {usagesOptions.map(rawOption => {
+              const option = normalizeUsageOption(rawOption)
+              return (
+                <FormControlLabel
+                  key={option.value}
+                  control={
+                    <Checkbox
+                      checked={filters.usages.includes(option.value)}
+                      onChange={e => {
+                        let newUsages = filters.usages
+                        if (e.target.checked) {
+                          newUsages = [...newUsages, option.value]
+                        } else {
+                          newUsages = newUsages.filter(u => u !== option.value)
+                        }
 
-                      onFilterChange({usages: newUsages})
-                    }}
-                  />
-                }
-                label={option}
-              />
-            ))}
+                        onFilterChange({usages: newUsages})
+                      }}
+                    />
+                  }
+                  label={option.label}
+                />
+              )
+            })}
           </FormGroup>
           <Button variant='outlined' onClick={onClearFilters}>
             Effacer tous les filtres

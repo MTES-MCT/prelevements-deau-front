@@ -14,6 +14,7 @@ import planIGN from './styles/plan-ign.json'
 import vectorIGN from './styles/vector-ign.json'
 import vector from './styles/vector.json'
 
+import {cooperativeGesturesLocale} from '@/components/map/cooperative-gestures.js'
 import {
   computeBestPopupAnchor,
   createUsagePieChart,
@@ -193,11 +194,7 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
       zoom: 5,
       hash: options.hash ?? false,
       cooperativeGestures: options.cooperativeGestures ?? true,
-      locale: {
-        'CooperativeGesturesHandler.WindowsHelpText': 'Utilisez Ctrl + molette pour zoomer sur la carte',
-        'CooperativeGesturesHandler.MacHelpText': 'Utilisez ⌘ + molette pour zoomer sur la carte',
-        'CooperativeGesturesHandler.MobileHelpText': 'Utilisez deux doigts pour déplacer la carte'
-      },
+      locale: cooperativeGesturesLocale,
       attributionControl: {compact: true}
     }
 

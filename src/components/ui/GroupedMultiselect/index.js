@@ -17,6 +17,14 @@ import {
   getOptionTitle
 } from './utils.js'
 
+const focusWithoutScroll = element => {
+  try {
+    element.focus({preventScroll: true})
+  } catch {
+    element.focus()
+  }
+}
+
 const GroupedMultiselect = ({
   value = [],
   label,
@@ -37,6 +45,7 @@ const GroupedMultiselect = ({
   const selectRef = useRef(null)
   const searchInputRef = useRef(null)
   const optionRefs = useRef([])
+  const wasOpenRef = useRef(false)
 
   const normalizedOptions = useMemo(() => normalizeOptions(options), [options])
 
@@ -215,16 +224,24 @@ const GroupedMultiselect = ({
   }, [open, toggleOption, flatOptions, focusedIndex])
 
   useEffect(() => {
+    if (!open && !wasOpenRef.current) {
+      return
+    }
+
     if (open && searchable && searchInputRef.current) {
-      searchInputRef.current.focus()
+      focusWithoutScroll(searchInputRef.current)
+      wasOpenRef.current = true
       return
     }
 
     if (open && focusedIndex >= 0 && optionRefs.current[focusedIndex]) {
       optionRefs.current[focusedIndex].scrollIntoView({block: 'nearest'})
+      wasOpenRef.current = true
     } else if (!open && selectRef.current) {
-      selectRef.current.focus()
+      focusWithoutScroll(selectRef.current)
     }
+
+    wasOpenRef.current = open
   }, [open, focusedIndex, searchable])
 
   const totalOptionsCount = useMemo(

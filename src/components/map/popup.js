@@ -7,6 +7,7 @@ import {
 } from '@mui/material'
 
 import {getDeclarantTitleFromUser} from '@/lib/declarants.js'
+import {getUsageKey, getUsageLabel} from '@/lib/water-uses.js'
 
 const Popup = ({point}) => {
   const theme = useTheme()
@@ -45,8 +46,8 @@ const Popup = ({point}) => {
         <Box className='flex flex-wrap gap-1'>
           {usages.map(usage => (
             <Chip
-              key={usage}
-              label={usage}
+              key={getUsageKey(usage)}
+              label={getUsageLabel(usage)}
               size='small'
               variant='outlined' />
           ))}

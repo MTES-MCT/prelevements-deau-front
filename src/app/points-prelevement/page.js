@@ -26,6 +26,7 @@ import useEvent from '@/hook/use-event.js'
 import {downloadCsv} from '@/lib/export-csv.js'
 import {extractWaterBodyType, extractUsages} from '@/lib/points-prelevement.js'
 import {getPointPrelevementURL} from '@/lib/urls.js'
+import {usageMatchesFilter} from '@/lib/water-uses.js'
 import {getPointsPrelevementAction} from '@/server/actions/points-prelevement.js'
 
 const Page = () => {
@@ -119,7 +120,9 @@ const Page = () => {
       }
 
       if (filters.usages && filters.usages.length > 0) {
-        matches &&= filters.usages.some(usage => point.usages.includes(usage))
+        matches &&= filters.usages.some(usageFilter =>
+          (point.usages ?? []).some(usage => usageMatchesFilter(usage, usageFilter))
+        )
       }
 
       return matches

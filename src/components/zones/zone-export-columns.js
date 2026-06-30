@@ -2,6 +2,7 @@ import {
   getDeclarantRoleLabel,
   getDeclarantTitleFromDeclarant
 } from '@/lib/declarants.js'
+import {formatUsages, getUsageLabel} from '@/lib/water-uses.js'
 
 const ZONE_TYPE_LABELS = {
   REGION: 'Région',
@@ -112,6 +113,26 @@ function getCollecteurs(exploitation) {
     .filter(Boolean)
 }
 
+function getDeclarantCollecteurLabels(declarant) {
+  const labelsByKey = new Map()
+
+  for (const point of asArray(declarant?.points)) {
+    for (const collecteur of asArray(point?.collecteurs)) {
+      const label = collecteur?.label
+        || (collecteur?.collecteur ? getDeclarantTitleFromDeclarant(collecteur.collecteur) : null)
+        || collecteur?.email
+
+      if (!label) {
+        continue
+      }
+
+      labelsByKey.set(collecteur.collecteurUserId || label, label)
+    }
+  }
+
+  return [...labelsByKey.values()]
+}
+
 function formatAccessPeriod(row) {
   if (!row?.startDate && !row?.endDate) {
     return ''
@@ -141,7 +162,7 @@ export const ZONES_EXPORT_COLUMNS = [
 ]
 
 export function getZoneDeclarantExportColumns({collecteursOnly = false} = {}) {
-  return [
+  const columns = [
     {label: 'ID déclarant', value: declarant => getDeclarantId(declarant)},
     {label: 'Rôle', value: declarant => getDeclarantRoleLabel(getDeclarantRole(declarant))},
     {label: 'Type', value: declarant => getDeclarantTypeLabel(declarant)},
@@ -159,6 +180,15 @@ export function getZoneDeclarantExportColumns({collecteursOnly = false} = {}) {
     {label: 'Exploitations / rattachements', value: declarant => declarant.exploitationsCount || declarant.pointPrelevements?.length || declarant.collecteurExploitations?.length || ''},
     {label: 'Préleveurs accessibles', value: declarant => formatList(declarant.preleveurs, getDeclarantTitleFromDeclarant)}
   ]
+
+  if (!collecteursOnly) {
+    columns.splice(4, 0, {
+      label: 'Collecteur',
+      value: declarant => formatList(getDeclarantCollecteurLabels(declarant))
+    })
+  }
+
+  return columns
 }
 
 export const ZONE_POINTS_EXPORT_COLUMNS = [
@@ -174,7 +204,7 @@ export const ZONE_POINTS_EXPORT_COLUMNS = [
   {label: 'Coordonnées', value: point => formatCoordinates(point.coordinates)},
   {label: 'Déclarants', value: point => formatList(getPointDeclarants(point), getDeclarantTitleFromDeclarant)},
   {label: 'Nombre de déclarants', value: point => getPointDeclarants(point).length},
-  {label: 'Usages', value: point => formatList(point.usages)},
+  {label: 'Usages', value: point => formatUsages(point.usages)},
   {label: 'Modifiable', value: point => formatBoolean(point.right?.canEdit)}
 ]
 
@@ -193,7 +223,7 @@ export const ZONE_EXPLOITATIONS_EXPORT_COLUMNS = [
   {label: 'Collecteurs', value: exploitation => formatList(getCollecteurs(exploitation), getDeclarantTitleFromDeclarant)},
   {label: 'Emails collecteurs', value: exploitation => formatList(getCollecteurs(exploitation), collecteur => collecteur.email || collecteur.user?.email)},
   {label: 'Alias e-mail collecteurs', value: exploitation => formatList(getCollecteurs(exploitation), formatEmailAliases)},
-  {label: 'Usages', value: exploitation => formatList(exploitation.usages)},
+  {label: 'Usage', value: exploitation => getUsageLabel(exploitation.usage)},
   {label: 'Dernière déclaration', value: exploitation => formatDate(exploitation.lastDeclarationAt)},
   {label: 'Connecteurs', value: exploitation => exploitation.connectors?.length || 0},
   {label: 'Modifiable', value: exploitation => formatBoolean(exploitation.right?.canEdit)}

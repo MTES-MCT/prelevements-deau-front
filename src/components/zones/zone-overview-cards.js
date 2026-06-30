@@ -36,7 +36,7 @@ const ZoneOverviewCards = ({zone}) => (
         priority: 'secondary',
         iconId: ZONE_ICONS.arrowRight,
         children: 'Voir les déclarants',
-        linkProps: {href: `/zones/${zone.id}/declarants?declarantRole=PRELEVEUR`}
+        linkProps: {href: `/zones/${zone.id}/declarants`}
       }}
     >
       <p className='fr-text--lead fr-mb-1w'>

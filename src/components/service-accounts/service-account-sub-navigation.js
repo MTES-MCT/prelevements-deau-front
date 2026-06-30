@@ -9,11 +9,6 @@ const ITEMS = [
     href: serviceAccount => `/comptes-service/${serviceAccount.id}`
   },
   {
-    key: 'declarants',
-    label: 'Déclarants rattachés',
-    href: serviceAccount => `/comptes-service/${serviceAccount.id}/declarants`
-  },
-  {
     key: 'credentials',
     label: 'Identifiants techniques',
     href: serviceAccount => `/comptes-service/${serviceAccount.id}/identifiants`

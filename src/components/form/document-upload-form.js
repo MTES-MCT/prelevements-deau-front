@@ -14,6 +14,7 @@ import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import SimpleLoading from '@/components/ui/SimpleLoading/index.js'
 import useFormSubmit from '@/hook/use-form-submit.js'
 import {formatFullDateFr} from '@/lib/format-date.js'
+import {getUsageLabel} from '@/lib/water-uses.js'
 import {createDocumentAction} from '@/server/actions/index.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
@@ -26,11 +27,11 @@ const statusLabels = {
 
 function getExploitationLabel(exploitation) {
   const pointName = exploitation.pointPrelevement?.name || 'Point inconnu'
-  const usagesText = exploitation.usages?.length > 0
-    ? exploitation.usages.join(', ')
+  const usageText = exploitation.usage
+    ? getUsageLabel(exploitation.usage)
     : 'Usage non renseigné'
 
-  return `${pointName} - ${usagesText}`
+  return `${pointName} - ${usageText}`
 }
 
 function getExploitationTooltip(exploitation) {

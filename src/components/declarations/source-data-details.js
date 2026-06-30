@@ -1,5 +1,6 @@
 'use client'
 
+import {formatUsageReference, getUsageReferenceLabel} from '@/lib/water-uses.js'
 import {formatNumber, coerceNumericValue} from '@/utils/number.js'
 
 const MAX_VISIBLE_VALUES = 20
@@ -307,6 +308,7 @@ const SourceDataDetails = ({source}) => {
           const visibleValues = getVisibleValues(chunk, source)
           const countLabel = displayAsIndex ? 'Index connus' : 'Nb. valeurs'
           const countValue = displayAsIndex ? visibleValues.length : chunk.chunkValues?.length ?? 0
+          const usageLabel = formatUsageReference(chunk.usage)
           let valueLabel = 'Dernière valeur'
 
           if (displayAsIndex) {
@@ -323,6 +325,11 @@ const SourceDataDetails = ({source}) => {
                   <p className='fr-text--sm fr-mb-0 text-gray-600'>
                     {formatMetricType(metricType)}
                   </p>
+                  {usageLabel && (
+                    <p className='fr-text--sm fr-mb-0 truncate text-gray-700' title={usageLabel}>
+                      {getUsageReferenceLabel(chunk.usage)} : <span className='font-medium'>{usageLabel}</span>
+                    </p>
+                  )}
                 </div>
 
                 <div>

@@ -42,14 +42,6 @@ const ServiceAccountHeader = ({serviceAccount, currentSection = 'overview'}) => 
     rightBadges={[getRightBadge(serviceAccount)]}
     hrefButtons={[
       {
-        label: 'Rattacher un déclarant',
-        icon: 'fr-icon-add-line',
-        alt: '',
-        priority: 'primary',
-        href: `/comptes-service/${serviceAccount.id}/declarants`,
-        hidden: serviceAccount.isDeleted || currentSection === 'declarants'
-      },
-      {
         label: 'Créer un identifiant',
         icon: 'fr-icon-add-line',
         alt: '',
@@ -65,7 +57,7 @@ const ServiceAccountHeader = ({serviceAccount, currentSection = 'overview'}) => 
       },
       {
         iconId: 'fr-icon-user-line',
-        content: pluralize(serviceAccount.counts?.activeDeclarants || 0, 'déclarant actif')
+        content: serviceAccount.scopeLabel ?? 'Tous les déclarants'
       },
       {
         iconId: 'fr-icon-lock-line',

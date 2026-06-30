@@ -193,9 +193,9 @@ const ServiceAccountOverview = ({serviceAccount}) => {
         <div className='fr-grid-row fr-grid-row--gutters'>
           <div className='fr-col-12 fr-col-sm-6 fr-col-lg-12'>
             <div className='fr-card fr-card--shadow fr-p-3w h-full'>
-              <p className='fr-text--xs fr-mb-1w'>Déclarants actifs</p>
-              <p className='fr-display--xs fr-mb-1w'>{account.counts?.activeDeclarants || 0}</p>
-              <p className='fr-text--sm fr-mb-0'>{pluralize(account.counts?.declarants || 0, 'rattachement total')}</p>
+              <p className='fr-text--xs fr-mb-1w'>Portée</p>
+              <p className='fr-h4 fr-mb-1w'>{account.scopeLabel ?? 'Tous les déclarants'}</p>
+              <p className='fr-text--sm fr-mb-0'>Le compte actif peut traiter tous les déclarants actifs.</p>
             </div>
           </div>
           <div className='fr-col-12 fr-col-sm-6 fr-col-lg-12'>

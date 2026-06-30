@@ -11,7 +11,9 @@ import {
 import maplibre from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
+import {cooperativeGesturesMapOptions} from '@/components/map/cooperative-gestures.js'
 import planIGN from '@/components/map/styles/plan-ign.json'
+import {formatUsageReference, getUsageReferenceLabel} from '@/lib/water-uses.js'
 
 const SOURCE_ID = 'declaration-reconciliation-points'
 const DEFAULT_MAP_ZOOM = 10
@@ -155,17 +157,25 @@ function isChunkAssociatedWithPoint(selectedChunk, point) {
     && normalizeId(selectedChunk.pointPrelevementId) === normalizeId(point?.id)
 }
 
-function getPopupHint(selectedChunk, point) {
+function getPopupHint({
+  canReconcile,
+  point,
+  selectedChunk
+}) {
   if (!selectedChunk) {
     return 'Sélectionnez une ligne dans la liste de gauche.'
   }
 
+  if (!canReconcile) {
+    return 'Consultation seule : cette association ne peut pas être modifiée ici.'
+  }
+
   if (isChunkAssociatedWithPoint(selectedChunk, point)) {
-    return 'Cette ligne est déjà associée à ce point.'
+    return 'Association actuelle de la ligne sélectionnée.'
   }
 
   if (selectedChunk.pointPrelevementId) {
-    return 'Ce choix remplacera le point actuellement associé à la ligne.'
+    return 'Ce choix remplacera le point actuellement associé à la ligne sélectionnée.'
   }
 
   return 'Associer la ligne sélectionnée à ce point.'
@@ -173,29 +183,37 @@ function getPopupHint(selectedChunk, point) {
 
 function getConflictHint(conflict) {
   return conflict.periodLabel
-    ? `Ce point a déjà des données associées sur cette période : ${conflict.periodLabel}.`
-    : `Ce point est déjà utilisé par ${conflict.label}.`
+    ? `Ce point est déjà associé à une autre ligne sur une période qui chevauche : ${conflict.periodLabel}.`
+    : `Ce point est déjà associé à ${conflict.label}.`
 }
 
 function getPopupStatus({alreadyAssociated, hasConflict}) {
   if (hasConflict) {
     return {
       className: 'bg-[#fff4f3] text-[#b34000]',
-      label: 'Point occupé'
+      label: 'Déjà utilisé'
     }
   }
 
   if (alreadyAssociated) {
     return {
       className: 'bg-[#e6feda] text-[#18753c]',
-      label: 'Lié à la ligne'
+      label: 'Association actuelle'
     }
   }
 
   return {
     className: 'bg-[#f5f5fe] text-[#000091]',
-    label: 'Point disponible'
+    label: 'Associable'
   }
+}
+
+function getReconcileButtonLabel({isSubmitting, selectedChunk}) {
+  if (isSubmitting) {
+    return 'Association…'
+  }
+
+  return selectedChunk?.pointPrelevementId ? 'Remplacer par ce point' : 'Associer à ce point'
 }
 
 function formatDate(value) {
@@ -364,8 +382,12 @@ function createPopupNode({
     ? 'mb-3 border-l-4 border-[#ce614a] bg-[#fff4f3] px-2 py-1.5 text-xs text-[#6b1f00]'
     : 'mb-3 text-xs text-gray-600'
   hint.textContent = hasConflict
-    ? getConflictHint(conflict)
-    : getPopupHint(selectedChunk, point)
+    ? `${getConflictHint(conflict)} Ouvrez la ligne concernée pour la modifier ou retirer son association.`
+    : getPopupHint({
+      canReconcile,
+      point,
+      selectedChunk
+    })
   container.append(hint)
 
   appendPointDetails(container, point)
@@ -381,6 +403,7 @@ function createPopupNode({
 
   if (selectedChunk) {
     const selectedPeriodLabel = formatPeriod(selectedChunk.minDate, selectedChunk.maxDate)
+    const selectedUsageLabel = formatUsageReference(selectedChunk.usage)
     const selectedLine = document.createElement('div')
     selectedLine.className = 'mt-3 border-t border-gray-200 pt-2 text-xs text-gray-700'
     appendTextElement(selectedLine, {
@@ -390,6 +413,10 @@ function createPopupNode({
     appendTextElement(selectedLine, {
       className: 'mt-0.5 truncate',
       text: selectedChunk.pointPrelevementName || `Ligne ${selectedChunk.index + 1}`
+    })
+    appendTextElement(selectedLine, {
+      className: 'mt-0.5 truncate text-gray-600',
+      text: selectedUsageLabel ? `${getUsageReferenceLabel(selectedChunk.usage)} : ${selectedUsageLabel}` : null
     })
     appendTextElement(selectedLine, {
       className: 'mt-0.5 text-gray-500',
@@ -404,7 +431,7 @@ function createPopupNode({
     const button = document.createElement('button')
     button.type = 'button'
     button.className = 'fr-btn fr-btn--secondary fr-btn--sm mt-3 w-full justify-center'
-    button.textContent = 'Voir la ligne'
+    button.textContent = 'Ouvrir la ligne concernée'
     button.addEventListener('click', () => onSelectConflictChunk?.(conflict.chunkId))
     container.append(button)
     return container
@@ -415,7 +442,7 @@ function createPopupNode({
     button.type = 'button'
     button.className = 'fr-btn fr-btn--sm mt-3 w-full justify-center'
     button.disabled = Boolean(isSubmitting)
-    button.textContent = isSubmitting ? 'Association…' : 'Associer à ce point'
+    button.textContent = getReconcileButtonLabel({isSubmitting, selectedChunk})
     button.addEventListener('click', () => onReconcilePoint(point.id))
     container.append(button)
   }
@@ -552,7 +579,8 @@ const PointReconciliationMap = ({
       style: planIGN,
       center: firstCoordinates,
       attributionControl: {compact: true},
-      zoom: DEFAULT_MAP_ZOOM
+      zoom: DEFAULT_MAP_ZOOM,
+      ...cooperativeGesturesMapOptions
     })
 
     mapRef.current = map

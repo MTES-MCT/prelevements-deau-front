@@ -6,6 +6,8 @@ import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Alert, Box} from '@mui/material'
 import {usePathname, useRouter, useSearchParams} from 'next/navigation'
 
+import {formatUsages} from '@/lib/water-uses.js'
+
 const CELL_LABELS = {
   DECLARED: 'Déclaration déposée',
   MISSING: 'Déclaration attendue',
@@ -63,7 +65,8 @@ function buildSearchText(row) {
     row.pointName,
     row.exploitationStatus,
     ...(row.collecteurs ?? []).flatMap(collecteur => [collecteur.label, collecteur.email]),
-    ...(row.usages ?? [])
+    row.usage ? formatUsages([row.usage]) : null,
+    formatUsages(row.usages ?? [])
   ].filter(Boolean).join(' '))
 }
 

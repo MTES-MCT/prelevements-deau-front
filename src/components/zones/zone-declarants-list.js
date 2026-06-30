@@ -174,12 +174,6 @@ const ZoneDeclarantsList = ({zone, declarants, meta, collecteursOnly = false}) =
                 </Button>
               )}
             </div>
-
-            {zone.isAdmin && !collecteursOnly && (
-              <p className='fr-text--xs fr-mb-0 max-w-sm md:text-right'>
-                Un collecteur apparaît ici après association à une exploitation de la zone.
-              </p>
-            )}
           </div>
         )}
         filters={collecteursOnly ? ZONE_COLLECTEUR_FILTERS : ZONE_DECLARANT_FILTERS}

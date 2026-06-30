@@ -12,12 +12,12 @@ export const DEFAULT_ZONE_PER_PAGE = 20
 
 export const ZONE_DECLARANT_FILTERS = [
   {
-    name: 'declarantRole',
-    label: 'Type de déclarant',
-    emptyLabel: 'Tous les déclarants',
+    name: 'collecteur',
+    label: 'Collecteur',
+    emptyLabel: 'Tous les rattachements',
     options: [
-      {value: 'PRELEVEUR', label: 'Préleveurs'},
-      {value: 'COLLECTEUR', label: 'Collecteurs'}
+      {value: 'WITH_COLLECTEUR', label: 'Lié à un collecteur'},
+      {value: 'WITHOUT_COLLECTEUR', label: 'Non lié à un collecteur'}
     ]
   },
   {

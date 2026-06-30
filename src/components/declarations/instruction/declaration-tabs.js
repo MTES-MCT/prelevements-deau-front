@@ -1,21 +1,25 @@
 'use client'
 
-import {useCallback, useState} from 'react'
+import {useCallback} from 'react'
 
-import {useRouter, usePathname, useSearchParams} from 'next/navigation'
+import {usePathname, useRouter, useSearchParams} from 'next/navigation'
 
 import DeclarationFilters from '@/components/declarations/instruction/declaration-filters.js'
 import DeclarationList from '@/components/declarations/instruction/declaration-list.js'
+
+const DEFAULT_PAGE = '1'
+const DEFAULT_PAGE_SIZE = '25'
+const FILTER_KEYS = ['declarant', 'dossierNumber', 'endDate', 'page', 'pageSize', 'startDate']
 
 const DeclarationTabs = () => {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [periodOptions, setPeriodOptions] = useState([{value: 'all', label: 'Tout'}])
 
   const getFiltersFromURL = () => {
     const filters = {}
-    for (const key of ['declarant', 'dossierNumber', 'periode']) {
+
+    for (const key of FILTER_KEYS) {
       const value = searchParams.get(key)
       if (value) {
         filters[key] = value
@@ -27,33 +31,34 @@ const DeclarationTabs = () => {
 
   const filters = getFiltersFromURL()
 
-  const handleSetFilters = updater => {
+  const handleSetFilters = useCallback(updater => {
     const next = updater(filters)
     const params = new URLSearchParams()
 
     for (const [key, value] of Object.entries(next)) {
-      if (value && value !== 'all') {
-        params.set(key, value)
+      if (
+        !value
+        || (key === 'page' && value === DEFAULT_PAGE)
+        || (key === 'pageSize' && value === DEFAULT_PAGE_SIZE)
+      ) {
+        continue
       }
+
+      params.set(key, value)
     }
 
-    router.replace(params.toString() ? `${pathname}?${params.toString()}` : pathname)
-  }
-
-  const handleAvailablePeriodsChange = useCallback(options => {
-    setPeriodOptions(options?.length ? options : [{value: 'all', label: 'Tout'}])
-  }, [])
+    router.replace(params.toString() ? `${pathname}?${params.toString()}` : pathname, {scroll: false})
+  }, [filters, pathname, router])
 
   return (
     <div className='fr-mt-4w'>
       <DeclarationFilters
         filters={filters}
         setFilters={handleSetFilters}
-        periodOptions={periodOptions}
       />
       <DeclarationList
         filters={filters}
-        onAvailablePeriodsChange={handleAvailablePeriodsChange}
+        setFilters={handleSetFilters}
       />
     </div>
   )
