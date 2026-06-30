@@ -1117,13 +1117,20 @@ const DateRangePicker = ({
   startDate
 }) => {
   const selectedStart = parseDateInput(startDate)
-  const selectedEnd = parseDateInput(endDate)
   const max = parseDateInput(maxDate)
   const [open, setOpen] = useState(false)
+  const [draftStartDate, setDraftStartDate] = useState(startDate)
+  const [draftEndDate, setDraftEndDate] = useState(endDate)
+  const [hoveredDate, setHoveredDate] = useState(null)
   const [displayMonth, setDisplayMonth] = useState(() => startOfMonth(selectedStart ?? max ?? new Date()))
   const containerRef = useRef(null)
   const calendarDays = useMemo(() => buildCalendarDays(displayMonth), [displayMonth])
   const presets = useMemo(() => buildMonthlyDateRangePresets(maxDate), [maxDate])
+  const draftStart = parseDateInput(draftStartDate)
+  const draftEnd = parseDateInput(draftEndDate)
+  const hoveredEnd = draftStart && !draftEnd && hoveredDate && hoveredDate >= draftStart ? hoveredDate : null
+  const previewEnd = draftEnd ?? hoveredEnd
+  const previewEndDate = previewEnd ? toDateInputValue(previewEnd) : ''
 
   useEffect(() => {
     if (!open) {
@@ -1143,62 +1150,90 @@ const DateRangePicker = ({
     }
   }, [open])
 
-  const applyRange = useCallback((nextStartDate, nextEndDate) => {
+  const resetDraftRange = useCallback(() => {
+    setDraftStartDate(startDate)
+    setDraftEndDate(endDate)
+    setHoveredDate(null)
+  }, [endDate, startDate])
+
+  const validateDraftRange = useCallback(() => {
+    if (!draftStartDate || !draftEndDate) {
+      return
+    }
+
     onChange({
-      startDate: nextStartDate,
-      endDate: nextEndDate
+      startDate: draftStartDate,
+      endDate: draftEndDate
     })
-  }, [onChange])
+    setHoveredDate(null)
+    setOpen(false)
+  }, [draftEndDate, draftStartDate, onChange])
+
+  const cancelDraftRange = useCallback(() => {
+    resetDraftRange()
+    setOpen(false)
+  }, [resetDraftRange])
 
   const handleDayClick = useCallback(day => {
     const dayValue = toDateInputValue(day)
 
-    if (!selectedStart || selectedEnd) {
-      applyRange(dayValue, '')
+    if (!draftStart || draftEnd) {
+      setDraftStartDate(dayValue)
+      setDraftEndDate('')
+      setHoveredDate(null)
       return
     }
 
-    if (day < selectedStart) {
-      applyRange(dayValue, '')
+    if (day < draftStart) {
+      setDraftStartDate(dayValue)
+      setDraftEndDate('')
+      setHoveredDate(null)
       return
     }
 
-    applyRange(startDate, dayValue)
-    setOpen(false)
-  }, [applyRange, selectedEnd, selectedStart, startDate])
+    setDraftEndDate(dayValue)
+    setHoveredDate(null)
+  }, [draftEnd, draftStart])
 
   return (
-    <div ref={containerRef} className='relative min-w-[300px]'>
+    <div ref={containerRef} className='relative min-w-0 sm:min-w-[320px]'>
       <label className='fr-label' htmlFor='quick-period-range'>
         <span>Période déclarée</span>
         <span className='fr-hint-text'>Sélectionnez la période couverte par le volume déclaré.</span>
       </label>
       <button
         id='quick-period-range'
-        className='fr-input w-full h-fit text-left whitespace-normal break-words bg-white'
+        className='fr-btn fr-input flex h-10 min-h-10 w-full items-center justify-between gap-2 overflow-hidden whitespace-nowrap text-left font-normal'
         type='button'
-        aria-haspopup='dialog'
         aria-expanded={open}
+        aria-haspopup='dialog'
         onClick={() => {
-          setDisplayMonth(startOfMonth(selectedStart ?? max ?? new Date()))
+          if (!open) {
+            resetDraftRange()
+            setDisplayMonth(startOfMonth(selectedStart ?? max ?? new Date()))
+          }
+
           setOpen(value => !value)
         }}
       >
-        {getDateRangeLabel(startDate, endDate)}
+        <span className='min-w-0 flex-1 truncate'>{getDateRangeLabel(startDate, endDate)}</span>
+        <span className='fr-icon-calendar-line shrink-0' aria-hidden='true' />
       </button>
 
       {open && (
-        <div className='absolute left-0 top-[calc(100%+0.25rem)] z-[9999] w-[min(28rem,calc(100vw-2rem))] bg-white border rounded-sm shadow-md p-4' role='dialog'>
-          <div className='mb-4'>
-            <p className='fr-mb-1v text-sm font-medium text-gray-900'>Périodes suggérées</p>
-            <div className='flex flex-wrap gap-2'>
+        <div className='absolute left-0 top-[calc(100%+0.25rem)] z-[9999] w-[min(22rem,calc(100vw-2rem))] bg-white border rounded-sm shadow-md p-3' role='dialog'>
+          <div className='mb-3'>
+            <p className='fr-mb-1v text-xs font-medium text-gray-900'>Périodes suggérées</p>
+            <div className='flex flex-wrap gap-1.5'>
               {presets.map(preset => (
                 <button
                   key={preset.label}
                   className='fr-btn fr-btn--secondary fr-btn--sm'
                   type='button'
                   onClick={() => {
-                    applyRange(preset.startDate, preset.endDate)
+                    setDraftStartDate(preset.startDate)
+                    setDraftEndDate(preset.endDate)
+                    setHoveredDate(null)
                     setDisplayMonth(startOfMonth(parseDateInput(preset.startDate)))
                   }}
                 >
@@ -1208,7 +1243,7 @@ const DateRangePicker = ({
             </div>
           </div>
 
-          <div className='mb-3 flex items-center justify-between gap-2'>
+          <div className='mb-2 flex items-center justify-between gap-2'>
             <button
               className='fr-btn fr-btn--tertiary-no-outline fr-btn--sm'
               type='button'
@@ -1229,32 +1264,33 @@ const DateRangePicker = ({
             </button>
           </div>
 
-          <div className='grid grid-cols-7 gap-1 text-center text-xs font-medium text-gray-500'>
+          <div className='grid grid-cols-7 gap-0.5 text-center text-xs font-medium text-gray-500'>
             {DATE_RANGE_WEEKDAYS.map(day => (
               <span key={day.key}>{day.label}</span>
             ))}
           </div>
-          <div className='mt-1 grid grid-cols-7 gap-1'>
+          <div className='mt-1 grid grid-cols-7 gap-0.5' onMouseLeave={() => setHoveredDate(null)}>
             {calendarDays.map(day => {
               const dateValue = toDateInputValue(day)
               const outsideMonth = day.getMonth() !== displayMonth.getMonth()
               const disabled = max && day > max
-              const selected = isSameDate(day, selectedStart) || isSameDate(day, selectedEnd)
-              const inRange = isDateInRange(day, selectedStart, selectedEnd)
+              const selected = isSameDate(day, draftStart) || isSameDate(day, draftEnd) || isSameDate(day, hoveredEnd)
+              const inRange = isDateInRange(day, draftStart, previewEnd)
 
               return (
                 <button
                   key={dateValue}
                   className={classNames(
-                    'h-9 text-sm transition rounded',
+                    'h-7 text-xs transition rounded',
                     outsideMonth && 'text-gray-400',
-                    !disabled && !selected && !inRange && 'hover:bg-gray-100',
-                    inRange && !selected && 'bg-blue-50 text-blue-900',
-                    selected && 'rounded-full bg-blue-600 font-semibold text-white',
+                    !disabled && !selected && !inRange && 'hover:bg-[var(--background-alt-blue-france)]',
+                    inRange && !selected && 'bg-[var(--background-contrast-blue-ecume)] text-[var(--background-active-blue-france)]',
+                    selected && 'rounded-full bg-[var(--background-active-blue-france)] font-semibold text-white',
                     disabled && 'cursor-not-allowed text-gray-300'
                   )}
                   type='button'
                   disabled={disabled}
+                  onMouseEnter={() => setHoveredDate(day)}
                   onClick={() => handleDayClick(day)}
                 >
                   {day.getDate()}
@@ -1263,18 +1299,22 @@ const DateRangePicker = ({
             })}
           </div>
 
-          <div className='fr-mt-3w grid grid-cols-1 gap-2 border-t border-gray-200 pt-3 text-sm sm:grid-cols-2'>
-            <div>
-              <span className='block text-xs font-medium text-gray-600'>Début</span>
-              <span className='font-semibold text-gray-900'>
-                {startDate ? formatDate(startDate) : 'À sélectionner'}
-              </span>
-            </div>
-            <div>
-              <span className='block text-xs font-medium text-gray-600'>Fin</span>
-              <span className='font-semibold text-gray-900'>
-                {endDate ? formatDate(endDate) : 'À sélectionner'}
-              </span>
+          <div className='fr-mt-2w border-t border-gray-200 pt-3'>
+            <p className='fr-mb-2w min-h-4 text-xs font-medium text-[var(--background-active-blue-france)]'>
+              {draftStartDate ? getDateRangeLabel(draftStartDate, previewEndDate) : 'Sélectionnez une date de début'}
+            </p>
+            <div className='flex flex-col gap-2 sm:flex-row sm:justify-end'>
+              <button className='fr-btn fr-btn--secondary fr-btn--sm' type='button' onClick={cancelDraftRange}>
+                Annuler
+              </button>
+              <button
+                className='fr-btn fr-btn--sm'
+                type='button'
+                disabled={!draftStartDate || !draftEndDate}
+                onClick={validateDraftRange}
+              >
+                Valider
+              </button>
             </div>
           </div>
         </div>

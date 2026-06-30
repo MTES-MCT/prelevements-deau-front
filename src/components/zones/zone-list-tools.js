@@ -172,7 +172,6 @@ export const ZoneSearchControl = ({label = 'Rechercher', placeholder = 'Recherch
         value={value}
         onChange={event => setValue(event.target.value)}
       />
-      <p className='fr-hint-text fr-mt-1w'>La recherche se lance automatiquement après une courte pause.</p>
     </div>
   )
 }
