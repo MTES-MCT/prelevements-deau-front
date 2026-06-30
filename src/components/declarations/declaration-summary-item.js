@@ -94,7 +94,7 @@ function getVolumeLabel(source) {
   return labels.join(' · ')
 }
 
-function getQuickDeclarationReadingsLabel(source) {
+function getQuickDeclarationEntriesMeta(source) {
   if (!isManualQuickDeclarationSource(source)) {
     return null
   }
@@ -110,7 +110,26 @@ function getQuickDeclarationReadingsLabel(source) {
     return null
   }
 
-  return `${count} index relevé${count > 1 ? 's' : ''}`
+  const measurementType = source?.metadata?.measurementType ?? 'INDEX'
+
+  if (measurementType === 'VOLUME_PRELEVE') {
+    return {
+      label: 'Volumes',
+      value: `${count} volume${count > 1 ? 's' : ''} prélevé${count > 1 ? 's' : ''}`
+    }
+  }
+
+  if (measurementType === 'VOLUME_REJETE') {
+    return {
+      label: 'Volumes',
+      value: `${count} volume${count > 1 ? 's' : ''} rejeté${count > 1 ? 's' : ''}`
+    }
+  }
+
+  return {
+    label: 'Relevés',
+    value: `${count} index relevé${count > 1 ? 's' : ''}`
+  }
 }
 
 function getDeclarationType(source, declaration) {
@@ -150,10 +169,10 @@ function getSummaryMetas({declaration, source, showDeclarant}) {
     metas.push({label: 'Volume', value: volume})
   }
 
-  const quickDeclarationReadings = getQuickDeclarationReadingsLabel(source)
+  const quickDeclarationEntries = getQuickDeclarationEntriesMeta(source)
 
-  if (quickDeclarationReadings) {
-    metas.push({label: 'Relevés', value: quickDeclarationReadings})
+  if (quickDeclarationEntries) {
+    metas.push(quickDeclarationEntries)
   }
 
   return metas

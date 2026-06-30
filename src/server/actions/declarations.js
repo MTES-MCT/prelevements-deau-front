@@ -100,24 +100,39 @@ export async function getQuickDeclarationContextAction({declarantUserId} = {}) {
 export async function createQuickDeclarationAction({
   type,
   declarantUserId,
+  measurementType,
   readingDate,
+  periodStartDate,
+  periodEndDate,
   entries = [],
   comment
 } = {}) {
   return withErrorHandling(async () => {
     const normalizedType = (type || '').trim().toLocaleLowerCase('fr-FR')
+    const normalizedMeasurementType = measurementType || 'INDEX'
 
-    if (!readingDate) {
+    if (normalizedMeasurementType === 'INDEX' && !readingDate) {
       throw new Error('Date de relevé requise.')
     }
 
+    if (normalizedMeasurementType !== 'INDEX' && (!periodStartDate || !periodEndDate)) {
+      throw new Error('Période requise.')
+    }
+
     if (!Array.isArray(entries) || entries.length === 0) {
-      throw new Error('Aucun index saisi.')
+      throw new Error('Aucune valeur saisie.')
     }
 
     const payload = {
-      readingDate,
+      measurementType: normalizedMeasurementType,
       entries
+    }
+
+    if (normalizedMeasurementType === 'INDEX') {
+      payload.readingDate = readingDate
+    } else {
+      payload.periodStartDate = periodStartDate
+      payload.periodEndDate = periodEndDate
     }
 
     if (normalizedType) {

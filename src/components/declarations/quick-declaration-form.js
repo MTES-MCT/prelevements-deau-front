@@ -6,6 +6,8 @@ import {
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Button} from '@codegouvfr/react-dsfr/Button'
+import {SegmentedControl} from '@codegouvfr/react-dsfr/SegmentedControl'
+import {createPortal} from 'react-dom'
 
 import QuickDeclarationMap from './quick-declaration-map.js'
 
@@ -21,7 +23,41 @@ import {formatNumber} from '@/utils/number.js'
 
 const POINTS_CONTACT_EMAIL = 'contact@partageonsleau.beta.gouv.fr'
 const POINTS_CONTACT_SUBJECT_SUFFIX = 'Modification sur mes points de prélèvements'
-const ENTRY_GRID_COLUMNS_CLASS_NAME = 'md:grid-cols-[minmax(150px,1fr)_128px_240px]'
+const ENTRY_GRID_COLUMNS_CLASS_NAME = 'md:grid-cols-[minmax(150px,1fr)_150px_minmax(260px,320px)]'
+
+const QUICK_DECLARATION_MEASUREMENT_TYPES = Object.freeze({
+  INDEX: 'INDEX',
+  VOLUME_PRELEVE: 'VOLUME_PRELEVE',
+  VOLUME_REJETE: 'VOLUME_REJETE'
+})
+
+const QUICK_DECLARATION_MEASUREMENT_SEGMENTS = [
+  {
+    value: QUICK_DECLARATION_MEASUREMENT_TYPES.INDEX,
+    label: 'Relevé d’index',
+    iconId: 'fr-icon-edit-line'
+  },
+  {
+    value: QUICK_DECLARATION_MEASUREMENT_TYPES.VOLUME_PRELEVE,
+    label: 'Volume prélevé',
+    iconId: 'fr-icon-arrow-up-line'
+  },
+  {
+    value: QUICK_DECLARATION_MEASUREMENT_TYPES.VOLUME_REJETE,
+    label: 'Volume rejeté',
+    iconId: 'fr-icon-arrow-down-line'
+  }
+]
+
+const DATE_RANGE_WEEKDAYS = [
+  {key: 'monday', label: 'L'},
+  {key: 'tuesday', label: 'M'},
+  {key: 'wednesday', label: 'M'},
+  {key: 'thursday', label: 'J'},
+  {key: 'friday', label: 'V'},
+  {key: 'saturday', label: 'S'},
+  {key: 'sunday', label: 'D'}
+]
 
 function getPreleveurId(preleveur) {
   return preleveur.id || preleveur.userId || preleveur.declarant?.userId
@@ -83,6 +119,131 @@ function formatDate(value) {
   return new Intl.DateTimeFormat('fr-FR').format(date)
 }
 
+function parseDateInput(value) {
+  if (!value) {
+    return null
+  }
+
+  const [year, month, day] = String(value).split('-').map(Number)
+
+  if (!year || !month || !day) {
+    return null
+  }
+
+  const date = new Date(year, month - 1, day)
+
+  if (
+    Number.isNaN(date.getTime())
+    || date.getFullYear() !== year
+    || date.getMonth() !== month - 1
+    || date.getDate() !== day
+  ) {
+    return null
+  }
+
+  return date
+}
+
+function toDateInputValue(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return ''
+  }
+
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}
+
+function addMonths(date, months) {
+  return new Date(date.getFullYear(), date.getMonth() + months, 1)
+}
+
+function startOfMonth(date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1)
+}
+
+function endOfMonth(date) {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0)
+}
+
+function isSameDate(left, right) {
+  return left && right && toDateInputValue(left) === toDateInputValue(right)
+}
+
+function isDateInRange(date, start, end) {
+  if (!date || !start || !end) {
+    return false
+  }
+
+  const time = date.getTime()
+  return time >= start.getTime() && time <= end.getTime()
+}
+
+function clampDateToMax(date, maxDate) {
+  const max = parseDateInput(maxDate)
+  return max && date > max ? max : date
+}
+
+function getMonthLabel(date) {
+  return new Intl.DateTimeFormat('fr-FR', {
+    month: 'long',
+    year: 'numeric'
+  }).format(date)
+}
+
+function getDateRangeLabel(startDate, endDate) {
+  const startLabel = formatDate(startDate)
+  const endLabel = formatDate(endDate)
+
+  if (startLabel && endLabel) {
+    return `Du ${startLabel} au ${endLabel}`
+  }
+
+  if (startLabel) {
+    return `Début : ${startLabel}`
+  }
+
+  if (endLabel) {
+    return `Fin : ${endLabel}`
+  }
+
+  return 'Sélectionner une période'
+}
+
+function buildCalendarDays(monthDate) {
+  const monthStart = startOfMonth(monthDate)
+  const offset = (monthStart.getDay() + 6) % 7
+  const firstDay = new Date(monthStart)
+  firstDay.setDate(monthStart.getDate() - offset)
+
+  return Array.from({length: 42}, (_, index) => {
+    const day = new Date(firstDay)
+    day.setDate(firstDay.getDate() + index)
+    return day
+  })
+}
+
+function buildMonthlyDateRangePresets(maxDate) {
+  const today = clampDateToMax(new Date(), maxDate)
+  const currentMonthStart = startOfMonth(today)
+  const previousMonthStart = addMonths(currentMonthStart, -1)
+
+  return [
+    {
+      label: 'Mois précédent',
+      startDate: toDateInputValue(previousMonthStart),
+      endDate: toDateInputValue(endOfMonth(previousMonthStart))
+    },
+    {
+      label: 'Mois en cours',
+      startDate: toDateInputValue(currentMonthStart),
+      endDate: toDateInputValue(today)
+    }
+  ]
+}
+
 function classNames(...values) {
   return values.filter(Boolean).join(' ')
 }
@@ -132,7 +293,7 @@ function normalizeNumberInput(value) {
   return `${integer || '0'}.${fraction}`
 }
 
-function formatIndexInput(value) {
+function formatNumberInput(value) {
   if (value === '' || value === null || value === undefined) {
     return ''
   }
@@ -192,13 +353,55 @@ function getDefaultUsage(point) {
 
 function getInitialRow(point) {
   return {
-    index: '',
+    value: '',
     usageId: getDefaultUsage(point)
   }
 }
 
 function getRowState(rows, pointId) {
-  return rows[pointId] ?? {index: '', usageId: ''}
+  const row = rows[pointId]
+
+  if (!row) {
+    return {value: '', usageId: '', usageSearch: undefined}
+  }
+
+  return {
+    value: row.value ?? row.index ?? '',
+    usageId: row.usageId ?? '',
+    usageSearch: row.usageSearch
+  }
+}
+
+function isIndexMeasurementType(measurementType) {
+  return measurementType === QUICK_DECLARATION_MEASUREMENT_TYPES.INDEX
+}
+
+function getMeasurementValueLabel(measurementType) {
+  if (measurementType === QUICK_DECLARATION_MEASUREMENT_TYPES.VOLUME_PRELEVE) {
+    return 'Volume prélevé'
+  }
+
+  if (measurementType === QUICK_DECLARATION_MEASUREMENT_TYPES.VOLUME_REJETE) {
+    return 'Volume rejeté'
+  }
+
+  return 'Index'
+}
+
+function getMeasurementValueValidationLabel(measurementType) {
+  if (measurementType === QUICK_DECLARATION_MEASUREMENT_TYPES.VOLUME_PRELEVE) {
+    return 'le volume prélevé'
+  }
+
+  if (measurementType === QUICK_DECLARATION_MEASUREMENT_TYPES.VOLUME_REJETE) {
+    return 'le volume rejeté'
+  }
+
+  return 'l’index'
+}
+
+function getMeasurementEntryNoun(measurementType) {
+  return isIndexMeasurementType(measurementType) ? 'relevé' : 'volume'
 }
 
 function getLastReadingLabel(point) {
@@ -214,12 +417,71 @@ function getLastReadingLabel(point) {
   return `${formatNumber(lastReading.value)} ${unit}${date ? ` au ${date}` : ''}`
 }
 
-function getWarning({point, row, readingDate}) {
-  if (!point?.lastReading || row.index === '' || !readingDate) {
+function getInclusivePeriodEnd(periodStart, periodEnd, frequency) {
+  if (!periodEnd) {
     return null
   }
 
-  const value = Number(row.index)
+  const end = new Date(periodEnd)
+
+  if (Number.isNaN(end.getTime())) {
+    return null
+  }
+
+  const start = new Date(periodStart)
+  const dateOnlyFrequencies = new Set(['1 day', '1 week', '1 month', '1 quarter', '1 year'])
+
+  if (!Number.isNaN(start.getTime()) && end > start && dateOnlyFrequencies.has(frequency)) {
+    end.setUTCDate(end.getUTCDate() - 1)
+  }
+
+  return end
+}
+
+function getPeriodLabel({frequency, periodEnd, periodStart}) {
+  const startLabel = formatDate(periodStart)
+  const inclusiveEnd = getInclusivePeriodEnd(periodStart, periodEnd, frequency)
+  const endLabel = inclusiveEnd ? formatDate(inclusiveEnd) : null
+
+  if (startLabel && endLabel && startLabel !== endLabel) {
+    return `${startLabel} au ${endLabel}`
+  }
+
+  return startLabel || endLabel
+}
+
+function getLastVolumePeriodLabel(point, measurementType) {
+  const lastVolume = measurementType === QUICK_DECLARATION_MEASUREMENT_TYPES.VOLUME_REJETE
+    ? point?.lastVolumePeriods?.discharged
+    : point?.lastVolumePeriods?.withdrawn
+
+  if (!lastVolume) {
+    return null
+  }
+
+  const period = getPeriodLabel(lastVolume)
+  const unit = lastVolume.unit || 'm³'
+  const volumeLabel = lastVolume.value === null || lastVolume.value === undefined
+    ? null
+    : `${formatNumber(lastVolume.value)} ${unit}`
+
+  return [
+    period ? `Dernière période : ${period}` : null,
+    volumeLabel
+  ].filter(Boolean).join(' · ')
+}
+
+function getWarning({
+  measurementType,
+  point,
+  readingDate,
+  row
+}) {
+  if (!isIndexMeasurementType(measurementType) || !point?.lastReading || row.value === '' || !readingDate) {
+    return null
+  }
+
+  const value = Number(row.value)
   const previousValue = Number(point.lastReading.value)
 
   if (!Number.isFinite(value) || !Number.isFinite(previousValue)) {
@@ -286,6 +548,69 @@ function formatUsageOptionLabel(option) {
   return option.code ? `${option.code} - ${option.label}` : option.label
 }
 
+function normalizeSearchText(value) {
+  return String(value ?? '').trim().toLocaleLowerCase('fr-FR')
+}
+
+function findUsageOptionById(usageOptions, usageId) {
+  return usageOptions.find(option => option.value === usageId) ?? null
+}
+
+function findUsageOptionBySearchValue(usageOptions, value) {
+  const normalizedValue = normalizeSearchText(value)
+
+  if (!normalizedValue) {
+    return null
+  }
+
+  return usageOptions.find(option => [
+    option.code,
+    option.label,
+    formatUsageOptionLabel(option)
+  ].some(label => normalizeSearchText(label) === normalizedValue)) ?? null
+}
+
+function getUsageSearchValue(row, usageOptions) {
+  if (row.usageSearch !== undefined) {
+    return row.usageSearch
+  }
+
+  const selectedUsage = findUsageOptionById(usageOptions, row.usageId)
+  return selectedUsage ? formatUsageOptionLabel(selectedUsage) : ''
+}
+
+function getUsageComboboxDropdownStyle(input) {
+  if (!input) {
+    return null
+  }
+
+  const rect = input.getBoundingClientRect()
+  const horizontalMargin = 8
+  const verticalMargin = 12
+  const dropdownGap = 4
+  const viewportWidth = document.documentElement.clientWidth
+  const width = Math.min(rect.width, viewportWidth - (horizontalMargin * 2))
+  const availableBelow = window.innerHeight - rect.bottom - verticalMargin
+  const availableAbove = rect.top - verticalMargin
+  const openAbove = availableBelow < 220 && availableAbove > availableBelow
+  const availableHeight = openAbove ? availableAbove : availableBelow
+  const maxHeight = Math.max(160, Math.min(360, availableHeight - dropdownGap))
+  const top = openAbove
+    ? Math.max(verticalMargin, rect.top - maxHeight - dropdownGap)
+    : rect.bottom + dropdownGap
+  const left = Math.min(
+    Math.max(horizontalMargin, rect.left),
+    Math.max(horizontalMargin, viewportWidth - width - horizontalMargin)
+  )
+
+  return {
+    left: `${Math.round(left)}px`,
+    top: `${Math.round(top)}px`,
+    width: `${Math.round(width)}px`,
+    maxHeight: `${Math.round(maxHeight)}px`
+  }
+}
+
 function getInitialPreleveurId(availablePreleveurs) {
   if (availablePreleveurs.length === 1) {
     return getPreleveurId(availablePreleveurs[0])
@@ -328,13 +653,14 @@ function canSubmitQuickDeclaration({
     && validationErrors.length === 0
 }
 
-function getSubmitButtonLabel(isSubmitting, entriesCount) {
+function getSubmitButtonLabel(isSubmitting, entriesCount, measurementType) {
   if (isSubmitting) {
     return 'Soumission…'
   }
 
   if (entriesCount > 0) {
-    return `Soumettre ${entriesCount} relevé${entriesCount > 1 ? 's' : ''}`
+    const noun = getMeasurementEntryNoun(measurementType)
+    return `Soumettre ${entriesCount} ${noun}${entriesCount > 1 ? 's' : ''}`
   }
 
   return 'Soumettre'
@@ -365,15 +691,59 @@ function getQuickDeclarationUnavailableAlertProps({
   return null
 }
 
-function getEntryRowClassName({hasHistory, hasIndex, isHighlighted}) {
+function getMeasurementDateValidationErrors({
+  maxReadingDate,
+  measurementType,
+  periodEndDate,
+  periodStartDate,
+  readingDate
+}) {
+  const validationErrors = []
+
+  if (isIndexMeasurementType(measurementType)) {
+    if (!readingDate) {
+      validationErrors.push('La date de relevé est obligatoire.')
+    }
+
+    if (isFutureDate(readingDate, maxReadingDate)) {
+      validationErrors.push('La date de relevé ne peut pas être dans le futur.')
+    }
+
+    return validationErrors
+  }
+
+  if (!periodStartDate) {
+    validationErrors.push('La date de début est obligatoire.')
+  }
+
+  if (!periodEndDate) {
+    validationErrors.push('La date de fin est obligatoire.')
+  }
+
+  if (isFutureDate(periodStartDate, maxReadingDate)) {
+    validationErrors.push('La date de début ne peut pas être dans le futur.')
+  }
+
+  if (isFutureDate(periodEndDate, maxReadingDate)) {
+    validationErrors.push('La date de fin ne peut pas être dans le futur.')
+  }
+
+  if (periodStartDate && periodEndDate && periodEndDate < periodStartDate) {
+    validationErrors.push('La date de fin doit être postérieure ou égale à la date de début.')
+  }
+
+  return validationErrors
+}
+
+function getEntryRowClassName({hasHistory, hasValue, isHighlighted}) {
   return classNames(
     'grid grid-cols-1 gap-2 border-b border-r border-l-4 px-2 py-2 transition md:items-start',
     'border-b-gray-200 border-r-gray-200',
     ENTRY_GRID_COLUMNS_CLASS_NAME,
-    hasIndex && 'border-l-green-600 bg-green-50 shadow-sm',
-    !hasIndex && isHighlighted && 'border-l-blue-500 bg-blue-50',
-    !hasIndex && !isHighlighted && hasHistory && 'border-l-gray-400 bg-gray-50 hover:bg-gray-100',
-    !hasIndex && !isHighlighted && !hasHistory && 'border-l-transparent bg-white hover:bg-gray-50'
+    hasValue && 'border-l-green-600 bg-green-50 shadow-sm',
+    !hasValue && isHighlighted && 'border-l-blue-500 bg-blue-50',
+    !hasValue && !isHighlighted && hasHistory && 'border-l-gray-400 bg-gray-50 hover:bg-gray-100',
+    !hasValue && !isHighlighted && !hasHistory && 'border-l-transparent bg-white hover:bg-gray-50'
   )
 }
 
@@ -381,58 +751,94 @@ const QuickDeclarationToolbar = ({
   availablePreleveurs,
   context,
   maxReadingDate,
+  measurementType,
   onPreleveurChange,
+  periodEndDate,
+  periodStartDate,
   pointsCount,
   readingDate,
   selectedPreleveurId,
+  setMeasurementType,
+  setPeriodEndDate,
+  setPeriodStartDate,
   setReadingDate,
   shouldSelectPreleveur
-}) => (
-  <div className='fr-mb-2w flex flex-col gap-2 md:flex-row md:items-end md:justify-between'>
-    <div className='min-w-0'>
+}) => {
+  const valueLabel = getMeasurementValueValidationLabel(measurementType)
+  const isIndexMeasurement = isIndexMeasurementType(measurementType)
+
+  return (
+    <div className='fr-mb-2w flex flex-col gap-3'>
       {context && pointsCount > 0 && (
-        <div className='flex flex-wrap items-center gap-2'>
-          <p className='fr-hint-text fr-mb-0'>
-            {pointsCount} point{pointsCount > 1 ? 's' : ''}. Seules les lignes avec un index seront déposées.
-          </p>
-        </div>
-      )}
-    </div>
-
-    <div className='grid grid-cols-1 gap-2 sm:grid-cols-2 md:flex md:items-end'>
-      {shouldSelectPreleveur && (
-        <div className='fr-select-group fr-mb-0 min-w-[220px]'>
-          <label className='fr-label' htmlFor='quick-preleveur'>Déclarant</label>
-          <select
-            id='quick-preleveur'
-            className='fr-select'
-            value={selectedPreleveurId}
-            onChange={event => onPreleveurChange(event.target.value)}
-          >
-            <option value=''>Sélectionner un déclarant</option>
-            {availablePreleveurs.map(preleveur => (
-              <option key={getPreleveurId(preleveur)} value={getPreleveurId(preleveur)}>
-                {getDeclarantTitleFromUser(preleveur)}
-              </option>
-            ))}
-          </select>
-        </div>
+        <p className='fr-hint-text fr-mb-0'>
+          {pointsCount} point{pointsCount > 1 ? 's' : ''}. Seules les lignes avec {valueLabel} seront déposées.
+        </p>
       )}
 
-      <div className='fr-input-group fr-mb-0 min-w-[180px]'>
-        <label className='fr-label' htmlFor='quick-reading-date'>Date de relevé</label>
-        <input
-          id='quick-reading-date'
-          className='fr-input'
-          type='date'
-          value={readingDate}
-          max={maxReadingDate}
-          onChange={event => setReadingDate(event.target.value)}
+      <div className='border border-gray-200 bg-white p-3 shadow-sm md:p-4'>
+        <SegmentedControl
+          className='fr-mb-2w'
+          legend='Je souhaite déclarer'
+          segments={QUICK_DECLARATION_MEASUREMENT_SEGMENTS.map(segment => ({
+            iconId: segment.iconId,
+            label: segment.label,
+            nativeInputProps: {
+              checked: measurementType === segment.value,
+              onChange: () => setMeasurementType(segment.value)
+            }
+          }))}
         />
+
+        <div className='grid grid-cols-1 gap-3 sm:grid-cols-2 xl:flex xl:items-start'>
+          {shouldSelectPreleveur && (
+            <div className='fr-select-group fr-mb-0 min-w-[220px]'>
+              <label className='fr-label' htmlFor='quick-preleveur'>Déclarant</label>
+              <select
+                id='quick-preleveur'
+                className='fr-select'
+                value={selectedPreleveurId}
+                onChange={event => onPreleveurChange(event.target.value)}
+              >
+                <option value=''>Sélectionner un déclarant</option>
+                {availablePreleveurs.map(preleveur => (
+                  <option key={getPreleveurId(preleveur)} value={getPreleveurId(preleveur)}>
+                    {getDeclarantTitleFromUser(preleveur)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {isIndexMeasurement ? (
+            <div className='fr-input-group fr-mb-0 min-w-[220px]'>
+              <label className='fr-label' htmlFor='quick-reading-date'>
+                Date du relevé d’index
+              </label>
+              <input
+                id='quick-reading-date'
+                className='fr-input'
+                type='date'
+                value={readingDate}
+                max={maxReadingDate}
+                onChange={event => setReadingDate(event.target.value)}
+              />
+            </div>
+          ) : (
+            <DateRangePicker
+              endDate={periodEndDate}
+              maxDate={maxReadingDate}
+              startDate={periodStartDate}
+              onChange={({endDate, startDate}) => {
+                setPeriodStartDate(startDate)
+                setPeriodEndDate(endDate)
+              }}
+            />
+          )}
+        </div>
       </div>
     </div>
-  </div>
-)
+  )
+}
 
 const QuickDeclarationStatusAlerts = ({
   context,
@@ -512,7 +918,7 @@ const UnsavedPreleveurChangeModal = ({
           Changer de déclarant ?
         </h2>
         <p className='fr-text--sm fr-mb-4w'>
-          Les index saisis ne seront pas conservés si vous sélectionnez un autre déclarant.
+          Les données saisies sur les points ne seront pas conservées si vous sélectionnez un autre déclarant.
         </p>
         <div className='flex flex-col gap-2 sm:flex-row sm:justify-end'>
           <button className='fr-btn fr-btn--secondary' type='button' onClick={close}>
@@ -527,14 +933,365 @@ const UnsavedPreleveurChangeModal = ({
   )
 }
 
+const UsageCombobox = ({
+  id,
+  onFocus,
+  onUsageChange,
+  options,
+  value,
+  warning
+}) => {
+  const [open, setOpen] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [dropdownStyle, setDropdownStyle] = useState(null)
+  const containerRef = useRef(null)
+  const inputRef = useRef(null)
+  const listboxRef = useRef(null)
+  const normalizedSearch = normalizeSearchText(value)
+  const visibleOptions = useMemo(() => {
+    if (!normalizedSearch) {
+      return options
+    }
+
+    return options.filter(option => normalizeSearchText(formatUsageOptionLabel(option)).includes(normalizedSearch))
+  }, [normalizedSearch, options])
+
+  const updateDropdownPosition = useCallback(() => {
+    setDropdownStyle(getUsageComboboxDropdownStyle(inputRef.current))
+  }, [])
+
+  useEffect(() => {
+    if (!open) {
+      return undefined
+    }
+
+    const handleClickOutside = event => {
+      if (
+        !containerRef.current?.contains(event.target)
+        && !listboxRef.current?.contains(event.target)
+      ) {
+        setOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!open) {
+      return undefined
+    }
+
+    updateDropdownPosition()
+    window.addEventListener('resize', updateDropdownPosition)
+    document.addEventListener('scroll', updateDropdownPosition, true)
+
+    return () => {
+      window.removeEventListener('resize', updateDropdownPosition)
+      document.removeEventListener('scroll', updateDropdownPosition, true)
+    }
+  }, [open, updateDropdownPosition])
+
+  useEffect(() => {
+    setActiveIndex(0)
+  }, [value, visibleOptions.length])
+
+  const openDropdown = useCallback(() => {
+    updateDropdownPosition()
+    setOpen(true)
+  }, [updateDropdownPosition])
+
+  const selectUsage = useCallback(usage => {
+    onUsageChange({
+      usageId: usage.value,
+      usageSearch: formatUsageOptionLabel(usage)
+    })
+    setOpen(false)
+  }, [onUsageChange])
+
+  const listbox = open && dropdownStyle && (
+    <div
+      ref={listboxRef}
+      id={`${id}-listbox`}
+      className='fixed z-[1200] overflow-auto border border-gray-300 bg-white shadow-lg'
+      role='listbox'
+      style={dropdownStyle}
+    >
+      {visibleOptions.length > 0 ? visibleOptions.map((usage, index) => (
+        <button
+          key={usage.value}
+          type='button'
+          role='option'
+          aria-selected={index === activeIndex}
+          className={classNames(
+            'block w-full border-b border-gray-100 px-3 py-2 text-left text-sm last:border-b-0',
+            index === activeIndex ? 'bg-blue-50 text-blue-900' : 'bg-white hover:bg-gray-50'
+          )}
+          onMouseEnter={() => setActiveIndex(index)}
+          onMouseDown={event => {
+            event.preventDefault()
+            selectUsage(usage)
+          }}
+        >
+          <span className='block font-medium'>{formatUsageOptionLabel(usage)}</span>
+          {usage.definition && (
+            <span className='mt-0.5 block text-xs text-gray-600'>{usage.definition}</span>
+          )}
+        </button>
+      )) : (
+        <p className='fr-hint-text fr-mb-0 px-3 py-2 text-sm'>Aucun usage trouvé.</p>
+      )}
+    </div>
+  )
+
+  return (
+    <div ref={containerRef} className='quick-declaration-combobox'>
+      <input
+        ref={inputRef}
+        id={id}
+        className='fr-input quick-declaration-control text-sm'
+        type='text'
+        role='combobox'
+        aria-autocomplete='list'
+        aria-expanded={open}
+        aria-controls={`${id}-listbox`}
+        value={value}
+        placeholder='Code ou libellé'
+        autoComplete='off'
+        onFocus={() => {
+          onFocus?.()
+          openDropdown()
+        }}
+        onChange={event => {
+          const usageSearch = event.target.value
+          const selectedUsage = findUsageOptionBySearchValue(options, usageSearch)
+
+          onUsageChange({
+            usageSearch,
+            usageId: selectedUsage?.value ?? ''
+          })
+          openDropdown()
+        }}
+        onKeyDown={event => {
+          if (event.key === 'ArrowDown') {
+            event.preventDefault()
+            openDropdown()
+            setActiveIndex(index => Math.min(index + 1, Math.max(visibleOptions.length - 1, 0)))
+          }
+
+          if (event.key === 'ArrowUp') {
+            event.preventDefault()
+            openDropdown()
+            setActiveIndex(index => Math.max(index - 1, 0))
+          }
+
+          if (event.key === 'Enter' && open && visibleOptions[activeIndex]) {
+            event.preventDefault()
+            selectUsage(visibleOptions[activeIndex])
+          }
+
+          if (event.key === 'Escape') {
+            setOpen(false)
+          }
+        }}
+      />
+      {typeof document === 'undefined' ? null : createPortal(listbox, document.body)}
+
+      {warning && (
+        <p className='fr-hint-text fr-mb-0 mt-2 text-[0.72rem] leading-tight text-orange-700'>
+          {warning}
+        </p>
+      )}
+    </div>
+  )
+}
+
+const DateRangePicker = ({
+  endDate,
+  maxDate,
+  onChange,
+  startDate
+}) => {
+  const selectedStart = parseDateInput(startDate)
+  const selectedEnd = parseDateInput(endDate)
+  const max = parseDateInput(maxDate)
+  const [open, setOpen] = useState(false)
+  const [displayMonth, setDisplayMonth] = useState(() => startOfMonth(selectedStart ?? max ?? new Date()))
+  const containerRef = useRef(null)
+  const calendarDays = useMemo(() => buildCalendarDays(displayMonth), [displayMonth])
+  const presets = useMemo(() => buildMonthlyDateRangePresets(maxDate), [maxDate])
+
+  useEffect(() => {
+    if (!open) {
+      return undefined
+    }
+
+    const handleClickOutside = event => {
+      if (!containerRef.current?.contains(event.target)) {
+        setOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [open])
+
+  const applyRange = useCallback((nextStartDate, nextEndDate) => {
+    onChange({
+      startDate: nextStartDate,
+      endDate: nextEndDate
+    })
+  }, [onChange])
+
+  const handleDayClick = useCallback(day => {
+    const dayValue = toDateInputValue(day)
+
+    if (!selectedStart || selectedEnd) {
+      applyRange(dayValue, '')
+      return
+    }
+
+    if (day < selectedStart) {
+      applyRange(dayValue, '')
+      return
+    }
+
+    applyRange(startDate, dayValue)
+    setOpen(false)
+  }, [applyRange, selectedEnd, selectedStart, startDate])
+
+  return (
+    <div ref={containerRef} className='relative min-w-[300px]'>
+      <label className='fr-label' htmlFor='quick-period-range'>
+        <span>Période déclarée</span>
+        <span className='fr-hint-text'>Sélectionnez la période couverte par le volume déclaré.</span>
+      </label>
+      <button
+        id='quick-period-range'
+        className='fr-input w-full h-fit text-left whitespace-normal break-words bg-white'
+        type='button'
+        aria-haspopup='dialog'
+        aria-expanded={open}
+        onClick={() => {
+          setDisplayMonth(startOfMonth(selectedStart ?? max ?? new Date()))
+          setOpen(value => !value)
+        }}
+      >
+        {getDateRangeLabel(startDate, endDate)}
+      </button>
+
+      {open && (
+        <div className='absolute left-0 top-[calc(100%+0.25rem)] z-[9999] w-[min(28rem,calc(100vw-2rem))] bg-white border rounded-sm shadow-md p-4' role='dialog'>
+          <div className='mb-4'>
+            <p className='fr-mb-1v text-sm font-medium text-gray-900'>Périodes suggérées</p>
+            <div className='flex flex-wrap gap-2'>
+              {presets.map(preset => (
+                <button
+                  key={preset.label}
+                  className='fr-btn fr-btn--secondary fr-btn--sm'
+                  type='button'
+                  onClick={() => {
+                    applyRange(preset.startDate, preset.endDate)
+                    setDisplayMonth(startOfMonth(parseDateInput(preset.startDate)))
+                  }}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className='mb-3 flex items-center justify-between gap-2'>
+            <button
+              className='fr-btn fr-btn--tertiary-no-outline fr-btn--sm'
+              type='button'
+              aria-label='Mois précédent'
+              onClick={() => setDisplayMonth(month => addMonths(month, -1))}
+            >
+              <span className='fr-icon-arrow-left-s-line' aria-hidden='true' />
+            </button>
+            <p className='fr-mb-0 text-sm font-semibold capitalize'>{getMonthLabel(displayMonth)}</p>
+            <button
+              className='fr-btn fr-btn--tertiary-no-outline fr-btn--sm'
+              type='button'
+              aria-label='Mois suivant'
+              disabled={max && startOfMonth(addMonths(displayMonth, 1)) > startOfMonth(max)}
+              onClick={() => setDisplayMonth(month => addMonths(month, 1))}
+            >
+              <span className='fr-icon-arrow-right-s-line' aria-hidden='true' />
+            </button>
+          </div>
+
+          <div className='grid grid-cols-7 gap-1 text-center text-xs font-medium text-gray-500'>
+            {DATE_RANGE_WEEKDAYS.map(day => (
+              <span key={day.key}>{day.label}</span>
+            ))}
+          </div>
+          <div className='mt-1 grid grid-cols-7 gap-1'>
+            {calendarDays.map(day => {
+              const dateValue = toDateInputValue(day)
+              const outsideMonth = day.getMonth() !== displayMonth.getMonth()
+              const disabled = max && day > max
+              const selected = isSameDate(day, selectedStart) || isSameDate(day, selectedEnd)
+              const inRange = isDateInRange(day, selectedStart, selectedEnd)
+
+              return (
+                <button
+                  key={dateValue}
+                  className={classNames(
+                    'h-9 text-sm transition rounded',
+                    outsideMonth && 'text-gray-400',
+                    !disabled && !selected && !inRange && 'hover:bg-gray-100',
+                    inRange && !selected && 'bg-blue-50 text-blue-900',
+                    selected && 'rounded-full bg-blue-600 font-semibold text-white',
+                    disabled && 'cursor-not-allowed text-gray-300'
+                  )}
+                  type='button'
+                  disabled={disabled}
+                  onClick={() => handleDayClick(day)}
+                >
+                  {day.getDate()}
+                </button>
+              )
+            })}
+          </div>
+
+          <div className='fr-mt-3w grid grid-cols-1 gap-2 border-t border-gray-200 pt-3 text-sm sm:grid-cols-2'>
+            <div>
+              <span className='block text-xs font-medium text-gray-600'>Début</span>
+              <span className='font-semibold text-gray-900'>
+                {startDate ? formatDate(startDate) : 'À sélectionner'}
+              </span>
+            </div>
+            <div>
+              <span className='block text-xs font-medium text-gray-600'>Fin</span>
+              <span className='font-semibold text-gray-900'>
+                {endDate ? formatDate(endDate) : 'À sélectionner'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const QuickDeclarationEntryRow = ({
   activePointId,
   focusNextPoint,
   focusPoint,
   globalUsageOptions,
-  handleIndexChange,
+  handleValueChange,
   hoveredPointId,
   inputRefs,
+  measurementType,
   point,
   readingDate,
   row,
@@ -543,19 +1300,30 @@ const QuickDeclarationEntryRow = ({
   updateRow
 }) => {
   const pointId = getPointId(point)
-  const hasIndex = row.index !== ''
+  const hasValue = row.value !== ''
   const hasHistory = hasDeclarationHistory(point)
-  const warning = getWarning({point, row, readingDate})
-  const lastReadingLabel = getLastReadingLabel(point)
+  const isIndexMeasurement = isIndexMeasurementType(measurementType)
+  const warning = getWarning({
+    measurementType,
+    point,
+    readingDate,
+    row
+  })
+  const lastReadingLabel = isIndexMeasurement ? getLastReadingLabel(point) : null
+  const lastVolumePeriodLabel = isIndexMeasurement ? null : getLastVolumePeriodLabel(point, measurementType)
   const isHighlighted = isPointIdEqual(pointId, hoveredPointId) || isPointIdEqual(pointId, activePointId)
   const usageOptions = buildUsageOptionsForPoint(point, globalUsageOptions).sort(compareUsageOptions)
+  const usageSearchValue = getUsageSearchValue(row, usageOptions)
   const pointName = getPointName(point)
+  const valueLabel = getMeasurementValueLabel(measurementType)
+  const valueInputId = `quick-value-${pointId}`
+  const usageInputId = `quick-usage-${pointId}`
 
   return (
     <div
       key={pointId}
       role='listitem'
-      className={getEntryRowClassName({hasHistory, hasIndex, isHighlighted})}
+      className={getEntryRowClassName({hasHistory, hasValue, isHighlighted})}
       onMouseEnter={() => setHoveredPointId(pointId)}
       onMouseLeave={() => setHoveredPointId(null)}
     >
@@ -564,7 +1332,7 @@ const QuickDeclarationEntryRow = ({
           type='button'
           className={classNames(
             'fr-link block max-w-full truncate text-left text-sm',
-            hasIndex ? 'font-bold' : 'font-medium'
+            hasValue ? 'font-bold' : 'font-medium'
           )}
           title={pointName}
           onClick={() => focusPoint(pointId)}
@@ -576,10 +1344,15 @@ const QuickDeclarationEntryRow = ({
             Dernier index : {lastReadingLabel}
           </p>
         )}
+        {lastVolumePeriodLabel && (
+          <p className='fr-hint-text fr-mb-0 mt-1 text-[0.72rem] leading-tight'>
+            {lastVolumePeriodLabel}
+          </p>
+        )}
       </div>
 
       <div className='fr-input-group fr-mb-0'>
-        <label className='fr-label md:hidden' htmlFor={`quick-index-${pointId}`}>Index</label>
+        <label className='fr-label md:hidden' htmlFor={valueInputId}>{valueLabel}</label>
         <div className='quick-declaration-field relative mt-1 md:mt-0'>
           <input
             ref={node => {
@@ -589,17 +1362,17 @@ const QuickDeclarationEntryRow = ({
                 delete inputRefs.current[pointId]
               }
             }}
-            id={`quick-index-${pointId}`}
+            id={valueInputId}
             className={classNames(
               'fr-input quick-declaration-control pr-9 text-right text-sm font-semibold tabular-nums',
-              hasIndex && 'bg-white'
+              hasValue && 'bg-white'
             )}
             type='text'
             inputMode='decimal'
-            value={formatIndexInput(row.index)}
+            value={formatNumberInput(row.value)}
             placeholder='0'
             onFocus={() => setActivePointId(pointId)}
-            onChange={event => handleIndexChange(pointId, event)}
+            onChange={event => handleValueChange(pointId, event)}
             onKeyDown={event => {
               if (event.key === 'Enter') {
                 event.preventDefault()
@@ -623,21 +1396,17 @@ const QuickDeclarationEntryRow = ({
         )}
       </div>
 
-      <div className='fr-select-group fr-mb-0'>
-        <label className='fr-label md:hidden' htmlFor={`quick-usage-${pointId}`}>Usage</label>
+      <div className='fr-input-group fr-mb-0'>
+        <label className='fr-label md:hidden' htmlFor={usageInputId}>Usage</label>
         <div className='quick-declaration-field mt-1 md:mt-0'>
-          <select
-            id={`quick-usage-${pointId}`}
-            className='fr-select quick-declaration-control text-sm'
-            value={row.usageId}
+          <UsageCombobox
+            id={usageInputId}
+            options={usageOptions}
+            value={usageSearchValue}
+            warning={usageSearchValue && !row.usageId ? 'Sélectionnez un usage proposé.' : null}
             onFocus={() => setActivePointId(pointId)}
-            onChange={event => updateRow(pointId, {usageId: event.target.value})}
-          >
-            <option disabled value=''>Sélectionner</option>
-            {usageOptions.map(usage => (
-              <option key={usage.value} value={usage.value}>{formatUsageOptionLabel(usage)}</option>
-            ))}
-          </select>
+            onUsageChange={changes => updateRow(pointId, changes)}
+          />
         </div>
       </div>
     </div>
@@ -650,9 +1419,10 @@ const QuickDeclarationEntryList = ({
   focusNextPoint,
   focusPoint,
   globalUsageOptions,
-  handleIndexChange,
+  handleValueChange,
   hoveredPointId,
   inputRefs,
+  measurementType,
   readingDate,
   rows,
   setActivePointId,
@@ -667,7 +1437,7 @@ const QuickDeclarationEntryList = ({
       )}
     >
       <div>Point de prélèvement</div>
-      <div>Index</div>
+      <div>{getMeasurementValueLabel(measurementType)}</div>
       <div>Usage</div>
     </div>
 
@@ -682,9 +1452,10 @@ const QuickDeclarationEntryList = ({
             focusNextPoint={focusNextPoint}
             focusPoint={focusPoint}
             globalUsageOptions={globalUsageOptions}
-            handleIndexChange={handleIndexChange}
+            handleValueChange={handleValueChange}
             hoveredPointId={hoveredPointId}
             inputRefs={inputRefs}
+            measurementType={measurementType}
             point={point}
             readingDate={readingDate}
             row={getRowState(rows, pointId)}
@@ -701,14 +1472,15 @@ const QuickDeclarationEntryList = ({
 const QuickDeclarationSubmission = ({
   canSubmit,
   entries,
-  hasAnyIndex,
+  hasAnyValue,
+  measurementType,
   submit,
   submitButtonLabel,
   submitResult,
   validationErrors
 }) => (
   <>
-    {validationErrors.length > 0 && hasAnyIndex && (
+    {validationErrors.length > 0 && hasAnyValue && (
       <Alert
         className='fr-mb-2w'
         severity='error'
@@ -722,7 +1494,9 @@ const QuickDeclarationSubmission = ({
         {submitButtonLabel}
       </Button>
       {entries.length === 0 && (
-        <p className='fr-hint-text fr-mb-0'>Saisissez au moins un index pour soumettre.</p>
+        <p className='fr-hint-text fr-mb-0'>
+          Saisissez au moins {isIndexMeasurementType(measurementType) ? 'un index' : 'un volume'} pour soumettre.
+        </p>
       )}
     </div>
 
@@ -756,10 +1530,11 @@ const QuickDeclarationEntriesPanel = ({
   focusNextPoint,
   focusPoint,
   globalUsageOptions,
-  handleIndexChange,
-  hasAnyIndex,
+  handleValueChange,
+  hasAnyValue,
   hoveredPointId,
   inputRefs,
+  measurementType,
   pointsCount,
   readingDate,
   rows,
@@ -784,9 +1559,10 @@ const QuickDeclarationEntriesPanel = ({
         focusNextPoint={focusNextPoint}
         focusPoint={focusPoint}
         globalUsageOptions={globalUsageOptions}
-        handleIndexChange={handleIndexChange}
+        handleValueChange={handleValueChange}
         hoveredPointId={hoveredPointId}
         inputRefs={inputRefs}
+        measurementType={measurementType}
         readingDate={readingDate}
         rows={rows}
         setActivePointId={setActivePointId}
@@ -808,7 +1584,8 @@ const QuickDeclarationEntriesPanel = ({
       <QuickDeclarationSubmission
         canSubmit={canSubmit}
         entries={entries}
-        hasAnyIndex={hasAnyIndex}
+        hasAnyValue={hasAnyValue}
+        measurementType={measurementType}
         submit={submit}
         submitButtonLabel={submitButtonLabel}
         submitResult={submitResult}
@@ -868,7 +1645,8 @@ const QuickDeclarationForm = ({
   declarantRole,
   quickDeclarationEnabled = true,
   canCreateQuickDeclaration = true,
-  onDirtyChange
+  onDirtyChange,
+  onSubmitted
 }) => {
   const {user} = useAuth()
   const initialPreleveurId = getInitialPreleveurId(availablePreleveurs)
@@ -876,7 +1654,11 @@ const QuickDeclarationForm = ({
   const [context, setContext] = useState(null)
   const [contextError, setContextError] = useState(null)
   const [isContextLoading, setIsContextLoading] = useState(false)
-  const [readingDate, setReadingDate] = useState(todayISO())
+  const maxReadingDate = useMemo(todayISO, [])
+  const [measurementType, setMeasurementType] = useState(QUICK_DECLARATION_MEASUREMENT_TYPES.INDEX)
+  const [readingDate, setReadingDate] = useState(maxReadingDate)
+  const [periodStartDate, setPeriodStartDate] = useState('')
+  const [periodEndDate, setPeriodEndDate] = useState('')
   const [comment, setComment] = useState('')
   const [rows, setRows] = useState({})
   const [activePointId, setActivePointId] = useState(null)
@@ -886,7 +1668,6 @@ const QuickDeclarationForm = ({
   const [pendingPreleveurId, setPendingPreleveurId] = useState(null)
   const [preleveurChangeModalOpen, setPreleveurChangeModalOpen] = useState(false)
   const inputRefs = useRef({})
-  const maxReadingDate = useMemo(todayISO, [])
 
   const selectedPreleveur = useMemo(
     () => availablePreleveurs.find(preleveur => getPreleveurId(preleveur) === selectedPreleveurId) ?? null,
@@ -917,7 +1698,7 @@ const QuickDeclarationForm = ({
   const pointsCount = points.length
   const selectedPointIds = useMemo(
     () => Object.entries(rows)
-      .filter(([, row]) => row.index !== '')
+      .filter(([pointId]) => getRowState(rows, pointId).value !== '')
       .map(([pointId]) => pointId),
     [rows]
   )
@@ -1023,14 +1804,14 @@ const QuickDeclarationForm = ({
     }
   }, [entryPoints, focusPoint])
 
-  const handleIndexChange = useCallback((pointId, event) => {
+  const handleValueChange = useCallback((pointId, event) => {
     const editableCharactersCount = countEditableNumberCharacters(
       event.target.value,
       event.target.selectionStart ?? event.target.value.length
     )
-    const index = normalizeNumberInput(event.target.value)
+    const value = normalizeNumberInput(event.target.value)
 
-    updateRow(pointId, {index})
+    updateRow(pointId, {value})
 
     requestAnimationFrame(() => {
       const input = inputRefs.current[pointId]
@@ -1039,7 +1820,7 @@ const QuickDeclarationForm = ({
         return
       }
 
-      const position = getFormattedCaretPosition(formatIndexInput(index), editableCharactersCount)
+      const position = getFormattedCaretPosition(formatNumberInput(value), editableCharactersCount)
       input.setSelectionRange(position, position)
     })
   }, [updateRow])
@@ -1047,58 +1828,69 @@ const QuickDeclarationForm = ({
   const {entries, validationErrors} = useMemo(() => {
     const nextEntries = []
     const nextValidationErrors = []
+    const isIndexMeasurement = isIndexMeasurementType(measurementType)
+    const valueValidationLabel = getMeasurementValueValidationLabel(measurementType)
 
     for (const point of entryPoints) {
       const pointId = getPointId(point)
       const pointName = getPointName(point)
       const row = getRowState(rows, pointId)
-      const hasIndex = row.index !== ''
-      const hasCompleteIndex = isCompleteNumberInput(row.index)
+      const hasValue = row.value !== ''
+      const hasCompleteValue = isCompleteNumberInput(row.value)
       const hasUsage = Boolean(row.usageId)
 
-      if (hasIndex) {
-        const index = Number(row.index)
+      if (hasValue) {
+        const numericValue = Number(row.value)
 
-        if (!hasCompleteIndex || !Number.isFinite(index) || index < 0) {
-          nextValidationErrors.push(`${pointName} : l’index doit être un nombre positif.`)
+        if (!hasCompleteValue || !Number.isFinite(numericValue) || numericValue < 0) {
+          nextValidationErrors.push(`${pointName} : ${valueValidationLabel} doit être un nombre positif.`)
         }
 
         if (!hasUsage) {
-          nextValidationErrors.push(`${pointName} : l’usage est requis si un index est renseigné.`)
+          nextValidationErrors.push(`${pointName} : l’usage est requis si ${valueValidationLabel} est renseigné.`)
         }
 
-        if (hasUsage && hasCompleteIndex && Number.isFinite(index) && index >= 0) {
+        if (hasUsage && hasCompleteValue && Number.isFinite(numericValue) && numericValue >= 0) {
           nextEntries.push({
             pointPrelevementId: pointId,
-            index,
+            ...(isIndexMeasurement ? {index: numericValue} : {value: numericValue}),
             usageId: row.usageId
           })
         }
       }
     }
 
-    if (!readingDate) {
-      nextValidationErrors.push('La date de relevé est obligatoire.')
-    }
-
-    if (isFutureDate(readingDate, maxReadingDate)) {
-      nextValidationErrors.push('La date de relevé ne peut pas être dans le futur.')
-    }
+    nextValidationErrors.push(...getMeasurementDateValidationErrors({
+      maxReadingDate,
+      measurementType,
+      periodEndDate,
+      periodStartDate,
+      readingDate
+    }))
 
     return {
       entries: nextEntries,
       validationErrors: nextValidationErrors
     }
-  }, [entryPoints, maxReadingDate, readingDate, rows])
+  }, [entryPoints, maxReadingDate, measurementType, periodEndDate, periodStartDate, readingDate, rows])
 
-  const hasAnyIndex = useMemo(
-    () => Object.values(rows).some(row => row.index !== ''),
+  const hasAnyValue = useMemo(
+    () => Object.values(rows).some(row => (row.value ?? row.index ?? '') !== ''),
     [rows]
   )
 
+  const hasUnsavedQuickDeclarationData = useMemo(() => (
+    hasAnyValue
+      || comment.trim() !== ''
+      || measurementType !== QUICK_DECLARATION_MEASUREMENT_TYPES.INDEX
+      || readingDate !== maxReadingDate
+      || periodStartDate !== ''
+      || periodEndDate !== ''
+  ), [comment, hasAnyValue, maxReadingDate, measurementType, periodEndDate, periodStartDate, readingDate])
+
   useEffect(() => {
-    onDirtyChange?.(hasAnyIndex)
-  }, [hasAnyIndex, onDirtyChange])
+    onDirtyChange?.(hasUnsavedQuickDeclarationData)
+  }, [hasUnsavedQuickDeclarationData, onDirtyChange])
 
   const applyPreleveurChange = useCallback(nextPreleveurId => {
     setSelectedPreleveurId(nextPreleveurId)
@@ -1110,14 +1902,14 @@ const QuickDeclarationForm = ({
       return
     }
 
-    if (hasAnyIndex) {
+    if (hasAnyValue) {
       setPendingPreleveurId(nextPreleveurId)
       setPreleveurChangeModalOpen(true)
       return
     }
 
     applyPreleveurChange(nextPreleveurId)
-  }, [applyPreleveurChange, hasAnyIndex, selectedPreleveurId])
+  }, [applyPreleveurChange, hasAnyValue, selectedPreleveurId])
 
   const closePreleveurChangeModal = useCallback(() => {
     setPendingPreleveurId(null)
@@ -1137,7 +1929,7 @@ const QuickDeclarationForm = ({
     isSubmitting,
     validationErrors
   })
-  const submitButtonLabel = getSubmitButtonLabel(isSubmitting, entries.length)
+  const submitButtonLabel = getSubmitButtonLabel(isSubmitting, entries.length, measurementType)
 
   const submit = useCallback(async () => {
     setIsSubmitting(true)
@@ -1148,9 +1940,13 @@ const QuickDeclarationForm = ({
         throw new Error(validationErrors[0] || 'Saisie incomplète.')
       }
 
+      const datePayload = isIndexMeasurementType(measurementType)
+        ? {readingDate}
+        : {periodStartDate, periodEndDate}
       const result = await createQuickDeclarationAction({
         declarantUserId: targetDeclarantUserId,
-        readingDate,
+        measurementType,
+        ...datePayload,
         comment,
         entries
       })
@@ -1160,6 +1956,7 @@ const QuickDeclarationForm = ({
       }
 
       setSubmitResult({status: 'success', message: 'Déclaration créée avec succès.'})
+      onSubmitted?.()
       window.location.href = getMyDeclarationURL(result.data.data)
     } catch (error) {
       console.error(error)
@@ -1170,7 +1967,18 @@ const QuickDeclarationForm = ({
     } finally {
       setIsSubmitting(false)
     }
-  }, [canSubmit, comment, entries, readingDate, targetDeclarantUserId, validationErrors])
+  }, [
+    canSubmit,
+    comment,
+    entries,
+    measurementType,
+    periodEndDate,
+    periodStartDate,
+    readingDate,
+    onSubmitted,
+    targetDeclarantUserId,
+    validationErrors
+  ])
 
   const unavailableAlertProps = getQuickDeclarationUnavailableAlertProps({
     availablePreleveurs,
@@ -1191,9 +1999,15 @@ const QuickDeclarationForm = ({
             availablePreleveurs={availablePreleveurs}
             context={context}
             maxReadingDate={maxReadingDate}
+            measurementType={measurementType}
+            periodEndDate={periodEndDate}
+            periodStartDate={periodStartDate}
             pointsCount={pointsCount}
             readingDate={readingDate}
             selectedPreleveurId={selectedPreleveurId}
+            setMeasurementType={setMeasurementType}
+            setPeriodEndDate={setPeriodEndDate}
+            setPeriodStartDate={setPeriodStartDate}
             setReadingDate={setReadingDate}
             shouldSelectPreleveur={shouldSelectPreleveur}
             onPreleveurChange={handlePreleveurChange}
@@ -1219,10 +2033,11 @@ const QuickDeclarationForm = ({
             focusNextPoint={focusNextPoint}
             focusPoint={focusPoint}
             globalUsageOptions={globalUsageOptions}
-            handleIndexChange={handleIndexChange}
-            hasAnyIndex={hasAnyIndex}
+            handleValueChange={handleValueChange}
+            hasAnyValue={hasAnyValue}
             hoveredPointId={hoveredPointId}
             inputRefs={inputRefs}
+            measurementType={measurementType}
             pointsCount={pointsCount}
             readingDate={readingDate}
             rows={rows}

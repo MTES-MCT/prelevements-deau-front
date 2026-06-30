@@ -1,7 +1,7 @@
 'use client'
 
 import {
-  useCallback, useEffect, useMemo, useState
+  useCallback, useEffect, useMemo, useRef, useState
 } from 'react'
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
@@ -32,7 +32,7 @@ const UnsavedQuickDeclarationModal = ({
           Quitter la saisie rapide ?
         </h2>
         <p className='fr-text--sm fr-mb-4w'>
-          Les index saisis ne seront pas conservés si vous quittez cette page ou changez de mode sans soumettre la déclaration.
+          Les données saisies ne seront pas conservées si vous quittez cette page ou changez de mode sans soumettre la déclaration.
         </p>
         <div className='flex flex-col gap-2 sm:flex-row sm:justify-end'>
           <button className='fr-btn fr-btn--secondary' type='button' onClick={close}>
@@ -72,9 +72,15 @@ const NewDeclarationEntry = ({
   const [mode, setMode] = useState(quickAvailable ? 'quick' : 'file')
   const [quickDeclarationDirty, setQuickDeclarationDirty] = useState(false)
   const shouldConfirmLeaveQuickDeclaration = mode === 'quick' && quickDeclarationDirty
+  const skipQuickDeclarationLeaveConfirmationRef = useRef(false)
   const [pendingMode, setPendingMode] = useState(null)
   const [pendingHref, setPendingHref] = useState(null)
   const [leaveModalOpen, setLeaveModalOpen] = useState(false)
+
+  const handleQuickDeclarationSubmitted = useCallback(() => {
+    skipQuickDeclarationLeaveConfirmationRef.current = true
+    setQuickDeclarationDirty(false)
+  }, [])
 
   const changeMode = useCallback(nextMode => {
     if (nextMode === mode) {
@@ -169,6 +175,27 @@ const NewDeclarationEntry = ({
     }
   }, [shouldConfirmLeaveQuickDeclaration])
 
+  useEffect(() => {
+    if (!shouldConfirmLeaveQuickDeclaration) {
+      return undefined
+    }
+
+    const handleBeforeUnload = event => {
+      if (skipQuickDeclarationLeaveConfirmationRef.current) {
+        return
+      }
+
+      event.preventDefault()
+      event.returnValue = ''
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [shouldConfirmLeaveQuickDeclaration])
+
   if (!quickAvailable && !fileAvailable) {
     return (
       <Alert
@@ -214,6 +241,7 @@ const NewDeclarationEntry = ({
           quickDeclarationEnabled={quickDeclarationEnabled}
           canCreateQuickDeclaration={canCreateQuickDeclaration}
           onDirtyChange={setQuickDeclarationDirty}
+          onSubmitted={handleQuickDeclarationSubmitted}
         />
       ) : (
         <>
