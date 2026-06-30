@@ -201,7 +201,7 @@ const NewDeclarationEntry = ({
       <Alert
         severity='info'
         title='Aucun mode de déclaration disponible'
-        description='La saisie rapide n’est pas activée pour ce déclarant et aucun type de déclaration par fichier n’est autorisé.'
+        description='Aucun mode de déclaration n’est disponible pour le moment.'
       />
     )
   }
@@ -250,7 +250,7 @@ const NewDeclarationEntry = ({
               className='fr-mb-3w'
               severity='info'
               title='Saisie rapide indisponible'
-              description='La saisie rapide n’est pas activée pour ce déclarant ou aucun préleveur accessible ne peut l’utiliser.'
+              description='Vous pouvez déposer un fichier pour transmettre votre déclaration.'
             />
           )}
           <NewDeclarationForm

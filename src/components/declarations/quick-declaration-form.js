@@ -24,6 +24,7 @@ import {formatNumber} from '@/utils/number.js'
 const POINTS_CONTACT_EMAIL = 'contact@partageonsleau.beta.gouv.fr'
 const POINTS_CONTACT_SUBJECT_SUFFIX = 'Modification sur mes points de prélèvements'
 const ENTRY_GRID_COLUMNS_CLASS_NAME = 'md:grid-cols-[minmax(150px,1fr)_150px_minmax(260px,320px)]'
+const QUICK_DECLARATION_UNAVAILABLE_MESSAGE = 'La saisie rapide est indisponible pour le moment.'
 
 const QUICK_DECLARATION_MEASUREMENT_TYPES = Object.freeze({
   INDEX: 'INDEX',
@@ -675,16 +676,16 @@ function getQuickDeclarationUnavailableAlertProps({
   if (declarantRole === 'COLLECTEUR' && availablePreleveurs.length === 0) {
     return {
       severity: 'info',
-      title: 'Aucun déclarant accessible',
-      description: 'Votre compte collecteur n’est rattaché à aucune exploitation.'
+      title: 'Saisie rapide indisponible',
+      description: 'Vous pouvez déposer un fichier pour transmettre votre déclaration.'
     }
   }
 
   if (!canCreateQuickDeclaration || quickDeclarationEnabled === false) {
     return {
       severity: 'info',
-      title: 'Saisie rapide désactivée',
-      description: 'La saisie rapide n’est pas activée pour votre compte. Vous pouvez continuer à déposer un fichier.'
+      title: 'Saisie rapide indisponible',
+      description: 'Vous pouvez déposer un fichier pour transmettre votre déclaration.'
     }
   }
 
@@ -864,7 +865,7 @@ const QuickDeclarationStatusAlerts = ({
         className='fr-mb-2w'
         severity='error'
         title='Saisie rapide indisponible'
-        description={contextError}
+        description={QUICK_DECLARATION_UNAVAILABLE_MESSAGE}
       />
     )}
 
@@ -881,7 +882,7 @@ const QuickDeclarationStatusAlerts = ({
       <Alert
         className='fr-mb-2w'
         severity='info'
-        title='Saisie rapide désactivée pour ce déclarant'
+        title='Saisie rapide indisponible'
         description='Sélectionnez un autre déclarant ou déposez un fichier.'
       />
     )}
