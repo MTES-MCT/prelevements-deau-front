@@ -26,7 +26,8 @@ const Page = async ({params}) => {
   }
 
   const declaration = result.data.data
-  const shouldLoadAvailablePoints = isPointReconciliationRelevant(declaration, declaration.source)
+  const shouldLoadAvailablePoints = declaration.source?.status === 'COMPLETED'
+    && isPointReconciliationRelevant(declaration, declaration.source)
   const availablePointsResult = shouldLoadAvailablePoints
     ? await getAvailablePointsPrelevementsForDeclarationAction(declaration.id)
     : null

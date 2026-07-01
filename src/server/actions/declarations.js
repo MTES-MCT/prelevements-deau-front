@@ -66,6 +66,10 @@ export async function getMyDeclarationsAction() {
   return withErrorHandling(async () => fetchJSON('api/declarations/me'))
 }
 
+export async function getReplayableDeclarationsAction() {
+  return withErrorHandling(async () => fetchJSON('api/admin/declarations/replayable'))
+}
+
 export async function getMyTelemetrySourcesAction() {
   return withErrorHandling(async () => fetchJSON('api/declarations/me/telemetry-sources'))
 }

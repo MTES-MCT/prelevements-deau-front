@@ -83,9 +83,11 @@ const ConfirmationDialog = ({
 }
 
 const DeclarationAdminActions = ({
+  canDelete = true,
   canReplay = false,
   declarationCode,
   declarationId,
+  onSuccess,
   sourceId
 }) => {
   const router = useRouter()
@@ -138,6 +140,10 @@ const DeclarationAdminActions = ({
         text: 'Retraitement demandé à l’orchestrateur.'
       })
       setPendingAction(null)
+      onSuccess?.({
+        action: pendingAction,
+        result
+      })
       router.refresh()
     } finally {
       setBusyAction(null)
@@ -150,6 +156,7 @@ const DeclarationAdminActions = ({
         <div className='flex flex-wrap justify-end gap-2'>
           {Object.entries(actionConfig)
             .filter(([action]) => action !== 'replay' || canReplay)
+            .filter(([action]) => action !== 'delete' || canDelete)
             .map(([action, config]) => (
               <button
                 key={action}

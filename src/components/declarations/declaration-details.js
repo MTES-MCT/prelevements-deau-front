@@ -17,6 +17,14 @@ function isTreatmentPending(source) {
   return source?.status === 'PENDING' || source?.status === 'PROCESSING'
 }
 
+function isTreatmentFailed(source) {
+  return source?.status === 'FAILED'
+}
+
+function getSourceProcessingError(source) {
+  return source?.declaration?.processingError || source?.metadata?.processingError || null
+}
+
 const VolumeSummary = ({metadata}) => {
   const totalWaterVolumeWithdrawn = metadata?.totalWaterVolumeWithdrawn
   const totalWaterVolumeDischarged = metadata?.totalWaterVolumeDischarged
@@ -44,6 +52,8 @@ const VolumeSummary = ({metadata}) => {
 
 const ProcessingState = ({source}) => {
   const statusLabel = sourceStateLabels[source?.status] ?? sourceStateLabels.PROCESSING
+  const hasFailed = isTreatmentFailed(source)
+  const processingError = getSourceProcessingError(source)
 
   return (
     <div className='fr-mt-3w fr-mb-6w'>
@@ -53,12 +63,21 @@ const ProcessingState = ({source}) => {
         description={(
           <div className='flex flex-col gap-2'>
             <span>
-              Le retraitement de la déclaration est en cours. Les données seront réaffichées dès que l’orchestrateur aura terminé.
+              {hasFailed
+                ? 'Le traitement automatique n’a pas abouti. Les fichiers déposés restent disponibles.'
+                : 'Le retraitement de la déclaration est en cours. Les données seront réaffichées dès que l’orchestrateur aura terminé.'}
             </span>
-            <div className='flex items-center gap-2'>
-              <CircularProgress aria-label='Traitement en cours' size={20} />
-              <span>Actualisation automatique de la page.</span>
-            </div>
+            {hasFailed && processingError && (
+              <span className='fr-text--sm fr-mb-0 text-red-700'>
+                {processingError}
+              </span>
+            )}
+            {!hasFailed && (
+              <div className='flex items-center gap-2'>
+                <CircularProgress aria-label='Traitement en cours' size={20} />
+                <span>Actualisation automatique de la page.</span>
+              </div>
+            )}
           </div>
         )}
       />
@@ -77,6 +96,7 @@ const DeclarationDetails = ({
   const router = useRouter()
   const showReconciliation = isPointReconciliationRelevant(declaration, source)
   const isPending = isTreatmentPending(source)
+  const hasFailed = isTreatmentFailed(source)
   const canReconcilePoints = typeof canReconcile === 'boolean'
     ? canReconcile
     : !isInstructor
@@ -97,7 +117,7 @@ const DeclarationDetails = ({
 
   let content = <SourceDataDetails source={source} />
 
-  if (isPending) {
+  if (isPending || hasFailed) {
     content = <ProcessingState source={source} />
   } else if (showReconciliation) {
     content = (

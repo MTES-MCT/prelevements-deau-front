@@ -227,6 +227,7 @@ const CompactMeta = ({align = 'left', label, secondaryValue = null, value}) => (
 
 const DeclarationSummaryContent = ({
   actionLabel,
+  actions,
   declaration,
   showDeclarant,
   source
@@ -261,11 +262,11 @@ const DeclarationSummaryContent = ({
       />
 
       <div className='flex items-center justify-end'>
-        {actionLabel && (
+        {actions || (actionLabel && (
           <span className='fr-link fr-icon-arrow-right-line fr-link--icon-right shrink-0 text-sm font-medium'>
             {actionLabel}
           </span>
-        )}
+        ))}
       </div>
     </article>
   )
@@ -273,6 +274,7 @@ const DeclarationSummaryContent = ({
 
 const DeclarationSummaryItem = ({
   actionLabel = 'Consulter',
+  actions = null,
   declaration,
   showDeclarant = true,
   source,
@@ -281,13 +283,14 @@ const DeclarationSummaryItem = ({
   const content = (
     <DeclarationSummaryContent
       actionLabel={url ? actionLabel : null}
+      actions={actions}
       declaration={declaration}
       showDeclarant={showDeclarant}
       source={source}
     />
   )
 
-  if (!url) {
+  if (!url || actions) {
     return content
   }
 

@@ -8,6 +8,7 @@ import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
 import {
   buildDeclarationViewFromSource,
+  getDeclarationDisplayStatus,
   getSourcePeriodLabel,
   getPointsPrelevementIdsFromSource,
   isPointReconciliationRelevant
@@ -47,13 +48,14 @@ const SourcePage = async ({params}) => {
   const source = result.data.data
   const currentRole = userResult?.data?.role ?? null
   const declaration = buildDeclarationViewFromSource(source)
+  const displayStatus = getDeclarationDisplayStatus(declaration, source)
   const idPoints = getPointsPrelevementIdsFromSource(source)
   const periodLabel = getSourcePeriodLabel(source)
-  const shouldLoadAvailablePoints = isPointReconciliationRelevant(declaration, source)
+  const shouldLoadAvailablePoints = source.status === 'COMPLETED'
+    && isPointReconciliationRelevant(declaration, source)
   const canReconcile = ['INSTRUCTOR', 'ADMIN'].includes(currentRole)
   const canAdminManageDeclaration = currentRole === 'ADMIN' && Boolean(source.declaration?.id)
   const canReplayDeclaration = canAdminManageDeclaration
-    && source.status === 'COMPLETED'
     && (source.declaration?.files?.length ?? 0) > 0
 
   const availablePointsResult = shouldLoadAvailablePoints
@@ -71,7 +73,7 @@ const SourcePage = async ({params}) => {
 
       <DeclarationOverview
         declaration={declaration}
-        status={source.globalInstructionStatus}
+        status={displayStatus}
         periodLabel={periodLabel}
         preleveurName={declaration.declarant ? getDeclarantTitleFromDeclarant(declaration.declarant) : null}
         actions={
