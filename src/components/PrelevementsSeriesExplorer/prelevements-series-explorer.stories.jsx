@@ -21,7 +21,7 @@ const meta = {
 **Schema**:
 \`\`\`typescript
 {
-  _id: string              // Series unique identifier (MongoDB ObjectId)
+  id: string               // Series unique identifier
   parameter: string        // Parameter name (e.g., 'temperature', 'debit')
   unit: string             // Unit of measurement (e.g., '°C', 'm³/h')
   frequency: string        // Sampling frequency (e.g., '1 day', '15 minutes')
@@ -42,7 +42,7 @@ const meta = {
 **Example**:
 \`\`\`javascript
 [{
-  _id: '507f1f77bcf86cd799439011',
+  id: 'series-1',
   parameter: 'temperature',
   unit: '°C',
   frequency: '1 day',

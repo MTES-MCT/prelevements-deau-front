@@ -1,5 +1,5 @@
 import moment from 'moment'
-import 'moment/locale/fr'
+import 'moment/locale/fr.js'
 
 moment.locale('fr')
 
@@ -106,7 +106,7 @@ export function getSourcePeriod(source) {
     return {start: null, end: null}
   }
 
-  const moments = dates.map(d => moment(d))
+  const moments = dates.map(d => moment.utc(d))
 
   return {
     start: moment.min(moments).toDate(),

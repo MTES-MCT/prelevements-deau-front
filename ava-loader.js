@@ -6,8 +6,19 @@
 import {pathToFileURL} from 'node:url'
 
 const baseURL = pathToFileURL(process.cwd() + '/').href
+const muiIconStubURL = new URL('src/test/mui-icon-stub.js', baseURL).href
 
 export async function resolve(specifier, context, nextResolve) {
+  if (
+    process.env.NODE_ENV === 'test'
+    && (specifier === '@mui/icons-material' || specifier.startsWith('@mui/icons-material/'))
+  ) {
+    return {
+      url: muiIconStubURL,
+      shortCircuit: true
+    }
+  }
+
   // Handle @/ alias
   if (specifier.startsWith('@/')) {
     const resolved = specifier.replace('@/', './src/')
