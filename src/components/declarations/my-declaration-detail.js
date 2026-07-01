@@ -9,28 +9,25 @@ import DeclarationDetails from '@/components/declarations/declaration-details.js
 import DeclarationOverview from '@/components/declarations/declaration-overview.js'
 import DeclarationPointsChangeRequestAction from '@/components/declarations/declaration-points-change-request-action.js'
 import {
+  getDeclarationDisplayStatus,
   getSourceReadingDateLabel,
   getSourcePeriodLabel,
+  isDeclarationTreatmentPending,
   sourceStateLabels
 } from '@/lib/declaration.js'
 import {getDeclarationAction} from '@/server/actions/declarations.js'
 
 const REFRESH_INTERVAL = 3000
 
-function getDisplayStatus(source) {
-  if (!source) {
-    return 'PROCESSING'
+function formatProcessingEventDate(value) {
+  if (!value) {
+    return null
   }
 
-  if (source.status === 'COMPLETED') {
-    return source.globalInstructionStatus
-  }
-
-  return source.status ?? 'PROCESSING'
-}
-
-function isTreatmentPending(source) {
-  return !source || source.status === 'PENDING' || source.status === 'PROCESSING'
+  return new Intl.DateTimeFormat('fr-FR', {
+    dateStyle: 'short',
+    timeStyle: 'short'
+  }).format(new Date(value))
 }
 
 const ProcessingLoader = () => (
@@ -42,9 +39,13 @@ const ProcessingLoader = () => (
 
 const ProcessingState = ({declaration}) => {
   const source = declaration?.source
-  const displayStatus = getDisplayStatus(source)
+  const displayStatus = getDeclarationDisplayStatus(declaration, source)
   const statusLabel = sourceStateLabels[displayStatus] ?? sourceStateLabels.PROCESSING
-  const isPending = isTreatmentPending(source)
+  const isPending = isDeclarationTreatmentPending(declaration, source)
+  const latestEvent = declaration?.processingEvents?.[0]
+  const latestEventDate = formatProcessingEventDate(latestEvent?.createdAt)
+  const processingError = declaration?.processingError || latestEvent?.message
+  const hasProcessingFailed = source?.status === 'FAILED' || declaration?.processingStatus === 'FAILED'
 
   return (
     <div className='fr-mb-6w'>
@@ -54,10 +55,23 @@ const ProcessingState = ({declaration}) => {
         description={
           <div className='flex flex-col gap-2'>
             <span>
-              {source?.status === 'FAILED'
+              {hasProcessingFailed
                 ? 'Le traitement automatique n’a pas abouti. Les fichiers déposés restent disponibles ci-dessous.'
                 : 'Les fichiers ont bien été déposés. Le traitement peut prendre quelques minutes pour les fichiers volumineux.'}
             </span>
+
+            {processingError && displayStatus === 'FAILED' && (
+              <span className='fr-text--sm fr-mb-0 text-red-700'>
+                {processingError}
+              </span>
+            )}
+
+            {latestEvent && (
+              <span className='fr-text--xs fr-text-mention--grey fr-mb-0'>
+                Dernier événement : {latestEvent.message || statusLabel.label}
+                {latestEventDate ? `, ${latestEventDate}` : ''}
+              </span>
+            )}
 
             {isPending && (
               <div className='flex flex-col gap-2'>
@@ -77,8 +91,8 @@ const ProcessingState = ({declaration}) => {
 const MyDeclarationDetail = ({availablePoints = [], initialDeclaration}) => {
   const [declaration, setDeclaration] = useState(initialDeclaration)
   const source = declaration?.source
-  const displayStatus = getDisplayStatus(source)
-  const shouldRefresh = isTreatmentPending(source)
+  const displayStatus = getDeclarationDisplayStatus(declaration, source)
+  const shouldRefresh = isDeclarationTreatmentPending(declaration, source)
 
   useEffect(() => {
     if (!shouldRefresh || !declaration?.id) {

@@ -5,6 +5,7 @@ import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
 import {getDeclarationTypeLabel} from '@/lib/declaration-types.js'
 import {
   dataSourceTypeLabels,
+  getDeclarationDisplayStatus,
   getSourcePeriodLabel,
   getTelemetrySourceTitle,
   isManualQuickDeclarationSource,
@@ -27,16 +28,9 @@ function formatDate(value) {
   return new Intl.DateTimeFormat('fr-FR').format(new Date(value))
 }
 
-function getStatus(source) {
-  if (!source) {
-    return {label: 'Traitement en cours', severity: 'info'}
-  }
-
-  if (source.status && source.status !== 'COMPLETED') {
-    return sourceStateLabels[source.status] ?? {label: 'Traitement en cours', severity: 'info'}
-  }
-
-  return sourceStateLabels[source.globalInstructionStatus] ?? {label: 'Statut inconnu', severity: 'info'}
+function getStatus(declaration, source) {
+  const displayStatus = getDeclarationDisplayStatus(declaration, source)
+  return sourceStateLabels[displayStatus] ?? {label: 'Statut inconnu', severity: 'info'}
 }
 
 function getApiTitle(source) {
@@ -237,7 +231,7 @@ const DeclarationSummaryContent = ({
   showDeclarant,
   source
 }) => {
-  const status = getStatus(source)
+  const status = getStatus(declaration, source)
   const metas = getSummaryMetas({declaration, source, showDeclarant})
   const periodLabel = getSourcePeriodLabel(source) ?? 'Non renseignée'
   const depositDateLabel = formatDate(declaration?.createdAt ?? source?.createdAt)

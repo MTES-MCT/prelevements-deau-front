@@ -4,6 +4,18 @@ import 'moment/locale/fr.js'
 moment.locale('fr')
 
 export const sourceStateLabels = {
+  CREATED: {
+    label: 'Déclaration créée',
+    severity: 'info'
+  },
+  UPLOADED: {
+    label: 'Fichier reçu',
+    severity: 'info'
+  },
+  QUEUED: {
+    label: 'Traitement planifié',
+    severity: 'info'
+  },
   PENDING: {
     label: 'Traitement en attente',
     severity: 'info'
@@ -37,6 +49,14 @@ export const sourceStateLabels = {
     severity: 'warning'
   }
 }
+
+export const pendingDeclarationProcessingStatuses = new Set([
+  'CREATED',
+  'UPLOADED',
+  'QUEUED',
+  'PROCESSING',
+  'PENDING'
+])
 
 export const dataSourceTypeLabels = {
   MANUAL: 'Saisie rapide',
@@ -95,6 +115,26 @@ export function getDeclarationEntryKind(declaration, source = declaration?.sourc
   }
 
   return declaration?.dataSourceType ?? 'NONE'
+}
+
+export function getDeclarationDisplayStatus(declaration, source = declaration?.source) {
+  if (source?.status === 'COMPLETED') {
+    return source.globalInstructionStatus
+  }
+
+  if (source?.status) {
+    return source.status
+  }
+
+  return declaration?.processingStatus ?? 'PROCESSING'
+}
+
+export function isDeclarationTreatmentPending(declaration, source = declaration?.source) {
+  if (source) {
+    return source.status === 'PENDING' || source.status === 'PROCESSING'
+  }
+
+  return pendingDeclarationProcessingStatuses.has(declaration?.processingStatus ?? 'PROCESSING')
 }
 
 export function getSourcePeriod(source) {

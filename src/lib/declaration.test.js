@@ -4,12 +4,14 @@ import {
   buildDeclarationViewFromSource,
   formatFullAddress,
   getDeclarationEntryKind,
+  getDeclarationDisplayStatus,
   getPointsPrelevementIdsFromDeclaration,
   getPointsPrelevementIdsFromSource,
   getSourcePeriod,
   getSourcePeriodLabel,
   getSourceReadingDateLabel,
   getTelemetrySourceTitle,
+  isDeclarationTreatmentPending,
   isManualQuickDeclarationSource,
   isPointReconciliationRelevant,
   isTelemetrySource
@@ -69,6 +71,33 @@ test('getDeclarationEntryKind classe télémétrie, manuel, fichier et absence',
   t.is(getDeclarationEntryKind({dataSourceType: 'SPREADSHEET'}, {type: 'API'}), 'TELEMETRY')
   t.is(getDeclarationEntryKind({dataSourceType: 'MANUAL'}, {type: 'DECLARATION'}), 'MANUAL')
   t.is(getDeclarationEntryKind({}, {type: 'DECLARATION'}), 'NONE')
+})
+
+test('getDeclarationDisplayStatus privilégie la source puis le statut de traitement', t => {
+  t.is(getDeclarationDisplayStatus({
+    processingStatus: 'QUEUED',
+    source: null
+  }), 'QUEUED')
+
+  t.is(getDeclarationDisplayStatus({
+    processingStatus: 'QUEUED',
+    source: {status: 'PROCESSING'}
+  }), 'PROCESSING')
+
+  t.is(getDeclarationDisplayStatus({
+    processingStatus: 'COMPLETED',
+    source: {status: 'COMPLETED', globalInstructionStatus: 'VALIDATED'}
+  }), 'VALIDATED')
+})
+
+test('isDeclarationTreatmentPending couvre les statuts sans source', t => {
+  t.true(isDeclarationTreatmentPending({processingStatus: 'UPLOADED', source: null}))
+  t.true(isDeclarationTreatmentPending({processingStatus: 'QUEUED', source: null}))
+  t.false(isDeclarationTreatmentPending({processingStatus: 'COMPLETED', source: null}))
+  t.false(isDeclarationTreatmentPending({
+    processingStatus: 'COMPLETED',
+    source: {status: 'COMPLETED'}
+  }))
 })
 
 test('getSourcePeriod calcule les bornes sur tous les chunks', t => {
