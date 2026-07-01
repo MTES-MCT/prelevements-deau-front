@@ -40,3 +40,16 @@ main {
 .declaration-reconciliation-map-shell .maplibregl-popup {
   z-index: 30;
 }
+
+.dashboard-points-map-shell .maplibregl-map,
+.dashboard-points-map-shell .maplibregl-canvas-container {
+  overflow: visible !important;
+}
+
+.dashboard-points-map-shell .maplibregl-popup {
+  z-index: 30;
+}
+
+.dashboard-points-map-shell .maplibregl-popup-content {
+  overflow-wrap: anywhere;
+}

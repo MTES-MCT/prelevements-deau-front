@@ -11,15 +11,15 @@ const Home = async () => {
   const role = userResult?.data?.role
 
   if (role === 'ADMIN') {
-    redirect('/zones')
+    redirect('/tableau-de-bord')
   }
 
   if (role === 'INSTRUCTOR') {
-    redirect('/declarations')
+    redirect('/tableau-de-bord')
   }
 
   if (role === 'DECLARANT') {
-    redirect('/mes-declarations')
+    redirect('/tableau-de-bord')
   }
 
   redirect('/login')

@@ -28,6 +28,14 @@ const ROLE_COLORS = {
 const NAV_ITEMS = [
   {
     linkProps: {
+      href: '/tableau-de-bord',
+      target: '_self'
+    },
+    text: 'Tableau de bord',
+    roles: ['DECLARANT', 'INSTRUCTOR', 'ADMIN']
+  },
+  {
+    linkProps: {
       href: '/mes-declarations',
       target: '_self'
     },
@@ -56,7 +64,7 @@ const NAV_ITEMS = [
       href: '/points-prelevement',
       target: '_self'
     },
-    text: 'Mes points de prélèvement',
+    text: 'Points de prélèvements',
     roles: ['DECLARANT', 'INSTRUCTOR', 'ADMIN']
   },
   {
@@ -107,7 +115,7 @@ function getNavigationText(item, href, role) {
   }
 
   if (href === '/points-prelevement' && role === 'ADMIN') {
-    return 'Points de prélèvement'
+    return 'Points de prélèvements'
   }
 
   return item.text

@@ -20,6 +20,7 @@ const LEGACY_USAGE_TO_CODE = {
   ALIMENTATION_SOUTIEN_CANAL: '16',
   DOMESTIQUE: '17'
 }
+const HIDDEN_DASHBOARD_USAGE_ROOT_CODES = new Set(['17'])
 
 export function getUsageCode(usage) {
   if (!usage) {
@@ -122,6 +123,11 @@ export function getUsageIcon(usage) {
 
 export function getUsageKey(usage) {
   return getUsageId(usage) ?? getUsageCode(usage) ?? getUsageLabel(usage)
+}
+
+export function isDashboardVisibleUsage(usage) {
+  return !HIDDEN_DASHBOARD_USAGE_ROOT_CODES.has(getUsageRootCode(usage))
+    && usage?.dashboardVisible !== false
 }
 
 export function normalizeUsageOption(usage) {

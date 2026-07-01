@@ -63,6 +63,10 @@ export {
 } from './stats.js'
 
 export {
+  getDashboardTerritoryAction
+} from './dashboard.js'
+
+export {
   addDeclarantDeclarationTypeAction,
   createDeclarationTypeAction,
   disableDeclarationTypeAction,

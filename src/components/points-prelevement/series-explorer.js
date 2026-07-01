@@ -25,7 +25,14 @@ const DEFAULT_PARAMETER = 'Volume prélevé'
 const FALLBACK_VOLUME_TEMPORAL_OPERATORS = ['sum', 'mean', 'min', 'max']
 const FALLBACK_STANDARD_TEMPORAL_OPERATORS = ['mean', 'min', 'max']
 
-const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = null, startDate = null, endDate = null}) => {
+const SeriesExplorer = ({
+  endDate = null,
+  pointIds = null,
+  preleveurId = null,
+  seriesOptions = null,
+  startDate = null,
+  title = 'Historique des prélèvements'
+}) => {
   // Vérifie si des paramètres sont disponibles depuis l'API
   const hasParameters = seriesOptions?.parameters?.length > 0
 
@@ -414,7 +421,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
   return hasParameters ? (
     <Box className='flex flex-col gap-4'>
       <Typography variant='h5' component='h2'>
-        Historique des prélèvements
+        {title}
       </Typography>
 
       {selectedParameters.length > 0 && (
@@ -442,7 +449,7 @@ const SeriesExplorer = ({pointIds = null, preleveurId = null, seriesOptions = nu
   ) : (
     <Box className='flex flex-col gap-4'>
       <Typography variant='h5' component='h2'>
-        Historique des prélèvements
+        {title}
       </Typography>
 
       <Alert
