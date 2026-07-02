@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Script from 'next/script'
 
 import ImpersonationBanner from '@/components/auth/impersonation-banner.js'
+import EnvironmentBanner from '@/components/environment-banner.js'
 import Footer from '@/components/footer.js'
 import Header from '@/components/header.js'
 import MatomoTracker from '@/components/matomo-tracker.js'
@@ -55,6 +56,7 @@ const RootLayout = ({children}) => (
       )}
     </head>
     <body>
+      <EnvironmentBanner />
       <NextAuthSessionProvider>
         <AuthProvider>
           <AppRouterCacheProvider>

@@ -2,7 +2,7 @@ name: Deploy (prod) to Scaleway
 
 on:
   push:
-    branches: ["testing"] # TODO: change
+    branches: ["prod"]
 
 permissions:
   contents: read
@@ -23,31 +23,29 @@ jobs:
       SCW_IMAGE_NAME: ${{ vars.SCW_IMAGE_NAME }}
       SCW_SERVERLESS_CONTAINER_ID: ${{ secrets.SCW_SERVERLESS_CONTAINER_ID_PROD }}
       NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+      NEXT_PUBLIC_DEPLOY_ENV: prod
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Enable corepack
-        run: corepack enable
-
-      - name: Use Node.js 22.x
+      - name: Use Node.js 24.x
         uses: actions/setup-node@v4
         with:
-          node-version: "22.x"
-          cache: "yarn"
+          node-version: "24.x"
+          cache: "npm"
 
       - name: Install deps
-        run: yarn --immutable
+        run: npm ci
 
       - name: Lint
-        run: yarn lint
+        run: npm run lint
 
       - name: Test
-        run: yarn test
+        run: npm test
 
       - name: Build (Next.js)
-        run: yarn build
+        run: npm run build
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -71,6 +69,7 @@ jobs:
             ${{ env.SCW_REGISTRY_ENDPOINT }}/${{ env.SCW_IMAGE_NAME }}:prod-${{ github.sha }}
           build-args: |
             NEXT_PUBLIC_API_URL=${{ env.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_DEPLOY_ENV=${{ env.NEXT_PUBLIC_DEPLOY_ENV }}
 
       - name: Install Scaleway CLI
         run: |

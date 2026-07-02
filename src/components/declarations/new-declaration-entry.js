@@ -244,19 +244,9 @@ const NewDeclarationEntry = ({
           onSubmitted={handleQuickDeclarationSubmitted}
         />
       ) : (
-        <>
-          {!quickAvailable && (
-            <Alert
-              className='fr-mb-3w'
-              severity='info'
-              title='Saisie rapide indisponible'
-              description='Vous pouvez déposer un fichier pour transmettre votre déclaration.'
-            />
-          )}
-          <NewDeclarationForm
-            allowedDeclarationTypes={allowedDeclarationTypes}
-          />
-        </>
+        <NewDeclarationForm
+          allowedDeclarationTypes={allowedDeclarationTypes}
+        />
       )}
 
       <UnsavedQuickDeclarationModal

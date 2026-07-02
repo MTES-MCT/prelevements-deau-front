@@ -4,15 +4,15 @@ Cette application est le front-end du projet de gestion des prélèvements d'eau
 
 ## Prérequis
 
-- **Node.js** ≥ 22.11 et < 23
-- **Yarn** 4 (la version 4.6.0 est recommandée)
+- **Node.js** 24.x
+- **npm**
 
 ## Installation
 
 1. Clonez ce dépôt.
 2. Installez les dépendances :
    ```bash
-   yarn install
+   npm install
    ```
 3. Créez un fichier `.env` à la racine en vous basant sur `.env.sample` puis renseignez les variables ci-dessous.
 
@@ -24,6 +24,7 @@ Cette application est le front-end du projet de gestion des prélèvements d'eau
 | `NEXT_PUBLIC_FRONTEND_URL`    | URL de base du frontend. Optionnel en production. |
 | `NEXT_PUBLIC_PROCEDURE_DS_ID` | Identifiant de la procédure Démarche Numérique pour générer les liens vers les dossiers. |
 | `NEXT_PUBLIC_STORAGE_URL`     | URL de base du stockage des documents.                                                 |
+| `NEXT_PUBLIC_DEPLOY_ENV`      | Environnement d'affichage (`testing` affiche un bandeau, `prod` n'en affiche pas). Optionnel en dev local. |
 | `NEXTAUTH_URL`                | URL de l'application NextAuth avec basePath (ex: `http://localhost:3000/auth/nextauth` en dev). |
 | `NEXTAUTH_SECRET`             | Clé secrète pour signer les JWT de session. Générez-la avec `openssl rand -base64 32`. |
 
@@ -43,22 +44,23 @@ NEXT_PUBLIC_API_URL=http://localhost:4000
 NEXT_PUBLIC_FRONTEND_URL=http://localhost:3000
 NEXT_PUBLIC_PROCEDURE_DS_ID=12345
 NEXT_PUBLIC_STORAGE_URL=http://localhost:5000
+NEXT_PUBLIC_DEPLOY_ENV=dev
 NEXTAUTH_URL=http://localhost:3000/auth/nextauth
 NEXTAUTH_SECRET=votre_secret_genere_avec_openssl
 ```
 
 ## Scripts disponibles
 
-- `yarn dev` : met à jour les icônes DSFR puis lance le serveur de développement.
-- `yarn build` : génère la version de production.
-- `yarn start` : démarre l'application Next.js construite via `yarn build`.
-- `yarn update-icons` : force la mise à jour des icônes DSFR.
-- `yarn lint` : vérifie la qualité du code avec XO.
+- `npm run dev` : met à jour les icônes DSFR puis lance le serveur de développement.
+- `npm run build` : génère la version de production.
+- `npm start` : démarre l'application Next.js construite via `npm run build`.
+- `npm run update-icons` : force la mise à jour des icônes DSFR.
+- `npm run lint` : vérifie la qualité du code avec XO.
 
 ## Démarrer en développement
 
 ```bash
-yarn dev
+npm run dev
 ```
 
 L'application sera alors disponible sur [http://localhost:3000](http://localhost:3000).
@@ -66,6 +68,6 @@ L'application sera alors disponible sur [http://localhost:3000](http://localhost
 Pour générer un build de production :
 
 ```bash
-yarn build
-yarn start
+npm run build
+npm start
 ```

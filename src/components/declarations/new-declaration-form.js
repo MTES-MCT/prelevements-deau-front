@@ -6,13 +6,13 @@ import {
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Button} from '@codegouvfr/react-dsfr/Button'
-import {extractTemplateFile} from '@fabnum/prelevements-deau-timeseries-parsers'
 import moment from 'moment'
 import 'moment/locale/fr'
 
 import FileValidationResult from '@/components/declarations/validateur/file-validation-result.js'
 import ValidateurForm from '@/components/declarations/validateur/form.js'
 import {createLocalSeriesRegistry} from '@/lib/local-series-registry.js'
+import {extractTemplateFile} from '@/lib/template-file-parser/index.js'
 import {getMyDeclarationURL} from '@/lib/urls.js'
 import {createDeclarationAction, revalidateDeclarationPaths} from '@/server/actions/declarations.js'
 
@@ -283,7 +283,7 @@ const NewDeclarationForm = ({allowedDeclarationTypes = []}) => {
 
   return (
     <>
-      <div className='fr-container fr-mt-2w fr-mb-2w'>
+      <div className='fr-mt-2w fr-mb-2w'>
         <ValidateurForm
           allowedDeclarationTypes={allowedDeclarationTypes}
           comment={comment}

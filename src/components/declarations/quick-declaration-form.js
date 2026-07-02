@@ -24,7 +24,6 @@ import {formatNumber} from '@/utils/number.js'
 const POINTS_CONTACT_EMAIL = 'contact@partageonsleau.beta.gouv.fr'
 const POINTS_CONTACT_SUBJECT_SUFFIX = 'Modification sur mes points de prélèvements'
 const ENTRY_GRID_COLUMNS_CLASS_NAME = 'md:grid-cols-[minmax(150px,1fr)_150px_minmax(260px,320px)]'
-const QUICK_DECLARATION_UNAVAILABLE_MESSAGE = 'La saisie rapide est indisponible pour le moment.'
 
 const QUICK_DECLARATION_MEASUREMENT_TYPES = Object.freeze({
   INDEX: 'INDEX',
@@ -667,31 +666,6 @@ function getSubmitButtonLabel(isSubmitting, entriesCount, measurementType) {
   return 'Soumettre'
 }
 
-function getQuickDeclarationUnavailableAlertProps({
-  availablePreleveurs,
-  canCreateQuickDeclaration,
-  declarantRole,
-  quickDeclarationEnabled
-}) {
-  if (declarantRole === 'COLLECTEUR' && availablePreleveurs.length === 0) {
-    return {
-      severity: 'info',
-      title: 'Saisie rapide indisponible',
-      description: 'Vous pouvez déposer un fichier pour transmettre votre déclaration.'
-    }
-  }
-
-  if (!canCreateQuickDeclaration || quickDeclarationEnabled === false) {
-    return {
-      severity: 'info',
-      title: 'Saisie rapide indisponible',
-      description: 'Vous pouvez déposer un fichier pour transmettre votre déclaration.'
-    }
-  }
-
-  return null
-}
-
 function getMeasurementDateValidationErrors({
   maxReadingDate,
   measurementType,
@@ -864,8 +838,8 @@ const QuickDeclarationStatusAlerts = ({
       <Alert
         className='fr-mb-2w'
         severity='error'
-        title='Saisie rapide indisponible'
-        description={QUICK_DECLARATION_UNAVAILABLE_MESSAGE}
+        title='Impossible de charger les points'
+        description='Réessayez plus tard ou déposez un fichier.'
       />
     )}
 
@@ -882,7 +856,7 @@ const QuickDeclarationStatusAlerts = ({
       <Alert
         className='fr-mb-2w'
         severity='info'
-        title='Saisie rapide indisponible'
+        title='Déclarant non configuré'
         description='Sélectionnez un autre déclarant ou déposez un fichier.'
       />
     )}
@@ -2020,17 +1994,6 @@ const QuickDeclarationForm = ({
     targetDeclarantUserId,
     validationErrors
   ])
-
-  const unavailableAlertProps = getQuickDeclarationUnavailableAlertProps({
-    availablePreleveurs,
-    canCreateQuickDeclaration,
-    declarantRole,
-    quickDeclarationEnabled
-  })
-
-  if (unavailableAlertProps) {
-    return <Alert {...unavailableAlertProps} />
-  }
 
   return (
     <div className='fr-mt-1w fr-mb-2w'>

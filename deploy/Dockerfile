@@ -1,19 +1,12 @@
-FROM node:22-bookworm-slim AS deps
+FROM node:24-bookworm-slim AS deps
 WORKDIR /app
 
-RUN corepack enable
-ENV YARN_NODE_LINKER=node-modules
+COPY package.json package-lock.json ./
 
-COPY package.json yarn.lock .yarnrc.yml ./
-COPY .yarn/ .yarn/
+RUN npm ci
 
-RUN yarn --immutable
-
-FROM node:22-bookworm-slim AS build
+FROM node:24-bookworm-slim AS build
 WORKDIR /app
-
-RUN corepack enable
-ENV YARN_NODE_LINKER=node-modules
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -22,15 +15,17 @@ ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_FRONTEND_URL
 ARG NEXT_PUBLIC_PROCEDURE_DS_ID
 ARG NEXT_PUBLIC_STORAGE_URL
+ARG NEXT_PUBLIC_DEPLOY_ENV
 
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_FRONTEND_URL=$NEXT_PUBLIC_FRONTEND_URL
 ENV NEXT_PUBLIC_PROCEDURE_DS_ID=$NEXT_PUBLIC_PROCEDURE_DS_ID
 ENV NEXT_PUBLIC_STORAGE_URL=$NEXT_PUBLIC_STORAGE_URL
+ENV NEXT_PUBLIC_DEPLOY_ENV=$NEXT_PUBLIC_DEPLOY_ENV
 
-RUN yarn build
+RUN npm run build
 
-FROM node:22-bookworm-slim AS runner
+FROM node:24-bookworm-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
