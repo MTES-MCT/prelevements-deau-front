@@ -11,7 +11,8 @@ const naturesDocument = [
   'Autorisation ICPE',
   'Autorisation IOTA',
   'Délibération abandon',
-  'Rapport hydrogéologue agréé'
+  'Rapport hydrogéologue agréé',
+  'Autre'
 ]
 
 const DocumentForm = ({document, setDocument}) => (
