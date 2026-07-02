@@ -92,12 +92,12 @@ test('getExploitationPointIds accepte les deux formes de point et déduplique', 
   )
 })
 
-test('getDeclarantSeriesScope utilise les points gérés pour les collecteurs', t => {
+test('getDeclarantSeriesScope utilise le collecteur pour résoudre les exploitations accessibles', t => {
   t.deepEqual(
     getDeclarantSeriesScope({declarantRole: 'COLLECTEUR'}, 'collecteur-1', ['point-1', 'point-2']),
-    {pointIds: ['point-1', 'point-2']}
+    {collecteurId: 'collecteur-1'}
   )
-  t.is(getDeclarantSeriesScope({declarantRole: 'COLLECTEUR'}, 'collecteur-1', []), null)
+  t.is(getDeclarantSeriesScope({declarantRole: 'COLLECTEUR'}, null, ['point-1']), null)
   t.deepEqual(
     getDeclarantSeriesScope({declarantRole: 'PRELEVEUR'}, 'preleveur-1', ['point-1']),
     {preleveurId: 'preleveur-1'}

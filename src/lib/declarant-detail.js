@@ -73,9 +73,9 @@ export function getExploitationPointIds(exploitations) {
   ]
 }
 
-export function getDeclarantSeriesScope(declarant, declarantId, pointIds = []) {
+export function getDeclarantSeriesScope(declarant, declarantId) {
   if (isCollecteurDeclarant(declarant)) {
-    return pointIds.length > 0 ? {pointIds} : null
+    return declarantId ? {collecteurId: declarantId} : null
   }
 
   return declarantId ? {preleveurId: declarantId} : null

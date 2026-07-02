@@ -26,6 +26,7 @@ const FALLBACK_VOLUME_TEMPORAL_OPERATORS = ['sum', 'mean', 'min', 'max']
 const FALLBACK_STANDARD_TEMPORAL_OPERATORS = ['mean', 'min', 'max']
 
 const SeriesExplorer = ({
+  collecteurId = null,
   endDate = null,
   pointIds = null,
   preleveurId = null,
@@ -263,6 +264,10 @@ const SeriesExplorer = ({
       params.pointIds = pointIds
     }
 
+    if (collecteurId) {
+      params.collecteurId = collecteurId
+    }
+
     if (preleveurId) {
       params.preleveurId = preleveurId
     }
@@ -279,7 +284,7 @@ const SeriesExplorer = ({
     // Cancellation is handled client-side via isActive flag
     const result = await getAggregatedSeriesAction(params)
     return result.success ? result.data : null
-  }, [pointIds, preleveurId, dateRange])
+  }, [collecteurId, pointIds, preleveurId, dateRange])
 
   useEffect(() => {
     // Clear the map only when no parameters are selected

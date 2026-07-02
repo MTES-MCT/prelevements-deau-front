@@ -5,6 +5,7 @@ import {notFound} from 'next/navigation'
 import {buildPageTitle} from '@/app/metadata-utils.js'
 import PreleveurMap from '@/components/declarants/preleveur-map.js'
 import DocumentsList from '@/components/documents/documents-list.js'
+import CollecteurExploitationsList from '@/components/exploitations/collecteur-exploitations-list.js'
 import ExploitationsList from '@/components/exploitations/exploitations-list.js'
 import SeriesExplorer from '@/components/points-prelevement/series-explorer.js'
 import ReglesListCard from '@/components/regles/regles-list-card.js'
@@ -182,7 +183,7 @@ const Page = async ({params}) => {
   const exploitationsLabel = getExploitationsLabel(exploitations.length, isCollecteur)
 
   return (
-    <Box className='fr-container h-full w-full flex flex-col gap-5 mb-5'>
+    <Box className='fr-container min-h-full w-full flex flex-col gap-5 mb-5'>
       <EntityHeader
         title={
           <>
@@ -234,11 +235,15 @@ const Page = async ({params}) => {
         />
       )}
 
-      <ExploitationsList
-        hidePreleveur={!isCollecteur}
-        exploitations={exploitationsWithPoints}
-        createHref={getExploitationCreateHref(isCollecteur, declarantId)}
-      />
+      {isCollecteur ? (
+        <CollecteurExploitationsList exploitations={exploitationsWithPoints} />
+      ) : (
+        <ExploitationsList
+          hidePreleveur
+          exploitations={exploitationsWithPoints}
+          createHref={getExploitationCreateHref(isCollecteur, declarantId)}
+        />
+      )}
 
       {!isCollecteur && (
         <>
