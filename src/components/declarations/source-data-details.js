@@ -13,9 +13,14 @@ const metricTypeLabels = {
 }
 
 const indexMetricTypeCodes = new Set(['index', 'relevé d\'index'])
+const volumeMetricTypeCodes = new Set(['volume prélevé', 'volume rejeté'])
 
 function isIndexMetricType(value) {
   return indexMetricTypeCodes.has(value)
+}
+
+function isVolumeMetricType(value) {
+  return volumeMetricTypeCodes.has(value)
 }
 
 function isQuickDeclarationSource(source) {
@@ -120,6 +125,19 @@ function formatValue(value, unit) {
   return `${formatNumber(number, {maximumFractionDigits: 2})}${unit ? ` ${unit}` : ''}`
 }
 
+function isOverwrittenValue(value) {
+  return value?.isOverwritten === true || value?.valueStatus === 'OVERWRITTEN'
+}
+
+function getReplacementLabel(value) {
+  const replacement = value?.overwrittenBy
+  if (!replacement) {
+    return null
+  }
+
+  return formatValue(replacement.value, replacement.unit ?? value.unit)
+}
+
 function getPointName(chunk) {
   return chunk.pointPrelevement?.name || chunk.pointPrelevementName || 'Point de prélèvement'
 }
@@ -158,16 +176,31 @@ function getReadingDate(chunk, source) {
     ?? chunk?.minDate
 }
 
+function getDeclaredPeriodStart(chunk, source) {
+  return chunk?.metadata?.periodStartDate
+    ?? source?.metadata?.periodStartDate
+    ?? chunk?.minDate
+    ?? getLastValue(chunk)?.periodStart
+}
+
+function getDeclaredPeriodEnd(chunk, source) {
+  return chunk?.metadata?.periodEndDate
+    ?? source?.metadata?.periodEndDate
+    ?? chunk?.maxDate
+    ?? getLastValue(chunk)?.periodEnd
+}
+
 function getVisibleValues(chunk, source) {
   const values = chunk.chunkValues ?? []
   const latestIndexReadings = getLatestIndexReadings(chunk)
   const indexValues = getIndexValues(chunk)
+  const displayAsIndex = isIndexMetricType(getMetricType(chunk))
 
-  if (isQuickDeclarationSource(source) && latestIndexReadings.length > 0) {
+  if (isQuickDeclarationSource(source) && displayAsIndex && latestIndexReadings.length > 0) {
     return latestIndexReadings
   }
 
-  if (isQuickDeclarationSource(source) && indexValues.length > 0) {
+  if (isQuickDeclarationSource(source) && displayAsIndex && indexValues.length > 0) {
     return indexValues
   }
 
@@ -190,6 +223,159 @@ function getSummary(source) {
   }
 }
 
+function getQuickDeclarationSummaryLabel(source) {
+  if (!isQuickDeclarationSource(source)) {
+    return 'Valeurs'
+  }
+
+  const measurementType = source?.metadata?.measurementType
+
+  if (measurementType === 'INDEX') {
+    return 'Index déclarés'
+  }
+
+  if (measurementType === 'VOLUME_REJETE') {
+    return 'Volumes rejetés déclarés'
+  }
+
+  if (measurementType === 'VOLUME_PRELEVE') {
+    return 'Volumes prélevés déclarés'
+  }
+
+  return 'Valeurs déclarées'
+}
+
+function getQuickDeclarationSeriesLabel(source) {
+  return isQuickDeclarationSource(source) ? 'Lignes déclarées' : 'Séries'
+}
+
+function getValueColumnLabel({displayAsIndex, displayAsVolume, isQuickDeclaration}) {
+  if (displayAsIndex) {
+    return 'Index relevé'
+  }
+
+  if (displayAsVolume) {
+    return isQuickDeclaration ? 'Volume déclaré' : 'Volume'
+  }
+
+  return 'Valeur'
+}
+
+function getValueDetailsLabel({displayAsIndex, displayAsVolume, isQuickDeclaration, metricType}) {
+  if (displayAsIndex) {
+    return isQuickDeclaration ? 'Index déclaré' : 'Index relevé'
+  }
+
+  if (displayAsVolume) {
+    const baseLabel = formatMetricType(metricType)
+    return isQuickDeclaration ? `${baseLabel} déclaré` : baseLabel
+  }
+
+  return 'Dernière valeur'
+}
+
+function getValuesPreviewSummaryLabel({displayAsIndex, displayAsVolume, isQuickDeclaration}) {
+  if (displayAsIndex) {
+    return isQuickDeclaration ? 'Voir les derniers index connus' : 'Voir les index relevés'
+  }
+
+  if (displayAsVolume) {
+    return isQuickDeclaration ? 'Voir les volumes déclarés' : 'Voir les volumes'
+  }
+
+  return 'Voir les dernières valeurs'
+}
+
+function getDateColumnLabel({displayAsIndex, displayAsVolume, isQuickDeclaration}) {
+  if (displayAsIndex) {
+    return 'Date de relevé'
+  }
+
+  if (displayAsVolume && isQuickDeclaration) {
+    return 'Période déclarée'
+  }
+
+  return 'Date'
+}
+
+function getChunkDateLabel({displayAsIndex, displayAsVolume, isQuickDeclaration}) {
+  if (displayAsIndex) {
+    return 'Date de relevé'
+  }
+
+  return isQuickDeclaration && displayAsVolume ? 'Période déclarée' : 'Période'
+}
+
+function getChunkDateValue({chunk, displayAsIndex, displayAsVolume, isQuickDeclaration, shouldShowIndexTime, source}) {
+  if (displayAsIndex) {
+    return formatReadingDate(getReadingDate(chunk, source), shouldShowIndexTime)
+  }
+
+  const startDate = isQuickDeclaration && displayAsVolume
+    ? getDeclaredPeriodStart(chunk, source)
+    : chunk.minDate
+  const endDate = isQuickDeclaration && displayAsVolume
+    ? getDeclaredPeriodEnd(chunk, source)
+    : chunk.maxDate
+
+  return formatPeriod(startDate, endDate)
+}
+
+function getChunkCountLabel({displayAsIndex, displayAsVolume, isQuickDeclaration}) {
+  if (displayAsIndex) {
+    return 'Index connus'
+  }
+
+  return isQuickDeclaration && displayAsVolume ? 'Volumes déclarés' : 'Nb. valeurs'
+}
+
+function getChunkDisplayContext(chunk, source) {
+  const isQuickDeclaration = isQuickDeclarationSource(source)
+  const lastValue = getLastValue(chunk)
+  const metricType = getMetricType(chunk)
+  const displayAsIndex = isIndexMetricType(metricType)
+  const displayAsVolume = isVolumeMetricType(metricType)
+  const shouldShowIndexTime = displayAsIndex && !isQuickDeclaration
+  const visibleValues = getVisibleValues(chunk, source)
+
+  return {
+    countLabel: getChunkCountLabel({displayAsIndex, displayAsVolume, isQuickDeclaration}),
+    countValue: displayAsIndex || (isQuickDeclaration && displayAsVolume)
+      ? visibleValues.length
+      : chunk.chunkValues?.length ?? 0,
+    dateLabel: getChunkDateLabel({displayAsIndex, displayAsVolume, isQuickDeclaration}),
+    dateValue: getChunkDateValue({
+      chunk,
+      displayAsIndex,
+      displayAsVolume,
+      isQuickDeclaration,
+      shouldShowIndexTime,
+      source
+    }),
+    displayValue: displayAsIndex ? getLastIndexValue(chunk) ?? lastValue : lastValue,
+    metricType,
+    usageLabel: formatUsageReference(chunk.usage),
+    valueLabel: getValueDetailsLabel({
+      displayAsIndex,
+      displayAsVolume,
+      isQuickDeclaration,
+      metricType
+    })
+  }
+}
+
+function formatValueDate({chunk, displayAsIndex, displayAsVolume, isQuickDeclaration, shouldShowIndexTime, source, value}) {
+  if (displayAsIndex) {
+    return formatReadingDate(value.periodEnd ?? value.periodStart, shouldShowIndexTime)
+  }
+
+  if (displayAsVolume && isQuickDeclaration) {
+    return formatPeriod(getDeclaredPeriodStart(chunk, source), getDeclaredPeriodEnd(chunk, source))
+  }
+
+  return formatDateTime(value.periodEnd ?? value.periodStart) ?? 'Non renseignée'
+}
+
 const SummaryItem = ({label, value}) => (
   <div className='border border-gray-200 bg-white p-3'>
     <div className='text-xs uppercase text-gray-500'>{label}</div>
@@ -197,18 +383,47 @@ const SummaryItem = ({label, value}) => (
   </div>
 )
 
+const OverwrittenBadge = () => (
+  <span className='inline-flex rounded-sm border border-red-200 bg-red-50 px-1.5 py-0.5 text-[0.7rem] font-semibold uppercase leading-none text-red-700'>
+    Écrasée
+  </span>
+)
+
+const DeclaredValueDisplay = ({value, align = 'left'}) => {
+  if (!value) {
+    return 'Non renseignée'
+  }
+
+  const isOverwritten = isOverwrittenValue(value)
+  const replacementLabel = getReplacementLabel(value)
+  const alignmentClass = align === 'right' ? 'items-end text-right' : 'items-start'
+
+  return (
+    <div className={`flex flex-col gap-1 ${alignmentClass}`}>
+      <div className='flex flex-wrap items-center gap-2'>
+        <span className={isOverwritten ? 'font-medium text-gray-500 line-through decoration-2' : 'font-medium'}>
+          {formatValue(value.value, value.unit)}
+        </span>
+        {isOverwritten && <OverwrittenBadge />}
+      </div>
+      {isOverwritten && replacementLabel && (
+        <div className='text-xs font-normal text-gray-600'>
+          Remplacée par {replacementLabel}
+        </div>
+      )}
+    </div>
+  )
+}
+
 const ValuesPreview = ({chunk, source}) => {
   const values = getVisibleValues(chunk, source)
   const visibleValues = sortValuesByDate(values).slice(-MAX_VISIBLE_VALUES).reverse()
   const metricType = getMetricType(chunk)
   const isQuickDeclaration = isQuickDeclarationSource(source)
-  const displayAsIndex = isQuickDeclaration || isIndexMetricType(metricType)
+  const displayAsIndex = isIndexMetricType(metricType)
+  const displayAsVolume = isVolumeMetricType(metricType)
   const shouldShowIndexTime = displayAsIndex && !isQuickDeclaration
-  let summaryLabel = 'Voir les dernières valeurs'
-
-  if (displayAsIndex) {
-    summaryLabel = isQuickDeclaration ? 'Voir les derniers index connus' : 'Voir les index relevés'
-  }
+  const summaryLabel = getValuesPreviewSummaryLabel({displayAsIndex, displayAsVolume, isQuickDeclaration})
 
   if (values.length === 0) {
     return (
@@ -224,30 +439,39 @@ const ValuesPreview = ({chunk, source}) => {
         {summaryLabel}
       </summary>
       <div className='mt-2 overflow-x-auto border border-gray-200'>
-        <table className='w-full min-w-[420px] text-sm'>
+        <table className='w-full min-w-[520px] text-sm'>
           <thead className='bg-gray-50 text-left text-xs uppercase text-gray-500'>
             <tr>
               <th className='px-3 py-2 font-medium'>
-                {displayAsIndex ? 'Date de relevé' : 'Date'}
+                {getDateColumnLabel({displayAsIndex, displayAsVolume, isQuickDeclaration})}
               </th>
               <th className='px-3 py-2 text-right font-medium'>
-                {displayAsIndex ? 'Index relevé' : 'Valeur'}
+                {getValueColumnLabel({displayAsIndex, displayAsVolume, isQuickDeclaration})}
               </th>
             </tr>
           </thead>
           <tbody className='divide-y divide-gray-100'>
-            {visibleValues.map(value => (
-              <tr key={value.id}>
-                <td className='px-3 py-2'>
-                  {displayAsIndex
-                    ? formatReadingDate(value.periodEnd ?? value.periodStart, shouldShowIndexTime)
-                    : formatDateTime(value.periodEnd ?? value.periodStart) ?? 'Non renseignée'}
-                </td>
-                <td className='px-3 py-2 text-right font-medium'>
-                  {formatValue(value.value, value.unit)}
-                </td>
-              </tr>
-            ))}
+            {visibleValues.map(value => {
+              const rowIsOverwritten = isOverwrittenValue(value)
+              return (
+                <tr key={value.id} className={rowIsOverwritten ? 'bg-red-50/50' : undefined}>
+                  <td className='px-3 py-2'>
+                    {formatValueDate({
+                      chunk,
+                      displayAsIndex,
+                      displayAsVolume,
+                      isQuickDeclaration,
+                      shouldShowIndexTime,
+                      source,
+                      value
+                    })}
+                  </td>
+                  <td className='px-3 py-2 text-right'>
+                    <DeclaredValueDisplay value={value} align='right' />
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
@@ -264,7 +488,6 @@ const SourceDataDetails = ({source}) => {
   const chunks = source?.chunks ?? []
   const summary = getSummary(source)
   const isTelemetry = source?.type === 'API'
-  const isQuickDeclaration = isQuickDeclarationSource(source)
   const connector = source?.metadata?.connector
 
   if (chunks.length === 0) {
@@ -290,30 +513,22 @@ const SourceDataDetails = ({source}) => {
 
       <div className='mb-4 grid gap-3 sm:grid-cols-3'>
         <SummaryItem label='Points' value={summary.pointCount} />
-        <SummaryItem label='Séries' value={summary.seriesCount} />
-        <SummaryItem label={isQuickDeclaration ? 'Index déclarés' : 'Valeurs'} value={summary.valuesCount} />
+        <SummaryItem label={getQuickDeclarationSeriesLabel(source)} value={summary.seriesCount} />
+        <SummaryItem label={getQuickDeclarationSummaryLabel(source)} value={summary.valuesCount} />
       </div>
 
       <div className='divide-y divide-gray-200 border border-gray-300 bg-white'>
         {chunks.map(chunk => {
-          const lastValue = getLastValue(chunk)
-          const metricType = getMetricType(chunk)
-          const displayAsIndex = isQuickDeclaration || isIndexMetricType(metricType)
-          const displayValue = displayAsIndex ? getLastIndexValue(chunk) ?? lastValue : lastValue
-          const shouldShowIndexTime = displayAsIndex && !isQuickDeclaration
-          const dateLabel = displayAsIndex ? 'Date de relevé' : 'Période'
-          const dateValue = displayAsIndex
-            ? formatReadingDate(getReadingDate(chunk, source), shouldShowIndexTime)
-            : formatPeriod(chunk.minDate, chunk.maxDate)
-          const visibleValues = getVisibleValues(chunk, source)
-          const countLabel = displayAsIndex ? 'Index connus' : 'Nb. valeurs'
-          const countValue = displayAsIndex ? visibleValues.length : chunk.chunkValues?.length ?? 0
-          const usageLabel = formatUsageReference(chunk.usage)
-          let valueLabel = 'Dernière valeur'
-
-          if (displayAsIndex) {
-            valueLabel = isQuickDeclaration ? 'Index déclaré' : 'Index relevé'
-          }
+          const {
+            countLabel,
+            countValue,
+            dateLabel,
+            dateValue,
+            displayValue,
+            metricType,
+            usageLabel,
+            valueLabel
+          } = getChunkDisplayContext(chunk, source)
 
           return (
             <article key={chunk.id} className='p-4'>
@@ -341,8 +556,8 @@ const SourceDataDetails = ({source}) => {
 
                 <div>
                   <div className='text-xs text-gray-500'>{valueLabel}</div>
-                  <div className='text-sm font-medium'>
-                    {displayValue ? formatValue(displayValue.value, displayValue.unit) : 'Non renseignée'}
+                  <div className='text-sm'>
+                    <DeclaredValueDisplay value={displayValue} />
                   </div>
                 </div>
 
