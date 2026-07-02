@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Script from 'next/script'
 
 import ImpersonationBanner from '@/components/auth/impersonation-banner.js'
+import CrispChat from '@/components/crisp-chat.js'
 import EnvironmentBanner from '@/components/environment-banner.js'
 import Footer from '@/components/footer.js'
 import Header from '@/components/header.js'
@@ -27,6 +28,10 @@ export const metadata = {
 
 const MATOMO_URL = process.env.NEXT_PUBLIC_MATOMO_URL
 const MATOMO_SITE_ID = process.env.NEXT_PUBLIC_MATOMO_SITE_ID
+const CRISP_DISABLED_VALUES = new Set(['1', 'true', 'yes', 'on'])
+const IS_CRISP_DISABLED = CRISP_DISABLED_VALUES.has(
+  process.env.NEXT_PUBLIC_CRISP_DISABLED?.trim().toLowerCase()
+)
 
 const RootLayout = ({children}) => (
   <html {...getHtmlAttributes({defaultColorScheme})} >
@@ -65,6 +70,7 @@ const RootLayout = ({children}) => (
                 <ImpersonationBanner />
                 <Header />
                 <MatomoTracker />
+                <CrispChat disabled={IS_CRISP_DISABLED} />
                 <main role='main' id='content'>
                   {children}
                 </main>

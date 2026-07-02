@@ -25,6 +25,7 @@ Cette application est le front-end du projet de gestion des prélèvements d'eau
 | `NEXT_PUBLIC_PROCEDURE_DS_ID` | Identifiant de la procédure Démarche Numérique pour générer les liens vers les dossiers. |
 | `NEXT_PUBLIC_STORAGE_URL`     | URL de base du stockage des documents.                                                 |
 | `NEXT_PUBLIC_DEPLOY_ENV`      | Environnement d'affichage (`testing` affiche un bandeau, `prod` n'en affiche pas). Optionnel en dev local. |
+| `NEXT_PUBLIC_CRISP_DISABLED`  | Mettre `true` pour désactiver le widget Crisp, par exemple en local. Par défaut, Crisp est actif. |
 | `NEXTAUTH_URL`                | URL de l'application NextAuth avec basePath (ex: `http://localhost:3000/auth/nextauth` en dev). |
 | `NEXTAUTH_SECRET`             | Clé secrète pour signer les JWT de session. Générez-la avec `openssl rand -base64 32`. |
 
@@ -45,6 +46,7 @@ NEXT_PUBLIC_FRONTEND_URL=http://localhost:3000
 NEXT_PUBLIC_PROCEDURE_DS_ID=12345
 NEXT_PUBLIC_STORAGE_URL=http://localhost:5000
 NEXT_PUBLIC_DEPLOY_ENV=dev
+NEXT_PUBLIC_CRISP_DISABLED=true
 NEXTAUTH_URL=http://localhost:3000/auth/nextauth
 NEXTAUTH_SECRET=votre_secret_genere_avec_openssl
 ```
