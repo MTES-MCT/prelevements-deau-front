@@ -22,6 +22,7 @@ import {
 import {getPointPrelevementURL} from '@/lib/urls.js'
 import {
   getUsageColor,
+  getUsageKey,
   getUsageLabel,
   getUsageTextColor,
   isDashboardVisibleUsage
@@ -112,6 +113,35 @@ function normalizePointId(pointId) {
   return pointId === null || pointId === undefined ? null : String(pointId)
 }
 
+function compareMarkerUsages(a, b) {
+  return String(getUsageKey(a) ?? '').localeCompare(String(getUsageKey(b) ?? ''), 'fr', {
+    numeric: true,
+    sensitivity: 'base'
+  })
+}
+
+function getDashboardMarkerUsages(point) {
+  return (point.usages ?? [])
+    .filter(usage => isDashboardVisibleUsage(usage))
+    .sort(compareMarkerUsages)
+}
+
+function getMarkerSignature(point) {
+  const usages = getDashboardMarkerUsages(point)
+
+  if (usages.length === 0) {
+    return 'empty'
+  }
+
+  return usages
+    .map(usage => `${getUsageKey(usage) ?? 'unknown'}:${getUsageColor(usage)}`)
+    .join('|')
+}
+
+function getPointMarkerIconId(point) {
+  return `dashboard-marker-${encodeURIComponent(getMarkerSignature(point))}`
+}
+
 function buildFeatures(points, {selectedPointId = null} = {}) {
   const normalizedSelectedPointId = normalizePointId(selectedPointId)
 
@@ -135,7 +165,7 @@ function buildFeatures(points, {selectedPointId = null} = {}) {
           properties: {
             id: point.id,
             name: point.name || 'Point de prélèvement',
-            icon: `dashboard-marker-${point.id}`,
+            icon: getPointMarkerIconId(point),
             selected: normalizePointId(point.id) === normalizedSelectedPointId
           }
         }
@@ -145,14 +175,20 @@ function buildFeatures(points, {selectedPointId = null} = {}) {
 }
 
 function ensureMarkerImages(map, points) {
-  for (const point of points) {
-    const markerId = `dashboard-marker-${point.id}`
+  const pointsByMarkerId = new Map()
 
-    if (map.hasImage(markerId)) {
+  for (const point of points) {
+    const markerId = getPointMarkerIconId(point)
+
+    if (map.hasImage(markerId) || pointsByMarkerId.has(markerId)) {
       continue
     }
 
-    const svgContainer = createUsagePieChart(point.usages || [])
+    pointsByMarkerId.set(markerId, point)
+  }
+
+  for (const [markerId, point] of pointsByMarkerId) {
+    const svgContainer = createUsagePieChart(getDashboardMarkerUsages(point))
     const dataURL = createSVGDataURL(svgContainer)
     const image = new Image()
 
@@ -169,7 +205,7 @@ function ensureMarkerImages(map, points) {
 function filterDashboardPointUsages(point) {
   return {
     ...point,
-    usages: (point.usages ?? []).filter(usage => isDashboardVisibleUsage(usage))
+    usages: getDashboardMarkerUsages(point)
   }
 }
 

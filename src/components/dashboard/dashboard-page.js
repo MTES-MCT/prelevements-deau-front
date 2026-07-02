@@ -125,6 +125,38 @@ const DashboardError = ({error}) => {
   )
 }
 
+const RefreshSpinner = ({className = 'h-4 w-4'}) => (
+  <span
+    aria-hidden='true'
+    className={`inline-block shrink-0 animate-spin rounded-full border-2 border-[#000091]/25 border-t-[#000091] ${className}`}
+  />
+)
+
+const DashboardRefreshStatus = ({isLoading}) => {
+  if (!isLoading) {
+    return null
+  }
+
+  return (
+    <div
+      aria-atomic='true'
+      aria-live='polite'
+      className='fixed left-4 right-4 top-20 z-50 inline-flex items-center justify-center gap-2 border border-[#000091]/20 bg-white px-4 py-3 text-sm font-medium text-[#000091] shadow-lg sm:left-auto sm:justify-start'
+      role='status'
+    >
+      <RefreshSpinner />
+      <span>Actualisation du tableau de bord...</span>
+    </div>
+  )
+}
+
+const InlineRefreshStatus = () => (
+  <span className='inline-flex items-center gap-2 text-sm font-medium text-[#000091]'>
+    <RefreshSpinner className='h-3.5 w-3.5' />
+    <span>Actualisation...</span>
+  </span>
+)
+
 function getDeclarationIntro(declarationCreation) {
   const canCreateDeclaration = declarationCreation?.canCreateDeclaration
     ?? declarationCreation?.allowedDeclarationTypes?.length > 0
@@ -300,9 +332,7 @@ const PointsMapSection = ({
         </Link>
       </div>
 
-      {isLoading && (
-        <span className='fr-badge fr-badge--info fr-badge--no-icon'>Mise à jour</span>
-      )}
+      {isLoading && <InlineRefreshStatus />}
     </div>
 
     <DashboardPointsMap
@@ -754,6 +784,8 @@ const DashboardPage = ({
 
   return (
     <main className='min-h-screen bg-[#f7f7fb] pb-12'>
+      <DashboardRefreshStatus isLoading={isLoading} />
+
       <div className='fr-container pt-8 md:pt-10'>
         <div className='mb-6 flex flex-col gap-5 md:flex-row md:items-start md:justify-between'>
           <h1 className='fr-h2 fr-mb-0'>
