@@ -101,7 +101,7 @@ export async function getQuickDeclarationContextAction({declarantUserId} = {}) {
   })
 }
 
-export async function createQuickDeclarationAction({
+function buildQuickDeclarationPayload({
   type,
   declarantUserId,
   measurementType,
@@ -111,49 +111,61 @@ export async function createQuickDeclarationAction({
   entries = [],
   comment
 } = {}) {
+  const normalizedType = (type || '').trim().toLocaleLowerCase('fr-FR')
+  const normalizedMeasurementType = measurementType || 'INDEX'
+
+  if (normalizedMeasurementType === 'INDEX' && !readingDate) {
+    throw new Error('Date de relevé requise.')
+  }
+
+  if (normalizedMeasurementType !== 'INDEX' && (!periodStartDate || !periodEndDate)) {
+    throw new Error('Période requise.')
+  }
+
+  if (!Array.isArray(entries) || entries.length === 0) {
+    throw new Error('Aucune valeur saisie.')
+  }
+
+  const payload = {
+    measurementType: normalizedMeasurementType,
+    entries
+  }
+
+  if (normalizedMeasurementType === 'INDEX') {
+    payload.readingDate = readingDate
+  } else {
+    payload.periodStartDate = periodStartDate
+    payload.periodEndDate = periodEndDate
+  }
+
+  if (normalizedType) {
+    payload.type = normalizedType
+  }
+
+  if (declarantUserId) {
+    payload.declarantUserId = declarantUserId
+  }
+
+  if (typeof comment === 'string' && comment.trim()) {
+    payload.comment = comment.trim()
+  }
+
+  return payload
+}
+
+export async function previewQuickDeclarationConflictsAction(payload) {
+  return withErrorHandling(async () =>
+    fetchJSON('api/declarations/quick/conflicts', {
+      method: 'POST',
+      body: buildQuickDeclarationPayload(payload)
+    }))
+}
+
+export async function createQuickDeclarationAction(payload) {
   return withErrorHandling(async () => {
-    const normalizedType = (type || '').trim().toLocaleLowerCase('fr-FR')
-    const normalizedMeasurementType = measurementType || 'INDEX'
-
-    if (normalizedMeasurementType === 'INDEX' && !readingDate) {
-      throw new Error('Date de relevé requise.')
-    }
-
-    if (normalizedMeasurementType !== 'INDEX' && (!periodStartDate || !periodEndDate)) {
-      throw new Error('Période requise.')
-    }
-
-    if (!Array.isArray(entries) || entries.length === 0) {
-      throw new Error('Aucune valeur saisie.')
-    }
-
-    const payload = {
-      measurementType: normalizedMeasurementType,
-      entries
-    }
-
-    if (normalizedMeasurementType === 'INDEX') {
-      payload.readingDate = readingDate
-    } else {
-      payload.periodStartDate = periodStartDate
-      payload.periodEndDate = periodEndDate
-    }
-
-    if (normalizedType) {
-      payload.type = normalizedType
-    }
-
-    if (declarantUserId) {
-      payload.declarantUserId = declarantUserId
-    }
-
-    if (typeof comment === 'string' && comment.trim()) {
-      payload.comment = comment.trim()
-    }
-
     const data = await fetchJSON('api/declarations/quick', {
       method: 'POST',
-      body: payload
+      body: buildQuickDeclarationPayload(payload)
     })
 
     await revalidateDeclarationPaths(data?.data?.id)

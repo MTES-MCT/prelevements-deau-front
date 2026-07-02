@@ -7,6 +7,7 @@ import {
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {SegmentedControl} from '@codegouvfr/react-dsfr/SegmentedControl'
+import Link from 'next/link'
 import {createPortal} from 'react-dom'
 
 import QuickDeclarationMap from './quick-declaration-map.js'
@@ -17,7 +18,8 @@ import {getMyDeclarationURL} from '@/lib/urls.js'
 import {normalizeUsageOption} from '@/lib/water-uses.js'
 import {
   createQuickDeclarationAction,
-  getQuickDeclarationContextAction
+  getQuickDeclarationContextAction,
+  previewQuickDeclarationConflictsAction
 } from '@/server/actions/declarations.js'
 import {formatNumber} from '@/utils/number.js'
 
@@ -664,6 +666,121 @@ function getSubmitButtonLabel(isSubmitting, entriesCount, measurementType) {
   }
 
   return 'Soumettre'
+}
+
+function getOverwriteSubmitButtonLabel(submitButtonLabel, overwriteWarning) {
+  if (overwriteWarning?.needsConfirmation) {
+    return 'Confirmer l’écrasement et soumettre'
+  }
+
+  return submitButtonLabel
+}
+
+function getQuickDeclarationSubmitSignature({
+  declarantUserId,
+  entries,
+  measurementType,
+  periodEndDate,
+  periodStartDate,
+  readingDate
+}) {
+  return JSON.stringify({
+    declarantUserId: declarantUserId ?? null,
+    entries: [...entries]
+      .map(entry => ({
+        pointPrelevementId: entry.pointPrelevementId,
+        usageId: entry.usageId,
+        value: entry.value ?? entry.index ?? null
+      }))
+      .sort((a, b) => a.pointPrelevementId.localeCompare(b.pointPrelevementId)),
+    measurementType,
+    periodEndDate,
+    periodStartDate,
+    readingDate
+  })
+}
+
+function getConflictMetricLabel(metricTypeCode) {
+  if (metricTypeCode === 'volume rejeté') {
+    return 'volume rejeté'
+  }
+
+  return 'volume prélevé'
+}
+
+function getConflictValueLabel(conflict) {
+  const value = formatNumber(conflict.value, {maximumFractionDigits: 2})
+
+  return `${value} ${conflict.unit || 'm³'}`
+}
+
+function getConflictDeclarationURL(conflict) {
+  if (conflict.declarationId) {
+    return getMyDeclarationURL({id: conflict.declarationId})
+  }
+
+  return null
+}
+
+function getConflictDeclarationLabel(conflict) {
+  if (conflict.declarationCode) {
+    return `Déclaration n°${conflict.declarationCode}`
+  }
+
+  if (conflict.declarationId) {
+    return 'Déclaration source'
+  }
+
+  if (conflict.sourceId) {
+    return 'Source sans déclaration associée'
+  }
+
+  return 'Origine non renseignée'
+}
+
+function groupOverwriteConflictsByPoint(conflicts = []) {
+  const groupsByPoint = new Map()
+
+  for (const conflict of conflicts) {
+    const pointKey = conflict.pointPrelevementId || conflict.pointPrelevementName || conflict.chunkValueId
+
+    if (!groupsByPoint.has(pointKey)) {
+      groupsByPoint.set(pointKey, {
+        key: pointKey,
+        pointName: conflict.pointPrelevementName || 'Point de prélèvement',
+        conflicts: []
+      })
+    }
+
+    groupsByPoint.get(pointKey).conflicts.push(conflict)
+  }
+
+  return [...groupsByPoint.values()]
+}
+
+function getOverwriteWarningTitle(conflicts = []) {
+  if (conflicts.length === 1) {
+    const [conflict] = conflicts
+    const period = getPeriodLabel(conflict)
+    const pointName = conflict.pointPrelevementName || 'ce point'
+    const metricLabel = getConflictMetricLabel(conflict.metricTypeCode)
+
+    if (period) {
+      return `Le ${metricLabel} de ${pointName} sur ${period} sera écrasé`
+    }
+
+    return `Le ${metricLabel} de ${pointName} sera écrasé`
+  }
+
+  return `${conflicts.length} volumes existants seront écrasés`
+}
+
+function getOverwriteWarningDescription(conflicts = []) {
+  if (conflicts.length === 1) {
+    return 'En confirmant, ce volume existant sera remplacé par votre nouvelle saisie.'
+  }
+
+  return 'En confirmant, les volumes suivants seront remplacés par votre nouvelle saisie.'
 }
 
 function getMeasurementDateValidationErrors({
@@ -1484,11 +1601,70 @@ const QuickDeclarationEntryList = ({
   </div>
 )
 
+const OverwriteConflictListItem = ({conflict}) => {
+  const period = getPeriodLabel(conflict)
+  const declarationURL = getConflictDeclarationURL(conflict)
+  const declarationLabel = getConflictDeclarationLabel(conflict)
+
+  return (
+    <li className='border-t border-gray-200 py-2 first:border-t-0'>
+      <div className='flex flex-col gap-1 md:flex-row md:items-start md:justify-between md:gap-4'>
+        <div className='min-w-0'>
+          <p className='fr-mb-0 text-sm font-medium text-gray-900'>
+            {getConflictMetricLabel(conflict.metricTypeCode)} - {getConflictValueLabel(conflict)}
+          </p>
+          {period && (
+            <p className='fr-hint-text fr-mb-0 text-sm'>
+              Période : {period}
+            </p>
+          )}
+        </div>
+        {declarationURL ? (
+          <Link className='fr-link shrink-0 text-sm' href={declarationURL}>
+            {declarationLabel}
+          </Link>
+        ) : (
+          <span className='shrink-0 text-sm text-gray-600'>{declarationLabel}</span>
+        )}
+      </div>
+    </li>
+  )
+}
+
+const OverwriteConflictPointGroup = ({group}) => (
+  <section className='border-b border-gray-200 p-3 last:border-b-0'>
+    <div className='fr-mb-1v flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between'>
+      <p className='fr-mb-0 font-semibold text-gray-900'>{group.pointName}</p>
+      <p className='fr-mb-0 text-xs uppercase tracking-wide text-gray-500'>
+        {group.conflicts.length} volume{group.conflicts.length > 1 ? 's' : ''}
+      </p>
+    </div>
+    <ul className='fr-mb-0 list-none pl-0'>
+      {group.conflicts.map(conflict => (
+        <OverwriteConflictListItem key={conflict.chunkValueId} conflict={conflict} />
+      ))}
+    </ul>
+  </section>
+)
+
+const OverwriteConflictsList = ({conflicts}) => {
+  const groups = groupOverwriteConflictsByPoint(conflicts)
+
+  return (
+    <div className='fr-mt-2w max-h-80 overflow-y-auto border border-gray-200 bg-white'>
+      {groups.map(group => (
+        <OverwriteConflictPointGroup key={group.key} group={group} />
+      ))}
+    </div>
+  )
+}
+
 const QuickDeclarationSubmission = ({
   canSubmit,
   entries,
   hasAnyValue,
   measurementType,
+  overwriteWarning,
   submit,
   submitButtonLabel,
   submitResult,
@@ -1504,9 +1680,25 @@ const QuickDeclarationSubmission = ({
       />
     )}
 
+    {overwriteWarning?.needsConfirmation && (
+      <Alert
+        className='fr-mb-2w'
+        severity='warning'
+        title={getOverwriteWarningTitle(overwriteWarning.conflicts)}
+        description={(
+          <>
+            <p className='fr-mb-1w'>
+              {getOverwriteWarningDescription(overwriteWarning.conflicts)}
+            </p>
+            <OverwriteConflictsList conflicts={overwriteWarning.conflicts} />
+          </>
+        )}
+      />
+    )}
+
     <div className='fr-mt-2w flex flex-col gap-2 md:flex-row md:items-center'>
       <Button priority='primary' disabled={!canSubmit} onClick={submit}>
-        {submitButtonLabel}
+        {getOverwriteSubmitButtonLabel(submitButtonLabel, overwriteWarning)}
       </Button>
       {entries.length === 0 && (
         <p className='fr-hint-text fr-mb-0'>
@@ -1550,6 +1742,7 @@ const QuickDeclarationEntriesPanel = ({
   hoveredPointId,
   inputRefs,
   measurementType,
+  overwriteWarning,
   pointsCount,
   readingDate,
   rows,
@@ -1601,6 +1794,7 @@ const QuickDeclarationEntriesPanel = ({
         entries={entries}
         hasAnyValue={hasAnyValue}
         measurementType={measurementType}
+        overwriteWarning={overwriteWarning}
         submit={submit}
         submitButtonLabel={submitButtonLabel}
         submitResult={submitResult}
@@ -1680,6 +1874,7 @@ const QuickDeclarationForm = ({
   const [hoveredPointId, setHoveredPointId] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitResult, setSubmitResult] = useState(null)
+  const [overwriteWarning, setOverwriteWarning] = useState(null)
   const [pendingPreleveurId, setPendingPreleveurId] = useState(null)
   const [preleveurChangeModalOpen, setPreleveurChangeModalOpen] = useState(false)
   const inputRefs = useRef({})
@@ -1945,6 +2140,17 @@ const QuickDeclarationForm = ({
     validationErrors
   })
   const submitButtonLabel = getSubmitButtonLabel(isSubmitting, entries.length, measurementType)
+  const submitSignature = useMemo(() => getQuickDeclarationSubmitSignature({
+    declarantUserId: targetDeclarantUserId,
+    entries,
+    measurementType,
+    periodEndDate,
+    periodStartDate,
+    readingDate
+  }), [entries, measurementType, periodEndDate, periodStartDate, readingDate, targetDeclarantUserId])
+  const activeOverwriteWarning = overwriteWarning?.signature === submitSignature
+    ? overwriteWarning
+    : null
 
   const submit = useCallback(async () => {
     setIsSubmitting(true)
@@ -1958,6 +2164,33 @@ const QuickDeclarationForm = ({
       const datePayload = isIndexMeasurementType(measurementType)
         ? {readingDate}
         : {periodStartDate, periodEndDate}
+
+      if (!isIndexMeasurementType(measurementType) && activeOverwriteWarning?.confirmed !== true) {
+        const previewResult = await previewQuickDeclarationConflictsAction({
+          declarantUserId: targetDeclarantUserId,
+          measurementType,
+          ...datePayload,
+          comment,
+          entries
+        })
+
+        if (!previewResult?.success || previewResult.data?.success !== true) {
+          throw new Error(previewResult?.error || previewResult?.data?.message || 'Impossible de vérifier les écrasements.')
+        }
+
+        const conflicts = previewResult.data?.data?.conflicts ?? []
+
+        if (conflicts.length > 0) {
+          setOverwriteWarning({
+            signature: submitSignature,
+            conflicts,
+            needsConfirmation: true,
+            confirmed: true
+          })
+          return
+        }
+      }
+
       const result = await createQuickDeclarationAction({
         declarantUserId: targetDeclarantUserId,
         measurementType,
@@ -1970,6 +2203,7 @@ const QuickDeclarationForm = ({
         throw new Error(result?.error || result?.data?.message || 'Erreur lors de la création de la déclaration.')
       }
 
+      setOverwriteWarning(null)
       setSubmitResult({status: 'success', message: 'Déclaration créée avec succès.'})
       onSubmitted?.()
       window.location.href = getMyDeclarationURL(result.data.data)
@@ -1986,11 +2220,13 @@ const QuickDeclarationForm = ({
     canSubmit,
     comment,
     entries,
+    activeOverwriteWarning,
     measurementType,
     periodEndDate,
     periodStartDate,
     readingDate,
     onSubmitted,
+    submitSignature,
     targetDeclarantUserId,
     validationErrors
   ])
@@ -2042,6 +2278,7 @@ const QuickDeclarationForm = ({
             hoveredPointId={hoveredPointId}
             inputRefs={inputRefs}
             measurementType={measurementType}
+            overwriteWarning={activeOverwriteWarning}
             pointsCount={pointsCount}
             readingDate={readingDate}
             rows={rows}
