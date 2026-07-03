@@ -25,7 +25,8 @@ import {formatNumber} from '@/utils/number.js'
 
 const POINTS_CONTACT_EMAIL = 'contact@partageonsleau.beta.gouv.fr'
 const POINTS_CONTACT_SUBJECT_SUFFIX = 'Modification sur mes points de prélèvements'
-const ENTRY_GRID_COLUMNS_CLASS_NAME = 'md:grid-cols-[minmax(150px,1fr)_150px_minmax(260px,320px)]'
+const ENTRY_GRID_COLUMNS_CLASS_NAME = 'md:grid-cols-[minmax(190px,1fr)_96px_minmax(170px,220px)]'
+const MOBILE_USAGE_DROPDOWN_MEDIA_QUERY = '(max-width: 47.999rem)'
 
 const QUICK_DECLARATION_MEASUREMENT_TYPES = Object.freeze({
   INDEX: 'INDEX',
@@ -378,16 +379,8 @@ function isIndexMeasurementType(measurementType) {
   return measurementType === QUICK_DECLARATION_MEASUREMENT_TYPES.INDEX
 }
 
-function getMeasurementValueLabel(measurementType) {
-  if (measurementType === QUICK_DECLARATION_MEASUREMENT_TYPES.VOLUME_PRELEVE) {
-    return 'Volume prélevé'
-  }
-
-  if (measurementType === QUICK_DECLARATION_MEASUREMENT_TYPES.VOLUME_REJETE) {
-    return 'Volume rejeté'
-  }
-
-  return 'Index'
+function getMeasurementInputLabel(measurementType) {
+  return isIndexMeasurementType(measurementType) ? 'Index (m³)' : 'Volume (m³)'
 }
 
 function getMeasurementValueValidationLabel(measurementType) {
@@ -613,6 +606,10 @@ function getUsageComboboxDropdownStyle(input) {
   }
 }
 
+function shouldUseInlineUsageDropdown() {
+  return typeof window !== 'undefined' && window.matchMedia(MOBILE_USAGE_DROPDOWN_MEDIA_QUERY).matches
+}
+
 function getInitialPreleveurId(availablePreleveurs) {
   if (availablePreleveurs.length === 1) {
     return getPreleveurId(availablePreleveurs[0])
@@ -829,7 +826,7 @@ function getMeasurementDateValidationErrors({
 
 function getEntryRowClassName({hasHistory, hasValue, isHighlighted}) {
   return classNames(
-    'grid grid-cols-1 gap-2 border-b border-r border-l-4 px-2 py-2 transition md:items-start',
+    'grid grid-cols-1 gap-2 border-b border-r border-l-4 px-2 py-1.5 transition md:items-start',
     'border-b-gray-200 border-r-gray-200',
     ENTRY_GRID_COLUMNS_CLASS_NAME,
     hasValue && 'border-l-green-600 bg-green-50 shadow-sm',
@@ -841,13 +838,11 @@ function getEntryRowClassName({hasHistory, hasValue, isHighlighted}) {
 
 const QuickDeclarationToolbar = ({
   availablePreleveurs,
-  context,
   maxReadingDate,
   measurementType,
   onPreleveurChange,
   periodEndDate,
   periodStartDate,
-  pointsCount,
   readingDate,
   selectedPreleveurId,
   setMeasurementType,
@@ -856,17 +851,10 @@ const QuickDeclarationToolbar = ({
   setReadingDate,
   shouldSelectPreleveur
 }) => {
-  const valueLabel = getMeasurementValueValidationLabel(measurementType)
   const isIndexMeasurement = isIndexMeasurementType(measurementType)
 
   return (
-    <div className='fr-mb-2w flex flex-col gap-3'>
-      {context && pointsCount > 0 && (
-        <p className='fr-hint-text fr-mb-0'>
-          {pointsCount} point{pointsCount > 1 ? 's' : ''}. Seules les lignes avec {valueLabel} seront déposées.
-        </p>
-      )}
-
+    <div className='flex flex-col gap-3'>
       <div className='border border-gray-200 bg-white p-3 shadow-sm md:p-4'>
         <SegmentedControl
           className='quick-declaration-measurement-segmented fr-mb-2w'
@@ -1036,6 +1024,7 @@ const UsageCombobox = ({
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
   const [dropdownStyle, setDropdownStyle] = useState(null)
+  const [isInlineDropdown, setIsInlineDropdown] = useState(false)
   const containerRef = useRef(null)
   const inputRef = useRef(null)
   const listboxRef = useRef(null)
@@ -1049,7 +1038,10 @@ const UsageCombobox = ({
   }, [normalizedSearch, options])
 
   const updateDropdownPosition = useCallback(() => {
-    setDropdownStyle(getUsageComboboxDropdownStyle(inputRef.current))
+    const useInlineDropdown = shouldUseInlineUsageDropdown()
+
+    setIsInlineDropdown(useInlineDropdown)
+    setDropdownStyle(useInlineDropdown ? null : getUsageComboboxDropdownStyle(inputRef.current))
   }, [])
 
   useEffect(() => {
@@ -1105,13 +1097,16 @@ const UsageCombobox = ({
     setOpen(false)
   }, [onUsageChange])
 
-  const listbox = open && dropdownStyle && (
+  const listbox = open && (isInlineDropdown || dropdownStyle) && (
     <div
       ref={listboxRef}
       id={`${id}-listbox`}
-      className='fixed z-[1200] overflow-auto border border-gray-300 bg-white shadow-lg'
+      className={classNames(
+        'z-[1200] overflow-auto border border-gray-300 bg-white shadow-lg',
+        isInlineDropdown ? 'absolute right-0 left-0 top-full mt-1 max-h-64' : 'fixed'
+      )}
       role='listbox'
-      style={dropdownStyle}
+      style={isInlineDropdown ? undefined : dropdownStyle}
     >
       {visibleOptions.length > 0 ? visibleOptions.map((usage, index) => (
         <button
@@ -1141,11 +1136,11 @@ const UsageCombobox = ({
   )
 
   return (
-    <div ref={containerRef} className='quick-declaration-combobox'>
+    <div ref={containerRef} className='quick-declaration-combobox relative'>
       <input
         ref={inputRef}
         id={id}
-        className='fr-input quick-declaration-control text-sm'
+        className='fr-input quick-declaration-control text-xs'
         type='text'
         role='combobox'
         aria-autocomplete='list'
@@ -1191,7 +1186,7 @@ const UsageCombobox = ({
           }
         }}
       />
-      {typeof document === 'undefined' ? null : createPortal(listbox, document.body)}
+      {isInlineDropdown ? listbox : (typeof document === 'undefined' ? null : createPortal(listbox, document.body))}
 
       {warning && (
         <p className='fr-hint-text fr-mb-0 mt-2 text-[0.72rem] leading-tight text-orange-700'>
@@ -1447,7 +1442,7 @@ const QuickDeclarationEntryRow = ({
   const usageOptions = buildUsageOptionsForPoint(point, globalUsageOptions).sort(compareUsageOptions)
   const usageSearchValue = getUsageSearchValue(row, usageOptions)
   const pointName = getPointName(point)
-  const valueLabel = getMeasurementValueLabel(measurementType)
+  const valueLabel = getMeasurementInputLabel(measurementType)
   const valueInputId = `quick-value-${pointId}`
   const usageInputId = `quick-usage-${pointId}`
 
@@ -1459,11 +1454,11 @@ const QuickDeclarationEntryRow = ({
       onMouseEnter={() => setHoveredPointId(pointId)}
       onMouseLeave={() => setHoveredPointId(null)}
     >
-      <div className='min-w-0 md:pt-2'>
+      <div className='min-w-0 md:pt-1'>
         <button
           type='button'
           className={classNames(
-            'fr-link block max-w-full truncate text-left text-sm',
+            'fr-link block max-w-full whitespace-normal break-words text-left text-xs leading-tight',
             hasValue ? 'font-bold' : 'font-medium'
           )}
           title={pointName}
@@ -1496,7 +1491,7 @@ const QuickDeclarationEntryRow = ({
             }}
             id={valueInputId}
             className={classNames(
-              'fr-input quick-declaration-control pr-9 text-right text-sm font-semibold tabular-nums',
+              'fr-input quick-declaration-control text-right text-xs font-semibold tabular-nums',
               hasValue && 'bg-white'
             )}
             type='text'
@@ -1512,14 +1507,6 @@ const QuickDeclarationEntryRow = ({
               }
             }}
           />
-          <span
-            className={classNames(
-              'pointer-events-none absolute inset-y-0 right-2 flex items-center',
-              'text-xs font-bold text-gray-600'
-            )}
-          >
-            m³
-          </span>
         </div>
         {warning && (
           <p className='fr-hint-text fr-mb-0 mt-2 text-[0.72rem] leading-tight text-orange-700'>
@@ -1561,7 +1548,7 @@ const QuickDeclarationEntryList = ({
   setHoveredPointId,
   updateRow
 }) => (
-  <div className='xl:max-h-[calc(100vh-18rem)] xl:overflow-auto'>
+  <div className='md:mt-1 xl:max-h-[calc(100vh-18rem)] xl:overflow-auto'>
     <div
       className={classNames(
         'hidden sticky top-0 z-10 gap-2 border-b bg-white px-2 py-1 text-xs font-bold text-gray-600 md:grid',
@@ -1569,7 +1556,7 @@ const QuickDeclarationEntryList = ({
       )}
     >
       <div>Point de prélèvement</div>
-      <div>{getMeasurementValueLabel(measurementType)}</div>
+      <div>{getMeasurementInputLabel(measurementType)}</div>
       <div>Usage</div>
     </div>
 
@@ -1823,7 +1810,7 @@ const QuickDeclarationMapPanel = ({
   const pointsContactMailto = buildPointsContactMailto(declarantName)
 
   return (
-    <aside className='sticky top-0 z-20 order-1 self-start bg-white pb-2 shadow-sm xl:order-2 xl:top-3 xl:pb-0 xl:shadow-none'>
+    <aside className='sticky top-0 z-20 order-2 self-start bg-white pb-2 shadow-sm xl:order-none xl:col-start-2 xl:row-start-1 xl:top-3 xl:pb-0 xl:shadow-none'>
       <div className='fr-mb-1v text-center'>
         <a
           className='fr-link text-xs'
@@ -1834,7 +1821,7 @@ const QuickDeclarationMapPanel = ({
           Signaler une modification sur mes points
         </a>
       </div>
-      <div className='h-[220px] sm:h-[260px] md:h-[300px] xl:h-[calc(100vh-12rem)]'>
+      <div className='h-[220px] sm:h-[260px] md:h-[300px] xl:h-[calc(100vh-4rem)]'>
         <QuickDeclarationMap
           points={entryPoints}
           activePointId={activePointId}
@@ -2233,65 +2220,67 @@ const QuickDeclarationForm = ({
 
   return (
     <div className='fr-mt-1w fr-mb-2w'>
-      <QuickDeclarationToolbar
-        availablePreleveurs={availablePreleveurs}
-        context={context}
-        maxReadingDate={maxReadingDate}
-        measurementType={measurementType}
-        periodEndDate={periodEndDate}
-        periodStartDate={periodStartDate}
-        pointsCount={pointsCount}
-        readingDate={readingDate}
-        selectedPreleveurId={selectedPreleveurId}
-        setMeasurementType={setMeasurementType}
-        setPeriodEndDate={setPeriodEndDate}
-        setPeriodStartDate={setPeriodStartDate}
-        setReadingDate={setReadingDate}
-        shouldSelectPreleveur={shouldSelectPreleveur}
-        onPreleveurChange={handlePreleveurChange}
-      />
+      <div className='grid grid-cols-1 gap-x-3 gap-y-3 xl:grid-cols-[minmax(0,1fr)_minmax(300px,0.72fr)] xl:items-start xl:gap-y-0'>
+        <div className='contents xl:col-start-1 xl:row-start-1 xl:block xl:min-w-0'>
+          <div className='order-1'>
+            <QuickDeclarationToolbar
+              availablePreleveurs={availablePreleveurs}
+              maxReadingDate={maxReadingDate}
+              measurementType={measurementType}
+              periodEndDate={periodEndDate}
+              periodStartDate={periodStartDate}
+              readingDate={readingDate}
+              selectedPreleveurId={selectedPreleveurId}
+              setMeasurementType={setMeasurementType}
+              setPeriodEndDate={setPeriodEndDate}
+              setPeriodStartDate={setPeriodStartDate}
+              setReadingDate={setReadingDate}
+              shouldSelectPreleveur={shouldSelectPreleveur}
+              onPreleveurChange={handlePreleveurChange}
+            />
 
-      <QuickDeclarationStatusAlerts
-        context={context}
-        contextError={contextError}
-        isContextLoading={isContextLoading}
-        pointsCount={pointsCount}
-        selectedPreleveur={selectedPreleveur}
-        selectedPreleveurId={selectedPreleveurId}
-        shouldSelectPreleveur={shouldSelectPreleveur}
-      />
+            <QuickDeclarationStatusAlerts
+              context={context}
+              contextError={contextError}
+              isContextLoading={isContextLoading}
+              pointsCount={pointsCount}
+              selectedPreleveur={selectedPreleveur}
+              selectedPreleveurId={selectedPreleveurId}
+              shouldSelectPreleveur={shouldSelectPreleveur}
+            />
+          </div>
 
-      <div className='grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(300px,0.72fr)] xl:items-start'>
-        <section className='order-2 xl:order-1 min-w-0'>
-          <QuickDeclarationEntriesPanel
-            activePointId={activePointId}
-            canSubmit={canSubmit}
-            comment={comment}
-            context={context}
-            entries={entries}
-            entryPoints={entryPoints}
-            focusNextPoint={focusNextPoint}
-            focusPoint={focusPoint}
-            globalUsageOptions={globalUsageOptions}
-            handleValueChange={handleValueChange}
-            hasAnyValue={hasAnyValue}
-            hoveredPointId={hoveredPointId}
-            inputRefs={inputRefs}
-            measurementType={measurementType}
-            overwriteWarning={activeOverwriteWarning}
-            pointsCount={pointsCount}
-            readingDate={readingDate}
-            rows={rows}
-            setActivePointId={setActivePointId}
-            setComment={setComment}
-            setHoveredPointId={setHoveredPointId}
-            submit={submit}
-            submitButtonLabel={submitButtonLabel}
-            submitResult={submitResult}
-            updateRow={updateRow}
-            validationErrors={validationErrors}
-          />
-        </section>
+          <section className='order-3 min-w-0'>
+            <QuickDeclarationEntriesPanel
+              activePointId={activePointId}
+              canSubmit={canSubmit}
+              comment={comment}
+              context={context}
+              entries={entries}
+              entryPoints={entryPoints}
+              focusNextPoint={focusNextPoint}
+              focusPoint={focusPoint}
+              globalUsageOptions={globalUsageOptions}
+              handleValueChange={handleValueChange}
+              hasAnyValue={hasAnyValue}
+              hoveredPointId={hoveredPointId}
+              inputRefs={inputRefs}
+              measurementType={measurementType}
+              overwriteWarning={activeOverwriteWarning}
+              pointsCount={pointsCount}
+              readingDate={readingDate}
+              rows={rows}
+              setActivePointId={setActivePointId}
+              setComment={setComment}
+              setHoveredPointId={setHoveredPointId}
+              submit={submit}
+              submitButtonLabel={submitButtonLabel}
+              submitResult={submitResult}
+              updateRow={updateRow}
+              validationErrors={validationErrors}
+            />
+          </section>
+        </div>
 
         <QuickDeclarationMapPanel
           activePointId={activePointId}

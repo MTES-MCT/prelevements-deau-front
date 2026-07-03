@@ -178,6 +178,8 @@ function buildFeatures(points, {
           return null
         }
 
+        const labelVisible = normalizedHoveredPointId ? id === normalizedHoveredPointId : id === normalizedActivePointId
+
         return {
           type: 'Feature',
           id,
@@ -191,7 +193,8 @@ function buildFeatures(points, {
             active: id === normalizedActivePointId,
             hovered: id === normalizedHoveredPointId,
             selected: selectedPointIdSet.has(id),
-            declared: declaredPointIdSet.has(id)
+            declared: declaredPointIdSet.has(id),
+            labelVisible
           }
         }
       })
@@ -365,6 +368,7 @@ const QuickDeclarationMap = ({
         id: 'quick-declaration-labels',
         type: 'symbol',
         source: 'quick-declaration-points',
+        filter: ['==', ['get', 'labelVisible'], true],
         layout: {
           'text-field': ['get', 'name'],
           'text-font': ['Source Sans Pro Bold'],
@@ -374,6 +378,8 @@ const QuickDeclarationMap = ({
             'case',
             ['==', ['get', 'active'], true],
             14,
+            ['==', ['get', 'hovered'], true],
+            13,
             ['==', ['get', 'selected'], true],
             13,
             12
