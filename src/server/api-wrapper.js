@@ -1,4 +1,4 @@
-import {forbidden} from 'next/navigation'
+import {forbidden, redirect} from 'next/navigation'
 
 import {getServerAuthSession} from '@/server/auth.js'
 
@@ -164,9 +164,11 @@ export function errorResult(error) {
 /**
  * Wrapper for server actions that handles common error patterns
  * @param {Function} fn - Async function to execute
+ * @param {Object} options - Error handling options
+ * @param {boolean} [options.redirectOnUnauthorized=true] - Redirect to login on 401
  * @returns {Promise<Object>} - Result object with success/error pattern
  */
-export async function withErrorHandling(fn) {
+export async function withErrorHandling(fn, {redirectOnUnauthorized = true} = {}) {
   try {
     const result = await fn()
     return successResult(result)
@@ -182,6 +184,10 @@ export async function withErrorHandling(fn) {
 
     // Re-throw auth errors so they can be handled at the page level
     if (error.message === 'UNAUTHORIZED' || error.code === 401) {
+      if (redirectOnUnauthorized) {
+        redirect('/login?error=session_expired')
+      }
+
       return {
         success: false,
         error: 'SESSION_EXPIRED',

@@ -10,7 +10,7 @@ import ReplayableDeclarationsPanel from '@/components/declarations/instruction/r
 
 const DEFAULT_PAGE = '1'
 const DEFAULT_PAGE_SIZE = '25'
-const FILTER_KEYS = ['declarant', 'dossierNumber', 'endDate', 'page', 'pageSize', 'startDate']
+const FILTER_KEYS = ['declarant', 'dossierNumber', 'endDate', 'page', 'pageSize', 'pointsToAssociate', 'startDate', 'types']
 
 const DeclarationTabs = () => {
   const router = useRouter()
@@ -52,7 +52,7 @@ const DeclarationTabs = () => {
   }, [filters, pathname, router])
 
   return (
-    <div className='fr-mt-4w'>
+    <div>
       <ReplayableDeclarationsPanel />
       <DeclarationFilters
         filters={filters}

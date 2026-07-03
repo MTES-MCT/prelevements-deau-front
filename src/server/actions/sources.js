@@ -10,8 +10,10 @@ function buildSourcesSearch({
   endDate,
   page,
   pageSize,
+  pointsToAssociate,
   startDate,
-  statuses = []
+  statuses = [],
+  types
 } = {}) {
   const searchParams = new URLSearchParams()
   const filteredStatuses = Array.isArray(statuses)
@@ -28,7 +30,9 @@ function buildSourcesSearch({
     endDate,
     page,
     pageSize,
-    startDate
+    pointsToAssociate,
+    startDate,
+    types
   }
 
   for (const [key, value] of Object.entries(values)) {

@@ -163,11 +163,11 @@ function getDeclarationIntro(declarationCreation) {
   const canCreateQuickDeclaration = declarationCreation?.canCreateQuickDeclaration ?? false
 
   if (canCreateQuickDeclaration && canCreateDeclaration) {
-    return 'Saisissez vos index directement sur la plateforme ou déposez un fichier après contrôle automatique.'
+    return 'Saisissez vos index, volumes prélevés ou volumes rejetés directement sur la plateforme, ou déposez un fichier après contrôle automatique.'
   }
 
   if (canCreateQuickDeclaration) {
-    return 'Saisissez vos index directement sur la plateforme.'
+    return 'Saisissez vos index, volumes prélevés ou volumes rejetés directement sur la plateforme.'
   }
 
   return 'Déposez vos fichiers de déclaration après contrôle automatique.'
@@ -299,7 +299,7 @@ const KeyFiguresSection = ({
                     </span>
                   </span>
                   <span className='shrink-0 font-semibold'>
-                    {formatCount(item.count, 'exploitation')}
+                    {formatCount(item.count, 'point')}
                   </span>
                 </li>
               ))}

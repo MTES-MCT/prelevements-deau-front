@@ -4,7 +4,7 @@ import {useCallback, useMemo} from 'react'
 
 import {Header as DSFRHeader} from '@codegouvfr/react-dsfr/Header'
 import {Chip} from '@mui/material'
-import {usePathname, useRouter} from 'next/navigation'
+import {usePathname} from 'next/navigation'
 
 import {useAuth} from '@/contexts/auth-context.js'
 
@@ -123,13 +123,11 @@ function getNavigationText(item, href, role) {
 
 const HeaderComponent = () => {
   const {user, logout, isLoading: isLoadingUser} = useAuth()
-  const router = useRouter()
   const pathname = usePathname()
 
   const handleLogout = useCallback(async () => {
     await logout()
-    router.push('/login')
-  }, [logout, router])
+  }, [logout])
 
   const navigation = useMemo(() => {
     if (isLoadingUser) {

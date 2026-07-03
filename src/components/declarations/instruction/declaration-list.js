@@ -69,16 +69,22 @@ const PageSizeSelect = ({pageSize, setFilters}) => {
       <label className='fr-label fr-mb-0 whitespace-nowrap text-xs text-gray-600' htmlFor='declarations-page-size'>
         Par page
       </label>
-      <select
-        className='h-8 w-16 border border-gray-300 bg-white px-2 text-sm'
-        id='declarations-page-size'
-        value={pageSize}
-        onChange={event => setPageSize(event.target.value)}
-      >
-        {PAGE_SIZE_OPTIONS.map(option => (
-          <option key={option} value={option}>{option}</option>
-        ))}
-      </select>
+      <div className='relative'>
+        <select
+          className='h-8 w-16 appearance-none border border-gray-300 bg-white pl-2 pr-6 text-sm'
+          id='declarations-page-size'
+          value={pageSize}
+          onChange={event => setPageSize(event.target.value)}
+        >
+          {PAGE_SIZE_OPTIONS.map(option => (
+            <option key={option} value={option}>{option}</option>
+          ))}
+        </select>
+        <span
+          className='fr-icon-arrow-down-s-line pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[0.62rem] text-gray-500 [&::after]:![--icon-size:0.68rem] [&::before]:![--icon-size:0.68rem]'
+          aria-hidden='true'
+        />
+      </div>
     </div>
   )
 }
@@ -194,8 +200,10 @@ const DeclarationList = ({status, filters, setFilters}) => {
         endDate: filters.endDate,
         page,
         pageSize,
+        pointsToAssociate: filters.pointsToAssociate,
         startDate: filters.startDate,
-        statuses: tabStatusMap[status] || []
+        statuses: tabStatusMap[status] || [],
+        types: filters.types
       })
 
       if (!cancelled && result.success) {
@@ -219,7 +227,9 @@ const DeclarationList = ({status, filters, setFilters}) => {
     filters.declarant,
     filters.dossierNumber,
     filters.endDate,
+    filters.pointsToAssociate,
     filters.startDate,
+    filters.types,
     page,
     pageSize,
     status

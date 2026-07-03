@@ -3,6 +3,7 @@ import {AppRouterCacheProvider} from '@mui/material-nextjs/v13-appRouter'
 import Link from 'next/link'
 import Script from 'next/script'
 
+import AuthSessionGuard from '@/components/auth/auth-session-guard.js'
 import ImpersonationBanner from '@/components/auth/impersonation-banner.js'
 import CrispChat from '@/components/crisp-chat.js'
 import EnvironmentBanner from '@/components/environment-banner.js'
@@ -67,6 +68,7 @@ const RootLayout = ({children}) => (
           <AppRouterCacheProvider>
             <DsfrProvider>
               <MuiDsfrThemeProvider>
+                <AuthSessionGuard />
                 <ImpersonationBanner />
                 <Header />
                 <MatomoTracker />

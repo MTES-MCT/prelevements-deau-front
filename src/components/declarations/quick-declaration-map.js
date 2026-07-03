@@ -11,7 +11,11 @@ import {cooperativeGesturesMapOptions} from '@/components/map/cooperative-gestur
 import planIGN from '@/components/map/styles/plan-ign.json'
 
 const DEFAULT_MAP_ZOOM = 10
-const FIT_BOUNDS_MAX_ZOOM = 15
+const FIT_BOUNDS_MAX_ZOOM = 18
+const POINT_CLUSTER_MAX_ZOOM = 17
+const POINT_CLUSTER_RADIUS = 48
+const CLUSTER_FILTER = ['has', 'point_count']
+const UNCLUSTERED_POINT_FILTER = ['!', CLUSTER_FILTER]
 const FIT_BOUNDS_PADDING = {
   top: 40,
   right: 40,
@@ -178,8 +182,6 @@ function buildFeatures(points, {
           return null
         }
 
-        const labelVisible = normalizedHoveredPointId ? id === normalizedHoveredPointId : id === normalizedActivePointId
-
         return {
           type: 'Feature',
           id,
@@ -193,8 +195,7 @@ function buildFeatures(points, {
             active: id === normalizedActivePointId,
             hovered: id === normalizedHoveredPointId,
             selected: selectedPointIdSet.has(id),
-            declared: declaredPointIdSet.has(id),
-            labelVisible
+            declared: declaredPointIdSet.has(id)
           }
         }
       })
@@ -274,12 +275,64 @@ const QuickDeclarationMap = ({
 
     map.on('load', () => {
       const data = buildFeatures(pointsWithCoordinates, stateRef.current)
-      map.addSource('quick-declaration-points', {type: 'geojson', data})
+      map.addSource('quick-declaration-points', {
+        type: 'geojson',
+        data,
+        cluster: true,
+        clusterMaxZoom: POINT_CLUSTER_MAX_ZOOM,
+        clusterRadius: POINT_CLUSTER_RADIUS
+      })
+
+      map.addLayer({
+        id: 'quick-declaration-clusters',
+        type: 'circle',
+        source: 'quick-declaration-points',
+        filter: CLUSTER_FILTER,
+        paint: {
+          'circle-radius': [
+            'step',
+            ['get', 'point_count'],
+            17,
+            10,
+            21,
+            25,
+            26
+          ],
+          'circle-color': [
+            'step',
+            ['get', 'point_count'],
+            '#6a6af4',
+            10,
+            '#000091',
+            25,
+            '#1212ff'
+          ],
+          'circle-opacity': 0.9,
+          'circle-stroke-color': '#ffffff',
+          'circle-stroke-width': 2
+        }
+      })
+
+      map.addLayer({
+        id: 'quick-declaration-cluster-counts',
+        type: 'symbol',
+        source: 'quick-declaration-points',
+        filter: CLUSTER_FILTER,
+        layout: {
+          'text-field': ['get', 'point_count_abbreviated'],
+          'text-font': ['Source Sans Pro Bold'],
+          'text-size': 12
+        },
+        paint: {
+          'text-color': '#ffffff'
+        }
+      })
 
       map.addLayer({
         id: 'quick-declaration-pin-halos',
         type: 'circle',
         source: 'quick-declaration-points',
+        filter: UNCLUSTERED_POINT_FILTER,
         paint: {
           'circle-radius': [
             'case',
@@ -325,6 +378,7 @@ const QuickDeclarationMap = ({
         id: 'quick-declaration-pins',
         type: 'circle',
         source: 'quick-declaration-points',
+        filter: UNCLUSTERED_POINT_FILTER,
         paint: {
           'circle-radius': [
             'case',
@@ -368,12 +422,13 @@ const QuickDeclarationMap = ({
         id: 'quick-declaration-labels',
         type: 'symbol',
         source: 'quick-declaration-points',
-        filter: ['==', ['get', 'labelVisible'], true],
+        filter: UNCLUSTERED_POINT_FILTER,
         layout: {
           'text-field': ['get', 'name'],
           'text-font': ['Source Sans Pro Bold'],
           'text-anchor': 'top',
           'text-offset': [0, 1.15],
+          'text-max-width': 14,
           'text-size': [
             'case',
             ['==', ['get', 'active'], true],
@@ -384,7 +439,8 @@ const QuickDeclarationMap = ({
             13,
             12
           ],
-          'text-allow-overlap': true
+          'text-allow-overlap': true,
+          'text-ignore-placement': true
         },
         paint: {
           'text-color': '#000091',
@@ -417,6 +473,10 @@ const QuickDeclarationMap = ({
       const interactivePointLayerIds = [
         'quick-declaration-pins',
         'quick-declaration-labels'
+      ]
+      const interactiveClusterLayerIds = [
+        'quick-declaration-clusters',
+        'quick-declaration-cluster-counts'
       ]
 
       const onInteractivePointMouseEnter = event => {
@@ -453,11 +513,47 @@ const QuickDeclarationMap = ({
         }
       }
 
+      const onInteractiveClusterMouseEnter = () => {
+        map.getCanvas().style.cursor = 'pointer'
+        hoverCallbackRef.current?.(null)
+      }
+
+      const onInteractiveClusterMouseLeave = () => {
+        map.getCanvas().style.cursor = ''
+      }
+
+      const onInteractiveClusterClick = async event => {
+        const feature = event.features?.[0]
+        const clusterId = feature?.properties?.cluster_id
+        const coordinates = feature?.geometry?.coordinates
+        const source = map.getSource('quick-declaration-points')
+
+        if (clusterId === undefined || clusterId === null || !Array.isArray(coordinates) || !source?.getClusterExpansionZoom) {
+          return
+        }
+
+        try {
+          const zoom = await source.getClusterExpansionZoom(clusterId)
+
+          map.easeTo({
+            center: coordinates,
+            zoom,
+            duration: 350
+          })
+        } catch {}
+      }
+
       for (const layerId of interactivePointLayerIds) {
         map.on('mouseenter', layerId, onInteractivePointMouseEnter)
         map.on('mousemove', layerId, onInteractivePointMouseMove)
         map.on('mouseleave', layerId, onInteractivePointMouseLeave)
         map.on('click', layerId, onInteractivePointClick)
+      }
+
+      for (const layerId of interactiveClusterLayerIds) {
+        map.on('mouseenter', layerId, onInteractiveClusterMouseEnter)
+        map.on('mouseleave', layerId, onInteractiveClusterMouseLeave)
+        map.on('click', layerId, onInteractiveClusterClick)
       }
     })
 

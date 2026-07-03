@@ -6,7 +6,6 @@ import {
   Typography
 } from '@mui/material'
 import Link from 'next/link'
-import {useRouter} from 'next/navigation'
 
 import {useAuth} from '@/contexts/auth-context.js'
 
@@ -22,7 +21,6 @@ const ROLE_COLORS = {
 
 const LoginHeaderItem = () => {
   const {user, logout} = useAuth()
-  const router = useRouter()
 
   const roleLabel = user?.role ? ROLE_LABELS[user.role] || user.role : null
   const roleColor = user?.role ? ROLE_COLORS[user.role] || 'var(--artwork-decorative-blue-france)' : null
@@ -30,7 +28,6 @@ const LoginHeaderItem = () => {
 
   const handleLogout = async () => {
     await logout()
-    router.push('/login')
   }
 
   return (

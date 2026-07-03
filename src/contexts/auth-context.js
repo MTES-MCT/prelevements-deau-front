@@ -82,7 +82,8 @@ export const AuthProvider = ({children}) => {
       }
     }
 
-    await signOut({callbackUrl: '/login'})
+    await signOut({redirect: false, callbackUrl: '/login'})
+    window.location.assign('/login')
   }, [session])
 
   const refreshUser = useCallback(async () => {
