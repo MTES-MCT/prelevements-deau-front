@@ -869,7 +869,7 @@ const QuickDeclarationToolbar = ({
 
       <div className='border border-gray-200 bg-white p-3 shadow-sm md:p-4'>
         <SegmentedControl
-          className='fr-mb-2w'
+          className='quick-declaration-measurement-segmented fr-mb-2w'
           legend='Je souhaite déclarer'
           segments={QUICK_DECLARATION_MEASUREMENT_SEGMENTS.map(segment => ({
             iconId: segment.iconId,
@@ -1823,7 +1823,7 @@ const QuickDeclarationMapPanel = ({
   const pointsContactMailto = buildPointsContactMailto(declarantName)
 
   return (
-    <aside className='order-1 xl:order-2 xl:sticky xl:top-3'>
+    <aside className='sticky top-0 z-20 order-1 self-start bg-white pb-2 shadow-sm xl:order-2 xl:top-3 xl:pb-0 xl:shadow-none'>
       <div className='fr-mb-1v text-center'>
         <a
           className='fr-link text-xs'
@@ -1834,7 +1834,7 @@ const QuickDeclarationMapPanel = ({
           Signaler une modification sur mes points
         </a>
       </div>
-      <div className='h-[220px] sm:h-[260px] xl:h-[calc(100vh-8rem)]'>
+      <div className='h-[220px] sm:h-[260px] md:h-[300px] xl:h-[calc(100vh-12rem)]'>
         <QuickDeclarationMap
           points={entryPoints}
           activePointId={activePointId}
@@ -2233,36 +2233,36 @@ const QuickDeclarationForm = ({
 
   return (
     <div className='fr-mt-1w fr-mb-2w'>
+      <QuickDeclarationToolbar
+        availablePreleveurs={availablePreleveurs}
+        context={context}
+        maxReadingDate={maxReadingDate}
+        measurementType={measurementType}
+        periodEndDate={periodEndDate}
+        periodStartDate={periodStartDate}
+        pointsCount={pointsCount}
+        readingDate={readingDate}
+        selectedPreleveurId={selectedPreleveurId}
+        setMeasurementType={setMeasurementType}
+        setPeriodEndDate={setPeriodEndDate}
+        setPeriodStartDate={setPeriodStartDate}
+        setReadingDate={setReadingDate}
+        shouldSelectPreleveur={shouldSelectPreleveur}
+        onPreleveurChange={handlePreleveurChange}
+      />
+
+      <QuickDeclarationStatusAlerts
+        context={context}
+        contextError={contextError}
+        isContextLoading={isContextLoading}
+        pointsCount={pointsCount}
+        selectedPreleveur={selectedPreleveur}
+        selectedPreleveurId={selectedPreleveurId}
+        shouldSelectPreleveur={shouldSelectPreleveur}
+      />
+
       <div className='grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(300px,0.72fr)] xl:items-start'>
         <section className='order-2 xl:order-1 min-w-0'>
-          <QuickDeclarationToolbar
-            availablePreleveurs={availablePreleveurs}
-            context={context}
-            maxReadingDate={maxReadingDate}
-            measurementType={measurementType}
-            periodEndDate={periodEndDate}
-            periodStartDate={periodStartDate}
-            pointsCount={pointsCount}
-            readingDate={readingDate}
-            selectedPreleveurId={selectedPreleveurId}
-            setMeasurementType={setMeasurementType}
-            setPeriodEndDate={setPeriodEndDate}
-            setPeriodStartDate={setPeriodStartDate}
-            setReadingDate={setReadingDate}
-            shouldSelectPreleveur={shouldSelectPreleveur}
-            onPreleveurChange={handlePreleveurChange}
-          />
-
-          <QuickDeclarationStatusAlerts
-            context={context}
-            contextError={contextError}
-            isContextLoading={isContextLoading}
-            pointsCount={pointsCount}
-            selectedPreleveur={selectedPreleveur}
-            selectedPreleveurId={selectedPreleveurId}
-            shouldSelectPreleveur={shouldSelectPreleveur}
-          />
-
           <QuickDeclarationEntriesPanel
             activePointId={activePointId}
             canSubmit={canSubmit}

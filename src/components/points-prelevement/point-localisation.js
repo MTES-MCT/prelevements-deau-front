@@ -1,28 +1,16 @@
-import proj4 from 'proj4'
-
 import Map from '@/components/map/index.js'
-
-const wgs84Projection = 'EPSG:4326'
-const lambert93Projection = 'EPSG:2154'
-
-proj4.defs(
-  wgs84Projection,
-  '+proj=longlat +datum=WGS84 +no_defs +type=crs'
-)
-
-proj4.defs(
-  lambert93Projection,
-  '+proj=lcc +lat_0=46.5 +lon_0=3 +lat_1=49 +lat_2=44 +x_0=700000 +y_0=6600000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs +type=crs'
-)
-
-const formatCoordinate = value => new Intl.NumberFormat('fr-FR', {
-  maximumFractionDigits: 3
-}).format(value)
+import {formatCoordinateLabel, wgs84ToLambert93} from '@/lib/coordinates.js'
 
 const getLambert93Label = coordinates => {
-  const [x, y] = proj4(wgs84Projection, lambert93Projection, coordinates)
+  const lambertCoordinates = wgs84ToLambert93(coordinates)
 
-  return `X ${formatCoordinate(x)} / Y ${formatCoordinate(y)}`
+  if (!lambertCoordinates) {
+    return null
+  }
+
+  const [x, y] = lambertCoordinates
+
+  return `X ${formatCoordinateLabel(x)} / Y ${formatCoordinateLabel(y)}`
 }
 
 const LabelValue = ({label, value, children}) => {

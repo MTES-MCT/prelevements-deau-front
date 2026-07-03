@@ -3,6 +3,7 @@
 import {useEffect, useRef, useState} from 'react'
 
 import Input from '@codegouvfr/react-dsfr/Input'
+import {SegmentedControl} from '@codegouvfr/react-dsfr/SegmentedControl'
 import Select from '@codegouvfr/react-dsfr/SelectNext'
 import {Box} from '@mui/system'
 import maplibre from 'maplibre-gl'
@@ -11,6 +12,12 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import {cooperativeGesturesMapOptions} from '@/components/map/cooperative-gestures.js'
 import photo from '@/components/map/styles/photo.json'
 import planIGN from '@/components/map/styles/plan-ign.json'
+import {
+  formatCoordinateInput,
+  lambert93ToWgs84,
+  parseCoordinateInput,
+  wgs84ToLambert93
+} from '@/lib/coordinates.js'
 
 const stylesMap = {
   'plan-ign': planIGN,
@@ -19,6 +26,94 @@ const stylesMap = {
 
 const DEFAULT_CENTER = [2.213_749, 46.227_638]
 const DEFAULT_ZOOM = 5
+const GPS_COORDINATE_SYSTEM = 'gps'
+const LAMBERT93_COORDINATE_SYSTEM = 'lambert93'
+
+const coordinateSystemLabels = {
+  [GPS_COORDINATE_SYSTEM]: 'GPS',
+  [LAMBERT93_COORDINATE_SYSTEM]: 'Lambert 93'
+}
+
+function getSafeCoordinates(geom) {
+  const coordinates = geom?.coordinates
+
+  if (
+    Array.isArray(coordinates)
+    && coordinates.length === 2
+    && coordinates.every(value => Number.isFinite(value))
+  ) {
+    return [...coordinates]
+  }
+
+  return [...DEFAULT_CENTER]
+}
+
+function getCoordinateInputs(coordinates, coordinateSystem) {
+  if (coordinateSystem === LAMBERT93_COORDINATE_SYSTEM) {
+    const lambertCoordinates = wgs84ToLambert93(coordinates) || []
+    const [x, y] = lambertCoordinates
+
+    return {
+      x: formatCoordinateInput(x, 2),
+      y: formatCoordinateInput(y, 2)
+    }
+  }
+
+  return {
+    latitude: formatCoordinateInput(coordinates[1]),
+    longitude: formatCoordinateInput(coordinates[0])
+  }
+}
+
+function getGpsCoordinatesFromInputs(coordinateInputs) {
+  const latitude = parseCoordinateInput(coordinateInputs.latitude)
+  const longitude = parseCoordinateInput(coordinateInputs.longitude)
+
+  if (latitude === null || longitude === null) {
+    return {
+      error: 'Renseigner une latitude et une longitude numériques.'
+    }
+  }
+
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    return {
+      error: 'La latitude doit être entre -90 et 90, et la longitude entre -180 et 180.'
+    }
+  }
+
+  return {
+    coordinates: [longitude, latitude]
+  }
+}
+
+function getLambert93CoordinatesFromInputs(coordinateInputs) {
+  const x = parseCoordinateInput(coordinateInputs.x)
+  const y = parseCoordinateInput(coordinateInputs.y)
+
+  if (x === null || y === null) {
+    return {
+      error: 'Renseigner des coordonnées Lambert 93 numériques.'
+    }
+  }
+
+  const coordinates = lambert93ToWgs84([x, y])
+
+  if (!coordinates) {
+    return {
+      error: 'Les coordonnées Lambert 93 ne peuvent pas être converties.'
+    }
+  }
+
+  return {
+    coordinates
+  }
+}
+
+function getCoordinatesFromInputs(coordinateInputs, coordinateSystem) {
+  return coordinateSystem === LAMBERT93_COORDINATE_SYSTEM
+    ? getLambert93CoordinatesFromInputs(coordinateInputs)
+    : getGpsCoordinatesFromInputs(coordinateInputs)
+}
 
 function createPointFeatureCollection(geom, coordinates) {
   return {
@@ -89,10 +184,15 @@ const MiniMapForm = ({geom, setGeom, boundaryFeature = null}) => {
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
   const currentStyleRef = useRef('plan-ign')
+  const coordinateSystemRef = useRef(LAMBERT93_COORDINATE_SYSTEM)
+  const initialCoordinates = getSafeCoordinates(geom)
   const [style, setStyle] = useState(currentStyleRef.current)
-  const [coordinates, setCoordinates] = useState(
-    geom ? [...geom.coordinates] : DEFAULT_CENTER
+  const [coordinateSystem, setCoordinateSystem] = useState(LAMBERT93_COORDINATE_SYSTEM)
+  const [coordinates, setCoordinates] = useState(initialCoordinates)
+  const [coordinateInputs, setCoordinateInputs] = useState(
+    getCoordinateInputs(initialCoordinates, LAMBERT93_COORDINATE_SYSTEM)
   )
+  const [coordinateError, setCoordinateError] = useState(null)
   const geojson = useRef(createPointFeatureCollection(geom, coordinates))
   const boundaryGeojson = useRef(createBoundaryFeatureCollection(boundaryFeature))
 
@@ -175,31 +275,43 @@ const MiniMapForm = ({geom, setGeom, boundaryFeature = null}) => {
     })
   }
 
-  const handleCoordinate = (value, coordType) => {
-    const numValue = Number.parseFloat(value)
-    if (Number.isNaN(numValue)) {
+  const handleCoordinateSystemChange = nextCoordinateSystem => {
+    coordinateSystemRef.current = nextCoordinateSystem
+    setCoordinateSystem(nextCoordinateSystem)
+    setCoordinateInputs(getCoordinateInputs(coordinates, nextCoordinateSystem))
+    setCoordinateError(null)
+  }
+
+  const handleCoordinateInput = (key, value) => {
+    const nextInputs = {
+      ...coordinateInputs,
+      [key]: value
+    }
+
+    setCoordinateInputs(nextInputs)
+
+    const result = getCoordinatesFromInputs(nextInputs, coordinateSystem)
+
+    if (result.error) {
+      setCoordinateError(result.error)
       return
     }
 
-    const newCoords = [...coordinates]
-    const index = coordType === 'longitude' ? 0 : 1
-    newCoords[index] = numValue
-
-    setCoordinates(newCoords)
-    updateGeometry(newCoords)
-
-    setGeom({
-      type: 'Point',
-      coordinates: newCoords
-    })
+    setCoordinateError(null)
+    updateGeometry(result.coordinates, {syncInputs: false})
   }
 
-  const updateGeometry = newCoords => {
+  const updateGeometry = (newCoords, {syncInputs = true} = {}) => {
+    setCoordinates([...newCoords])
     geojson.current.features[0].geometry.coordinates = [...newCoords]
     setGeom({
       type: 'Point',
       coordinates: [...newCoords]
     })
+
+    if (syncInputs) {
+      setCoordinateInputs(getCoordinateInputs(newCoords, coordinateSystemRef.current))
+    }
 
     if (mapRef.current && mapRef.current.getSource('point')) {
       mapRef.current.getSource('point').setData(geojson.current)
@@ -255,15 +367,7 @@ const MiniMapForm = ({geom, setGeom, boundaryFeature = null}) => {
 
       map.on('click', e => {
         const newCoords = [e.lngLat.lng, e.lngLat.lat]
-        geojson.current.features[0].geometry.coordinates = newCoords
-
-        map.getSource('point').setData(geojson.current)
-        setCoordinates(newCoords)
-
-        setGeom({
-          type: 'Point',
-          coordinates: newCoords
-        })
+        updateGeometry(newCoords)
       })
 
       map.on('mousedown', 'point', e => {
@@ -274,8 +378,7 @@ const MiniMapForm = ({geom, setGeom, boundaryFeature = null}) => {
         map.on('mousemove', onMove)
         map.once('mouseup', () => {
           const newCoords = geojson.current.features[0].geometry.coordinates
-          setCoordinates([...newCoords])
-          setGeom(geojson.current.features[0].geometry)
+          updateGeometry(newCoords)
           map.off('mousemove', onMove)
         })
       })
@@ -329,21 +432,85 @@ const MiniMapForm = ({geom, setGeom, boundaryFeature = null}) => {
           {value: 'orthophoto', label: 'Photographie aérienne'}
         ]}
       />
-      <div className='p-5 grid grid-cols-2 gap-4'>
-        <Input
-          label='Longitude'
-          nativeInputProps={{
-            value: coordinates[0],
-            onChange: e => handleCoordinate(e.target.value, 'longitude')
-          }}
+      <div className='border-t border-gray-200 bg-white p-4'>
+        <SegmentedControl
+          className='fr-mb-2w'
+          legend='Format de saisie des coordonnées'
+          segments={[
+            {
+              label: coordinateSystemLabels[LAMBERT93_COORDINATE_SYSTEM],
+              nativeInputProps: {
+                checked: coordinateSystem === LAMBERT93_COORDINATE_SYSTEM,
+                onChange: () => handleCoordinateSystemChange(LAMBERT93_COORDINATE_SYSTEM)
+              }
+            },
+            {
+              label: coordinateSystemLabels[GPS_COORDINATE_SYSTEM],
+              nativeInputProps: {
+                checked: coordinateSystem === GPS_COORDINATE_SYSTEM,
+                onChange: () => handleCoordinateSystemChange(GPS_COORDINATE_SYSTEM)
+              }
+            }
+          ]}
         />
-        <Input
-          label='Latitude'
-          nativeInputProps={{
-            value: coordinates[1],
-            onChange: e => handleCoordinate(e.target.value, 'latitude')
-          }}
-        />
+
+        <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+          {coordinateSystem === LAMBERT93_COORDINATE_SYSTEM ? (
+            <>
+              <Input
+                label='X Lambert 93'
+                hintText='Ex. 652469,12'
+                state={coordinateError ? 'error' : 'default'}
+                stateRelatedMessage={coordinateError || undefined}
+                nativeInputProps={{
+                  inputMode: 'decimal',
+                  autoComplete: 'off',
+                  value: coordinateInputs.x,
+                  onChange: e => handleCoordinateInput('x', e.target.value)
+                }}
+              />
+              <Input
+                label='Y Lambert 93'
+                hintText='Ex. 6862035,25'
+                state={coordinateError ? 'error' : 'default'}
+                stateRelatedMessage={coordinateError || undefined}
+                nativeInputProps={{
+                  inputMode: 'decimal',
+                  autoComplete: 'off',
+                  value: coordinateInputs.y,
+                  onChange: e => handleCoordinateInput('y', e.target.value)
+                }}
+              />
+            </>
+          ) : (
+            <>
+              <Input
+                label='Latitude GPS'
+                hintText='Ex. 46,227638'
+                state={coordinateError ? 'error' : 'default'}
+                stateRelatedMessage={coordinateError || undefined}
+                nativeInputProps={{
+                  inputMode: 'decimal',
+                  autoComplete: 'off',
+                  value: coordinateInputs.latitude,
+                  onChange: e => handleCoordinateInput('latitude', e.target.value)
+                }}
+              />
+              <Input
+                label='Longitude GPS'
+                hintText='Ex. 2,213749'
+                state={coordinateError ? 'error' : 'default'}
+                stateRelatedMessage={coordinateError || undefined}
+                nativeInputProps={{
+                  inputMode: 'decimal',
+                  autoComplete: 'off',
+                  value: coordinateInputs.longitude,
+                  onChange: e => handleCoordinateInput('longitude', e.target.value)
+                }}
+              />
+            </>
+          )}
+        </div>
       </div>
     </Box>
   )

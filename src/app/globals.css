@@ -64,6 +64,18 @@ main {
   margin-top: 0 !important;
 }
 
+@media (max-width: 47.999rem) {
+  .quick-declaration-measurement-segmented .fr-segmented__elements,
+  .quick-declaration-measurement-segmented .fr-segmented__element,
+  .quick-declaration-measurement-segmented .fr-label {
+    width: 100%;
+  }
+
+  .quick-declaration-measurement-segmented .fr-label {
+    justify-content: center;
+  }
+}
+
 .declaration-reconciliation-map-shell .maplibregl-map,
 .declaration-reconciliation-map-shell .maplibregl-canvas-container {
   overflow: visible !important;
