@@ -88,7 +88,7 @@ const ProcessingState = ({declaration}) => {
   )
 }
 
-const MyDeclarationDetail = ({availablePoints = [], initialDeclaration}) => {
+const MyDeclarationDetail = ({availablePoints = [], initialDeclaration, showDeclarant = false}) => {
   const [declaration, setDeclaration] = useState(initialDeclaration)
   const source = declaration?.source
   const displayStatus = getDeclarationDisplayStatus(declaration, source)
@@ -146,8 +146,9 @@ const MyDeclarationDetail = ({availablePoints = [], initialDeclaration}) => {
           />
         )}
         declaration={declaration}
+        showDeclarant={showDeclarant}
+        source={source}
         status={displayStatus}
-        periodTitle={readingDateLabel ? 'Date de relevé' : undefined}
         periodLabel={periodLabel}
       />
 

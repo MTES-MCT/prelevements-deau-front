@@ -72,10 +72,12 @@ const SourcePage = async ({params}) => {
       <StartDsfrOnHydration />
 
       <DeclarationOverview
+        showDeclarant
         declaration={declaration}
+        source={source}
         status={displayStatus}
         periodLabel={periodLabel}
-        preleveurName={declaration.declarant ? getDeclarantTitleFromDeclarant(declaration.declarant) : null}
+        declarantName={declaration.declarant ? getDeclarantTitleFromDeclarant(declaration.declarant) : null}
         actions={
           canAdminManageDeclaration
             ? (

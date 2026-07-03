@@ -1,5 +1,4 @@
 import {fr} from '@codegouvfr/react-dsfr'
-import {Box, Typography} from '@mui/material'
 
 import DeclarationTemplateDownload from '@/components/declarations/declaration-template-download.js'
 import NewDeclarationEntry from '@/components/declarations/new-declaration-entry.js'
@@ -23,26 +22,32 @@ const NouvelleDeclarationPage = async () => {
   )
 
   return (
-    <>
-      <div className='fr-container flex flex-col my-3 gap-4'>
-        <Typography variant='h4'>
-          Nouvelle déclaration de prélèvements
-        </Typography>
-        <NewDeclarationEntry
-          allowedDeclarationTypes={allowedDeclarationTypes}
-          availablePreleveurs={meta.preleveurs ?? []}
-          declarantRole={meta.declarantRole}
-          quickDeclarationEnabled={meta.quickDeclarationEnabled}
-          canCreateQuickDeclaration={meta.canCreateQuickDeclaration}
-        />
+    <main className='min-h-screen bg-[#f7f7fb] pb-12'>
+      <div className='fr-container pt-6 md:pt-8'>
+        <div className='mb-4'>
+          <h1 className='fr-h3 fr-mb-1v'>
+            Nouvelle déclaration
+          </h1>
+          <p className='fr-text--sm fr-mb-0 max-w-[760px] text-gray-700'>
+            Saisissez vos index, volumes prélevés ou volumes rejetés directement sur la plateforme, ou déposez un fichier de déclaration.
+          </p>
+        </div>
+
+        <section className='border border-gray-200 bg-white p-4 md:p-5'>
+          <NewDeclarationEntry
+            allowedDeclarationTypes={allowedDeclarationTypes}
+            availablePreleveurs={meta.preleveurs ?? []}
+            declarantRole={meta.declarantRole}
+            quickDeclarationEnabled={meta.quickDeclarationEnabled}
+            canCreateQuickDeclaration={meta.canCreateQuickDeclaration}
+          />
+        </section>
       </div>
 
       {hasTemplateDeclarationType && (
-        <Box
-          className='flex flex-wrap justify-between gap-4'
-          sx={{
-            pt: 3,
-            pb: 2,
+        <section
+          className='mt-6 flex flex-wrap justify-between gap-4 py-6'
+          style={{
             backgroundColor: fr.colors.decisions.background.alt.blueFrance.default
           }}
         >
@@ -52,9 +57,9 @@ const NouvelleDeclarationPage = async () => {
             </h3>
             <DeclarationTemplateDownload />
           </div>
-        </Box>
+        </section>
       )}
-    </>
+    </main>
   )
 }
 

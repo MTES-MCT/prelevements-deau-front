@@ -9,7 +9,6 @@ import {useRouter} from 'next/navigation'
 import PointReconciliationPanel from '@/components/declarations/point-reconciliation-panel.js'
 import SourceDataDetails from '@/components/declarations/source-data-details.js'
 import {isPointReconciliationRelevant, sourceStateLabels} from '@/lib/declaration.js'
-import {formatNumber} from '@/utils/number.js'
 
 const REFRESH_INTERVAL = 3000
 
@@ -23,31 +22,6 @@ function isTreatmentFailed(source) {
 
 function getSourceProcessingError(source) {
   return source?.declaration?.processingError || source?.metadata?.processingError || null
-}
-
-const VolumeSummary = ({metadata}) => {
-  const totalWaterVolumeWithdrawn = metadata?.totalWaterVolumeWithdrawn
-  const totalWaterVolumeDischarged = metadata?.totalWaterVolumeDischarged
-
-  if (!totalWaterVolumeWithdrawn && !totalWaterVolumeDischarged) {
-    return null
-  }
-
-  return (
-    <div className='fr-mb-2w flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-700'>
-      {totalWaterVolumeWithdrawn > 0 && (
-        <p className='fr-mb-0'>
-          Volume prélevé : <strong>{formatNumber(totalWaterVolumeWithdrawn)} m³</strong>
-        </p>
-      )}
-
-      {totalWaterVolumeDischarged > 0 && (
-        <p className='fr-mb-0'>
-          Volume rejeté : <strong>{formatNumber(totalWaterVolumeDischarged)} m³</strong>
-        </p>
-      )}
-    </div>
-  )
 }
 
 const ProcessingState = ({source}) => {
@@ -115,7 +89,7 @@ const DeclarationDetails = ({
     }
   }, [isPending, router, source?.id, source?.status])
 
-  let content = <SourceDataDetails source={source} />
+  let content = <SourceDataDetails declaration={declaration} source={source} />
 
   if (isPending || hasFailed) {
     content = <ProcessingState source={source} />
@@ -133,7 +107,6 @@ const DeclarationDetails = ({
 
   return (
     <div className='fr-mb-4w'>
-      <VolumeSummary metadata={source?.metadata} />
       {content}
     </div>
   )

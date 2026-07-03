@@ -8,6 +8,7 @@ import {
   getAvailablePointsPrelevementsForDeclarationAction,
   getDeclarationAction
 } from '@/server/actions/declarations.js'
+import {getCurrentUser} from '@/server/actions/user.js'
 
 export async function generateMetadata({params}) {
   const {id} = await params
@@ -20,12 +21,16 @@ export async function generateMetadata({params}) {
 const Page = async ({params}) => {
   const {id} = await params
 
-  const result = await getDeclarationAction(id)
+  const [result, userResult] = await Promise.all([
+    getDeclarationAction(id),
+    getCurrentUser()
+  ])
   if (!result.success || !result.data) {
     notFound()
   }
 
   const declaration = result.data.data
+  const showDeclarant = userResult?.data?.declarantRole === 'COLLECTEUR'
   const shouldLoadAvailablePoints = declaration.source?.status === 'COMPLETED'
     && isPointReconciliationRelevant(declaration, declaration.source)
   const availablePointsResult = shouldLoadAvailablePoints
@@ -36,7 +41,11 @@ const Page = async ({params}) => {
   return (
     <>
       <StartDsfrOnHydration />
-      <MyDeclarationDetail initialDeclaration={declaration} availablePoints={availablePoints} />
+      <MyDeclarationDetail
+        initialDeclaration={declaration}
+        availablePoints={availablePoints}
+        showDeclarant={showDeclarant}
+      />
     </>
   )
 }

@@ -376,7 +376,7 @@ const MyDeclarationsList = ({
         <div className={`grid grid-cols-1 gap-x-4 gap-y-3 ${showDeclarant ? 'lg:grid-cols-[minmax(12rem,1fr)_minmax(10rem,.75fr)_minmax(25rem,1.25fr)]' : 'lg:grid-cols-[minmax(10rem,.75fr)_minmax(25rem,1.25fr)]'} lg:items-end`}>
           {showDeclarant && (
             <div className='fr-input-group fr-mb-0 min-w-0'>
-              <label className='fr-label min-h-6' htmlFor='my-declarations-declarant-filter'>Préleveur</label>
+              <label className='fr-label min-h-6' htmlFor='my-declarations-declarant-filter'>Déclarant concerné</label>
               <input
                 className='fr-input'
                 id='my-declarations-declarant-filter'

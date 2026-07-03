@@ -14,7 +14,12 @@ import Badge from '@codegouvfr/react-dsfr/Badge'
 
 import PointReconciliationMap from '@/components/declarations/point-reconciliation-map.js'
 import {formatDateRange} from '@/lib/format-date.js'
-import {formatUsageReference, getUsageReferenceLabel} from '@/lib/water-uses.js'
+import {
+  formatUsageReference,
+  getUsageColor,
+  getUsageReferenceLabel,
+  getUsageTextColor
+} from '@/lib/water-uses.js'
 import {reconcileDeclarationChunkAction} from '@/server/actions/declarations.js'
 import {formatNumber} from '@/utils/number.js'
 
@@ -101,6 +106,21 @@ const ChunkStatusBadge = ({matched}) => (
   <Badge severity={matched ? 'success' : 'warning'}>
     {matched ? 'Associé' : 'À associer'}
   </Badge>
+)
+
+const UsageReference = ({label, usage}) => (
+  <div className='mt-2 flex min-w-0 items-center gap-1.5 text-xs text-gray-700' title={label}>
+    <span className='shrink-0 font-medium text-gray-600'>{getUsageReferenceLabel(usage)} :</span>
+    <span
+      className='inline-flex min-w-0 max-w-full items-center truncate px-1.5 py-0.5 text-[0.68rem] font-semibold leading-none'
+      style={{
+        backgroundColor: getUsageColor(usage),
+        color: getUsageTextColor(usage)
+      }}
+    >
+      {label}
+    </span>
+  </div>
 )
 
 function getChunkItemClassName({isSelected, matched}) {
@@ -265,11 +285,7 @@ const ChunkListItem = ({
             {getAssociationLabel({chunk, isSelected})}
           </div>
 
-          {usageLabel && (
-            <div className='mt-2 truncate text-xs text-gray-700' title={usageLabel}>
-              <span className='font-medium'>{getUsageReferenceLabel(chunk.usage)} :</span> {usageLabel}
-            </div>
-          )}
+          {usageLabel && <UsageReference label={usageLabel} usage={chunk.usage} />}
 
           {volumeLabel && (
             <div className='mt-2 text-xs text-gray-600'>
@@ -602,7 +618,11 @@ const PointReconciliationPanel = ({
   }
 
   return (
-    <section className='fr-mt-4w fr-mb-4w'>
+    <section className='fr-mb-4w border border-gray-200 bg-white p-5 md:p-6'>
+      <div className='mb-4'>
+        <h2 className='fr-h4 fr-mb-1v'>Association des points</h2>
+      </div>
+
       <Alert
         severity={summarySeverity}
         title={getSummaryTitle({remainingCount})}

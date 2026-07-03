@@ -18,19 +18,21 @@ const Layout = async ({params, children}) => {
   return (
     <>
       <StartDsfrOnHydration />
-      <div className='fr-container mt-4'>
+      <div className='min-h-screen bg-[#f7f7fb] pb-12'>
+        <div className='fr-container pt-4 md:pt-6'>
 
-        <Breadcrumb
-          currentPageLabel={'Déclaration n°' + declaration.code}
-          segments={[{
-            label: 'Mes déclarations',
-            linkProps: {
-              href: getMyDeclarationsURL()
-            }
-          }]}
-        />
+          <Breadcrumb
+            currentPageLabel={'Déclaration n°' + declaration.code}
+            segments={[{
+              label: 'Mes déclarations',
+              linkProps: {
+                href: getMyDeclarationsURL()
+              }
+            }]}
+          />
 
-        {children}
+          {children}
+        </div>
       </div>
     </>
   )

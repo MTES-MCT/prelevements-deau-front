@@ -20,17 +20,19 @@ const SourceLayout = async ({params, children}) => {
   return (
     <>
       <StartDsfrOnHydration />
-      <div className='fr-container mt-4'>
-        <Breadcrumb
-          currentPageLabel={title}
-          segments={[{
-            label: 'Déclarations',
-            linkProps: {
-              href: getDeclarationsURL()
-            }
-          }]}
-        />
-        {children}
+      <div className='min-h-screen bg-[#f7f7fb] pb-12'>
+        <div className='fr-container pt-4 md:pt-6'>
+          <Breadcrumb
+            currentPageLabel={title}
+            segments={[{
+              label: 'Déclarations',
+              linkProps: {
+                href: getDeclarationsURL()
+              }
+            }]}
+          />
+          {children}
+        </div>
       </div>
     </>
   )

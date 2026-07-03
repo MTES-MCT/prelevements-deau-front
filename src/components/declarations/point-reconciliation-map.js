@@ -13,7 +13,12 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 
 import {cooperativeGesturesMapOptions} from '@/components/map/cooperative-gestures.js'
 import planIGN from '@/components/map/styles/plan-ign.json'
-import {formatUsageReference, getUsageReferenceLabel} from '@/lib/water-uses.js'
+import {
+  formatUsageReference,
+  getUsageColor,
+  getUsageReferenceLabel,
+  getUsageTextColor
+} from '@/lib/water-uses.js'
 
 const SOURCE_ID = 'declaration-reconciliation-points'
 const DEFAULT_MAP_ZOOM = 10
@@ -280,6 +285,31 @@ function appendMetaRow(parent, label, value) {
   parent.append(row)
 }
 
+function appendUsageReference(parent, usage, value) {
+  if (!value) {
+    return
+  }
+
+  const row = document.createElement('div')
+  row.className = 'mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-gray-700'
+  row.title = value
+
+  appendTextElement(row, {
+    className: 'shrink-0 text-gray-600',
+    text: `${getUsageReferenceLabel(usage)} :`,
+    tagName: 'span'
+  })
+
+  const usageValue = document.createElement('span')
+  usageValue.className = 'inline-flex min-w-0 max-w-full items-center truncate px-1.5 py-0.5 text-[0.68rem] font-semibold leading-none'
+  usageValue.style.backgroundColor = getUsageColor(usage)
+  usageValue.style.color = getUsageTextColor(usage)
+  usageValue.textContent = value
+  row.append(usageValue)
+
+  parent.append(row)
+}
+
 function appendPill(parent, value) {
   if (!value) {
     return
@@ -414,10 +444,7 @@ function createPopupNode({
       className: 'mt-0.5 truncate',
       text: selectedChunk.pointPrelevementName || `Ligne ${selectedChunk.index + 1}`
     })
-    appendTextElement(selectedLine, {
-      className: 'mt-0.5 truncate text-gray-600',
-      text: selectedUsageLabel ? `${getUsageReferenceLabel(selectedChunk.usage)} : ${selectedUsageLabel}` : null
-    })
+    appendUsageReference(selectedLine, selectedChunk.usage, selectedUsageLabel)
     appendTextElement(selectedLine, {
       className: 'mt-0.5 text-gray-500',
       text: selectedPeriodLabel

@@ -308,7 +308,7 @@ function getTelemetryReadingsLabel(source) {
     return formatCount(visibleValuesCount, 'relevé')
   }
 
-  return formatCount(source?._count?.chunks ?? chunks.length, 'série télérelevée')
+  return formatCount(source?._count?.chunks ?? chunks.length, 'mesure télérelevée')
 }
 
 function getTelemetryPreleveurNames(source, declaration) {
@@ -408,8 +408,8 @@ function getContextSection({declaration, isTelemetry, showDeclarant, source}) {
 
     return {
       iconClassName: 'fr-icon-user-line text-gray-600',
-      label: 'Préleveur / points',
-      primary: getDeclarantName(declaration?.declarant) ?? 'Préleveur non renseigné',
+      label: 'Déclarant concerné / points',
+      primary: getDeclarantName(declaration?.declarant) ?? 'Déclarant non renseigné',
       secondary: joinDetails([pointSummary, createdBy])
     }
   }
@@ -712,7 +712,7 @@ const DeclarationSummaryItem = ({
 const DeclarationSummaryListHeader = ({showDeclarant = true}) => (
   <div className={`hidden gap-2.5 border-b border-gray-200 bg-white px-3 py-1.5 text-[0.74rem] font-semibold leading-none text-gray-600 md:grid ${rowGridClassName} md:items-center`}>
     <div>Déclaration</div>
-    <div>{showDeclarant ? 'Préleveur / points' : 'Points'}</div>
+    <div>{showDeclarant ? 'Déclarant concerné / points' : 'Points'}</div>
     <div>Index et volumes</div>
     <div aria-hidden='true' />
   </div>

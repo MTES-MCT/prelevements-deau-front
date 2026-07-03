@@ -1,6 +1,12 @@
 'use client'
 
-import {formatUsageReference, getUsageReferenceLabel} from '@/lib/water-uses.js'
+import {getDeclarationTypeLabel} from '@/lib/declaration-types.js'
+import {
+  formatUsageReference,
+  getUsageColor,
+  getUsageReferenceLabel,
+  getUsageTextColor
+} from '@/lib/water-uses.js'
 import {formatNumber, coerceNumericValue} from '@/utils/number.js'
 
 const MAX_VISIBLE_VALUES = 20
@@ -11,6 +17,8 @@ const metricTypeLabels = {
   index: 'Index',
   'relevé d\'index': 'Relevé d’index'
 }
+
+const quickDeclarationIndexLabel = 'Relevé d\'index'
 
 const indexMetricTypeCodes = new Set(['index', 'relevé d\'index'])
 const volumeMetricTypeCodes = new Set(['volume prélevé', 'volume rejeté'])
@@ -115,6 +123,10 @@ function formatMetricType(value) {
   return metricTypeLabels[value] ?? value ?? 'Donnée'
 }
 
+function simplifyDeclarationTypeLabel(value) {
+  return value?.replace(/^extraction\s+/i, '') ?? null
+}
+
 function formatValue(value, unit) {
   const number = coerceNumericValue(value)
 
@@ -211,42 +223,35 @@ function shouldShowValuesPreview(chunk, source) {
   return !isQuickDeclarationSource(source) || getVisibleValues(chunk, source).length > 0
 }
 
-function getSummary(source) {
-  const chunks = source?.chunks ?? []
-  const pointIds = new Set(chunks.map(chunk => chunk.pointPrelevementId).filter(Boolean))
-  const valuesCount = chunks.reduce((count, chunk) => count + (chunk.chunkValues?.length ?? 0), 0)
-
-  return {
-    pointCount: pointIds.size > 0 ? pointIds.size : chunks.length,
-    seriesCount: chunks.length,
-    valuesCount
-  }
+function getSourceConnectorLabel(source) {
+  const connector = source?.metadata?.connector
+  return connector ? `Source ${connector}` : null
 }
 
-function getQuickDeclarationSummaryLabel(source) {
-  if (!isQuickDeclarationSource(source)) {
-    return 'Valeurs'
+function getDeclarationDetailTypeLabel(declaration, source) {
+  if (source?.type === 'API' || isQuickDeclarationSource(source)) {
+    return null
   }
 
-  const measurementType = source?.metadata?.measurementType
-
-  if (measurementType === 'INDEX') {
-    return 'Index déclarés'
-  }
-
-  if (measurementType === 'VOLUME_REJETE') {
-    return 'Volumes rejetés déclarés'
-  }
-
-  if (measurementType === 'VOLUME_PRELEVE') {
-    return 'Volumes prélevés déclarés'
-  }
-
-  return 'Valeurs déclarées'
+  const declarationType = declaration?.declarationType ?? source?.declaration?.declarationType
+  const declarationCode = declaration?.type ?? source?.declaration?.type ?? source?.metadata?.declarationType
+  return simplifyDeclarationTypeLabel(getDeclarationTypeLabel(declarationCode, declarationType))
 }
 
-function getQuickDeclarationSeriesLabel(source) {
-  return isQuickDeclarationSource(source) ? 'Lignes déclarées' : 'Séries'
+function getFirstColumnDetails({declaration, metricType, source}) {
+  if (source?.type === 'API') {
+    return []
+  }
+
+  const metricTypeLabel = isQuickDeclarationSource(source) && isIndexMetricType(metricType)
+    ? quickDeclarationIndexLabel
+    : formatMetricType(metricType)
+
+  return [
+    getSourceConnectorLabel(source),
+    getDeclarationDetailTypeLabel(declaration, source),
+    metricTypeLabel
+  ].filter(Boolean)
 }
 
 function getValueColumnLabel({displayAsIndex, displayAsVolume, isQuickDeclaration}) {
@@ -376,17 +381,25 @@ function formatValueDate({chunk, displayAsIndex, displayAsVolume, isQuickDeclara
   return formatDateTime(value.periodEnd ?? value.periodStart) ?? 'Non renseignée'
 }
 
-const SummaryItem = ({label, value}) => (
-  <div className='border border-gray-200 bg-white p-3'>
-    <div className='text-xs uppercase text-gray-500'>{label}</div>
-    <div className='fr-text--lg fr-mb-0 font-bold'>{value}</div>
-  </div>
-)
-
 const OverwrittenBadge = () => (
   <span className='inline-flex rounded-sm border border-red-200 bg-red-50 px-1.5 py-0.5 text-[0.7rem] font-semibold uppercase leading-none text-red-700'>
     Écrasée
   </span>
+)
+
+const UsageReference = ({label, usage}) => (
+  <p className='fr-text--sm fr-mb-0 flex min-w-0 items-center gap-1.5 text-gray-700' title={label}>
+    <span className='shrink-0 text-gray-600'>{getUsageReferenceLabel(usage)} :</span>
+    <span
+      className='inline-flex min-w-0 max-w-full items-center truncate px-1.5 py-0.5 text-[0.68rem] font-semibold leading-none'
+      style={{
+        backgroundColor: getUsageColor(usage),
+        color: getUsageTextColor(usage)
+      }}
+    >
+      {label}
+    </span>
+  </p>
 )
 
 const DeclaredValueDisplay = ({value, align = 'left'}) => {
@@ -484,11 +497,9 @@ const ValuesPreview = ({chunk, source}) => {
   )
 }
 
-const SourceDataDetails = ({source}) => {
+const SourceDataDetails = ({declaration, source}) => {
   const chunks = source?.chunks ?? []
-  const summary = getSummary(source)
   const isTelemetry = source?.type === 'API'
-  const connector = source?.metadata?.connector
 
   if (chunks.length === 0) {
     return (
@@ -504,17 +515,6 @@ const SourceDataDetails = ({source}) => {
         <h2 className='fr-h5 fr-mb-0'>
           {isTelemetry ? 'Données télérelevées' : 'Données déclarées'}
         </h2>
-        {connector && (
-          <p className='fr-text--sm fr-mb-0 text-gray-600'>
-            Source : {connector}
-          </p>
-        )}
-      </div>
-
-      <div className='mb-4 grid gap-3 sm:grid-cols-3'>
-        <SummaryItem label='Points' value={summary.pointCount} />
-        <SummaryItem label={getQuickDeclarationSeriesLabel(source)} value={summary.seriesCount} />
-        <SummaryItem label={getQuickDeclarationSummaryLabel(source)} value={summary.valuesCount} />
       </div>
 
       <div className='divide-y divide-gray-200 border border-gray-300 bg-white'>
@@ -529,6 +529,11 @@ const SourceDataDetails = ({source}) => {
             usageLabel,
             valueLabel
           } = getChunkDisplayContext(chunk, source)
+          const firstColumnDetails = getFirstColumnDetails({
+            declaration,
+            metricType,
+            source
+          })
 
           return (
             <article key={chunk.id} className='p-4'>
@@ -537,14 +542,12 @@ const SourceDataDetails = ({source}) => {
                   <h3 className='fr-text--md fr-mb-0 truncate font-bold'>
                     {getPointName(chunk)}
                   </h3>
-                  <p className='fr-text--sm fr-mb-0 text-gray-600'>
-                    {formatMetricType(metricType)}
-                  </p>
-                  {usageLabel && (
-                    <p className='fr-text--sm fr-mb-0 truncate text-gray-700' title={usageLabel}>
-                      {getUsageReferenceLabel(chunk.usage)} : <span className='font-medium'>{usageLabel}</span>
+                  {firstColumnDetails.map(detail => (
+                    <p key={detail} className='fr-text--sm fr-mb-0'>
+                      {detail}
                     </p>
-                  )}
+                  ))}
+                  {usageLabel && <UsageReference label={usageLabel} usage={chunk.usage} />}
                 </div>
 
                 <div>
