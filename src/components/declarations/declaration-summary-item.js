@@ -340,7 +340,7 @@ function getDeclarationType(source, declaration) {
 }
 
 function isChunkToAssociate(chunk) {
-  return chunk?.instructionStatus !== 'VALIDATED' || !chunk?.pointPrelevementId
+  return !chunk?.pointPrelevementId
 }
 
 function getPointsToAssociateCount(source) {

@@ -8,6 +8,7 @@ import {
   useState
 } from 'react'
 
+import {SegmentedControl} from '@codegouvfr/react-dsfr/SegmentedControl'
 import Link from 'next/link'
 import {
   usePathname,
@@ -43,6 +44,18 @@ const WATER_BODY_TYPE_OPTIONS = [
   {value: 'TRANSITION', label: 'Eau de transition'}
 ]
 const WATER_BODY_TYPE_VALUES = WATER_BODY_TYPE_OPTIONS.map(option => option.value)
+const DECLARATION_PERIOD_SEGMENTS = [
+  {
+    value: 'month',
+    label: 'Mois',
+    iconId: 'fr-icon-calendar-line'
+  },
+  {
+    value: 'week',
+    label: 'Semaines',
+    iconId: 'fr-icon-calendar-2-line'
+  }
+]
 const NO_WATER_BODY_TYPES_SENTINEL = '__none__'
 const VOLUME_CHART_SUBTITLE = 'Volumes représentant uniquement les déclarations enregistrées sur Partageons l’Eau, pouvant être inférieurs aux volumes réels du territoire.'
 const EMPTY_ARRAY = []
@@ -93,13 +106,15 @@ function getExpectedWaterBodyTypesSearchValue(waterBodyTypes) {
 }
 
 function isDashboardSearchSynced(searchParams, {
-  month,
+  period,
+  periodType,
   waterBodyTypes,
   year,
   zoneCodes
 }) {
   return searchParams.get('zones') === buildZoneSearchValue(zoneCodes)
-    && searchParams.get('month') === month
+    && searchParams.get('periodType') === periodType
+    && searchParams.get('period') === period
     && searchParams.get('year') === String(year)
     && (searchParams.get('waterBodyTypes') ?? '') === getExpectedWaterBodyTypesSearchValue(waterBodyTypes)
     && !searchParams.has('waterBodyType')
@@ -360,10 +375,12 @@ const RegisteredPrelevementsSection = ({
   declarationsURL,
   declarationsURLLabel,
   isLoading,
-  monthOptions,
-  onMonthChange,
+  onPeriodChange,
+  onPeriodTypeChange,
+  periodOptions,
   registeredPrelevementsByUsage,
-  selectedMonth,
+  selectedPeriod,
+  selectedPeriodType,
   showReminder
 }) => (
   <section className='mt-6 border border-gray-200 bg-white p-5 md:p-6'>
@@ -377,28 +394,45 @@ const RegisteredPrelevementsSection = ({
         </Link>
       </div>
 
-      <div className='fr-select-group mb-0 w-full md:w-[220px]'>
-        <label className='fr-label' htmlFor='dashboard-declaration-month'>
-          Mois
-        </label>
-        <select
-          className='fr-select'
-          disabled={isLoading || monthOptions.length === 0}
-          id='dashboard-declaration-month'
-          value={selectedMonth}
-          onChange={onMonthChange}
-        >
-          {monthOptions.map(option => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+      <div className='flex w-full flex-col gap-2 md:ml-auto md:w-auto md:flex-row md:items-start md:justify-end'>
+        <SegmentedControl
+          hideLegend
+          small
+          legend='Afficher par'
+          segments={DECLARATION_PERIOD_SEGMENTS.map(segment => ({
+            iconId: segment.iconId,
+            label: segment.label,
+            nativeInputProps: {
+              checked: selectedPeriodType === segment.value,
+              disabled: isLoading,
+              onChange: () => onPeriodTypeChange(segment.value)
+            }
+          }))}
+        />
+
+        <div className='fr-select-group mb-0 md:w-[260px]'>
+          <label className='sr-only' htmlFor='dashboard-declaration-period'>
+            Période
+          </label>
+          <select
+            className='fr-select'
+            disabled={isLoading || periodOptions.length === 0}
+            id='dashboard-declaration-period'
+            value={selectedPeriod}
+            onChange={onPeriodChange}
+          >
+            {periodOptions.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
     </div>
 
     {registeredPrelevementsByUsage.length > 0 ? (
-      <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-3'>
+      <div className='grid gap-4 md:grid-cols-2'>
         {registeredPrelevementsByUsage.map(item => {
           const usageColor = getUsageColor(item.usage)
           const usageLabel = getUsageLabel(item.usage)
@@ -476,8 +510,11 @@ const DashboardPage = ({
   const hasSyncedDefaultZonesRef = useRef(false)
   const [dashboard, setDashboard] = useState(initialDashboard)
   const [selectedZoneCodes, setSelectedZoneCodes] = useState(initialDashboard?.selectedZoneCodes ?? [])
-  const [selectedMonth, setSelectedMonth] = useState(
-    initialDashboard?.registeredPrelevements?.selectedMonth ?? ''
+  const [selectedPeriodType, setSelectedPeriodType] = useState(
+    initialDashboard?.registeredPrelevements?.selectedPeriodType ?? 'month'
+  )
+  const [selectedPeriod, setSelectedPeriod] = useState(
+    initialDashboard?.registeredPrelevements?.selectedPeriod ?? ''
   )
   const [selectedVolumeYear, setSelectedVolumeYear] = useState(
     initialDashboard?.volumesByUsage?.selectedYear ?? ''
@@ -495,7 +532,7 @@ const DashboardPage = ({
   const registeredPrelevements = dashboard?.registeredPrelevements
   const registeredPrelevementsByUsage = (registeredPrelevements?.byUsage ?? EMPTY_ARRAY)
     .filter(item => isDashboardVisibleUsage(item.usage))
-  const monthOptions = registeredPrelevements?.monthOptions ?? EMPTY_ARRAY
+  const periodOptions = registeredPrelevements?.periodOptions ?? EMPTY_ARRAY
   const volumesByUsage = dashboard?.volumesByUsage
   const volumeYearOptions = volumesByUsage?.yearOptions ?? EMPTY_ARRAY
   const totalPoints = dashboard?.metrics?.totalPoints ?? 0
@@ -535,7 +572,8 @@ const DashboardPage = ({
   const syncURL = useCallback((
     zoneCodes,
     {
-      month = selectedMonth,
+      period = selectedPeriod,
+      periodType = selectedPeriodType,
       replace = true,
       waterBodyTypes = selectedWaterBodyTypes,
       year = selectedVolumeYear
@@ -544,10 +582,16 @@ const DashboardPage = ({
     const nextSearchParams = new URLSearchParams(searchParams.toString())
     nextSearchParams.set('zones', buildZoneSearchValue(zoneCodes))
 
-    if (month) {
-      nextSearchParams.set('month', month)
+    if (periodType) {
+      nextSearchParams.set('periodType', periodType)
     } else {
-      nextSearchParams.delete('month')
+      nextSearchParams.delete('periodType')
+    }
+
+    if (period) {
+      nextSearchParams.set('period', period)
+    } else {
+      nextSearchParams.delete('period')
     }
 
     if (year) {
@@ -563,6 +607,8 @@ const DashboardPage = ({
     }
 
     nextSearchParams.delete('waterBodyType')
+    nextSearchParams.delete('month')
+    nextSearchParams.delete('week')
 
     const search = nextSearchParams.toString()
     const url = search ? `${pathname}?${search}` : pathname
@@ -573,13 +619,22 @@ const DashboardPage = ({
     }
 
     router.push(url, {scroll: false})
-  }, [pathname, router, searchParams, selectedMonth, selectedVolumeYear, selectedWaterBodyTypes])
+  }, [
+    pathname,
+    router,
+    searchParams,
+    selectedPeriod,
+    selectedPeriodType,
+    selectedVolumeYear,
+    selectedWaterBodyTypes
+  ])
 
   useEffect(() => {
     if (
       hasSyncedDefaultZonesRef.current
       || selectedZoneCodes.length === 0
-      || !selectedMonth
+      || !selectedPeriod
+      || !selectedPeriodType
       || !selectedVolumeYear
     ) {
       return
@@ -588,20 +643,83 @@ const DashboardPage = ({
     hasSyncedDefaultZonesRef.current = true
 
     if (!isDashboardSearchSynced(searchParams, {
-      month: selectedMonth,
+      period: selectedPeriod,
+      periodType: selectedPeriodType,
       waterBodyTypes: selectedWaterBodyTypes,
       year: selectedVolumeYear,
       zoneCodes: selectedZoneCodes
     })) {
       syncURL(selectedZoneCodes, {
-        month: selectedMonth,
+        period: selectedPeriod,
+        periodType: selectedPeriodType,
         waterBodyTypes: selectedWaterBodyTypes,
         year: selectedVolumeYear
       })
     }
   }, [
     searchParams,
-    selectedMonth,
+    selectedPeriod,
+    selectedPeriodType,
+    selectedVolumeYear,
+    selectedWaterBodyTypes,
+    selectedZoneCodes,
+    syncURL
+  ])
+
+  const reloadDashboard = useCallback(async ({
+    period = selectedPeriod,
+    periodType = selectedPeriodType,
+    waterBodyTypes = selectedWaterBodyTypes,
+    year = selectedVolumeYear,
+    zoneCodes = selectedZoneCodes
+  } = {}) => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      syncURL(zoneCodes, {
+        period,
+        periodType,
+        waterBodyTypes,
+        year
+      })
+
+      const result = await getDashboardTerritoryAction({
+        period,
+        periodType,
+        waterBodyTypes,
+        year,
+        zoneCodes
+      })
+
+      if (result.success) {
+        const nextSelectedZoneCodes = result.data.selectedZoneCodes ?? zoneCodes
+        const nextSelectedPeriodType = result.data.registeredPrelevements?.selectedPeriodType ?? periodType
+        const nextSelectedPeriod = result.data.registeredPrelevements?.selectedPeriod ?? period
+        const nextSelectedYear = result.data.volumesByUsage?.selectedYear ?? year
+        const nextSelectedWaterBodyTypes = result.data.volumesByUsage?.selectedWaterBodyTypes ?? waterBodyTypes
+
+        setDashboard(result.data)
+        setSelectedZoneCodes(nextSelectedZoneCodes)
+        setSelectedPeriodType(nextSelectedPeriodType)
+        setSelectedPeriod(nextSelectedPeriod)
+        setSelectedVolumeYear(nextSelectedYear)
+        setSelectedWaterBodyTypes(nextSelectedWaterBodyTypes)
+        syncURL(nextSelectedZoneCodes, {
+          period: nextSelectedPeriod,
+          periodType: nextSelectedPeriodType,
+          waterBodyTypes: nextSelectedWaterBodyTypes,
+          year: nextSelectedYear
+        })
+      } else {
+        setError(result.error || 'Impossible de charger le tableau de bord.')
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }, [
+    selectedPeriod,
+    selectedPeriodType,
     selectedVolumeYear,
     selectedWaterBodyTypes,
     selectedZoneCodes,
@@ -616,171 +734,38 @@ const DashboardPage = ({
     }
 
     setSelectedZoneCodes(nextZoneCodes)
-    setIsLoading(true)
-    setError(null)
-    syncURL(nextZoneCodes, {
-      month: selectedMonth,
-      waterBodyTypes: selectedWaterBodyTypes,
-      year: selectedVolumeYear
-    })
+    await reloadDashboard({zoneCodes: nextZoneCodes})
+  }, [normalizeZoneCodes, reloadDashboard])
 
-    const result = await getDashboardTerritoryAction({
-      month: selectedMonth,
-      waterBodyTypes: selectedWaterBodyTypes,
-      year: selectedVolumeYear,
-      zoneCodes: nextZoneCodes
-    })
-
-    if (result.success) {
-      const nextSelectedZoneCodes = result.data.selectedZoneCodes ?? nextZoneCodes
-      const nextSelectedMonth = result.data.registeredPrelevements?.selectedMonth ?? selectedMonth
-      const nextSelectedYear = result.data.volumesByUsage?.selectedYear ?? selectedVolumeYear
-      const nextSelectedWaterBodyTypes = result.data.volumesByUsage?.selectedWaterBodyTypes ?? selectedWaterBodyTypes
-
-      setDashboard(result.data)
-      setSelectedZoneCodes(nextSelectedZoneCodes)
-      setSelectedMonth(nextSelectedMonth)
-      setSelectedVolumeYear(nextSelectedYear)
-      setSelectedWaterBodyTypes(nextSelectedWaterBodyTypes)
-      syncURL(nextSelectedZoneCodes, {
-        month: nextSelectedMonth,
-        waterBodyTypes: nextSelectedWaterBodyTypes,
-        year: nextSelectedYear
-      })
-    } else {
-      setError(result.error || 'Impossible de charger le tableau de bord.')
+  const handlePeriodTypeChange = useCallback(async nextPeriodType => {
+    if (nextPeriodType === selectedPeriodType) {
+      return
     }
 
-    setIsLoading(false)
-  }, [
-    normalizeZoneCodes,
-    selectedMonth,
-    selectedVolumeYear,
-    selectedWaterBodyTypes,
-    syncURL
-  ])
-
-  const handleMonthChange = useCallback(async event => {
-    const nextMonth = event.target.value
-
-    setSelectedMonth(nextMonth)
-    setIsLoading(true)
-    setError(null)
-    syncURL(selectedZoneCodes, {
-      month: nextMonth,
-      waterBodyTypes: selectedWaterBodyTypes,
-      year: selectedVolumeYear
+    setSelectedPeriodType(nextPeriodType)
+    setSelectedPeriod('')
+    await reloadDashboard({
+      period: '',
+      periodType: nextPeriodType
     })
+  }, [reloadDashboard, selectedPeriodType])
 
-    const result = await getDashboardTerritoryAction({
-      month: nextMonth,
-      waterBodyTypes: selectedWaterBodyTypes,
-      year: selectedVolumeYear,
-      zoneCodes: selectedZoneCodes
-    })
+  const handlePeriodChange = useCallback(async event => {
+    const nextPeriod = event.target.value
 
-    if (result.success) {
-      const nextSelectedZoneCodes = result.data.selectedZoneCodes ?? selectedZoneCodes
-      const nextSelectedMonth = result.data.registeredPrelevements?.selectedMonth ?? nextMonth
-      const nextSelectedYear = result.data.volumesByUsage?.selectedYear ?? selectedVolumeYear
-      const nextSelectedWaterBodyTypes = result.data.volumesByUsage?.selectedWaterBodyTypes ?? selectedWaterBodyTypes
-
-      setDashboard(result.data)
-      setSelectedZoneCodes(nextSelectedZoneCodes)
-      setSelectedMonth(nextSelectedMonth)
-      setSelectedVolumeYear(nextSelectedYear)
-      setSelectedWaterBodyTypes(nextSelectedWaterBodyTypes)
-      syncURL(nextSelectedZoneCodes, {
-        month: nextSelectedMonth,
-        waterBodyTypes: nextSelectedWaterBodyTypes,
-        year: nextSelectedYear
-      })
-    } else {
-      setError(result.error || 'Impossible de charger le tableau de bord.')
-    }
-
-    setIsLoading(false)
-  }, [selectedVolumeYear, selectedWaterBodyTypes, selectedZoneCodes, syncURL])
+    setSelectedPeriod(nextPeriod)
+    await reloadDashboard({period: nextPeriod})
+  }, [reloadDashboard])
 
   const handleVolumeYearChange = useCallback(async nextYear => {
     setSelectedVolumeYear(nextYear)
-    setIsLoading(true)
-    setError(null)
-    syncURL(selectedZoneCodes, {
-      month: selectedMonth,
-      waterBodyTypes: selectedWaterBodyTypes,
-      year: nextYear
-    })
-
-    const result = await getDashboardTerritoryAction({
-      month: selectedMonth,
-      waterBodyTypes: selectedWaterBodyTypes,
-      year: nextYear,
-      zoneCodes: selectedZoneCodes
-    })
-
-    if (result.success) {
-      const nextSelectedZoneCodes = result.data.selectedZoneCodes ?? selectedZoneCodes
-      const nextSelectedMonth = result.data.registeredPrelevements?.selectedMonth ?? selectedMonth
-      const nextSelectedYear = result.data.volumesByUsage?.selectedYear ?? nextYear
-      const nextSelectedWaterBodyTypes = result.data.volumesByUsage?.selectedWaterBodyTypes ?? selectedWaterBodyTypes
-
-      setDashboard(result.data)
-      setSelectedZoneCodes(nextSelectedZoneCodes)
-      setSelectedMonth(nextSelectedMonth)
-      setSelectedVolumeYear(nextSelectedYear)
-      setSelectedWaterBodyTypes(nextSelectedWaterBodyTypes)
-      syncURL(nextSelectedZoneCodes, {
-        month: nextSelectedMonth,
-        waterBodyTypes: nextSelectedWaterBodyTypes,
-        year: nextSelectedYear
-      })
-    } else {
-      setError(result.error || 'Impossible de charger le tableau de bord.')
-    }
-
-    setIsLoading(false)
-  }, [selectedMonth, selectedWaterBodyTypes, selectedZoneCodes, syncURL])
+    await reloadDashboard({year: nextYear})
+  }, [reloadDashboard])
 
   const handleWaterBodyTypesChange = useCallback(async nextWaterBodyTypes => {
     setSelectedWaterBodyTypes(nextWaterBodyTypes)
-    setIsLoading(true)
-    setError(null)
-    syncURL(selectedZoneCodes, {
-      month: selectedMonth,
-      waterBodyTypes: nextWaterBodyTypes,
-      year: selectedVolumeYear
-    })
-
-    const result = await getDashboardTerritoryAction({
-      month: selectedMonth,
-      waterBodyTypes: nextWaterBodyTypes,
-      year: selectedVolumeYear,
-      zoneCodes: selectedZoneCodes
-    })
-
-    if (result.success) {
-      const nextSelectedZoneCodes = result.data.selectedZoneCodes ?? selectedZoneCodes
-      const nextSelectedMonth = result.data.registeredPrelevements?.selectedMonth ?? selectedMonth
-      const nextSelectedYear = result.data.volumesByUsage?.selectedYear ?? selectedVolumeYear
-      const nextSelectedWaterBodyTypes = result.data.volumesByUsage?.selectedWaterBodyTypes ?? nextWaterBodyTypes
-
-      setDashboard(result.data)
-      setSelectedZoneCodes(nextSelectedZoneCodes)
-      setSelectedMonth(nextSelectedMonth)
-      setSelectedVolumeYear(nextSelectedYear)
-      setSelectedWaterBodyTypes(nextSelectedWaterBodyTypes)
-      syncURL(nextSelectedZoneCodes, {
-        month: nextSelectedMonth,
-        waterBodyTypes: nextSelectedWaterBodyTypes,
-        year: nextSelectedYear
-      })
-    } else {
-      setError(result.error || 'Impossible de charger le tableau de bord.')
-    }
-
-    setIsLoading(false)
-  }, [selectedMonth, selectedVolumeYear, selectedZoneCodes, syncURL])
+    await reloadDashboard({waterBodyTypes: nextWaterBodyTypes})
+  }, [reloadDashboard])
 
   return (
     <main className='min-h-screen bg-[#f7f7fb] pb-12'>
@@ -837,11 +822,13 @@ const DashboardPage = ({
           declarationsURL={declarationsURL}
           declarationsURLLabel={declarationsURLLabel}
           isLoading={isLoading}
-          monthOptions={monthOptions}
+          periodOptions={periodOptions}
           registeredPrelevementsByUsage={registeredPrelevementsByUsage}
-          selectedMonth={selectedMonth}
+          selectedPeriod={selectedPeriod}
+          selectedPeriodType={selectedPeriodType}
           showReminder={!isPreleveurDeclarant}
-          onMonthChange={handleMonthChange}
+          onPeriodChange={handlePeriodChange}
+          onPeriodTypeChange={handlePeriodTypeChange}
         />
 
         {withdrawnChart && (

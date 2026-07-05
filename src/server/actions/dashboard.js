@@ -11,8 +11,12 @@ function buildDashboardSearch(options = {}) {
     params.set('zones', options.zoneCodes.join(','))
   }
 
-  if (options.month) {
-    params.set('month', options.month)
+  if (options.periodType) {
+    params.set('periodType', options.periodType)
+  }
+
+  if (options.period) {
+    params.set('period', options.period)
   }
 
   if (options.year) {

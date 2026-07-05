@@ -31,7 +31,8 @@ function getSearchParamValue(value) {
 const Page = async ({searchParams}) => {
   const resolvedSearchParams = await searchParams
   const requestedZoneCodes = splitZoneCodes(resolvedSearchParams?.zones)
-  const requestedMonth = getSearchParamValue(resolvedSearchParams?.month)
+  const requestedPeriodType = getSearchParamValue(resolvedSearchParams?.periodType)
+  const requestedPeriod = getSearchParamValue(resolvedSearchParams?.period)
   const requestedYear = getSearchParamValue(resolvedSearchParams?.year)
   const requestedWaterBodyTypes = getSearchParamValue(resolvedSearchParams?.waterBodyTypes)
   const requestedWaterBodyType = getSearchParamValue(resolvedSearchParams?.waterBodyType)
@@ -48,7 +49,8 @@ const Page = async ({searchParams}) => {
   const shouldLoadDeclarantSeries = isDeclarant && !isCollector && user?.id
   const [dashboardResult, declarationTypesResult, seriesOptionsResult] = await Promise.all([
     getDashboardTerritoryAction({
-      month: requestedMonth,
+      period: requestedPeriod,
+      periodType: requestedPeriodType,
       waterBodyType: requestedWaterBodyType,
       waterBodyTypes: requestedWaterBodyTypes,
       year: requestedYear,

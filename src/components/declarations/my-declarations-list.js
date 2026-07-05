@@ -223,7 +223,7 @@ function entryMatchesPeriod(entry, startDate, endDate) {
 }
 
 function isChunkToAssociate(chunk) {
-  return chunk?.instructionStatus !== 'VALIDATED' || !chunk?.pointPrelevementId
+  return !chunk?.pointPrelevementId
 }
 
 function getPointsToAssociateCount(source) {
