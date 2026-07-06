@@ -21,7 +21,7 @@ import {getAggregatedSeriesAction} from '@/server/actions/series.js'
 import {pickAvailableFrequency} from '@/utils/frequency.js'
 
 const DEFAULT_FREQUENCY = '1 day'
-const DEFAULT_PARAMETER = 'Volume prélevé'
+const DEFAULT_PARAMETERS = ['volume prélevé', 'débit prélevé']
 const FALLBACK_VOLUME_TEMPORAL_OPERATORS = ['sum', 'mean', 'min', 'max']
 const FALLBACK_STANDARD_TEMPORAL_OPERATORS = ['mean', 'min', 'max']
 
@@ -138,18 +138,18 @@ const SeriesExplorer = ({
     )
   }, [seriesOptions])
 
-  // Prioritize 'volume prélevé' as default metricTypeCode if available
+  // Prioritize withdrawn volume and flow rate on point details when available.
   const derivedDefaultParameters = useMemo(() => {
-    // Priority 1: Check if 'volume prélevé' is available
-    const volumeParameter = parameterOptions.find(
-      opt => opt.value?.toLowerCase() === DEFAULT_PARAMETER.toLowerCase()
-    )
+    const defaultParameters = DEFAULT_PARAMETERS
+      .map(parameter => parameterOptions.find(
+        option => option.value?.toLowerCase() === parameter
+      )?.value)
+      .filter(Boolean)
 
-    if (volumeParameter) {
-      return [volumeParameter.value]
+    if (defaultParameters.length > 0) {
+      return defaultParameters
     }
 
-    // Priority 2: Fallback to first available metricTypeCode
     return parameterOptions[0]?.value ? [parameterOptions[0].value] : []
   }, [parameterOptions])
 
