@@ -11,6 +11,11 @@ import ZoneExportButton from '@/components/zones/zone-export-button.js'
 import {ZONE_INSTRUCTORS_EXPORT_COLUMNS} from '@/components/zones/zone-export-columns.js'
 import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
 import useDebouncedValue from '@/hook/use-debounced-value.js'
+import {
+  formatAccessPeriod,
+  getInstructorName,
+  pluralize
+} from '@/lib/zone-instructors.js'
 
 const CLIENT_PAGE_SIZE = 20
 
@@ -20,40 +25,6 @@ function normalizeSearch(value) {
     .replaceAll(/[\u0300-\u036F]/g, '')
     .toLowerCase()
     .trim()
-}
-
-function pluralize(count, singular, plural = `${singular}s`) {
-  return `${count} ${count > 1 ? plural : singular}`
-}
-
-function formatDate(date) {
-  return new Intl.DateTimeFormat('fr-FR').format(new Date(date))
-}
-
-function formatAccessPeriod(startDate, endDate) {
-  if (!startDate && !endDate) {
-    return 'Accès permanent'
-  }
-
-  if (!startDate) {
-    return `Jusqu’au ${formatDate(endDate)}`
-  }
-
-  if (!endDate) {
-    const start = new Date(startDate)
-    const now = new Date()
-
-    return start > now
-      ? `À partir du ${formatDate(startDate)}`
-      : `Depuis le ${formatDate(startDate)}`
-  }
-
-  return `Du ${formatDate(startDate)} au ${formatDate(endDate)}`
-}
-
-function getInstructorName(instructor) {
-  const fullName = [instructor.firstName, instructor.lastName].filter(Boolean).join(' ').trim()
-  return fullName || instructor.email || 'Agent sans nom'
 }
 
 function getInstructorSearchText(instructor) {
@@ -204,19 +175,17 @@ const ZoneInstructorsList = ({zone, instructors}) => {
             />
           </div>
 
-          {zone.isAdmin && (
-            <div className='flex gap-2 md:items-center md:flex-col md:justify-center'>
-              <Button
-                priority='tertiary no outline'
-                size='small'
-                linkProps={{
-                  href: `/zones/${zone.id}/agents/${instructor.id}/modifier`
-                }}
-              >
-                Modifier
-              </Button>
-            </div>
-          )}
+          <div className='flex gap-2 md:items-center md:flex-col md:justify-center'>
+            <Button
+              priority='tertiary no outline'
+              size='small'
+              linkProps={{
+                href: `/zones/${zone.id}/agents/${instructor.id}`
+              }}
+            >
+              Voir
+            </Button>
+          </div>
         </Box>
       ))}
 

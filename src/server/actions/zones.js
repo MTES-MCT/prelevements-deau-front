@@ -60,6 +60,10 @@ function buildListSearch(options = {}) {
     searchParams.set('perPage', String(options.perPage))
   }
 
+  if (options.limit) {
+    searchParams.set('limit', String(options.limit))
+  }
+
   if (options.search) {
     searchParams.set('search', String(options.search))
   }
@@ -106,11 +110,7 @@ function todayAsInputValue() {
 
 function buildInstructorPayload(instructor, notificationPayload) {
   return {
-    email: instructor.email,
-    firstName: instructor.firstName || '',
-    lastName: instructor.lastName || '',
-    phoneNumber: instructor.phoneNumber || '',
-    jobTitle: instructor.jobTitle || '',
+    instructorUserId: instructor.id,
     isAdmin: Boolean(instructor.isAdmin),
     startDate: dateToInputValue(instructor.startDate) || todayAsInputValue(),
     endDate: dateToInputValue(instructor.endDate),
@@ -148,6 +148,10 @@ export async function getZoneDeclarationMonthlyStatusAction(zoneId, options = {}
 
 export async function getZoneInstructorsAction(zoneId) {
   return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/instructeurs`))
+}
+
+export async function getZoneInstructorOptionsAction(zoneId, options = {}) {
+  return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/instructeurs/options${buildListSearch(options)}`))
 }
 
 export async function getZoneInstructorAction(zoneId, instructorUserId) {

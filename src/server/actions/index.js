@@ -93,6 +93,7 @@ export {
   getZoneExploitationsAction,
   getZoneGeometryAction,
   getZoneInstructorAction,
+  getZoneInstructorOptionsAction,
   getZoneInstructorsAction,
   getZonePointPrelevementAction,
   getZonePointsPrelevementAction,

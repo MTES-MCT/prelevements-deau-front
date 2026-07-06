@@ -4,18 +4,14 @@ import {notFound} from 'next/navigation'
 import {buildPageTitle} from '@/app/metadata-utils.js'
 import ZoneBreadcrumb from '@/components/zones/zone-breadcrumb.js'
 import ZoneHeader from '@/components/zones/zone-header.js'
-import ZoneInstructorDeleteCard from '@/components/zones/zone-instructor-delete-card.js'
+import ZoneInstructorDetail from '@/components/zones/zone-instructor-detail.js'
 import ZoneSubNavigation from '@/components/zones/zone-sub-navigation.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
+import {getInstructorName} from '@/lib/zone-instructors.js'
 import {
   getZoneAction,
   getZoneInstructorAction
 } from '@/server/actions/zones.js'
-
-function getInstructorName(instructor) {
-  const fullName = [instructor?.firstName, instructor?.lastName].filter(Boolean).join(' ').trim()
-  return fullName || instructor?.email || null
-}
 
 export async function generateMetadata({params}) {
   const {zoneId, instructorId} = await params
@@ -25,10 +21,9 @@ export async function generateMetadata({params}) {
   ])
 
   return buildPageTitle([
-    'Retirer un agent',
     getInstructorName(instructorResult.success && instructorResult.data),
     zoneResult.success && zoneResult.data?.name
-  ], 'Retirer un agent')
+  ], 'Agent')
 }
 
 export const dynamic = 'force-dynamic'
@@ -51,10 +46,7 @@ const Page = async ({params}) => {
 
   const zone = zoneResult.data
   const instructor = instructorResult.data
-
-  if (!zone.isAdmin || instructor.isCurrentUser) {
-    notFound()
-  }
+  const instructorName = getInstructorName(instructor)
 
   return (
     <>
@@ -63,7 +55,7 @@ const Page = async ({params}) => {
       <Box className='fr-container h-full w-full flex flex-col gap-5 mb-8'>
         <ZoneBreadcrumb
           zone={zone}
-          currentPageLabel='Retirer un agent'
+          currentPageLabel={instructorName}
           segments={[
             {
               label: 'Agents',
@@ -78,7 +70,7 @@ const Page = async ({params}) => {
 
         <ZoneSubNavigation zone={zone} current='agents' />
 
-        <ZoneInstructorDeleteCard zone={zone} instructor={instructor} />
+        <ZoneInstructorDetail zone={zone} instructor={instructor} />
       </Box>
     </>
   )
