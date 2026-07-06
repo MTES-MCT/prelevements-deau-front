@@ -1,5 +1,4 @@
 import {Button} from '@codegouvfr/react-dsfr/Button'
-import {Box, Typography} from '@mui/material'
 
 import DeclarantsList from '@/components/declarants/declarants-list.js'
 import {RequireEditor} from '@/components/permissions/index.js'
@@ -20,28 +19,31 @@ const Page = async () => {
     <>
       <StartDsfrOnHydration />
 
-      <Box className='flex flex-col fr-container h-full w-full'>
-        <div className='flex flex-col md:flex-row md:justify-between md:items-end gap-3'>
-          <div>
-            <Typography variant='h4' className='fr-pt-3w'>Déclarants</Typography>
-            <p className='fr-text--sm fr-mb-0'>
-              Retrouvez les préleveurs et les collecteurs. Les préleveurs peuvent être sans email ; les collecteurs doivent avoir un compte connecté.
-            </p>
+      <main className='min-h-screen bg-[#f7f7fb] pb-12'>
+        <div className='fr-container pt-8 md:pt-10'>
+          <div className='mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between'>
+            <div>
+              <h1 className='fr-h2 fr-mb-1w'>Déclarants</h1>
+              <p className='fr-text--sm fr-mb-0 max-w-3xl'>
+                Retrouvez les préleveurs et les collecteurs. Les préleveurs peuvent être sans email ; les collecteurs doivent avoir un compte connecté.
+              </p>
+            </div>
+            <RequireEditor>
+              <Button
+                priority='secondary'
+                iconId='fr-icon-add-line'
+                size='small'
+                linkProps={{href: '/declarants/new'}}
+                title='Ajouter un nouveau déclarant'
+              >
+                Ajouter un nouveau déclarant
+              </Button>
+            </RequireEditor>
           </div>
-          <RequireEditor>
-            <Button
-              priority='secondary'
-              iconId='fr-icon-add-line'
-              size='small'
-              linkProps={{href: '/declarants/new'}}
-              title='Ajouter un nouveau déclarant'
-            >
-              Ajouter un nouveau déclarant
-            </Button>
-          </RequireEditor>
+
+          <DeclarantsList declarants={declarants} />
         </div>
-        <DeclarantsList declarants={declarants} />
-      </Box>
+      </main>
     </>
   )
 }
