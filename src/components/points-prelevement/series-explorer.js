@@ -32,6 +32,7 @@ const SeriesExplorer = ({
   preleveurId = null,
   seriesOptions = null,
   startDate = null,
+  subtitle = null,
   title = 'Historique des prélèvements'
 }) => {
   // Vérifie si des paramètres sont disponibles depuis l'API
@@ -425,9 +426,17 @@ const SeriesExplorer = ({
 
   return hasParameters ? (
     <Box className='flex flex-col gap-4'>
-      <Typography variant='h5' component='h2'>
-        {title}
-      </Typography>
+      <Box>
+        <Typography variant='h5' component='h2'>
+          {title}
+        </Typography>
+
+        {subtitle && (
+          <Typography color='text.secondary' variant='body2'>
+            {subtitle}
+          </Typography>
+        )}
+      </Box>
 
       {selectedParameters.length > 0 && (
         <AggregatedSeriesExplorer
@@ -453,9 +462,17 @@ const SeriesExplorer = ({
     </Box>
   ) : (
     <Box className='flex flex-col gap-4'>
-      <Typography variant='h5' component='h2'>
-        {title}
-      </Typography>
+      <Box>
+        <Typography variant='h5' component='h2'>
+          {title}
+        </Typography>
+
+        {subtitle && (
+          <Typography color='text.secondary' variant='body2'>
+            {subtitle}
+          </Typography>
+        )}
+      </Box>
 
       <Alert
         severity='info'

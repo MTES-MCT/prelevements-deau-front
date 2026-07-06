@@ -39,7 +39,6 @@ const ZONE_TYPE_LABELS = {
 }
 const WATER_BODY_TYPE_OPTIONS = [
   {value: 'SUPERFICIELLE', label: 'Eau superficielle'},
-  {value: 'SURFACE', label: 'Eau de surface'},
   {value: 'SOUTERRAIN', label: 'Eau souterraine'},
   {value: 'TRANSITION', label: 'Eau de transition'}
 ]
@@ -172,23 +171,9 @@ const InlineRefreshStatus = () => (
   </span>
 )
 
-function getDeclarationIntro(declarationCreation) {
-  const canCreateDeclaration = declarationCreation?.canCreateDeclaration
-    ?? declarationCreation?.allowedDeclarationTypes?.length > 0
-  const canCreateQuickDeclaration = declarationCreation?.canCreateQuickDeclaration ?? false
+const DECLARATION_CREATION_INTRO = 'Saisissez vos index, volumes prélevés ou volumes rejetés directement sur la plateforme, ou déposez un fichier.'
 
-  if (canCreateQuickDeclaration && canCreateDeclaration) {
-    return 'Saisissez vos index, volumes prélevés ou volumes rejetés directement sur la plateforme, ou déposez un fichier après contrôle automatique.'
-  }
-
-  if (canCreateQuickDeclaration) {
-    return 'Saisissez vos index, volumes prélevés ou volumes rejetés directement sur la plateforme.'
-  }
-
-  return 'Déposez vos fichiers de déclaration après contrôle automatique.'
-}
-
-const DeclarationCreationCard = ({declarationCreation}) => {
+const DeclarationCreationCard = ({className = 'mt-6', declarationCreation}) => {
   const allowedDeclarationTypes = declarationCreation?.allowedDeclarationTypes ?? EMPTY_ARRAY
   const canCreateDeclaration = declarationCreation?.canCreateDeclaration ?? allowedDeclarationTypes.length > 0
   const canCreateQuickDeclaration = declarationCreation?.canCreateQuickDeclaration ?? false
@@ -199,15 +184,12 @@ const DeclarationCreationCard = ({declarationCreation}) => {
   }
 
   return (
-    <section className='mt-6 border border-gray-200 bg-white p-5 md:p-6'>
+    <section className={`border border-gray-200 bg-white p-5 md:p-6 ${className}`}>
       <div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
         <div>
           <h2 className='fr-h3 fr-mb-1w'>Déclarer mes prélèvements en eau</h2>
           <p className='fr-text--sm fr-mb-0 max-w-[680px] text-gray-700'>
-            {getDeclarationIntro(declarationCreation)}
-            {declarationCreation?.declarantRole === 'COLLECTEUR'
-              ? <> Vous sélectionnerez ensuite le déclarant concerné.</>
-              : null}
+            {DECLARATION_CREATION_INTRO}
           </p>
         </div>
 
@@ -330,7 +312,53 @@ const KeyFiguresSection = ({
   </section>
 )
 
+const DashboardBlock = ({
+  actions = null,
+  boxed = false,
+  children,
+  className = 'mt-8',
+  title
+}) => {
+  const blockClassName = boxed
+    ? `${className} border border-gray-200 bg-white p-5 md:p-6`
+    : className
+
+  return (
+    <section className={blockClassName}>
+      <div className='mb-4 flex flex-col gap-4 md:flex-row md:items-start md:justify-between'>
+        <h2 className='fr-h2 fr-mb-0'>{title}</h2>
+        {actions}
+      </div>
+
+      {children}
+    </section>
+  )
+}
+
+const DashboardZoneFilter = ({
+  disabled,
+  hideLabel = false,
+  label,
+  onChange,
+  options,
+  placeholder = 'Sélectionner des zones',
+  value
+}) => (
+  <div className='w-full md:w-[380px]'>
+    <GroupedMultiselect
+      hideLabel={hideLabel}
+      disabled={disabled}
+      label={label}
+      options={options}
+      placeholder={placeholder}
+      value={value}
+      onChange={onChange}
+    />
+  </div>
+)
+
 const PointsMapSection = ({
+  className = 'mt-6',
   isLoading,
   points,
   pointsSectionTitle,
@@ -338,7 +366,7 @@ const PointsMapSection = ({
   showCollecteurs,
   showPreleveurs
 }) => (
-  <section className='mt-6 border border-gray-200 bg-white p-5 md:p-6'>
+  <section className={`border border-gray-200 bg-white p-5 md:p-6 ${className}`}>
     <div className='mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between'>
       <div className='flex flex-wrap items-baseline gap-x-4 gap-y-1'>
         <h2 className='fr-h3 fr-mb-0'>{pointsSectionTitle}</h2>
@@ -359,19 +387,22 @@ const PointsMapSection = ({
 )
 
 const DeclarantSeriesSection = ({
+  className = 'mt-6',
   seriesOptions,
   user
 }) => (
-  <section className='mt-6 border border-gray-200 bg-white p-5 md:p-6'>
+  <section className={`border border-gray-200 bg-white p-5 md:p-6 ${className}`}>
     <SeriesExplorer
       preleveurId={user?.id}
       seriesOptions={seriesOptions}
+      subtitle='Volumes représentant uniquement vos prélèvements déclarés via Partageons l’Eau'
       title='Évolution de mes prélèvements'
     />
   </section>
 )
 
 const RegisteredPrelevementsSection = ({
+  className = 'mt-6',
   declarationsURL,
   declarationsURLLabel,
   isLoading,
@@ -381,13 +412,14 @@ const RegisteredPrelevementsSection = ({
   registeredPrelevementsByUsage,
   selectedPeriod,
   selectedPeriodType,
-  showReminder
+  showReminder,
+  title = 'Prélèvements enregistrés sur Partageons l’Eau'
 }) => (
-  <section className='mt-6 border border-gray-200 bg-white p-5 md:p-6'>
+  <section className={`border border-gray-200 bg-white p-5 md:p-6 ${className}`}>
     <div className='mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between'>
       <div className='flex flex-wrap items-baseline gap-x-4 gap-y-1'>
         <h2 className='fr-h3 fr-mb-0'>
-          Prélèvements enregistrés sur Partageons l&apos;Eau
+          {title}
         </h2>
         <Link className='fr-link text-sm' href={declarationsURL}>
           {declarationsURLLabel}
@@ -497,6 +529,47 @@ const RegisteredPrelevementsSection = ({
   </section>
 )
 
+const DashboardVolumeCharts = ({
+  dischargedChart,
+  isLoading,
+  onVolumeYearChange,
+  onWaterBodyTypesChange,
+  selectedVolumeYear,
+  selectedWaterBodyTypes,
+  volumeYearOptions,
+  withdrawnChart
+}) => (
+  <>
+    {withdrawnChart && (
+      <DashboardVolumesChart
+        chart={withdrawnChart}
+        isLoading={isLoading}
+        selectedWaterBodyTypes={selectedWaterBodyTypes}
+        selectedYear={selectedVolumeYear}
+        subtitle={VOLUME_CHART_SUBTITLE}
+        waterBodyTypeOptions={WATER_BODY_TYPE_OPTIONS}
+        yearOptions={volumeYearOptions}
+        onWaterBodyTypesChange={onWaterBodyTypesChange}
+        onYearChange={onVolumeYearChange}
+      />
+    )}
+
+    {dischargedChart && (
+      <DashboardVolumesChart
+        chart={dischargedChart}
+        isLoading={isLoading}
+        selectedWaterBodyTypes={selectedWaterBodyTypes}
+        selectedYear={selectedVolumeYear}
+        subtitle={VOLUME_CHART_SUBTITLE}
+        waterBodyTypeOptions={WATER_BODY_TYPE_OPTIONS}
+        yearOptions={volumeYearOptions}
+        onWaterBodyTypesChange={onWaterBodyTypesChange}
+        onYearChange={onVolumeYearChange}
+      />
+    )}
+  </>
+)
+
 const DashboardPage = ({
   declarationCreation = null,
   declarantSeriesOptions = null,
@@ -536,6 +609,7 @@ const DashboardPage = ({
   const volumesByUsage = dashboard?.volumesByUsage
   const volumeYearOptions = volumesByUsage?.yearOptions ?? EMPTY_ARRAY
   const totalPoints = dashboard?.metrics?.totalPoints ?? 0
+  const activityPoints = dashboard?.activityPoints ?? points
   const {
     isCollector,
     isDeclarant,
@@ -550,6 +624,8 @@ const DashboardPage = ({
   } = getDashboardLinks({isDeclarant, isPreleveurDeclarant})
   const withdrawnChart = getVolumeChartForRole(volumesByUsage?.charts?.withdrawn, isDeclarant)
   const dischargedChart = getVolumeChartForRole(volumesByUsage?.charts?.discharged, isDeclarant)
+  const hasSelectableZones = zones.length > 0
+  const isZoneFilterDisabled = !hasSelectableZones || isLoading
 
   const zoneOptions = useMemo(() =>
     zones.map(zone => {
@@ -777,86 +853,129 @@ const DashboardPage = ({
             {greetingName ? `Bonjour ${greetingName},` : 'Bonjour,'}
           </h1>
 
-          <div className='w-full md:w-[380px]'>
-            <GroupedMultiselect
+          {!isDeclarant && (
+            <DashboardZoneFilter
+              disabled={isZoneFilterDisabled}
               label='Filtrer le contenu de la page par :'
-              placeholder='Sélectionner des zones'
               options={zoneOptions}
               value={selectedZoneCodes}
-              disabled={zones.length === 0 || isLoading}
               onChange={handleZoneChange}
             />
-          </div>
+          )}
         </div>
 
         <DashboardError error={error} />
 
-        <KeyFiguresSection
-          pointsURL={pointsURL}
-          showUsageDistribution={!isPreleveurDeclarant}
-          totalPoints={totalPoints}
-          usageDistribution={usageDistribution}
-        />
+        {isDeclarant ? (
+          <>
+            <DashboardBlock boxed className='mt-0' title='Mon activité'>
+              <DeclarationCreationCard
+                className='mt-0'
+                declarationCreation={declarationCreation}
+              />
 
-        {isDeclarant && (
-          <DeclarationCreationCard declarationCreation={declarationCreation} />
-        )}
+              <PointsMapSection
+                isLoading={isLoading}
+                points={activityPoints}
+                pointsSectionTitle={pointsSectionTitle}
+                pointsURL={pointsURL}
+                showCollecteurs={!isCollector}
+                showPreleveurs={!isPreleveurDeclarant}
+              />
 
-        <PointsMapSection
-          isLoading={isLoading}
-          points={points}
-          pointsSectionTitle={pointsSectionTitle}
-          pointsURL={pointsURL}
-          showCollecteurs={!isCollector}
-          showPreleveurs={!isPreleveurDeclarant}
-        />
+              {isPreleveurDeclarant && (
+                <DeclarantSeriesSection
+                  seriesOptions={declarantSeriesOptions}
+                  user={user}
+                />
+              )}
+            </DashboardBlock>
 
-        {isPreleveurDeclarant && (
-          <DeclarantSeriesSection
-            seriesOptions={declarantSeriesOptions}
-            user={user}
-          />
-        )}
+            {hasSelectableZones && (
+              <DashboardBlock
+                boxed
+                actions={(
+                  <DashboardZoneFilter
+                    hideLabel
+                    disabled={isZoneFilterDisabled}
+                    label='Zones'
+                    options={zoneOptions}
+                    value={selectedZoneCodes}
+                    onChange={handleZoneChange}
+                  />
+                )}
+                title='Chiffres clés de mon territoire'
+              >
+                <RegisteredPrelevementsSection
+                  className='mt-0'
+                  declarationsURL={declarationsURL}
+                  declarationsURLLabel={declarationsURLLabel}
+                  isLoading={isLoading}
+                  periodOptions={periodOptions}
+                  registeredPrelevementsByUsage={registeredPrelevementsByUsage}
+                  selectedPeriod={selectedPeriod}
+                  selectedPeriodType={selectedPeriodType}
+                  showReminder={!isPreleveurDeclarant}
+                  title='Prélèvements déclarés'
+                  onPeriodChange={handlePeriodChange}
+                  onPeriodTypeChange={handlePeriodTypeChange}
+                />
 
-        <RegisteredPrelevementsSection
-          declarationsURL={declarationsURL}
-          declarationsURLLabel={declarationsURLLabel}
-          isLoading={isLoading}
-          periodOptions={periodOptions}
-          registeredPrelevementsByUsage={registeredPrelevementsByUsage}
-          selectedPeriod={selectedPeriod}
-          selectedPeriodType={selectedPeriodType}
-          showReminder={!isPreleveurDeclarant}
-          onPeriodChange={handlePeriodChange}
-          onPeriodTypeChange={handlePeriodTypeChange}
-        />
+                <DashboardVolumeCharts
+                  dischargedChart={dischargedChart}
+                  isLoading={isLoading}
+                  selectedVolumeYear={selectedVolumeYear}
+                  selectedWaterBodyTypes={selectedWaterBodyTypes}
+                  volumeYearOptions={volumeYearOptions}
+                  withdrawnChart={withdrawnChart}
+                  onVolumeYearChange={handleVolumeYearChange}
+                  onWaterBodyTypesChange={handleWaterBodyTypesChange}
+                />
+              </DashboardBlock>
+            )}
+          </>
+        ) : (
+          <>
+            <KeyFiguresSection
+              showUsageDistribution
+              pointsURL={pointsURL}
+              totalPoints={totalPoints}
+              usageDistribution={usageDistribution}
+            />
 
-        {withdrawnChart && (
-          <DashboardVolumesChart
-            chart={withdrawnChart}
-            isLoading={isLoading}
-            selectedWaterBodyTypes={selectedWaterBodyTypes}
-            selectedYear={selectedVolumeYear}
-            subtitle={VOLUME_CHART_SUBTITLE}
-            waterBodyTypeOptions={WATER_BODY_TYPE_OPTIONS}
-            yearOptions={volumeYearOptions}
-            onWaterBodyTypesChange={handleWaterBodyTypesChange}
-            onYearChange={handleVolumeYearChange}
-          />
-        )}
+            <PointsMapSection
+              showPreleveurs
+              isLoading={isLoading}
+              points={points}
+              pointsSectionTitle={pointsSectionTitle}
+              pointsURL={pointsURL}
+              showCollecteurs={!isCollector}
+            />
 
-        {dischargedChart && (
-          <DashboardVolumesChart
-            chart={dischargedChart}
-            isLoading={isLoading}
-            selectedWaterBodyTypes={selectedWaterBodyTypes}
-            selectedYear={selectedVolumeYear}
-            subtitle={VOLUME_CHART_SUBTITLE}
-            waterBodyTypeOptions={WATER_BODY_TYPE_OPTIONS}
-            yearOptions={volumeYearOptions}
-            onWaterBodyTypesChange={handleWaterBodyTypesChange}
-            onYearChange={handleVolumeYearChange}
-          />
+            <RegisteredPrelevementsSection
+              showReminder
+              declarationsURL={declarationsURL}
+              declarationsURLLabel={declarationsURLLabel}
+              isLoading={isLoading}
+              periodOptions={periodOptions}
+              registeredPrelevementsByUsage={registeredPrelevementsByUsage}
+              selectedPeriod={selectedPeriod}
+              selectedPeriodType={selectedPeriodType}
+              onPeriodChange={handlePeriodChange}
+              onPeriodTypeChange={handlePeriodTypeChange}
+            />
+
+            <DashboardVolumeCharts
+              dischargedChart={dischargedChart}
+              isLoading={isLoading}
+              selectedVolumeYear={selectedVolumeYear}
+              selectedWaterBodyTypes={selectedWaterBodyTypes}
+              volumeYearOptions={volumeYearOptions}
+              withdrawnChart={withdrawnChart}
+              onVolumeYearChange={handleVolumeYearChange}
+              onWaterBodyTypesChange={handleWaterBodyTypesChange}
+            />
+          </>
         )}
       </div>
     </main>

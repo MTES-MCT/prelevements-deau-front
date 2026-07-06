@@ -42,7 +42,13 @@ export const renderSelectedText = (value, placeholder, showMore, hiddenCount) =>
     return value.join(', ')
   }
 
-  const visibleCount = value.length - hiddenCount
+  const visibleCount = Math.min(value.length, Math.max(1, value.length - hiddenCount))
   const visibleItems = value.slice(0, visibleCount)
-  return `${visibleItems.join(', ')} + ${hiddenCount} autre${hiddenCount > 1 ? 's' : ''}`
+  const resolvedHiddenCount = value.length - visibleCount
+
+  if (resolvedHiddenCount === 0) {
+    return visibleItems.join(', ')
+  }
+
+  return `${visibleItems.join(', ')} + ${resolvedHiddenCount} autre${resolvedHiddenCount > 1 ? 's' : ''}`
 }

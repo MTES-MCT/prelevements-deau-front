@@ -12,7 +12,6 @@ import AccordionCentered from '@/components/ui/AccordionCentered/index.js'
 
 const waterBodyTypes = [
   {value: 'SUPERFICIELLE', label: 'Eau superficielle'},
-  {value: 'SURFACE', label: 'Eau de surface'},
   {value: 'SOUTERRAIN', label: 'Eau souterraine'},
   {value: 'TRANSITION', label: 'Eau de transition'}
 ]

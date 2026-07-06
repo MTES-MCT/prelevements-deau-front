@@ -116,7 +116,6 @@ export const legendColors = {
   ],
 
   typesMilieu: [
-    {text: 'SURFACE', color: 'var(--artwork-minor-blue-france)', textColor: lightTextColor},
     {text: 'SUPERFICIELLE', color: 'var(--artwork-minor-blue-france)', textColor: lightTextColor},
     {text: 'SOUTERRAIN', color: 'var(--artwork-minor-green-menthe)', textColor: lightTextColor},
     {text: 'TRANSITION', color: 'var(--background-flat-blue-ecume)', textColor: lightTextColor}

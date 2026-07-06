@@ -7,7 +7,6 @@ import {getTypeMilieuColor} from '@/lib/points-prelevement.js'
 import {getPointPrelevementLabel} from '@/utils/point-prelevement.js'
 
 const waterBodyTypeLabels = {
-  SURFACE: 'Eau de surface',
   SUPERFICIELLE: 'Eau superficielle',
   SOUTERRAIN: 'Eau souterraine',
   TRANSITION: 'Eau de transition'

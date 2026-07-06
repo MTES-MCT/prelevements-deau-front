@@ -33,7 +33,8 @@ const GroupedMultiselect = ({
   options = [],
   onChange,
   disabled,
-  searchable = false
+  searchable = false,
+  hideLabel = false
 }) => {
   const [open, setOpen] = useState(false)
   const [showMore, setShowMore] = useState(false)
@@ -152,7 +153,7 @@ const GroupedMultiselect = ({
       }
     }
 
-    const visibleCount = left
+    const visibleCount = Math.max(1, left)
     const hidden = selectedDisplayValues.length - visibleCount
     setHiddenCount(hidden)
     setShowMore(hidden > 0)
@@ -255,13 +256,13 @@ const GroupedMultiselect = ({
       style={{position: 'relative'}}
       className={disabled ? 'fr-select-group--disabled' : ''}
     >
-      <label className='fr-label' htmlFor='selector'>{label}</label>
+      <label className={hideLabel ? 'sr-only' : 'fr-label'} htmlFor='selector'>{label}</label>
       {hint && <span className='fr-hint-text'>{hint}</span>}
 
       <Box
         ref={selectRef}
         id='selector'
-        className={`fr-select mt-2${disabled ? ' fr-bg-disabled-grey' : ''}`}
+        className={`fr-select${hideLabel ? '' : ' mt-2'}${disabled ? ' fr-bg-disabled-grey' : ''}`}
         aria-disabled={disabled}
         sx={{
           cursor: disabled ? 'not-allowed' : 'pointer'

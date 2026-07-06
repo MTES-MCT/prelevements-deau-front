@@ -32,7 +32,6 @@ const FIT_BOUNDS_PADDING = {
 const MAP_MOVE_DURATION = 180
 
 const waterBodyTypeLabels = {
-  SURFACE: 'Eau de surface',
   SUPERFICIELLE: 'Eau superficielle',
   SOUTERRAIN: 'Eau souterraine',
   TRANSITION: 'Eau de transition'
