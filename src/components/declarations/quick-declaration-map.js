@@ -272,6 +272,7 @@ const QuickDeclarationMap = ({
     })
 
     mapRef.current = map
+    map.addControl(new maplibre.NavigationControl({showCompass: false}), 'bottom-right')
 
     map.on('load', () => {
       const data = buildFeatures(pointsWithCoordinates, stateRef.current)

@@ -57,6 +57,7 @@ const declarationTypeFilterOptions = [
 ]
 
 const declarationTypeFilterValues = declarationTypeFilterOptions.map(option => option.value)
+const defaultDeclarationTypeFilterValues = declarationTypeFilterValues.filter(value => value !== 'TELEMETRY')
 
 function compareEntries(entryA, entryB) {
   const dateA = new Date(entryA.createdAt ?? 0).getTime()
@@ -266,7 +267,7 @@ const MyDeclarationsList = ({
     endDate: '',
     startDate: ''
   })
-  const [selectedKinds, setSelectedKinds] = useState(declarationTypeFilterValues)
+  const [selectedKinds, setSelectedKinds] = useState(defaultDeclarationTypeFilterValues)
   const [pointsToAssociateOnly, setPointsToAssociateOnly] = useState(false)
   const showDeclarant = typeof showDeclarantFromProps === 'boolean'
     ? showDeclarantFromProps
@@ -288,7 +289,9 @@ const MyDeclarationsList = ({
     [availableTypeOptions]
   )
   const selectedKindSet = useMemo(() => new Set(selectedKinds), [selectedKinds])
-  const hasActiveTypeFilter = availableKindValues.some(kind => !selectedKindSet.has(kind))
+  const defaultKindSet = useMemo(() => new Set(defaultDeclarationTypeFilterValues), [])
+  const hasActiveTypeFilter = availableKindValues.some(kind =>
+    selectedKindSet.has(kind) !== defaultKindSet.has(kind))
   const hasSpreadsheetType = availableKindValues.includes('SPREADSHEET') && selectedKindSet.has('SPREADSHEET')
   const visibleEntries = useMemo(
     () => entries.filter(entry => {
@@ -347,7 +350,7 @@ const MyDeclarationsList = ({
       endDate: '',
       startDate: ''
     })
-    setSelectedKinds(declarationTypeFilterValues)
+    setSelectedKinds(defaultDeclarationTypeFilterValues)
     setPointsToAssociateOnly(false)
   }
 

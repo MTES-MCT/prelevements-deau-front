@@ -480,6 +480,7 @@ const DashboardPointsMap = ({
     })
 
     mapRef.current = map
+    map.addControl(new maplibre.NavigationControl({showCompass: false}), 'bottom-right')
 
     map.on('load', () => {
       ensureMarkerImages(map, pointsRef.current)

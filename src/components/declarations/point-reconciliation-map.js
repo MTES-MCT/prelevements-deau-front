@@ -611,6 +611,7 @@ const PointReconciliationMap = ({
     })
 
     mapRef.current = map
+    map.addControl(new maplibre.NavigationControl({showCompass: false}), 'bottom-right')
 
     map.on('load', () => {
       map.addSource(SOURCE_ID, {

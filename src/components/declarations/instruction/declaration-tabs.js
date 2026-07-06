@@ -10,6 +10,7 @@ import ReplayableDeclarationsPanel from '@/components/declarations/instruction/r
 
 const DEFAULT_PAGE = '1'
 const DEFAULT_PAGE_SIZE = '25'
+const DEFAULT_TYPES = 'MANUAL,SPREADSHEET'
 const FILTER_KEYS = ['declarant', 'dossierNumber', 'endDate', 'page', 'pageSize', 'pointsToAssociate', 'startDate', 'types']
 
 const DeclarationTabs = () => {
@@ -27,7 +28,10 @@ const DeclarationTabs = () => {
       }
     }
 
-    return filters
+    return {
+      ...filters,
+      types: filters.types ?? DEFAULT_TYPES
+    }
   }
 
   const filters = getFiltersFromURL()
@@ -41,6 +45,7 @@ const DeclarationTabs = () => {
         !value
         || (key === 'page' && value === DEFAULT_PAGE)
         || (key === 'pageSize' && value === DEFAULT_PAGE_SIZE)
+        || (key === 'types' && value === DEFAULT_TYPES)
       ) {
         continue
       }

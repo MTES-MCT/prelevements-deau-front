@@ -32,6 +32,7 @@ const declarationTypeFilterOptions = [
   }
 ]
 const declarationTypeFilterValues = declarationTypeFilterOptions.map(option => option.value)
+const defaultDeclarationTypeFilterValues = declarationTypeFilterValues.filter(value => value !== 'API')
 const emptyDeclarationTypesFilterValue = 'NONE'
 const pointsToAssociateFilterValue = 'true'
 const spreadsheetDeclarationType = 'SPREADSHEET'
@@ -44,7 +45,7 @@ function withoutEmptyValues(values) {
 
 function parseSelectedTypes(value) {
   if (!value) {
-    return declarationTypeFilterValues
+    return defaultDeclarationTypeFilterValues
   }
 
   if (value === emptyDeclarationTypesFilterValue) {
@@ -56,11 +57,14 @@ function parseSelectedTypes(value) {
     .map(type => type.trim())
     .filter(type => declarationTypeFilterValues.includes(type))
 
-  return values.length > 0 ? values : declarationTypeFilterValues
+  return values.length > 0 ? values : defaultDeclarationTypeFilterValues
 }
 
 function serializeSelectedTypes(types) {
-  if (types.length === declarationTypeFilterValues.length) {
+  if (
+    types.length === defaultDeclarationTypeFilterValues.length
+    && defaultDeclarationTypeFilterValues.every(value => types.includes(value))
+  ) {
     return undefined
   }
 
@@ -148,7 +152,7 @@ const DeclarationFilters = ({filters, setFilters}) => {
     || filters.startDate
     || filters.endDate
     || filters.pointsToAssociate
-    || filters.types
+    || serializeSelectedTypes(selectedTypes)
   )
 
   return (
