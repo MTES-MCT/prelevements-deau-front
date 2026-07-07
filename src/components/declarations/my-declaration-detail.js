@@ -13,9 +13,13 @@ import {
   getSourceReadingDateLabel,
   getSourcePeriodLabel,
   isDeclarationTreatmentPending,
+  isPointReconciliationRelevant,
   sourceStateLabels
 } from '@/lib/declaration.js'
-import {getDeclarationAction} from '@/server/actions/declarations.js'
+import {
+  getAvailablePointsPrelevementsForDeclarationAction,
+  getDeclarationAction
+} from '@/server/actions/declarations.js'
 
 const REFRESH_INTERVAL = 3000
 
@@ -34,6 +38,21 @@ const ProcessingLoader = () => (
   <div className='flex items-center gap-2'>
     <CircularProgress aria-label='Traitement en cours' size={20} />
     <span>Traitement de la déclaration en cours.</span>
+  </div>
+)
+
+const AvailablePointsLoadingState = () => (
+  <div className='fr-mb-6w'>
+    <Alert
+      severity='info'
+      title='Chargement des points'
+      description={(
+        <div className='flex items-center gap-2'>
+          <CircularProgress aria-label='Chargement des points' size={20} />
+          <span>Chargement des points disponibles.</span>
+        </div>
+      )}
+    />
   </div>
 )
 
@@ -90,9 +109,22 @@ const ProcessingState = ({declaration}) => {
 
 const MyDeclarationDetail = ({availablePoints = [], initialDeclaration, showDeclarant = false}) => {
   const [declaration, setDeclaration] = useState(initialDeclaration)
+  const [availableDeclarationPoints, setAvailableDeclarationPoints] = useState(availablePoints)
+  const [loadedAvailablePointsKey, setLoadedAvailablePointsKey] = useState(
+    availablePoints.length > 0 && initialDeclaration?.source?.id
+      ? `${initialDeclaration.id}:${initialDeclaration.source.id}`
+      : null
+  )
   const source = declaration?.source
   const displayStatus = getDeclarationDisplayStatus(declaration, source)
   const shouldRefresh = isDeclarationTreatmentPending(declaration, source)
+  const shouldLoadAvailablePoints = source?.status === 'COMPLETED'
+    && isPointReconciliationRelevant(declaration, source)
+  const availablePointsKey = shouldLoadAvailablePoints && declaration?.id && source?.id
+    ? `${declaration.id}:${source.id}`
+    : null
+  const isAvailablePointsPending = shouldLoadAvailablePoints
+    && loadedAvailablePointsKey !== availablePointsKey
 
   useEffect(() => {
     if (!shouldRefresh || !declaration?.id) {
@@ -129,11 +161,59 @@ const MyDeclarationDetail = ({availablePoints = [], initialDeclaration, showDecl
     }
   }, [declaration?.id, shouldRefresh])
 
+  useEffect(() => {
+    if (!availablePointsKey || loadedAvailablePointsKey === availablePointsKey) {
+      return undefined
+    }
+
+    let isDisposed = false
+
+    const loadAvailablePoints = async () => {
+      try {
+        const result = await getAvailablePointsPrelevementsForDeclarationAction(declaration.id)
+
+        if (!isDisposed && result?.success) {
+          setAvailableDeclarationPoints(result.data?.data ?? [])
+          setLoadedAvailablePointsKey(availablePointsKey)
+        }
+      } catch (error) {
+        console.error(error)
+        if (!isDisposed) {
+          setLoadedAvailablePointsKey(availablePointsKey)
+        }
+      }
+    }
+
+    loadAvailablePoints()
+
+    return () => {
+      isDisposed = true
+    }
+  }, [availablePointsKey, declaration?.id, loadedAvailablePointsKey])
+
   const readingDateLabel = useMemo(() => getSourceReadingDateLabel(source), [source])
   const periodLabel = useMemo(
     () => readingDateLabel ?? getSourcePeriodLabel(source),
     [readingDateLabel, source]
   )
+
+  let declarationDetailsContent
+
+  if (source?.status === 'COMPLETED' && !isAvailablePointsPending) {
+    declarationDetailsContent = (
+      <DeclarationDetails
+        availablePoints={availableDeclarationPoints}
+        declaration={declaration}
+        source={source}
+        isInstructor={false}
+        onDeclarationChange={setDeclaration}
+      />
+    )
+  } else if (source?.status === 'COMPLETED' && isAvailablePointsPending) {
+    declarationDetailsContent = <AvailablePointsLoadingState />
+  } else {
+    declarationDetailsContent = <ProcessingState declaration={declaration} />
+  }
 
   return (
     <>
@@ -152,17 +232,7 @@ const MyDeclarationDetail = ({availablePoints = [], initialDeclaration, showDecl
         periodLabel={periodLabel}
       />
 
-      {source?.status === 'COMPLETED' ? (
-        <DeclarationDetails
-          availablePoints={availablePoints}
-          declaration={declaration}
-          source={source}
-          isInstructor={false}
-          onDeclarationChange={setDeclaration}
-        />
-      ) : (
-        <ProcessingState declaration={declaration} />
-      )}
+      {declarationDetailsContent}
     </>
   )
 }

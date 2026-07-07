@@ -71,7 +71,7 @@ function buildSearchText(row) {
 }
 
 function getCellTitle(row, cell) {
-  const base = `${row.declarantLabel} / ${row.pointName} / ${cell.month}`
+  const base = `${row.declarantLabel} / ${row.pointName} / ${cell.period || cell.month}`
 
   if (cell.status === 'DECLARED') {
     const codes = cell.declarations.map(declaration => declaration.code).filter(Boolean).join(', ')
@@ -88,10 +88,10 @@ function getCellTitle(row, cell) {
   }
 
   if (cell.status === 'MISSING') {
-    return `${base}\nDéclaration attendue, aucune déclaration trouvée sur ce mois.`
+    return `${base}\nDéclaration attendue, aucune déclaration trouvée sur cette période.`
   }
 
-  return `${base}\nExploitation inactive ou hors période sur ce mois.`
+  return `${base}\nExploitation inactive ou hors période.`
 }
 
 function flattenGroups(groups) {
@@ -118,25 +118,57 @@ function setQuery(router, pathname, searchParams, values) {
   router.replace(query ? `${pathname}?${query}` : pathname, {scroll: false})
 }
 
-const MonthRangeControls = () => {
+const PeriodControls = ({periodType, periods, zoneId}) => {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const selectedMonths = Number(searchParams.get('months') || 12)
+  const selectedPeriodCount = Number(searchParams.get('periodCount') || searchParams.get('months') || 12)
+  const exportPeriod = periods.at(-1)?.key
 
   return (
-    <div className='flex flex-wrap gap-2 items-center'>
-      <span className='fr-text--sm fr-mb-0'>Période</span>
-      {[6, 12, 18, 24, 36].map(value => (
+    <div className='flex flex-wrap gap-2 items-center justify-end'>
+      <span className='fr-text--sm fr-mb-0'>Vue</span>
+      {[
+        {value: 'month', label: 'Mois'},
+        {value: 'week', label: 'Semaines'}
+      ].map(option => (
         <Button
-          key={value}
-          priority={selectedMonths === value ? 'primary' : 'tertiary no outline'}
+          key={option.value}
+          priority={periodType === option.value ? 'primary' : 'tertiary no outline'}
           size='small'
-          onClick={() => setQuery(router, pathname, searchParams, {months: value})}
+          onClick={() => setQuery(router, pathname, searchParams, {
+            periodType: option.value,
+            periodCount: selectedPeriodCount,
+            months: undefined,
+            to: undefined
+          })}
         >
-          {value} mois
+          {option.label}
         </Button>
       ))}
+      <span className='fr-text--sm fr-mb-0 ml-2'>Périodes</span>
+      {[8, 12, 18, 24, 36].map(value => (
+        <Button
+          key={value}
+          priority={selectedPeriodCount === value ? 'primary' : 'tertiary no outline'}
+          size='small'
+          onClick={() => setQuery(router, pathname, searchParams, {
+            periodCount: value,
+            months: undefined
+          })}
+        >
+          {value}
+        </Button>
+      ))}
+      {exportPeriod && zoneId && (
+        <a
+          className='fr-btn fr-btn--secondary fr-btn--sm'
+          href={`/api/zones/${zoneId}/suivi-declarations/export?periodType=${periodType}&to=${exportPeriod}&periodCount=${selectedPeriodCount}`}
+          title='Exporter les lignes manquantes des périodes affichées'
+        >
+          Exporter les manquants
+        </a>
+      )}
     </div>
   )
 }
@@ -149,7 +181,7 @@ const MatrixCell = ({row, cell}) => {
     <td
       className='p-0 text-center align-middle'
       title={getCellTitle(row, cell)}
-      aria-label={`${label} pour ${row.pointName} en ${cell.month}`}
+      aria-label={`${label} pour ${row.pointName} sur ${cell.period || cell.month}`}
       style={{
         minWidth: 22,
         width: 22,
@@ -176,7 +208,9 @@ const MatrixCell = ({row, cell}) => {
 
 const ZoneDeclarationMonthlyMatrix = ({payload}) => {
   const groups = useMemo(() => payload?.data?.groups ?? [], [payload?.data?.groups])
-  const months = payload?.data?.months ?? []
+  const periods = payload?.data?.periods ?? payload?.data?.months ?? []
+  const periodType = payload?.data?.periodType ?? payload?.meta?.periodType ?? 'month'
+  const zoneId = payload?.meta?.zoneId
   const summary = payload?.meta?.summary ?? {}
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
@@ -205,7 +239,7 @@ const ZoneDeclarationMonthlyMatrix = ({payload}) => {
   if (groups.length === 0) {
     return (
       <Alert severity='info'>
-        Aucune exploitation de préleveur n’est disponible dans cette zone pour construire le suivi mensuel.
+        Aucune exploitation de préleveur n’est disponible dans cette zone pour construire le suivi.
       </Alert>
     )
   }
@@ -222,7 +256,7 @@ const ZoneDeclarationMonthlyMatrix = ({payload}) => {
           <p className='fr-h4 fr-mb-0'>{summary.declared ?? 0}</p>
         </div>
         <div className='fr-card fr-card--sm fr-card--grey fr-p-3w'>
-          <p className='fr-text--sm fr-mb-1w'>Mois attendus sans déclaration</p>
+          <p className='fr-text--sm fr-mb-1w'>Périodes attendues sans déclaration</p>
           <p className='fr-h4 fr-mb-0'>{summary.missing ?? 0}</p>
         </div>
         <div className='fr-card fr-card--sm fr-card--grey fr-p-3w'>
@@ -235,7 +269,7 @@ const ZoneDeclarationMonthlyMatrix = ({payload}) => {
         severity='info'
         title='Lecture de la matrice'
       >
-        Une case verte indique qu’au moins une déclaration déposée a produit des données sur le point de prélèvement concerné pour le mois. Une case rouge indique qu’une exploitation active sur ce mois n’a aucune déclaration trouvée. Les cases grises sont hors période ou inactives.
+        Une case verte indique qu’au moins une déclaration déposée a produit des données sur le point de prélèvement concerné pour la période. Une case rouge indique qu’une exploitation active sur cette période n’a aucune déclaration trouvée. Les cases grises sont hors période ou inactives.
       </Alert>
 
       <div className='flex flex-col gap-3'>
@@ -252,7 +286,7 @@ const ZoneDeclarationMonthlyMatrix = ({payload}) => {
             />
           </div>
 
-          <MonthRangeControls />
+          <PeriodControls periodType={periodType} periods={periods} zoneId={zoneId} />
         </div>
 
         <div className='flex flex-wrap gap-2 items-center'>
@@ -315,16 +349,16 @@ const ZoneDeclarationMonthlyMatrix = ({payload}) => {
                 >
                   Point / exploitation
                 </th>
-                {months.map(month => (
+                {periods.map(period => (
                   <th
-                    key={month.key}
+                    key={period.key}
                     className='p-1 sticky top-0 z-10 text-center whitespace-nowrap'
                     style={{
                       backgroundColor: 'var(--background-default-grey)', minWidth: 22, border: '1px solid var(--border-default-grey)', writingMode: 'vertical-rl', transform: 'rotate(180deg)'
                     }}
-                    title={month.key}
+                    title={period.fullLabel || period.key}
                   >
-                    {month.label}
+                    {period.label}
                   </th>
                 ))}
               </tr>
@@ -361,7 +395,7 @@ const ZoneDeclarationMonthlyMatrix = ({payload}) => {
                   </td>
 
                   {row.cells.map(cell => (
-                    <MatrixCell key={`${row.exploitationId}-${cell.month}`} cell={cell} row={row} />
+                    <MatrixCell key={`${row.exploitationId}-${cell.period || cell.month}`} cell={cell} row={row} />
                   ))}
                 </tr>
               ))}

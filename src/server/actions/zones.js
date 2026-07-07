@@ -81,6 +81,18 @@ function buildListSearch(options = {}) {
 function buildMatrixSearch(options = {}) {
   const searchParams = new URLSearchParams()
 
+  if (options.periodType) {
+    searchParams.set('periodType', String(options.periodType))
+  }
+
+  if (options.periodCount) {
+    searchParams.set('periodCount', String(options.periodCount))
+  }
+
+  if (options.periodKey) {
+    searchParams.set('periodKey', String(options.periodKey))
+  }
+
   if (options.months) {
     searchParams.set('months', String(options.months))
   }
@@ -144,6 +156,61 @@ export async function getZoneCollecteursAction(zoneId, options = {}) {
 
 export async function getZoneDeclarationMonthlyStatusAction(zoneId, options = {}) {
   return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/suivi-declarations${buildMatrixSearch(options)}`))
+}
+
+export async function getZoneDeclarationSettingsAction(zoneId) {
+  return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/declaration-settings`))
+}
+
+export async function updateZoneDeclarationSettingsAction(zoneId, payload) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(`api/zones/${zoneId}/declaration-settings`, {
+      method: 'PUT',
+      body: payload
+    })
+
+    revalidateZonePaths(zoneId)
+
+    return result
+  })
+}
+
+export async function createZoneDeclarationOverrideAction(zoneId, payload) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(`api/zones/${zoneId}/declaration-period-overrides`, {
+      method: 'POST',
+      body: payload
+    })
+
+    revalidateZonePaths(zoneId)
+
+    return result
+  })
+}
+
+export async function updateZoneDeclarationOverrideAction(zoneId, overrideId, payload) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(`api/zones/${zoneId}/declaration-period-overrides/${overrideId}`, {
+      method: 'PUT',
+      body: payload
+    })
+
+    revalidateZonePaths(zoneId)
+
+    return result
+  })
+}
+
+export async function deleteZoneDeclarationOverrideAction(zoneId, overrideId) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(`api/zones/${zoneId}/declaration-period-overrides/${overrideId}`, {
+      method: 'DELETE'
+    })
+
+    revalidateZonePaths(zoneId)
+
+    return result
+  })
 }
 
 export async function getZoneInstructorsAction(zoneId) {

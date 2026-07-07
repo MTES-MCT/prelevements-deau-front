@@ -85,6 +85,14 @@ const NAV_ITEMS = [
   },
   {
     linkProps: {
+      href: '/notifications-declarations',
+      target: '_self'
+    },
+    text: 'Notifications',
+    roles: ['ADMIN']
+  },
+  {
+    linkProps: {
       href: '/comptes-service',
       target: '_self'
     },
