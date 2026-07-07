@@ -27,14 +27,12 @@ export async function generateMetadata({params}) {
 export const dynamic = 'force-dynamic'
 
 function readMatrixOptions(searchParams = {}) {
-  const months = Number.parseInt(searchParams.months || '12', 10)
-  const periodCount = Number.parseInt(searchParams.periodCount || searchParams.months || '12', 10)
-  const to = typeof searchParams.to === 'string' ? searchParams.to : undefined
-  const periodType = searchParams.periodType === 'week' ? 'week' : 'month'
+  const months = Number.parseInt(searchParams.months || searchParams.periodCount || '12', 10)
+  const to = typeof searchParams.to === 'string' && /^\d{4}-\d{2}$/.test(searchParams.to)
+    ? searchParams.to
+    : undefined
 
   return {
-    periodType,
-    periodCount: Number.isFinite(periodCount) && periodCount > 0 ? periodCount : 12,
     months: Number.isFinite(months) && months > 0 ? months : 12,
     to
   }

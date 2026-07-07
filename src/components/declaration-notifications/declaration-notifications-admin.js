@@ -49,6 +49,10 @@ const EXCLUSION_REASON_FALLBACKS = {
     label: 'Déclaration déjà reçue',
     description: 'Une déclaration existe déjà pour ce point sur la période.'
   },
+  DECLARANT_EXCLUDED: {
+    label: 'Déclarant exclu',
+    description: 'Ce déclarant est configuré pour ne pas recevoir les rappels ou relances de déclaration.'
+  },
   NO_EMAIL: {
     label: 'Aucun email exploitable',
     description: 'Aucun email n’est disponible pour le préleveur ou ses collecteurs.'

@@ -1,6 +1,6 @@
 'use client'
 
-import {useMemo, useState} from 'react'
+import {useEffect, useMemo, useState} from 'react'
 
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Alert, Box} from '@mui/material'
@@ -71,7 +71,7 @@ function buildSearchText(row) {
 }
 
 function getCellTitle(row, cell) {
-  const base = `${row.declarantLabel} / ${row.pointName} / ${cell.period || cell.month}`
+  const base = `${row.declarantLabel} / ${row.pointName} / ${cell.periodLabel || cell.period || cell.month}`
 
   if (cell.status === 'DECLARED') {
     const codes = cell.declarations.map(declaration => declaration.code).filter(Boolean).join(', ')
@@ -118,56 +118,66 @@ function setQuery(router, pathname, searchParams, values) {
   router.replace(query ? `${pathname}?${query}` : pathname, {scroll: false})
 }
 
-const PeriodControls = ({periodType, periods, zoneId}) => {
+const PERIOD_TYPE_LABELS = {
+  month: 'Mensuel',
+  week: 'Hebdomadaire'
+}
+
+const PeriodControls = ({periods, zoneId}) => {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const selectedPeriodCount = Number(searchParams.get('periodCount') || searchParams.get('months') || 12)
-  const exportPeriod = periods.at(-1)?.key
+  const selectedMonthsCount = Number(searchParams.get('months') || searchParams.get('periodCount') || 12)
+  const [exportPeriodKey, setExportPeriodKey] = useState(periods.at(-1)?.key ?? '')
+
+  useEffect(() => {
+    setExportPeriodKey(periods.at(-1)?.key ?? '')
+  }, [periods])
+
+  const exportPeriod = periods.find(period => period.key === exportPeriodKey)
 
   return (
     <div className='flex flex-wrap gap-2 items-center justify-end'>
-      <span className='fr-text--sm fr-mb-0'>Vue</span>
-      {[
-        {value: 'month', label: 'Mois'},
-        {value: 'week', label: 'Semaines'}
-      ].map(option => (
-        <Button
-          key={option.value}
-          priority={periodType === option.value ? 'primary' : 'tertiary no outline'}
-          size='small'
-          onClick={() => setQuery(router, pathname, searchParams, {
-            periodType: option.value,
-            periodCount: selectedPeriodCount,
-            months: undefined,
-            to: undefined
-          })}
-        >
-          {option.label}
-        </Button>
-      ))}
-      <span className='fr-text--sm fr-mb-0 ml-2'>Périodes</span>
+      <span className='fr-text--sm fr-mb-0'>Mois affichés</span>
       {[8, 12, 18, 24, 36].map(value => (
         <Button
           key={value}
-          priority={selectedPeriodCount === value ? 'primary' : 'tertiary no outline'}
+          priority={selectedMonthsCount === value ? 'primary' : 'tertiary no outline'}
           size='small'
           onClick={() => setQuery(router, pathname, searchParams, {
-            periodCount: value,
-            months: undefined
+            months: value,
+            periodCount: undefined,
+            periodType: undefined
           })}
         >
           {value}
         </Button>
       ))}
       {exportPeriod && zoneId && (
-        <a
-          className='fr-btn fr-btn--secondary fr-btn--sm'
-          href={`/api/zones/${zoneId}/suivi-declarations/export?periodType=${periodType}&to=${exportPeriod}&periodCount=${selectedPeriodCount}`}
-          title='Exporter les lignes manquantes des périodes affichées'
-        >
-          Exporter les manquants
-        </a>
+        <>
+          <div className='fr-select-group fr-mb-0 min-w-64'>
+            <label className='fr-label' htmlFor='zone-declaration-export-period'>Période à exporter</label>
+            <select
+              className='fr-select fr-select--sm'
+              id='zone-declaration-export-period'
+              value={exportPeriodKey}
+              onChange={event => setExportPeriodKey(event.target.value)}
+            >
+              {periods.map(period => (
+                <option key={period.key} value={period.key}>
+                  {PERIOD_TYPE_LABELS[period.periodType] ?? 'Période'} - {period.fullLabel || period.label || period.key}
+                </option>
+              ))}
+            </select>
+          </div>
+          <a
+            className='fr-btn fr-btn--secondary fr-btn--sm'
+            href={`/api/zones/${zoneId}/suivi-declarations/export?periodType=${exportPeriod.periodType}&periodKey=${exportPeriod.key}`}
+            title='Exporter les lignes manquantes de la période sélectionnée'
+          >
+            Exporter les manquants
+          </a>
+        </>
       )}
     </div>
   )
@@ -181,7 +191,7 @@ const MatrixCell = ({row, cell}) => {
     <td
       className='p-0 text-center align-middle'
       title={getCellTitle(row, cell)}
-      aria-label={`${label} pour ${row.pointName} sur ${cell.period || cell.month}`}
+      aria-label={`${label} pour ${row.pointName} sur ${cell.periodLabel || cell.period || cell.month}`}
       style={{
         minWidth: 22,
         width: 22,
@@ -209,7 +219,6 @@ const MatrixCell = ({row, cell}) => {
 const ZoneDeclarationMonthlyMatrix = ({payload}) => {
   const groups = useMemo(() => payload?.data?.groups ?? [], [payload?.data?.groups])
   const periods = payload?.data?.periods ?? payload?.data?.months ?? []
-  const periodType = payload?.data?.periodType ?? payload?.meta?.periodType ?? 'month'
   const zoneId = payload?.meta?.zoneId
   const summary = payload?.meta?.summary ?? {}
   const [search, setSearch] = useState('')
@@ -269,7 +278,7 @@ const ZoneDeclarationMonthlyMatrix = ({payload}) => {
         severity='info'
         title='Lecture de la matrice'
       >
-        Une case verte indique qu’au moins une déclaration déposée a produit des données sur le point de prélèvement concerné pour la période. Une case rouge indique qu’une exploitation active sur cette période n’a aucune déclaration trouvée. Les cases grises sont hors période ou inactives.
+        Une case verte indique qu’au moins une déclaration déposée a produit des données sur le point de prélèvement concerné pour la période attendue. Une case rouge indique qu’une exploitation active sur cette période n’a aucune déclaration trouvée. Les cases grises sont hors période, inactives ou concernent un autre pas de temps. La timeline alterne automatiquement les mois et les semaines selon les règles de déclaration de la zone.
       </Alert>
 
       <div className='flex flex-col gap-3'>
@@ -286,7 +295,7 @@ const ZoneDeclarationMonthlyMatrix = ({payload}) => {
             />
           </div>
 
-          <PeriodControls periodType={periodType} periods={periods} zoneId={zoneId} />
+          <PeriodControls periods={periods} zoneId={zoneId} />
         </div>
 
         <div className='flex flex-wrap gap-2 items-center'>
