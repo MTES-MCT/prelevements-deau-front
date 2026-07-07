@@ -35,6 +35,11 @@ const ITEMS = [
     href: zone => `/zones/${zone.id}/suivi-declarations`
   },
   {
+    key: 'declaration-settings',
+    label: 'Paramètres déclaration',
+    href: zone => `/zones/${zone.id}/parametres-declaration`
+  },
+  {
     key: 'agents',
     label: 'Agents',
     href: zone => `/zones/${zone.id}/agents`

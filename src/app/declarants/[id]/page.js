@@ -20,7 +20,11 @@ import {
   getExploitationPointIds,
   hasDeclarantContactInfo
 } from '@/lib/declarant-detail.js'
-import {getDeclarantTitleFromDeclarant, getDeclarantTypeIcon} from '@/lib/declarants.js'
+import {
+  getDeclarantTitleFromDeclarant,
+  getDeclarantTypeIcon,
+  isDeclarationNotificationsEnabled
+} from '@/lib/declarants.js'
 import {formatFullAddress} from '@/lib/declaration.js'
 import {getNewExploitationURL} from '@/lib/urls.js'
 import {
@@ -214,8 +218,12 @@ const Page = async ({params}) => {
           {
             iconId: 'ri-map-pin-user-line',
             content: exploitationsLabel
+          },
+          !isDeclarationNotificationsEnabled(declarant) && {
+            iconId: 'ri-notification-off-line',
+            content: 'Rappels et relances désactivés'
           }
-        ]}
+        ].filter(Boolean)}
       />
 
       {(hasInfoCard || hasMap) && (

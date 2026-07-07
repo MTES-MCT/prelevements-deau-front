@@ -13,6 +13,10 @@ export function getDeclarantRoleLabel(role) {
   return DECLARANT_ROLE_LABELS[role] ?? 'Préleveur'
 }
 
+export function isDeclarationNotificationsEnabled(declarant) {
+  return declarant?.declarationNotificationsEnabled ?? declarant?.declarant?.declarationNotificationsEnabled ?? true
+}
+
 export function getDeclarantTypeIcon(declarant) {
   if (declarant?.declarantRole === 'COLLECTEUR' || declarant?.declarant?.declarantRole === 'COLLECTEUR') {
     return PRELEVEUR_TYPE_ICONS.collecteur

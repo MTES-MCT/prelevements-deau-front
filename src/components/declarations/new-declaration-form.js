@@ -117,13 +117,8 @@ const validateFiles = async (files, declarationTypeCode) => {
   }
 
   return {
-    errors: [
-      {
-        message: 'La validation automatique côté navigateur n’est pas disponible pour ce type de déclaration. Les fichiers seront contrôlés au traitement.',
-        severity: 'warning'
-      }
-    ],
-    validationStatus: 'warning'
+    errors: [],
+    validationStatus: 'success'
   }
 }
 

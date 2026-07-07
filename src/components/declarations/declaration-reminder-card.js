@@ -5,6 +5,7 @@ import {useMemo, useState, useTransition} from 'react'
 import moment from 'moment'
 
 import SectionCard from '@/components/ui/SectionCard/index.js'
+import {isDeclarationNotificationsEnabled} from '@/lib/declarants.js'
 import {sendDeclarationReminderAction} from '@/server/actions/declarants.js'
 
 const REMINDER_CONFIG = {
@@ -93,8 +94,18 @@ const DeclarationReminderCard = ({declarant}) => {
 
   const lastDeclarationAt = declarant?.lastDeclarationAt
   const lastReminderMailSentAt = result?.sentAt ?? declarant?.lastReminderMailSentAt
+  const declarationNotificationsEnabled = isDeclarationNotificationsEnabled(declarant)
 
   const status = useMemo(() => {
+    if (!declarationNotificationsEnabled) {
+      return {
+        type: 'warning',
+        label: 'Relances désactivées',
+        description: 'Ce déclarant est exclu des rappels et relances de déclaration.',
+        canSend: false
+      }
+    }
+
     const computedStatus = getReminderStatus({
       lastDeclarationAt,
       lastReminderMailSentAt
@@ -110,7 +121,7 @@ const DeclarationReminderCard = ({declarant}) => {
     }
 
     return computedStatus
-  }, [lastDeclarationAt, lastReminderMailSentAt, result])
+  }, [declarationNotificationsEnabled, lastDeclarationAt, lastReminderMailSentAt, result])
 
   const handleSend = () => {
     if (!declarant?.userId) {

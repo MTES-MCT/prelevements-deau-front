@@ -41,6 +41,7 @@ export async function updatePreleveurAction(idPreleveur, payload) {
     revalidatePath('/preleveurs')
     revalidatePath(`/declarants/${idPreleveur}`)
     revalidatePath(`/declarants/${idPreleveur}/edit`)
+    revalidatePath(`/declarants/${idPreleveur}/gestion`)
     revalidatePath(`/preleveurs/${idPreleveur}`)
     return result
   })

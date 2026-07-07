@@ -2,7 +2,12 @@ import {fr} from '@codegouvfr/react-dsfr'
 import Link from 'next/link'
 
 import ListItem from '@/components/ui/ListItem/index.js'
-import {getDeclarantTitleFromUser, getDeclarantTypeIcon, getDeclarantRoleLabel} from '@/lib/declarants.js'
+import {
+  getDeclarantRoleLabel,
+  getDeclarantTitleFromUser,
+  getDeclarantTypeIcon,
+  isDeclarationNotificationsEnabled
+} from '@/lib/declarants.js'
 
 function pluralize(count, singular, plural = `${singular}s`) {
   return `${count} ${count > 1 ? plural : singular}`
@@ -35,6 +40,7 @@ const Declarant = ({declarant, index, basePath = '/declarants'}) => {
         </>}
         tags={[
           {label: getDeclarantRoleLabel(role), severity: isCollecteur ? 'info' : 'success'},
+          !isDeclarationNotificationsEnabled(declarant) && {label: 'Rappels désactivés', severity: 'warning'},
           !declarant.email && {label: 'Sans email', severity: 'warning'}
         ].filter(Boolean)}
         metas={[

@@ -20,6 +20,7 @@ const COMMON_FIELDS = [
   'declarantType',
   'declarantRole',
   'quickDeclarationEnabled',
+  'declarationNotificationsEnabled',
   'civility',
   'lastName',
   'firstName',
@@ -55,6 +56,10 @@ function getQuickDeclarationEnabled(declarant) {
   return declarant?.quickDeclarationEnabled ?? declarant?.declarant?.quickDeclarationEnabled ?? true
 }
 
+function getDeclarationNotificationsEnabled(declarant) {
+  return declarant?.declarationNotificationsEnabled ?? declarant?.declarant?.declarationNotificationsEnabled ?? true
+}
+
 const FormSection = ({
   title,
   description,
@@ -86,6 +91,7 @@ function normalizeDeclarant(declarant) {
     declarantType: getDeclarantType(declarant),
     declarantRole: getDeclarantRole(declarant),
     quickDeclarationEnabled: getQuickDeclarationEnabled(declarant),
+    declarationNotificationsEnabled: getDeclarationNotificationsEnabled(declarant),
     civility: firstTruthy(declarant?.civility),
     firstName: firstTruthy(declarant?.firstName, user?.firstName),
     lastName: firstTruthy(declarant?.lastName, user?.lastName),
@@ -118,6 +124,7 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
     declarantType: 'NATURAL_PERSON',
     declarantRole: 'PRELEVEUR',
     quickDeclarationEnabled: true,
+    declarationNotificationsEnabled: true,
     civility: '',
     firstName: '',
     lastName: '',
@@ -283,6 +290,23 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
 
             <Typography variant='body2' color='text.secondary' sx={{mt: -2}}>
               Activé par défaut : le déclarant pourra saisir ses index directement dans la plateforme, sans déposer de fichier.
+            </Typography>
+
+            <FormControlLabel
+              control={(
+                <Checkbox
+                  checked={preleveur.declarationNotificationsEnabled !== false}
+                  onChange={event => setPreleveur(prev => ({
+                    ...prev,
+                    declarationNotificationsEnabled: event.target.checked
+                  }))}
+                />
+              )}
+              label='Inclure ce déclarant dans les rappels et relances de déclaration'
+            />
+
+            <Typography variant='body2' color='text.secondary' sx={{mt: -2}}>
+              Activé par défaut : le déclarant pourra recevoir les rappels et relances automatiques liés aux déclarations attendues.
             </Typography>
 
             {!isEditing && (
