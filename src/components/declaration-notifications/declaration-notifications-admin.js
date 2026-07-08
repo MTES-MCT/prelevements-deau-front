@@ -53,10 +53,41 @@ const EXCLUSION_REASON_FALLBACKS = {
     label: 'Déclarant exclu',
     description: 'Ce déclarant est configuré pour ne pas recevoir les rappels ou relances de déclaration.'
   },
+  INVALID_EMAIL: {
+    label: 'Email invalide',
+    description: 'Une adresse email rattachée à ce déclarant n’a pas un format exploitable.'
+  },
   NO_EMAIL: {
     label: 'Aucun email exploitable',
     description: 'Aucun email n’est disponible pour le préleveur ou ses collecteurs.'
   }
+}
+
+const EXCLUSION_REASON_SEVERITIES = {
+  ALREADY_DECLARED: 'success',
+  TELEMETRY: 'info',
+  PERIOD_TYPE_MISMATCH: 'info',
+  EXPLOITATION_INACTIVE: 'warning',
+  NO_ZONE: 'warning',
+  DECLARANT_EXCLUDED: 'warning',
+  NO_EMAIL: 'warning',
+  INVALID_EMAIL: 'error'
+}
+
+const EXCLUSION_BADGE_CLASSES = {
+  success: 'fr-badge--success',
+  info: 'fr-badge--info',
+  warning: 'fr-badge--warning',
+  error: 'fr-badge--error',
+  default: 'fr-badge--grey'
+}
+
+const EXCLUSION_SUMMARY_CLASSES = {
+  success: 'border-l-green-600 bg-green-50',
+  info: 'border-l-blue-600 bg-blue-50',
+  warning: 'border-l-yellow-600 bg-yellow-50',
+  error: 'border-l-red-600 bg-red-50',
+  default: 'border-l-gray-400 fr-background-alt--grey'
 }
 
 const DATE_FORMATTER = new Intl.DateTimeFormat('fr-FR', {
@@ -140,12 +171,25 @@ function getExclusionReason(exclusion) {
   }
 }
 
+function getExclusionSeverity(reason) {
+  return EXCLUSION_REASON_SEVERITIES[reason] ?? 'default'
+}
+
+function getExclusionBadgeClass(reason) {
+  return EXCLUSION_BADGE_CLASSES[getExclusionSeverity(reason)] ?? EXCLUSION_BADGE_CLASSES.default
+}
+
+function getExclusionSummaryClass(reason) {
+  return EXCLUSION_SUMMARY_CLASSES[getExclusionSeverity(reason)] ?? EXCLUSION_SUMMARY_CLASSES.default
+}
+
 function getExclusionReasonCounts(exclusions = []) {
   const counts = new Map()
 
   for (const exclusion of exclusions) {
     const reason = getExclusionReason(exclusion)
     const current = counts.get(reason.label) ?? {
+      reason: exclusion.reason,
       label: reason.label,
       description: reason.description,
       count: 0
@@ -204,7 +248,7 @@ const ExclusionsTable = ({exclusions = []}) => {
     <div className='flex flex-col gap-3'>
       <div className='grid grid-cols-1 md:grid-cols-2 gap-2'>
         {reasonCounts.map(reason => (
-          <div key={reason.label} className='fr-p-2w fr-background-alt--grey'>
+          <div key={reason.label} className={`fr-p-2w border-l-4 ${getExclusionSummaryClass(reason.reason)}`}>
             <p className='fr-text--sm fr-text--bold fr-mb-1v'>
               {formatCount(reason.count, 'exclusion')} - {reason.label}
             </p>
@@ -230,14 +274,15 @@ const ExclusionsTable = ({exclusions = []}) => {
                 exclusion.declarantUserId,
                 exclusion.pointPrelevementId,
                 exclusion.expectedPeriodType,
-                exclusion.zoneId
+                exclusion.zoneId,
+                exclusion.invalidEmail
               ].filter(Boolean).join('-') || JSON.stringify(exclusion)
               const reason = getExclusionReason(exclusion)
 
               return (
                 <tr key={key}>
                   <td className='p-2 border-b'>
-                    <span className='fr-badge fr-badge--sm fr-badge--grey'>{reason.label}</span>
+                    <span className={`fr-badge fr-badge--sm ${getExclusionBadgeClass(exclusion.reason)}`}>{reason.label}</span>
                   </td>
                   <td className='p-2 border-b'>{reason.description}</td>
                   <td className='p-2 border-b'>{exclusion.declarantLabel || exclusion.declarantUserId || 'Non renseigné'}</td>
