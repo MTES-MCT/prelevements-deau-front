@@ -1,12 +1,16 @@
 'use client'
 
 import {
-  useCallback, useEffect, useMemo, useState
+  useCallback, useEffect, useMemo, useRef, useState
 } from 'react'
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Box, Typography} from '@mui/material'
 
+import {
+  resolveInitialDisplayFrequency,
+  resolveSeriesDisplayFrequency
+} from '@/components/points-prelevement/series-display-frequency.js'
 import AggregatedSeriesExplorer from '@/components/PrelevementsSeriesExplorer/aggregated-series-explorer.js'
 import {
   getParameterMetadata,
@@ -20,7 +24,6 @@ import {
 import {getAggregatedSeriesAction} from '@/server/actions/series.js'
 import {pickAvailableFrequency} from '@/utils/frequency.js'
 
-const DEFAULT_FREQUENCY = '1 day'
 const DEFAULT_PARAMETERS = ['volume prélevé', 'débit prélevé']
 const FALLBACK_VOLUME_TEMPORAL_OPERATORS = ['sum', 'mean', 'min', 'max']
 const FALLBACK_STANDARD_TEMPORAL_OPERATORS = ['mean', 'min', 'max']
@@ -76,6 +79,14 @@ const SeriesExplorer = ({
   const defaultPeriods = useMemo(
     () => extractDefaultPeriodsFromDateRange(dateRange.start, dateRange.end),
     [dateRange]
+  )
+  const dateRangeKey = `${dateRange.start ?? ''}:${dateRange.end ?? ''}`
+  const initialDisplayFrequency = useMemo(
+    () => resolveInitialDisplayFrequency({
+      startDate: dateRange.start,
+      endDate: dateRange.end
+    }),
+    [dateRange.end, dateRange.start]
   )
 
   // Construit les options de paramètres depuis la réponse API
@@ -155,10 +166,20 @@ const SeriesExplorer = ({
 
   const [selectedParameters, setSelectedParameters] = useState(derivedDefaultParameters)
   const [parameterTemporalOperators, setParameterTemporalOperators] = useState({})
-  const [targetDisplayFrequency, setTargetDisplayFrequency] = useState(DEFAULT_FREQUENCY)
+  const [targetDisplayFrequency, setTargetDisplayFrequency] = useState(initialDisplayFrequency)
   const [aggregatedSeriesMap, setAggregatedSeriesMap] = useState(new Map())
   const [isLoading, setIsLoading] = useState(false)
   const [loadError, setLoadError] = useState(null)
+  const previousDateRangeKeyRef = useRef(dateRangeKey)
+
+  useEffect(() => {
+    if (previousDateRangeKeyRef.current === dateRangeKey) {
+      return
+    }
+
+    previousDateRangeKeyRef.current = dateRangeKey
+    setTargetDisplayFrequency(initialDisplayFrequency)
+  }, [dateRangeKey, initialDisplayFrequency])
 
   useEffect(() => {
     if (parameterOptions.length === 0 || derivedDefaultParameters.length === 0) {
@@ -338,7 +359,7 @@ const SeriesExplorer = ({
           const chosenFrequency = pickAvailableFrequency(
             targetDisplayFrequency,
             availableFrequencies
-          ) ?? targetDisplayFrequency ?? DEFAULT_FREQUENCY
+          ) ?? targetDisplayFrequency
 
           const response = await fetchAggregatedSeries(
             param,
@@ -420,9 +441,13 @@ const SeriesExplorer = ({
 
   const handleDisplayResolutionChange = useCallback(frequency => {
     if (frequency) {
-      setTargetDisplayFrequency(frequency)
+      setTargetDisplayFrequency(resolveSeriesDisplayFrequency({
+        endDate: dateRange.end,
+        startDate: dateRange.start,
+        suggestedFrequency: frequency
+      }))
     }
-  }, [])
+  }, [dateRange.end, dateRange.start])
 
   return hasParameters ? (
     <Box className='flex flex-col gap-4'>
