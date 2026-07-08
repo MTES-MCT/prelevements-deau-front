@@ -8,6 +8,7 @@ import maplibre from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 import {cooperativeGesturesMapOptions} from '@/components/map/cooperative-gestures.js'
+import {IGN_RASTER_MAX_ZOOM} from '@/components/map/ign-raster.js'
 import planIGN from '@/components/map/styles/plan-ign.json'
 
 const DEFAULT_MAP_ZOOM = 10
@@ -268,6 +269,7 @@ const QuickDeclarationMap = ({
       center: firstCoordinates,
       attributionControl: {compact: true},
       zoom: DEFAULT_MAP_ZOOM,
+      maxZoom: IGN_RASTER_MAX_ZOOM,
       ...cooperativeGesturesMapOptions
     })
 

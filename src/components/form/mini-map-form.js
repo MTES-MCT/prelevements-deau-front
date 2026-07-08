@@ -10,6 +10,7 @@ import maplibre from 'maplibre-gl'
 
 import 'maplibre-gl/dist/maplibre-gl.css'
 import {cooperativeGesturesMapOptions} from '@/components/map/cooperative-gestures.js'
+import {getMapMaxZoomForStyle} from '@/components/map/ign-raster.js'
 import photo from '@/components/map/styles/photo.json'
 import planIGN from '@/components/map/styles/plan-ign.json'
 import {
@@ -334,6 +335,7 @@ const MiniMapForm = ({geom, setGeom, boundaryFeature = null}) => {
       center: geom ? geom.coordinates : boundaryBounds?.getCenter()?.toArray?.() || DEFAULT_CENTER,
       zoom: geom ? 11 : DEFAULT_ZOOM,
       attributionControl: {compact: true},
+      maxZoom: getMapMaxZoomForStyle(style),
       ...cooperativeGesturesMapOptions
     })
 
@@ -395,12 +397,14 @@ const MiniMapForm = ({geom, setGeom, boundaryFeature = null}) => {
     if (map && style !== currentStyleRef.current) {
       const center = map.getCenter()
       const zoom = map.getZoom()
+      const maxZoom = getMapMaxZoomForStyle(style)
 
+      map.setMaxZoom(maxZoom)
       map.setStyle(stylesMap[style])
 
       map.once('styledata', () => {
         map.setCenter(center)
-        map.setZoom(zoom)
+        map.setZoom(Math.min(zoom, maxZoom))
         addBoundaryLayer(map)
         addPointLayer(map)
 

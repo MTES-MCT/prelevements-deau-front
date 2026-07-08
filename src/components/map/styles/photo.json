@@ -8,6 +8,7 @@
         "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image%2Fjpeg"
       ],
       "tileSize": 256,
+      "maxzoom": 19,
       "attribution": "<a target='_blank' href='https://geoservices.ign.fr/documentation/donnees/ortho/bdortho'>© IGN</a>"
     }
   },
@@ -19,7 +20,7 @@
       "type": "raster",
       "source": "ign",
       "minzoom": 0,
-      "maxzoom": 18
+      "maxzoom": 20
     }
   ]
 }

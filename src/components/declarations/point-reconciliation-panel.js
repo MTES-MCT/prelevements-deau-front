@@ -251,6 +251,7 @@ const ChunkListItem = ({
   itemRef,
   isSelected,
   isSubmitting = false,
+  showStatus = true,
   onDetach,
   onSelect
 }) => {
@@ -301,7 +302,7 @@ const ChunkListItem = ({
         </button>
 
         <div className='flex shrink-0 flex-col items-end gap-2'>
-          <ChunkStatusBadge matched={matched} />
+          {showStatus && <ChunkStatusBadge matched={matched} />}
           {canDetach && (
             <button
               type='button'
@@ -328,12 +329,18 @@ const PointReconciliationPanel = ({
   const unmatchedOnlyInputId = useId()
   const selectedChunkItemRef = useRef(null)
   const chunks = useMemo(() => source?.chunks ?? [], [source?.chunks])
+  const remainingCount = chunks.filter(chunk => !isChunkMatched(chunk)).length
+  const totalCount = chunks.length
   const firstUnmatchedChunkId = useMemo(
     () => chunks.find(chunk => !isChunkMatched(chunk))?.id ?? chunks[0]?.id ?? null,
     [chunks]
   )
+  const initialSelectedChunk = useMemo(
+    () => chunks.find(chunk => chunk.id === firstUnmatchedChunkId) ?? null,
+    [chunks, firstUnmatchedChunkId]
+  )
   const [selectedChunkId, setSelectedChunkId] = useState(firstUnmatchedChunkId)
-  const [activePointId, setActivePointId] = useState(null)
+  const [activePointId, setActivePointId] = useState(initialSelectedChunk?.pointPrelevementId ?? null)
   const [focusRequestKey, setFocusRequestKey] = useState(0)
   const [hoveredPointId, setHoveredPointId] = useState(null)
   const [submitError, setSubmitError] = useState(null)
@@ -342,6 +349,8 @@ const PointReconciliationPanel = ({
   const [chunkSearch, setChunkSearch] = useState('')
   const [pointSearch, setPointSearch] = useState('')
   const [showOnlyUnmatched, setShowOnlyUnmatched] = useState(false)
+  const [isAssociationMode, setIsAssociationMode] = useState(remainingCount > 0)
+  const previousRemainingCountRef = useRef(remainingCount)
 
   const handleSelectChunk = useCallback(chunk => {
     if (!chunk) {
@@ -362,8 +371,28 @@ const PointReconciliationPanel = ({
   useEffect(() => {
     if (!chunks.some(chunk => chunk.id === selectedChunkId)) {
       setSelectedChunkId(firstUnmatchedChunkId)
+      setActivePointId(initialSelectedChunk?.pointPrelevementId ?? null)
     }
-  }, [chunks, firstUnmatchedChunkId, selectedChunkId])
+  }, [chunks, firstUnmatchedChunkId, initialSelectedChunk?.pointPrelevementId, selectedChunkId])
+
+  useEffect(() => {
+    setIsAssociationMode(remainingCount > 0)
+    previousRemainingCountRef.current = remainingCount
+    setSubmitError(null)
+    setSubmitSuccess(null)
+  }, [remainingCount, source?.id])
+
+  useEffect(() => {
+    const previousRemainingCount = previousRemainingCountRef.current
+
+    if (remainingCount > 0) {
+      setIsAssociationMode(true)
+    } else if (previousRemainingCount > 0) {
+      setIsAssociationMode(false)
+    }
+
+    previousRemainingCountRef.current = remainingCount
+  }, [remainingCount])
 
   useEffect(() => {
     selectedChunkItemRef.current?.scrollIntoView({
@@ -391,10 +420,9 @@ const PointReconciliationPanel = ({
     }
   }, [chunks, selectedChunk])
 
-  const remainingCount = chunks.filter(chunk => !isChunkMatched(chunk)).length
-  const totalCount = chunks.length
   const summarySeverity = getSummarySeverity({remainingCount, totalCount})
-  const canSubmitReconciliation = canReconcile && Boolean(selectedChunk)
+  const canEditAssociations = canReconcile && isAssociationMode
+  const canSubmitReconciliation = canEditAssociations && Boolean(selectedChunk)
   const nextUnmatchedChunk = useMemo(
     () => getNextUnmatchedChunk(chunks, selectedChunkId),
     [chunks, selectedChunkId]
@@ -417,6 +445,9 @@ const PointReconciliationPanel = ({
 
       return getChunkSearchText(chunk, index).includes(normalizedChunkSearch)
     }), [chunks, normalizedChunkSearch, showOnlyUnmatched])
+  const visibleChunkItems = isAssociationMode
+    ? filteredChunkItems
+    : chunks.map((chunk, index) => ({chunk, index}))
   const normalizedPointSearch = normalizeSearchValue(pointSearch)
   const filteredAvailablePoints = useMemo(() => {
     if (!normalizedPointSearch) {
@@ -425,6 +456,12 @@ const PointReconciliationPanel = ({
 
     return availablePoints.filter(point => getPointSearchText(point).includes(normalizedPointSearch))
   }, [availablePoints, normalizedPointSearch])
+  const associatedAvailablePoints = useMemo(() => {
+    const matchedPointIdSet = new Set(matchedPointIds.map(String))
+
+    return availablePoints.filter(point => matchedPointIdSet.has(String(point.id)))
+  }, [availablePoints, matchedPointIds])
+  const visibleAvailablePoints = isAssociationMode ? filteredAvailablePoints : associatedAvailablePoints
 
   useEffect(() => {
     if (!activePointId) {
@@ -476,10 +513,10 @@ const PointReconciliationPanel = ({
   }, [])
 
   useEffect(() => {
-    if (showOnlyUnmatched && selectedChunk && isChunkMatched(selectedChunk) && nextUnmatchedChunk) {
+    if (isAssociationMode && showOnlyUnmatched && selectedChunk && isChunkMatched(selectedChunk) && nextUnmatchedChunk) {
       handleSelectChunk(nextUnmatchedChunk)
     }
-  }, [handleSelectChunk, nextUnmatchedChunk, selectedChunk, showOnlyUnmatched])
+  }, [handleSelectChunk, isAssociationMode, nextUnmatchedChunk, selectedChunk, showOnlyUnmatched])
 
   const updateSelectedChunkAssociation = useCallback(({globalInstructionStatus, point}) => {
     if (!selectedChunk) {
@@ -572,7 +609,7 @@ const PointReconciliationPanel = ({
   ])
 
   const handleDetachPoint = useCallback(async () => {
-    if (!canReconcile || !selectedChunk?.pointPrelevementId) {
+    if (!canEditAssociations || !selectedChunk?.pointPrelevementId) {
       return
     }
 
@@ -605,7 +642,7 @@ const PointReconciliationPanel = ({
     } finally {
       setIsSubmitting(false)
     }
-  }, [canReconcile, declaration.id, isSubmitting, selectedChunk, updateSelectedChunkAssociation])
+  }, [canEditAssociations, declaration.id, isSubmitting, selectedChunk, updateSelectedChunkAssociation])
 
   if (totalCount === 0) {
     return (
@@ -617,19 +654,66 @@ const PointReconciliationPanel = ({
     )
   }
 
+  let mapEmptyMessage
+
+  if (!isAssociationMode) {
+    mapEmptyMessage = 'Aucun point associé géolocalisé.'
+  } else if (normalizedPointSearch && filteredAvailablePoints.length === 0) {
+    mapEmptyMessage = 'Aucun point ne correspond à la recherche.'
+  }
+
+  const pointCounterLabel = isAssociationMode
+    ? `${visibleAvailablePoints.length}/${availablePoints.length}`
+    : `${visibleAvailablePoints.length} point${visibleAvailablePoints.length > 1 ? 's' : ''}`
+
   return (
     <section className='fr-mb-4w border border-gray-200 bg-white p-5 md:p-6'>
-      <div className='mb-4'>
-        <h2 className='fr-h4 fr-mb-1v'>Association des points</h2>
+      <div className='mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between'>
+        <div>
+          <h2 className='fr-h4 fr-mb-1v'>
+            {isAssociationMode ? 'Association des points' : 'Points de prélèvement déclarés'}
+          </h2>
+          {!isAssociationMode && (
+            <p className='fr-text--sm fr-mb-0 text-gray-600'>
+              {totalCount} point{totalCount > 1 ? 's' : ''} détecté{totalCount > 1 ? 's' : ''} dans le fichier.
+            </p>
+          )}
+        </div>
+
+        {canReconcile && (
+          <div className='flex shrink-0 flex-wrap gap-2'>
+            {isAssociationMode ? (
+              remainingCount === 0 && (
+                <button
+                  type='button'
+                  className='fr-btn fr-btn--secondary fr-btn--sm'
+                  onClick={() => setIsAssociationMode(false)}
+                >
+                  Voir en lecture seule
+                </button>
+              )
+            ) : (
+              <button
+                type='button'
+                className='fr-btn fr-btn--secondary fr-btn--sm'
+                onClick={() => setIsAssociationMode(true)}
+              >
+                Modifier les associations
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      <Alert
-        severity={summarySeverity}
-        title={getSummaryTitle({remainingCount})}
-        description={getSummaryDescription({remainingCount, totalCount})}
-      />
+      {isAssociationMode && (
+        <Alert
+          severity={summarySeverity}
+          title={getSummaryTitle({remainingCount})}
+          description={getSummaryDescription({remainingCount, totalCount})}
+        />
+      )}
 
-      {submitError && (
+      {isAssociationMode && submitError && (
         <Alert
           className='fr-mt-2w'
           severity='error'
@@ -641,59 +725,63 @@ const PointReconciliationPanel = ({
       <div className='fr-mt-3w grid gap-4 lg:grid-cols-[minmax(280px,420px)_1fr]'>
         <div>
           <div className='mb-2 flex items-center justify-between gap-2'>
-            <h2 className='fr-h6 fr-mb-0'>Lignes importées</h2>
-            <button
-              type='button'
-              className='fr-btn fr-btn--secondary fr-btn--sm'
-              disabled={!nextUnmatchedChunk}
-              onClick={handleSelectNextUnmatchedChunk}
-            >
-              Suivant à associer
-            </button>
+            <h2 className='fr-h6 fr-mb-0'>{isAssociationMode ? 'Lignes importées' : 'Lignes du fichier'}</h2>
+            {isAssociationMode && (
+              <button
+                type='button'
+                className='fr-btn fr-btn--secondary fr-btn--sm'
+                disabled={!nextUnmatchedChunk}
+                onClick={handleSelectNextUnmatchedChunk}
+              >
+                Suivant à associer
+              </button>
+            )}
           </div>
 
-          <div className='mb-2 flex flex-col gap-2'>
-            <input
-              type='search'
-              className='fr-input'
-              aria-label='Rechercher une ligne importée'
-              placeholder='Rechercher une ligne'
-              value={chunkSearch}
-              onChange={event => setChunkSearch(event.target.value)}
-            />
+          {isAssociationMode && (
+            <div className='mb-2 flex flex-col gap-2'>
+              <input
+                type='search'
+                className='fr-input'
+                aria-label='Rechercher une ligne importée'
+                placeholder='Rechercher une ligne'
+                value={chunkSearch}
+                onChange={event => setChunkSearch(event.target.value)}
+              />
 
-            <div className='flex items-center justify-between gap-3'>
-              <div className='fr-checkbox-group fr-mb-0'>
-                <input
-                  id={unmatchedOnlyInputId}
-                  type='checkbox'
-                  checked={showOnlyUnmatched}
-                  onChange={event => setShowOnlyUnmatched(event.target.checked)}
-                />
-                <label className='fr-label' htmlFor={unmatchedOnlyInputId}>
-                  À associer uniquement
-                </label>
+              <div className='flex items-center justify-between gap-3'>
+                <div className='fr-checkbox-group fr-mb-0'>
+                  <input
+                    id={unmatchedOnlyInputId}
+                    type='checkbox'
+                    checked={showOnlyUnmatched}
+                    onChange={event => setShowOnlyUnmatched(event.target.checked)}
+                  />
+                  <label className='fr-label' htmlFor={unmatchedOnlyInputId}>
+                    À associer uniquement
+                  </label>
+                </div>
+                <span className='shrink-0 text-sm text-gray-600'>
+                  {filteredChunkItems.length}/{totalCount}
+                </span>
               </div>
-              <span className='shrink-0 text-sm text-gray-600'>
-                {filteredChunkItems.length}/{totalCount}
-              </span>
             </div>
-          </div>
+          )}
 
           <div
             className='max-h-[min(70vh,720px)] space-y-2 overflow-y-auto pr-1'
             onWheel={handleChunkListWheel}
           >
-            {filteredChunkItems.length === 0 ? (
+            {visibleChunkItems.length === 0 ? (
               <div className='border border-dashed border-gray-300 bg-white p-4 text-center text-sm text-gray-600'>
                 Aucune ligne.
               </div>
             ) : (
-              filteredChunkItems.map(({chunk, index}) => (
+              visibleChunkItems.map(({chunk, index}) => (
                 <ChunkListItem
                   key={chunk.id}
                   canDetach={
-                    canReconcile
+                    canEditAssociations
                     && chunk.id === selectedChunkId
                     && Boolean(chunk.pointPrelevementId)
                   }
@@ -703,6 +791,7 @@ const PointReconciliationPanel = ({
                   itemRef={chunk.id === selectedChunkId ? selectedChunkItemRef : undefined}
                   isSubmitting={isSubmitting}
                   isSelected={chunk.id === selectedChunkId}
+                  showStatus={isAssociationMode}
                   onDetach={handleDetachPoint}
                   onSelect={() => handleSelectChunk(chunk)}
                 />
@@ -713,40 +802,40 @@ const PointReconciliationPanel = ({
 
         <div className='min-h-0'>
           <div className='mb-2 flex items-center justify-between gap-2'>
-            <h2 className='fr-h6 fr-mb-0'>Points de prélèvement du déclarant</h2>
+            <h2 className='fr-h6 fr-mb-0'>
+              {isAssociationMode ? 'Points de prélèvement du déclarant' : 'Points associés'}
+            </h2>
             <span className='text-sm text-gray-600'>
-              {filteredAvailablePoints.length}/{availablePoints.length}
+              {pointCounterLabel}
             </span>
           </div>
 
-          <input
-            type='search'
-            className='fr-input fr-mb-2w'
-            aria-label='Rechercher un point de prélèvement'
-            placeholder='Rechercher un point'
-            value={pointSearch}
-            onChange={event => setPointSearch(event.target.value)}
-          />
+          {isAssociationMode && (
+            <input
+              type='search'
+              className='fr-input fr-mb-2w'
+              aria-label='Rechercher un point de prélèvement'
+              placeholder='Rechercher un point'
+              value={pointSearch}
+              onChange={event => setPointSearch(event.target.value)}
+            />
+          )}
 
           <PointReconciliationMap
             activePointId={activePointId}
             canReconcile={canSubmitReconciliation}
-            emptyMessage={
-              normalizedPointSearch && filteredAvailablePoints.length === 0
-                ? 'Aucun point ne correspond à la recherche.'
-                : undefined
-            }
+            emptyMessage={mapEmptyMessage}
             focusRequestKey={focusRequestKey}
             hoveredPointId={hoveredPointId}
             isSubmitting={isSubmitting}
             matchedPointIds={matchedPointIds}
-            pointConflictById={localConflictByPointId}
-            points={filteredAvailablePoints}
+            pointConflictById={isAssociationMode ? localConflictByPointId : {}}
+            points={visibleAvailablePoints}
             selectedChunk={selectedChunkWithIndex}
             onFocusPoint={setActivePointId}
             onHoverPoint={setHoveredPointId}
-            onReconcilePoint={handleReconcilePoint}
-            onSelectConflictChunk={handleSelectConflictChunk}
+            onReconcilePoint={isAssociationMode ? handleReconcilePoint : undefined}
+            onSelectConflictChunk={isAssociationMode ? handleSelectConflictChunk : undefined}
           />
         </div>
       </div>

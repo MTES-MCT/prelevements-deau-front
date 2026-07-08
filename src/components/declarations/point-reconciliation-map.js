@@ -12,6 +12,7 @@ import maplibre from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 import {cooperativeGesturesMapOptions} from '@/components/map/cooperative-gestures.js'
+import {IGN_RASTER_MAX_ZOOM} from '@/components/map/ign-raster.js'
 import planIGN from '@/components/map/styles/plan-ign.json'
 import {
   formatUsageReference,
@@ -171,7 +172,9 @@ function getPopupHint({
   }
 
   if (!canReconcile) {
-    return 'Consultation seule : cette association ne peut pas être modifiée ici.'
+    return isChunkAssociatedWithPoint(selectedChunk, point)
+      ? 'Point associé à la ligne sélectionnée.'
+      : 'Point consultable uniquement dans ce mode.'
   }
 
   if (isChunkAssociatedWithPoint(selectedChunk, point)) {
@@ -191,7 +194,7 @@ function getConflictHint(conflict) {
     : `Ce point est déjà associé à ${conflict.label}.`
 }
 
-function getPopupStatus({alreadyAssociated, hasConflict}) {
+function getPopupStatus({alreadyAssociated, canReconcile, hasConflict}) {
   if (hasConflict) {
     return {
       className: 'bg-[#fff4f3] text-[#b34000]',
@@ -203,6 +206,13 @@ function getPopupStatus({alreadyAssociated, hasConflict}) {
     return {
       className: 'bg-[#e6feda] text-[#18753c]',
       label: 'Association actuelle'
+    }
+  }
+
+  if (!canReconcile) {
+    return {
+      className: 'bg-[#f6f6f6] text-gray-700',
+      label: 'Consultation'
     }
   }
 
@@ -391,7 +401,7 @@ function createPopupNode({
   container.className = 'w-[300px] p-1'
   const alreadyAssociated = isChunkAssociatedWithPoint(selectedChunk, point)
   const hasConflict = Boolean(conflict && !alreadyAssociated)
-  const statusData = getPopupStatus({alreadyAssociated, hasConflict})
+  const statusData = getPopupStatus({alreadyAssociated, canReconcile, hasConflict})
 
   const status = document.createElement('div')
   status.className = [
@@ -606,6 +616,7 @@ const PointReconciliationMap = ({
       center: firstCoordinates,
       attributionControl: {compact: true},
       zoom: DEFAULT_MAP_ZOOM,
+      maxZoom: IGN_RASTER_MAX_ZOOM,
       ...cooperativeGesturesMapOptions
     })
 

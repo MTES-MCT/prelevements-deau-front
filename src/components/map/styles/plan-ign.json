@@ -8,6 +8,7 @@
         "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image%2Fpng"
       ],
       "tileSize": 256,
+      "maxzoom": 19,
       "attribution": "<a target='_blank' href='https://geoservices.ign.fr/planign'>© IGN</a>"
     },
     "reunion-ocean-mask": {
@@ -50,7 +51,7 @@
       "type": "raster",
       "source": "ign",
       "minzoom": 0,
-      "maxzoom": 18
+      "maxzoom": 20
     },
 
     {

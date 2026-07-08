@@ -12,6 +12,7 @@ import maplibre from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 import {cooperativeGesturesMapOptions} from '@/components/map/cooperative-gestures.js'
+import {IGN_RASTER_MAX_ZOOM} from '@/components/map/ign-raster.js'
 import planIGN from '@/components/map/styles/plan-ign.json'
 import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
 import {
@@ -476,6 +477,7 @@ const DashboardPointsMap = ({
       center: firstCoordinates ?? DEFAULT_MAP_CENTER,
       zoom: firstCoordinates ? SINGLE_POINT_ZOOM : DEFAULT_MAP_ZOOM,
       attributionControl: {compact: true},
+      maxZoom: IGN_RASTER_MAX_ZOOM,
       ...cooperativeGesturesMapOptions
     })
 

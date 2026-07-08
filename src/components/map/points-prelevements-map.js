@@ -12,6 +12,7 @@ import vectorIGN from './styles/vector-ign.json'
 import vector from './styles/vector.json'
 
 import {cooperativeGesturesMapOptions} from '@/components/map/cooperative-gestures.js'
+import {getMapMaxZoomForStyle} from '@/components/map/ign-raster.js'
 import {createPointPrelevementFeatures} from '@/lib/points-prelevement.js'
 
 const stylesMap = {
@@ -51,6 +52,7 @@ const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector'
       center,
       attributionControl: {compact: true},
       zoom: 10,
+      maxZoom: getMapMaxZoomForStyle(style),
       ...cooperativeGesturesMapOptions
     })
     mapRef.current = map

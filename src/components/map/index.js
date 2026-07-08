@@ -15,6 +15,7 @@ import vectorIGN from './styles/vector-ign.json'
 import vector from './styles/vector.json'
 
 import {cooperativeGesturesLocale} from '@/components/map/cooperative-gestures.js'
+import {getMapMaxZoomForStyle} from '@/components/map/ign-raster.js'
 import {
   computeBestPopupAnchor,
   createUsagePieChart,
@@ -195,7 +196,8 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
       hash: options.hash ?? false,
       cooperativeGestures: options.cooperativeGestures ?? true,
       locale: cooperativeGesturesLocale,
-      attributionControl: {compact: true}
+      attributionControl: {compact: true},
+      maxZoom: options.maxZoom ?? getMapMaxZoomForStyle(mapStyle)
     }
 
     let boundsToFit = null
@@ -297,7 +299,7 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
     return () => {
       map.remove()
     }
-  }, [mapStyle, points, handleSelectedPoint, options.hash, options.cooperativeGestures])
+  }, [mapStyle, points, handleSelectedPoint, options.hash, options.cooperativeGestures, options.maxZoom])
 
   // Mise à jour des sources lorsque les points filtrés changent
   useEffect(() => {
@@ -332,6 +334,7 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
     if (map) {
       if (mapStyle !== currentStyleRef.current) {
         currentStyleRef.current = mapStyle
+        map.setMaxZoom(options.maxZoom ?? getMapMaxZoomForStyle(mapStyle))
         map.setStyle(stylesMap[mapStyle])
       }
 
@@ -340,7 +343,7 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
         updateHighlightedPoint(map, selectedPoint, showLabels)
       })
     }
-  }, [points, mapStyle, selectedPoint, showLabels])
+  }, [points, mapStyle, selectedPoint, showLabels, options.maxZoom])
 
   useEffect(() => {
     const map = mapRef.current
