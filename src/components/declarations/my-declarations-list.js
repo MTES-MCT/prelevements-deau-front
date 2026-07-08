@@ -57,7 +57,7 @@ const declarationTypeFilterOptions = [
 ]
 
 const declarationTypeFilterValues = declarationTypeFilterOptions.map(option => option.value)
-const defaultDeclarationTypeFilterValues = declarationTypeFilterValues.filter(value => value !== 'TELEMETRY')
+const defaultDeclarationTypeFilterValues = declarationTypeFilterValues
 
 function compareEntries(entryA, entryB) {
   const dateA = new Date(entryA.createdAt ?? 0).getTime()

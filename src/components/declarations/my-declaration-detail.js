@@ -8,6 +8,7 @@ import {CircularProgress} from '@mui/material'
 import DeclarationDetails from '@/components/declarations/declaration-details.js'
 import DeclarationOverview from '@/components/declarations/declaration-overview.js'
 import DeclarationPointsChangeRequestAction from '@/components/declarations/declaration-points-change-request-action.js'
+import DeclarationSubmissionFlash from '@/components/declarations/declaration-submission-flash.js'
 import {
   getDeclarationDisplayStatus,
   getSourceReadingDateLabel,
@@ -217,6 +218,8 @@ const MyDeclarationDetail = ({availablePoints = [], initialDeclaration, showDecl
 
   return (
     <>
+      <DeclarationSubmissionFlash />
+
       <DeclarationOverview
         actions={(
           <DeclarationPointsChangeRequestAction

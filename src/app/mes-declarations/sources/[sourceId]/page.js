@@ -40,6 +40,7 @@ const Page = async ({params}) => {
 
       <DeclarationOverview
         declaration={declaration}
+        source={source}
         status={source.globalInstructionStatus}
         periodLabel={periodLabel}
       />

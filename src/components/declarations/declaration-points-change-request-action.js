@@ -166,6 +166,8 @@ const DeclarationPointsChangeRequestModal = ({
 }
 
 const DeclarationPointsChangeRequestAction = ({
+  buttonClassName = 'fr-btn fr-btn--secondary fr-btn--sm fr-icon-edit-line fr-btn--icon-left',
+  buttonLabel = 'Demander une modification',
   declaration,
   periodLabel,
   status
@@ -176,10 +178,10 @@ const DeclarationPointsChangeRequestAction = ({
     <>
       <button
         type='button'
-        className='fr-btn fr-btn--secondary fr-btn--sm fr-icon-edit-line fr-btn--icon-left'
+        className={buttonClassName}
         onClick={() => setIsOpen(true)}
       >
-        Demander une modification
+        {buttonLabel}
       </button>
 
       <DeclarationPointsChangeRequestModal

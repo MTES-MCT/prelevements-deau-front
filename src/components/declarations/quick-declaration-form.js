@@ -14,7 +14,10 @@ import QuickDeclarationMap from './quick-declaration-map.js'
 
 import {useAuth} from '@/contexts/auth-context.js'
 import {getDeclarantTitleFromUser} from '@/lib/declarants.js'
-import {getMyDeclarationURL} from '@/lib/urls.js'
+import {
+  getMyDeclarationSubmissionSuccessURL,
+  getMyDeclarationURL
+} from '@/lib/urls.js'
 import {normalizeUsageOption} from '@/lib/water-uses.js'
 import {
   createQuickDeclarationAction,
@@ -2193,7 +2196,7 @@ const QuickDeclarationForm = ({
       setOverwriteWarning(null)
       setSubmitResult({status: 'success', message: 'Déclaration créée avec succès.'})
       onSubmitted?.()
-      window.location.href = getMyDeclarationURL(result.data.data)
+      window.location.href = getMyDeclarationSubmissionSuccessURL(result.data.data)
     } catch (error) {
       console.error(error)
       setSubmitResult({

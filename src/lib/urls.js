@@ -38,6 +38,10 @@ export function getMyDeclarationURL(declaration) {
   return `/mes-declarations/${declaration.id}`
 }
 
+export function getMyDeclarationSubmissionSuccessURL(declaration) {
+  return `${getMyDeclarationURL(declaration)}?submitted=1`
+}
+
 export function getMyTelemetrySourceURL(source) {
   return `/mes-declarations/sources/${source.id}`
 }

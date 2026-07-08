@@ -1,6 +1,9 @@
 'use client'
 
+import Link from 'next/link'
+
 import {getDeclarationTypeLabel} from '@/lib/declaration-types.js'
+import {getPointPrelevementURL} from '@/lib/urls.js'
 import {
   formatUsageReference,
   getUsageColor,
@@ -152,6 +155,18 @@ function getReplacementLabel(value) {
 
 function getPointName(chunk) {
   return chunk.pointPrelevement?.name || chunk.pointPrelevementName || 'Point de prélèvement'
+}
+
+function getPointPrelevementLinkTarget(chunk) {
+  if (chunk.pointPrelevement?.id) {
+    return chunk.pointPrelevement
+  }
+
+  if (chunk.pointPrelevementId) {
+    return {id: chunk.pointPrelevementId}
+  }
+
+  return null
 }
 
 function getLastValue(chunk) {
@@ -402,6 +417,25 @@ const UsageReference = ({label, usage}) => (
   </p>
 )
 
+const PointTitle = ({chunk}) => {
+  const pointName = getPointName(chunk)
+  const pointLinkTarget = getPointPrelevementLinkTarget(chunk)
+
+  return (
+    <h3 className='fr-text--md fr-mb-0 truncate font-bold'>
+      {pointLinkTarget ? (
+        <Link
+          className='fr-link inline-flex max-w-full items-center gap-1 truncate'
+          href={getPointPrelevementURL(pointLinkTarget)}
+        >
+          <span className='truncate'>{pointName}</span>
+          <span className='fr-icon-arrow-right-up-line text-xs' aria-hidden='true' />
+        </Link>
+      ) : pointName}
+    </h3>
+  )
+}
+
 const DeclaredValueDisplay = ({value, align = 'left'}) => {
   if (!value) {
     return 'Non renseignée'
@@ -539,9 +573,7 @@ const SourceDataDetails = ({declaration, source}) => {
             <article key={chunk.id} className='p-4'>
               <div className='grid gap-3 lg:grid-cols-[minmax(0,1fr)_11rem_12rem_11rem] lg:items-start'>
                 <div className='min-w-0'>
-                  <h3 className='fr-text--md fr-mb-0 truncate font-bold'>
-                    {getPointName(chunk)}
-                  </h3>
+                  <PointTitle chunk={chunk} />
                   {firstColumnDetails.map(detail => (
                     <p key={detail} className='fr-text--sm fr-mb-0'>
                       {detail}

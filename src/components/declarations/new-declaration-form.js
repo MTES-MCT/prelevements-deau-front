@@ -13,7 +13,7 @@ import FileValidationResult from '@/components/declarations/validateur/file-vali
 import ValidateurForm from '@/components/declarations/validateur/form.js'
 import {createLocalSeriesRegistry} from '@/lib/local-series-registry.js'
 import {extractTemplateFile} from '@/lib/template-file-parser/index.js'
-import {getMyDeclarationURL} from '@/lib/urls.js'
+import {getMyDeclarationSubmissionSuccessURL} from '@/lib/urls.js'
 import {createDeclarationAction, revalidateDeclarationPaths} from '@/server/actions/declarations.js'
 
 moment.locale('fr')
@@ -256,7 +256,7 @@ const NewDeclarationForm = ({allowedDeclarationTypes = []}) => {
         message: 'Déclaration soumise avec succès.'
       })
 
-      window.location.href = getMyDeclarationURL(result.data.data)
+      window.location.href = getMyDeclarationSubmissionSuccessURL(result.data.data)
     } catch (error) {
       console.error(error)
       setSubmitResult({

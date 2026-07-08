@@ -6,6 +6,7 @@ import {
   getDeclarantsURL,
   getDeclarationURL,
   getDeclarationsURL,
+  getMyDeclarationSubmissionSuccessURL,
   getMyDeclarationURL,
   getMyDeclarationsURL,
   getMyTelemetrySourceURL,
@@ -27,6 +28,7 @@ test('URLs de listes principales', t => {
 test('URLs de détail', t => {
   t.is(getDeclarationURL('declaration-id'), '/declarations/declaration-id')
   t.is(getMyDeclarationURL({id: 'declaration-id'}), '/mes-declarations/declaration-id')
+  t.is(getMyDeclarationSubmissionSuccessURL({id: 'declaration-id'}), '/mes-declarations/declaration-id?submitted=1')
   t.is(getMyTelemetrySourceURL({id: 'source-id'}), '/mes-declarations/sources/source-id')
   t.is(getPointPrelevementURL({id: 'point-id'}), '/points-prelevement/point-id')
 })

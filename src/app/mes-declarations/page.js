@@ -17,6 +17,8 @@ export const metadata = {
 
 export const dynamic = 'force-dynamic'
 
+const DECLARATION_CREATION_INTRO = 'Saisissez vos index, volumes prélevés ou volumes rejetés directement sur la plateforme, ou déposez un fichier.'
+
 const Dossiers = async () => {
   const [result, telemetrySourcesResult] = await Promise.all([
     getMyDeclarationsAction(),
@@ -30,20 +32,6 @@ const Dossiers = async () => {
   const canCreateDeclaration = meta.canCreateDeclaration ?? allowedDeclarationTypes.length > 0
   const canCreateQuickDeclaration = meta.canCreateQuickDeclaration ?? false
   const canCreateAnyDeclaration = canCreateDeclaration || canCreateQuickDeclaration
-  const allowedDeclarationTypesLabel = allowedDeclarationTypes
-    .map(declarationType => declarationType.name)
-    .join(', ')
-  const declarationIntro = (() => {
-    if (canCreateQuickDeclaration && canCreateDeclaration) {
-      return 'Saisissez vos index, volumes prélevés ou volumes rejetés directement sur la plateforme, ou déposez un fichier après contrôle automatique.'
-    }
-
-    if (canCreateQuickDeclaration) {
-      return 'Saisissez vos index, volumes prélevés ou volumes rejetés directement sur la plateforme.'
-    }
-
-    return 'Déposez vos fichiers de déclaration après contrôle automatique.'
-  })()
 
   return (
     <main className='min-h-screen bg-[#f7f7fb] pb-12'>
@@ -65,17 +53,11 @@ const Dossiers = async () => {
             <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
               <div>
                 <h2 className='fr-mb-1v text-lg font-bold leading-snug text-gray-900 md:text-xl'>
-                  Déclarez vos prélèvements d’eau
+                  Nouvelle déclaration
                 </h2>
 
-                <p className='fr-text--sm fr-mb-0 max-w-[760px] text-gray-700'>
-                  {declarationIntro}
-                  {meta.declarantRole === 'COLLECTEUR'
-                    ? <> Vous sélectionnerez ensuite le déclarant concerné.</>
-                    : null}
-                  {allowedDeclarationTypesLabel ? (
-                    <> Types autorisés : {allowedDeclarationTypesLabel}.</>
-                  ) : null}
+                <p className='fr-text--sm fr-mb-0 text-gray-700'>
+                  {DECLARATION_CREATION_INTRO}
                 </p>
               </div>
 

@@ -11,6 +11,7 @@ export const metadata = {
 export const dynamic = 'force-dynamic'
 
 const TEMPLATE_DECLARATION_TYPE_CODE = 'template-file'
+const DECLARATION_CREATION_INTRO = 'Saisissez vos index, volumes prélevés ou volumes rejetés directement sur la plateforme, ou déposez un fichier.'
 
 const NouvelleDeclarationPage = async () => {
   const result = await getAllowedDeclarationTypesAction()
@@ -28,8 +29,8 @@ const NouvelleDeclarationPage = async () => {
           <h1 className='fr-h3 fr-mb-1v'>
             Nouvelle déclaration
           </h1>
-          <p className='fr-text--sm fr-mb-0 max-w-[760px] text-gray-700'>
-            Saisissez vos index, volumes prélevés ou volumes rejetés directement sur la plateforme, ou déposez un fichier de déclaration.
+          <p className='fr-text--sm fr-mb-0 text-gray-700'>
+            {DECLARATION_CREATION_INTRO}
           </p>
         </div>
 

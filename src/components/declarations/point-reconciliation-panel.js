@@ -12,7 +12,12 @@ import {
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import Badge from '@codegouvfr/react-dsfr/Badge'
 
+import DeclarationPointsChangeRequestAction from '@/components/declarations/declaration-points-change-request-action.js'
 import PointReconciliationMap from '@/components/declarations/point-reconciliation-map.js'
+import {
+  getDeclarationDisplayStatus,
+  getSourcePeriodLabel
+} from '@/lib/declaration.js'
 import {formatDateRange} from '@/lib/format-date.js'
 import {
   formatUsageReference,
@@ -24,6 +29,10 @@ import {reconcileDeclarationChunkAction} from '@/server/actions/declarations.js'
 import {formatNumber} from '@/utils/number.js'
 
 const CHUNK_LIST_SCROLL_FACTOR = 1.8
+const AVAILABLE_POINT_COLOR = '#666666'
+const MATCHED_POINT_COLOR = '#18753c'
+const POINTS_TO_ASSOCIATE_ANCHOR_ID = 'points-a-associer'
+const ASSOCIATION_INTRO = 'Certains points de votre fichier n\'ont pas pu être reliés automatiquement aux points de prélèvement connus sur votre territoire. Demandez la création du point ou associez-les manuellement pour que les volumes déclarés soient rattachés au bon point.'
 
 function isChunkMatched(chunk) {
   return Boolean(chunk?.pointPrelevementId)
@@ -68,22 +77,8 @@ function getSummarySeverity({remainingCount, totalCount}) {
   return 'warning'
 }
 
-function getSummaryTitle({remainingCount}) {
-  return remainingCount === 0
-    ? 'Tous les points sont associés'
-    : 'Points à associer'
-}
-
-function getSummaryDescription({remainingCount, totalCount}) {
-  if (totalCount === 0) {
-    return 'Aucun point n’a été détecté dans ce fichier.'
-  }
-
-  if (remainingCount === 0) {
-    return `${totalCount} point${totalCount > 1 ? 's' : ''} détecté${totalCount > 1 ? 's' : ''} et associé${totalCount > 1 ? 's' : ''}.`
-  }
-
-  return `${remainingCount} point${remainingCount > 1 ? 's' : ''} sur ${totalCount} reste${remainingCount > 1 ? 'nt' : ''} à associer.`
+function formatRemainingAssociationTitle(remainingCount) {
+  return `${remainingCount} point${remainingCount > 1 ? 's' : ''} restant${remainingCount > 1 ? 's' : ''} à associer`
 }
 
 function getChunkVolumeLabel(chunk) {
@@ -252,6 +247,7 @@ const ChunkListItem = ({
   isSelected,
   isSubmitting = false,
   showStatus = true,
+  showUsage = true,
   onDetach,
   onSelect
 }) => {
@@ -286,7 +282,7 @@ const ChunkListItem = ({
             {getAssociationLabel({chunk, isSelected})}
           </div>
 
-          {usageLabel && <UsageReference label={usageLabel} usage={chunk.usage} />}
+          {showUsage && usageLabel && <UsageReference label={usageLabel} usage={chunk.usage} />}
 
           {volumeLabel && (
             <div className='mt-2 text-xs text-gray-600'>
@@ -319,6 +315,90 @@ const ChunkListItem = ({
   )
 }
 
+const MapLegendCheckbox = ({
+  checked,
+  checkedClassName,
+  checkboxClassName,
+  inputId,
+  label,
+  markerClassName,
+  markerStyle,
+  onChange
+}) => (
+  <label
+    className={`inline-flex cursor-pointer items-center gap-1.5 border px-2 py-1 text-sm font-medium transition-colors ${checked ? checkedClassName : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'}`}
+    htmlFor={inputId}
+  >
+    <input
+      checked={checked}
+      className={`h-3.5 w-3.5 shrink-0 ${checkboxClassName}`}
+      id={inputId}
+      type='checkbox'
+      onChange={event => onChange(event.target.checked)}
+    />
+    <span
+      className={`${markerClassName} ${checked ? '' : 'opacity-40'}`}
+      style={markerStyle}
+      aria-hidden='true'
+    />
+    <span>{label}</span>
+  </label>
+)
+
+const MapPointsLegend = ({
+  mode,
+  showMatchedPoints,
+  showUnmatchedPoints,
+  onToggleMatchedPoints,
+  onToggleUnmatchedPoints
+}) => {
+  const unmatchedInputId = useId()
+  const matchedInputId = useId()
+  const canToggleUnmatchedPoints = mode === 'association'
+
+  const matchedLabel = mode === 'readonly'
+    ? 'Points rattachés à la déclaration'
+    : 'Points déjà rattachés'
+
+  return (
+    <div className='mt-2 flex flex-wrap justify-end gap-x-4 gap-y-1 text-xs text-gray-600' aria-label='Légende de la carte'>
+      {canToggleUnmatchedPoints && (
+        <MapLegendCheckbox
+          checked={showUnmatchedPoints}
+          checkedClassName='border-gray-500 bg-gray-50 text-gray-900'
+          checkboxClassName='accent-gray-600'
+          inputId={unmatchedInputId}
+          label='Points disponibles à associer'
+          markerClassName='h-3 w-3 rounded-full border border-white shadow-sm'
+          markerStyle={{backgroundColor: AVAILABLE_POINT_COLOR}}
+          onChange={onToggleUnmatchedPoints}
+        />
+      )}
+
+      <MapLegendCheckbox
+        checked={showMatchedPoints}
+        checkedClassName='border-[#18753c] bg-[#f3fbf6] text-gray-900'
+        checkboxClassName='accent-[#18753c]'
+        inputId={matchedInputId}
+        label={matchedLabel}
+        markerClassName='h-4 w-4 rounded-full border-2 border-white shadow-sm ring-2 ring-[#18753c]/25'
+        markerStyle={{backgroundColor: MATCHED_POINT_COLOR}}
+        onChange={onToggleMatchedPoints}
+      />
+    </div>
+  )
+}
+
+const AssociationSummary = ({
+  remainingCount,
+  totalCount
+}) => (
+  <Alert
+    severity={getSummarySeverity({remainingCount, totalCount})}
+    title={formatRemainingAssociationTitle(remainingCount)}
+  />
+)
+
 const PointReconciliationPanel = ({
   availablePoints = [],
   canReconcile = false,
@@ -331,9 +411,13 @@ const PointReconciliationPanel = ({
   const chunks = useMemo(() => source?.chunks ?? [], [source?.chunks])
   const remainingCount = chunks.filter(chunk => !isChunkMatched(chunk)).length
   const totalCount = chunks.length
-  const firstUnmatchedChunkId = useMemo(
-    () => chunks.find(chunk => !isChunkMatched(chunk))?.id ?? chunks[0]?.id ?? null,
+  const firstUnmatchedChunk = useMemo(
+    () => chunks.find(chunk => !isChunkMatched(chunk)) ?? null,
     [chunks]
+  )
+  const firstUnmatchedChunkId = useMemo(
+    () => firstUnmatchedChunk?.id ?? chunks[0]?.id ?? null,
+    [chunks, firstUnmatchedChunk?.id]
   )
   const initialSelectedChunk = useMemo(
     () => chunks.find(chunk => chunk.id === firstUnmatchedChunkId) ?? null,
@@ -345,12 +429,16 @@ const PointReconciliationPanel = ({
   const [hoveredPointId, setHoveredPointId] = useState(null)
   const [submitError, setSubmitError] = useState(null)
   const [submitSuccess, setSubmitSuccess] = useState(null)
+  const [completionSuccess, setCompletionSuccess] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [chunkSearch, setChunkSearch] = useState('')
   const [pointSearch, setPointSearch] = useState('')
-  const [showOnlyUnmatched, setShowOnlyUnmatched] = useState(false)
+  const [showOnlyUnmatched, setShowOnlyUnmatched] = useState(remainingCount > 0)
   const [isAssociationMode, setIsAssociationMode] = useState(remainingCount > 0)
+  const [showUnmatchedMapPoints, setShowUnmatchedMapPoints] = useState(remainingCount > 0)
+  const [showMatchedMapPoints, setShowMatchedMapPoints] = useState(remainingCount === 0)
   const previousRemainingCountRef = useRef(remainingCount)
+  const previousSourceIdRef = useRef(null)
 
   const handleSelectChunk = useCallback(chunk => {
     if (!chunk) {
@@ -376,8 +464,19 @@ const PointReconciliationPanel = ({
   }, [chunks, firstUnmatchedChunkId, initialSelectedChunk?.pointPrelevementId, selectedChunkId])
 
   useEffect(() => {
-    setIsAssociationMode(remainingCount > 0)
+    if (previousSourceIdRef.current === source?.id) {
+      return
+    }
+
+    const shouldEditAssociations = remainingCount > 0
+
+    previousSourceIdRef.current = source?.id
+    setIsAssociationMode(shouldEditAssociations)
+    setShowOnlyUnmatched(shouldEditAssociations)
+    setShowUnmatchedMapPoints(shouldEditAssociations)
+    setShowMatchedMapPoints(!shouldEditAssociations)
     previousRemainingCountRef.current = remainingCount
+    setCompletionSuccess(null)
     setSubmitError(null)
     setSubmitSuccess(null)
   }, [remainingCount, source?.id])
@@ -385,10 +484,18 @@ const PointReconciliationPanel = ({
   useEffect(() => {
     const previousRemainingCount = previousRemainingCountRef.current
 
-    if (remainingCount > 0) {
+    if (remainingCount > 0 && previousRemainingCount === 0) {
       setIsAssociationMode(true)
-    } else if (previousRemainingCount > 0) {
+      setShowOnlyUnmatched(true)
+      setShowUnmatchedMapPoints(true)
+      setShowMatchedMapPoints(false)
+      setCompletionSuccess(null)
+    } else if (remainingCount === 0 && previousRemainingCount > 0) {
       setIsAssociationMode(false)
+      setShowOnlyUnmatched(false)
+      setShowUnmatchedMapPoints(false)
+      setShowMatchedMapPoints(true)
+      setCompletionSuccess('Tous les points détectés dans le fichier sont maintenant associés.')
     }
 
     previousRemainingCountRef.current = remainingCount
@@ -405,6 +512,10 @@ const PointReconciliationPanel = ({
     () => chunks.map(chunk => chunk.pointPrelevementId).filter(Boolean),
     [chunks]
   )
+  const matchedPointIdSet = useMemo(
+    () => new Set(matchedPointIds.map(String)),
+    [matchedPointIds]
+  )
   const selectedChunk = useMemo(
     () => chunks.find(chunk => chunk.id === selectedChunkId) ?? null,
     [chunks, selectedChunkId]
@@ -420,9 +531,9 @@ const PointReconciliationPanel = ({
     }
   }, [chunks, selectedChunk])
 
-  const summarySeverity = getSummarySeverity({remainingCount, totalCount})
   const canEditAssociations = canReconcile && isAssociationMode
   const canSubmitReconciliation = canEditAssociations && Boolean(selectedChunk)
+  const shouldShowAssociationWorkflow = isAssociationMode && remainingCount > 0
   const nextUnmatchedChunk = useMemo(
     () => getNextUnmatchedChunk(chunks, selectedChunkId),
     [chunks, selectedChunkId]
@@ -432,22 +543,26 @@ const PointReconciliationPanel = ({
     [chunks, selectedChunk]
   )
   const normalizedChunkSearch = normalizeSearchValue(chunkSearch)
-  const filteredChunkItems = useMemo(() => chunks
-    .map((chunk, index) => ({chunk, index}))
+  const chunkItems = useMemo(
+    () => chunks.map((chunk, index) => ({chunk, index})),
+    [chunks]
+  )
+  const searchableChunkItems = useMemo(
+    () => shouldShowAssociationWorkflow && showOnlyUnmatched
+      ? chunkItems.filter(({chunk}) => !isChunkMatched(chunk))
+      : chunkItems,
+    [chunkItems, shouldShowAssociationWorkflow, showOnlyUnmatched]
+  )
+  const visibleChunkItems = useMemo(() => searchableChunkItems
     .filter(({chunk, index}) => {
-      if (showOnlyUnmatched && isChunkMatched(chunk)) {
-        return false
-      }
-
       if (!normalizedChunkSearch) {
         return true
       }
 
       return getChunkSearchText(chunk, index).includes(normalizedChunkSearch)
-    }), [chunks, normalizedChunkSearch, showOnlyUnmatched])
-  const visibleChunkItems = isAssociationMode
-    ? filteredChunkItems
-    : chunks.map((chunk, index) => ({chunk, index}))
+    }), [normalizedChunkSearch, searchableChunkItems])
+  const visibleChunkCounterLabel = `${visibleChunkItems.length}/${totalCount} ligne${totalCount > 1 ? 's' : ''}`
+  const totalChunkCounterLabel = `${totalCount} ligne${totalCount > 1 ? 's' : ''}`
   const normalizedPointSearch = normalizeSearchValue(pointSearch)
   const filteredAvailablePoints = useMemo(() => {
     if (!normalizedPointSearch) {
@@ -456,28 +571,58 @@ const PointReconciliationPanel = ({
 
     return availablePoints.filter(point => getPointSearchText(point).includes(normalizedPointSearch))
   }, [availablePoints, normalizedPointSearch])
-  const associatedAvailablePoints = useMemo(() => {
-    const matchedPointIdSet = new Set(matchedPointIds.map(String))
+  const visibleAvailablePoints = useMemo(() => {
+    const pointOptions = isAssociationMode ? filteredAvailablePoints : availablePoints
 
-    return availablePoints.filter(point => matchedPointIdSet.has(String(point.id)))
-  }, [availablePoints, matchedPointIds])
-  const visibleAvailablePoints = isAssociationMode ? filteredAvailablePoints : associatedAvailablePoints
+    return pointOptions.filter(point => {
+      const matched = matchedPointIdSet.has(String(point.id))
+      return matched ? showMatchedMapPoints : showUnmatchedMapPoints
+    })
+  }, [
+    availablePoints,
+    filteredAvailablePoints,
+    isAssociationMode,
+    matchedPointIdSet,
+    showMatchedMapPoints,
+    showUnmatchedMapPoints
+  ])
 
   useEffect(() => {
     if (!activePointId) {
       return
     }
 
-    if (!filteredAvailablePoints.some(point => point.id === activePointId)) {
+    if (!visibleAvailablePoints.some(point => String(point.id) === String(activePointId))) {
       setActivePointId(null)
     }
-  }, [activePointId, filteredAvailablePoints])
+  }, [activePointId, visibleAvailablePoints])
 
   const handleSelectNextUnmatchedChunk = useCallback(() => {
     if (nextUnmatchedChunk) {
       handleSelectChunk(nextUnmatchedChunk)
     }
   }, [handleSelectChunk, nextUnmatchedChunk])
+
+  const handleEnterAssociationView = useCallback(() => {
+    const hasRemainingAssociations = remainingCount > 0
+
+    setIsAssociationMode(true)
+    setShowOnlyUnmatched(hasRemainingAssociations)
+    setShowUnmatchedMapPoints(true)
+    setShowMatchedMapPoints(true)
+    setCompletionSuccess(null)
+    setSubmitError(null)
+    setSubmitSuccess(null)
+  }, [remainingCount])
+
+  const handleLeaveAssociationView = useCallback(() => {
+    setIsAssociationMode(false)
+    setShowOnlyUnmatched(false)
+    setShowUnmatchedMapPoints(false)
+    setShowMatchedMapPoints(true)
+    setSubmitError(null)
+    setSubmitSuccess(null)
+  }, [])
 
   const handleSelectConflictChunk = useCallback(chunkId => {
     const conflictChunk = chunks.find(chunk => chunk.id === chunkId)
@@ -656,27 +801,36 @@ const PointReconciliationPanel = ({
 
   let mapEmptyMessage
 
-  if (!isAssociationMode) {
+  if (!showMatchedMapPoints && !showUnmatchedMapPoints) {
+    mapEmptyMessage = 'Aucun type de point sélectionné.'
+  } else if (!isAssociationMode) {
     mapEmptyMessage = 'Aucun point associé géolocalisé.'
   } else if (normalizedPointSearch && filteredAvailablePoints.length === 0) {
     mapEmptyMessage = 'Aucun point ne correspond à la recherche.'
   }
 
   const pointCounterLabel = isAssociationMode
-    ? `${visibleAvailablePoints.length}/${availablePoints.length}`
+    ? `${visibleAvailablePoints.length}/${filteredAvailablePoints.length}`
     : `${visibleAvailablePoints.length} point${visibleAvailablePoints.length > 1 ? 's' : ''}`
+  const mapLegendMode = isAssociationMode ? 'association' : 'readonly'
+  const pointsChangeStatus = getDeclarationDisplayStatus(declaration, source)
+  const pointsChangePeriodLabel = getSourcePeriodLabel(source)
 
   return (
     <section className='fr-mb-4w border border-gray-200 bg-white p-5 md:p-6'>
       <div className='mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between'>
         <div>
-          <h2 className='fr-h4 fr-mb-1v'>
-            {isAssociationMode ? 'Association des points' : 'Points de prélèvement déclarés'}
-          </h2>
-          {!isAssociationMode && (
-            <p className='fr-text--sm fr-mb-0 text-gray-600'>
-              {totalCount} point{totalCount > 1 ? 's' : ''} détecté{totalCount > 1 ? 's' : ''} dans le fichier.
-            </p>
+          {shouldShowAssociationWorkflow ? (
+            <h2 className='fr-text--md fr-mb-0 font-semibold leading-snug text-gray-900'>
+              {ASSOCIATION_INTRO}
+            </h2>
+          ) : (
+            <>
+              <h2 className='fr-h4 fr-mb-1v'>Points de prélèvement déclarés</h2>
+              <p className='fr-text--sm fr-mb-0 text-gray-600'>
+                {totalCount} point{totalCount > 1 ? 's' : ''} détecté{totalCount > 1 ? 's' : ''} dans le fichier.
+              </p>
+            </>
           )}
         </div>
 
@@ -687,7 +841,7 @@ const PointReconciliationPanel = ({
                 <button
                   type='button'
                   className='fr-btn fr-btn--secondary fr-btn--sm'
-                  onClick={() => setIsAssociationMode(false)}
+                  onClick={handleLeaveAssociationView}
                 >
                   Voir en lecture seule
                 </button>
@@ -696,7 +850,7 @@ const PointReconciliationPanel = ({
               <button
                 type='button'
                 className='fr-btn fr-btn--secondary fr-btn--sm'
-                onClick={() => setIsAssociationMode(true)}
+                onClick={handleEnterAssociationView}
               >
                 Modifier les associations
               </button>
@@ -705,11 +859,18 @@ const PointReconciliationPanel = ({
         )}
       </div>
 
-      {isAssociationMode && (
+      {shouldShowAssociationWorkflow && (
+        <AssociationSummary
+          remainingCount={remainingCount}
+          totalCount={totalCount}
+        />
+      )}
+
+      {!isAssociationMode && completionSuccess && (
         <Alert
-          severity={summarySeverity}
-          title={getSummaryTitle({remainingCount})}
-          description={getSummaryDescription({remainingCount, totalCount})}
+          severity='success'
+          title='Associations terminées'
+          description={completionSuccess}
         />
       )}
 
@@ -723,10 +884,10 @@ const PointReconciliationPanel = ({
       )}
 
       <div className='fr-mt-3w grid gap-4 lg:grid-cols-[minmax(280px,420px)_1fr]'>
-        <div>
+        <div id={POINTS_TO_ASSOCIATE_ANCHOR_ID}>
           <div className='mb-2 flex items-center justify-between gap-2'>
-            <h2 className='fr-h6 fr-mb-0'>{isAssociationMode ? 'Lignes importées' : 'Lignes du fichier'}</h2>
-            {isAssociationMode && (
+            <h2 className='fr-h6 fr-mb-0'>{shouldShowAssociationWorkflow ? 'Points du fichier à associer' : 'Lignes du fichier'}</h2>
+            {shouldShowAssociationWorkflow ? (
               <button
                 type='button'
                 className='fr-btn fr-btn--secondary fr-btn--sm'
@@ -735,6 +896,12 @@ const PointReconciliationPanel = ({
               >
                 Suivant à associer
               </button>
+            ) : (
+              !isAssociationMode && (
+                <span className='shrink-0 text-sm text-gray-600'>
+                  {totalChunkCounterLabel}
+                </span>
+              )
             )}
           </div>
 
@@ -749,22 +916,24 @@ const PointReconciliationPanel = ({
                 onChange={event => setChunkSearch(event.target.value)}
               />
 
-              <div className='flex items-center justify-between gap-3'>
-                <div className='fr-checkbox-group fr-mb-0'>
-                  <input
-                    id={unmatchedOnlyInputId}
-                    type='checkbox'
-                    checked={showOnlyUnmatched}
-                    onChange={event => setShowOnlyUnmatched(event.target.checked)}
-                  />
-                  <label className='fr-label' htmlFor={unmatchedOnlyInputId}>
-                    À associer uniquement
-                  </label>
+              {shouldShowAssociationWorkflow && (
+                <div className='flex items-center justify-between gap-3'>
+                  <div className='fr-checkbox-group fr-mb-0'>
+                    <input
+                      checked={showOnlyUnmatched}
+                      id={unmatchedOnlyInputId}
+                      type='checkbox'
+                      onChange={event => setShowOnlyUnmatched(event.target.checked)}
+                    />
+                    <label className='fr-label' htmlFor={unmatchedOnlyInputId}>
+                      Afficher uniquement les points à associer
+                    </label>
+                  </div>
+                  <span className='shrink-0 text-sm text-gray-600'>
+                    {visibleChunkCounterLabel}
+                  </span>
                 </div>
-                <span className='shrink-0 text-sm text-gray-600'>
-                  {filteredChunkItems.length}/{totalCount}
-                </span>
-              </div>
+              )}
             </div>
           )}
 
@@ -792,6 +961,7 @@ const PointReconciliationPanel = ({
                   isSubmitting={isSubmitting}
                   isSelected={chunk.id === selectedChunkId}
                   showStatus={isAssociationMode}
+                  showUsage={!isAssociationMode}
                   onDetach={handleDetachPoint}
                   onSelect={() => handleSelectChunk(chunk)}
                 />
@@ -821,6 +991,24 @@ const PointReconciliationPanel = ({
             />
           )}
 
+          {shouldShowAssociationWorkflow && (
+            <div className='mb-2 flex flex-col gap-2 border border-dashed border-gray-300 bg-gray-50 p-3 sm:flex-row sm:items-center sm:justify-between'>
+              <div>
+                <p className='fr-text--sm fr-mb-0 font-medium text-gray-900'>Point introuvable ?</p>
+                <p className='fr-text--xs fr-mb-0 text-gray-600'>
+                  Demandez l’ajout ou la correction des points de prélèvement du territoire.
+                </p>
+              </div>
+              <DeclarationPointsChangeRequestAction
+                buttonClassName='fr-btn fr-btn--tertiary fr-btn--sm fr-icon-add-circle-line fr-btn--icon-left shrink-0'
+                buttonLabel='Demander la création de points'
+                declaration={declaration}
+                periodLabel={pointsChangePeriodLabel}
+                status={pointsChangeStatus}
+              />
+            </div>
+          )}
+
           <PointReconciliationMap
             activePointId={activePointId}
             canReconcile={canSubmitReconciliation}
@@ -832,10 +1020,19 @@ const PointReconciliationPanel = ({
             pointConflictById={isAssociationMode ? localConflictByPointId : {}}
             points={visibleAvailablePoints}
             selectedChunk={selectedChunkWithIndex}
+            showSelectedChunkUsage={!isAssociationMode}
             onFocusPoint={setActivePointId}
             onHoverPoint={setHoveredPointId}
             onReconcilePoint={isAssociationMode ? handleReconcilePoint : undefined}
             onSelectConflictChunk={isAssociationMode ? handleSelectConflictChunk : undefined}
+          />
+
+          <MapPointsLegend
+            mode={mapLegendMode}
+            showMatchedPoints={showMatchedMapPoints}
+            showUnmatchedPoints={showUnmatchedMapPoints}
+            onToggleMatchedPoints={setShowMatchedMapPoints}
+            onToggleUnmatchedPoints={setShowUnmatchedMapPoints}
           />
         </div>
       </div>

@@ -395,6 +395,7 @@ function createPopupNode({
   onSelectConflictChunk,
   point,
   selectedChunk,
+  showSelectedChunkUsage,
   onReconcilePoint
 }) {
   const container = document.createElement('div')
@@ -453,7 +454,11 @@ function createPopupNode({
       className: 'mt-0.5 truncate',
       text: selectedChunk.pointPrelevementName || `Ligne ${selectedChunk.index + 1}`
     })
-    appendUsageReference(selectedLine, selectedChunk.usage, selectedUsageLabel)
+
+    if (showSelectedChunkUsage) {
+      appendUsageReference(selectedLine, selectedChunk.usage, selectedUsageLabel)
+    }
+
     appendTextElement(selectedLine, {
       className: 'mt-0.5 text-gray-500',
       text: selectedPeriodLabel
@@ -517,7 +522,8 @@ function openPointPopup({
       onReconcilePoint: props.onReconcilePoint,
       onSelectConflictChunk: props.onSelectConflictChunk,
       point,
-      selectedChunk: props.selectedChunk
+      selectedChunk: props.selectedChunk,
+      showSelectedChunkUsage: props.showSelectedChunkUsage
     }))
     .addTo(map)
 }
@@ -536,7 +542,8 @@ const PointReconciliationMap = ({
   onSelectConflictChunk,
   pointConflictById = {},
   points = [],
-  selectedChunk = null
+  selectedChunk = null,
+  showSelectedChunkUsage = true
 }) => {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
@@ -556,7 +563,8 @@ const PointReconciliationMap = ({
     onReconcilePoint,
     onSelectConflictChunk,
     pointConflictById,
-    selectedChunk
+    selectedChunk,
+    showSelectedChunkUsage
   })
   const [hasMapMoved, setHasMapMoved] = useState(false)
   const pointsWithCoordinates = useMemo(
@@ -582,7 +590,8 @@ const PointReconciliationMap = ({
       onReconcilePoint,
       onSelectConflictChunk,
       pointConflictById,
-      selectedChunk
+      selectedChunk,
+      showSelectedChunkUsage
     }
   }, [
     canReconcile,
@@ -592,7 +601,8 @@ const PointReconciliationMap = ({
     onReconcilePoint,
     onSelectConflictChunk,
     pointConflictById,
-    selectedChunk
+    selectedChunk,
+    showSelectedChunkUsage
   ])
 
   useEffect(() => {
