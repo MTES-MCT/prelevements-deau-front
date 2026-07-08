@@ -10,11 +10,6 @@ import {
 
 import {SegmentedControl} from '@codegouvfr/react-dsfr/SegmentedControl'
 import Link from 'next/link'
-import {
-  usePathname,
-  useRouter,
-  useSearchParams
-} from 'next/navigation'
 
 import DashboardPointsMap from '@/components/dashboard/dashboard-points-map.js'
 import DashboardVolumesChart from '@/components/dashboard/dashboard-volumes-chart.js'
@@ -58,6 +53,7 @@ const DECLARATION_PERIOD_SEGMENTS = [
 const NO_WATER_BODY_TYPES_SENTINEL = '__none__'
 const VOLUME_CHART_SUBTITLE = 'Volumes représentant uniquement les déclarations enregistrées sur Partageons l’Eau, pouvant être inférieurs aux volumes réels du territoire.'
 const EMPTY_ARRAY = []
+const DASHBOARD_HASH_PREFIX = 'dashboard?'
 
 function formatZoneLabel(zone) {
   const typeLabel = ZONE_TYPE_LABELS[zone.type] ?? zone.type
@@ -98,25 +94,103 @@ function areAllWaterBodyTypesSelected(waterBodyTypes) {
     && WATER_BODY_TYPE_VALUES.every(value => waterBodyTypes.includes(value))
 }
 
-function getExpectedWaterBodyTypesSearchValue(waterBodyTypes) {
-  return areAllWaterBodyTypesSelected(waterBodyTypes)
-    ? ''
-    : buildWaterBodyTypesSearchValue(waterBodyTypes)
+function areSameValues(firstValues, secondValues) {
+  return firstValues.length === secondValues.length
+    && firstValues.every((value, index) => secondValues[index] === value)
 }
 
-function isDashboardSearchSynced(searchParams, {
+function splitDashboardHashValues(value) {
+  return String(value ?? '')
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean)
+}
+
+function parseDashboardHashWaterBodyTypes(value) {
+  if (value === null) {
+    return WATER_BODY_TYPE_VALUES
+  }
+
+  if (value === NO_WATER_BODY_TYPES_SENTINEL) {
+    return []
+  }
+
+  const values = splitDashboardHashValues(value)
+    .filter(item => WATER_BODY_TYPE_VALUES.includes(item))
+
+  return values.length > 0 ? values : WATER_BODY_TYPE_VALUES
+}
+
+function parseDashboardHash(hash) {
+  const hashValue = hash.startsWith('#') ? hash.slice(1) : hash
+
+  if (!hashValue.startsWith(DASHBOARD_HASH_PREFIX)) {
+    return null
+  }
+
+  const params = new URLSearchParams(hashValue.slice(DASHBOARD_HASH_PREFIX.length))
+  const parsedYear = Number(params.get('year'))
+
+  return {
+    period: params.get('period') ?? '',
+    periodType: params.get('periodType') ?? '',
+    waterBodyTypes: parseDashboardHashWaterBodyTypes(params.get('waterBodyTypes')),
+    year: Number.isFinite(parsedYear) ? parsedYear : '',
+    zoneCodes: splitDashboardHashValues(params.get('zones'))
+  }
+}
+
+function buildDashboardHash({
   period,
   periodType,
   waterBodyTypes,
   year,
   zoneCodes
 }) {
-  return searchParams.get('zones') === buildZoneSearchValue(zoneCodes)
-    && searchParams.get('periodType') === periodType
-    && searchParams.get('period') === period
-    && searchParams.get('year') === String(year)
-    && (searchParams.get('waterBodyTypes') ?? '') === getExpectedWaterBodyTypesSearchValue(waterBodyTypes)
-    && !searchParams.has('waterBodyType')
+  const params = new URLSearchParams()
+
+  if (Array.isArray(zoneCodes) && zoneCodes.length > 0) {
+    params.set('zones', buildZoneSearchValue(zoneCodes))
+  }
+
+  if (periodType) {
+    params.set('periodType', periodType)
+  }
+
+  if (period) {
+    params.set('period', period)
+  }
+
+  if (year) {
+    params.set('year', year)
+  }
+
+  if (Array.isArray(waterBodyTypes) && !areAllWaterBodyTypesSelected(waterBodyTypes)) {
+    params.set('waterBodyTypes', buildWaterBodyTypesSearchValue(waterBodyTypes))
+  }
+
+  const search = params.toString()
+
+  return search ? `${DASHBOARD_HASH_PREFIX}${search}` : ''
+}
+
+function replaceDashboardHash(options) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  const hash = buildDashboardHash(options)
+  const url = `${window.location.pathname}${window.location.search}${hash ? `#${hash}` : ''}`
+
+  window.history.replaceState(window.history.state, '', url)
+}
+
+function isSameDashboardFilterState(current, next) {
+  return current.period === next.period
+    && current.periodType === next.periodType
+    && String(current.year) === String(next.year)
+    && areSameValues(current.zoneCodes, next.zoneCodes)
+    && areSameValues(current.waterBodyTypes, next.waterBodyTypes)
 }
 
 function getDeclarationProgress(item) {
@@ -577,10 +651,8 @@ const DashboardPage = ({
   initialError,
   user
 }) => {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const hasSyncedDefaultZonesRef = useRef(false)
+  const hasAppliedInitialHashRef = useRef(false)
+  const territoryReloadRequestIdRef = useRef(0)
   const [dashboard, setDashboard] = useState(initialDashboard)
   const [selectedZoneCodes, setSelectedZoneCodes] = useState(initialDashboard?.selectedZoneCodes ?? [])
   const [selectedPeriodType, setSelectedPeriodType] = useState(
@@ -596,7 +668,7 @@ const DashboardPage = ({
     initialDashboard?.volumesByUsage?.selectedWaterBodyTypes ?? WATER_BODY_TYPE_VALUES
   )
   const [error, setError] = useState(initialError)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isTerritoryLoading, setIsTerritoryLoading] = useState(false)
 
   const zones = dashboard?.zones ?? EMPTY_ARRAY
   const points = dashboard?.points ?? EMPTY_ARRAY
@@ -625,7 +697,7 @@ const DashboardPage = ({
   const withdrawnChart = getVolumeChartForRole(volumesByUsage?.charts?.withdrawn, isDeclarant)
   const dischargedChart = getVolumeChartForRole(volumesByUsage?.charts?.discharged, isDeclarant)
   const hasSelectableZones = zones.length > 0
-  const isZoneFilterDisabled = !hasSelectableZones || isLoading
+  const isZoneFilterDisabled = !hasSelectableZones || isTerritoryLoading
 
   const zoneOptions = useMemo(() =>
     zones.map(zone => {
@@ -645,103 +717,6 @@ const DashboardPage = ({
       .filter(code => selectedSet.has(code))
   }, [zones])
 
-  const syncURL = useCallback((
-    zoneCodes,
-    {
-      period = selectedPeriod,
-      periodType = selectedPeriodType,
-      replace = true,
-      waterBodyTypes = selectedWaterBodyTypes,
-      year = selectedVolumeYear
-    } = {}
-  ) => {
-    const nextSearchParams = new URLSearchParams(searchParams.toString())
-    nextSearchParams.set('zones', buildZoneSearchValue(zoneCodes))
-
-    if (periodType) {
-      nextSearchParams.set('periodType', periodType)
-    } else {
-      nextSearchParams.delete('periodType')
-    }
-
-    if (period) {
-      nextSearchParams.set('period', period)
-    } else {
-      nextSearchParams.delete('period')
-    }
-
-    if (year) {
-      nextSearchParams.set('year', year)
-    } else {
-      nextSearchParams.delete('year')
-    }
-
-    if (Array.isArray(waterBodyTypes) && !areAllWaterBodyTypesSelected(waterBodyTypes)) {
-      nextSearchParams.set('waterBodyTypes', buildWaterBodyTypesSearchValue(waterBodyTypes))
-    } else {
-      nextSearchParams.delete('waterBodyTypes')
-    }
-
-    nextSearchParams.delete('waterBodyType')
-    nextSearchParams.delete('month')
-    nextSearchParams.delete('week')
-
-    const search = nextSearchParams.toString()
-    const url = search ? `${pathname}?${search}` : pathname
-
-    if (replace) {
-      router.replace(url, {scroll: false})
-      return
-    }
-
-    router.push(url, {scroll: false})
-  }, [
-    pathname,
-    router,
-    searchParams,
-    selectedPeriod,
-    selectedPeriodType,
-    selectedVolumeYear,
-    selectedWaterBodyTypes
-  ])
-
-  useEffect(() => {
-    if (
-      hasSyncedDefaultZonesRef.current
-      || selectedZoneCodes.length === 0
-      || !selectedPeriod
-      || !selectedPeriodType
-      || !selectedVolumeYear
-    ) {
-      return
-    }
-
-    hasSyncedDefaultZonesRef.current = true
-
-    if (!isDashboardSearchSynced(searchParams, {
-      period: selectedPeriod,
-      periodType: selectedPeriodType,
-      waterBodyTypes: selectedWaterBodyTypes,
-      year: selectedVolumeYear,
-      zoneCodes: selectedZoneCodes
-    })) {
-      syncURL(selectedZoneCodes, {
-        period: selectedPeriod,
-        periodType: selectedPeriodType,
-        waterBodyTypes: selectedWaterBodyTypes,
-        year: selectedVolumeYear
-      })
-    }
-  }, [
-    searchParams,
-    selectedPeriod,
-    selectedPeriodType,
-    selectedVolumeYear,
-    selectedWaterBodyTypes,
-    selectedZoneCodes,
-    syncURL
-  ])
-
   const reloadDashboard = useCallback(async ({
     period = selectedPeriod,
     periodType = selectedPeriodType,
@@ -749,17 +724,20 @@ const DashboardPage = ({
     year = selectedVolumeYear,
     zoneCodes = selectedZoneCodes
   } = {}) => {
-    setIsLoading(true)
+    const requestId = territoryReloadRequestIdRef.current + 1
+    territoryReloadRequestIdRef.current = requestId
+
+    setIsTerritoryLoading(true)
     setError(null)
+    replaceDashboardHash({
+      period,
+      periodType,
+      waterBodyTypes,
+      year,
+      zoneCodes
+    })
 
     try {
-      syncURL(zoneCodes, {
-        period,
-        periodType,
-        waterBodyTypes,
-        year
-      })
-
       const result = await getDashboardTerritoryAction({
         period,
         periodType,
@@ -767,6 +745,10 @@ const DashboardPage = ({
         year,
         zoneCodes
       })
+
+      if (territoryReloadRequestIdRef.current !== requestId) {
+        return
+      }
 
       if (result.success) {
         const nextSelectedZoneCodes = result.data.selectedZoneCodes ?? zoneCodes
@@ -781,25 +763,101 @@ const DashboardPage = ({
         setSelectedPeriod(nextSelectedPeriod)
         setSelectedVolumeYear(nextSelectedYear)
         setSelectedWaterBodyTypes(nextSelectedWaterBodyTypes)
-        syncURL(nextSelectedZoneCodes, {
+        replaceDashboardHash({
           period: nextSelectedPeriod,
           periodType: nextSelectedPeriodType,
           waterBodyTypes: nextSelectedWaterBodyTypes,
-          year: nextSelectedYear
+          year: nextSelectedYear,
+          zoneCodes: nextSelectedZoneCodes
         })
       } else {
         setError(result.error || 'Impossible de charger le tableau de bord.')
       }
+    } catch {
+      if (territoryReloadRequestIdRef.current === requestId) {
+        setError('Impossible de charger le tableau de bord.')
+      }
     } finally {
-      setIsLoading(false)
+      if (territoryReloadRequestIdRef.current === requestId) {
+        setIsTerritoryLoading(false)
+      }
     }
   }, [
     selectedPeriod,
     selectedPeriodType,
     selectedVolumeYear,
     selectedWaterBodyTypes,
-    selectedZoneCodes,
-    syncURL
+    selectedZoneCodes
+  ])
+
+  useEffect(() => {
+    if (
+      hasAppliedInitialHashRef.current
+      || selectedZoneCodes.length === 0
+      || !selectedPeriod
+      || !selectedPeriodType
+      || !selectedVolumeYear
+    ) {
+      return
+    }
+
+    hasAppliedInitialHashRef.current = true
+
+    const hashFilters = parseDashboardHash(window.location.hash)
+
+    if (!hashFilters) {
+      replaceDashboardHash({
+        period: selectedPeriod,
+        periodType: selectedPeriodType,
+        waterBodyTypes: selectedWaterBodyTypes,
+        year: selectedVolumeYear,
+        zoneCodes: selectedZoneCodes
+      })
+      return
+    }
+
+    const nextZoneCodes = hashFilters.zoneCodes.length > 0
+      ? normalizeZoneCodes(hashFilters.zoneCodes)
+      : selectedZoneCodes
+    const nextFilters = {
+      period: hashFilters.period || selectedPeriod,
+      periodType: hashFilters.periodType || selectedPeriodType,
+      waterBodyTypes: hashFilters.waterBodyTypes,
+      year: hashFilters.year || selectedVolumeYear,
+      zoneCodes: nextZoneCodes.length > 0 ? nextZoneCodes : selectedZoneCodes
+    }
+    const currentFilters = {
+      period: selectedPeriod,
+      periodType: selectedPeriodType,
+      waterBodyTypes: selectedWaterBodyTypes,
+      year: selectedVolumeYear,
+      zoneCodes: selectedZoneCodes
+    }
+
+    if (isSameDashboardFilterState(currentFilters, nextFilters)) {
+      replaceDashboardHash(nextFilters)
+      return
+    }
+
+    setSelectedZoneCodes(nextFilters.zoneCodes)
+    setSelectedPeriodType(nextFilters.periodType)
+    setSelectedPeriod(nextFilters.period)
+    setSelectedVolumeYear(nextFilters.year)
+    setSelectedWaterBodyTypes(nextFilters.waterBodyTypes)
+
+    async function reloadHashDashboard() {
+      await reloadDashboard(nextFilters)
+    }
+
+    reloadHashDashboard()
+  }, [
+    normalizeZoneCodes,
+    reloadDashboard,
+    selectedPeriod,
+    selectedPeriodType,
+    selectedVolumeYear,
+    selectedWaterBodyTypes,
+    selectedZoneCodes
   ])
 
   const handleZoneChange = useCallback(async nextValue => {
@@ -845,7 +903,7 @@ const DashboardPage = ({
 
   return (
     <main className='min-h-screen bg-[#f7f7fb] pb-12'>
-      <DashboardRefreshStatus isLoading={isLoading} />
+      <DashboardRefreshStatus isLoading={isTerritoryLoading} />
 
       <div className='fr-container pt-8 md:pt-10'>
         <div className='mb-6 flex flex-col gap-5 md:flex-row md:items-start md:justify-between'>
@@ -875,7 +933,7 @@ const DashboardPage = ({
               />
 
               <PointsMapSection
-                isLoading={isLoading}
+                isLoading={false}
                 points={activityPoints}
                 pointsSectionTitle={pointsSectionTitle}
                 pointsURL={pointsURL}
@@ -910,7 +968,7 @@ const DashboardPage = ({
                   className='mt-0'
                   declarationsURL={declarationsURL}
                   declarationsURLLabel={declarationsURLLabel}
-                  isLoading={isLoading}
+                  isLoading={isTerritoryLoading}
                   periodOptions={periodOptions}
                   registeredPrelevementsByUsage={registeredPrelevementsByUsage}
                   selectedPeriod={selectedPeriod}
@@ -923,7 +981,7 @@ const DashboardPage = ({
 
                 <DashboardVolumeCharts
                   dischargedChart={dischargedChart}
-                  isLoading={isLoading}
+                  isLoading={isTerritoryLoading}
                   selectedVolumeYear={selectedVolumeYear}
                   selectedWaterBodyTypes={selectedWaterBodyTypes}
                   volumeYearOptions={volumeYearOptions}
@@ -945,7 +1003,7 @@ const DashboardPage = ({
 
             <PointsMapSection
               showPreleveurs
-              isLoading={isLoading}
+              isLoading={isTerritoryLoading}
               points={points}
               pointsSectionTitle={pointsSectionTitle}
               pointsURL={pointsURL}
@@ -956,7 +1014,7 @@ const DashboardPage = ({
               showReminder
               declarationsURL={declarationsURL}
               declarationsURLLabel={declarationsURLLabel}
-              isLoading={isLoading}
+              isLoading={isTerritoryLoading}
               periodOptions={periodOptions}
               registeredPrelevementsByUsage={registeredPrelevementsByUsage}
               selectedPeriod={selectedPeriod}
@@ -967,7 +1025,7 @@ const DashboardPage = ({
 
             <DashboardVolumeCharts
               dischargedChart={dischargedChart}
-              isLoading={isLoading}
+              isLoading={isTerritoryLoading}
               selectedVolumeYear={selectedVolumeYear}
               selectedWaterBodyTypes={selectedWaterBodyTypes}
               volumeYearOptions={volumeYearOptions}

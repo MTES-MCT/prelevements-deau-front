@@ -152,7 +152,17 @@ const WaterBodyTypesMultiselect = ({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  useEffect(() => {
+    if (disabled) {
+      setOpen(false)
+    }
+  }, [disabled])
+
   function handleToggle(optionValue) {
+    if (disabled) {
+      return
+    }
+
     const allValues = getAllWaterBodyTypeValues(options)
     const currentValues = value
     const nextValues = currentValues.includes(optionValue)
@@ -169,7 +179,7 @@ const WaterBodyTypesMultiselect = ({
       </label>
       <button
         aria-expanded={open}
-        className='fr-select mt-2 block w-full cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap text-left disabled:cursor-not-allowed'
+        className='fr-select mt-2 block w-full cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap text-left disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500'
         disabled={disabled}
         id={id}
         type='button'
@@ -183,11 +193,12 @@ const WaterBodyTypesMultiselect = ({
           {options.map(option => (
             <label
               key={option.value}
-              className='flex cursor-pointer items-center gap-2 px-2 py-1 text-sm hover:bg-gray-100'
+              className={`flex items-center gap-2 px-2 py-1 text-sm ${disabled ? 'cursor-not-allowed text-gray-500' : 'cursor-pointer hover:bg-gray-100'}`}
             >
               <input
                 checked={value.includes(option.value)}
-                className='cursor-pointer'
+                className={disabled ? 'cursor-not-allowed' : 'cursor-pointer'}
+                disabled={disabled}
                 type='checkbox'
                 value={option.value}
                 onChange={() => handleToggle(option.value)}
