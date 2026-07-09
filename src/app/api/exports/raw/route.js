@@ -55,6 +55,14 @@ function buildDateHeure(date, time) {
   return `${date} ${time}`
 }
 
+function getActorLabel(actor) {
+  if (!actor) {
+    return ''
+  }
+
+  return actor.name || actor.socialReason || [actor.firstName, actor.lastName].filter(Boolean).join(' ') || actor.email || ''
+}
+
 // eslint-disable-next-line complexity
 function flattenSeriesValues(series, payload, {pointNameById}) {
   const rows = []
@@ -62,11 +70,19 @@ function flattenSeriesValues(series, payload, {pointNameById}) {
 
   const pointId = series.pointPrelevement ?? ''
   const pointNom = pointNameById.get(String(pointId)) || ''
+  const preleveur = series.actors?.preleveur || null
+  const collecteur = series.actors?.collecteur || null
 
   for (const entry of values) {
     const baseRow = {
       pointId,
       pointNom,
+      preleveurId: preleveur?.id || '',
+      preleveurNom: getActorLabel(preleveur),
+      preleveurEmail: preleveur?.email || '',
+      collecteurId: collecteur?.id || '',
+      collecteurNom: getActorLabel(collecteur),
+      collecteurEmail: collecteur?.email || '',
       metricTypeCode: series.metricTypeCode || '',
       unit: series.unit || '',
       frequency: series.frequency || '',
@@ -156,6 +172,12 @@ function buildCsv(rows) {
   const headers = [
     'pointId',
     'pointNom',
+    'preleveurId',
+    'preleveurNom',
+    'preleveurEmail',
+    'collecteurId',
+    'collecteurNom',
+    'collecteurEmail',
     'metricTypeCode',
     'unit',
     'frequency',
