@@ -525,6 +525,7 @@ const ExportForm = ({
             </h2>
             <p className='fr-text--sm fr-mb-0 text-gray-700'>
               Les champs marqués d’un astérisque sont obligatoires. La période ne peut pas inclure de date future.
+              Les volumes sont sélectionnés par chevauchement de période, les index par date de mesure.
             </p>
           </div>
 

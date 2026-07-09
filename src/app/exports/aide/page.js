@@ -89,16 +89,40 @@ const fieldDescriptions = [
     description: 'Unité de la valeur exportée, par exemple m3.'
   },
   {
-    name: 'Date',
-    description: 'Date UTC de début de la mesure ou de la période concernée.'
+    name: 'Date de mesure',
+    description: 'Date UTC de la valeur instantanée, par exemple un index ou un débit. Vide pour les volumes.'
   },
   {
-    name: 'Heure',
-    description: 'Heure UTC de début de la mesure lorsque la donnée est horodatée.'
+    name: 'Heure de mesure',
+    description: 'Heure UTC de la valeur instantanée lorsque l’information est disponible. Vide pour les volumes.'
   },
   {
-    name: 'DateHeure',
-    description: 'Date et heure UTC de début de la mesure. Pour une donnée journalière ou périodique sans heure utile, seule la date est renseignée.'
+    name: 'DateHeure de mesure',
+    description: 'Date et heure UTC de la valeur instantanée. Vide pour les volumes.'
+  },
+  {
+    name: 'Date de début de période',
+    description: 'Date UTC de début pour une valeur cumulative, notamment un volume. Vide pour les index.'
+  },
+  {
+    name: 'Heure de début de période',
+    description: 'Heure UTC de début de période lorsque l’information est disponible. Vide pour les index.'
+  },
+  {
+    name: 'DateHeure de début de période',
+    description: 'Date et heure UTC de début de période. Vide pour les index.'
+  },
+  {
+    name: 'Date de fin de période',
+    description: 'Date UTC de fin affichée pour une valeur cumulative. Pour les fréquences journalières ou supérieures, c’est le dernier jour inclus. Vide pour les index.'
+  },
+  {
+    name: 'Heure de fin de période',
+    description: 'Heure UTC de fin de période lorsque l’information est disponible. Vide pour les index.'
+  },
+  {
+    name: 'DateHeure de fin de période',
+    description: 'Date et heure UTC de fin de période. Vide pour les index.'
   },
   {
     name: 'Valeur',
