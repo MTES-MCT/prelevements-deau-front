@@ -88,6 +88,7 @@ const DeclarationAdminActions = ({
   declarationCode,
   declarationId,
   onSuccess,
+  redirectOnDelete = true,
   sourceId
 }) => {
   const router = useRouter()
@@ -130,7 +131,16 @@ const DeclarationAdminActions = ({
       }
 
       if (pendingAction === 'delete') {
-        router.push('/declarations')
+        setPendingAction(null)
+        onSuccess?.({
+          action: pendingAction,
+          result
+        })
+
+        if (redirectOnDelete) {
+          router.push('/declarations')
+        }
+
         router.refresh()
         return
       }

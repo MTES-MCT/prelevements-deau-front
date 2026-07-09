@@ -7,6 +7,7 @@ import {
   getDeclarationDisplayStatus,
   getSourcePeriodLabel,
   getSourceReadingDateLabel,
+  isDeclarationTreatmentPending,
   isManualQuickDeclarationSource,
   isTelemetrySource,
   sourceStateLabels
@@ -211,6 +212,10 @@ function getPointSummary(source) {
   return formatCount(getPointCount(source), 'point de prélèvement', 'points de prélèvement')
 }
 
+function isSpreadsheetTreatmentPending(declaration, source) {
+  return declaration?.dataSourceType === 'SPREADSHEET' && isDeclarationTreatmentPending(declaration, source)
+}
+
 function getVolumeLabel(source) {
   const withdrawn = source?.metadata?.totalWaterVolumeWithdrawn
   const discharged = source?.metadata?.totalWaterVolumeDischarged
@@ -389,8 +394,14 @@ function getTypeSection({declaration, kind, presentation, source, status}) {
   }
 }
 
-function getContextSection({declaration, isTelemetry, showDeclarant, source}) {
-  const pointSummary = getPointSummary(source)
+function getContextSection({
+  declaration,
+  isTelemetry,
+  pointSummary: pointSummaryOverride,
+  showDeclarant,
+  source
+}) {
+  const pointSummary = pointSummaryOverride ?? getPointSummary(source)
 
   if (isTelemetry && showDeclarant) {
     return {
@@ -485,10 +496,12 @@ function getSummarySections({
   const isManual = isManualQuickDeclarationSource(source)
   const isTelemetry = isTelemetrySource(source, declaration)
   const kind = getSourceKind(source, declaration)
+  const isWaitingForFileProcessing = isSpreadsheetTreatmentPending(declaration, source)
   const periodLabel = (isManual
     ? getManualQuickDeclarationPeriodLabel(source)
     : getSourceExactPeriodLabel(source) ?? getSourcePeriodLabel(source))
     ?? 'Période non renseignée'
+  const displayedPeriodLabel = isWaitingForFileProcessing ? 'Analyse du fichier en cours' : periodLabel
 
   return [
     getTypeSection({
@@ -501,6 +514,7 @@ function getSummarySections({
     getContextSection({
       declaration,
       isTelemetry,
+      pointSummary: isWaitingForFileProcessing ? 'Analyse des points en cours' : null,
       showDeclarant,
       source
     }),
@@ -509,7 +523,7 @@ function getSummarySections({
       isManual,
       isTelemetry,
       kind,
-      periodLabel,
+      periodLabel: displayedPeriodLabel,
       source
     })
   ]

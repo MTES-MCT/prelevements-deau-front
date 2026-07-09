@@ -58,7 +58,7 @@ const DeclarationTabs = () => {
 
   return (
     <div>
-      <ReplayableDeclarationsPanel />
+      <ReplayableDeclarationsPanel mode='summary' />
       <DeclarationFilters
         filters={filters}
         setFilters={handleSetFilters}

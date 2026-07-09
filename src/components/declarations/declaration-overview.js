@@ -11,6 +11,7 @@ import {
   formatFullAddress,
   getSourcePeriodLabel,
   getSourceReadingDateLabel,
+  isDeclarationTreatmentPending,
   isManualQuickDeclarationSource,
   isTelemetrySource,
   sourceStateLabels
@@ -173,6 +174,24 @@ function getPointSummary(source) {
   }
 
   return formatCount(getPointCount(source), 'point de prélèvement', 'points de prélèvement')
+}
+
+function isSpreadsheetTreatmentPending(declaration, source) {
+  return declaration?.dataSourceType === 'SPREADSHEET' && isDeclarationTreatmentPending(declaration, source)
+}
+
+function getProcessingAwareOverviewLabels({declaration, periodLabel, source}) {
+  if (isSpreadsheetTreatmentPending(declaration, source)) {
+    return {
+      pointSummary: 'Analyse des points en cours',
+      periodLabel: 'Analyse du fichier en cours'
+    }
+  }
+
+  return {
+    pointSummary: getPointSummary(source),
+    periodLabel: getOverviewPeriodLabel(source, periodLabel)
+  }
 }
 
 function getTelemetryPreleveurNames(source, declaration) {
@@ -537,8 +556,7 @@ const DeclarationOverview = ({
   const hasSeparateDepositorValue = hasSeparateDepositor(declaration)
   const displayedAotDecreeNumber = declaration.aotDecreeNumber || declaration.numeroArreteAot
   const title = getDeclarationTitle(declaration)
-  const pointSummary = getPointSummary(source)
-  const resolvedPeriodLabel = getOverviewPeriodLabel(source, periodLabel)
+  const overviewLabels = getProcessingAwareOverviewLabels({declaration, periodLabel, source})
   const nature = getNatureDetails({declaration, kind, source})
   const receivedDateLabel = getReceivedDateLabel({declaration, source})
   const depositDetail = getDepositDetail({declaration, kind, source})
@@ -546,7 +564,7 @@ const DeclarationOverview = ({
     declarantName,
     declaration,
     isTelemetry: kind === 'TELEMETRY',
-    pointSummary,
+    pointSummary: overviewLabels.pointSummary,
     showDeclarant,
     source
   })
@@ -610,7 +628,7 @@ const DeclarationOverview = ({
           <section className='min-w-0'>
             <h2 className='fr-text--xs fr-mb-2v font-semibold uppercase text-gray-500'>Index / Volumes</h2>
             <div className='break-words text-base font-semibold leading-snug text-gray-900'>
-              {resolvedPeriodLabel}
+              {overviewLabels.periodLabel}
             </div>
             {nature.label && (
               <div className='mt-1'>

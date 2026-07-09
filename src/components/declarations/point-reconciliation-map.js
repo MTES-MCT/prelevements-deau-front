@@ -662,7 +662,7 @@ const PointReconciliationMap = ({
             '#18753c',
             ['==', ['get', 'hovered'], true],
             '#6a6af4',
-            '#666666'
+            '#000091'
           ],
           'circle-opacity': [
             'case',
@@ -693,7 +693,7 @@ const PointReconciliationMap = ({
             10,
             ['==', ['get', 'hovered'], true],
             10,
-            7
+            8
           ],
           'circle-color': [
             'case',
@@ -703,7 +703,7 @@ const PointReconciliationMap = ({
             '#18753c',
             ['==', ['get', 'hovered'], true],
             '#6a6af4',
-            '#666666'
+            '#000091'
           ],
           'circle-stroke-color': '#ffffff',
           'circle-stroke-width': [
@@ -712,7 +712,7 @@ const PointReconciliationMap = ({
             4,
             ['==', ['get', 'matched'], true],
             2,
-            1.5
+            2
           ]
         }
       })
@@ -720,7 +720,11 @@ const PointReconciliationMap = ({
       fitPoints(map, pointsWithCoordinatesRef.current)
 
       map.once('idle', () => {
-        map.on('movestart', () => setHasMapMoved(true))
+        map.on('movestart', event => {
+          if (event.originalEvent) {
+            setHasMapMoved(true)
+          }
+        })
       })
 
       const onMouseEnter = event => {

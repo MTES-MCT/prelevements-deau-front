@@ -1027,18 +1027,20 @@ const UsageCombobox = ({
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
   const [dropdownStyle, setDropdownStyle] = useState(null)
+  const [isFiltering, setIsFiltering] = useState(false)
   const [isInlineDropdown, setIsInlineDropdown] = useState(false)
   const containerRef = useRef(null)
   const inputRef = useRef(null)
   const listboxRef = useRef(null)
   const normalizedSearch = normalizeSearchText(value)
+  const selectedUsage = findUsageOptionBySearchValue(options, value)
   const visibleOptions = useMemo(() => {
-    if (!normalizedSearch) {
+    if (!isFiltering || !normalizedSearch) {
       return options
     }
 
     return options.filter(option => normalizeSearchText(formatUsageOptionLabel(option)).includes(normalizedSearch))
-  }, [normalizedSearch, options])
+  }, [isFiltering, normalizedSearch, options])
 
   const updateDropdownPosition = useCallback(() => {
     const useInlineDropdown = shouldUseInlineUsageDropdown()
@@ -1084,10 +1086,25 @@ const UsageCombobox = ({
   }, [open, updateDropdownPosition])
 
   useEffect(() => {
-    setActiveIndex(0)
-  }, [value, visibleOptions.length])
+    const selectedIndex = selectedUsage
+      ? visibleOptions.findIndex(option => option.value === selectedUsage.value)
+      : -1
 
-  const openDropdown = useCallback(() => {
+    setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0)
+  }, [selectedUsage, visibleOptions])
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+
+    listboxRef.current
+      ?.querySelector(`[data-option-index="${activeIndex}"]`)
+      ?.scrollIntoView({block: 'nearest'})
+  }, [activeIndex, open])
+
+  const openDropdown = useCallback(({filter = false} = {}) => {
+    setIsFiltering(filter)
     updateDropdownPosition()
     setOpen(true)
   }, [updateDropdownPosition])
@@ -1097,6 +1114,7 @@ const UsageCombobox = ({
       usageId: usage.value,
       usageSearch: formatUsageOptionLabel(usage)
     })
+    setIsFiltering(false)
     setOpen(false)
   }, [onUsageChange])
 
@@ -1105,56 +1123,77 @@ const UsageCombobox = ({
       ref={listboxRef}
       id={`${id}-listbox`}
       className={classNames(
-        'z-[1200] overflow-auto border border-gray-300 bg-white shadow-lg',
+        'quick-declaration-usage-listbox z-[1200] overflow-auto border border-gray-300 bg-white shadow-lg',
         isInlineDropdown ? 'absolute right-0 left-0 top-full mt-1 max-h-64' : 'fixed'
       )}
       role='listbox'
       style={isInlineDropdown ? undefined : dropdownStyle}
     >
-      {visibleOptions.length > 0 ? visibleOptions.map((usage, index) => (
-        <button
-          key={usage.value}
-          type='button'
-          role='option'
-          aria-selected={index === activeIndex}
-          className={classNames(
-            'block w-full border-b border-gray-100 px-3 py-2 text-left text-sm last:border-b-0',
-            index === activeIndex ? 'bg-blue-50 text-blue-900' : 'bg-white hover:bg-gray-50'
-          )}
-          onMouseEnter={() => setActiveIndex(index)}
-          onMouseDown={event => {
-            event.preventDefault()
-            selectUsage(usage)
-          }}
-        >
-          <span className='block font-medium'>{formatUsageOptionLabel(usage)}</span>
-          {usage.definition && (
-            <span className='mt-0.5 block text-xs text-gray-600'>{usage.definition}</span>
-          )}
-        </button>
-      )) : (
+      {visibleOptions.length > 0 ? visibleOptions.map((usage, index) => {
+        const isActive = index === activeIndex
+        const isSelected = usage.value === selectedUsage?.value
+
+        return (
+          <button
+            key={usage.value}
+            id={`${id}-option-${index}`}
+            data-option-index={index}
+            type='button'
+            role='option'
+            aria-selected={isSelected}
+            className={classNames(
+              'relative block w-full cursor-pointer border-b border-gray-100 py-2 pr-3 text-left text-xs last:border-b-0',
+              isSelected ? 'pl-7' : 'pl-3',
+              isActive ? 'bg-blue-50 text-blue-900' : 'bg-white hover:bg-gray-50',
+              isSelected && 'font-semibold'
+            )}
+            onMouseEnter={() => setActiveIndex(index)}
+            onMouseDown={event => {
+              event.preventDefault()
+              selectUsage(usage)
+            }}
+          >
+            {isSelected && (
+              <span
+                className='fr-icon-check-line absolute left-3 top-[0.62rem] text-[#18753c]'
+                aria-hidden='true'
+              />
+            )}
+            <span className='min-w-0'>
+              <span className='block'>{formatUsageOptionLabel(usage)}</span>
+              {usage.definition && (
+                <span className='mt-0.5 block text-xs font-normal text-gray-600'>{usage.definition}</span>
+              )}
+            </span>
+          </button>
+        )
+      }) : (
         <p className='fr-hint-text fr-mb-0 px-3 py-2 text-sm'>Aucun usage trouvé.</p>
       )}
     </div>
   )
+  const activeDescendant = open && visibleOptions[activeIndex] ? `${id}-option-${activeIndex}` : undefined
 
   return (
     <div ref={containerRef} className='quick-declaration-combobox relative'>
       <input
         ref={inputRef}
         id={id}
-        className='fr-input quick-declaration-control text-xs'
+        className='fr-input quick-declaration-control quick-declaration-combobox-input text-xs'
         type='text'
         role='combobox'
         aria-autocomplete='list'
+        aria-activedescendant={activeDescendant}
         aria-expanded={open}
         aria-controls={`${id}-listbox`}
+        aria-haspopup='listbox'
         value={value}
-        placeholder='Code ou libellé'
+        placeholder='Rechercher'
         autoComplete='off'
-        onFocus={() => {
+        onFocus={event => {
           onFocus?.()
-          openDropdown()
+          event.target.select()
+          openDropdown({filter: false})
         }}
         onChange={event => {
           const usageSearch = event.target.value
@@ -1164,18 +1203,18 @@ const UsageCombobox = ({
             usageSearch,
             usageId: selectedUsage?.value ?? ''
           })
-          openDropdown()
+          openDropdown({filter: true})
         }}
         onKeyDown={event => {
           if (event.key === 'ArrowDown') {
             event.preventDefault()
-            openDropdown()
+            openDropdown({filter: open ? isFiltering : false})
             setActiveIndex(index => Math.min(index + 1, Math.max(visibleOptions.length - 1, 0)))
           }
 
           if (event.key === 'ArrowUp') {
             event.preventDefault()
-            openDropdown()
+            openDropdown({filter: open ? isFiltering : false})
             setActiveIndex(index => Math.max(index - 1, 0))
           }
 
@@ -1187,6 +1226,24 @@ const UsageCombobox = ({
           if (event.key === 'Escape') {
             setOpen(false)
           }
+        }}
+      />
+      <button
+        type='button'
+        tabIndex={-1}
+        className='quick-declaration-combobox-toggle fr-icon-arrow-down-s-line'
+        aria-label={open ? 'Fermer la liste des usages' : 'Ouvrir la liste des usages'}
+        onMouseDown={event => event.preventDefault()}
+        onClick={() => {
+          inputRef.current?.focus()
+          inputRef.current?.select()
+
+          if (open) {
+            setOpen(false)
+            return
+          }
+
+          openDropdown({filter: false})
         }}
       />
       {isInlineDropdown ? listbox : (typeof document === 'undefined' ? null : createPortal(listbox, document.body))}
@@ -1520,7 +1577,7 @@ const QuickDeclarationEntryRow = ({
 
       <div className='fr-input-group fr-mb-0'>
         <label className='fr-label md:hidden' htmlFor={usageInputId}>Usage</label>
-        <div className='quick-declaration-field mt-1 md:mt-0'>
+        <div className='quick-declaration-field quick-declaration-usage-field mt-1 md:mt-0'>
           <UsageCombobox
             id={usageInputId}
             options={usageOptions}

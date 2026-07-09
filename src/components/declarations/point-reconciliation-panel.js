@@ -10,7 +10,6 @@ import {
 } from 'react'
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
-import Badge from '@codegouvfr/react-dsfr/Badge'
 
 import DeclarationPointsChangeRequestAction from '@/components/declarations/declaration-points-change-request-action.js'
 import PointReconciliationMap from '@/components/declarations/point-reconciliation-map.js'
@@ -29,7 +28,7 @@ import {reconcileDeclarationChunkAction} from '@/server/actions/declarations.js'
 import {formatNumber} from '@/utils/number.js'
 
 const CHUNK_LIST_SCROLL_FACTOR = 1.8
-const AVAILABLE_POINT_COLOR = '#666666'
+const AVAILABLE_POINT_COLOR = '#000091'
 const MATCHED_POINT_COLOR = '#18753c'
 const POINTS_TO_ASSOCIATE_ANCHOR_ID = 'points-a-associer'
 const ASSOCIATION_INTRO = 'Certains points de votre fichier n\'ont pas pu être reliés automatiquement aux points de prélèvement connus sur votre territoire. Demandez la création du point ou associez-les manuellement pour que les volumes déclarés soient rattachés au bon point.'
@@ -98,9 +97,9 @@ function getChunkVolumeLabel(chunk) {
 }
 
 const ChunkStatusBadge = ({matched}) => (
-  <Badge severity={matched ? 'success' : 'warning'}>
+  <span className={`inline-flex whitespace-nowrap border px-1.5 py-0.5 text-[0.62rem] font-semibold uppercase leading-none ${matched ? 'border-transparent bg-[#e6f4ea] text-[#18753c]' : 'border-[#ce614a] bg-[#fff4f0] text-[#8d533e]'}`}>
     {matched ? 'Associé' : 'À associer'}
-  </Badge>
+  </span>
 )
 
 const UsageReference = ({label, usage}) => (
@@ -119,17 +118,17 @@ const UsageReference = ({label, usage}) => (
 )
 
 function getChunkItemClassName({isSelected, matched}) {
-  const baseClassName = 'w-full border border-l-4 p-3 text-left transition-colors'
+  const baseClassName = 'relative w-full border p-3 text-left transition-colors'
 
   if (isSelected) {
-    return `${baseClassName} border-[#000091] border-l-[#000091] bg-[#f5f5fe] shadow-sm`
+    return 'relative w-full border-2 border-[#000091] bg-[#f5f5fe] p-[11px] text-left shadow-sm transition-colors'
   }
 
   if (matched) {
-    return `${baseClassName} border-gray-300 border-l-[#18753c] bg-white hover:bg-gray-50`
+    return `${baseClassName} border-gray-300 bg-white hover:bg-gray-50`
   }
 
-  return `${baseClassName} border-gray-300 border-l-[#ce614a] bg-white hover:bg-gray-50`
+  return `${baseClassName} border-gray-300 bg-white hover:bg-gray-50`
 }
 
 function getAssociationLabel({chunk, isSelected}) {
@@ -238,6 +237,14 @@ function getReconciliationErrorMessage(result) {
   return result?.error || result?.data?.message || 'L’association n’a pas pu être enregistrée.'
 }
 
+function focusChunkListItem(currentItem, targetIndex) {
+  const list = currentItem.closest('[data-chunk-list]')
+  const items = [...(list?.querySelectorAll('[data-chunk-list-item]') ?? [])]
+  const target = items[targetIndex]
+
+  target?.focus()
+}
+
 const ChunkListItem = ({
   canDetach = false,
   chunk,
@@ -255,28 +262,66 @@ const ChunkListItem = ({
   const chunkTitle = getChunkTitle(chunk, index)
   const volumeLabel = getChunkVolumeLabel(chunk)
   const usageLabel = formatUsageReference(chunk.usage)
+  const handleKeyDown = event => {
+    if (event.target !== event.currentTarget) {
+      return
+    }
+
+    const list = event.currentTarget.closest('[data-chunk-list]')
+    const items = [...(list?.querySelectorAll('[data-chunk-list-item]') ?? [])]
+    const currentIndex = items.indexOf(event.currentTarget)
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      focusChunkListItem(event.currentTarget, Math.min(currentIndex + 1, items.length - 1))
+      return
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      focusChunkListItem(event.currentTarget, Math.max(currentIndex - 1, 0))
+      return
+    }
+
+    if (event.key === 'Home') {
+      event.preventDefault()
+      focusChunkListItem(event.currentTarget, 0)
+      return
+    }
+
+    if (event.key === 'End') {
+      event.preventDefault()
+      focusChunkListItem(event.currentTarget, items.length - 1)
+      return
+    }
+
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      onSelect()
+    }
+  }
 
   return (
-    <div ref={itemRef} className={getChunkItemClassName({isSelected, matched})}>
+    <div
+      ref={itemRef}
+      className={`${getChunkItemClassName({isSelected, matched})} cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#000091]`}
+      data-chunk-list-item='true'
+      role='button'
+      tabIndex={0}
+      aria-label={`Sélectionner ${chunkTitle}`}
+      aria-pressed={isSelected}
+      onClick={onSelect}
+      onKeyDown={handleKeyDown}
+    >
       <div className='flex items-start justify-between gap-3'>
-        <button
-          type='button'
-          className='min-w-0 flex-1 appearance-none border-0 bg-transparent p-0 text-left'
-          aria-pressed={isSelected}
-          onClick={onSelect}
-        >
+        <div className='min-w-0 flex-1'>
           <div className='flex flex-wrap items-center gap-2'>
             <span className='truncate text-sm font-bold text-gray-900' title={chunkTitle}>
               {chunkTitle}
             </span>
-            {isSelected && (
-              <span className='text-xs font-medium text-[#000091]'>
-                Sélectionné
-              </span>
-            )}
           </div>
           <div
-            className={matched ? 'truncate text-xs text-[#18753c]' : 'truncate text-xs text-gray-500'}
+            className={matched ? 'truncate text-xs text-[#18753c]' : 'truncate text-xs text-gray-600'}
             title={matched ? getChunkPointName(chunk) : undefined}
           >
             {getAssociationLabel({chunk, isSelected})}
@@ -295,7 +340,7 @@ const ChunkListItem = ({
               {feedbackMessage}
             </div>
           )}
-        </button>
+        </div>
 
         <div className='flex shrink-0 flex-col items-end gap-2'>
           {showStatus && <ChunkStatusBadge matched={matched} />}
@@ -304,7 +349,10 @@ const ChunkListItem = ({
               type='button'
               className='fr-btn fr-btn--secondary fr-btn--sm'
               disabled={isSubmitting}
-              onClick={onDetach}
+              onClick={event => {
+                event.stopPropagation()
+                onDetach?.()
+              }}
             >
               Détacher
             </button>
@@ -344,7 +392,6 @@ const MapLegendCheckbox = ({
     <span>{label}</span>
   </label>
 )
-
 const MapPointsLegend = ({
   mode,
   showMatchedPoints,
@@ -365,11 +412,11 @@ const MapPointsLegend = ({
       {canToggleUnmatchedPoints && (
         <MapLegendCheckbox
           checked={showUnmatchedPoints}
-          checkedClassName='border-gray-500 bg-gray-50 text-gray-900'
-          checkboxClassName='accent-gray-600'
+          checkedClassName='border-[#000091] bg-[#f5f5fe] text-gray-900'
+          checkboxClassName='accent-[#000091]'
           inputId={unmatchedInputId}
           label='Points disponibles à associer'
-          markerClassName='h-3 w-3 rounded-full border border-white shadow-sm'
+          markerClassName='h-4 w-4 rounded-full border-2 border-white shadow-sm ring-2 ring-[#000091]/20'
           markerStyle={{backgroundColor: AVAILABLE_POINT_COLOR}}
           onChange={onToggleUnmatchedPoints}
         />
@@ -918,14 +965,14 @@ const PointReconciliationPanel = ({
 
               {shouldShowAssociationWorkflow && (
                 <div className='flex items-center justify-between gap-3'>
-                  <div className='fr-checkbox-group fr-mb-0'>
+                  <div className='fr-checkbox-group fr-mb-0 min-w-0'>
                     <input
                       checked={showOnlyUnmatched}
                       id={unmatchedOnlyInputId}
                       type='checkbox'
                       onChange={event => setShowOnlyUnmatched(event.target.checked)}
                     />
-                    <label className='fr-label' htmlFor={unmatchedOnlyInputId}>
+                    <label className='fr-label whitespace-nowrap text-[0.78rem]' htmlFor={unmatchedOnlyInputId}>
                       Afficher uniquement les points à associer
                     </label>
                   </div>
@@ -938,6 +985,7 @@ const PointReconciliationPanel = ({
           )}
 
           <div
+            data-chunk-list
             className='max-h-[min(70vh,720px)] space-y-2 overflow-y-auto pr-1'
             onWheel={handleChunkListWheel}
           >
