@@ -67,6 +67,14 @@ export {
 } from './dashboard.js'
 
 export {
+  createDataExportAction,
+  deleteDataExportAction,
+  getDataExportDownloadAction,
+  getDataExportOptionsAction,
+  listDataExportsAction
+} from './exports.js'
+
+export {
   addDeclarantDeclarationTypeAction,
   createDeclarationTypeAction,
   disableDeclarationTypeAction,
