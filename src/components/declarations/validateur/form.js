@@ -57,12 +57,12 @@ const FileValidateurForm = ({
     <div className='flex flex-col gap-4'>
       {allowedDeclarationTypes.length === 1 ? (
         <div>
-          <p className='fr-text--sm fr-mb-1w'>Type de déclaration</p>
+          <p className='fr-text--sm fr-mb-1w'>Type de fichier attendu</p>
           <Tag>{selectedDeclarationType?.name ?? selectedDeclarationTypeCode}</Tag>
         </div>
       ) : (
         <Select
-          label='Type de déclaration *'
+          label='Type de fichier attendu *'
           nativeSelectProps={{
             value: selectedDeclarationTypeCode,
             onChange: handleDeclarationTypeChange

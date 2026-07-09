@@ -162,7 +162,7 @@ const MonComptePage = async () => {
               </Typography>
 
               <Typography variant='body2'>
-                Pour exercer vos droits : <a href='mailto:prelevements-deau@beta.gouv.fr'>prelevements-deau@beta.gouv.fr</a>
+                Pour exercer vos droits : <a href='mailto:contact@partageonsleau.beta.gouv.fr'>contact@partageonsleau.beta.gouv.fr</a>
               </Typography>
             </div>
 

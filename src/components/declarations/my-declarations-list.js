@@ -362,8 +362,6 @@ const MyDeclarationsList = ({
     <div className='flex flex-col gap-3'>
       <section className='border border-gray-200 bg-white px-4 py-3' aria-label='Filtres des déclarations'>
         <div className='mb-3 flex flex-wrap items-center justify-between gap-2'>
-          <h3 className='fr-h6 fr-mb-0'>Filtres</h3>
-
           {hasActiveFilters && (
             <Button
               priority='secondary'
