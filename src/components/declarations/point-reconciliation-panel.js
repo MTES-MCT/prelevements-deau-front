@@ -13,6 +13,7 @@ import {Alert} from '@codegouvfr/react-dsfr/Alert'
 
 import DeclarationPointsChangeRequestAction from '@/components/declarations/declaration-points-change-request-action.js'
 import PointReconciliationMap from '@/components/declarations/point-reconciliation-map.js'
+import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
 import {
   getDeclarationDisplayStatus,
   getSourcePeriodLabel
@@ -52,6 +53,14 @@ function getChunkPointName(chunk) {
 
 function getRawPointName(chunk) {
   return chunk?.pointPrelevementName || 'Nom non identifié'
+}
+
+function getChunkPreleveurLabel(chunk) {
+  if (chunk?.preleveur) {
+    return getDeclarantTitleFromDeclarant(chunk.preleveur)
+  }
+
+  return chunk?.metadata?.externalDeclarant?.name ?? null
 }
 
 function getChunkTitle(chunk, index) {
@@ -144,6 +153,7 @@ function getChunkSearchText(chunk, index) {
     getChunkTitle(chunk, index),
     getRawPointName(chunk),
     getChunkPointName(chunk),
+    getChunkPreleveurLabel(chunk),
     getAssociationLabel({chunk, isSelected: false}),
     getUsageReferenceLabel(chunk.usage),
     formatUsageReference(chunk.usage)
@@ -261,6 +271,7 @@ const ChunkListItem = ({
   const matched = isChunkMatched(chunk)
   const chunkTitle = getChunkTitle(chunk, index)
   const volumeLabel = getChunkVolumeLabel(chunk)
+  const preleveurLabel = getChunkPreleveurLabel(chunk)
   const usageLabel = formatUsageReference(chunk.usage)
   const handleKeyDown = event => {
     if (event.target !== event.currentTarget) {
@@ -326,6 +337,12 @@ const ChunkListItem = ({
           >
             {getAssociationLabel({chunk, isSelected})}
           </div>
+
+          {preleveurLabel && (
+            <div className='mt-1 truncate text-xs font-medium text-gray-700' title={preleveurLabel}>
+              Préleveur : {preleveurLabel}
+            </div>
+          )}
 
           {showUsage && usageLabel && <UsageReference label={usageLabel} usage={chunk.usage} />}
 
