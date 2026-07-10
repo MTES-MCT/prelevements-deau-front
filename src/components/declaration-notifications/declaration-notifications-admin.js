@@ -2,14 +2,19 @@
 
 import {useMemo, useState, useTransition} from 'react'
 
+import ToggleSwitch from '@codegouvfr/react-dsfr/ToggleSwitch'
 import {Alert, Box, CircularProgress} from '@mui/material'
 import {useRouter} from 'next/navigation'
 
+import DeclarationNotificationEmailPreviewDialog from './declaration-notification-email-preview-dialog.js'
+
 import {
   getDeclarationNotificationRunAction,
+  previewDeclarationNotificationEmailAction,
   previewDeclarationNotificationAction,
   retryDeclarationNotificationFailuresAction,
-  sendDeclarationNotificationNowAction
+  sendDeclarationNotificationNowAction,
+  updateDeclarationNotificationSettingAction
 } from '@/server/actions/declaration-notifications.js'
 
 const TYPE_LABELS = {
@@ -202,7 +207,7 @@ function getExclusionReasonCounts(exclusions = []) {
   return [...counts.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'fr'))
 }
 
-const RecipientsTable = ({recipients = []}) => {
+const RecipientsTable = ({recipients = [], onPreview, previewingRecipientKey = null}) => {
   if (recipients.length === 0) {
     return <Alert severity='info'>Aucun destinataire.</Alert>
   }
@@ -218,19 +223,35 @@ const RecipientsTable = ({recipients = []}) => {
             <th className='text-left p-2 border-b'>Zones</th>
             <th className='text-left p-2 border-b'>Points</th>
             <th className='text-left p-2 border-b'>Statut</th>
+            <th className='text-left p-2 border-b'>Aperçu</th>
           </tr>
         </thead>
         <tbody>
-          {recipients.map(recipient => (
-            <tr key={recipient.id || recipient.email}>
-              <td className='p-2 border-b'>{recipient.email}</td>
-              <td className='p-2 border-b'>{recipient.name || [recipient.firstName, recipient.lastName].filter(Boolean).join(' ') || recipient.socialReason || 'Non renseigné'}</td>
-              <td className='p-2 border-b'>{recipient.recipientRole === 'COLLECTEUR' ? 'Collecteur' : 'Préleveur déclarant'}</td>
-              <td className='p-2 border-b'>{formatList((recipient.zones || []).map(zone => zone.name))}</td>
-              <td className='p-2 border-b'>{formatList((recipient.points || []).map(point => point.name))}</td>
-              <td className='p-2 border-b'>{recipient.statusLabel || recipient.status || 'Prévu'}</td>
-            </tr>
-          ))}
+          {recipients.map(recipient => {
+            const recipientKey = recipient.id || recipient.email
+
+            return (
+              <tr key={recipientKey}>
+                <td className='p-2 border-b'>{recipient.email}</td>
+                <td className='p-2 border-b'>{recipient.name || [recipient.firstName, recipient.lastName].filter(Boolean).join(' ') || recipient.socialReason || 'Non renseigné'}</td>
+                <td className='p-2 border-b'>{recipient.recipientRole === 'COLLECTEUR' ? 'Collecteur' : 'Préleveur déclarant'}</td>
+                <td className='p-2 border-b'>{formatList((recipient.zones || []).map(zone => zone.name))}</td>
+                <td className='p-2 border-b'>{formatList((recipient.points || []).map(point => point.name))}</td>
+                <td className='p-2 border-b'>{recipient.statusLabel || recipient.status || 'Prévu'}</td>
+                <td className='p-2 border-b'>
+                  <button
+                    className='fr-btn fr-btn--sm fr-btn--tertiary-no-outline'
+                    disabled={previewingRecipientKey === recipientKey}
+                    type='button'
+                    onClick={() => onPreview(recipient)}
+                  >
+                    <span className='ri-eye-line fr-mr-1v' aria-hidden='true' />
+                    <span>Aperçu du mail</span>
+                  </button>
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>
@@ -350,6 +371,7 @@ const NotificationRules = () => (
       <li>Les rappels et relances sont calculés à partir du pas de temps configuré sur chaque zone. Si un point dépend de plusieurs zones, le pas de temps le plus fréquent est retenu.</li>
       <li>Les rappels hebdomadaires partent le lundi à 9h pour la semaine précédente ; les relances hebdomadaires partent le lundi à 17h pour cette même semaine.</li>
       <li>Les rappels mensuels partent le 28 à 9h pour le mois en cours ; les relances mensuelles partent le 5 à 9h pour le mois précédent.</li>
+      <li>La désactivation d’un type bloque ses envois automatiques, ses envois manuels et ses reprises d’échecs. Elle n’interrompt pas un envoi déjà démarré.</li>
       <li>Les destinataires sont les préleveurs déclarants et les collecteurs rattachés aux points attendus, avec leurs alias email. Un même email n’est envoyé qu’une seule fois par envoi.</li>
       <li>Les points en télérelève, hors période d’activité, sans zone exploitable, déjà déclarés pour une relance, sans email, ou relevant d’un autre pas de temps sont exclus et listés dans le détail.</li>
     </ul>
@@ -358,17 +380,112 @@ const NotificationRules = () => (
 
 const DeclarationNotificationsAdmin = ({upcoming = [], runs = []}) => {
   const router = useRouter()
+  const [upcomingItems, setUpcomingItems] = useState(upcoming)
   const [activeTab, setActiveTab] = useState('upcoming')
   const [selected, setSelected] = useState(null)
   const [error, setError] = useState(null)
   const [successMessage, setSuccessMessage] = useState(null)
   const [isConfirmingSendNow, setIsConfirmingSendNow] = useState(false)
+  const [emailPreviewState, setEmailPreviewState] = useState({open: false})
   const [isPending, startTransition] = useTransition()
 
   const failedRuns = useMemo(
     () => runs.filter(run => ['FAILED', 'PARTIAL_FAILURE', 'BLOCKED'].includes(run.status)),
     [runs]
   )
+  const isNotificationEnabled = item => upcomingItems.find(setting =>
+    setting.notificationType === item.notificationType && setting.periodType === item.periodType
+  )?.enabled !== false
+
+  const updateSetting = (item, enabled) => {
+    const isSameDefinition = value => value.notificationType === item.notificationType && value.periodType === item.periodType
+
+    setError(null)
+    setSuccessMessage(null)
+    setIsConfirmingSendNow(false)
+    setUpcomingItems(current => current.map(value => isSameDefinition(value) ? {...value, enabled} : value))
+    setSelected(current => current && isSameDefinition(current.payload) ? {...current, enabled} : current)
+
+    startTransition(async () => {
+      const result = await updateDeclarationNotificationSettingAction(
+        item.notificationType,
+        item.periodType,
+        enabled
+      )
+
+      if (result.success) {
+        const notificationLabel = item.notificationType === 'followup' ? 'Relances' : 'Rappels'
+        const isFeminine = item.notificationType === 'followup'
+        const periodLabel = item.periodType === 'week'
+          ? 'hebdomadaires'
+          : (isFeminine ? 'mensuelles' : 'mensuels')
+        const statusLabel = enabled
+          ? (isFeminine ? 'activées' : 'activés')
+          : (isFeminine ? 'désactivées' : 'désactivés')
+
+        setSuccessMessage(
+          `${notificationLabel} ${periodLabel} ${statusLabel}.`
+        )
+        router.refresh()
+      } else {
+        setUpcomingItems(current => current.map(value => isSameDefinition(value) ? {...value, enabled: !enabled} : value))
+        setSelected(current => current && isSameDefinition(current.payload) ? {...current, enabled: !enabled} : current)
+        setError(result.error)
+      }
+    })
+  }
+
+  const closeEmailPreview = () => {
+    setEmailPreviewState(current => ({...current, open: false}))
+  }
+
+  const openEmailPreview = async recipient => {
+    if (!selected) {
+      return
+    }
+
+    const recipientKey = recipient.id || recipient.email
+    const options = selected.mode === 'run'
+      ? {
+        runId: selected.payload.id,
+        recipientId: recipient.id
+      }
+      : {
+        notificationType: selected.payload.notificationType,
+        periodType: selected.payload.periodType,
+        periodKey: selected.payload.periodKey,
+        email: recipient.email,
+        scheduledFor: selected.sendNowOptions?.scheduledFor
+      }
+
+    setEmailPreviewState({
+      open: true,
+      loading: true,
+      error: null,
+      data: null,
+      recipientKey
+    })
+
+    const result = await previewDeclarationNotificationEmailAction(options)
+
+    if (result.success) {
+      setEmailPreviewState(current => current.recipientKey === recipientKey
+        ? {
+          ...current,
+          loading: false,
+          data: result.data.data || result.data
+        }
+        : current)
+    } else {
+      setEmailPreviewState(current => current.recipientKey === recipientKey
+        ? {
+          ...current,
+          loading: false,
+          error: result.error
+        }
+        : current)
+    }
+  }
 
   const loadPreview = item => {
     setError(null)
@@ -378,7 +495,8 @@ const DeclarationNotificationsAdmin = ({upcoming = [], runs = []}) => {
       const result = await previewDeclarationNotificationAction({
         notificationType: item.notificationType,
         periodType: item.periodType,
-        periodKey: item.periodKey
+        periodKey: item.periodKey,
+        scheduledFor: item.scheduledFor
       })
 
       if (result.success) {
@@ -386,6 +504,7 @@ const DeclarationNotificationsAdmin = ({upcoming = [], runs = []}) => {
 
         setSelected({
           mode: 'preview',
+          enabled: item.enabled !== false,
           title: `${TYPE_LABELS[item.notificationType]} ${PERIOD_LABELS[item.periodType]} - ${periodLabel}`,
           payload: result.data.data || result.data,
           sendNowOptions: {
@@ -508,21 +627,43 @@ const DeclarationNotificationsAdmin = ({upcoming = [], runs = []}) => {
 
       {activeTab === 'upcoming' && (
         <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
-          {upcoming.map(item => (
-            <section key={`${item.notificationType}-${item.periodType}`} className='border border-gray-200 bg-white p-4'>
-              <p className='fr-text--sm fr-mb-1w text-gray-600'>{TYPE_LABELS[item.notificationType]} {PERIOD_LABELS[item.periodType]}</p>
-              <h2 className='fr-h5 fr-mb-1w'>{formatPeriodLabel(item.periodType, item.periodKey, item.periodLabel)}</h2>
-              <p className='fr-text--sm fr-mb-1w'>Départ prévu : {formatDateTime(item.scheduledFor)}</p>
-              <div className='grid grid-cols-3 gap-2 fr-mb-3w'>
-                <div><strong>{item.summary?.recipients ?? 0}</strong><br />emails uniques à envoyer</div>
-                <div><strong>{item.summary?.expectedExploitations ?? 0}</strong><br />points attendus à déclarer</div>
-                <div><strong>{item.summary?.exclusions ?? 0}</strong><br />points exclus de cet envoi</div>
-              </div>
-              <button className='fr-btn fr-btn--secondary' type='button' onClick={() => loadPreview(item)}>
-                Voir le détail avant envoi
-              </button>
-            </section>
-          ))}
+          {upcomingItems.map(item => {
+            const enabled = item.enabled !== false
+            const settingId = `declaration-notification-${item.notificationType}-${item.periodType}`
+
+            return (
+              <section
+                key={`${item.notificationType}-${item.periodType}`}
+                className={`border border-gray-200 border-l-4 p-4 ${enabled ? 'border-l-green-600 bg-green-50' : 'border-l-yellow-600 bg-yellow-50'}`}
+              >
+                <div className='flex justify-between items-start gap-4 fr-mb-1w'>
+                  <p className='fr-text--sm fr-mb-0 text-gray-600'>{TYPE_LABELS[item.notificationType]} {PERIOD_LABELS[item.periodType]}</p>
+                  <ToggleSwitch
+                    showCheckedHint
+                    checked={enabled}
+                    className='shrink-0'
+                    disabled={isPending}
+                    id={settingId}
+                    label='Autoriser les envois'
+                    labelPosition='left'
+                    onChange={checked => updateSetting(item, checked)}
+                  />
+                </div>
+                <h2 className='fr-h5 fr-mb-1w'>{formatPeriodLabel(item.periodType, item.periodKey, item.periodLabel)}</h2>
+                <p className='fr-text--sm fr-mb-1w'>
+                  {enabled ? `Départ prévu : ${formatDateTime(item.scheduledFor)}` : 'Envois désactivés'}
+                </p>
+                <div className='grid grid-cols-3 gap-2 fr-mb-3w'>
+                  <div><strong>{item.summary?.recipients ?? 0}</strong><br />emails uniques à envoyer</div>
+                  <div><strong>{item.summary?.expectedExploitations ?? 0}</strong><br />points attendus à déclarer</div>
+                  <div><strong>{item.summary?.exclusions ?? 0}</strong><br />points exclus de cet envoi</div>
+                </div>
+                <button className='fr-btn fr-btn--secondary' type='button' onClick={() => loadPreview(item)}>
+                  Voir le détail avant envoi
+                </button>
+              </section>
+            )
+          })}
         </div>
       )}
 
@@ -553,7 +694,13 @@ const DeclarationNotificationsAdmin = ({upcoming = [], runs = []}) => {
                         Détail
                       </button>
                       {run.failedCount > 0 && (
-                        <button className='fr-btn fr-btn--sm fr-btn--tertiary' type='button' onClick={() => retryFailures(run)}>
+                        <button
+                          className='fr-btn fr-btn--sm fr-btn--tertiary'
+                          disabled={isPending || !isNotificationEnabled(run)}
+                          title={isNotificationEnabled(run) ? undefined : 'Ce type de notification est désactivé.'}
+                          type='button'
+                          onClick={() => retryFailures(run)}
+                        >
                           Relancer les échecs
                         </button>
                       )}
@@ -574,6 +721,11 @@ const DeclarationNotificationsAdmin = ({upcoming = [], runs = []}) => {
               ? 'Aperçu recalculé avant envoi. Aucun mail n’est envoyé tant que vous ne confirmez pas.'
               : 'Détail de l’envoi enregistré et de son état de distribution.'}
           </p>
+          {selected.mode === 'preview' && selected.enabled === false && (
+            <Alert severity='warning' className='fr-mb-3w'>
+              Ce type de notification est désactivé. Vous pouvez consulter les destinataires et les aperçus, mais aucun envoi ne peut être lancé.
+            </Alert>
+          )}
           <DetailSummary selected={selected} />
           {selected.mode === 'preview' && (
             <div className='flex flex-wrap items-center gap-3 fr-mb-4w'>
@@ -588,7 +740,7 @@ const DeclarationNotificationsAdmin = ({upcoming = [], runs = []}) => {
                   <div className='fr-btns-group fr-btns-group--inline fr-btns-group--sm fr-mb-0'>
                     <button
                       className='fr-btn'
-                      disabled={isPending || selectedRecipientCount === 0}
+                      disabled={isPending || selectedRecipientCount === 0 || selected.enabled === false}
                       type='button'
                       onClick={sendNow}
                     >
@@ -608,7 +760,7 @@ const DeclarationNotificationsAdmin = ({upcoming = [], runs = []}) => {
                 <>
                   <button
                     className='fr-btn'
-                    disabled={isPending || selectedRecipientCount === 0}
+                    disabled={isPending || selectedRecipientCount === 0 || selected.enabled === false}
                     type='button'
                     onClick={() => setIsConfirmingSendNow(true)}
                   >
@@ -622,7 +774,11 @@ const DeclarationNotificationsAdmin = ({upcoming = [], runs = []}) => {
             </div>
           )}
           <h3 className='fr-h5'>Destinataires</h3>
-          <RecipientsTable recipients={selected.payload.recipients} />
+          <RecipientsTable
+            previewingRecipientKey={emailPreviewState.loading ? emailPreviewState.recipientKey : null}
+            recipients={selected.payload.recipients}
+            onPreview={openEmailPreview}
+          />
           {selected.mode === 'preview' && (
             <>
               <h3 className='fr-h5 fr-mt-4w'>Exclusions</h3>
@@ -631,6 +787,8 @@ const DeclarationNotificationsAdmin = ({upcoming = [], runs = []}) => {
           )}
         </Box>
       )}
+
+      <DeclarationNotificationEmailPreviewDialog state={emailPreviewState} onClose={closeEmailPreview} />
     </div>
   )
 }

@@ -26,6 +26,23 @@ export async function previewDeclarationNotificationAction(options) {
   return withErrorHandling(async () => fetchJSON(`api/admin/declaration-notifications/preview${buildSearch(options)}`))
 }
 
+export async function previewDeclarationNotificationEmailAction(options) {
+  return withErrorHandling(async () => fetchJSON('api/admin/declaration-notifications/email-preview', {
+    method: 'POST',
+    body: options
+  }))
+}
+
+export async function updateDeclarationNotificationSettingAction(notificationType, periodType, enabled) {
+  return withErrorHandling(async () => fetchJSON(
+    `api/admin/declaration-notifications/settings/${notificationType}/${periodType}`,
+    {
+      method: 'PUT',
+      body: {enabled}
+    }
+  ))
+}
+
 export async function listDeclarationNotificationRunsAction(options = {}) {
   return withErrorHandling(async () => fetchJSON(`api/admin/declaration-notifications/runs${buildSearch(options)}`))
 }
