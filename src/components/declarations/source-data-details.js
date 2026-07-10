@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 
+import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
 import {getDeclarationTypeLabel} from '@/lib/declaration-types.js'
 import {getPointPrelevementURL} from '@/lib/urls.js'
 import {
@@ -155,6 +156,14 @@ function getReplacementLabel(value) {
 
 function getPointName(chunk) {
   return chunk.pointPrelevement?.name || chunk.pointPrelevementName || 'Point de prélèvement'
+}
+
+function getChunkPreleveurLabel(chunk) {
+  if (chunk?.preleveur) {
+    return getDeclarantTitleFromDeclarant(chunk.preleveur)
+  }
+
+  return chunk?.metadata?.externalDeclarant?.name ?? null
 }
 
 function getPointPrelevementLinkTarget(chunk) {
@@ -420,19 +429,27 @@ const UsageReference = ({label, usage}) => (
 const PointTitle = ({chunk}) => {
   const pointName = getPointName(chunk)
   const pointLinkTarget = getPointPrelevementLinkTarget(chunk)
+  const preleveurLabel = getChunkPreleveurLabel(chunk)
 
   return (
-    <h3 className='fr-text--md fr-mb-0 truncate font-bold'>
-      {pointLinkTarget ? (
-        <Link
-          className='fr-link inline-flex max-w-full items-center gap-1 truncate'
-          href={getPointPrelevementURL(pointLinkTarget)}
-        >
-          <span className='truncate'>{pointName}</span>
-          <span className='fr-icon-arrow-right-up-line text-xs' aria-hidden='true' />
-        </Link>
-      ) : pointName}
-    </h3>
+    <>
+      <h3 className='fr-text--md fr-mb-0 truncate font-bold'>
+        {pointLinkTarget ? (
+          <Link
+            className='fr-link inline-flex max-w-full items-center gap-1 truncate'
+            href={getPointPrelevementURL(pointLinkTarget)}
+          >
+            <span className='truncate'>{pointName}</span>
+            <span className='fr-icon-arrow-right-up-line text-xs' aria-hidden='true' />
+          </Link>
+        ) : pointName}
+      </h3>
+      {preleveurLabel && (
+        <p className='fr-text--sm fr-mb-0 truncate text-gray-700' title={preleveurLabel}>
+          Préleveur : {preleveurLabel}
+        </p>
+      )}
+    </>
   )
 }
 
