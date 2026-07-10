@@ -8,52 +8,69 @@ import {Select} from '@codegouvfr/react-dsfr/SelectNext'
 import {Typography} from '@mui/material'
 
 import OptionalPreleveurFieldsForm from '@/components/form/optional-preleveur-fields-form.js'
-import SearchByCompany from '@/components/form/search-by-company.js'
+import SearchByStructure from '@/components/form/search-by-structure.js'
 import AccordionCentered from '@/components/ui/AccordionCentered/index.js'
 
 const PreleveurMoralForm = ({preleveur, setPreleveur, emailRequired = false}) => {
   const [isExpanded, setIsExpanded] = useState(false)
 
   useEffect(() => {
-    if (preleveur?.commune) {
+    if (
+      preleveur?.addressLine1
+      || preleveur?.addressLine2
+      || preleveur?.poBox
+      || preleveur?.postalCode
+      || preleveur?.city
+      || preleveur?.phoneNumber
+    ) {
       setIsExpanded(true)
     }
-  }, [preleveur])
+  }, [
+    preleveur?.addressLine1,
+    preleveur?.addressLine2,
+    preleveur?.city,
+    preleveur?.phoneNumber,
+    preleveur?.poBox,
+    preleveur?.postalCode
+  ])
 
   return (
     <>
       <Typography component='h3' variant='h6' className='pb-5'>
-        Informations générales
+        Informations de la structure
       </Typography>
+      <div className='pb-6'>
+        <SearchByStructure setPreleveur={setPreleveur} />
+      </div>
       <div className='grid grid-cols-1 md:grid-cols-2 gap-4 pb-5'>
-        <div>
-          <p className='pb-2'>Rechercher l’entreprise</p>
-          <SearchByCompany setPreleveur={setPreleveur} />
-        </div>
         <Input
-          label='SIRET'
+          label='Nom de la structure *'
+          hintText='Raison sociale, dénomination d’association ou nom officiel'
+          nativeInputProps={{
+            placeholder: 'Entrer le nom de la structure',
+            value: preleveur?.socialReason || '',
+            onChange: e => setPreleveur(prev => ({...prev, socialReason: e.target.value}))
+          }}
+        />
+        <Input
+          label='SIRET de la structure'
+          hintText='Identifiant à 14 chiffres du siège ou de l’établissement'
           nativeInputProps={{
             placeholder: 'Entrer le SIRET',
-            defaultValue: preleveur?.siret || '',
+            value: preleveur?.siret || '',
             onChange: e => setPreleveur(prev => ({...prev, siret: e.target.value}))
           }}
         />
       </div>
-      <Input
-        label='Raison sociale *'
-        hintText='Nom officiel de l’entreprise'
-        nativeInputProps={{
-          placeholder: 'Entrer la raison sociale',
-          defaultValue: preleveur?.socialReason || '',
-          onChange: e => setPreleveur(prev => ({...prev, socialReason: e.target.value}))
-        }}
-      />
+      <Typography component='h3' variant='h6' className='pb-5 pt-2'>
+        Contact principal
+      </Typography>
       <Input
         label='Fonction du contact'
         hintText='Fonction ou service du contact'
         nativeInputProps={{
           placeholder: 'Entrer la fonction',
-          defaultValue: preleveur?.jobTitle || '',
+          value: preleveur?.jobTitle || '',
           onChange: e => setPreleveur(prev => ({...prev, jobTitle: e.target.value}))
         }}
       />
@@ -62,7 +79,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur, emailRequired = false}) =>
           label='Civilité du contact'
           placeholder='Choisir la civilité'
           nativeSelectProps={{
-            defaultValue: preleveur?.civility || '',
+            value: preleveur?.civility || '',
             onChange: e => setPreleveur(prev => ({...prev, civility: e.target.value}))
           }}
           options={[
@@ -75,7 +92,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur, emailRequired = false}) =>
           label='Nom du contact'
           nativeInputProps={{
             placeholder: 'Entrer le nom',
-            defaultValue: preleveur?.lastName || '',
+            value: preleveur?.lastName || '',
             onChange: e => setPreleveur(prev => ({...prev, lastName: e.target.value}))
           }}
         />
@@ -83,7 +100,7 @@ const PreleveurMoralForm = ({preleveur, setPreleveur, emailRequired = false}) =>
           label='Prénom du contact'
           nativeInputProps={{
             placeholder: 'Entrer le prénom',
-            defaultValue: preleveur?.firstName || '',
+            value: preleveur?.firstName || '',
             onChange: e => setPreleveur(prev => ({...prev, firstName: e.target.value}))
           }}
         />
@@ -93,14 +110,14 @@ const PreleveurMoralForm = ({preleveur, setPreleveur, emailRequired = false}) =>
         hintText={emailRequired ? 'Obligatoire pour permettre la connexion ou l’envoi de notification.' : 'Facultative pour un préleveur non déclarant.'}
         nativeInputProps={{
           placeholder: 'Entrer l’adresse email de contact',
-          defaultValue: preleveur?.email || '',
+          value: preleveur?.email || '',
           onChange: e => setPreleveur(prev => ({...prev, email: e.target.value}))
         }}
       />
       <AccordionCentered
         isExpanded={isExpanded}
         setIsExpanded={setIsExpanded}
-        label='les champs optionnels'
+        label='l’adresse et le téléphone'
       >
         <OptionalPreleveurFieldsForm
           preleveur={preleveur}
