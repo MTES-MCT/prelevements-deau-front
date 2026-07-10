@@ -44,8 +44,8 @@ const Page = async ({params}) => {
   const currentRole = currentUserResult?.data?.role
   const currentUser = currentUserResult?.data?.user
   const isImpersonating = currentUserResult?.data?.impersonation?.active
-  const canManageDeclarationTypes = ['INSTRUCTOR', 'ADMIN'].includes(currentRole)
   const canManageWriteActions = Boolean(declarant.right?.canEdit)
+  const canManageDeclarationTypes = canManageWriteActions
   const canImpersonate = currentRole === 'ADMIN' && !isImpersonating && currentUser?.id !== declarantId
 
   if (!canImpersonate && !canManageDeclarationTypes && !canManageWriteActions) {

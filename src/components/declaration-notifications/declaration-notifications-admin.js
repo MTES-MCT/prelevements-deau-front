@@ -38,10 +38,6 @@ const EXCLUSION_REASON_FALLBACKS = {
     label: 'Exploitation inactive',
     description: 'L’exploitation n’est pas active sur la période calculée.'
   },
-  TELEMETRY: {
-    label: 'Point en télérelève',
-    description: 'Les points suivis automatiquement par télérelève ne reçoivent pas de rappel ou de relance.'
-  },
   NO_ZONE: {
     label: 'Pas de zone de déclaration',
     description: 'Aucune zone active ne permet de déterminer le pas de temps attendu pour ce point.'
@@ -70,7 +66,6 @@ const EXCLUSION_REASON_FALLBACKS = {
 
 const EXCLUSION_REASON_SEVERITIES = {
   ALREADY_DECLARED: 'success',
-  TELEMETRY: 'info',
   PERIOD_TYPE_MISMATCH: 'info',
   EXPLOITATION_INACTIVE: 'warning',
   NO_ZONE: 'warning',
@@ -373,7 +368,7 @@ const NotificationRules = () => (
       <li>Les rappels mensuels partent le 28 à 9h pour le mois en cours ; les relances mensuelles partent le 5 à 9h pour le mois précédent.</li>
       <li>La désactivation d’un type bloque ses envois automatiques, ses envois manuels et ses reprises d’échecs. Elle n’interrompt pas un envoi déjà démarré.</li>
       <li>Les destinataires sont les préleveurs déclarants et les collecteurs rattachés aux points attendus, avec leurs alias email. Un même email n’est envoyé qu’une seule fois par envoi.</li>
-      <li>Les points en télérelève, hors période d’activité, sans zone exploitable, déjà déclarés pour une relance, sans email, ou relevant d’un autre pas de temps sont exclus et listés dans le détail.</li>
+      <li>Les exploitations hors période d’activité, sans zone exploitable, déjà déclarées pour une relance, sans email ou relevant d’un autre pas de temps sont exclues et listées dans le détail.</li>
     </ul>
   </section>
 )
@@ -651,7 +646,7 @@ const DeclarationNotificationsAdmin = ({upcoming = [], runs = []}) => {
                 </div>
                 <h2 className='fr-h5 fr-mb-1w'>{formatPeriodLabel(item.periodType, item.periodKey, item.periodLabel)}</h2>
                 <p className='fr-text--sm fr-mb-1w'>
-                  {enabled ? `Départ prévu : ${formatDateTime(item.scheduledFor)}` : 'Envois désactivés'}
+                  Départ prévu : {formatDateTime(item.scheduledFor)}
                 </p>
                 <div className='grid grid-cols-3 gap-2 fr-mb-3w'>
                   <div><strong>{item.summary?.recipients ?? 0}</strong><br />emails uniques à envoyer</div>

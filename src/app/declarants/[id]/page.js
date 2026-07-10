@@ -202,6 +202,7 @@ const Page = async ({params}) => {
             alt: '',
             priority: 'secondary',
             href: `/declarants/${declarantId}/gestion`,
+            hidden: !declarant.right?.canEdit,
             requireEditor: true
           },
           {

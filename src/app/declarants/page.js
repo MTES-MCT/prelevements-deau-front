@@ -1,9 +1,9 @@
 import {Button} from '@codegouvfr/react-dsfr/Button'
 
 import DeclarantsList from '@/components/declarants/declarants-list.js'
-import {RequireEditor} from '@/components/permissions/index.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getDeclarantsAction} from '@/server/actions/declarants.js'
+import {canCurrentUserCreateDeclarant} from '@/server/permissions/declarants.js'
 
 export const metadata = {
   title: 'Déclarants'
@@ -12,7 +12,10 @@ export const metadata = {
 export const dynamic = 'force-dynamic'
 
 const Page = async () => {
-  const result = await getDeclarantsAction()
+  const [result, canCreateDeclarant] = await Promise.all([
+    getDeclarantsAction(),
+    canCurrentUserCreateDeclarant()
+  ])
   const declarants = result.data || []
 
   return (
@@ -28,7 +31,7 @@ const Page = async () => {
                 Retrouvez les préleveurs et les collecteurs. Les préleveurs peuvent être sans email ; les collecteurs doivent avoir un compte connecté.
               </p>
             </div>
-            <RequireEditor>
+            {canCreateDeclarant && (
               <Button
                 priority='secondary'
                 iconId='fr-icon-add-line'
@@ -38,7 +41,7 @@ const Page = async () => {
               >
                 Ajouter un nouveau déclarant
               </Button>
-            </RequireEditor>
+            )}
           </div>
 
           <DeclarantsList declarants={declarants} />
