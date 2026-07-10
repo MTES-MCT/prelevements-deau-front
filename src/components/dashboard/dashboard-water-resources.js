@@ -147,7 +147,7 @@ function buildPiezometrySeries(stations, mode, colors, period) {
 function buildFlowSeries(stations, colors) {
   return stations.map(station => ({
     id: station.id,
-    label: `${station.label} (l/s)`,
+    label: `${station.label} (L/s)`,
     axis: 'left',
     color: colors.get(station.id),
     precision: 0,
@@ -634,7 +634,7 @@ const DashboardWaterResources = ({
                 series={flowSeries}
                 showLegend={false}
                 visibilityModel={flowVisibility}
-                yAxisLabel='Débit (l/s)'
+                yAxisLabel='Débit (L/s)'
               />
             ) : (
               <div className='flex min-h-[300px] items-center justify-center bg-gray-50 text-sm text-gray-600'>

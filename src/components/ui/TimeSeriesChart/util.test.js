@@ -13,6 +13,9 @@ import {
   toDate,
   getNumberFormatter,
   getDateFormatter,
+  collectAxisTooltipRows,
+  getSharedTooltipNature,
+  getTimelineTickStride,
   getRangeBasedDateFormatter,
   largestTriangleThreeBuckets,
   decimatePoints,
@@ -38,6 +41,62 @@ const baseTheme = {
     grey: {400: '#9ca3af'}
   }
 }
+
+test('le tooltip regroupe les séries et n’affiche qu’une nature commune', t => {
+  const series = [
+    {
+      id: 'station-a__plain',
+      originalId: 'station-a',
+      originalLabel: 'Station A (L/s)',
+      color: '#000091',
+      data: [12],
+      valueFormatter: String
+    },
+    {
+      id: 'station-a__duplicate',
+      originalId: 'station-a',
+      originalLabel: 'Station A (L/s)',
+      color: '#000091',
+      data: [12],
+      valueFormatter: String
+    },
+    {
+      id: 'station-b__plain',
+      originalId: 'station-b',
+      originalLabel: 'Station B (L/s)',
+      color: '#009081',
+      data: [18],
+      valueFormatter: String
+    }
+  ]
+  const rows = collectAxisTooltipRows({
+    series,
+    dataIndex: 0,
+    getPointMeta: () => ({comment: 'Temps réel'}),
+    getSegmentOrigin: () => null,
+    translations: {interpolatedPoint: 'Point interpolé'}
+  })
+
+  t.is(rows.length, 2)
+  t.deepEqual(rows.map(row => row.label), ['Station A (L/s)', 'Station B (L/s)'])
+  t.is(getSharedTooltipNature(rows), 'Temps réel')
+})
+
+test('le tooltip conserve les natures différentes au niveau de chaque ligne', t => {
+  const rows = [
+    {nature: 'Temps réel'},
+    {nature: 'Moyenne journalière'}
+  ]
+
+  t.is(getSharedTooltipNature(rows), null)
+})
+
+test('le quadrillage temporel adapte son pas au nombre de points et à la largeur', t => {
+  t.is(getTimelineTickStride(10, 1000), 1)
+  t.true(getTimelineTickStride(1000, 1000) > 1)
+  t.true(getTimelineTickStride(1000, 320) > getTimelineTickStride(1000, 1000))
+  t.is(getTimelineTickStride(1000, 0), 1)
+})
 
 test('buildYAxisConfigurations peut cadrer une série sans imposer zéro', t => {
   const axes = buildYAxisConfigurations({

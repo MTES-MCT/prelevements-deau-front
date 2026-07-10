@@ -38,14 +38,20 @@ import {
   axisFormatterFactory,
   buildAnnotations,
   buildSeriesModel,
-  getDateFormatForFrequency
+  collectAxisTooltipRows,
+  getSharedTooltipNature,
+  getDateFormatForFrequency,
+  getTimelineTickStride
 } from './util.js'
 
 import CompactAlert from '@/components/ui/CompactAlert/index.js'
-import MetasList from '@/components/ui/MetasList/index.js'
 import {parseFrequency} from '@/utils/frequency-parsing.js'
 
 const CHART_HEIGHT = 360
+const CHART_MARGIN = {
+  top: 48, right: 80, bottom: 36, left: 80
+}
+const Y_AXIS_LABEL_OFFSET = 68
 
 /**
  * @typedef {Object} DataPoint
@@ -93,80 +99,6 @@ const useChartModel = ({series, locale, theme, exposeAllMarks, options}) => useM
   }),
   [series, locale, theme, exposeAllMarks, options]
 )
-
-/**
- * Helper to collect parameters and alerts from series data
- * @param {Array} series - Array of series data
- * @param {number} dataIndex - Index of the data point
- * @param {Function} getPointMeta - Function to retrieve metadata
- * @param {Function} getSegmentOrigin - Function to retrieve segment origin
- * @param {Object} translations - Translation strings
- * @returns {Object} Object with parameters and alerts arrays
- */
-const collectTooltipData = ({series, dataIndex, getPointMeta, getSegmentOrigin, translations}) => {
-  const parameters = []
-  const alerts = []
-
-  for (const item of series) {
-    const baseId = item.originalId ?? item.id
-    const originalLabel = item.originalLabel ?? item.label
-    const formattedValue = item.valueFormatter?.(item.data?.[dataIndex] ?? null, {dataIndex})
-
-    if (formattedValue === null || formattedValue === undefined) {
-      continue
-    }
-
-    const meta = getPointMeta(baseId, dataIndex)
-    const origin = getSegmentOrigin(baseId, dataIndex)
-    const color = item.getColor?.(dataIndex) ?? item.color
-
-    // Create parameter entry with colored dot icon
-    const ColorDot = properties => (
-      <span
-        {...properties}
-        style={{
-          display: 'inline-block',
-          width: 10,
-          height: 10,
-          borderRadius: '50%',
-          backgroundColor: color
-        }}
-      />
-    )
-    ColorDot.displayName = originalLabel
-
-    parameters.push({
-      icon: ColorDot,
-      content: `${originalLabel}: ${formattedValue}`
-    })
-
-    // Add meta information if present
-    if (meta) {
-      if (meta.comment) {
-        alerts.push({
-          alertLabel: meta.comment,
-          alertType: 'info'
-        })
-      }
-
-      if (meta.alert) {
-        alerts.push({
-          alertLabel: meta.alert,
-          alertType: 'error'
-        })
-      }
-    }
-
-    // Add synthetic point indicator
-    if (origin?.synthetic) {
-      parameters.push({
-        content: translations.interpolatedPoint
-      })
-    }
-  }
-
-  return {parameters, alerts}
-}
 
 /**
  * Custom Tooltip Content Component
@@ -254,14 +186,14 @@ const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, g
     ? () => tooltipDateFormatter(resolvedAxisValue)
     : (axis?.valueFormatter || defaultFormatter)
 
-  // Collect all parameters (series values) and alerts
-  const {parameters, alerts} = collectTooltipData({
+  const rows = collectAxisTooltipRows({
     series,
     dataIndex,
     getPointMeta,
     getSegmentOrigin,
     translations: t
   })
+  const sharedNature = getSharedTooltipNature(rows)
 
   return (
     <Box
@@ -272,27 +204,63 @@ const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, g
         gap: 1,
         backgroundColor: 'white',
         borderRadius: 1,
-        minWidth: 220,
-        maxWidth: 320
+        minWidth: 260,
+        maxWidth: 380
       }}
     >
       {axisValue !== undefined && (
         <Typography sx={{fontWeight: 'bold'}}>{axisFormatter(resolvedAxisValue ?? axisValue)}</Typography>
       )}
-      <Box sx={{display: 'flex', flexDirection: 'column', gap: 2}}>
-        {parameters.length > 0 && <MetasList metas={parameters} />}
-        {alerts.length > 0 && (
-          <Box>
-            {alerts.map(alert => (
-              <CompactAlert
-                key={alert.alertLabel}
-                label={alert.alertLabel}
-                alertType={alert.alertType}
-              />
-            ))}
+      <Box
+        component='ul'
+        sx={{
+          display: 'flex', flexDirection: 'column', gap: 0.5, listStyle: 'none', m: 0, p: 0
+        }}
+      >
+        {rows.map(row => (
+          <Box
+            key={row.id}
+            component='li'
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: '10px minmax(0, 1fr) auto',
+              columnGap: 1,
+              rowGap: 0.25,
+              alignItems: 'baseline',
+              py: 0.5
+            }}
+          >
+            <Box
+              aria-hidden='true'
+              component='span'
+              sx={{
+                backgroundColor: row.color, borderRadius: '50%', height: 10, mt: '5px', width: 10
+              }}
+            />
+            <Typography variant='body2' sx={{overflowWrap: 'anywhere'}}>{row.label}</Typography>
+            <Typography variant='body2' sx={{fontWeight: 600, whiteSpace: 'nowrap'}}>{row.value}</Typography>
+            {!sharedNature && row.nature && (
+              <Typography color='text.secondary' sx={{fontSize: 12, gridColumn: '2 / -1'}}>{row.nature}</Typography>
+            )}
+            {row.syntheticLabel && (
+              <Typography color='text.secondary' sx={{fontSize: 12, gridColumn: '2 / -1'}}>{row.syntheticLabel}</Typography>
+            )}
+            {row.alert && (
+              <Box sx={{gridColumn: '2 / -1'}}><CompactAlert alertType='error' label={row.alert} /></Box>
+            )}
           </Box>
-        )}
+        ))}
       </Box>
+      {sharedNature && (
+        <Box
+          sx={{
+            borderTop: '1px solid', borderColor: 'divider', display: 'flex', gap: 1, justifyContent: 'space-between', pt: 1
+          }}
+        >
+          <Typography color='text.secondary' sx={{fontSize: 12}}>Nature des données</Typography>
+          <Typography sx={{fontSize: 12, fontWeight: 500, textAlign: 'right'}}>{sharedNature}</Typography>
+        </Box>
+      )}
     </Box>
   )
 }
@@ -619,6 +587,10 @@ const TimeSeriesChart = ({
     () => axisFormatterFactory(locale, chartModel.xAxisDates, frequency),
     [chartModel.xAxisDates, locale, frequency]
   )
+  const timelineTickStride = useMemo(() => getTimelineTickStride(
+    chartModel.xAxisDates.length,
+    Math.max(0, (containerWidth ?? 0) - CHART_MARGIN.left - CHART_MARGIN.right)
+  ), [chartModel.xAxisDates.length, containerWidth])
   const xAxisBand = useMemo(() => [{
     id: X_AXIS_ID,
     scaleType: 'band',
@@ -628,8 +600,11 @@ const TimeSeriesChart = ({
       const date = chartModel.xAxisDates[value]
       return date ? xAxisDateFormatter(date) : ''
     },
+    tickInterval(_value, index, values) {
+      return index === 0 || index === values.length - 1 || index % timelineTickStride === 0
+    },
     tickLabelStyle: {fontSize: 12}
-  }], [chartModel.xAxisDates, xAxisDateFormatter])
+  }], [chartModel.xAxisDates, timelineTickStride, xAxisDateFormatter])
 
   const yAxis = useMemo(() => chartModel.yAxis, [chartModel.yAxis])
 
@@ -733,22 +708,22 @@ const TimeSeriesChart = ({
     return styles
   }, [chartModel.dynamicThresholdSeries])
 
-  const leftAxisId = useMemo(() => {
-    const axis = yAxis.find(item => item.position === 'left' && item.hasData)
-    return axis?.id ?? null
-  }, [yAxis])
-
-  const rightAxisId = useMemo(() => {
-    const axis = yAxis.find(item => item.position === 'right' && item.hasData)
-    return axis?.id ?? null
-  }, [yAxis])
-
-  const chartMargin = useMemo(() => ({
-    top: 48,
-    right: rightAxisId ? 80 : 32,
-    bottom: 36,
-    left: yAxisLabel ? 112 : 80
-  }), [rightAxisId, yAxisLabel])
+  const leftAxis = useMemo(
+    () => yAxis.find(item => item.position === 'left' && item.hasData) ?? null,
+    [yAxis]
+  )
+  const rightAxis = useMemo(
+    () => yAxis.find(item => item.position === 'right' && item.hasData) ?? null,
+    [yAxis]
+  )
+  const leftAxisConfig = leftAxis && {
+    axisId: leftAxis.id,
+    ...(leftAxis.label && {slotProps: {axisLabel: {x: -Y_AXIS_LABEL_OFFSET}}})
+  }
+  const rightAxisConfig = rightAxis && {
+    axisId: rightAxis.id,
+    ...(rightAxis.label && {slotProps: {axisLabel: {x: Y_AXIS_LABEL_OFFSET}}})
+  }
 
   const getPointMeta = useCallback((seriesId, index) => chartModel.metaBySeries.get(seriesId)?.[index] ?? null, [chartModel.metaBySeries])
 
@@ -789,15 +764,15 @@ const TimeSeriesChart = ({
               series={composedSeries}
               xAxis={xAxisBand}
               yAxis={yAxis}
-              margin={chartMargin}
+              margin={CHART_MARGIN}
               sx={{
                 ...dashedStyles
               }}
             >
               <ChartsGrid horizontal vertical />
               <ChartsAxis
-                leftAxis={leftAxisId ?? null}
-                rightAxis={rightAxisId ?? null}
+                leftAxis={leftAxisConfig}
+                rightAxis={rightAxisConfig}
               />
               <ChartsAxisHighlight x='line' y='line' />
               <AreaPlot />

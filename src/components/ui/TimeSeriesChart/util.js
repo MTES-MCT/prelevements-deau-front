@@ -54,6 +54,59 @@ export const getDateFormatter = locale => new Intl.DateTimeFormat(locale, {
   minute: '2-digit'
 })
 
+export const collectAxisTooltipRows = ({
+  series,
+  dataIndex,
+  getPointMeta,
+  getSegmentOrigin,
+  translations
+}) => {
+  const rows = new Map()
+
+  for (const item of series) {
+    const baseId = item.originalId ?? item.id
+    if (rows.has(baseId)) {
+      continue
+    }
+
+    const formattedValue = item.valueFormatter?.(item.data?.[dataIndex] ?? null, {dataIndex})
+    if (formattedValue === null || formattedValue === undefined) {
+      continue
+    }
+
+    const meta = getPointMeta(baseId, dataIndex)
+    const origin = getSegmentOrigin(baseId, dataIndex)
+
+    rows.set(baseId, {
+      id: baseId,
+      label: item.originalLabel ?? item.label,
+      value: formattedValue,
+      color: item.getColor?.(dataIndex) ?? item.color,
+      nature: meta?.comment ?? null,
+      alert: meta?.alert ?? null,
+      syntheticLabel: origin?.synthetic ? translations.interpolatedPoint : null
+    })
+  }
+
+  return [...rows.values()]
+}
+
+export const getSharedTooltipNature = rows => {
+  const natures = [...new Set(rows.map(row => row.nature).filter(Boolean))]
+  return natures.length === 1 && rows.every(row => row.nature === natures[0])
+    ? natures[0]
+    : null
+}
+
+export const getTimelineTickStride = (pointCount, availableWidth, minimumSpacing = 72) => {
+  if (pointCount <= 0 || availableWidth <= 0 || minimumSpacing <= 0) {
+    return 1
+  }
+
+  const maximumTickCount = Math.max(2, Math.floor(availableWidth / minimumSpacing))
+  return Math.max(1, Math.ceil(pointCount / maximumTickCount))
+}
+
 /**
  * Format a quarter label based on locale
  * @param {Date} date - Date to extract quarter from
