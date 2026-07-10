@@ -48,3 +48,28 @@ export async function getDashboardTerritoryAction(options = {}) {
   return withErrorHandling(async () =>
     fetchJSON(`api/dashboard/territory${buildDashboardSearch(options)}`))
 }
+
+function buildWaterResourceSearch(options = {}) {
+  const parameters = new URLSearchParams()
+
+  if (Array.isArray(options.zoneCodes) && options.zoneCodes.length > 0) {
+    parameters.set('zones', options.zoneCodes.join(','))
+  }
+
+  if (options.period) {
+    parameters.set('period', options.period)
+  }
+
+  const search = parameters.toString()
+  return search ? `?${search}` : ''
+}
+
+export async function getDashboardPiezometryAction(options = {}) {
+  return withErrorHandling(async () =>
+    fetchJSON(`api/dashboard/water-resources/piezometry${buildWaterResourceSearch(options)}`))
+}
+
+export async function getDashboardRiverFlowsAction(options = {}) {
+  return withErrorHandling(async () =>
+    fetchJSON(`api/dashboard/water-resources/flows${buildWaterResourceSearch(options)}`))
+}

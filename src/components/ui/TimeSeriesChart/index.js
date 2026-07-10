@@ -519,6 +519,8 @@ const DEFAULT_TRANSLATIONS = {
  * @param {boolean} [props.enableDecimation=true] - Enable automatic data decimation for large datasets
  * @param {number} [props.decimationTarget=DECIMATION_TARGET] - Target number of points after decimation
  * @param {number} [props.maxPointsBeforeDecimation=MAX_POINTS_BEFORE_DECIMATION] - Point count that triggers decimation warning
+ * @param {number} [props.height=360] - Chart height in pixels
+ * @param {string} [props.tooltipFrequency] - Frequency used to format tooltip dates, when different from the axis frequency
  *
  * @returns {JSX.Element} Rendered time series chart
  */
@@ -533,7 +535,15 @@ const TimeSeriesChart = ({
   decimationTarget = DECIMATION_TARGET,
   maxPointsBeforeDecimation = MAX_POINTS_BEFORE_DECIMATION,
   frequency = null,
-  timelineRange = null
+  tooltipFrequency = frequency,
+  timelineRange = null,
+  includeZero = true,
+  reverseYAxis = false,
+  showLegend = true,
+  visibilityModel,
+  onVisibilityModelChange,
+  yAxisLabel = null,
+  height = CHART_HEIGHT
 }) => {
   // Validate that frequency is provided (required for date formatting)
   if (!frequency) {
@@ -542,16 +552,19 @@ const TimeSeriesChart = ({
 
   const t = {...DEFAULT_TRANSLATIONS, ...translations}
   const theme = useTheme()
-  const [visibility, setVisibility] = useState(() => getInitialVisibility(series))
+  const [internalVisibility, setInternalVisibility] = useState(() => getInitialVisibility(series))
+  const visibility = visibilityModel ?? internalVisibility
   const containerRef = useRef(null)
   const [containerWidth, setContainerWidth] = useState(null)
 
   useEffect(() => {
-    setVisibility(previous => ({
-      ...getInitialVisibility(series),
-      ...previous
-    }))
-  }, [series])
+    if (visibilityModel === undefined) {
+      setInternalVisibility(previous => ({
+        ...getInitialVisibility(series),
+        ...previous
+      }))
+    }
+  }, [series, visibilityModel])
 
   useEffect(() => {
     const node = containerRef.current
@@ -587,8 +600,12 @@ const TimeSeriesChart = ({
     decimationTarget,
     maxPointsBeforeDecimation,
     timelineFrequency: frequency,
-    timelineRange
-  }), [enableThresholds, enableDecimation, decimationTarget, maxPointsBeforeDecimation, frequency, timelineRange])
+    timelineRange,
+    includeZero,
+    reverseYAxis,
+    yAxisLabel,
+    visibilityModel: visibility
+  }), [enableThresholds, enableDecimation, decimationTarget, maxPointsBeforeDecimation, frequency, timelineRange, includeZero, reverseYAxis, visibility, yAxisLabel])
 
   const chartModel = useChartModel({
     series,
@@ -650,11 +667,17 @@ const TimeSeriesChart = ({
 
   const handleLegendClick = useCallback((event, item) => {
     event.preventDefault()
-    setVisibility(previous => ({
-      ...previous,
-      [item.seriesId]: !previous[item.seriesId]
-    }))
-  }, [])
+    const nextVisibility = {
+      ...visibility,
+      [item.seriesId]: visibility[item.seriesId] === false
+    }
+
+    if (visibilityModel === undefined) {
+      setInternalVisibility(nextVisibility)
+    }
+
+    onVisibilityModelChange?.(nextVisibility)
+  }, [onVisibilityModelChange, visibility, visibilityModel])
 
   const filteredSegments = useMemo(
     () => chartModel.segmentSeries.filter(segment => visibility[segment.originalId] !== false),
@@ -720,6 +743,13 @@ const TimeSeriesChart = ({
     return axis?.id ?? null
   }, [yAxis])
 
+  const chartMargin = useMemo(() => ({
+    top: 48,
+    right: rightAxisId ? 80 : 32,
+    bottom: 36,
+    left: yAxisLabel ? 112 : 80
+  }), [rightAxisId, yAxisLabel])
+
   const getPointMeta = useCallback((seriesId, index) => chartModel.metaBySeries.get(seriesId)?.[index] ?? null, [chartModel.metaBySeries])
 
   const getSegmentOrigin = useCallback((seriesId, index) => chartModel.pointBySeries.get(seriesId)?.[index] ?? null, [chartModel.pointBySeries])
@@ -755,13 +785,11 @@ const TimeSeriesChart = ({
           <div role='figure' aria-label={t.chartAriaLabel}>
             <ChartContainer
               width={containerWidth}
-              height={CHART_HEIGHT}
+              height={height}
               series={composedSeries}
               xAxis={xAxisBand}
               yAxis={yAxis}
-              margin={{
-                top: 48, right: 80, bottom: 36, left: 80
-              }}
+              margin={chartMargin}
               sx={{
                 ...dashedStyles
               }}
@@ -782,11 +810,13 @@ const TimeSeriesChart = ({
                 }}
                 onItemClick={handleMarkClick}
               />
-              <ChartsLegend
-                direction='row'
-                position={{vertical: 'top', horizontal: 'middle'}}
-                onItemClick={handleLegendClick}
-              />
+              {showLegend && (
+                <ChartsLegend
+                  direction='row'
+                  position={{vertical: 'top', horizontal: 'middle'}}
+                  onItemClick={handleLegendClick}
+                />
+              )}
               <ChartsTooltip
                 trigger='axis'
                 slots={{
@@ -798,7 +828,7 @@ const TimeSeriesChart = ({
                       getXAxisDate={getTooltipXAxisDate}
                       translations={t}
                       locale={locale}
-                      frequency={frequency}
+                      frequency={tooltipFrequency}
                     />
                   )
                 }}
@@ -815,7 +845,7 @@ const TimeSeriesChart = ({
             </ChartContainer>
           </div>
         ) : (
-          <Box sx={{height: CHART_HEIGHT}} />
+          <Box sx={{height}} />
         )}
       </div>
 

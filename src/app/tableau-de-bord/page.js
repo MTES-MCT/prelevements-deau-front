@@ -1,6 +1,10 @@
 import DashboardPage from '@/components/dashboard/dashboard-page.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {getDashboardTerritoryAction} from '@/server/actions/dashboard.js'
+import {
+  getDashboardPiezometryAction,
+  getDashboardRiverFlowsAction,
+  getDashboardTerritoryAction
+} from '@/server/actions/dashboard.js'
 import {getAllowedDeclarationTypesAction} from '@/server/actions/declarations.js'
 import {getAggregatedSeriesOptionsAction} from '@/server/actions/series.js'
 import {getCurrentUser} from '@/server/actions/user.js'
@@ -47,7 +51,13 @@ const Page = async ({searchParams}) => {
   const isDeclarant = role === 'DECLARANT'
   const isCollector = isDeclarant && user?.declarantRole === 'COLLECTEUR'
   const shouldLoadDeclarantSeries = isDeclarant && !isCollector && user?.id
-  const [dashboardResult, declarationTypesResult, seriesOptionsResult] = await Promise.all([
+  const [
+    dashboardResult,
+    declarationTypesResult,
+    seriesOptionsResult,
+    piezometryResult,
+    riverFlowsResult
+  ] = await Promise.all([
     getDashboardTerritoryAction({
       period: requestedPeriod,
       periodType: requestedPeriodType,
@@ -59,7 +69,9 @@ const Page = async ({searchParams}) => {
     isDeclarant ? getAllowedDeclarationTypesAction() : Promise.resolve(null),
     shouldLoadDeclarantSeries
       ? getAggregatedSeriesOptionsAction({preleveurId: user.id})
-      : Promise.resolve(null)
+      : Promise.resolve(null),
+    getDashboardPiezometryAction({zoneCodes: requestedZoneCodes, period: 'week'}),
+    getDashboardRiverFlowsAction({zoneCodes: requestedZoneCodes, period: 'week'})
   ])
   const declarationTypesResponse = declarationTypesResult?.success ? declarationTypesResult.data : null
   const declarationCreation = isDeclarant
@@ -78,6 +90,10 @@ const Page = async ({searchParams}) => {
         declarantSeriesOptions={seriesOptionsResult?.success ? seriesOptionsResult.data : null}
         initialDashboard={dashboardResult.success ? dashboardResult.data : null}
         initialError={dashboardResult.success ? null : dashboardResult.error}
+        initialPiezometry={piezometryResult.success ? piezometryResult.data : null}
+        initialPiezometryError={piezometryResult.success ? null : piezometryResult.error}
+        initialRiverFlows={riverFlowsResult.success ? riverFlowsResult.data : null}
+        initialRiverFlowsError={riverFlowsResult.success ? null : riverFlowsResult.error}
         user={user}
       />
     </>

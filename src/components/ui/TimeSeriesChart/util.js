@@ -364,6 +364,7 @@ export const processInputSeries = (inputSeries, options = {}) => {
     threshold: thresholdConfig,
     chartType,
     precision: inputSeries.precision ?? 0,
+    connectNulls: Boolean(inputSeries.connectNulls),
     ...(inputSeries.area && {area: true}),
     ...(inputSeries.stack && {stack: inputSeries.stack})
   }
@@ -616,12 +617,18 @@ export const buildPointMap = (filteredPoints, thresholdCrossings, xValuesSet) =>
 /**
  * Align series data to unified x-axis and update axis statistics
  */
-export const alignSeriesToXAxis = (processedSeries, xValues, xAxisDates, axisStats) => {
+export const alignSeriesToXAxis = (
+  processedSeries,
+  xValues,
+  xAxisDates,
+  {axisStats, visibilityModel = null}
+) => {
   const metaBySeries = new Map()
   const pointBySeries = new Map()
   const alignedData = []
 
   for (const processed of processedSeries) {
+    const includeInAxis = visibilityModel?.[processed.id] !== false
     const metas = []
     const pointsWithMeta = []
     const values = []
@@ -636,13 +643,13 @@ export const alignSeriesToXAxis = (processedSeries, xValues, xAxisDates, axisSta
       const thresholdValue = processed.thresholdEvaluator(xValue)
 
       // Update axis statistics
-      if (y !== null && !Number.isNaN(y)) {
+      if (includeInAxis && y !== null && !Number.isNaN(y)) {
         const stats = axisStats[processed.axisId]
         stats.min = Math.min(stats.min, y)
         stats.max = Math.max(stats.max, y)
       }
 
-      if (thresholdValue !== null && thresholdValue !== undefined) {
+      if (includeInAxis && thresholdValue !== null && thresholdValue !== undefined) {
         const stats = axisStats[processed.axisId]
         stats.min = Math.min(stats.min, thresholdValue)
         stats.max = Math.max(stats.max, thresholdValue)
@@ -777,7 +784,7 @@ export const buildSegments = (alignedData, xValues, options) => {
         yAxisId: data.axisId,
         color: currentSegment.classification === SEGMENT_ABOVE ? theme.palette.error.main : data.color,
         label: undefined,
-        connectNulls: Boolean(data.area),
+        connectNulls: Boolean(data.connectNulls || data.area),
         ...(data.area && {area: true}),
         ...(data.stack && {stack: data.stack}),
         showMark({index}) {
@@ -856,7 +863,7 @@ export const buildPlainSeries = (alignedData, options) => {
       yAxisId: data.axisId,
       color: data.color,
       label: undefined,
-      connectNulls: Boolean(data.area),
+      connectNulls: Boolean(data.connectNulls || data.area),
       ...(data.area && {area: true}),
       ...(data.stack && {stack: data.stack}),
       showMark({index}) {
@@ -898,7 +905,7 @@ export const buildStubSeries = (processedSeries, xValuesLength) => processedSeri
   xAxisId: X_AXIS_ID,
   yAxisId: processed.axisId,
   showMark: false,
-  connectNulls: Boolean(processed.area),
+  connectNulls: Boolean(processed.connectNulls || processed.area),
   valueFormatter: () => null,
   chartType: processed.chartType,
   ...(processed.area && {area: true}),
@@ -915,9 +922,10 @@ export const buildStubSeries = (processedSeries, xValuesLength) => processedSeri
  * @returns {object} Y-axis configuration
  */
 // eslint-disable-next-line max-params
-const buildSingleYAxis = (axisId, stats, locale, precision, label = null) => {
+const buildSingleYAxis = (axisId, stats, locale, precision, label = null, options = {}) => {
   const hasData = stats.min !== Number.POSITIVE_INFINITY
   const numberFormatter = getNumberFormatterWithPrecision(locale, precision)
+  const reverse = Boolean(options.reverse && axisId === AXIS_LEFT_ID)
 
   // Create a default axis even if no data to prevent useYScale errors
   // This ensures both axes are always defined for React hooks consistency
@@ -936,14 +944,15 @@ const buildSingleYAxis = (axisId, stats, locale, precision, label = null) => {
       },
       min: 0,
       max: 1,
+      reverse,
       hasData: false // Mark as empty for conditional rendering
     }
   }
 
   // Extend axis range to include zero when data doesn't already span it
   // Support both positive and negative values by extending the range to include zero
-  let axisMin = Math.min(0, stats.min)
-  let axisMax = Math.max(0, stats.max)
+  let axisMin = options.includeZero === false ? stats.min : Math.min(0, stats.min)
+  let axisMax = options.includeZero === false ? stats.max : Math.max(0, stats.max)
 
   // Prevent collapsed axis when min equals max
   if (axisMin === axisMax) {
@@ -965,6 +974,7 @@ const buildSingleYAxis = (axisId, stats, locale, precision, label = null) => {
     },
     min: axisMin,
     max: axisMax,
+    reverse,
     hasData: true
   }
 }
@@ -977,16 +987,31 @@ const buildSingleYAxis = (axisId, stats, locale, precision, label = null) => {
  * @param {object} axisPrecision - Precision (decimal places) per axis
  * @returns {Array} Y-axis configurations
  */
-export const buildYAxisConfigurations = (axisStats, locale, axisLabels = {}, axisPrecision = {}) =>
-  [AXIS_LEFT_ID, AXIS_RIGHT_ID].map(axisId =>
-    buildSingleYAxis(
-      axisId,
-      axisStats[axisId],
-      locale,
-      axisPrecision[axisId] ?? 0,
-      axisLabels[axisId] ?? null
+export const buildYAxisConfigurations = (
+  axisStats,
+  locale,
+  {
+    axisLabels = {},
+    axisPrecision = {},
+    includeZero = true,
+    reverse = false
+  } = {}
+) => {
+  const options = {includeZero, reverse}
+
+  return (
+    [AXIS_LEFT_ID, AXIS_RIGHT_ID].map(axisId =>
+      buildSingleYAxis(
+        axisId,
+        axisStats[axisId],
+        locale,
+        axisPrecision[axisId] ?? 0,
+        axisLabels[axisId] ?? null,
+        options
+      )
     )
   )
+}
 
 /**
  * Extract static thresholds from processed series
@@ -1251,6 +1276,7 @@ const processSeriesWithDecimation = (series, options) => {
       points: pointMap,
       chartType: processed.chartType || 'line',
       precision: processed.precision,
+      connectNulls: processed.connectNulls,
       nativeFrequency, // Store for later resampling
       ...(processed.area && {area: true}),
       ...(processed.stack && {stack: processed.stack})
@@ -1302,7 +1328,11 @@ export const buildSeriesModel = ({
   decimationTarget = DECIMATION_TARGET,
   maxPointsBeforeDecimation = MAX_POINTS_BEFORE_DECIMATION,
   timelineFrequency = null,
-  timelineRange = null
+  timelineRange = null,
+  includeZero = true,
+  reverseYAxis = false,
+  yAxisLabel = null,
+  visibilityModel = null
 }) => {
   const axisStats = {
     [AXIS_LEFT_ID]: {min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY},
@@ -1378,7 +1408,7 @@ export const buildSeriesModel = ({
     resampledSeries, // Use resampled instead of processed
     xValues,
     xAxisDates,
-    axisStats
+    {axisStats, visibilityModel}
   )
 
   // Step 4: Build dynamic threshold series
@@ -1414,9 +1444,17 @@ export const buildSeriesModel = ({
 
   // Step 8: Extract axis metadata
   const {axisLabels, axisPrecision} = extractAxisMetadata(processedSeries)
+  if (yAxisLabel) {
+    axisLabels[AXIS_LEFT_ID] = yAxisLabel
+  }
 
   // Step 9: Build y-axis configurations
-  const yAxis = buildYAxisConfigurations(axisStats, locale, axisLabels, axisPrecision)
+  const yAxis = buildYAxisConfigurations(axisStats, locale, {
+    axisLabels,
+    axisPrecision,
+    includeZero,
+    reverse: reverseYAxis
+  })
 
   return {
     xValues,

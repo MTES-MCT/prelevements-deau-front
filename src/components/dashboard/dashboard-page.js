@@ -13,6 +13,7 @@ import Link from 'next/link'
 
 import DashboardPointsMap from '@/components/dashboard/dashboard-points-map.js'
 import DashboardVolumesChart from '@/components/dashboard/dashboard-volumes-chart.js'
+import DashboardWaterResources from '@/components/dashboard/dashboard-water-resources.js'
 import SeriesExplorer from '@/components/points-prelevement/series-explorer.js'
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import {
@@ -179,7 +180,25 @@ function replaceDashboardHash(options) {
     return
   }
 
-  const hash = buildDashboardHash(options)
+  const territoryHash = buildDashboardHash(options)
+  const parameters = new URLSearchParams(
+    territoryHash.startsWith(DASHBOARD_HASH_PREFIX)
+      ? territoryHash.slice(DASHBOARD_HASH_PREFIX.length)
+      : ''
+  )
+  const currentHash = window.location.hash.startsWith(`#${DASHBOARD_HASH_PREFIX}`)
+    ? new URLSearchParams(window.location.hash.slice(DASHBOARD_HASH_PREFIX.length + 1))
+    : null
+
+  for (const key of ['piezoPeriod', 'flowPeriod', 'piezoMode']) {
+    const value = currentHash?.get(key)
+    if (value) {
+      parameters.set(key, value)
+    }
+  }
+
+  const search = parameters.toString()
+  const hash = search ? `${DASHBOARD_HASH_PREFIX}${search}` : ''
   const url = `${window.location.pathname}${window.location.search}${hash ? `#${hash}` : ''}`
 
   window.history.replaceState(window.history.state, '', url)
@@ -314,13 +333,25 @@ function getDashboardVariant(user, dashboard) {
   }
 }
 
-function getDashboardLinks({isDeclarant, isPreleveurDeclarant}) {
+function getDashboardLinks({isDeclarant}) {
   return {
     declarationsURL: isDeclarant ? getMyDeclarationsURL() : getDeclarationsURL(),
     declarationsURLLabel: isDeclarant ? 'Accéder au suivi' : 'Accéder à la page',
-    pointsSectionTitle: isPreleveurDeclarant ? 'Mes points de prélèvement' : 'Points de prélèvement',
+    pointsSectionTitle: 'Ressources et prélèvements de mon territoire',
     pointsURL: getPointsPrelevementURL()
   }
+}
+
+function getMonitoringStationsSignature(stations) {
+  return JSON.stringify([...stations]
+    .sort((first, second) => first.id.localeCompare(second.id))
+    .map(station => [
+      station.id,
+      station.type,
+      station.label,
+      station.stationCode,
+      ...(station.coordinates?.coordinates ?? [])
+    ]))
 }
 
 const KeyFiguresSection = ({
@@ -434,6 +465,7 @@ const DashboardZoneFilter = ({
 const PointsMapSection = ({
   className = 'mt-6',
   isLoading,
+  monitoringStations,
   points,
   pointsSectionTitle,
   pointsURL,
@@ -453,6 +485,7 @@ const PointsMapSection = ({
     </div>
 
     <DashboardPointsMap
+      monitoringStations={monitoringStations}
       points={points}
       showCollecteurs={showCollecteurs}
       showPreleveurs={showPreleveurs}
@@ -649,6 +682,10 @@ const DashboardPage = ({
   declarantSeriesOptions = null,
   initialDashboard,
   initialError,
+  initialPiezometry,
+  initialPiezometryError,
+  initialRiverFlows,
+  initialRiverFlowsError,
   user
 }) => {
   const hasAppliedInitialHashRef = useRef(false)
@@ -669,6 +706,14 @@ const DashboardPage = ({
   )
   const [error, setError] = useState(initialError)
   const [isTerritoryLoading, setIsTerritoryLoading] = useState(false)
+  const [monitoringStations, setMonitoringStations] = useState(() => {
+    const stations = [
+      ...(initialPiezometry?.stations ?? EMPTY_ARRAY),
+      ...(initialRiverFlows?.stations ?? EMPTY_ARRAY)
+    ]
+
+    return [...new Map(stations.map(station => [station.id, station])).values()]
+  })
 
   const zones = dashboard?.zones ?? EMPTY_ARRAY
   const points = dashboard?.points ?? EMPTY_ARRAY
@@ -693,7 +738,7 @@ const DashboardPage = ({
     declarationsURLLabel,
     pointsSectionTitle,
     pointsURL
-  } = getDashboardLinks({isDeclarant, isPreleveurDeclarant})
+  } = getDashboardLinks({isDeclarant})
   const withdrawnChart = getVolumeChartForRole(volumesByUsage?.charts?.withdrawn, isDeclarant)
   const dischargedChart = getVolumeChartForRole(volumesByUsage?.charts?.discharged, isDeclarant)
   const hasSelectableZones = zones.length > 0
@@ -901,6 +946,13 @@ const DashboardPage = ({
     await reloadDashboard({waterBodyTypes: nextWaterBodyTypes})
   }, [reloadDashboard])
 
+  const handleMonitoringStationsChange = useCallback(stations => {
+    setMonitoringStations(current =>
+      getMonitoringStationsSignature(current) === getMonitoringStationsSignature(stations)
+        ? current
+        : stations)
+  }, [])
+
   return (
     <main className='min-h-screen bg-[#f7f7fb] pb-12'>
       <DashboardRefreshStatus isLoading={isTerritoryLoading} />
@@ -934,6 +986,7 @@ const DashboardPage = ({
 
               <PointsMapSection
                 isLoading={false}
+                monitoringStations={monitoringStations}
                 points={activityPoints}
                 pointsSectionTitle={pointsSectionTitle}
                 pointsURL={pointsURL}
@@ -1004,6 +1057,7 @@ const DashboardPage = ({
             <PointsMapSection
               showPreleveurs
               isLoading={isTerritoryLoading}
+              monitoringStations={monitoringStations}
               points={points}
               pointsSectionTitle={pointsSectionTitle}
               pointsURL={pointsURL}
@@ -1035,6 +1089,15 @@ const DashboardPage = ({
             />
           </>
         )}
+
+        <DashboardWaterResources
+          initialPiezometry={initialPiezometry}
+          initialPiezometryError={initialPiezometryError}
+          initialRiverFlows={initialRiverFlows}
+          initialRiverFlowsError={initialRiverFlowsError}
+          selectedZoneCodes={selectedZoneCodes}
+          onStationsChange={handleMonitoringStationsChange}
+        />
       </div>
     </main>
   )

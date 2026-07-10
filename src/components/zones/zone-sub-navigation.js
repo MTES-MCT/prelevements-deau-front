@@ -15,6 +15,11 @@ const ITEMS = [
     href: zone => `/zones/${zone.id}/points-prelevement`
   },
   {
+    key: 'monitoring-stations',
+    label: 'Paramétrage des ressources',
+    href: zone => `/zones/${zone.id}/parametres-ressources`
+  },
+  {
     key: 'declarants',
     label: 'Déclarants',
     href: zone => `/zones/${zone.id}/declarants`

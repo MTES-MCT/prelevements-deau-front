@@ -26,6 +26,7 @@ function revalidateZonePaths(zoneId) {
   revalidatePath(`/zones/${zoneId}/collecteurs`)
   revalidatePath(`/zones/${zoneId}/suivi-declarations`)
   revalidatePath(`/zones/${zoneId}/points-prelevement`)
+  revalidatePath(`/zones/${zoneId}/parametres-ressources`)
   revalidatePath(`/zones/${zoneId}/exploitations`)
 }
 
@@ -209,6 +210,45 @@ export async function deleteZoneDeclarationOverrideAction(zoneId, overrideId) {
 
     revalidateZonePaths(zoneId)
 
+    return result
+  })
+}
+
+export async function getZoneMonitoringStationsAction(zoneId) {
+  return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/monitoring-stations`))
+}
+
+export async function createZoneMonitoringStationAction(zoneId, payload) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(`api/zones/${zoneId}/monitoring-stations`, {
+      method: 'POST',
+      body: payload
+    })
+
+    revalidateZonePaths(zoneId)
+    return result
+  })
+}
+
+export async function updateZoneMonitoringStationAction(zoneId, associationId, payload) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(`api/zones/${zoneId}/monitoring-stations/${associationId}`, {
+      method: 'PATCH',
+      body: payload
+    })
+
+    revalidateZonePaths(zoneId)
+    return result
+  })
+}
+
+export async function deleteZoneMonitoringStationAction(zoneId, associationId) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(`api/zones/${zoneId}/monitoring-stations/${associationId}`, {
+      method: 'DELETE'
+    })
+
+    revalidateZonePaths(zoneId)
     return result
   })
 }

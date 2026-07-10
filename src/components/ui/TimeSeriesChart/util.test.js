@@ -21,6 +21,7 @@ import {
   buildPointMap,
   buildThresholdEvaluator,
   classifyPoint,
+  buildYAxisConfigurations,
   buildSeriesModel,
   axisFormatterFactory,
   buildAnnotations,
@@ -37,6 +38,53 @@ const baseTheme = {
     grey: {400: '#9ca3af'}
   }
 }
+
+test('buildYAxisConfigurations peut cadrer une série sans imposer zéro', t => {
+  const axes = buildYAxisConfigurations({
+    [AXIS_LEFT_ID]: {min: 230, max: 235},
+    [AXIS_RIGHT_ID]: {min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY}
+  }, 'fr-FR', {
+    includeZero: false,
+    reverse: true,
+    axisLabels: {[AXIS_LEFT_ID]: 'Profondeur (m)'}
+  })
+
+  t.is(axes[0].min, 230)
+  t.is(axes[0].max, 235)
+  t.true(axes[0].reverse)
+  t.is(axes[0].label, 'Profondeur (m)')
+  t.false(axes[1].reverse)
+})
+
+test('buildSeriesModel recadre l’axe sur les séries visibles', t => {
+  const sharedDate = new Date('2026-07-01T00:00:00.000Z')
+  const model = buildSeriesModel({
+    series: [
+      {
+        id: 'low',
+        label: 'Nappe basse',
+        color: '#000091',
+        axis: 'left',
+        data: [{x: sharedDate, y: 12}]
+      },
+      {
+        id: 'high',
+        label: 'Nappe haute',
+        color: '#009081',
+        axis: 'left',
+        data: [{x: sharedDate, y: 240}]
+      }
+    ],
+    locale: 'fr-FR',
+    theme: baseTheme,
+    exposeAllMarks: false,
+    includeZero: false,
+    visibilityModel: {low: true, high: false}
+  })
+
+  t.is(model.yAxis[0].min, 11)
+  t.is(model.yAxis[0].max, 13)
+})
 
 test('toTimestamp returns milliseconds for dates and numbers', t => {
   const now = new Date('2024-01-01T00:00:00Z')
@@ -441,6 +489,29 @@ test('buildSeriesModel - should handle multiple series on different axes', t => 
   t.is(result.yAxis[0].hasData, true)
   t.is(result.yAxis[1].hasData, true)
   t.is(result.stubSeries.length, 2)
+})
+
+test('buildSeriesModel - relie les mesures lorsque la série le demande', t => {
+  const result = buildSeriesModel({
+    series: [{
+      id: 'groundwater',
+      label: 'Niveau (m NGF)',
+      color: '#000091',
+      axis: 'left',
+      connectNulls: true,
+      data: [
+        {x: new Date('2024-01-01'), y: 10},
+        {x: new Date('2024-01-03'), y: 12}
+      ]
+    }],
+    locale: 'fr-FR',
+    theme: baseTheme,
+    exposeAllMarks: false,
+    enableThresholds: false
+  })
+
+  t.true(result.segmentSeries[0].connectNulls)
+  t.true(result.stubSeries[0].connectNulls)
 })
 
 test('buildSeriesModel - should detect decimation', t => {
@@ -1175,4 +1246,3 @@ test('resampleSeriesData returns original map when frequencies cannot be parsed'
 
   t.is(result, pointMap)
 })
-
