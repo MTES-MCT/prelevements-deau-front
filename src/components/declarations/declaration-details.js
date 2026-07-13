@@ -65,6 +65,7 @@ const DeclarationDetails = ({
   declaration,
   isInstructor,
   onDeclarationChange,
+  preferUsageName = false,
   source
 }) => {
   const router = useRouter()
@@ -89,7 +90,13 @@ const DeclarationDetails = ({
     }
   }, [isPending, router, source?.id, source?.status])
 
-  let content = <SourceDataDetails declaration={declaration} source={source} />
+  let content = (
+    <SourceDataDetails
+      declaration={declaration}
+      preferUsageName={preferUsageName}
+      source={source}
+    />
+  )
 
   if (isPending || hasFailed) {
     content = <ProcessingState source={source} />

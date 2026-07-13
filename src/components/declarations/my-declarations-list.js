@@ -498,6 +498,7 @@ const MyDeclarationsList = ({
           {visibleEntries.map(entry => (
             <DeclarationSummaryItem
               key={entry.id}
+              preferUsageName
               declaration={entry.declaration}
               source={entry.source}
               url={entry.url}

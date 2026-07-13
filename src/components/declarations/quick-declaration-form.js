@@ -15,6 +15,14 @@ import QuickDeclarationMap from './quick-declaration-map.js'
 import {useAuth} from '@/contexts/auth-context.js'
 import {getDeclarantTitleFromUser} from '@/lib/declarants.js'
 import {
+  buildPointDisplayNames,
+  buildPointUsageNameChanges,
+  getPointDisplayName,
+  getPointTechnicalName,
+  getPointUsageNameDraft,
+  MAX_POINT_USAGE_NAME_LENGTH
+} from '@/lib/quick-declaration-point-name.js'
+import {
   getMyDeclarationSubmissionSuccessURL,
   getMyDeclarationURL
 } from '@/lib/urls.js'
@@ -254,10 +262,6 @@ function classNames(...values) {
   return values.filter(Boolean).join(' ')
 }
 
-function getPointName(point) {
-  return point.name || 'Point de prélèvement'
-}
-
 function hasDeclarationHistory(point) {
   const declarationsCount = Number(point.declarationsCount ?? point.declarationCount ?? 0)
   return Boolean(point.lastReading || point.lastDeclaration || declarationsCount > 0)
@@ -270,7 +274,7 @@ function comparePointsForEntry(pointA, pointB) {
     return historyOrder
   }
 
-  return getPointName(pointA).localeCompare(getPointName(pointB), 'fr', {sensitivity: 'base'})
+  return getPointDisplayName(pointA).localeCompare(getPointDisplayName(pointB), 'fr', {sensitivity: 'base'})
 }
 
 function normalizeNumberInput(value) {
@@ -360,7 +364,8 @@ function getDefaultUsage(point) {
 function getInitialRow(point) {
   return {
     value: '',
-    usageId: getDefaultUsage(point)
+    usageId: getDefaultUsage(point),
+    usageName: point.usageName ?? ''
   }
 }
 
@@ -368,12 +373,18 @@ function getRowState(rows, pointId) {
   const row = rows[pointId]
 
   if (!row) {
-    return {value: '', usageId: '', usageSearch: undefined}
+    return {
+      value: '',
+      usageId: '',
+      usageName: '',
+      usageSearch: undefined
+    }
   }
 
   return {
     value: row.value ?? row.index ?? '',
     usageId: row.usageId ?? '',
+    usageName: row.usageName ?? '',
     usageSearch: row.usageSearch
   }
 }
@@ -682,6 +693,7 @@ function getQuickDeclarationSubmitSignature({
   measurementType,
   periodEndDate,
   periodStartDate,
+  pointUsageNames = [],
   readingDate
 }) {
   return JSON.stringify({
@@ -696,6 +708,8 @@ function getQuickDeclarationSubmitSignature({
     measurementType,
     periodEndDate,
     periodStartDate,
+    pointUsageNames: [...pointUsageNames]
+      .sort((a, b) => a.pointPrelevementId.localeCompare(b.pointPrelevementId)),
     readingDate
   })
 }
@@ -1501,10 +1515,14 @@ const QuickDeclarationEntryRow = ({
   const isHighlighted = isPointIdEqual(pointId, hoveredPointId) || isPointIdEqual(pointId, activePointId)
   const usageOptions = buildUsageOptionsForPoint(point, globalUsageOptions).sort(compareUsageOptions)
   const usageSearchValue = getUsageSearchValue(row, usageOptions)
-  const pointName = getPointName(point)
+  const usageName = getPointUsageNameDraft(point, row)
+  const technicalName = getPointTechnicalName(point)
+  const pointName = getPointDisplayName(point, usageName)
+  const hasDistinctUsageName = pointName !== technicalName
   const valueLabel = getMeasurementInputLabel(measurementType)
   const valueInputId = `quick-value-${pointId}`
   const usageInputId = `quick-usage-${pointId}`
+  const usageNameInputId = `quick-usage-name-${pointId}`
 
   return (
     <div
@@ -1515,17 +1533,43 @@ const QuickDeclarationEntryRow = ({
       onMouseLeave={() => setHoveredPointId(null)}
     >
       <div className='min-w-0 md:pt-1'>
-        <button
-          type='button'
-          className={classNames(
-            'fr-link block max-w-full whitespace-normal break-words text-left text-xs leading-tight',
-            hasValue ? 'font-bold' : 'font-medium'
+        <div className='flex min-w-0 flex-wrap items-baseline gap-x-1'>
+          <button
+            type='button'
+            className={classNames(
+              'fr-link min-w-0 max-w-full whitespace-normal break-words text-left text-xs leading-tight',
+              hasValue ? 'font-bold' : 'font-medium'
+            )}
+            title={pointName}
+            onClick={() => focusPoint(pointId)}
+          >
+            {pointName}
+          </button>
+          {hasDistinctUsageName && (
+            <span
+              className='min-w-0 break-all text-[0.68rem] leading-tight text-gray-500'
+              title='Nom technique du point'
+            >
+              ({technicalName})
+            </span>
           )}
-          title={pointName}
-          onClick={() => focusPoint(pointId)}
-        >
-          {pointName}
-        </button>
+        </div>
+        <div className='quick-declaration-usage-name-field'>
+          <span className='fr-icon-edit-line shrink-0' aria-hidden='true' />
+          <label className='sr-only' htmlFor={usageNameInputId}>
+            Nom d’usage facultatif pour {technicalName}
+          </label>
+          <input
+            id={usageNameInputId}
+            className='quick-declaration-usage-name-input'
+            type='text'
+            maxLength={MAX_POINT_USAGE_NAME_LENGTH}
+            value={usageName}
+            placeholder='Ajouter un nom d’usage'
+            onFocus={() => setActivePointId(pointId)}
+            onChange={event => updateRow(pointId, {usageName: event.target.value})}
+          />
+        </div>
         {lastReadingLabel && (
           <p className='fr-hint-text fr-mb-0 mt-1 text-[0.72rem] leading-tight'>
             Dernier index : {lastReadingLabel}
@@ -1859,6 +1903,7 @@ const QuickDeclarationMapPanel = ({
   entryPoints,
   focusPoint,
   hoveredPointId,
+  pointDisplayNames,
   pointsCount,
   selectedPointIds,
   setHoveredPointId
@@ -1886,6 +1931,7 @@ const QuickDeclarationMapPanel = ({
           points={entryPoints}
           activePointId={activePointId}
           hoveredPointId={hoveredPointId}
+          pointDisplayNames={pointDisplayNames}
           selectedPointIds={selectedPointIds}
           declaredPointIds={declaredPointIds}
           onHoverPoint={setHoveredPointId}
@@ -1964,6 +2010,14 @@ const QuickDeclarationForm = ({
       .filter(point => hasDeclarationHistory(point))
       .map(point => getPointId(point)),
     [points]
+  )
+  const pointUsageNames = useMemo(
+    () => buildPointUsageNameChanges(points, rows),
+    [points, rows]
+  )
+  const pointDisplayNames = useMemo(
+    () => buildPointDisplayNames(points, rows),
+    [points, rows]
   )
 
   useEffect(() => {
@@ -2090,8 +2144,8 @@ const QuickDeclarationForm = ({
 
     for (const point of entryPoints) {
       const pointId = getPointId(point)
-      const pointName = getPointName(point)
       const row = getRowState(rows, pointId)
+      const pointName = getPointDisplayName(point, getPointUsageNameDraft(point, row))
       const hasValue = row.value !== ''
       const hasCompleteValue = isCompleteNumberInput(row.value)
       const hasUsage = Boolean(row.usageId)
@@ -2135,15 +2189,17 @@ const QuickDeclarationForm = ({
     () => Object.values(rows).some(row => (row.value ?? row.index ?? '') !== ''),
     [rows]
   )
+  const hasPointUsageNameChanges = pointUsageNames.length > 0
 
   const hasUnsavedQuickDeclarationData = useMemo(() => (
     hasAnyValue
+      || hasPointUsageNameChanges
       || comment.trim() !== ''
       || measurementType !== QUICK_DECLARATION_MEASUREMENT_TYPES.INDEX
       || readingDate !== maxReadingDate
       || periodStartDate !== ''
       || periodEndDate !== ''
-  ), [comment, hasAnyValue, maxReadingDate, measurementType, periodEndDate, periodStartDate, readingDate])
+  ), [comment, hasAnyValue, hasPointUsageNameChanges, maxReadingDate, measurementType, periodEndDate, periodStartDate, readingDate])
 
   useEffect(() => {
     onDirtyChange?.(hasUnsavedQuickDeclarationData)
@@ -2159,14 +2215,14 @@ const QuickDeclarationForm = ({
       return
     }
 
-    if (hasAnyValue) {
+    if (hasAnyValue || hasPointUsageNameChanges) {
       setPendingPreleveurId(nextPreleveurId)
       setPreleveurChangeModalOpen(true)
       return
     }
 
     applyPreleveurChange(nextPreleveurId)
-  }, [applyPreleveurChange, hasAnyValue, selectedPreleveurId])
+  }, [applyPreleveurChange, hasAnyValue, hasPointUsageNameChanges, selectedPreleveurId])
 
   const closePreleveurChangeModal = useCallback(() => {
     setPendingPreleveurId(null)
@@ -2193,8 +2249,9 @@ const QuickDeclarationForm = ({
     measurementType,
     periodEndDate,
     periodStartDate,
+    pointUsageNames,
     readingDate
-  }), [entries, measurementType, periodEndDate, periodStartDate, readingDate, targetDeclarantUserId])
+  }), [entries, measurementType, periodEndDate, periodStartDate, pointUsageNames, readingDate, targetDeclarantUserId])
   const activeOverwriteWarning = overwriteWarning?.signature === submitSignature
     ? overwriteWarning
     : null
@@ -2243,7 +2300,8 @@ const QuickDeclarationForm = ({
         measurementType,
         ...datePayload,
         comment,
-        entries
+        entries,
+        pointUsageNames
       })
 
       if (!result?.success || !result.data?.success) {
@@ -2271,6 +2329,7 @@ const QuickDeclarationForm = ({
     measurementType,
     periodEndDate,
     periodStartDate,
+    pointUsageNames,
     readingDate,
     onSubmitted,
     submitSignature,
@@ -2350,6 +2409,7 @@ const QuickDeclarationForm = ({
           entryPoints={entryPoints}
           focusPoint={focusPoint}
           hoveredPointId={hoveredPointId}
+          pointDisplayNames={pointDisplayNames}
           pointsCount={pointsCount}
           selectedPointIds={selectedPointIds}
           setHoveredPointId={setHoveredPointId}

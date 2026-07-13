@@ -66,6 +66,81 @@ main {
   padding-left: 0.5rem !important;
 }
 
+.quick-declaration-usage-name-field {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  margin-top: 0.2rem;
+  color: var(--text-mention-grey);
+}
+
+.quick-declaration-usage-name-field .fr-icon-edit-line::before,
+.quick-declaration-usage-name-field .fr-icon-edit-line::after {
+  --icon-size: 0.625rem;
+}
+
+.quick-declaration-usage-name-input {
+  width: 100%;
+  min-width: 0;
+  height: 1.35rem;
+  padding: 0 0.125rem;
+  border: 0;
+  border-bottom: 1px solid var(--border-default-grey);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-default-grey);
+  font-family: inherit;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  cursor: text;
+}
+
+.quick-declaration-usage-name-input::placeholder {
+  color: var(--text-mention-grey);
+  opacity: 1;
+}
+
+.quick-declaration-usage-name-input:hover {
+  border-bottom-color: var(--border-active-blue-france);
+}
+
+.quick-declaration-usage-name-input:focus-visible {
+  border-bottom-color: transparent;
+  outline: 2px solid var(--border-active-blue-france);
+  outline-offset: 1px;
+  background: var(--background-default-grey);
+}
+
+.point-usage-name-editor {
+  width: min(100%, 28rem);
+}
+
+.point-usage-name-edit-input {
+  width: 100%;
+  min-width: 8rem;
+  height: 2rem;
+  padding: 0 0.5rem;
+  border: 0;
+  border-bottom: 2px solid var(--border-plain-grey);
+  border-radius: 0;
+  background: var(--background-contrast-grey);
+  box-shadow: none;
+  color: var(--text-default-grey);
+  font-family: inherit;
+  font-size: 0.875rem;
+}
+
+.point-usage-name-edit-input:hover {
+  border-bottom-color: var(--border-active-blue-france);
+}
+
+.point-usage-name-edit-input:focus-visible {
+  outline: 2px solid var(--border-active-blue-france);
+  outline-offset: 2px;
+}
+
 .quick-declaration-combobox-input {
   padding-right: 1.625rem !important;
   font-size: 0.72rem !important;

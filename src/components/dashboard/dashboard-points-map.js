@@ -29,6 +29,10 @@ import {
   isDashboardVisibleUsage
 } from '@/lib/water-uses.js'
 import {getExploitationsByPointIdAction} from '@/server/actions/points-prelevement.js'
+import {
+  getPointPrelevementDisplayName,
+  getPointPrelevementTechnicalReference
+} from '@/utils/point-prelevement.js'
 
 const SOURCE_ID = 'dashboard-points'
 const MARKERS_SOURCE_ID = 'dashboard-points-markers'
@@ -218,7 +222,7 @@ function getPointMarkerIconId(point) {
   return `dashboard-marker-${encodeURIComponent(getMarkerSignature(point))}`
 }
 
-function buildFeatures(points, {selectedPointId = null} = {}) {
+function buildFeatures(points, {preferUsageName = false, selectedPointId = null} = {}) {
   const normalizedSelectedPointId = normalizePointId(selectedPointId)
 
   return {
@@ -240,7 +244,10 @@ function buildFeatures(points, {selectedPointId = null} = {}) {
           },
           properties: {
             id: point.id,
-            name: point.name || 'Point de prélèvement',
+            name: getPointPrelevementDisplayName(point, {
+              fallback: 'Point de prélèvement',
+              preferUsageName
+            }),
             icon: getPointMarkerIconId(point),
             selected: normalizePointId(point.id) === normalizedSelectedPointId
           }
@@ -441,6 +448,7 @@ function openPointPopup({
   map,
   point,
   popupRef,
+  preferUsageName,
   showCollecteurs,
   showPreleveurs
 }) {
@@ -459,8 +467,19 @@ function openPointPopup({
 
   const title = document.createElement('p')
   title.className = 'fr-text--md fr-mb-2v break-words font-semibold text-gray-900'
-  title.textContent = point.name || 'Point de prélèvement'
+  title.textContent = getPointPrelevementDisplayName(point, {
+    fallback: 'Point de prélèvement',
+    preferUsageName
+  })
   container.append(title)
+
+  const technicalReference = getPointPrelevementTechnicalReference(point, {preferUsageName})
+  if (technicalReference) {
+    const reference = document.createElement('p')
+    reference.className = 'fr-text--xs fr-mb-2v break-all text-gray-600'
+    reference.textContent = `Référence : ${technicalReference}`
+    container.append(reference)
+  }
 
   if (showPreleveurs) {
     appendAssociationsSection(container, point, loadExploitations, {showCollecteurs})
@@ -492,6 +511,7 @@ function openPointPopup({
 const DashboardPointsMap = ({
   monitoringStations = [],
   points,
+  preferUsageName = false,
   showCollecteurs = true,
   showPreleveurs = true
 }) => {
@@ -586,12 +606,18 @@ const DashboardPointsMap = ({
 
       map.addSource(SOURCE_ID, {
         type: 'geojson',
-        data: buildFeatures(pointsRef.current, {selectedPointId: selectedPointIdRef.current})
+        data: buildFeatures(pointsRef.current, {
+          preferUsageName,
+          selectedPointId: selectedPointIdRef.current
+        })
       })
 
       map.addSource(MARKERS_SOURCE_ID, {
         type: 'geojson',
-        data: buildFeatures(pointsRef.current, {selectedPointId: selectedPointIdRef.current})
+        data: buildFeatures(pointsRef.current, {
+          preferUsageName,
+          selectedPointId: selectedPointIdRef.current
+        })
       })
 
       map.addSource(MONITORING_SOURCE_ID, {
@@ -699,6 +725,7 @@ const DashboardPointsMap = ({
             map,
             point,
             popupRef,
+            preferUsageName,
             showCollecteurs,
             showPreleveurs
           })
@@ -717,7 +744,7 @@ const DashboardPointsMap = ({
       map.remove()
       mapRef.current = null
     }
-  }, [hasMapFeatures, loadExploitations, showCollecteurs, showPreleveurs])
+  }, [hasMapFeatures, loadExploitations, preferUsageName, showCollecteurs, showPreleveurs])
 
   useEffect(() => {
     const map = mapRef.current
@@ -728,6 +755,7 @@ const DashboardPointsMap = ({
 
     ensureMarkerImages(map, pointsWithCoordinates)
     const data = buildFeatures(pointsWithCoordinates, {
+      preferUsageName,
       selectedPointId: selectedPointIdRef.current
     })
     map.getSource(SOURCE_ID)?.setData(data)
@@ -748,7 +776,7 @@ const DashboardPointsMap = ({
       isRecenteringRef.current = false
       setHasMapMoved(false)
     })
-  }, [monitoringStationsWithCoordinates, pointsWithCoordinates])
+  }, [monitoringStationsWithCoordinates, pointsWithCoordinates, preferUsageName])
 
   useEffect(() => {
     const map = mapRef.current
@@ -780,10 +808,13 @@ const DashboardPointsMap = ({
       return
     }
 
-    const data = buildFeatures(pointsWithCoordinates, {selectedPointId})
+    const data = buildFeatures(pointsWithCoordinates, {
+      preferUsageName,
+      selectedPointId
+    })
     map.getSource(SOURCE_ID)?.setData(data)
     map.getSource(MARKERS_SOURCE_ID)?.setData(data)
-  }, [pointsWithCoordinates, selectedPointId])
+  }, [pointsWithCoordinates, preferUsageName, selectedPointId])
 
   const handleRecenter = useCallback(() => {
     const map = mapRef.current

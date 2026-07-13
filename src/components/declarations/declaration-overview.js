@@ -5,6 +5,7 @@ import {Tag} from '@codegouvfr/react-dsfr/Tag'
 import Link from 'next/link'
 
 import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
+import {getDeclarationPointDisplayName} from '@/lib/declaration-point-name.js'
 import {getDeclarationTypeLabel} from '@/lib/declaration-types.js'
 import {
   dataSourceTypeLabels,
@@ -152,9 +153,12 @@ function getSourceKindPresentation(source, declaration) {
   }
 }
 
-function getPointNames(source) {
+function getPointNames(source, {preferUsageName = false} = {}) {
   return (source?.chunks ?? [])
-    .map(chunk => chunk.pointPrelevement?.name ?? chunk.pointPrelevementName)
+    .map(chunk => getDeclarationPointDisplayName(chunk, source, {
+      fallback: '',
+      preferUsageName
+    }))
     .filter(Boolean)
 }
 
@@ -166,8 +170,8 @@ function getPointCount(source) {
     : source?._count?.chunks ?? source?.chunks?.length ?? 0
 }
 
-function getPointSummary(source) {
-  const names = getPointNames(source)
+function getPointSummary(source, options) {
+  const names = getPointNames(source, options)
 
   if (names.length > 0) {
     return formatNames(names, {emptyLabel: null})
@@ -180,7 +184,7 @@ function isSpreadsheetTreatmentPending(declaration, source) {
   return declaration?.dataSourceType === 'SPREADSHEET' && isDeclarationTreatmentPending(declaration, source)
 }
 
-function getProcessingAwareOverviewLabels({declaration, periodLabel, source}) {
+function getProcessingAwareOverviewLabels({declaration, periodLabel, preferUsageName, source}) {
   if (isSpreadsheetTreatmentPending(declaration, source)) {
     return {
       pointSummary: 'Analyse des points en cours',
@@ -189,7 +193,7 @@ function getProcessingAwareOverviewLabels({declaration, periodLabel, source}) {
   }
 
   return {
-    pointSummary: getPointSummary(source),
+    pointSummary: getPointSummary(source, {preferUsageName}),
     periodLabel: getOverviewPeriodLabel(source, periodLabel)
   }
 }
@@ -546,6 +550,7 @@ const DeclarationOverview = ({
   declarantName,
   declaration,
   periodLabel,
+  preferUsageName = false,
   showDeclarant = Boolean(declarantName),
   source: sourceFromProps,
   status
@@ -556,7 +561,12 @@ const DeclarationOverview = ({
   const hasSeparateDepositorValue = hasSeparateDepositor(declaration)
   const displayedAotDecreeNumber = declaration.aotDecreeNumber || declaration.numeroArreteAot
   const title = getDeclarationTitle(declaration)
-  const overviewLabels = getProcessingAwareOverviewLabels({declaration, periodLabel, source})
+  const overviewLabels = getProcessingAwareOverviewLabels({
+    declaration,
+    periodLabel,
+    preferUsageName,
+    source
+  })
   const nature = getNatureDetails({declaration, kind, source})
   const receivedDateLabel = getReceivedDateLabel({declaration, source})
   const depositDetail = getDepositDetail({declaration, kind, source})

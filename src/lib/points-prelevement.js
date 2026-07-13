@@ -4,6 +4,10 @@ import {
   getUsageKey,
   normalizeUsageOption
 } from '@/lib/water-uses.js'
+import {
+  getPointPrelevementDisplayName,
+  getPointPrelevementTechnicalReference
+} from '@/utils/point-prelevement.js'
 
 // Fonction utilitaire pour récupérer la couleur associée au type de milieu
 export const getTypeMilieuColor = typeMilieu => {
@@ -49,18 +53,28 @@ export function extractWaterBodyType(points) {
   return [...typeMilieuSet]
 }
 
-export function createPointPrelevementFeatures(points) {
+export function createPointPrelevementFeatures(points, {preferUsageName = false} = {}) {
   return {
     type: 'FeatureCollection',
-    features: points.map(point => ({
-      type: 'Feature',
-      geometry: point.coordinates,
-      id: point.id,
-      properties: {
-        ...point,
-        textOffset: [0, 1.5 + (0.07 * Math.min(point.name?.length || 0, 50))]
+    features: points.map(point => {
+      const displayName = getPointPrelevementDisplayName(point, {
+        fallback: 'Point de prélèvement',
+        preferUsageName
+      })
+
+      return {
+        type: 'Feature',
+        geometry: point.coordinates,
+        id: point.id,
+        properties: {
+          ...point,
+          name: displayName,
+          nom: displayName,
+          technicalName: getPointPrelevementTechnicalReference(point, {preferUsageName}),
+          textOffset: [0, 1.5 + (0.07 * Math.min(displayName.length, 50))]
+        }
       }
-    }))
+    })
   }
 }
 

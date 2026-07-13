@@ -469,6 +469,7 @@ const PointsMapSection = ({
   points,
   pointsSectionTitle,
   pointsURL,
+  preferUsageName = false,
   showCollecteurs,
   showPreleveurs
 }) => (
@@ -487,6 +488,7 @@ const PointsMapSection = ({
     <DashboardPointsMap
       monitoringStations={monitoringStations}
       points={points}
+      preferUsageName={preferUsageName}
       showCollecteurs={showCollecteurs}
       showPreleveurs={showPreleveurs}
     />
@@ -985,6 +987,7 @@ const DashboardPage = ({
               />
 
               <PointsMapSection
+                preferUsageName
                 isLoading={false}
                 monitoringStations={monitoringStations}
                 points={activityPoints}

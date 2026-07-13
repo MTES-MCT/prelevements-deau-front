@@ -82,9 +82,9 @@ function updateHighlightedPoint(map, selectedPoint, showLabels = true) {
   }
 }
 
-function loadMap(map, points, showLabels = true) {
+function loadMap(map, points, showLabels = true, preferUsageName = false) {
   // --- Chargement de la source et du layer de texte ---
-  const geojson = createPointPrelevementFeatures(points)
+  const geojson = createPointPrelevementFeatures(points, {preferUsageName})
   if (map.getSource(SOURCE_ID)) {
     map.getSource(SOURCE_ID).setData(geojson)
   } else {
@@ -170,7 +170,16 @@ function loadMap(map, points, showLabels = true) {
   }
 }
 
-const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapStyle = 'plan-ign', showLabels = true, options = {}}) => {
+const Map = ({
+  points,
+  filteredPoints,
+  selectedPoint,
+  handleSelectedPoint,
+  mapStyle = 'plan-ign',
+  showLabels = true,
+  options = {},
+  preferUsageName = false
+}) => {
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
   const popupRef = useRef(null)
@@ -254,7 +263,7 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
         const hoveredPoint = pointsRef.current.find(point => point.id === pointId)
         const popupContainer = document.createElement('div')
         const root = createRoot(popupContainer)
-        root.render(<Popup point={hoveredPoint} />)
+        root.render(<Popup point={hoveredPoint} preferUsageName={preferUsageName} />)
         if (popupRef.current) {
           popupRef.current.remove()
         }
@@ -299,7 +308,7 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
     return () => {
       map.remove()
     }
-  }, [mapStyle, points, handleSelectedPoint, options.hash, options.cooperativeGestures, options.maxZoom])
+  }, [mapStyle, points, handleSelectedPoint, options.hash, options.cooperativeGestures, options.maxZoom, preferUsageName])
 
   // Mise à jour des sources lorsque les points filtrés changent
   useEffect(() => {
@@ -309,11 +318,11 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
 
     const visiblePoints = points.filter(pt => filteredPoints.includes(pt.id))
     if (mapRef.current.getSource(SOURCE_ID)) {
-      mapRef.current.getSource(SOURCE_ID).setData(createPointPrelevementFeatures(visiblePoints))
+      mapRef.current.getSource(SOURCE_ID).setData(createPointPrelevementFeatures(visiblePoints, {preferUsageName}))
     }
 
     if (mapRef.current.getSource('points-markers')) {
-      const baseGeojson = createPointPrelevementFeatures(visiblePoints)
+      const baseGeojson = createPointPrelevementFeatures(visiblePoints, {preferUsageName})
       const markersFeatures = baseGeojson.features.map(feature => {
         const {id} = feature.properties
         feature.properties.icon = 'marker-' + id
@@ -325,7 +334,7 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
       }
       mapRef.current.getSource('points-markers').setData(markersGeoJSON)
     }
-  }, [points, filteredPoints])
+  }, [points, filteredPoints, preferUsageName])
 
   // Mise à jour du style de la carte et chargement des données
   useEffect(() => {
@@ -339,11 +348,11 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
       }
 
       map.on('load', () => {
-        loadMap(map, points, showLabels)
+        loadMap(map, points, showLabels, preferUsageName)
         updateHighlightedPoint(map, selectedPoint, showLabels)
       })
     }
-  }, [points, mapStyle, selectedPoint, showLabels, options.maxZoom])
+  }, [points, mapStyle, selectedPoint, showLabels, options.maxZoom, preferUsageName])
 
   useEffect(() => {
     const map = mapRef.current

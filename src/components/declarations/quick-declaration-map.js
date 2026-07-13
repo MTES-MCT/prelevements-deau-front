@@ -10,6 +10,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import {cooperativeGesturesMapOptions} from '@/components/map/cooperative-gestures.js'
 import {IGN_RASTER_MAX_ZOOM} from '@/components/map/ign-raster.js'
 import planIGN from '@/components/map/styles/plan-ign.json'
+import {getPointDisplayName} from '@/lib/quick-declaration-point-name.js'
 
 const DEFAULT_MAP_ZOOM = 10
 const FIT_BOUNDS_MAX_ZOOM = 18
@@ -161,6 +162,7 @@ function getInitialMapPoints(points, activePointId, selectedPointIdSet) {
 function buildFeatures(points, {
   activePointId,
   hoveredPointId,
+  pointDisplayNames,
   selectedPointIdSet,
   declaredPointIdSet
 }) {
@@ -192,7 +194,7 @@ function buildFeatures(points, {
           },
           properties: {
             id,
-            name: point.name || 'Point de prélèvement',
+            name: pointDisplayNames[id] || getPointDisplayName(point),
             active: id === normalizedActivePointId,
             hovered: id === normalizedHoveredPointId,
             selected: selectedPointIdSet.has(id),
@@ -208,6 +210,7 @@ const QuickDeclarationMap = ({
   points = [],
   activePointId = null,
   hoveredPointId = null,
+  pointDisplayNames = {},
   selectedPointIds = [],
   declaredPointIds = [],
   onHoverPoint,
@@ -231,6 +234,7 @@ const QuickDeclarationMap = ({
   const stateRef = useRef({
     activePointId,
     hoveredPointId,
+    pointDisplayNames,
     selectedPointIdSet,
     declaredPointIdSet
   })
@@ -252,10 +256,11 @@ const QuickDeclarationMap = ({
     stateRef.current = {
       activePointId,
       hoveredPointId,
+      pointDisplayNames,
       selectedPointIdSet,
       declaredPointIdSet
     }
-  }, [activePointId, declaredPointIdSet, hoveredPointId, selectedPointIdSet])
+  }, [activePointId, declaredPointIdSet, hoveredPointId, pointDisplayNames, selectedPointIdSet])
 
   useEffect(() => {
     if (!containerRef.current || pointsWithCoordinates.length === 0) {
@@ -590,10 +595,11 @@ const QuickDeclarationMap = ({
     source.setData(buildFeatures(pointsWithCoordinates, {
       activePointId,
       hoveredPointId,
+      pointDisplayNames,
       selectedPointIdSet,
       declaredPointIdSet
     }))
-  }, [activePointId, declaredPointIdSet, hoveredPointId, pointsWithCoordinates, selectedPointIdSet])
+  }, [activePointId, declaredPointIdSet, hoveredPointId, pointDisplayNames, pointsWithCoordinates, selectedPointIdSet])
 
   const fitVisiblePoints = useCallback(() => {
     const map = mapRef.current

@@ -203,6 +203,7 @@ const MyDeclarationDetail = ({availablePoints = [], initialDeclaration, showDecl
   if (source?.status === 'COMPLETED' && !isAvailablePointsPending) {
     declarationDetailsContent = (
       <DeclarationDetails
+        preferUsageName
         availablePoints={availableDeclarationPoints}
         declaration={declaration}
         source={source}
@@ -221,6 +222,7 @@ const MyDeclarationDetail = ({availablePoints = [], initialDeclaration, showDecl
       <DeclarationSubmissionFlash />
 
       <DeclarationOverview
+        preferUsageName
         actions={(
           <DeclarationPointsChangeRequestAction
             declaration={declaration}

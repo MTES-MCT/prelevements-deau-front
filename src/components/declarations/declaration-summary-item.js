@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
 import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
+import {getDeclarationPointDisplayName} from '@/lib/declaration-point-name.js'
 import {getDeclarationTypeLabel} from '@/lib/declaration-types.js'
 import {
   dataSourceTypeLabels,
@@ -188,9 +189,12 @@ function isSameDeclarant(a, b) {
   return Boolean(aId && bId && aId === bId)
 }
 
-function getPointNames(source) {
+function getPointNames(source, {preferUsageName = false} = {}) {
   return (source?.chunks ?? [])
-    .map(chunk => chunk.pointPrelevement?.name ?? chunk.pointPrelevementName)
+    .map(chunk => getDeclarationPointDisplayName(chunk, source, {
+      fallback: '',
+      preferUsageName
+    }))
     .filter(Boolean)
 }
 
@@ -202,8 +206,8 @@ function getPointCount(source) {
     : source?._count?.chunks ?? source?.chunks?.length ?? 0
 }
 
-function getPointSummary(source) {
-  const names = getPointNames(source)
+function getPointSummary(source, options) {
+  const names = getPointNames(source, options)
 
   if (names.length > 0) {
     return formatNames(names, {emptyLabel: null})
@@ -398,10 +402,11 @@ function getContextSection({
   declaration,
   isTelemetry,
   pointSummary: pointSummaryOverride,
+  preferUsageName,
   showDeclarant,
   source
 }) {
-  const pointSummary = pointSummaryOverride ?? getPointSummary(source)
+  const pointSummary = pointSummaryOverride ?? getPointSummary(source, {preferUsageName})
 
   if (isTelemetry && showDeclarant) {
     return {
@@ -489,6 +494,7 @@ function getNatureSection({declaration, isManual, isTelemetry, kind, periodLabel
 function getSummarySections({
   declaration,
   presentation,
+  preferUsageName,
   showDeclarant,
   source,
   status
@@ -515,6 +521,7 @@ function getSummarySections({
       declaration,
       isTelemetry,
       pointSummary: isWaitingForFileProcessing ? 'Analyse des points en cours' : null,
+      preferUsageName,
       showDeclarant,
       source
     }),
@@ -642,6 +649,7 @@ const DeclarationSummaryContent = ({
   actionLabel,
   actions,
   declaration,
+  preferUsageName,
   showDeclarant,
   source
 }) => {
@@ -650,6 +658,7 @@ const DeclarationSummaryContent = ({
   const sections = getSummarySections({
     declaration,
     presentation,
+    preferUsageName,
     showDeclarant,
     source,
     status
@@ -698,6 +707,7 @@ const DeclarationSummaryItem = ({
   actionLabel = 'Consulter',
   actions = null,
   declaration,
+  preferUsageName = false,
   showDeclarant = true,
   source,
   url
@@ -707,6 +717,7 @@ const DeclarationSummaryItem = ({
       actionLabel={url ? actionLabel : null}
       actions={actions}
       declaration={declaration}
+      preferUsageName={preferUsageName}
       showDeclarant={showDeclarant}
       source={source}
     />

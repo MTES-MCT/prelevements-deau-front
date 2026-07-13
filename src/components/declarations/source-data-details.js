@@ -3,6 +3,10 @@
 import Link from 'next/link'
 
 import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
+import {
+  getDeclarationPointDisplayName,
+  getDeclarationPointTechnicalReference
+} from '@/lib/declaration-point-name.js'
 import {getDeclarationTypeLabel} from '@/lib/declaration-types.js'
 import {getPointPrelevementURL} from '@/lib/urls.js'
 import {
@@ -152,10 +156,6 @@ function getReplacementLabel(value) {
   }
 
   return formatValue(replacement.value, replacement.unit ?? value.unit)
-}
-
-function getPointName(chunk) {
-  return chunk.pointPrelevement?.name || chunk.pointPrelevementName || 'Point de prélèvement'
 }
 
 function getChunkPreleveurLabel(chunk) {
@@ -426,8 +426,9 @@ const UsageReference = ({label, usage}) => (
   </p>
 )
 
-const PointTitle = ({chunk}) => {
-  const pointName = getPointName(chunk)
+const PointTitle = ({chunk, preferUsageName = false, source}) => {
+  const pointName = getDeclarationPointDisplayName(chunk, source, {preferUsageName})
+  const technicalReference = getDeclarationPointTechnicalReference(chunk, source, {preferUsageName})
   const pointLinkTarget = getPointPrelevementLinkTarget(chunk)
   const preleveurLabel = getChunkPreleveurLabel(chunk)
 
@@ -444,6 +445,11 @@ const PointTitle = ({chunk}) => {
           </Link>
         ) : pointName}
       </h3>
+      {technicalReference && (
+        <p className='fr-text--xs fr-mb-0 truncate text-gray-500' title={technicalReference}>
+          Référence : {technicalReference}
+        </p>
+      )}
       {preleveurLabel && (
         <p className='fr-text--sm fr-mb-0 truncate text-gray-700' title={preleveurLabel}>
           Préleveur : {preleveurLabel}
@@ -548,7 +554,7 @@ const ValuesPreview = ({chunk, source}) => {
   )
 }
 
-const SourceDataDetails = ({declaration, source}) => {
+const SourceDataDetails = ({declaration, preferUsageName = false, source}) => {
   const chunks = source?.chunks ?? []
   const isTelemetry = source?.type === 'API'
 
@@ -590,7 +596,11 @@ const SourceDataDetails = ({declaration, source}) => {
             <article key={chunk.id} className='p-4'>
               <div className='grid gap-3 lg:grid-cols-[minmax(0,1fr)_11rem_12rem_11rem] lg:items-start'>
                 <div className='min-w-0'>
-                  <PointTitle chunk={chunk} />
+                  <PointTitle
+                    chunk={chunk}
+                    preferUsageName={preferUsageName}
+                    source={source}
+                  />
                   {firstColumnDetails.map(detail => (
                     <p key={detail} className='fr-text--sm fr-mb-0'>
                       {detail}

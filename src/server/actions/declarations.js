@@ -109,6 +109,7 @@ function buildQuickDeclarationPayload({
   periodStartDate,
   periodEndDate,
   entries = [],
+  pointUsageNames = [],
   comment
 } = {}) {
   const normalizedType = (type || '').trim().toLocaleLowerCase('fr-FR')
@@ -144,6 +145,10 @@ function buildQuickDeclarationPayload({
 
   if (declarantUserId) {
     payload.declarantUserId = declarantUserId
+  }
+
+  if (Array.isArray(pointUsageNames) && pointUsageNames.length > 0) {
+    payload.pointUsageNames = pointUsageNames
   }
 
   if (typeof comment === 'string' && comment.trim()) {

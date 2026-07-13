@@ -3,8 +3,12 @@ import Article from '@mui/icons-material/Article'
 import Launch from '@mui/icons-material/Launch'
 import {Box, Chip, Typography} from '@mui/material'
 
+import PointUsageNameEditor from '@/components/points-prelevement/point-usage-name-editor.js'
 import {getTypeMilieuColor} from '@/lib/points-prelevement.js'
-import {getPointPrelevementLabel} from '@/utils/point-prelevement.js'
+import {
+  getPointPrelevementLabel,
+  getPointPrelevementTechnicalReference
+} from '@/utils/point-prelevement.js'
 
 const waterBodyTypeLabels = {
   SUPERFICIELLE: 'Eau superficielle',
@@ -90,22 +94,42 @@ const IdentifierList = ({identifiers}) => {
   )
 }
 
-const PointIdentification = ({pointPrelevement, lienBss, lienBnpe}) => {
+const PointIdentification = ({
+  pointPrelevement,
+  lienBss,
+  lienBnpe,
+  preferUsageName = false
+}) => {
   const {id: idPoint} = pointPrelevement
-  const pointLabel = getPointPrelevementLabel({pointPrelevement})
+  const pointLabel = getPointPrelevementLabel({pointPrelevement, preferUsageName})
+  const technicalReference = getPointPrelevementTechnicalReference(pointPrelevement, {preferUsageName})
   const typeMilieuColor = getTypeMilieuColor(pointPrelevement.waterBodyType)
   const namesLabel = formatNameEntries(pointPrelevement.names)
+  const canEditUsageName = preferUsageName && pointPrelevement.right?.canEditUsageName
 
   return (
     <div className='flex flex-col gap-4'>
       <div className='flex justify-between md:items-center sm:items-start gap-4 pb-2'>
-        <Typography variant='h3'>
-          <div className='flex flex-wrap items-center gap-4'>
-            {pointLabel} {pointPrelevement.exploitationsStatus && (
-              <small className='fr-badge fr-badge--success fr-badge--no-icon'>{pointPrelevement.exploitationsStatus}</small>
-            )}
-          </div>
-        </Typography>
+        <div className='min-w-0'>
+          <Typography variant='h3'>
+            <span className='flex flex-wrap items-center gap-4'>
+              {pointLabel} {pointPrelevement.exploitationsStatus && (
+                <small className='fr-badge fr-badge--success fr-badge--no-icon'>{pointPrelevement.exploitationsStatus}</small>
+              )}
+            </span>
+          </Typography>
+          {technicalReference && (
+            <p className='fr-text--sm fr-mb-0 text-gray-600'>
+              Référence : {technicalReference}
+            </p>
+          )}
+          {canEditUsageName && (
+            <PointUsageNameEditor
+              pointId={idPoint}
+              usageName={pointPrelevement.usageName}
+            />
+          )}
+        </div>
         {pointPrelevement.right?.canEdit && (
           <Button
             priority='secondary'

@@ -8,17 +8,30 @@ import {
 
 import {getDeclarantTitleFromUser} from '@/lib/declarants.js'
 import {getUsageKey, getUsageLabel} from '@/lib/water-uses.js'
+import {
+  getPointPrelevementDisplayName,
+  getPointPrelevementTechnicalReference
+} from '@/utils/point-prelevement.js'
 
-const Popup = ({point}) => {
+const Popup = ({point, preferUsageName = false}) => {
   const theme = useTheme()
-  const {name, autresNoms, preleveurs, usages} = point
+  const {autresNoms, preleveurs, usages} = point
+  const displayName = getPointPrelevementDisplayName(point, {
+    fallback: 'Pas de nom renseigné',
+    preferUsageName
+  })
+  const technicalReference = getPointPrelevementTechnicalReference(point, {preferUsageName})
 
   return (
     // Note: migrate this popup to the DSFR theme when the map UI is aligned.
     <Box className='flex flex-col gap-2' sx={{color: theme.palette.text.primary}}>
       <Typography variant='h6' sx={{color: theme.palette.text.primary}}>
-        {name || 'Pas de nom renseigné'}
+        {displayName}
       </Typography>
+
+      {technicalReference && (
+        <Typography variant='caption'>Référence : {technicalReference}</Typography>
+      )}
 
       <Typography variant='caption'>
         {autresNoms}

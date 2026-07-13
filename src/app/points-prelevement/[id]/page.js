@@ -14,14 +14,23 @@ import {getPointPrelevementLabel} from '@/utils/point-prelevement.js'
 
 export async function generateMetadata({params}) {
   const {id} = await params
-  const result = await getPointPrelevementAction(id)
+  const [result, userResult] = await Promise.all([
+    getPointPrelevementAction(id),
+    getCurrentUser()
+  ])
+  const preferUsageName = userResult?.data?.role === 'DECLARANT'
 
-  return buildPageTitle([result.success && result.data ? getPointPrelevementLabel({pointPrelevement: result.data}) : null], 'Point de prélèvement')
+  return buildPageTitle([
+    result.success && result.data
+      ? getPointPrelevementLabel({pointPrelevement: result.data, preferUsageName})
+      : null
+  ], 'Point de prélèvement')
 }
 
 const Page = async ({params}) => {
   const userResult = await getCurrentUser()
   const role = userResult?.data?.role ?? null
+  const preferUsageName = role === 'DECLARANT'
 
   const {id} = (await params)
 
@@ -44,6 +53,7 @@ const Page = async ({params}) => {
       <div className='flex flex-col gap-8 mb-16'>
         <PointIdentification
           pointPrelevement={pointPrelevement}
+          preferUsageName={preferUsageName}
         />
         <PointLocalisation
           pointPrelevement={pointPrelevement}

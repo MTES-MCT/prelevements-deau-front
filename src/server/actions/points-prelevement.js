@@ -77,6 +77,20 @@ export async function editPointPrelevementAction(id, payload) {
   })
 }
 
+export async function editPointUsageNameAction(id, usageName) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(`api/points-prelevement/${id}/usage-name`, {
+      method: 'PATCH',
+      body: {usageName}
+    })
+    revalidatePath('/')
+    revalidatePath('/mes-declarations', 'layout')
+    revalidatePath('/points-prelevement')
+    revalidatePath(`/points-prelevement/${id}`)
+    return result
+  })
+}
+
 /**
  * Delete a point de prélèvement
  * @param {string} id - Point ID

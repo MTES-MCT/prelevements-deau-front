@@ -21,6 +21,7 @@ import Legend from '@/components/map/legend.js'
 import PointsListHeader from '@/components/map/points-list-header.js'
 import PointsList from '@/components/map/points-list.js'
 import LoadingOverlay from '@/components/ui/LoadingOverlay/index.js'
+import {useAuth} from '@/contexts/auth-context.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import useEvent from '@/hook/use-event.js'
 import {downloadCsv} from '@/lib/export-csv.js'
@@ -30,10 +31,12 @@ import {usageMatchesFilter} from '@/lib/water-uses.js'
 import {getPointsPrelevementAction} from '@/server/actions/points-prelevement.js'
 
 const Page = () => {
+  const {user} = useAuth()
   const theme = useTheme()
   const searchParams = useSearchParams()
   const router = useRouter()
   const selectedPointId = searchParams.get('point-prelevement')
+  const preferUsageName = user?.role === 'DECLARANT'
   // État pour les données
   const [points, setPoints] = useState([])
   const [loading, setLoading] = useState(true)
@@ -97,6 +100,7 @@ const Page = () => {
 
         // Normalisation des valeurs à comparer
         const normalizedName = point.name ? deburr(point.name.toLowerCase().trim()) : ''
+        const normalizedUsageName = point.usageName ? deburr(point.usageName.toLowerCase().trim()) : ''
         const idPointStr = String(point.id).toLowerCase()
         const preleveurMatches = point.preleveurs.some(preleveur => {
           const normalizedSocialReason = preleveur?.declarant?.socialReason ? deburr(preleveur?.declarant?.socialReason?.toLowerCase().trim()) : ''
@@ -110,7 +114,8 @@ const Page = () => {
           )
         })
 
-        matches &&= normalizedName.includes(normalizedSearch)
+        matches &&= normalizedUsageName.includes(normalizedSearch)
+          || normalizedName.includes(normalizedSearch)
           || idPointStr.includes(normalizedSearch)
           || preleveurMatches
       }
@@ -164,6 +169,7 @@ const Page = () => {
           <PointsList
             isLoading={loading}
             points={points.filter(pt => filteredPoints.includes(pt.id))}
+            preferUsageName={preferUsageName}
           />
         }
       >
@@ -178,6 +184,7 @@ const Page = () => {
             handleSelectedPoint={handleSelectedPoint}
             mapStyle={style}
             options={{hash: true, cooperativeGestures: false}}
+            preferUsageName={preferUsageName}
           />
           <Box
             sx={{

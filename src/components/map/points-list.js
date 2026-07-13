@@ -6,8 +6,9 @@ import Link from 'next/link'
 
 import Point from '@/components/map/point.js'
 import {getPointPrelevementURL} from '@/lib/urls.js'
+import {getPointPrelevementDisplayName} from '@/utils/point-prelevement.js'
 
-const PointsList = ({points, isLoading}) => {
+const PointsList = ({points, isLoading, preferUsageName = false}) => {
   // Si points est null, afficher un indicateur de chargement centré
   if (isLoading) {
     return (
@@ -22,11 +23,14 @@ const PointsList = ({points, isLoading}) => {
   return (
     <div className='flex flex-col gap-2'>
       <List>
-        {orderBy(points, 'name').map((point, index) => (
+        {orderBy(points, point => getPointPrelevementDisplayName(point, {
+          preferUsageName
+        })).map((point, index) => (
           <Link key={point.id} href={getPointPrelevementURL(point)}>
             <Point
               point={point}
               index={index}
+              preferUsageName={preferUsageName}
             />
           </Link>
         ))}
