@@ -13,12 +13,16 @@ export const dynamic = 'force-dynamic'
 
 const fieldDescriptions = [
   {
-    name: 'ID du point de prélèvement',
-    description: 'Identifiant technique du point de prélèvement exporté.'
+    name: 'ID du point',
+    description: 'Identifiant technique du point exporté.'
   },
   {
-    name: 'Nom du point de prélèvement',
+    name: 'Nom du point',
     description: 'Nom du point tel qu’il est connu dans Partageons l’Eau.'
+  },
+  {
+    name: 'Type de point',
+    description: 'Indique si le point est configuré pour un prélèvement ou un rejet. Ce type qualifie les volumes, index et débits associés.'
   },
   {
     name: 'Commune',
@@ -81,8 +85,8 @@ const fieldDescriptions = [
     description: 'Adresse e-mail du compte collecteur lorsqu’il existe.'
   },
   {
-    name: 'Type de donnée',
-    description: 'Nature de la valeur : index compteur, volume prélevé, volume rejeté, etc.'
+    name: 'Type de mesure',
+    description: 'Nature de la valeur mesurée : index, volume ou débit. Le sens prélèvement ou rejet est indiqué dans la colonne « Type de point ».'
   },
   {
     name: 'Unité',

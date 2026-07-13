@@ -19,6 +19,17 @@ import {
 
 import {getSmallestFrequency} from '@/utils/frequency.js'
 
+export function shouldRenderCumulativeSeriesAsArea(parameters, parameter) {
+  if (!isCumulativeValueType(parameter?.valueType)) {
+    return false
+  }
+
+  const cumulativeSeriesOnSameAxis = parameters.filter(candidate =>
+    candidate?.unit === parameter.unit && isCumulativeValueType(candidate?.valueType))
+
+  return cumulativeSeriesOnSameAxis.length === 1
+}
+
 /**
  * Transforms loaded values into chart-ready series format
  *
@@ -83,6 +94,7 @@ export function useChartSeries({
 
       const color = param.color ?? FALLBACK_PARAMETER_COLOR
       const label = param.unit ? `${param.parameterLabel} (${param.unit})` : param.parameterLabel
+      const area = shouldRenderCumulativeSeriesAsArea(selectedParamsData, param)
       const nativeResolution = param.nativeResolution ?? resolutionFromFrequency(param.frequency)
       // Fallback to param.frequency which is already in human-readable format (e.g., '1 day')
       // compatible with processTimeSeriesData's parseFrequencyToMs function
@@ -125,13 +137,13 @@ export function useChartSeries({
         : rawData
 
       return {
-        id: param.parameterLabel,
+        id: param.parameterId ?? paramLabel,
         label,
         axis,
         color,
         data: processedData,
-        area: isCumulativeValueType(param.valueType),
-        stack: isCumulativeValueType(param.valueType) ? 'total' : undefined,
+        area,
+        stack: area ? `total-${axis}` : undefined,
         nativeResolution,
         frequency: nativeFrequency,
         precision: param.precision ?? 0

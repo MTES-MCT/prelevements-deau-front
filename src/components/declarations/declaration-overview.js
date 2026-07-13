@@ -65,6 +65,11 @@ const quickDeclarationMeasurementPresentation = {
     iconClassName: 'fr-icon-dashboard-3-line text-[#3B87FF]',
     label: 'Relevé d\'index'
   },
+  VOLUME: {
+    color: '#000091',
+    iconClassName: 'fr-icon-drop-line text-[#000091]',
+    label: 'Volume'
+  },
   VOLUME_PRELEVE: {
     color: '#000091',
     iconClassName: 'fr-icon-drop-line text-[#000091]',

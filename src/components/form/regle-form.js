@@ -147,12 +147,12 @@ const ParameterSection = ({regle, setRegle, fieldError}) => {
       ...previous,
       parameter,
       unit,
-      frequency: parameter === 'volume prélevé' ? previous.frequency : null
+      frequency: parameter === 'volume' ? previous.frequency : null
     }))
   }
 
   const showUnitField = hasUnit(regle.parameter)
-  const isVolumeParameter = regle.parameter === 'volume prélevé'
+  const isVolumeParameter = regle.parameter === 'volume'
   const unitOptions = getUnitOptions(regle.parameter)
 
   return (

@@ -2,6 +2,12 @@ import {normalizeString} from '@/utils/string.js'
 
 const VOLUME_TEMPORAL_OPERATORS = Object.freeze(['sum', 'mean', 'min', 'max'])
 const STANDARD_TEMPORAL_OPERATORS = Object.freeze(['mean', 'min', 'max'])
+const LEGACY_PARAMETER_ALIASES = new Map([
+  ['volume prélevé', 'volume'],
+  ['volume rejeté', 'volume'],
+  ['relevé d’index', 'index'],
+  ['débit prélevé', 'débit']
+].map(([legacyParameter, parameter]) => [normalizeString(legacyParameter), normalizeString(parameter)]))
 
 export const MAX_DIFFERENT_UNITS = 2
 
@@ -34,7 +40,7 @@ export const DEFAULT_TRANSLATIONS = {
 
 export const AGGREGATED_PARAMETERS = [
   {
-    parameter: 'volume prélevé',
+    parameter: 'volume',
     unit: 'm³',
     type: 'cumulative',
     defaultTemporalOperator: 'sum',
@@ -50,14 +56,6 @@ export const AGGREGATED_PARAMETERS = [
     precision: 0
   },
   {
-    parameter: 'relevé d\'index',
-    unit: 'm³',
-    type: 'instantaneous',
-    defaultTemporalOperator: 'max',
-    temporalOperators: STANDARD_TEMPORAL_OPERATORS,
-    precision: 0
-  },
-  {
     parameter: 'index',
     unit: 'm³',
     type: 'instantaneous',
@@ -66,7 +64,7 @@ export const AGGREGATED_PARAMETERS = [
     precision: 0
   },
   {
-    parameter: 'débit prélevé',
+    parameter: 'débit',
     unit: 'L/s',
     type: 'instantaneous',
     defaultTemporalOperator: 'mean',
@@ -170,14 +168,19 @@ export const FREQUENCY_OPTIONS = [
 
 export const DEFAULT_AGGREGATION_FREQUENCY = '1 day'
 
+function normalizeParameterKey(parameterName) {
+  const normalized = normalizeString(parameterName)
+  return LEGACY_PARAMETER_ALIASES.get(normalized) ?? normalized
+}
+
 export function getParameterMetadata(parameterName) {
   if (!parameterName) {
     return undefined
   }
 
-  const normalized = normalizeString(parameterName)
+  const normalized = normalizeParameterKey(parameterName)
   return AGGREGATED_PARAMETERS.find(
-    entry => normalizeString(entry.parameter) === normalized
+    entry => normalizeParameterKey(entry.parameter) === normalized
   )
 }
 
@@ -188,7 +191,7 @@ export function getAvailableParametersFromSeries(series) {
 
   const availableKeys = new Set(
     series
-      .map(item => normalizeString(item?.parameter ?? item?.parametre))
+      .map(item => normalizeParameterKey(item?.parameter ?? item?.parametre))
       .filter(Boolean)
   )
 
@@ -197,6 +200,6 @@ export function getAvailableParametersFromSeries(series) {
   }
 
   return AGGREGATED_PARAMETERS.filter(entry =>
-    availableKeys.has(normalizeString(entry.parameter))
+    availableKeys.has(normalizeParameterKey(entry.parameter))
   )
 }

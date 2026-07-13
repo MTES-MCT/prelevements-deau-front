@@ -26,11 +26,32 @@ const PARAMETER_COLOR_ENTRIES = [
   ['autre', '#AEA397']
 ]
 
+const PARAMETER_FLOW_COLOR_ENTRIES = [
+  ['volume:PRELEVEMENT', '#000091'],
+  ['volume:REJET', '#CE614A'],
+  ['index:PRELEVEMENT', '#3B87FF'],
+  ['index:REJET', '#B34000'],
+  ['debit:PRELEVEMENT', '#0063CB'],
+  ['debit:REJET', '#009099']
+]
+
 export const PARAMETER_COLOR_MAP = new Map(
   PARAMETER_COLOR_ENTRIES.map(([name, color]) => [normalizeString(name), color])
 )
 
 export const FALLBACK_PARAMETER_COLOR = PARAMETER_COLOR_MAP.get('autre')
+
+export const PARAMETER_FLOW_COLOR_MAP = new Map(PARAMETER_FLOW_COLOR_ENTRIES)
+
+export function getParameterFlowColor(metricTypeCode, flowType) {
+  if (!metricTypeCode || !flowType) {
+    return null
+  }
+
+  return PARAMETER_FLOW_COLOR_MAP.get(
+    `${normalizeString(metricTypeCode)}:${String(flowType).toUpperCase()}`
+  ) ?? null
+}
 
 /**
  * Calendar status colors based on DSFR design system

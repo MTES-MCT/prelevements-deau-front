@@ -38,7 +38,7 @@ const RegleCreationForm = ({preleveur, exploitations = [], documents = []}) => {
   const [regle, setRegle] = useState(emptyRegle)
 
   const declarantId = preleveur.userId || preleveur.id
-  const isFrequencyRequired = regle.parameter === 'volume prélevé'
+  const isFrequencyRequired = regle.parameter === 'volume'
 
   const isFormValid = regle.exploitationIds?.length > 0
     && regle.parameter

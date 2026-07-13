@@ -14,6 +14,7 @@ import {
   getOptionValue,
   getOptionContent,
   getOptionDisabled,
+  getOptionLabel,
   getOptionTitle
 } from './utils.js'
 
@@ -57,7 +58,7 @@ const GroupedMultiselect = ({
       for (const option of group.options || []) {
         map.set(
           getOptionValue(option),
-          getOptionTitle(option) || getOptionValue(option)
+          getOptionLabel(option) || getOptionValue(option)
         )
       }
     }

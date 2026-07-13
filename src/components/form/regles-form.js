@@ -131,7 +131,7 @@ const ParameterSection = ({regle, setRegle, fieldError}) => {
   }
 
   const showUnitField = requiresUnitSelection(regle.parameter)
-  const isVolumeParameter = regle.parameter === 'volume prélevé'
+  const isVolumeParameter = regle.parameter === 'volume'
 
   return (
     <DividerSection title='Paramètre et valeur'>

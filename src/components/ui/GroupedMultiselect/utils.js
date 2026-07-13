@@ -32,6 +32,14 @@ export const getOptionTitle = opt => {
   return opt.disabledReason ?? opt.title ?? opt.tooltip
 }
 
+export const getOptionLabel = opt => {
+  if (!isOptionObject(opt)) {
+    return opt
+  }
+
+  return opt.label ?? opt.title ?? opt.tooltip ?? opt.value
+}
+
 // Affiche le texte des éléments sélectionnés, avec "+ n autres" si besoin
 export const renderSelectedText = (value, placeholder, showMore, hiddenCount) => {
   if (isEmpty(value)) {

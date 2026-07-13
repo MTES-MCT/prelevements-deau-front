@@ -54,7 +54,7 @@ const RegleEditionForm = ({preleveur, regle, exploitations, documents}) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  const isFrequencyRequired = formData.parameter === 'volume prélevé'
+  const isFrequencyRequired = formData.parameter === 'volume'
   const declarantId = preleveur.userId || preleveur.id
 
   const isFormValid = formData.exploitationIds?.length > 0

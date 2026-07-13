@@ -12,7 +12,7 @@ export const DEFAULT_PALETTE = {
  * Determine the display color for a given day based on values and anomalies.
  * Rules (priority order):
  * 1. Any negative value -> palette.error
- * 2. Daily volume ("volume prélevé") present (not NaN) -> palette.blue
+ * 2. Daily volume present (not NaN) -> palette.blue
  * 3. Any other data present (NaN placeholder or fifteen-minute data) -> palette.warning
  * 4. Otherwise -> palette.grey
  * @param {number[]} values Daily aggregated values array (may contain NaN or undefined)
@@ -27,12 +27,14 @@ export function determineColors(values, fifteenMinutesValues, dailyParameters, p
     return {color: palette.error}
   }
 
-  const volumePreleveParam = dailyParameters?.find(p => p.nom_parametre === 'volume prélevé')
-  const volumePreleveIndex = volumePreleveParam ? dailyParameters.indexOf(volumePreleveParam) : -1
+  const volumeParam = dailyParameters?.find(p =>
+    ['volume', 'volume prélevé', 'volume rejeté'].includes(p.nom_parametre)
+  )
+  const volumeIndex = volumeParam ? dailyParameters.indexOf(volumeParam) : -1
 
   const hasAnyData = values?.some(v => !Number.isNaN(v)) || (fifteenMinutesValues?.length > 0)
 
-  if (volumePreleveIndex > -1 && !Number.isNaN(values?.[volumePreleveIndex])) {
+  if (volumeIndex > -1 && !Number.isNaN(values?.[volumeIndex])) {
     return {color: palette.blue}
   }
 

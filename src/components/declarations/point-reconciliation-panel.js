@@ -19,6 +19,7 @@ import {
   getSourcePeriodLabel
 } from '@/lib/declaration.js'
 import {formatDateRange} from '@/lib/format-date.js'
+import {getPointFlowType, getPointFlowTypeLabel, POINT_FLOW_TYPES} from '@/lib/point-flow-types.js'
 import {
   formatUsageReference,
   getUsageColor,
@@ -49,6 +50,11 @@ function normalizeSearchValue(value) {
 
 function getChunkPointName(chunk) {
   return chunk?.pointPrelevement?.name || chunk?.pointPrelevementName || 'Point du fichier'
+}
+
+function getChunkSourceFlowType(chunk) {
+  const sourceFlowType = chunk?.metadata?.sourceFlowType ?? chunk?.metadata?.source_flow_type
+  return Object.values(POINT_FLOW_TYPES).includes(sourceFlowType) ? sourceFlowType : null
 }
 
 function getRawPointName(chunk) {
@@ -166,7 +172,8 @@ function getPointSearchText(point) {
     ...(point?.pointPrelevementNameAliases ?? []),
     point?.waterBodyType,
     point?.nature,
-    point?.withdrawalType
+    point?.withdrawalType,
+    getPointFlowTypeLabel(getPointFlowType(point))
   ].filter(Boolean).join(' '))
 }
 
@@ -273,6 +280,7 @@ const ChunkListItem = ({
   const volumeLabel = getChunkVolumeLabel(chunk)
   const preleveurLabel = getChunkPreleveurLabel(chunk)
   const usageLabel = formatUsageReference(chunk.usage)
+  const flowTypeLabel = chunk.flowType ? getPointFlowTypeLabel(chunk.flowType) : null
   const handleKeyDown = event => {
     if (event.target !== event.currentTarget) {
       return
@@ -330,6 +338,11 @@ const ChunkListItem = ({
             <span className='truncate text-sm font-bold text-gray-900' title={chunkTitle}>
               {chunkTitle}
             </span>
+            {flowTypeLabel && (
+              <span className='text-[0.68rem] font-medium text-gray-600'>
+                {flowTypeLabel}
+              </span>
+            )}
           </div>
           <div
             className={matched ? 'truncate text-xs text-[#18753c]' : 'truncate text-xs text-gray-600'}
@@ -629,12 +642,16 @@ const PointReconciliationPanel = ({
   const totalChunkCounterLabel = `${totalCount} ligne${totalCount > 1 ? 's' : ''}`
   const normalizedPointSearch = normalizeSearchValue(pointSearch)
   const filteredAvailablePoints = useMemo(() => {
-    if (!normalizedPointSearch) {
-      return availablePoints
-    }
+    const sourceFlowType = getChunkSourceFlowType(selectedChunk)
 
-    return availablePoints.filter(point => getPointSearchText(point).includes(normalizedPointSearch))
-  }, [availablePoints, normalizedPointSearch])
+    return availablePoints.filter(point => {
+      const hasCompatibleFlowType = !sourceFlowType || getPointFlowType(point) === sourceFlowType
+      const matchesSearch = !normalizedPointSearch
+        || getPointSearchText(point).includes(normalizedPointSearch)
+
+      return hasCompatibleFlowType && matchesSearch
+    })
+  }, [availablePoints, normalizedPointSearch, selectedChunk])
   const visibleAvailablePoints = useMemo(() => {
     const pointOptions = isAssociationMode ? filteredAvailablePoints : availablePoints
 

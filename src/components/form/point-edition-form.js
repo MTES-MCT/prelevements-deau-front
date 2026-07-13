@@ -13,6 +13,8 @@ import {
 import {useRouter} from 'next/navigation'
 
 import PointForm from '@/components/form/point-form.js'
+import PointFlowReclassificationDialog from '@/components/points-prelevement/point-flow-reclassification-dialog.js'
+import {getPointFlowChangeDetails} from '@/lib/point-flow-types.js'
 import {editPointPrelevementAction, deletePointPrelevementAction} from '@/server/actions/index.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
@@ -23,8 +25,9 @@ const PointEditionForm = ({pointPrelevement}) => {
   const [validationErrors, setValidationErrors] = useState([])
   const [error, setError] = useState(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [flowChangeDetails, setFlowChangeDetails] = useState(null)
 
-  const handleSubmit = async () => {
+  const handleSubmit = async ({confirmFlowReclassification = false} = {}) => {
     setError(null)
     setValidationErrors([])
 
@@ -34,7 +37,10 @@ const PointEditionForm = ({pointPrelevement}) => {
     }
 
     try {
-      const cleanedPayload = emptyStringToNull(payload)
+      const cleanedPayload = emptyStringToNull({
+        ...payload,
+        ...(confirmFlowReclassification ? {confirmFlowReclassification: true} : {})
+      })
       const response = await editPointPrelevementAction(point.id, cleanedPayload)
 
       if (response.success) {
@@ -42,7 +48,12 @@ const PointEditionForm = ({pointPrelevement}) => {
       } else if (response.validationErrors) {
         setValidationErrors(response.validationErrors)
       } else {
-        setError(response.error)
+        const reclassificationDetails = getPointFlowChangeDetails(response)
+        if (reclassificationDetails) {
+          setFlowChangeDetails(reclassificationDetails)
+        } else {
+          setError(response.error)
+        }
       }
     } catch (error_) {
       setError(error_.message)
@@ -78,6 +89,16 @@ const PointEditionForm = ({pointPrelevement}) => {
         point={{...point, ...payload}}
         setPoint={setPayload}
         handleSetGeom={handleSetGeom}
+      />
+
+      <PointFlowReclassificationDialog
+        details={flowChangeDetails}
+        open={Boolean(flowChangeDetails)}
+        onCancel={() => setFlowChangeDetails(null)}
+        onConfirm={() => {
+          setFlowChangeDetails(null)
+          handleSubmit({confirmFlowReclassification: true})
+        }}
       />
 
       <div className='border border-red-500 rounded-sm p-5'>
@@ -143,7 +164,7 @@ const PointEditionForm = ({pointPrelevement}) => {
       )}
 
       <div className='w-full flex justify-center p-5 my-5'>
-        <Button onClick={handleSubmit}>
+        <Button onClick={() => handleSubmit()}>
           Valider les modifications sur le point de prélèvement {point.name}
         </Button>
       </div>

@@ -29,7 +29,8 @@ test('extractTemplateFile - valid file', async t => {
   // Vérifier la structure des séries
   for (const serie of data.series) {
     t.truthy(serie.pointPrelevement, 'pointPrelevement manquant')
-    t.is(serie.parameter, 'volume prélevé')
+    t.is(serie.parameter, 'volume')
+    t.is(serie.flowType, 'PRELEVEMENT')
     t.is(serie.unit, 'm³')
     t.is(serie.frequency, '1 day')
     t.is(serie.valueType, 'cumulative')
@@ -41,6 +42,9 @@ test('extractTemplateFile - valid file', async t => {
     // Vérifier la structure des données
     for (const entry of serie.data) {
       t.truthy(entry.date)
+      t.truthy(entry.periodStart)
+      t.truthy(entry.periodEnd)
+      t.true(entry.periodEnd > entry.periodStart)
       t.true(typeof entry.value === 'number')
     }
   }
@@ -369,7 +373,8 @@ test('extractTemplateFile - valid file with point_de_prelevement sheet optional'
   if (data.series.length > 0) {
     const serie = data.series[0]
     t.is(serie.pointPrelevement, 'POINT1')
-    t.is(serie.parameter, 'volume prélevé')
+    t.is(serie.parameter, 'volume')
+    t.is(serie.flowType, 'PRELEVEMENT')
     t.true(serie.data.length > 0)
   }
 })

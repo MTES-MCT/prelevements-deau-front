@@ -161,7 +161,10 @@ const ParameterOperatorsSelector = ({
   }, [currentParameterTemporalOperators, defaultTemporalOperators, normalizedTemporalOperatorOptionsByParam, onChange, selectedTemporalOperators])
 
   return (
-    <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 2}}>
+    <Box sx={{
+      display: 'flex', flexWrap: 'wrap', gap: 2, minWidth: 0, width: '100%'
+    }}
+    >
       {parameters.map(param => {
         const temporalOperatorOptions = normalizedTemporalOperatorOptionsByParam.get(param) ?? []
         if (temporalOperatorOptions.length === 0) {
@@ -181,7 +184,8 @@ const ParameterOperatorsSelector = ({
             key={param}
             sx={{
               flex: '1 1 220px',
-              minWidth: 220
+              minWidth: 0,
+              maxWidth: '100%'
             }}
           >
             <Select

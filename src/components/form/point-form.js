@@ -9,6 +9,7 @@ import {Typography} from '@mui/material'
 import MiniMapForm from '@/components/form/mini-map-form.js'
 import OptionalPointFieldsForm from '@/components/form/optional-point-fields-form.js'
 import AccordionCentered from '@/components/ui/AccordionCentered/index.js'
+import {POINT_FLOW_TYPES} from '@/lib/point-flow-types.js'
 
 const waterBodyTypes = [
   {value: 'SUPERFICIELLE', label: 'Eau superficielle'},
@@ -29,6 +30,11 @@ const withdrawalTypes = [
   {value: 'CONTINENTAL', label: 'Continental'},
   {value: 'SOUTERRAIN', label: 'Souterrain'},
   {value: 'STOCKAGE', label: 'Stockage'}
+]
+
+const pointFlowTypes = [
+  {value: POINT_FLOW_TYPES.PRELEVEMENT, label: 'Prélèvement'},
+  {value: POINT_FLOW_TYPES.REJET, label: 'Rejet'}
 ]
 
 const precisionsGeom = [
@@ -60,12 +66,27 @@ const PointForm = ({
     <>
       <Input
         required
-        label='Nom du point de prélèvement *'
+        label='Nom du point *'
         nativeInputProps={{
-          placeholder: 'Entrer le nom du point de prélèvement',
+          placeholder: 'Entrer le nom du point',
           defaultValue: point.name || '',
           onChange: e => setPoint(prev => ({...prev, name: e.target.value}))
         }}
+      />
+
+      <Select
+        label='Type de point *'
+        placeholder='Sélectionner le type de point'
+        nativeSelectProps={{
+          value: point.flowType || '',
+          required: true,
+          onChange: e => setPoint(prev => ({
+            ...prev,
+            flowType: e.target.value,
+            ...(e.target.value === POINT_FLOW_TYPES.REJET ? {withdrawalType: null} : {})
+          }))
+        }}
+        options={pointFlowTypes}
       />
 
       <Select
@@ -79,7 +100,7 @@ const PointForm = ({
       />
 
       <Select
-        label='Nature du point de prélèvement'
+        label='Nature du point'
         placeholder='Sélectionner la nature du point'
         nativeSelectProps={{
           defaultValue: point.nature || '',
@@ -88,15 +109,17 @@ const PointForm = ({
         options={pointNatures}
       />
 
-      <Select
-        label='Type de prélèvement'
-        placeholder='Sélectionner le type de prélèvement'
-        nativeSelectProps={{
-          defaultValue: point.withdrawalType || '',
-          onChange: e => setPoint(prev => ({...prev, withdrawalType: e.target.value}))
-        }}
-        options={withdrawalTypes}
-      />
+      {point.flowType !== POINT_FLOW_TYPES.REJET && (
+        <Select
+          label='Type de prélèvement'
+          placeholder='Sélectionner le type de prélèvement'
+          nativeSelectProps={{
+            defaultValue: point.withdrawalType || '',
+            onChange: e => setPoint(prev => ({...prev, withdrawalType: e.target.value}))
+          }}
+          options={withdrawalTypes}
+        />
+      )}
 
       <div className='pb-5'>
         <Typography variant='h5'>

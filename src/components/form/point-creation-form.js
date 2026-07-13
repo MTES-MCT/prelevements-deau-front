@@ -14,6 +14,7 @@ const PointCreationForm = () => {
   const router = useRouter()
   const [point, setPoint] = useState({
     name: '',
+    flowType: '',
     waterBodyType: '',
     geometryPrecision: ''
   })
@@ -47,7 +48,7 @@ const PointCreationForm = () => {
   }
 
   useEffect(() => {
-    setIsDisabled(!(point.name && point.waterBodyType && point.coordinates))
+    setIsDisabled(!(point.name && point.flowType && point.waterBodyType && point.coordinates))
   }, [point])
 
   return (

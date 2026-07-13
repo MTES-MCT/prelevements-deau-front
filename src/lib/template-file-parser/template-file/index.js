@@ -515,7 +515,11 @@ function validateAndExtractData(dataSheet, errors, options) {
     columnMap.pointId === undefined
     || columnMap.dateDebut === undefined
     || columnMap.dateFin === undefined
-    || (columnMap.volumePreleve === undefined && columnMap.volumeRejete === undefined)
+    || (
+      columnMap.volume === undefined
+      && columnMap.volumePreleve === undefined
+      && columnMap.volumeRejete === undefined
+    )
   ) {
     return result
   }
@@ -524,7 +528,7 @@ function validateAndExtractData(dataSheet, errors, options) {
 
   if (data.rows.length === 0) {
     result.errors.push({
-      message: 'Aucune ligne de données valide trouvée dans la feuille. Vérifiez que les colonnes id_point_de_prelevement, date_debut, date_fin et au moins une des colonnes volume_preleve_m3 / volume_rejete_m3 sont remplies.',
+      message: 'Aucune ligne de données valide trouvée dans la feuille. Vérifiez que les colonnes id_point_de_prelevement, date_debut, date_fin et volume_m3 sont remplies.',
       severity: 'error'
     })
   }
@@ -547,7 +551,7 @@ function findHeaderRow(sheet, range, errors) {
     )
 
     const hasVolumeColumn = rowValues.some(val =>
-      val.includes('volume_preleve') || val.includes('volume_rejete')
+      val === 'volume_m3' || val.includes('volume_preleve') || val.includes('volume_rejete')
     )
 
     if (hasBaseKeywords && hasVolumeColumn) {
@@ -557,7 +561,7 @@ function findHeaderRow(sheet, range, errors) {
 
   const sampleHeaders = getSampleHeaders(sheet, range)
   errors.push({
-    message: `Impossible de trouver la ligne d'en-tête avec les colonnes requises (id_point_de_prelevement, date_debut, date_fin et au moins une des colonnes volume_preleve_m3 / volume_rejete_m3). ${sampleHeaders.length > 0 ? `Premières lignes: ${sampleHeaders.join('; ')}` : ''}`,
+    message: `Impossible de trouver la ligne d'en-tête avec les colonnes requises (id_point_de_prelevement, date_debut, date_fin et volume_m3). Les anciennes colonnes volume_preleve_m3 / volume_rejete_m3 restent acceptées. ${sampleHeaders.length > 0 ? `Premières lignes: ${sampleHeaders.join('; ')}` : ''}`,
     severity: 'error'
   })
 
@@ -598,6 +602,8 @@ function mapColumns(sheet, headerRow, range, errors) {
       columnMap.dateDebut = c
     } else if (columnMap.dateFin === undefined && matchesDateFinColumn(normalized)) {
       columnMap.dateFin = c
+    } else if (columnMap.volume === undefined && matchesVolumeColumn(normalized)) {
+      columnMap.volume = c
     } else if (columnMap.volumePreleve === undefined && matchesVolumePreleveColumn(normalized)) {
       columnMap.volumePreleve = c
     } else if (columnMap.volumeRejete === undefined && matchesVolumeRejeteColumn(normalized)) {
@@ -637,6 +643,10 @@ function matchesVolumePreleveColumn(normalized) {
     || (normalized.includes('volume') && normalized.includes('preleve') && !normalized.includes('rejete'))
 }
 
+function matchesVolumeColumn(normalized) {
+  return normalized === 'volume_m3'
+}
+
 function matchesVolumeRejeteColumn(normalized) {
   return normalized.includes('volume_rejete_m3')
     || normalized.includes('volume_rejet')
@@ -657,8 +667,12 @@ function validateColumnMapping(columnMap, foundColumns, headerRow, errors) {
     missingColumns.push('date_fin')
   }
 
-  if (columnMap.volumePreleve === undefined && columnMap.volumeRejete === undefined) {
-    missingColumns.push('volume_preleve_m3 ou volume_rejete_m3')
+  if (
+    columnMap.volume === undefined
+    && columnMap.volumePreleve === undefined
+    && columnMap.volumeRejete === undefined
+  ) {
+    missingColumns.push('volume_m3')
   }
 
   if (missingColumns.length > 0) {
@@ -679,6 +693,10 @@ function parseDataRows(sheet, headerRow, range, columnMap, rows, errors, options
     const pointId = readAsString(sheet, r, columnMap.pointId)
     const dateDebut = readAsDateString(sheet, r, columnMap.dateDebut)
     const dateFin = readAsDateString(sheet, r, columnMap.dateFin)
+
+    const volume = columnMap.volume === undefined
+      ? null
+      : readAsNumber(sheet, r, columnMap.volume)
 
     const volumePreleve = columnMap.volumePreleve === undefined
       ? null
@@ -716,15 +734,47 @@ function parseDataRows(sheet, headerRow, range, columnMap, rows, errors, options
       continue
     }
 
-    const hasPreleve = volumePreleve !== null && volumePreleve !== undefined
-    const hasRejete = volumeRejete !== null && volumeRejete !== undefined
-
-    if (!hasPreleve && !hasRejete) {
+    if (dateFin <= dateDebut) {
+      errors.push({
+        message: `Ligne ${r + 1}: La date de fin doit être postérieure à la date de début.`,
+        severity: 'error'
+      })
       continue
     }
 
+    const hasVolume = volume !== null && volume !== undefined
+    const hasPreleve = volumePreleve !== null && volumePreleve !== undefined
+    const hasRejete = volumeRejete !== null && volumeRejete !== undefined
+    const populatedVolumeCount = [hasVolume, hasPreleve, hasRejete].filter(Boolean).length
+
+    if (populatedVolumeCount === 0) {
+      continue
+    }
+
+    if (populatedVolumeCount > 1) {
+      errors.push({
+        message: `Ligne ${r + 1}: plusieurs colonnes de volume sont renseignées. Utilisez uniquement volume_m3.`,
+        severity: 'error'
+      })
+      continue
+    }
+
+    let numericVolume = null
     let numericVolumePreleve = null
     let numericVolumeRejete = null
+
+    if (hasVolume) {
+      try {
+        numericVolume = validateNumericValue(volume)
+        numericVolume ??= null
+      } catch (error) {
+        errors.push({
+          message: error.message || `Ligne ${r + 1}: Valeur numérique invalide: ${volume}`,
+          explanation: error.explanation,
+          severity: 'error'
+        })
+      }
+    }
 
     if (hasPreleve) {
       try {
@@ -752,7 +802,7 @@ function parseDataRows(sheet, headerRow, range, columnMap, rows, errors, options
       }
     }
 
-    if (numericVolumePreleve === null && numericVolumeRejete === null) {
+    if (numericVolume === null && numericVolumePreleve === null && numericVolumeRejete === null) {
       continue
     }
 
@@ -769,36 +819,55 @@ function parseDataRows(sheet, headerRow, range, columnMap, rows, errors, options
       continue
     }
 
-    const volumePrelevePerPoint = pointIds.length > 1 && numericVolumePreleve !== null
-      ? numericVolumePreleve / pointIds.length
-      : numericVolumePreleve
-
-    const volumeRejetePerPoint = pointIds.length > 1 && numericVolumeRejete !== null
-      ? numericVolumeRejete / pointIds.length
-      : numericVolumeRejete
+    const selectedVolume = numericVolume ?? numericVolumePreleve ?? numericVolumeRejete
+    const volumePerPoint = pointIds.length > 1
+      ? selectedVolume / pointIds.length
+      : selectedVolume
+    let flowType
+    if (numericVolumePreleve !== null) {
+      flowType = 'PRELEVEMENT'
+    } else if (numericVolumeRejete !== null) {
+      flowType = 'REJET'
+    }
 
     // Créer une entrée par point de prélèvement et par paramètre
     for (const singlePointId of pointIds) {
-      if (volumePrelevePerPoint !== null) {
-        rows.push({
-          pointId: singlePointId,
-          dateDebut,
-          dateFin,
-          volume: volumePrelevePerPoint,
-          parameter: 'volume prélevé'
-        })
-      }
-
-      if (volumeRejetePerPoint !== null) {
-        rows.push({
-          pointId: singlePointId,
-          dateDebut,
-          dateFin,
-          volume: volumeRejetePerPoint,
-          parameter: 'volume rejeté'
-        })
-      }
+      rows.push({
+        pointId: singlePointId,
+        dateDebut,
+        dateFin,
+        volume: volumePerPoint,
+        parameter: 'volume',
+        flowType
+      })
     }
+  }
+
+  const flowTypesByPoint = new Map()
+  for (const row of rows) {
+    if (row.flowType) {
+      const flowTypes = flowTypesByPoint.get(row.pointId) ?? new Set()
+      flowTypes.add(row.flowType)
+      flowTypesByPoint.set(row.pointId, flowTypes)
+    }
+  }
+
+  const mixedFlowPointIds = new Set(
+    [...flowTypesByPoint.entries()]
+      .filter(([, flowTypes]) => flowTypes.size > 1)
+      .map(([pointId]) => pointId)
+  )
+
+  for (const pointId of mixedFlowPointIds) {
+    errors.push({
+      message: `Le point ${pointId} contient à la fois des volumes prélevés et rejetés. Un point ne peut avoir qu’un seul type.`,
+      severity: 'error'
+    })
+  }
+
+  if (mixedFlowPointIds.size > 0) {
+    const validRows = rows.filter(row => !mixedFlowPointIds.has(row.pointId))
+    rows.splice(0, rows.length, ...validRows)
   }
 }
 
@@ -813,10 +882,10 @@ function consolidateData(rawData) {
     return {series}
   }
 
-  // Grouper par point de prélèvement + paramètre
+  // Grouper par point + paramètre + éventuel indice de fonction historique.
   const rowsByPointAndParameter = new Map()
   for (const row of volumeRows) {
-    const key = `${row.pointId}__${row.parameter}`
+    const key = `${row.pointId}__${row.parameter}__${row.flowType ?? ''}`
     if (!rowsByPointAndParameter.has(key)) {
       rowsByPointAndParameter.set(key, [])
     }
@@ -832,16 +901,22 @@ function consolidateData(rawData) {
   for (const rows of rowsByPointAndParameter.values()) {
     const {pointId} = rows[0]
     const {parameter} = rows[0]
+    const {flowType} = rows[0]
 
-    const valuesByDate = new Map()
+    const valuesByPeriod = new Map()
     let minDate = null
     let maxDate = null
 
     for (const row of rows) {
-      // Pour template-file, on crée une entrée par date de fin
-      // (plus logique pour des données mensuelles : le volume est prélevé/rejeté jusqu'à cette date)
-      if (row.dateFin) {
-        valuesByDate.set(row.dateFin, (valuesByDate.get(row.dateFin) || 0) + row.volume)
+      if (row.dateDebut && row.dateFin) {
+        const periodKey = `${row.dateDebut}__${row.dateFin}`
+        const existing = valuesByPeriod.get(periodKey)
+        valuesByPeriod.set(periodKey, {
+          date: row.dateFin,
+          periodStart: row.dateDebut,
+          periodEnd: row.dateFin,
+          value: (existing?.value || 0) + row.volume
+        })
       }
 
       if (!minDate || row.dateDebut < minDate) {
@@ -853,17 +928,17 @@ function consolidateData(rawData) {
       }
     }
 
-    if (valuesByDate.size === 0) {
+    if (valuesByPeriod.size === 0) {
       continue
     }
 
     // Trier par date
-    const dataEntries = [...valuesByDate.entries()]
-      .map(([date, value]) => ({date, value}))
+    const dataEntries = [...valuesByPeriod.values()]
       .sort((a, b) => a.date.localeCompare(b.date))
 
     series.push({
       pointPrelevement: pointId,
+      ...(flowType ? {flowType} : {}),
       parameter,
       unit: 'm³',
       frequency: '1 day',

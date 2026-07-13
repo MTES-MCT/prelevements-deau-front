@@ -7,6 +7,8 @@ import {Alert} from '@mui/material'
 import {useRouter} from 'next/navigation'
 
 import PointForm from '@/components/form/point-form.js'
+import PointFlowReclassificationDialog from '@/components/points-prelevement/point-flow-reclassification-dialog.js'
+import {getPointFlowChangeDetails} from '@/lib/point-flow-types.js'
 import {
   createZonePointPrelevementAction,
   updateZonePointPrelevementAction
@@ -38,19 +40,21 @@ const ZonePointForm = ({zone, point = null, mode = 'create', zoneGeometry = null
   const isEdit = mode === 'edit'
   const [draft, setDraft] = useState(() => (isEdit ? {} : {
     name: '',
+    flowType: '',
     waterBodyType: '',
     geometryPrecision: ''
   }))
   const [error, setError] = useState(null)
   const [validationErrors, setValidationErrors] = useState([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [flowChangeDetails, setFlowChangeDetails] = useState(null)
 
   const visiblePoint = useMemo(
     () => isEdit ? {...getEditablePointFields(point), ...draft} : draft,
     [draft, isEdit, point]
   )
 
-  const isDisabled = isSubmitting || (!isEdit && !(visiblePoint.name && visiblePoint.waterBodyType && visiblePoint.coordinates))
+  const isDisabled = isSubmitting || (!isEdit && !(visiblePoint.name && visiblePoint.flowType && visiblePoint.waterBodyType && visiblePoint.coordinates))
 
   const handleSetPoint = updater => {
     setError(null)
@@ -64,13 +68,16 @@ const ZonePointForm = ({zone, point = null, mode = 'create', zoneGeometry = null
     setDraft(previous => ({...previous, coordinates}))
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = async ({confirmFlowReclassification = false} = {}) => {
     setError(null)
     setValidationErrors([])
     setIsSubmitting(true)
 
     try {
-      const payload = emptyStringToNull(isEdit ? draft : visiblePoint)
+      const payload = emptyStringToNull({
+        ...(isEdit ? draft : visiblePoint),
+        ...(confirmFlowReclassification ? {confirmFlowReclassification: true} : {})
+      })
 
       if (isEdit && Object.keys(payload).length === 0) {
         router.push(`/zones/${zone.id}/points-prelevement`)
@@ -82,6 +89,12 @@ const ZonePointForm = ({zone, point = null, mode = 'create', zoneGeometry = null
         : await createZonePointPrelevementAction(zone.id, payload)
 
       if (!response.success) {
+        const reclassificationDetails = getPointFlowChangeDetails(response)
+        if (reclassificationDetails) {
+          setFlowChangeDetails(reclassificationDetails)
+          return
+        }
+
         if (response.validationErrors) {
           setValidationErrors(response.validationErrors)
         } else {
@@ -113,6 +126,16 @@ const ZonePointForm = ({zone, point = null, mode = 'create', zoneGeometry = null
         boundaryFeature={zoneGeometry}
       />
 
+      <PointFlowReclassificationDialog
+        details={flowChangeDetails}
+        open={Boolean(flowChangeDetails)}
+        onCancel={() => setFlowChangeDetails(null)}
+        onConfirm={() => {
+          setFlowChangeDetails(null)
+          handleSubmit({confirmFlowReclassification: true})
+        }}
+      />
+
       {error && (
         <div className='text-center p-5 text-red-500'>
           <p><b>Un problème est survenu :</b></p>
@@ -133,7 +156,7 @@ const ZonePointForm = ({zone, point = null, mode = 'create', zoneGeometry = null
         <Button priority='secondary' linkProps={{href: `/zones/${zone.id}/points-prelevement`}}>
           Annuler
         </Button>
-        <Button disabled={isDisabled} onClick={handleSubmit}>
+        <Button disabled={isDisabled} onClick={() => handleSubmit()}>
           {isSubmitting
             ? 'Enregistrement...'
             : (isEdit ? 'Enregistrer le point de prélèvement' : 'Créer le point de prélèvement')}

@@ -8,6 +8,7 @@ import {
   getDeclarationPointTechnicalReference
 } from '@/lib/declaration-point-name.js'
 import {getDeclarationTypeLabel} from '@/lib/declaration-types.js'
+import {getPointFlowTypeLabel, POINT_FLOW_TYPES} from '@/lib/point-flow-types.js'
 import {getPointPrelevementURL} from '@/lib/urls.js'
 import {
   formatUsageReference,
@@ -20,8 +21,11 @@ import {formatNumber, coerceNumericValue} from '@/utils/number.js'
 const MAX_VISIBLE_VALUES = 20
 
 const metricTypeLabels = {
+  volume: 'Volume',
   'volume prélevé': 'Volume prélevé',
   'volume rejeté': 'Volume rejeté',
+  débit: 'Débit',
+  'débit prélevé': 'Débit prélevé',
   index: 'Index',
   'relevé d\'index': 'Relevé d’index'
 }
@@ -29,7 +33,7 @@ const metricTypeLabels = {
 const quickDeclarationIndexLabel = 'Relevé d\'index'
 
 const indexMetricTypeCodes = new Set(['index', 'relevé d\'index'])
-const volumeMetricTypeCodes = new Set(['volume prélevé', 'volume rejeté'])
+const volumeMetricTypeCodes = new Set(['volume', 'volume prélevé', 'volume rejeté'])
 
 function isIndexMetricType(value) {
   return indexMetricTypeCodes.has(value)
@@ -127,8 +131,33 @@ function sortValuesByDate(values) {
   })
 }
 
-function formatMetricType(value) {
+function formatMetricType(value, flowType) {
+  if (value === 'volume' && flowType) {
+    return flowType === POINT_FLOW_TYPES.REJET ? 'Volume rejeté' : 'Volume prélevé'
+  }
+
+  if (value === 'débit' && flowType) {
+    return flowType === POINT_FLOW_TYPES.REJET ? 'Débit rejeté' : 'Débit prélevé'
+  }
+
   return metricTypeLabels[value] ?? value ?? 'Donnée'
+}
+
+function getChunkFlowType(chunk) {
+  if (chunk?.flowType || chunk?.pointPrelevement?.flowType) {
+    return chunk.flowType ?? chunk.pointPrelevement.flowType
+  }
+
+  const metricType = getMetricType(chunk)
+  if (metricType === 'volume rejeté') {
+    return POINT_FLOW_TYPES.REJET
+  }
+
+  if (metricType === 'volume prélevé' || metricType === 'débit prélevé') {
+    return POINT_FLOW_TYPES.PRELEVEMENT
+  }
+
+  return null
 }
 
 function simplifyDeclarationTypeLabel(value) {
@@ -262,14 +291,14 @@ function getDeclarationDetailTypeLabel(declaration, source) {
   return simplifyDeclarationTypeLabel(getDeclarationTypeLabel(declarationCode, declarationType))
 }
 
-function getFirstColumnDetails({declaration, metricType, source}) {
+function getFirstColumnDetails({declaration, flowType, metricType, source}) {
   if (source?.type === 'API') {
     return []
   }
 
   const metricTypeLabel = isQuickDeclarationSource(source) && isIndexMetricType(metricType)
     ? quickDeclarationIndexLabel
-    : formatMetricType(metricType)
+    : formatMetricType(metricType, flowType)
 
   return [
     getSourceConnectorLabel(source),
@@ -290,13 +319,13 @@ function getValueColumnLabel({displayAsIndex, displayAsVolume, isQuickDeclaratio
   return 'Valeur'
 }
 
-function getValueDetailsLabel({displayAsIndex, displayAsVolume, isQuickDeclaration, metricType}) {
+function getValueDetailsLabel({displayAsIndex, displayAsVolume, flowType, isQuickDeclaration, metricType}) {
   if (displayAsIndex) {
     return isQuickDeclaration ? 'Index déclaré' : 'Index relevé'
   }
 
   if (displayAsVolume) {
-    const baseLabel = formatMetricType(metricType)
+    const baseLabel = formatMetricType(metricType, flowType)
     return isQuickDeclaration ? `${baseLabel} déclaré` : baseLabel
   }
 
@@ -362,6 +391,7 @@ function getChunkDisplayContext(chunk, source) {
   const isQuickDeclaration = isQuickDeclarationSource(source)
   const lastValue = getLastValue(chunk)
   const metricType = getMetricType(chunk)
+  const flowType = getChunkFlowType(chunk)
   const displayAsIndex = isIndexMetricType(metricType)
   const displayAsVolume = isVolumeMetricType(metricType)
   const shouldShowIndexTime = displayAsIndex && !isQuickDeclaration
@@ -383,10 +413,12 @@ function getChunkDisplayContext(chunk, source) {
     }),
     displayValue: displayAsIndex ? getLastIndexValue(chunk) ?? lastValue : lastValue,
     metricType,
+    flowType,
     usageLabel: formatUsageReference(chunk.usage),
     valueLabel: getValueDetailsLabel({
       displayAsIndex,
       displayAsVolume,
+      flowType,
       isQuickDeclaration,
       metricType
     })
@@ -431,6 +463,7 @@ const PointTitle = ({chunk, preferUsageName = false, source}) => {
   const technicalReference = getDeclarationPointTechnicalReference(chunk, source, {preferUsageName})
   const pointLinkTarget = getPointPrelevementLinkTarget(chunk)
   const preleveurLabel = getChunkPreleveurLabel(chunk)
+  const flowType = getChunkFlowType(chunk)
 
   return (
     <>
@@ -448,6 +481,11 @@ const PointTitle = ({chunk, preferUsageName = false, source}) => {
       {technicalReference && (
         <p className='fr-text--xs fr-mb-0 truncate text-gray-500' title={technicalReference}>
           Référence : {technicalReference}
+        </p>
+      )}
+      {flowType && (
+        <p className='fr-text--xs fr-mb-0 text-gray-600'>
+          Type de point : {getPointFlowTypeLabel(flowType)}
         </p>
       )}
       {preleveurLabel && (
@@ -582,12 +620,14 @@ const SourceDataDetails = ({declaration, preferUsageName = false, source}) => {
             dateLabel,
             dateValue,
             displayValue,
+            flowType,
             metricType,
             usageLabel,
             valueLabel
           } = getChunkDisplayContext(chunk, source)
           const firstColumnDetails = getFirstColumnDetails({
             declaration,
+            flowType,
             metricType,
             source
           })

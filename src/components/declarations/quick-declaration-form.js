@@ -14,6 +14,7 @@ import QuickDeclarationMap from './quick-declaration-map.js'
 
 import {useAuth} from '@/contexts/auth-context.js'
 import {getDeclarantTitleFromUser} from '@/lib/declarants.js'
+import {getPointFlowType, getPointFlowTypeLabel, POINT_FLOW_TYPES} from '@/lib/point-flow-types.js'
 import {
   buildPointDisplayNames,
   buildPointUsageNameChanges,
@@ -41,8 +42,7 @@ const MOBILE_USAGE_DROPDOWN_MEDIA_QUERY = '(max-width: 47.999rem)'
 
 const QUICK_DECLARATION_MEASUREMENT_TYPES = Object.freeze({
   INDEX: 'INDEX',
-  VOLUME_PRELEVE: 'VOLUME_PRELEVE',
-  VOLUME_REJETE: 'VOLUME_REJETE'
+  VOLUME: 'VOLUME'
 })
 
 const QUICK_DECLARATION_MEASUREMENT_SEGMENTS = [
@@ -52,14 +52,9 @@ const QUICK_DECLARATION_MEASUREMENT_SEGMENTS = [
     iconId: 'fr-icon-edit-line'
   },
   {
-    value: QUICK_DECLARATION_MEASUREMENT_TYPES.VOLUME_PRELEVE,
-    label: 'Volume prélevé',
-    iconId: 'fr-icon-arrow-up-line'
-  },
-  {
-    value: QUICK_DECLARATION_MEASUREMENT_TYPES.VOLUME_REJETE,
-    label: 'Volume rejeté',
-    iconId: 'fr-icon-arrow-down-line'
+    value: QUICK_DECLARATION_MEASUREMENT_TYPES.VOLUME,
+    label: 'Volume',
+    iconId: 'fr-icon-drop-line'
   }
 ]
 
@@ -398,15 +393,7 @@ function getMeasurementInputLabel(measurementType) {
 }
 
 function getMeasurementValueValidationLabel(measurementType) {
-  if (measurementType === QUICK_DECLARATION_MEASUREMENT_TYPES.VOLUME_PRELEVE) {
-    return 'le volume prélevé'
-  }
-
-  if (measurementType === QUICK_DECLARATION_MEASUREMENT_TYPES.VOLUME_REJETE) {
-    return 'le volume rejeté'
-  }
-
-  return 'l’index'
+  return isIndexMeasurementType(measurementType) ? 'l’index' : 'le volume'
 }
 
 function getMeasurementEntryNoun(measurementType) {
@@ -459,8 +446,8 @@ function getPeriodLabel({frequency, periodEnd, periodStart}) {
   return startLabel || endLabel
 }
 
-function getLastVolumePeriodLabel(point, measurementType) {
-  const lastVolume = measurementType === QUICK_DECLARATION_MEASUREMENT_TYPES.VOLUME_REJETE
+function getLastVolumePeriodLabel(point) {
+  const lastVolume = getPointFlowType(point) === POINT_FLOW_TYPES.REJET
     ? point?.lastVolumePeriods?.discharged
     : point?.lastVolumePeriods?.withdrawn
 
@@ -714,8 +701,8 @@ function getQuickDeclarationSubmitSignature({
   })
 }
 
-function getConflictMetricLabel(metricTypeCode) {
-  if (metricTypeCode === 'volume rejeté') {
+function getConflictMetricLabel(conflict) {
+  if (conflict?.flowType === POINT_FLOW_TYPES.REJET || conflict?.metricTypeCode === 'volume rejeté') {
     return 'volume rejeté'
   }
 
@@ -777,7 +764,7 @@ function getOverwriteWarningTitle(conflicts = []) {
     const [conflict] = conflicts
     const period = getPeriodLabel(conflict)
     const pointName = conflict.pointPrelevementName || 'ce point'
-    const metricLabel = getConflictMetricLabel(conflict.metricTypeCode)
+    const metricLabel = getConflictMetricLabel(conflict)
 
     if (period) {
       return `Le ${metricLabel} de ${pointName} sur ${period} sera écrasé`
@@ -1511,7 +1498,7 @@ const QuickDeclarationEntryRow = ({
     row
   })
   const lastReadingLabel = isIndexMeasurement ? getLastReadingLabel(point) : null
-  const lastVolumePeriodLabel = isIndexMeasurement ? null : getLastVolumePeriodLabel(point, measurementType)
+  const lastVolumePeriodLabel = isIndexMeasurement ? null : getLastVolumePeriodLabel(point)
   const isHighlighted = isPointIdEqual(pointId, hoveredPointId) || isPointIdEqual(pointId, activePointId)
   const usageOptions = buildUsageOptionsForPoint(point, globalUsageOptions).sort(compareUsageOptions)
   const usageSearchValue = getUsageSearchValue(row, usageOptions)
@@ -1523,6 +1510,7 @@ const QuickDeclarationEntryRow = ({
   const valueInputId = `quick-value-${pointId}`
   const usageInputId = `quick-usage-${pointId}`
   const usageNameInputId = `quick-usage-name-${pointId}`
+  const flowType = getPointFlowType(point)
 
   return (
     <div
@@ -1553,6 +1541,15 @@ const QuickDeclarationEntryRow = ({
               ({technicalName})
             </span>
           )}
+          <span className={classNames(
+            'inline-flex shrink-0 px-1.5 py-0.5 text-[0.64rem] font-semibold leading-none',
+            flowType === POINT_FLOW_TYPES.REJET
+              ? 'bg-[#fee9e7] text-[#b34000]'
+              : 'bg-[#e3e3fd] text-[#000091]'
+          )}
+          >
+            {getPointFlowTypeLabel(flowType)}
+          </span>
         </div>
         <div className='quick-declaration-usage-name-field'>
           <span className='fr-icon-edit-line shrink-0' aria-hidden='true' />
@@ -1659,7 +1656,7 @@ const QuickDeclarationEntryList = ({
         ENTRY_GRID_COLUMNS_CLASS_NAME
       )}
     >
-      <div>Point de prélèvement</div>
+      <div>Point</div>
       <div>{getMeasurementInputLabel(measurementType)}</div>
       <div>Usage</div>
     </div>
@@ -1702,7 +1699,7 @@ const OverwriteConflictListItem = ({conflict}) => {
       <div className='flex flex-col gap-1 md:flex-row md:items-start md:justify-between md:gap-4'>
         <div className='min-w-0'>
           <p className='fr-mb-0 text-sm font-medium text-gray-900'>
-            {getConflictMetricLabel(conflict.metricTypeCode)} - {getConflictValueLabel(conflict)}
+            {getConflictMetricLabel(conflict)} - {getConflictValueLabel(conflict)}
           </p>
           {period && (
             <p className='fr-hint-text fr-mb-0 text-sm'>

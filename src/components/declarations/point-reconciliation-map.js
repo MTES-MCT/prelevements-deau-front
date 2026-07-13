@@ -14,6 +14,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import {cooperativeGesturesMapOptions} from '@/components/map/cooperative-gestures.js'
 import {IGN_RASTER_MAX_ZOOM} from '@/components/map/ign-raster.js'
 import planIGN from '@/components/map/styles/plan-ign.json'
+import {getPointFlowType, getPointFlowTypeLabel} from '@/lib/point-flow-types.js'
 import {
   formatUsageReference,
   getUsageColor,
@@ -333,6 +334,7 @@ function appendPill(parent, value) {
 
 function appendPointDetails(parent, point) {
   const values = [
+    getPointFlowTypeLabel(getPointFlowType(point)),
     waterBodyTypeLabels[point.waterBodyType] ?? point.waterBodyType,
     pointNatureLabels[point.nature] ?? point.nature,
     withdrawalTypeLabels[point.withdrawalType] ?? point.withdrawalType

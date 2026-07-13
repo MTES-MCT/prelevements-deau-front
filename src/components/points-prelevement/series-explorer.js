@@ -12,6 +12,7 @@ import {
   resolveSeriesDisplayFrequency
 } from '@/components/points-prelevement/series-display-frequency.js'
 import AggregatedSeriesExplorer from '@/components/PrelevementsSeriesExplorer/aggregated-series-explorer.js'
+import {getParameterFlowColor} from '@/components/PrelevementsSeriesExplorer/constants/colors.js'
 import {
   getParameterMetadata,
   MAX_DIFFERENT_UNITS,
@@ -24,7 +25,7 @@ import {
 import {getAggregatedSeriesAction} from '@/server/actions/series.js'
 import {pickAvailableFrequency} from '@/utils/frequency.js'
 
-const DEFAULT_PARAMETERS = ['volume prélevé', 'débit prélevé']
+const DEFAULT_METRIC_TYPE_CODES = ['volume', 'débit']
 const FALLBACK_VOLUME_TEMPORAL_OPERATORS = ['sum', 'mean', 'min', 'max']
 const FALLBACK_STANDARD_TEMPORAL_OPERATORS = ['mean', 'min', 'max']
 
@@ -93,9 +94,13 @@ const SeriesExplorer = ({
   const parameterOptions = useMemo(
     () => (seriesOptions?.parameters ?? []).map(param => {
       const metadata = getParameterMetadata(param.name)
+      const metricTypeCode = param.metricTypeCode ?? param.code ?? param.name
       return {
-        value: param.metricTypeCode ?? param.code ?? param.name,
+        value: param.id ?? metricTypeCode,
         label: param.label ?? param.name,
+        color: getParameterFlowColor(metricTypeCode, param.flowType),
+        metricTypeCode,
+        flowType: param.flowType ?? null,
         unit: param.unit ?? metadata?.unit ?? '',
         valueType: param.valueType ?? metadata?.valueType ?? metadata?.type ?? null
       }
@@ -111,6 +116,8 @@ const SeriesExplorer = ({
     return new Map(
       seriesOptions.parameters.map(param => {
         const metadata = getParameterMetadata(param.name) ?? {}
+        const metricTypeCode = param.metricTypeCode ?? param.code ?? param.name
+        const parameterId = param.id ?? metricTypeCode
         const normalizedName = param.name?.toLowerCase() ?? ''
         const fallbackTemporalOperators = normalizedName.includes('volume')
           ? FALLBACK_VOLUME_TEMPORAL_OPERATORS
@@ -136,10 +143,11 @@ const SeriesExplorer = ({
           ?? metadata.defaultTemporalOperator
           ?? temporalOperators[0]
 
-        return [param.name, {
+        return [parameterId, {
           ...metadata,
           ...param,
-          parameter: param.name,
+          parameter: metricTypeCode,
+          metricTypeCode,
           temporalOperators,
           defaultTemporalOperator,
           unit,
@@ -151,9 +159,9 @@ const SeriesExplorer = ({
 
   // Prioritize withdrawn volume and flow rate on point details when available.
   const derivedDefaultParameters = useMemo(() => {
-    const defaultParameters = DEFAULT_PARAMETERS
-      .map(parameter => parameterOptions.find(
-        option => option.value?.toLowerCase() === parameter
+    const defaultParameters = DEFAULT_METRIC_TYPE_CODES
+      .map(metricTypeCode => parameterOptions.find(
+        option => option.metricTypeCode?.toLowerCase() === metricTypeCode
       )?.value)
       .filter(Boolean)
 
@@ -275,11 +283,16 @@ const SeriesExplorer = ({
     [buildTemporalOperatorsForParameters, selectedParameters]
   )
 
-  const fetchAggregatedSeries = useCallback(async (metricTypeCode, temporalOperator, frequency) => {
+  const fetchAggregatedSeries = useCallback(async (parameterId, temporalOperator, frequency) => {
+    const parameterDefinition = parameterDefinitionMap.get(parameterId)
     const params = {
       aggregationFrequency: frequency,
-      metricTypeCode,
+      metricTypeCode: parameterDefinition?.metricTypeCode ?? parameterId,
       temporalOperator
+    }
+
+    if (parameterDefinition?.flowType) {
+      params.pointFlowType = parameterDefinition.flowType
     }
 
     if (pointIds) {
@@ -306,7 +319,7 @@ const SeriesExplorer = ({
     // Cancellation is handled client-side via isActive flag
     const result = await getAggregatedSeriesAction(params)
     return result.success ? result.data : null
-  }, [collecteurId, pointIds, preleveurId, dateRange])
+  }, [collecteurId, pointIds, preleveurId, dateRange, parameterDefinitionMap])
 
   useEffect(() => {
     // Clear the map only when no parameters are selected

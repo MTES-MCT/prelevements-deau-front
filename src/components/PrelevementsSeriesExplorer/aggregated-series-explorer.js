@@ -47,7 +47,12 @@ import {formatFrequencyLabel, getFrequencyOrder, getSmallestFrequency} from '@/u
 import {normalizeString} from '@/utils/string.js'
 import {parseLocalDateTime} from '@/utils/time.js'
 
-const DEFAULT_PARAMETER = 'volume prélevé'
+const DEFAULT_PARAMETER = 'volume'
+
+function isDefaultParameterOption(option) {
+  const value = String(option?.value ?? '').toLocaleLowerCase('fr-FR')
+  return value === DEFAULT_PARAMETER || value.startsWith(`${DEFAULT_PARAMETER}:`)
+}
 
 /**
  * FrequencyBadges Component
@@ -163,6 +168,7 @@ const buildNormalizedOption = ({
   label,
   unit,
   valueType,
+  color,
   disabled = false,
   disabledReason,
   title,
@@ -177,6 +183,7 @@ const buildNormalizedOption = ({
     label: resolvedLabel,
     unit: normalizedUnit,
     valueType: normalizedValueType,
+    color,
     disabled: Boolean(disabled),
     disabledReason,
     title,
@@ -222,6 +229,7 @@ const normalizeParameterOptions = options => {
           label: option.label ?? option.parameter ?? value,
           unit: option.unit ?? metadata?.unit,
           valueType: option.valueType ?? metadata?.valueType ?? metadata?.type,
+          color: option.color,
           disabled: option.disabled,
           disabledReason: option.disabledReason,
           title: option.title,
@@ -334,10 +342,7 @@ const AggregatedSeriesExplorer = ({
       return defaultParameters
     }
 
-    // Try to find 'volume prélevé' as default
-    const volumeParam = parameterOptionsNormalized.find(
-      opt => opt.value?.toLowerCase() === DEFAULT_PARAMETER.toLowerCase()
-    )
+    const volumeParam = parameterOptionsNormalized.find(option => isDefaultParameterOption(option))
     if (volumeParam) {
       return [volumeParam.value]
     }
@@ -396,7 +401,7 @@ const AggregatedSeriesExplorer = ({
   }, [parameterOptionMap, handleParametersChange])
 
   // Build parameter options with disabled state based on unit constraints
-  // Group by valueType and put "volume prélevé" first
+  // Group by valueType and put volume first.
   const parameterOptions = useMemo(() => {
     const selectedUnits = new Set(
       currentParameters
@@ -434,8 +439,8 @@ const AggregatedSeriesExplorer = ({
       const options = groupedByValueType.get(valueTypeLabel)
 
       options.sort((a, b) => {
-        const aIsDefault = a.value.toLowerCase() === DEFAULT_PARAMETER.toLowerCase()
-        const bIsDefault = b.value.toLowerCase() === DEFAULT_PARAMETER.toLowerCase()
+        const aIsDefault = isDefaultParameterOption(a)
+        const bIsDefault = isDefaultParameterOption(b)
 
         if (aIsDefault && !bIsDefault) {
           return -1
@@ -539,12 +544,14 @@ const AggregatedSeriesExplorer = ({
     for (const paramValue of currentParameters) {
       const paramSeries = seriesMap.get(paramValue)
       const metadata = getParameterMetadata(paramValue)
-      const normalizedKey = normalizeString(paramValue)
       const optionMetadata = parameterOptionMap.get(paramValue)
 
       // Use series metadata if available, otherwise use static metadata
       const meta = paramSeries?.metadata ?? {}
+      const parameterLabel = optionMetadata?.label ?? meta.label ?? paramValue
+      const normalizedKey = normalizeString(parameterLabel)
       const color = meta.color
+        ?? optionMetadata?.color
         ?? PARAMETER_COLOR_MAP.get(normalizedKey)
         ?? FALLBACK_PARAMETER_COLOR
       const frequency = meta.frequency
@@ -557,9 +564,10 @@ const AggregatedSeriesExplorer = ({
       const resolvedMetadataValueType = getCachedValueType(metadata?.valueType ?? metadata?.type)
 
       map.set(paramValue, {
-        parameter: meta.parameter ?? paramValue,
-        parameterLabel: paramValue,
-        unit: meta.unit ?? metadata?.unit ?? '',
+        parameterId: paramValue,
+        parameter: parameterLabel,
+        parameterLabel,
+        unit: meta.unit ?? optionMetadata?.unit ?? metadata?.unit ?? '',
         color,
         frequency,
         valueType: resolvedMetaValueType
@@ -674,8 +682,9 @@ const AggregatedSeriesExplorer = ({
     const map = new Map()
     if (seriesOptions?.parameters) {
       for (const param of seriesOptions.parameters) {
-        if (param.name && param.availableFrequencies) {
-          map.set(param.name, param.availableFrequencies)
+        const parameterId = param.id ?? param.name
+        if (parameterId && param.availableFrequencies) {
+          map.set(parameterId, param.availableFrequencies)
         }
       }
     }
@@ -894,17 +903,15 @@ const AggregatedSeriesExplorer = ({
           onChange={handleParameterSelection}
         />
 
-        <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 2}}>
-          <ParameterOperatorsSelector
-            parameters={currentParameters}
-            temporalOperatorOptionsByParameter={temporalOperatorOptionsByParameter}
-            defaultTemporalOperators={defaultTemporalOperators}
-            selectedTemporalOperators={selectedTemporalOperatorsProp}
-            parameterOptionMap={parameterOptionMap}
-            placeholder={t.operatorPlaceholder}
-            onChange={parameterTemporalOperators => onFiltersChange?.({parameterTemporalOperators})}
-          />
-        </Box>
+        <ParameterOperatorsSelector
+          parameters={currentParameters}
+          temporalOperatorOptionsByParameter={temporalOperatorOptionsByParameter}
+          defaultTemporalOperators={defaultTemporalOperators}
+          selectedTemporalOperators={selectedTemporalOperatorsProp}
+          parameterOptionMap={parameterOptionMap}
+          placeholder={t.operatorPlaceholder}
+          onChange={parameterTemporalOperators => onFiltersChange?.({parameterTemporalOperators})}
+        />
       </Box>
 
       {renderChartSection()}

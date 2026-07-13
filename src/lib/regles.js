@@ -11,9 +11,9 @@ import WaterOutlinedIcon from '@mui/icons-material/WaterOutlined'
 import {safeParseDate} from '@/lib/format-date.js'
 
 export const parameterUnits = {
-  'volume prélevé': ['m³'],
-  'relevé d\'index': ['m³'],
-  'débit prélevé': ['L/s', 'm³/h'],
+  volume: ['m³'],
+  index: ['m³'],
+  débit: ['L/s', 'm³/h'],
   'débit réservé': ['L/s', 'm³/h'],
   chlorures: ['mg/L'],
   nitrates: ['mg/L'],
@@ -25,14 +25,14 @@ export const parameterUnits = {
 }
 
 const ruleParameters = {
-  'volume prélevé': {
-    '1 day': {label: 'Volume prélevé journalier', icon: <OpacityOutlinedIcon />},
-    '1 month': {label: 'Volume prélevé mensuel', icon: <OpacityOutlinedIcon />},
-    '1 year': {label: 'Volume prélevé annuel', icon: <OpacityOutlinedIcon />},
-    default: {label: 'Volume prélevé', icon: <OpacityOutlinedIcon />}
+  volume: {
+    '1 day': {label: 'Volume journalier', icon: <OpacityOutlinedIcon />},
+    '1 month': {label: 'Volume mensuel', icon: <OpacityOutlinedIcon />},
+    '1 year': {label: 'Volume annuel', icon: <OpacityOutlinedIcon />},
+    default: {label: 'Volume', icon: <OpacityOutlinedIcon />}
   },
-  'relevé d\'index': {label: 'Relevé d’index', icon: <OpacityOutlinedIcon />},
-  'débit prélevé': {label: 'Débit prélevé', icon: <OilBarrelOutlinedIcon />},
+  index: {label: 'Relevé d’index', icon: <OpacityOutlinedIcon />},
+  débit: {label: 'Débit', icon: <OilBarrelOutlinedIcon />},
   'débit réservé': {label: 'Débit réservé', icon: <WaterOutlinedIcon />},
   'niveau piézométrique': {label: 'Niveau piézométrique', icon: <HeightOutlinedIcon />},
   conductivité: {label: 'Conductivité', icon: <OfflineBoltOutlinedIcon />},
@@ -50,12 +50,18 @@ const ruleConstraint = {
 }
 
 export const getParameterInfo = (parameter, frequency) => {
-  const parameterData = ruleParameters[parameter]
+  const normalizedParameter = {
+    'volume prélevé': 'volume',
+    'volume rejeté': 'volume',
+    'relevé d\'index': 'index',
+    'débit prélevé': 'débit'
+  }[parameter] ?? parameter
+  const parameterData = ruleParameters[normalizedParameter]
   if (!parameterData) {
     return null
   }
 
-  if (parameter === 'volume prélevé' && typeof parameterData === 'object' && !parameterData.label) {
+  if (normalizedParameter === 'volume' && typeof parameterData === 'object' && !parameterData.label) {
     return parameterData[frequency] || parameterData.default
   }
 

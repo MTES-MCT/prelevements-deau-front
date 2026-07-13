@@ -4,6 +4,7 @@ import Launch from '@mui/icons-material/Launch'
 import {Box, Chip, Typography} from '@mui/material'
 
 import PointUsageNameEditor from '@/components/points-prelevement/point-usage-name-editor.js'
+import {getPointFlowType, getPointFlowTypeLabel, POINT_FLOW_TYPES} from '@/lib/point-flow-types.js'
 import {getTypeMilieuColor} from '@/lib/points-prelevement.js'
 import {
   getPointPrelevementLabel,
@@ -106,6 +107,7 @@ const PointIdentification = ({
   const typeMilieuColor = getTypeMilieuColor(pointPrelevement.waterBodyType)
   const namesLabel = formatNameEntries(pointPrelevement.names)
   const canEditUsageName = preferUsageName && pointPrelevement.right?.canEditUsageName
+  const flowType = getPointFlowType(pointPrelevement)
 
   return (
     <div className='flex flex-col gap-4'>
@@ -144,6 +146,13 @@ const PointIdentification = ({
       </div>
 
       <Box className='flex flex-wrap items-center gap-2'>
+        <Chip
+          size='small'
+          label={`Type de point : ${getPointFlowTypeLabel(flowType)}`}
+          sx={flowType === POINT_FLOW_TYPES.REJET
+            ? {backgroundColor: '#fee9e7', color: '#b34000'}
+            : {backgroundColor: '#e3e3fd', color: '#000091'}}
+        />
         {pointPrelevement.waterBodyType && (
           <Chip
             size='small'
@@ -162,7 +171,7 @@ const PointIdentification = ({
           />
         )}
 
-        {pointPrelevement.withdrawalType && (
+        {flowType === POINT_FLOW_TYPES.PRELEVEMENT && pointPrelevement.withdrawalType && (
           <Chip
             size='small'
             label={`Type de prélèvement : ${formatLabel(withdrawalTypeLabels, pointPrelevement.withdrawalType)}`}
