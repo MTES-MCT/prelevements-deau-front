@@ -27,7 +27,7 @@ function findHeaderColumnNumber(sheet, headerName) {
   return null
 }
 
-const DeclarationTemplateDownload = () => {
+const DeclarationTemplateDownload = ({inline = false, label = 'Télécharger le modèle de déclaration de volumes enrichi'}) => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
 
@@ -100,11 +100,32 @@ const DeclarationTemplateDownload = () => {
     }
   }
 
+  if (inline) {
+    return (
+      <>
+        <a
+          aria-busy={isLoading}
+          className='fr-link fr-icon-download-line fr-link--icon-right'
+          href={TEMPLATE_PATH}
+          // eslint-disable-next-line react/jsx-no-bind
+          onClick={handleDownload}
+        >
+          {isLoading ? 'Préparation du fichier…' : label}
+        </a>
+        {error ? (
+          <span className='fr-text-default--error block'>
+            {error}
+          </span>
+        ) : null}
+      </>
+    )
+  }
+
   return (
     <div>
       <Download
         details={isLoading ? 'Préparation du fichier…' : 'XLSX – modèle de déclaration de volumes enrichi avec vos points de prélèvement'}
-        label='Télécharger le modèle de déclaration de volumes enrichi'
+        label={label}
         linkProps={{
           href: TEMPLATE_PATH,
           onClick: handleDownload,

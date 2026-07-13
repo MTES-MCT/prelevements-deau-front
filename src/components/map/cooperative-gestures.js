@@ -6,5 +6,8 @@ export const cooperativeGesturesLocale = {
 
 export const cooperativeGesturesMapOptions = {
   cooperativeGestures: true,
-  locale: cooperativeGesturesLocale
+  locale: cooperativeGesturesLocale,
+  dragRotate: false,
+  pitchWithRotate: false,
+  touchPitch: false
 }

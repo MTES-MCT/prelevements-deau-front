@@ -7,8 +7,12 @@ import {Select} from '@codegouvfr/react-dsfr/Select'
 import {Tag} from '@codegouvfr/react-dsfr/Tag'
 import {Upload} from '@codegouvfr/react-dsfr/Upload'
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024
+import DeclarationTemplateDownload from '@/components/declarations/declaration-template-download.js'
+
+const MAX_FILE_SIZE_MB = 50
+const MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024
 const SPREADSHEET_ACCEPT = '.xlsx, .xls, .ods, .csv'
+const TEMPLATE_DECLARATION_TYPE_CODE = 'template-file'
 
 const FileValidateurForm = ({
   allowedDeclarationTypes = [],
@@ -23,6 +27,9 @@ const FileValidateurForm = ({
 
   const selectedDeclarationType = allowedDeclarationTypes.find(
     declarationType => declarationType.code === selectedDeclarationTypeCode
+  )
+  const canDownloadTemplate = allowedDeclarationTypes.some(
+    declarationType => declarationType.code === TEMPLATE_DECLARATION_TYPE_CODE
   )
 
   const inputError = fileInputError || (selectedDeclarationTypeCode
@@ -79,8 +86,21 @@ const FileValidateurForm = ({
         </Select>
       )}
 
+      <div className='fr-text--sm flex flex-col gap-1 text-gray-700'>
+        <p className='fr-mb-0'>
+          Vous pouvez déposer directement les fichiers issus de votre outil logiciel de gestion des prélèvements.
+        </p>
+        {canDownloadTemplate && (
+          <p className='fr-mb-0'>
+            Si vous n&apos;utilisez pas d&apos;outil logiciel, remplissez notre modèle de déclaration de volumes (format Excel) :{' '}
+            <DeclarationTemplateDownload inline label='Télécharger le modèle' />
+          </p>
+        )}
+        <p className='fr-mb-0'>Taille maximale : {MAX_FILE_SIZE_MB} Mo par fichier.</p>
+      </div>
+
       <Upload
-        hint='Déposez un ou plusieurs fichiers du type sélectionné. Taille maximale : 50 Mo par fichier.'
+        hint='Déposez un ou plusieurs fichiers du type sélectionné.'
         state={inputError ? 'error' : 'default'}
         stateRelatedMessage={inputError}
         nativeInputProps={{

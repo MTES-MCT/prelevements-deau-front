@@ -205,6 +205,9 @@ const Map = ({
       hash: options.hash ?? false,
       cooperativeGestures: options.cooperativeGestures ?? true,
       locale: cooperativeGesturesLocale,
+      dragRotate: false,
+      pitchWithRotate: false,
+      touchPitch: false,
       attributionControl: {compact: true},
       maxZoom: options.maxZoom ?? getMapMaxZoomForStyle(mapStyle)
     }

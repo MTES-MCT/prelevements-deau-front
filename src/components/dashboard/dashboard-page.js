@@ -52,7 +52,8 @@ const DECLARATION_PERIOD_SEGMENTS = [
   }
 ]
 const NO_WATER_BODY_TYPES_SENTINEL = '__none__'
-const VOLUME_CHART_SUBTITLE = 'Volumes représentant uniquement les déclarations enregistrées sur Partageons l’Eau, pouvant être inférieurs aux volumes réels du territoire.'
+const WITHDRAWN_VOLUME_CHART_SUBTITLE = 'Eau prélevée dans le milieu naturel (cours d\'eau, nappe, plan d\'eau, retenue), qu\'elle y retourne ensuite ou non.'
+const DISCHARGED_VOLUME_CHART_SUBTITLE = 'Eau restituée, après utilisation, au milieu où elle a été prélevée.'
 const EMPTY_ARRAY = []
 const DASHBOARD_HASH_PREFIX = 'dashboard?'
 
@@ -305,7 +306,7 @@ function getVolumeChartForRole(chart, isDeclarant) {
   if (chart?.key === 'withdrawn') {
     return {
       ...chart,
-      title: 'Volumes déclarés par usage'
+      title: 'Volumes prélevés par usage'
     }
   }
 
@@ -655,7 +656,7 @@ const DashboardVolumeCharts = ({
         isLoading={isLoading}
         selectedWaterBodyTypes={selectedWaterBodyTypes}
         selectedYear={selectedVolumeYear}
-        subtitle={VOLUME_CHART_SUBTITLE}
+        subtitle={WITHDRAWN_VOLUME_CHART_SUBTITLE}
         waterBodyTypeOptions={WATER_BODY_TYPE_OPTIONS}
         yearOptions={volumeYearOptions}
         onWaterBodyTypesChange={onWaterBodyTypesChange}
@@ -669,7 +670,7 @@ const DashboardVolumeCharts = ({
         isLoading={isLoading}
         selectedWaterBodyTypes={selectedWaterBodyTypes}
         selectedYear={selectedVolumeYear}
-        subtitle={VOLUME_CHART_SUBTITLE}
+        subtitle={DISCHARGED_VOLUME_CHART_SUBTITLE}
         waterBodyTypeOptions={WATER_BODY_TYPE_OPTIONS}
         yearOptions={volumeYearOptions}
         onWaterBodyTypesChange={onWaterBodyTypesChange}
