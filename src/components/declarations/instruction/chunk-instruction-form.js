@@ -15,17 +15,15 @@ import {
   RadioGroup,
   TextField,
   Typography,
-  Autocomplete,
-  createFilterOptions
+  Autocomplete
 } from '@mui/material'
 import {useRouter} from 'next/navigation'
 
 import {CHUNK_STATUS} from '@/components/declarations/instruction/chunk-instruction-badge.js'
+import {filterSearchAutocompleteOptions} from '@/lib/search-options.js'
 import {instructChunkAction} from '@/server/actions/chunks.js'
 
-const filterOptions = createFilterOptions({
-  limit: 50
-})
+const filterOptions = (options, state) => filterSearchAutocompleteOptions(options, state, {limit: 50})
 
 const ChunkInstructionForm = ({
   chunkId,
@@ -55,7 +53,8 @@ const ChunkInstructionForm = ({
 
   const pointOptions = useMemo(() => availablePoints.map(point => ({
     id: point.id,
-    label: point.name
+    label: point.name,
+    codeBSS: point.codeBSS
   })), [availablePoints])
 
   const selectedPoint = useMemo(() => pointOptions.find(point => point.id === selectedPointId) ?? null, [pointOptions, selectedPointId])

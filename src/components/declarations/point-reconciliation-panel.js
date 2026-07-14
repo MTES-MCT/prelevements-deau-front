@@ -169,6 +169,7 @@ function getChunkSearchText(chunk, index) {
 function getPointSearchText(point) {
   return normalizeSearchValue([
     point?.name,
+    point?.codeBSS,
     ...(point?.pointPrelevementNameAliases ?? []),
     point?.waterBodyType,
     point?.nature,

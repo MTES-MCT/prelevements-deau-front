@@ -134,7 +134,7 @@ function buildUsageOptions(usages = []) {
       options: sortOptions(roots.map(usage => ({
         value: usage.id,
         content: usage.label,
-        title: `${usage.label}${usage.code ? ` (${usage.code})` : ''}`
+        title: usage.label
       })))
     }
   ]

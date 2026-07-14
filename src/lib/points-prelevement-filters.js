@@ -35,7 +35,7 @@ const normalizeText = value => deburr(String(value ?? '').trim().toLocaleLowerCa
 
 const createPointFilterMetadata = point => ({
   flowType: getPointFlowType(point),
-  searchText: [point?.name, point?.usageName, point?.id]
+  searchText: [point?.name, point?.usageName, point?.codeBSS, point?.id]
     .map(value => normalizeText(value))
     .filter(Boolean)
     .join('\n'),

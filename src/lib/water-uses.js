@@ -81,18 +81,7 @@ export function getUsageReferenceLabel(usage) {
 }
 
 export function formatUsageReference(usage) {
-  const code = getUsageCode(usage)
-  const label = getUsageLabel(usage)
-
-  if (!code) {
-    return label
-  }
-
-  if (!label || label === code) {
-    return code
-  }
-
-  return `${code} - ${label}`
+  return getUsageLabel(usage)
 }
 
 export function getUsageColor(usage) {

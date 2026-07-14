@@ -183,7 +183,7 @@ const ZoneDeclarantsList = ({zone, declarants, meta, collecteursOnly = false}) =
         itemPlural={itemPlural}
         meta={meta}
         searchLabel={`Rechercher un ${itemLabel}`}
-        searchPlaceholder={collecteursOnly ? 'Nom, raison sociale, email, préleveur, point…' : 'Nom, raison sociale, email, ville, point…'}
+        searchPlaceholder={collecteursOnly ? 'Nom, raison sociale, email, SIRET, préleveur, point…' : 'Nom, raison sociale, email, SIRET, ville, point…'}
       />
 
       {hasNoResult && (

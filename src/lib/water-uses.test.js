@@ -55,7 +55,8 @@ test('isSubUsage détecte les sous-usages via kind ou code', t => {
 test('getUsageReferenceLabel et formatUsageReference rendent les usages lisibles', t => {
   t.is(getUsageReferenceLabel('2A'), 'Sous-usage')
   t.is(getUsageReferenceLabel('2'), 'Usage')
-  t.is(formatUsageReference('2'), '2 - Irrigation')
+  t.is(formatUsageReference('2'), 'Irrigation')
+  t.is(formatUsageReference({code: '2', label: 'Irrigation'}), 'Irrigation')
   t.is(formatUsageReference({code: 'XYZ'}), 'XYZ')
   t.is(formatUsageReference({label: 'Sans code'}), 'Sans code')
 })

@@ -1,12 +1,23 @@
 import {cx} from '@codegouvfr/react-dsfr/fr/cx'
 import Autocomplete from '@mui/material/Autocomplete'
 
+import {filterSearchAutocompleteOptions} from '@/lib/search-options.js'
+
 const SearchAutocomplete = props => {
-  const {className, id, placeholder, type} = props
+  const {
+    className,
+    filterOptions = filterSearchAutocompleteOptions,
+    id,
+    placeholder,
+    type,
+    ...autocompleteProps
+  } = props
 
   return (
     <Autocomplete
-      {...props}
+      {...autocompleteProps}
+      className={className}
+      filterOptions={filterOptions}
       id={id}
       renderInput={params => (
         // Fix overlay position

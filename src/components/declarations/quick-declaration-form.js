@@ -579,7 +579,11 @@ function compareUsageOptions(left, right) {
 }
 
 function formatUsageOptionLabel(option) {
-  return option.code ? `${option.code} - ${option.label}` : option.label
+  return option.label || option.code || ''
+}
+
+function getUsageOptionSearchText(option) {
+  return [option.code, option.label].filter(Boolean).join(' ')
 }
 
 function normalizeSearchText(value) {
@@ -1093,7 +1097,7 @@ const UsageCombobox = ({
       return options
     }
 
-    return options.filter(option => normalizeSearchText(formatUsageOptionLabel(option)).includes(normalizedSearch))
+    return options.filter(option => normalizeSearchText(getUsageOptionSearchText(option)).includes(normalizedSearch))
   }, [isFiltering, normalizedSearch, options])
 
   const updateDropdownPosition = useCallback(() => {

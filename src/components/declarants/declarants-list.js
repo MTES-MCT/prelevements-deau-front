@@ -9,6 +9,7 @@ import {Button} from '@codegouvfr/react-dsfr/Button'
 import FlexSearch from '../../../node_modules/flexsearch/dist/flexsearch.bundle.module.min.js'
 
 import Declarant from '@/components/declarants/declarant.js'
+import {getIdentifierAwareSearchQueries} from '@/lib/search-options.js'
 import {normalizeString} from '@/utils/string.js'
 
 const DEFAULT_PAGE_SIZE = 10
@@ -42,7 +43,8 @@ function getDeclarantSearchDocument(declarant) {
     socialReason: normalizeString(declarant?.declarant?.socialReason || declarant.socialReason),
     email: normalizeString(declarant.email),
     role: normalizeString(getDeclarantRole(declarant)),
-    city: normalizeString(declarant?.declarant?.city || declarant.city)
+    city: normalizeString(declarant?.declarant?.city || declarant.city),
+    siret: normalizeString(declarant?.declarant?.siret || declarant.siret).replaceAll(/\D/g, '')
   }
 }
 
@@ -203,7 +205,7 @@ const DeclarantsList = ({declarants, basePath = '/declarants'}) => {
     index.current = new FlexSearch.Document({
       document: {
         id: 'id',
-        index: ['lastName', 'firstName', 'socialReason', 'email', 'role', 'city'],
+        index: ['lastName', 'firstName', 'socialReason', 'email', 'role', 'city', 'siret'],
         store: true
       },
       tokenize: 'full',
@@ -222,28 +224,30 @@ const DeclarantsList = ({declarants, basePath = '/declarants'}) => {
 
   const handleFilter = event => {
     const {value} = event.target
-    const nextQuery = normalizeString(value)
+    const searchQueries = getIdentifierAwareSearchQueries(value)
 
     setQuery(value)
     setPage(1)
 
-    if (nextQuery.length === 0) {
+    if (searchQueries.length === 0) {
       setMatchingIds(null)
       return
     }
 
-    const results = index.current.search(nextQuery, {
-      suggest: true,
-      enrich: true,
-      bool: 'or',
-      threshold: 5
-    })
-
     const ids = new Set()
 
-    for (const result of results) {
-      for (const doc of result.result) {
-        ids.add(doc.id)
+    for (const searchQuery of searchQueries) {
+      const results = index.current.search(searchQuery, {
+        suggest: true,
+        enrich: true,
+        bool: 'or',
+        threshold: 5
+      })
+
+      for (const result of results) {
+        for (const doc of result.result) {
+          ids.add(doc.id)
+        }
       }
     }
 
@@ -339,7 +343,7 @@ const DeclarantsList = ({declarants, basePath = '/declarants'}) => {
             <input
               className='fr-input'
               id='declarants-search-filter'
-              placeholder='Nom, prénom, raison sociale, email ou ville'
+              placeholder='Nom, prénom, raison sociale, email, ville ou SIRET'
               type='search'
               value={query}
               onChange={handleFilter}

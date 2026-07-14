@@ -20,6 +20,7 @@ const points = [
   {
     id: 'point-1',
     name: 'Forage de l’Étang',
+    codeBSS: '10972X0137/PONT',
     usageName: 'Source nord',
     flowType: 'PRELEVEMENT',
     waterBodyType: 'SOUTERRAIN',
@@ -51,9 +52,10 @@ const allFilters = {
   waterBodyTypes: ['SOUTERRAIN', 'SUPERFICIELLE', MISSING_WATER_BODY_TYPE]
 }
 
-test('la recherche couvre le nom, le nom d’usage et l’identifiant sans tenir compte des accents', t => {
+test('la recherche couvre le nom, le nom d’usage, le BSS et l’identifiant sans tenir compte des accents', t => {
   t.true(pointMatchesSearch(points[0], 'etang'))
   t.true(pointMatchesSearch(points[0], 'SOURCE NORD'))
+  t.true(pointMatchesSearch(points[0], '10972x0137'))
   t.true(pointMatchesSearch(points[0], 'point-1'))
   t.false(pointMatchesSearch(points[0], 'communal'))
 })
