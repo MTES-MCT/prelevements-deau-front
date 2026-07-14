@@ -1083,7 +1083,10 @@ const DashboardPointsMap = ({
                     type='checkbox'
                     onChange={event => setVisibleLayers(current => ({...current, points: event.target.checked}))}
                   />
-                  <span>{pointsLegendLabel}</span>
+                  <span className='min-w-0 flex-1'>{pointsLegendLabel}</span>
+                  <span className='shrink-0 tabular-nums text-gray-500'>
+                    {NUMBER_FORMATTER.format(pointsWithCoordinates.length)}
+                  </span>
                 </label>
               )}
               {piezometerCount > 0 && (
@@ -1095,7 +1098,10 @@ const DashboardPointsMap = ({
                     type='checkbox'
                     onChange={event => setVisibleLayers(current => ({...current, piezometers: event.target.checked}))}
                   />
-                  <span>Niveaux piézométriques</span>
+                  <span className='min-w-0 flex-1'>Niveaux piézométriques</span>
+                  <span className='shrink-0 tabular-nums text-gray-500'>
+                    {NUMBER_FORMATTER.format(piezometerCount)}
+                  </span>
                 </label>
               )}
               {flowStationCount > 0 && (
@@ -1107,7 +1113,10 @@ const DashboardPointsMap = ({
                     type='checkbox'
                     onChange={event => setVisibleLayers(current => ({...current, flowStations: event.target.checked}))}
                   />
-                  <span>Mesures de débit</span>
+                  <span className='min-w-0 flex-1'>Mesures de débit</span>
+                  <span className='shrink-0 tabular-nums text-gray-500'>
+                    {NUMBER_FORMATTER.format(flowStationCount)}
+                  </span>
                 </label>
               )}
             </div>

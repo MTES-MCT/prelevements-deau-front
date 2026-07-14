@@ -16,6 +16,7 @@ import DashboardVolumesChart from '@/components/dashboard/dashboard-volumes-char
 import DashboardWaterResources from '@/components/dashboard/dashboard-water-resources.js'
 import SeriesExplorer from '@/components/points-prelevement/series-explorer.js'
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
+import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
 import {getMonitoringStationMapSummary} from '@/lib/monitoring-stations.js'
 import {
   getDeclarationsURL,
@@ -29,10 +30,22 @@ import {
 } from '@/lib/water-uses.js'
 import {getDashboardTerritoryAction} from '@/server/actions/dashboard.js'
 
-const ZONE_TYPE_LABELS = {
-  DEPARTEMENT: 'Département',
-  REGION: 'Région',
-  SAGE: 'SAGE'
+const ZONE_TYPE_PRESENTATIONS = {
+  REGION: {
+    className: 'border-[#000091] bg-[#eeeeff] text-[#000091]',
+    iconClassName: ZONE_ICONS.mapPin2,
+    label: 'Région'
+  },
+  DEPARTEMENT: {
+    className: 'border-[#18753c] bg-[#e6f4ea] text-[#18753c]',
+    iconClassName: ZONE_ICONS.mapPin,
+    label: 'Département'
+  },
+  SAGE: {
+    className: 'border-[#8d533e] bg-[#fff4f0] text-[#8d533e]',
+    iconClassName: ZONE_ICONS.water,
+    label: 'SAGE'
+  }
 }
 const WATER_BODY_TYPE_OPTIONS = [
   {value: 'SUPERFICIELLE', label: 'Eau superficielle'},
@@ -59,7 +72,7 @@ const EMPTY_ARRAY = []
 const DASHBOARD_HASH_PREFIX = 'dashboard?'
 
 function formatZoneLabel(zone) {
-  const typeLabel = ZONE_TYPE_LABELS[zone.type] ?? zone.type
+  const typeLabel = ZONE_TYPE_PRESENTATIONS[zone.type]?.label ?? zone.type
   return `${typeLabel} ${zone.name}`
 }
 
@@ -749,10 +762,27 @@ const DashboardPage = ({
   const zoneOptions = useMemo(() =>
     zones.map(zone => {
       const label = formatZoneLabel(zone)
+      const presentation = ZONE_TYPE_PRESENTATIONS[zone.type] ?? {
+        className: 'border-gray-300 bg-gray-100 text-gray-700',
+        iconClassName: ZONE_ICONS.mapPin2,
+        label: zone.type
+      }
 
       return {
         value: zone.code,
-        content: label,
+        label,
+        content: (
+          <span className='flex min-w-0 flex-1 items-center justify-between gap-2'>
+            <span className='truncate'>{zone.name}</span>
+            <span className={`inline-flex shrink-0 items-center gap-1 border px-1.5 py-0.5 text-xs font-medium ${presentation.className}`}>
+              <span
+                className={`${presentation.iconClassName} [&::after]:![--icon-size:0.72rem] [&::before]:![--icon-size:0.72rem]`}
+                aria-hidden='true'
+              />
+              {presentation.label}
+            </span>
+          </span>
+        ),
         title: label
       }
     }), [zones])

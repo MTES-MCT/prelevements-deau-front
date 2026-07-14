@@ -10,6 +10,7 @@ import Button from '@codegouvfr/react-dsfr/Button'
 import Input from '@codegouvfr/react-dsfr/Input'
 
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
+import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
 import {
   createDataExportAction,
   deleteDataExportAction,
@@ -18,6 +19,24 @@ import {
 } from '@/server/actions/exports.js'
 
 const REFRESH_INTERVAL_MS = 4000
+
+const zoneTypePresentations = {
+  REGION: {
+    className: 'border-[#000091] bg-[#eeeeff] text-[#000091]',
+    iconClassName: ZONE_ICONS.mapPin2,
+    label: 'Région'
+  },
+  DEPARTEMENT: {
+    className: 'border-[#18753c] bg-[#e6f4ea] text-[#18753c]',
+    iconClassName: ZONE_ICONS.mapPin,
+    label: 'Département'
+  },
+  SAGE: {
+    className: 'border-[#8d533e] bg-[#fff4f0] text-[#8d533e]',
+    iconClassName: ZONE_ICONS.water,
+    label: 'SAGE'
+  }
+}
 
 const statusConfig = {
   PENDING: {
@@ -100,7 +119,7 @@ function buildPeriodPresets(today) {
 
 function sortOptions(options) {
   return [...options].sort((a, b) =>
-    String(a.content || '').localeCompare(String(b.content || ''), 'fr', {
+    String(a.sortLabel || a.content || '').localeCompare(String(b.sortLabel || b.content || ''), 'fr', {
       sensitivity: 'base'
     })
   )
@@ -108,15 +127,8 @@ function sortOptions(options) {
 
 function buildUsageOptions(usages = []) {
   const roots = usages.filter(usage => usage.kind === 'USAGE')
-  const childrenByParent = new Map()
 
-  for (const usage of usages.filter(item => item.kind === 'SUB_USAGE')) {
-    const children = childrenByParent.get(usage.parentId) ?? []
-    children.push(usage)
-    childrenByParent.set(usage.parentId, children)
-  }
-
-  const groups = [
+  return [
     {
       label: 'Usages principaux',
       options: sortOptions(roots.map(usage => ({
@@ -126,38 +138,38 @@ function buildUsageOptions(usages = []) {
       })))
     }
   ]
-
-  for (const root of sortOptions(roots.map(usage => ({
-    ...usage,
-    content: usage.label
-  })))) {
-    const children = childrenByParent.get(root.id) ?? []
-    if (children.length === 0) {
-      continue
-    }
-
-    groups.push({
-      label: `Sous-usages - ${root.label}`,
-      options: sortOptions(children.map(usage => ({
-        value: usage.id,
-        content: usage.label,
-        title: `${usage.label}${usage.code ? ` (${usage.code})` : ''}`
-      })))
-    })
-  }
-
-  return groups
 }
 
 function buildZoneOptions(zones = []) {
   return [
     {
       label: 'Zones',
-      options: sortOptions(zones.map(zone => ({
-        value: zone.id,
-        content: zone.label || zone.name,
-        title: zone.label || zone.name
-      })))
+      options: sortOptions(zones.map(zone => {
+        const presentation = zoneTypePresentations[zone.type] ?? {
+          className: 'border-gray-300 bg-gray-100 text-gray-700',
+          iconClassName: ZONE_ICONS.mapPin2,
+          label: zone.type
+        }
+
+        return {
+          value: zone.id,
+          label: zone.label || zone.name,
+          sortLabel: zone.name,
+          title: zone.label || zone.name,
+          content: (
+            <span className='flex min-w-0 flex-1 items-center justify-between gap-2'>
+              <span className='truncate'>{zone.name}</span>
+              <span className={`inline-flex shrink-0 items-center gap-1 border px-1.5 py-0.5 text-xs font-medium ${presentation.className}`}>
+                <span
+                  className={`${presentation.iconClassName} [&::after]:![--icon-size:0.72rem] [&::before]:![--icon-size:0.72rem]`}
+                  aria-hidden='true'
+                />
+                {presentation.label}
+              </span>
+            </span>
+          )
+        }
+      }))
     }
   ]
 }
@@ -180,11 +192,15 @@ function buildOptionLabelMap(groups = []) {
 
   for (const group of groups) {
     for (const option of group.options || []) {
-      labels.set(option.value, option.content || option.title || option.value)
+      labels.set(option.value, option.label || option.content || option.title || option.value)
     }
   }
 
   return labels
+}
+
+function buildUsageLabelMap(usages = []) {
+  return new Map(usages.map(usage => [usage.id, usage.label]))
 }
 
 function formatDateTime(value) {
@@ -212,7 +228,8 @@ function formatDateRange(filters = {}) {
 
 function formatExportCount(exportItem) {
   if (exportItem.status === 'COMPLETED') {
-    return `${exportItem.rowCount ?? 0} ligne${exportItem.rowCount > 1 ? 's' : ''}`
+    const rowCount = exportItem.rowCount ?? 0
+    return `${rowCount} ligne${rowCount === 1 ? '' : 's'}`
   }
 
   return 'Nombre de lignes à venir'
@@ -274,6 +291,107 @@ const ExportStatusBadge = ({status}) => {
   )
 }
 
+const ExportGenerationFeedback = ({
+  items,
+  downloadingId,
+  onCloseAll,
+  onDismiss,
+  onDownload
+}) => {
+  if (items.length === 0) {
+    return null
+  }
+
+  const runningCount = items.filter(item => ['PENDING', 'PROCESSING'].includes(item.status)).length
+
+  return (
+    <aside
+      className='fixed bottom-4 left-4 right-4 z-[1000] border border-gray-200 bg-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] sm:left-auto sm:w-[26rem]'
+      aria-atomic='true'
+      aria-live='polite'
+      role='status'
+    >
+      <div className='flex items-start justify-between gap-3 border-b border-gray-200 px-4 py-3'>
+        <div>
+          <p className='fr-mb-0 font-semibold text-gray-900'>Suivi des exports</p>
+          <p className='fr-text--xs fr-mb-0 text-gray-600'>
+            {runningCount > 0
+              ? `${runningCount} fichier${runningCount > 1 ? 's' : ''} en préparation`
+              : 'Tous les traitements sont terminés'}
+          </p>
+        </div>
+
+        <button
+          type='button'
+          className='fr-btn fr-btn--tertiary-no-outline fr-btn--sm fr-icon-close-line fr-btn--icon-left shrink-0'
+          aria-label='Masquer le suivi des exports'
+          onClick={onCloseAll}
+        />
+      </div>
+
+      <div className='max-h-[min(60vh,28rem)] overflow-y-auto'>
+        {items.map(item => {
+          const isRunning = ['PENDING', 'PROCESSING'].includes(item.status)
+          const isCompleted = item.status === 'COMPLETED'
+          let title = 'Échec de la génération'
+          let description = item.errorMessage || 'Le fichier n’a pas pu être généré.'
+          let iconClassName = 'fr-icon-error-warning-line text-[#ce0500]'
+
+          if (isRunning) {
+            title = item.status === 'PENDING' ? 'Export en attente' : 'Génération en cours'
+            description = 'Le fichier est en cours de préparation.'
+          } else if (isCompleted) {
+            title = 'Export prêt'
+            description = `${formatExportCount(item)} disponible${item.rowCount === 1 ? '' : 's'}.`
+            iconClassName = 'fr-icon-check-line text-[#18753c]'
+          }
+
+          return (
+            <div key={item.id} className='flex items-start gap-3 border-b border-gray-100 px-4 py-3 last:border-b-0'>
+              {isRunning ? (
+                <span
+                  className='mt-0.5 h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-[#000091] border-t-transparent'
+                  aria-hidden='true'
+                />
+              ) : (
+                <span
+                  className={`${iconClassName} mt-0.5 shrink-0 [&::after]:![--icon-size:1.25rem] [&::before]:![--icon-size:1.25rem]`}
+                  aria-hidden='true'
+                />
+              )}
+
+              <div className='min-w-0 flex-1'>
+                <p className='fr-text--sm fr-mb-0 font-semibold text-gray-900'>{title}</p>
+                <p className='fr-text--xs fr-mb-0 text-gray-700'>{description}</p>
+                <p className='fr-text--xs fr-mb-0 text-gray-600'>{formatDateRange(item.filters)}</p>
+
+                {isCompleted && (
+                  <div className='mt-2'>
+                    <Button
+                      size='small'
+                      disabled={downloadingId === item.id}
+                      onClick={() => onDownload(item)}
+                    >
+                      {downloadingId === item.id ? 'Téléchargement...' : 'Télécharger'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <button
+                type='button'
+                className='fr-btn fr-btn--tertiary-no-outline fr-btn--sm fr-icon-close-line fr-btn--icon-left shrink-0'
+                aria-label={`Masquer le suivi de l’export ${formatDateRange(item.filters)}`}
+                onClick={() => onDismiss(item.id)}
+              />
+            </div>
+          )
+        })}
+      </div>
+    </aside>
+  )
+}
+
 const ExportHistoryItem = ({
   item,
   optionLabelMaps,
@@ -316,9 +434,10 @@ const ExportHistoryItem = ({
           </p>
         </div>
 
-        <div className='flex flex-wrap gap-2'>
+        <div className='flex shrink-0 flex-wrap gap-2'>
           {item.status === 'COMPLETED' && (
             <Button
+              className='whitespace-nowrap'
               size='small'
               priority='secondary'
               disabled={downloading || deleting}
@@ -330,6 +449,7 @@ const ExportHistoryItem = ({
 
           {!['PENDING', 'PROCESSING'].includes(item.status) && (
             <Button
+              className='whitespace-nowrap'
               size='small'
               priority='tertiary no outline'
               disabled={downloading || deleting}
@@ -362,10 +482,13 @@ const ExportForm = ({
   const [endDate, setEndDate] = useState('')
   const [error, setError] = useState(null)
   const [historyError, setHistoryError] = useState(null)
-  const [success, setSuccess] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [downloadingId, setDownloadingId] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
+  const [feedbackExportIds, setFeedbackExportIds] = useState(() =>
+    initialExports
+      .filter(item => ['PENDING', 'PROCESSING'].includes(item.status))
+      .map(item => item.id))
 
   const todayDate = useMemo(() => formatDateInput(new Date()), [])
   const periodPresets = useMemo(() => buildPeriodPresets(new Date()), [])
@@ -376,11 +499,14 @@ const ExportForm = ({
     [options.waterBodyTypes]
   )
   const optionLabelMaps = useMemo(() => ({
-    usage: buildOptionLabelMap(usageOptions),
+    usage: buildUsageLabelMap(options.usages),
     zone: buildOptionLabelMap(zoneOptions),
     waterBodyType: buildOptionLabelMap(waterBodyTypeOptions)
-  }), [usageOptions, zoneOptions, waterBodyTypeOptions])
+  }), [options.usages, zoneOptions, waterBodyTypeOptions])
   const hasRunningExport = exports.some(item => ['PENDING', 'PROCESSING'].includes(item.status))
+  const feedbackExports = feedbackExportIds
+    .map(exportId => exports.find(item => item.id === exportId))
+    .filter(Boolean)
 
   const refreshExports = useCallback(async () => {
     const result = await listDataExportsAction()
@@ -408,13 +534,11 @@ const ExportForm = ({
     setStartDate(preset.startDate)
     setEndDate(preset.endDate)
     setError(null)
-    setSuccess(null)
   }
 
   const handleSubmit = async event => {
     event.preventDefault()
     setError(null)
-    setSuccess(null)
 
     if (!startDate || !endDate) {
       setError('Sélectionnez une date de début et une date de fin.')
@@ -442,7 +566,14 @@ const ExportForm = ({
       })
 
       if (result.success) {
-        setSuccess('Export demandé. Le fichier sera disponible dans l’historique dès la fin du traitement.')
+        setFeedbackExportIds(currentIds => [
+          result.data.id,
+          ...currentIds.filter(exportId => exportId !== result.data.id)
+        ])
+        setExports(currentExports => [
+          result.data,
+          ...currentExports.filter(item => item.id !== result.data.id)
+        ])
         await refreshExports()
       } else {
         setError(result.error || 'Impossible de créer l’export.')
@@ -461,7 +592,12 @@ const ExportForm = ({
       const result = await getDataExportDownloadAction(item.id)
 
       if (result.success && result.data?.downloadUrl) {
-        window.open(result.data.downloadUrl, '_blank', 'noopener,noreferrer')
+        const downloadLink = document.createElement('a')
+        downloadLink.href = result.data.downloadUrl
+        downloadLink.rel = 'noopener noreferrer'
+        document.body.append(downloadLink)
+        downloadLink.click()
+        downloadLink.remove()
       } else {
         setHistoryError(result.error || 'Impossible de télécharger cet export.')
       }
@@ -483,13 +619,13 @@ const ExportForm = ({
     setDeletingId(item.id)
     setError(null)
     setHistoryError(null)
-    setSuccess(null)
 
     try {
       const result = await deleteDataExportAction(item.id)
 
       if (result.success) {
         setExports(currentExports => currentExports.filter(exportItem => exportItem.id !== item.id))
+        setFeedbackExportIds(currentIds => currentIds.filter(exportId => exportId !== item.id))
       } else {
         await refreshExports()
         setHistoryError(result.error || 'Impossible de supprimer cet export.')
@@ -511,22 +647,32 @@ const ExportForm = ({
             />
           )}
 
-          {success && (
-            <Alert
-              small
-              severity='success'
-              description={success}
-            />
-          )}
-
           <div>
             <h2 className='fr-h5 fr-mb-1w'>
-              Période à exporter
+              Paramètres de l’export
             </h2>
             <p className='fr-text--sm fr-mb-0 text-gray-700'>
-              Les champs marqués d’un astérisque sont obligatoires. La période ne peut pas inclure de date future.
-              Les volumes sont sélectionnés par chevauchement de période, les index par date de mesure.
+              Le volume est toujours indiqué. L’index l’est aussi lorsqu’il a été déclaré : certaines déclarations portent uniquement sur le volume, la colonne index est alors vide. La génération du fichier peut prendre quelques minutes selon la période et le nombre de points concernés. Une fois prêt, il est disponible dans l’historique en bas de cette page.
             </p>
+          </div>
+
+          <div className='flex flex-col gap-2'>
+            <p className='fr-text--sm fr-mb-0 font-medium text-gray-700'>
+              Périodes prédéfinies
+            </p>
+
+            <div className='flex flex-wrap gap-2'>
+              {periodPresets.map(preset => (
+                <button
+                  key={preset.label}
+                  type='button'
+                  className='fr-tag'
+                  onClick={() => applyPeriodPreset(preset)}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
@@ -553,31 +699,17 @@ const ExportForm = ({
             />
           </div>
 
-          <div className='flex flex-wrap gap-2'>
-            {periodPresets.map(preset => (
-              <button
-                key={preset.label}
-                type='button'
-                className='fr-tag'
-                onClick={() => applyPeriodPreset(preset)}
-              >
-                {preset.label}
-              </button>
-            ))}
-          </div>
-
           <div className='flex flex-col gap-4 border-t border-gray-200 pt-4'>
             <div>
               <h2 className='fr-h5 fr-mb-1w'>
-                Affiner l’export
+                Paramètres optionnels
               </h2>
               <p className='fr-text--sm fr-mb-0 text-gray-700'>
-                Ces filtres sont optionnels. Sans sélection, l’export conserve tout le périmètre auquel vous avez accès.
+                Par défaut, le fichier d’export contiendra toutes les options possibles ci-dessous.
               </p>
             </div>
 
             <GroupedMultiselect
-              searchable
               label='Usages'
               placeholder='Tous les usages'
               options={usageOptions}
@@ -586,7 +718,6 @@ const ExportForm = ({
             />
 
             <GroupedMultiselect
-              searchable
               label='Zones'
               placeholder='Toutes les zones accessibles'
               options={zoneOptions}
@@ -595,7 +726,6 @@ const ExportForm = ({
             />
 
             <GroupedMultiselect
-              searchable
               label='Types de milieu'
               placeholder='Tous les types de milieu'
               options={waterBodyTypeOptions}
@@ -656,6 +786,15 @@ const ExportForm = ({
           </div>
         )}
       </section>
+
+      <ExportGenerationFeedback
+        items={feedbackExports}
+        downloadingId={downloadingId}
+        onCloseAll={() => setFeedbackExportIds([])}
+        onDismiss={exportId => setFeedbackExportIds(currentIds =>
+          currentIds.filter(currentId => currentId !== exportId))}
+        onDownload={handleDownload}
+      />
     </div>
   )
 }

@@ -86,11 +86,6 @@ main {
   color: var(--text-mention-grey);
 }
 
-.quick-declaration-usage-name-field .fr-icon-edit-line::before,
-.quick-declaration-usage-name-field .fr-icon-edit-line::after {
-  --icon-size: 0.625rem;
-}
-
 .quick-declaration-usage-name-input {
   width: 100%;
   min-width: 0;

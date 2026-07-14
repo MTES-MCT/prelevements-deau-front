@@ -17,7 +17,6 @@ import {getDeclarantTitleFromUser} from '@/lib/declarants.js'
 import {
   getPointFlowType,
   getPointFlowTypeColors,
-  getPointFlowTypeLabel,
   POINT_FLOW_TYPES
 } from '@/lib/point-flow-types.js'
 import {
@@ -26,7 +25,8 @@ import {
   getPointDisplayName,
   getPointTechnicalName,
   getPointUsageNameDraft,
-  MAX_POINT_USAGE_NAME_LENGTH
+  MAX_POINT_USAGE_NAME_LENGTH,
+  normalizePointUsageName
 } from '@/lib/quick-declaration-point-name.js'
 import {
   getMyDeclarationSubmissionSuccessURL,
@@ -49,6 +49,20 @@ const QUICK_DECLARATION_MEASUREMENT_TYPES = Object.freeze({
   INDEX: 'INDEX',
   VOLUME: 'VOLUME'
 })
+
+const QUICK_DECLARATION_POINT_GROUPS = [
+  {
+    flowType: POINT_FLOW_TYPES.PRELEVEMENT,
+    label: 'Points de prélèvement'
+  },
+  {
+    flowType: POINT_FLOW_TYPES.REJET,
+    label: 'Points de rejet'
+  }
+]
+const QUICK_DECLARATION_POINT_FLOW_ORDER = Object.fromEntries(
+  QUICK_DECLARATION_POINT_GROUPS.map((group, index) => [group.flowType, index])
+)
 
 const QUICK_DECLARATION_MEASUREMENT_SEGMENTS = [
   {
@@ -268,6 +282,13 @@ function hasDeclarationHistory(point) {
 }
 
 function comparePointsForEntry(pointA, pointB) {
+  const flowTypeDifference = (QUICK_DECLARATION_POINT_FLOW_ORDER[getPointFlowType(pointA)] ?? 0)
+    - (QUICK_DECLARATION_POINT_FLOW_ORDER[getPointFlowType(pointB)] ?? 0)
+
+  if (flowTypeDifference !== 0) {
+    return flowTypeDifference
+  }
+
   const historyOrder = Number(hasDeclarationHistory(pointB)) - Number(hasDeclarationHistory(pointA))
 
   if (historyOrder !== 0) {
@@ -353,6 +374,18 @@ function getFormattedCaretPosition(value, editableCharactersCount) {
 
 function isCompleteNumberInput(value) {
   return value !== '' && !String(value).endsWith('.')
+}
+
+function getUsageNameFeedback(previousUsageName, nextUsageName) {
+  if (previousUsageName === nextUsageName) {
+    return null
+  }
+
+  if (!nextUsageName) {
+    return 'Nom d’usage supprimé'
+  }
+
+  return previousUsageName ? 'Nom d’usage modifié' : 'Nom d’usage ajouté'
 }
 
 function getDefaultUsage(point) {
@@ -835,7 +868,7 @@ function getMeasurementDateValidationErrors({
 
 function getEntryRowClassName({hasHistory, hasValue, isHighlighted}) {
   return classNames(
-    'grid grid-cols-1 gap-2 border-b border-r border-l-4 px-2 py-1.5 transition md:items-start',
+    'grid cursor-pointer grid-cols-1 gap-2 border-b border-r border-l-4 px-2 py-1.5 transition md:items-start',
     'border-b-gray-200 border-r-gray-200',
     ENTRY_GRID_COLUMNS_CLASS_NAME,
     hasValue && 'border-l-green-600 bg-green-50 shadow-sm',
@@ -843,6 +876,21 @@ function getEntryRowClassName({hasHistory, hasValue, isHighlighted}) {
     !hasValue && !isHighlighted && hasHistory && 'border-l-gray-400 bg-gray-50 hover:bg-gray-100',
     !hasValue && !isHighlighted && !hasHistory && 'border-l-transparent bg-white hover:bg-gray-50'
   )
+}
+
+function isQuickDeclarationRowControl(target) {
+  return Boolean(target?.closest?.([
+    'a',
+    'button',
+    'input',
+    'label',
+    'select',
+    'textarea',
+    '[role="button"]',
+    '[role="combobox"]',
+    '.fr-input-group',
+    '.quick-declaration-usage-name-field'
+  ].join(',')))
 }
 
 const QuickDeclarationToolbar = ({
@@ -1511,27 +1559,68 @@ const QuickDeclarationEntryRow = ({
   const technicalName = getPointTechnicalName(point)
   const pointName = getPointDisplayName(point, usageName)
   const hasDistinctUsageName = pointName !== technicalName
+  const [isUsageNameEditing, setIsUsageNameEditing] = useState(false)
+  const [usageNameDraft, setUsageNameDraft] = useState(usageName)
+  const [usageNameFeedback, setUsageNameFeedback] = useState(null)
   const valueLabel = getMeasurementInputLabel(measurementType)
   const valueInputId = `quick-value-${pointId}`
   const usageInputId = `quick-usage-${pointId}`
   const usageNameInputId = `quick-usage-name-${pointId}`
-  const flowType = getPointFlowType(point)
-  const flowTypeColors = getPointFlowTypeColors(flowType)
+
+  const startUsageNameEditing = () => {
+    setUsageNameDraft(usageName)
+    setUsageNameFeedback(null)
+    setActivePointId(pointId)
+    setIsUsageNameEditing(true)
+  }
+
+  const validateUsageName = () => {
+    const normalizedUsageName = normalizePointUsageName(usageNameDraft)
+    const previousUsageName = normalizePointUsageName(usageName)
+    const hasChanged = normalizedUsageName !== previousUsageName
+
+    if (hasChanged) {
+      updateRow(pointId, {usageName: normalizedUsageName})
+    }
+
+    setIsUsageNameEditing(false)
+    setUsageNameFeedback(getUsageNameFeedback(previousUsageName, normalizedUsageName))
+  }
+
+  const cancelUsageNameEditing = () => {
+    setUsageNameDraft(usageName)
+    setUsageNameFeedback(null)
+    setIsUsageNameEditing(false)
+  }
+
+  useEffect(() => {
+    if (!usageNameFeedback) {
+      return undefined
+    }
+
+    const timeout = setTimeout(() => setUsageNameFeedback(null), 1800)
+    return () => clearTimeout(timeout)
+  }, [usageNameFeedback])
 
   return (
     <div
       key={pointId}
       role='listitem'
       className={getEntryRowClassName({hasHistory, hasValue, isHighlighted})}
+      onClick={event => {
+        if (!isQuickDeclarationRowControl(event.target)) {
+          focusPoint(pointId)
+        }
+      }}
       onMouseEnter={() => setHoveredPointId(pointId)}
       onMouseLeave={() => setHoveredPointId(null)}
     >
       <div className='min-w-0 md:pt-1'>
-        <div className='flex min-w-0 flex-wrap items-baseline gap-x-1'>
+        <div className='flex min-w-0 items-start gap-1'>
           <button
             type='button'
             className={classNames(
-              'fr-link min-w-0 max-w-full whitespace-normal break-words text-left text-xs leading-tight',
+              'fr-link min-w-0 whitespace-normal break-words text-left text-xs leading-tight',
               hasValue ? 'font-bold' : 'font-medium'
             )}
             title={pointName}
@@ -1539,40 +1628,89 @@ const QuickDeclarationEntryRow = ({
           >
             {pointName}
           </button>
-          {hasDistinctUsageName && (
-            <span
-              className='min-w-0 break-all text-[0.68rem] leading-tight text-gray-500'
-              title='Nom technique du point'
-            >
-              ({technicalName})
-            </span>
+          {!isUsageNameEditing && hasDistinctUsageName && (
+            <button
+              type='button'
+              className='fr-icon-edit-line inline-flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-gray-500 hover:bg-[var(--background-alt-blue-france-hover)] hover:text-[#000091] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#0a76f6] [&::after]:![--icon-size:0.7rem] [&::before]:![--icon-size:0.7rem]'
+              aria-label={`Modifier le nom d’usage de ${technicalName}`}
+              title='Modifier le nom d’usage'
+              onClick={startUsageNameEditing}
+            />
           )}
-          <span
-            className='inline-flex shrink-0 px-1.5 py-0.5 text-[0.64rem] font-semibold leading-none'
-            style={{
-              backgroundColor: flowTypeColors.backgroundColor,
-              color: flowTypeColors.textColor
+        </div>
+        {!isUsageNameEditing && (
+          <div className='mt-0.5 flex min-h-5 min-w-0 items-center justify-between gap-2'>
+            <div className='flex min-w-0 items-center gap-1'>
+              {hasDistinctUsageName ? (
+                <span
+                  className='truncate text-[0.68rem] leading-tight text-gray-500'
+                  title={`Nom technique : ${technicalName}`}
+                >
+                  Nom technique : {technicalName}
+                </span>
+              ) : (
+                <button
+                  type='button'
+                  className='fr-icon-edit-line inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-[0.68rem] leading-tight text-gray-500 hover:text-[#000091] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#0a76f6] [&::after]:![--icon-size:0.68rem] [&::before]:![--icon-size:0.68rem]'
+                  aria-label={`Ajouter un nom d’usage à ${technicalName}`}
+                  title='Ajouter un nom d’usage'
+                  onClick={startUsageNameEditing}
+                >
+                  Ajouter un nom d’usage
+                </button>
+              )}
+            </div>
+            {usageNameFeedback && (
+              <span
+                className='inline-flex shrink-0 bg-[#eeeeff] px-1.5 py-0.5 text-[0.64rem] font-medium leading-tight text-[#000091]'
+                role='status'
+              >
+                {usageNameFeedback}
+              </span>
+            )}
+          </div>
+        )}
+        {isUsageNameEditing && (
+          <div
+            className='quick-declaration-usage-name-field'
+            onBlur={event => {
+              if (!event.currentTarget.contains(event.relatedTarget)) {
+                validateUsageName()
+              }
             }}
           >
-            {getPointFlowTypeLabel(flowType)}
-          </span>
-        </div>
-        <div className='quick-declaration-usage-name-field'>
-          <span className='fr-icon-edit-line shrink-0' aria-hidden='true' />
-          <label className='sr-only' htmlFor={usageNameInputId}>
-            Nom d’usage facultatif pour {technicalName}
-          </label>
-          <input
-            id={usageNameInputId}
-            className='quick-declaration-usage-name-input'
-            type='text'
-            maxLength={MAX_POINT_USAGE_NAME_LENGTH}
-            value={usageName}
-            placeholder='Ajouter un nom d’usage'
-            onFocus={() => setActivePointId(pointId)}
-            onChange={event => updateRow(pointId, {usageName: event.target.value})}
-          />
-        </div>
+            <label className='sr-only' htmlFor={usageNameInputId}>
+              Nom d’usage facultatif pour {technicalName}
+            </label>
+            <input
+              autoFocus
+              id={usageNameInputId}
+              className='quick-declaration-usage-name-input'
+              type='text'
+              maxLength={MAX_POINT_USAGE_NAME_LENGTH}
+              value={usageNameDraft}
+              placeholder='Ex. Forage de la source'
+              onFocus={() => setActivePointId(pointId)}
+              onChange={event => setUsageNameDraft(event.target.value)}
+              onKeyDown={event => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  validateUsageName()
+                } else if (event.key === 'Escape') {
+                  event.preventDefault()
+                  cancelUsageNameEditing()
+                }
+              }}
+            />
+            <button
+              type='button'
+              className='fr-icon-close-line inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-gray-600 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#0a76f6] [&::after]:![--icon-size:0.78rem] [&::before]:![--icon-size:0.78rem]'
+              aria-label='Annuler la modification du nom d’usage'
+              title='Annuler'
+              onClick={cancelUsageNameEditing}
+            />
+          </div>
+        )}
         {lastReadingLabel && (
           <p className='fr-hint-text fr-mb-0 mt-1 text-[0.72rem] leading-tight'>
             Dernier index : {lastReadingLabel}
@@ -1585,7 +1723,7 @@ const QuickDeclarationEntryRow = ({
         )}
       </div>
 
-      <div className='fr-input-group fr-mb-0'>
+      <div className='fr-input-group fr-mb-0 cursor-default'>
         <label className='fr-label md:hidden' htmlFor={valueInputId}>{valueLabel}</label>
         <div className='quick-declaration-field relative mt-1 md:mt-0'>
           <input
@@ -1622,7 +1760,7 @@ const QuickDeclarationEntryRow = ({
         )}
       </div>
 
-      <div className='fr-input-group fr-mb-0'>
+      <div className='fr-input-group fr-mb-0 cursor-default'>
         <label className='fr-label md:hidden' htmlFor={usageInputId}>Usage</label>
         <div className='quick-declaration-field quick-declaration-usage-field mt-1 md:mt-0'>
           <UsageCombobox
@@ -1654,46 +1792,75 @@ const QuickDeclarationEntryList = ({
   setActivePointId,
   setHoveredPointId,
   updateRow
-}) => (
-  <div className='md:mt-1 xl:max-h-[calc(100vh-18rem)] xl:overflow-auto'>
-    <div
-      className={classNames(
-        'hidden sticky top-0 z-10 gap-2 border-b bg-white px-2 py-1 text-xs font-bold text-gray-600 md:grid',
-        ENTRY_GRID_COLUMNS_CLASS_NAME
-      )}
-    >
-      <div>Point</div>
-      <div>{getMeasurementInputLabel(measurementType)}</div>
-      <div>Usage</div>
-    </div>
+}) => {
+  const pointGroups = QUICK_DECLARATION_POINT_GROUPS
+    .map(group => ({
+      ...group,
+      points: entryPoints.filter(point => getPointFlowType(point) === group.flowType)
+    }))
+    .filter(group => group.points.length > 0)
 
-    <div role='list' className='border-t border-gray-200 md:border-t-0'>
-      {entryPoints.map(point => {
-        const pointId = getPointId(point)
+  return (
+    <div className='md:mt-1 xl:max-h-[calc(100vh-18rem)] xl:overflow-auto'>
+      <div className='border-t border-gray-200 md:border-t-0'>
+        {pointGroups.map(group => {
+          const colors = getPointFlowTypeColors(group.flowType)
+          const headingId = `quick-declaration-${group.flowType.toLowerCase()}-heading`
 
-        return (
-          <QuickDeclarationEntryRow
-            key={pointId}
-            activePointId={activePointId}
-            focusNextPoint={focusNextPoint}
-            focusPoint={focusPoint}
-            globalUsageOptions={globalUsageOptions}
-            handleValueChange={handleValueChange}
-            hoveredPointId={hoveredPointId}
-            inputRefs={inputRefs}
-            measurementType={measurementType}
-            point={point}
-            readingDate={readingDate}
-            row={getRowState(rows, pointId)}
-            setActivePointId={setActivePointId}
-            setHoveredPointId={setHoveredPointId}
-            updateRow={updateRow}
-          />
-        )
-      })}
+          return (
+            <section key={group.flowType} className='mt-2 first:mt-0' aria-labelledby={headingId}>
+              <div
+                className='px-2 py-2 text-center'
+                style={{color: colors.textColor}}
+              >
+                <h3 id={headingId} className='fr-mb-0 whitespace-nowrap text-[0.7rem] font-semibold leading-none'>
+                  {group.label}
+                </h3>
+              </div>
+
+              <div
+                className={classNames(
+                  'hidden sticky top-0 z-10 gap-2 border-y border-gray-200 bg-white px-2 py-1 text-xs font-bold text-gray-600 md:grid',
+                  ENTRY_GRID_COLUMNS_CLASS_NAME
+                )}
+              >
+                <div>Point</div>
+                <div>{getMeasurementInputLabel(measurementType)}</div>
+                <div>Usage</div>
+              </div>
+
+              <div role='list'>
+                {group.points.map(point => {
+                  const pointId = getPointId(point)
+
+                  return (
+                    <QuickDeclarationEntryRow
+                      key={pointId}
+                      activePointId={activePointId}
+                      focusNextPoint={focusNextPoint}
+                      focusPoint={focusPoint}
+                      globalUsageOptions={globalUsageOptions}
+                      handleValueChange={handleValueChange}
+                      hoveredPointId={hoveredPointId}
+                      inputRefs={inputRefs}
+                      measurementType={measurementType}
+                      point={point}
+                      readingDate={readingDate}
+                      row={getRowState(rows, pointId)}
+                      setActivePointId={setActivePointId}
+                      setHoveredPointId={setHoveredPointId}
+                      updateRow={updateRow}
+                    />
+                  )
+                })}
+              </div>
+            </section>
+          )
+        })}
+      </div>
     </div>
-  </div>
-)
+  )
+}
 
 const OverwriteConflictListItem = ({conflict}) => {
   const period = getPeriodLabel(conflict)
@@ -1904,6 +2071,7 @@ const QuickDeclarationMapPanel = ({
   declaredPointIds,
   declarantName,
   entryPoints,
+  focusRequestId,
   focusPoint,
   hoveredPointId,
   pointDisplayNames,
@@ -1937,6 +2105,7 @@ const QuickDeclarationMapPanel = ({
           pointDisplayNames={pointDisplayNames}
           selectedPointIds={selectedPointIds}
           declaredPointIds={declaredPointIds}
+          focusRequestId={focusRequestId}
           onHoverPoint={setHoveredPointId}
           onFocusPoint={focusPoint}
         />
@@ -1967,6 +2136,7 @@ const QuickDeclarationForm = ({
   const [comment, setComment] = useState('')
   const [rows, setRows] = useState({})
   const [activePointId, setActivePointId] = useState(null)
+  const [focusRequestId, setFocusRequestId] = useState(0)
   const [hoveredPointId, setHoveredPointId] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitResult, setSubmitResult] = useState(null)
@@ -2096,6 +2266,7 @@ const QuickDeclarationForm = ({
 
   const focusPoint = useCallback(pointId => {
     setActivePointId(pointId)
+    setFocusRequestId(current => current + 1)
     setHoveredPointId(pointId)
 
     const input = inputRefs.current[pointId]
@@ -2410,6 +2581,7 @@ const QuickDeclarationForm = ({
           declaredPointIds={declaredPointIds}
           declarantName={contactDeclarantName}
           entryPoints={entryPoints}
+          focusRequestId={focusRequestId}
           focusPoint={focusPoint}
           hoveredPointId={hoveredPointId}
           pointDisplayNames={pointDisplayNames}

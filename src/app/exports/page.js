@@ -57,8 +57,7 @@ const Page = async () => {
               </h1>
 
               <p className='fr-text--sm fr-mb-0 text-gray-700'>
-                Préparez un export Excel des valeurs validées sur une plage de dates, avec filtres par usage, zone et type de milieu.
-                Le fichier est généré en arrière-plan puis mis à disposition dans l’historique.
+                Téléchargez un fichier Excel contenant les index et volumes prélevés sur les points de prélèvement de votre territoire, pour la période de votre choix.
               </p>
             </div>
 
@@ -67,7 +66,7 @@ const Page = async () => {
                 className='fr-link fr-icon-question-line fr-link--icon-left shrink-0'
                 href='/exports/aide'
               >
-                Aide
+                Lexique du fichier exporté
               </Link>
             )}
           </div>

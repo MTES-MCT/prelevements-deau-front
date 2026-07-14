@@ -6,7 +6,7 @@ import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getCurrentUser} from '@/server/actions/user.js'
 
 export const metadata = {
-  title: 'Aide export'
+  title: 'Lexique du fichier exporté'
 }
 
 export const dynamic = 'force-dynamic'
@@ -85,6 +85,10 @@ const fieldDescriptions = [
     description: 'Adresse e-mail du compte collecteur lorsqu’il existe.'
   },
   {
+    name: 'Donnée télérelevée',
+    description: 'Indique par « Oui » ou « Non » si la valeur provient d’une source de télérelève. Une donnée inférée depuis un index télérelevé est également indiquée comme télérelevée.'
+  },
+  {
     name: 'Type de mesure',
     description: 'Nature de la valeur mesurée : index, volume ou débit. Le sens prélèvement ou rejet est indiqué dans la colonne « Type de point ».'
   },
@@ -154,8 +158,8 @@ const NoExportAccess = () => (
   <section className='border border-gray-200 bg-white p-4 md:p-5'>
     <Alert
       severity='info'
-      title='Aide non disponible'
-      description='La documentation des exports est réservée aux agents et aux administrateurs.'
+      title='Lexique non disponible'
+      description='Le lexique du fichier exporté est réservé aux agents et aux administrateurs.'
     />
   </section>
 )
@@ -178,7 +182,7 @@ const Page = async () => {
           <div className='mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between'>
             <div>
               <h1 className='fr-h2 fr-mb-2w'>
-                Documentation de l’export
+                Lexique du fichier exporté
               </h1>
 
               <p className='fr-text--sm fr-mb-0 text-gray-700'>

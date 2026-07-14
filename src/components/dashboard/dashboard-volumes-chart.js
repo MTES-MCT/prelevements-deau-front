@@ -72,6 +72,10 @@ function getUsageId(usage) {
   return usage?.id ?? usage?.code ?? getUsageLabel(usage)
 }
 
+function hasUsageData(item) {
+  return item?.hasData ?? Number(item?.total) > 0
+}
+
 function getVisibleMonthUsages(month, visibleUsageIds) {
   return (month.usages ?? []).filter(item => visibleUsageIds.has(getUsageId(item.usage)))
 }
@@ -226,7 +230,8 @@ const DashboardVolumesChart = ({
   const wrapperRef = useRef(null)
   const usages = chart?.usages ?? EMPTY_ARRAY
   const months = chart?.months ?? EMPTY_ARRAY
-  const [visibleUsageIds, toggleUsage] = useVisibleUsages(usages)
+  const usagesWithData = useMemo(() => usages.filter(item => hasUsageData(item)), [usages])
+  const [visibleUsageIds, toggleUsage] = useVisibleUsages(usagesWithData)
   const [tooltip, setTooltip] = useState(null)
 
   const visibleTotals = useMemo(() =>
@@ -317,23 +322,29 @@ const DashboardVolumesChart = ({
         <div className='mb-3 flex flex-wrap gap-x-4 gap-y-2'>
           {usages.map(item => {
             const usageId = getUsageId(item.usage)
-            const isVisible = visibleUsageIds.has(usageId)
+            const hasData = hasUsageData(item)
+            const isVisible = hasData && visibleUsageIds.has(usageId)
+            const emptyLabel = Number(selectedYear) === new Date().getFullYear()
+              ? `Aucun volume déclaré à ce jour en ${selectedYear}`
+              : `Aucun volume déclaré en ${selectedYear}`
 
             return (
               <button
                 key={usageId}
-                aria-pressed={isVisible}
-                className={`inline-flex items-center gap-1.5 border-0 bg-transparent p-0 text-xs ${isVisible ? 'text-gray-700' : 'text-gray-400'}`}
+                aria-label={hasData ? undefined : `${getUsageLabel(item.usage)}. ${emptyLabel}.`}
+                aria-pressed={hasData ? isVisible : undefined}
+                className={`inline-flex items-center gap-1.5 border-0 bg-transparent p-0 text-xs ${hasData ? 'cursor-pointer' : 'cursor-default'} ${isVisible ? 'text-gray-700' : 'text-gray-400'}`}
+                disabled={!hasData}
+                title={hasData ? undefined : emptyLabel}
                 type='button'
-                style={{cursor: 'pointer'}}
                 onClick={() => toggleUsage(usageId)}
               >
                 <span
                   aria-hidden='true'
                   className='block h-3 w-3 rounded-full'
                   style={{
-                    backgroundColor: getUsageColor(item.usage),
-                    opacity: isVisible ? 1 : 0.35
+                    backgroundColor: hasData ? getUsageColor(item.usage) : '#929292',
+                    opacity: isVisible ? 1 : 0.45
                   }}
                 />
                 <span>{getUsageLabel(item.usage)}</span>

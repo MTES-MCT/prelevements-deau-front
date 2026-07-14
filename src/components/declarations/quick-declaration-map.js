@@ -15,6 +15,7 @@ import {getPointDisplayName} from '@/lib/quick-declaration-point-name.js'
 const DEFAULT_MAP_ZOOM = 10
 const FIT_BOUNDS_MAX_ZOOM = 18
 const POINT_CLUSTER_MAX_ZOOM = 17
+const POINT_FOCUS_ZOOM = Math.min(POINT_CLUSTER_MAX_ZOOM + 1, IGN_RASTER_MAX_ZOOM)
 const POINT_CLUSTER_RADIUS = 48
 const CLUSTER_FILTER = ['has', 'point_count']
 const UNCLUSTERED_POINT_FILTER = ['!', CLUSTER_FILTER]
@@ -213,6 +214,7 @@ const QuickDeclarationMap = ({
   pointDisplayNames = {},
   selectedPointIds = [],
   declaredPointIds = [],
+  focusRequestId = 0,
   onHoverPoint,
   onFocusPoint
 }) => {
@@ -576,13 +578,18 @@ const QuickDeclarationMap = ({
   useEffect(() => {
     const map = mapRef.current
     const activePoint = getPointById(pointsWithCoordinates, activePointId)
+    const coordinates = getPointCoordinates(activePoint)
 
-    if (!map || !activePoint) {
+    if (!map || !coordinates) {
       return
     }
 
-    moveToPoints(map, [activePoint], {duration: 350})
-  }, [activePointId, pointsWithCoordinates])
+    map.easeTo({
+      center: coordinates,
+      zoom: Math.max(map.getZoom(), POINT_FOCUS_ZOOM),
+      duration: 350
+    })
+  }, [activePointId, focusRequestId, pointsWithCoordinates])
 
   useEffect(() => {
     const map = mapRef.current
