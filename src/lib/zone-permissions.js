@@ -10,24 +10,6 @@ export function hasAnyZonePermission(user, permission) {
   return Boolean(user?.permissions?.includes(permission))
 }
 
-export function getUserZonePermissions(user, zoneId) {
-  if (!zoneId) {
-    return []
-  }
-
-  return user?.zoneAssignments
-    ?.find(assignment => assignment.zoneId === zoneId)
-    ?.permissions || []
-}
-
-export function userHasZonePermission(user, zoneId, permission) {
-  if (user?.role === 'ADMIN') {
-    return true
-  }
-
-  return getUserZonePermissions(user, zoneId).includes(permission)
-}
-
 export function addPermissionWithDependencies(values, code, catalogByCode) {
   const selected = new Set(values)
   const add = permission => {

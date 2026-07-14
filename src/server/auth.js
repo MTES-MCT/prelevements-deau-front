@@ -15,12 +15,15 @@ const SESSION_CALLBACKS = {
   async jwt({
     token, user, trigger, session
   }) {
+    // Detailed assignments can make the encrypted NextAuth cookie exceed browser
+    // header limits. Zone-scoped rights are returned by the relevant API routes.
+    delete token.zoneAssignments
+
     if (user) {
       token.token = user.token
       token.role = user.role
       token.userInfo = user.userInfo
       token.permissions = user.permissions || []
-      token.zoneAssignments = user.zoneAssignments || []
       token.impersonation = user.impersonation || null
       token.infoRefreshedAt = Date.now()
     }
@@ -38,7 +41,6 @@ const SESSION_CALLBACKS = {
       token.role = info.role
       token.userInfo = info.user || null
       token.permissions = info.permissions || []
-      token.zoneAssignments = info.zoneAssignments || []
       token.impersonation = info.impersonation || null
       token.infoRefreshedAt = Date.now()
     }
@@ -49,7 +51,6 @@ const SESSION_CALLBACKS = {
     session.user.token = token.token
     session.user.role = token.role
     session.user.permissions = token.permissions || []
-    session.user.zoneAssignments = token.zoneAssignments || []
     session.user.impersonation = token.impersonation || null
     if (token.userInfo) {
       session.user.id = token.userInfo.id || token.sub || 'anonymous'
@@ -158,7 +159,6 @@ export async function getAuthOptions() {
                 role: info.role,
                 userInfo: info.user || null,
                 permissions: info.permissions || [],
-                zoneAssignments: info.zoneAssignments || [],
                 impersonation: info.impersonation || null
               }
             }
