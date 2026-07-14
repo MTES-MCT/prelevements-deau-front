@@ -4,6 +4,23 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL
 const IS_DEV = process.env.NODE_ENV === 'development'
 const INFO_REFRESH_INTERVAL_MS = 5 * 60 * 1000
 
+function compactSessionUserInfo(userInfo) {
+  if (!userInfo) {
+    return null
+  }
+
+  return {
+    id: userInfo.id,
+    email: userInfo.email,
+    firstName: userInfo.firstName,
+    lastName: userInfo.lastName,
+    structure: userInfo.structure,
+    declarantType: userInfo.declarantType,
+    declarantRole: userInfo.declarantRole,
+    socialReason: userInfo.socialReason
+  }
+}
+
 // Session configuration shared between async and static exports
 const SESSION_CONFIG = {
   strategy: 'jwt',
@@ -18,11 +35,12 @@ const SESSION_CALLBACKS = {
     // Detailed assignments can make the encrypted NextAuth cookie exceed browser
     // header limits. Zone-scoped rights are returned by the relevant API routes.
     delete token.zoneAssignments
+    token.userInfo = compactSessionUserInfo(token.userInfo)
 
     if (user) {
       token.token = user.token
       token.role = user.role
-      token.userInfo = user.userInfo
+      token.userInfo = compactSessionUserInfo(user.userInfo)
       token.permissions = user.permissions || []
       token.impersonation = user.impersonation || null
       token.infoRefreshedAt = Date.now()
@@ -39,7 +57,7 @@ const SESSION_CALLBACKS = {
       const info = await getInfo(authToken)
       token.token = authToken
       token.role = info.role
-      token.userInfo = info.user || null
+      token.userInfo = compactSessionUserInfo(info.user)
       token.permissions = info.permissions || []
       token.impersonation = info.impersonation || null
       token.infoRefreshedAt = Date.now()
