@@ -123,7 +123,7 @@ const PERIOD_TYPE_LABELS = {
   week: 'Hebdomadaire'
 }
 
-const PeriodControls = ({periods, zoneId}) => {
+const PeriodControls = ({canExport, periods, zoneId}) => {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -153,7 +153,7 @@ const PeriodControls = ({periods, zoneId}) => {
           {value}
         </Button>
       ))}
-      {exportPeriod && zoneId && (
+      {canExport && exportPeriod && zoneId && (
         <>
           <div className='fr-select-group fr-mb-0 min-w-64'>
             <label className='fr-label' htmlFor='zone-declaration-export-period'>Période à exporter</label>
@@ -216,7 +216,7 @@ const MatrixCell = ({row, cell}) => {
   )
 }
 
-const ZoneDeclarationMonthlyMatrix = ({payload}) => {
+const ZoneDeclarationMonthlyMatrix = ({canExport = false, payload}) => {
   const groups = useMemo(() => payload?.data?.groups ?? [], [payload?.data?.groups])
   const periods = payload?.data?.periods ?? payload?.data?.months ?? []
   const zoneId = payload?.meta?.zoneId
@@ -295,7 +295,7 @@ const ZoneDeclarationMonthlyMatrix = ({payload}) => {
             />
           </div>
 
-          <PeriodControls periods={periods} zoneId={zoneId} />
+          <PeriodControls canExport={canExport} periods={periods} zoneId={zoneId} />
         </div>
 
         <div className='flex flex-wrap gap-2 items-center'>

@@ -1,8 +1,10 @@
 import {Button} from '@codegouvfr/react-dsfr/Button'
+import {forbidden} from 'next/navigation'
 
 import DeclarantsList from '@/components/declarants/declarants-list.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getDeclarantsAction} from '@/server/actions/declarants.js'
+import {getCurrentUser} from '@/server/actions/user.js'
 import {canCurrentUserCreateDeclarant} from '@/server/permissions/declarants.js'
 
 export const metadata = {
@@ -12,10 +14,16 @@ export const metadata = {
 export const dynamic = 'force-dynamic'
 
 const Page = async () => {
-  const [result, canCreateDeclarant] = await Promise.all([
+  const [result, canCreateDeclarant, userResult] = await Promise.all([
     getDeclarantsAction(),
-    canCurrentUserCreateDeclarant()
+    canCurrentUserCreateDeclarant(),
+    getCurrentUser()
   ])
+  if (userResult.data?.role === 'INSTRUCTOR'
+    && !userResult.data?.permissions?.includes('declarant.list')) {
+    forbidden()
+  }
+
   const declarants = result.data || []
 
   return (

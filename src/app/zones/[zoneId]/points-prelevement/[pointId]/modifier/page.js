@@ -7,14 +7,10 @@ import ZoneHeader from '@/components/zones/zone-header.js'
 import ZonePointForm from '@/components/zones/zone-point-form.js'
 import ZoneSubNavigation from '@/components/zones/zone-sub-navigation.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {unwrapPaginatedData} from '@/lib/zone-pagination.js'
 import {
   getZoneAction,
-  getZoneDeclarantsAction,
-  getZoneExploitationsAction,
   getZoneGeometryAction,
-  getZonePointPrelevementAction,
-  getZonePointsPrelevementAction
+  getZonePointPrelevementAction
 } from '@/server/actions/zones.js'
 
 export async function generateMetadata({params}) {
@@ -36,31 +32,20 @@ export const dynamic = 'force-dynamic'
 const Page = async ({params}) => {
   const {zoneId, pointId} = await params
 
-  const [zoneResult, pointResult, zoneGeometryResult, pointsResult, declarantsResult, exploitationsResult] = await Promise.all([
+  const [zoneResult, pointResult, zoneGeometryResult] = await Promise.all([
     getZoneAction(zoneId),
     getZonePointPrelevementAction(zoneId, pointId),
-    getZoneGeometryAction(zoneId),
-    getZonePointsPrelevementAction(zoneId, {perPage: 1}),
-    getZoneDeclarantsAction(zoneId, {perPage: 1}),
-    getZoneExploitationsAction(zoneId, {perPage: 1})
+    getZoneGeometryAction(zoneId)
   ])
 
   if (!zoneResult.success || !zoneResult.data || !pointResult.success || !pointResult.data) {
     notFound()
   }
 
-  const pointsPayload = pointsResult.success ? unwrapPaginatedData(pointsResult.data) : {meta: {totalAll: 0}}
-  const declarantsPayload = declarantsResult.success ? unwrapPaginatedData(declarantsResult.data) : {meta: {totalAll: 0}}
-  const exploitationsPayload = exploitationsResult.success ? unwrapPaginatedData(exploitationsResult.data) : {meta: {totalAll: 0}}
-  const zone = {
-    ...zoneResult.data,
-    pointsCount: pointsPayload.meta.totalAll,
-    declarantsCount: declarantsPayload.meta.totalAll,
-    exploitationsCount: exploitationsPayload.meta.totalAll
-  }
+  const zone = zoneResult.data
   const point = pointResult.data
 
-  if (!zone.isAdmin || !point.right?.canEdit) {
+  if (!zone.permissions?.includes('pp.update') || !point.right?.canEdit) {
     forbidden()
   }
 

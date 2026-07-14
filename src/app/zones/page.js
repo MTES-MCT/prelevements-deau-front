@@ -1,3 +1,5 @@
+import {forbidden} from 'next/navigation'
+
 import ZoneBreadcrumb from '@/components/zones/zone-breadcrumb.js'
 import ZonesList from '@/components/zones/zones-list.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
@@ -15,6 +17,11 @@ const Page = async () => {
     getZonesAction(),
     getCurrentUser()
   ])
+  if (userResult.data?.role === 'INSTRUCTOR'
+    && !userResult.data?.permissions?.includes('zone.detail.read')) {
+    forbidden()
+  }
+
   const zones = result.data || []
   const isGlobalAdmin = userResult?.data?.role === 'ADMIN'
   const pageLabel = isGlobalAdmin ? 'Zones' : 'Mes zones'

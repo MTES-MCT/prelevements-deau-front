@@ -7,14 +7,7 @@ import ZoneHeader from '@/components/zones/zone-header.js'
 import ZoneOverviewCards from '@/components/zones/zone-overview-cards.js'
 import ZoneSubNavigation from '@/components/zones/zone-sub-navigation.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {unwrapPaginatedData} from '@/lib/zone-pagination.js'
-import {
-  getZoneAction,
-  getZoneCollecteursAction,
-  getZoneDeclarantsAction,
-  getZoneExploitationsAction,
-  getZonePointsPrelevementAction
-} from '@/server/actions/zones.js'
+import {getZoneAction} from '@/server/actions/zones.js'
 
 export async function generateMetadata({params}) {
   const {zoneId} = await params
@@ -28,31 +21,13 @@ export const dynamic = 'force-dynamic'
 const Page = async ({params}) => {
   const {zoneId} = await params
 
-  const [zoneResult, pointsResult, declarantsResult, collecteursResult, exploitationsResult] = await Promise.all([
-    getZoneAction(zoneId),
-    getZonePointsPrelevementAction(zoneId, {perPage: 1}),
-    getZoneDeclarantsAction(zoneId, {perPage: 1, declarantRole: 'PRELEVEUR'}),
-    getZoneCollecteursAction(zoneId, {perPage: 1}),
-    getZoneExploitationsAction(zoneId, {perPage: 1})
-  ])
+  const zoneResult = await getZoneAction(zoneId)
 
   if (!zoneResult.success || !zoneResult.data) {
     notFound()
   }
 
-  const pointsPayload = pointsResult.success ? unwrapPaginatedData(pointsResult.data) : {meta: {totalAll: 0}}
-  const declarantsPayload = declarantsResult.success ? unwrapPaginatedData(declarantsResult.data) : {meta: {totalAll: 0}}
-  const collecteursPayload = collecteursResult.success ? unwrapPaginatedData(collecteursResult.data) : {meta: {totalAll: 0}}
-  const exploitationsPayload = exploitationsResult.success ? unwrapPaginatedData(exploitationsResult.data) : {meta: {totalAll: 0}}
-
-  const zone = {
-    ...zoneResult.data,
-    pointsCount: pointsPayload.meta.totalAll,
-    preleveursCount: declarantsPayload.meta.totalAll,
-    declarantsCount: declarantsPayload.meta.totalAll,
-    collecteursCount: collecteursPayload.meta.totalAll,
-    exploitationsCount: exploitationsPayload.meta.totalAll
-  }
+  const zone = zoneResult.data
 
   return (
     <>

@@ -33,6 +33,10 @@ const Page = async ({params}) => {
   }
 
   const declarant = declarantResult.data
+  if (!declarant.right?.permissions?.includes('declarant.rule.update')) {
+    notFound()
+  }
+
   const declarantId = getDeclarantId(declarant)
 
   const regleResult = await getRegleAction(regleId)
@@ -42,8 +46,12 @@ const Page = async ({params}) => {
   }
 
   const [exploitationsResult, documentsResult] = await Promise.all([
-    getExploitationFromPreleveurAction(declarantId),
-    getDocumentsFromPreleveurAction(declarantId)
+    declarant.right.permissions.includes('exploitation.list')
+      ? getExploitationFromPreleveurAction(declarantId)
+      : Promise.resolve({data: []}),
+    declarant.right.permissions.includes('declarant.document.read')
+      ? getDocumentsFromPreleveurAction(declarantId)
+      : Promise.resolve({data: []})
   ])
 
   const regle = regleResult.data
@@ -57,6 +65,7 @@ const Page = async ({params}) => {
       </Typography>
 
       <RegleEditionForm
+        canDelete={declarant.right.permissions.includes('declarant.rule.delete')}
         preleveur={declarant}
         regle={regle}
         exploitations={exploitations}

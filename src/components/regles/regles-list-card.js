@@ -1,8 +1,9 @@
 'use client'
 
-import {useMemo} from 'react'
+import {useEffect, useMemo, useState} from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Badge} from '@codegouvfr/react-dsfr/Badge'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Tooltip} from '@codegouvfr/react-dsfr/Tooltip'
@@ -12,11 +13,14 @@ import {
   Typography,
   Accordion,
   AccordionSummary,
-  AccordionDetails
+  AccordionDetails,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle
 } from '@mui/material'
 import Link from 'next/link'
 
-import {RequireEditor} from '@/components/permissions/index.js'
 import SectionCard from '@/components/ui/SectionCard/index.js'
 import {downloadCsv} from '@/lib/export-csv.js'
 import {formatDateRange, formatFullDateFr} from '@/lib/format-date.js'
@@ -26,6 +30,7 @@ import {
   getRegleStatus,
   sortReglesByStatus
 } from '@/lib/regles.js'
+import {deleteRegleAction} from '@/server/actions/index.js'
 import {formatNumber} from '@/utils/number.js'
 
 const InfoRow = ({label, value, description}) => (
@@ -138,7 +143,7 @@ const RegleHeader = ({
   )
 }
 
-const RegleItem = ({regle, preleveurId, status}) => {
+const RegleItem = ({canDelete, canUpdate, regle, preleveurId, status, onDelete}) => {
   const itemStyle = statusConfig[status]?.style || {}
 
   return (
@@ -182,9 +187,9 @@ const RegleItem = ({regle, preleveurId, status}) => {
           />
           <InfoRow label='Exploitations' value={regle.exploitations?.length || 0} />
           <InfoRow label='Commentaire' value={regle.comment} />
-          <RequireEditor>
-            <Box className='flex justify-end mt-2'>
-              <Link href={`/declarants/${preleveurId}/regles/${regle.id}`}>
+          {(canUpdate || canDelete) && (
+            <Box className='flex flex-wrap justify-end gap-2 mt-2'>
+              {canUpdate && <Link href={`/declarants/${preleveurId}/regles/${regle.id}`}>
                 <Button
                   iconId='fr-icon-edit-line'
                   priority='tertiary'
@@ -192,21 +197,65 @@ const RegleItem = ({regle, preleveurId, status}) => {
                 >
                   Modifier
                 </Button>
-              </Link>
+              </Link>}
+              {canDelete && (
+                <Button
+                  iconId='fr-icon-delete-line'
+                  priority='tertiary no outline'
+                  size='small'
+                  style={{color: fr.colors.decisions.text.active.redMarianne.default}}
+                  title='Supprimer cette règle'
+                  onClick={() => onDelete(regle)}
+                >
+                  Supprimer
+                </Button>
+              )}
             </Box>
-          </RequireEditor>
+          )}
         </Box>
       </AccordionDetails>
     </Accordion>
   )
 }
 
-const ReglesListCard = ({regles = [], preleveurId, hasExploitations}) => {
-  const sortedRegles = useMemo(() => sortReglesByStatus(regles), [regles])
+const ReglesListCard = ({canCreate = false, canDelete = false, canUpdate = false, regles = [], preleveurId, hasExploitations}) => {
+  const [visibleRegles, setVisibleRegles] = useState(regles)
+  const [regleToDelete, setRegleToDelete] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState(null)
+  const sortedRegles = useMemo(() => sortReglesByStatus(visibleRegles), [visibleRegles])
+
+  useEffect(() => {
+    setVisibleRegles(regles)
+  }, [regles])
+
+  const handleDelete = async () => {
+    if (!regleToDelete) {
+      return
+    }
+
+    setDeleting(true)
+    setError(null)
+
+    try {
+      const result = await deleteRegleAction(regleToDelete.id, preleveurId)
+      if (!result.success) {
+        setError(result.error || 'La suppression de la règle a échoué.')
+        return
+      }
+
+      setVisibleRegles(current => current.filter(regle => regle.id !== regleToDelete.id))
+      setRegleToDelete(null)
+    } catch (deleteError) {
+      setError(deleteError.message)
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   return (
     <SectionCard
-      buttonProps={hasExploitations ? {
+      buttonProps={canCreate && hasExploitations ? {
         children: 'Ajouter une règle',
         iconId: 'fr-icon-add-line',
         priority: 'secondary',
@@ -214,6 +263,7 @@ const ReglesListCard = ({regles = [], preleveurId, hasExploitations}) => {
           href: `/declarants/${preleveurId}/regles/new`
         }
       } : undefined}
+      editorOnly={false}
       icon='fr-icon-scales-3-line'
       title='Règles'
     >
@@ -233,7 +283,7 @@ const ReglesListCard = ({regles = [], preleveurId, hasExploitations}) => {
               iconId='fr-icon-download-line'
               priority='secondary'
               size='small'
-              onClick={() => downloadCsv(regles, 'regles.csv')}
+              onClick={() => downloadCsv(visibleRegles, 'regles.csv')}
             >
               Télécharger au format csv
             </Button>
@@ -243,9 +293,12 @@ const ReglesListCard = ({regles = [], preleveurId, hasExploitations}) => {
             {sortedRegles.map(regle => (
               <RegleItem
                 key={regle.id}
+                canDelete={canDelete}
+                canUpdate={canUpdate}
                 preleveurId={preleveurId}
                 regle={regle}
                 status={getRegleStatus(regle)}
+                onDelete={setRegleToDelete}
               />
             ))}
           </Box>
@@ -255,6 +308,41 @@ const ReglesListCard = ({regles = [], preleveurId, hasExploitations}) => {
           Aucune règle définie pour ce déclarant.
         </Typography>
       )}
+
+      {error && (
+        <Alert
+          closable
+          small
+          className='mt-3'
+          description={error}
+          severity='error'
+          title='Suppression impossible'
+          onClose={() => setError(null)}
+        />
+      )}
+
+      <Dialog
+        maxWidth='sm'
+        open={Boolean(regleToDelete)}
+        onClose={() => setRegleToDelete(null)}
+      >
+        <DialogTitle>Supprimer cette règle</DialogTitle>
+        <DialogContent>
+          Êtes-vous sûr de vouloir supprimer cette règle ? Cette action est irréversible.
+        </DialogContent>
+        <DialogActions className='m-3'>
+          <Button priority='secondary' onClick={() => setRegleToDelete(null)}>
+            Annuler
+          </Button>
+          <Button
+            disabled={deleting}
+            style={{backgroundColor: '#ce0500'}}
+            onClick={handleDelete}
+          >
+            {deleting ? 'Suppression…' : 'Supprimer cette règle'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </SectionCard>
   )
 }

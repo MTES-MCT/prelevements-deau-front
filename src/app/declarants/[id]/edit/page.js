@@ -1,7 +1,6 @@
 import {notFound} from 'next/navigation'
 
 import {buildPageTitle} from '@/app/metadata-utils.js'
-import PreleveurDeleteSection from '@/components/form/preleveur-delete-section.js'
 import PreleveurForm from '@/components/form/preleveur-form.js'
 import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
 import {
@@ -30,7 +29,10 @@ const Page = async ({params}) => {
     notFound()
   }
 
-  const emailAliasesResult = await listDeclarantEmailAliasesAction(id)
+  const permissions = new Set(preleveurData.right?.permissions || [])
+  const emailAliasesResult = permissions.has('declarant.email-alias.read')
+    ? await listDeclarantEmailAliasesAction(id)
+    : {success: true, data: {emailAliases: []}}
 
   const preleveur = {
     ...preleveurData,
@@ -40,14 +42,9 @@ const Page = async ({params}) => {
   }
 
   return (
-    <>
-      <PreleveurForm
-        preleveur={preleveur}
-      />
-      <PreleveurDeleteSection
-        preleveur={preleveur}
-      />
-    </>
+    <PreleveurForm
+      preleveur={preleveur}
+    />
   )
 }
 

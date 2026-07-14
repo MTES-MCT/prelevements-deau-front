@@ -21,6 +21,8 @@ export {
   createPreleveurAction,
   updatePreleveurAction,
   sendDeclarantAccountCreationNotificationAction,
+  getDeclarantZonesAction,
+  updateDeclarantZonesAction,
   deletePreleveurAction,
   getPointsFromPreleveurAction,
   getExploitationFromPreleveurAction,

@@ -13,6 +13,7 @@ import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
 import useDebouncedValue from '@/hook/use-debounced-value.js'
 import {
   formatAccessPeriod,
+  getHabilitationRoleLabel,
   getInstructorName,
   pluralize
 } from '@/lib/zone-instructors.js'
@@ -34,7 +35,7 @@ function getInstructorSearchText(instructor) {
     instructor.email,
     instructor.phoneNumber,
     instructor.jobTitle,
-    instructor.isAdmin ? 'admin administrateur' : 'consultation agent'
+    instructor.isAdmin ? 'acces complet' : `${instructor.permissions?.length || 0} droits`
   ].filter(Boolean).join(' '))
 }
 
@@ -64,7 +65,7 @@ const ZoneInstructorsList = ({zone, instructors}) => {
           Aucun agent n’est rattaché à cette zone.
         </Alert>
 
-        {zone.isAdmin && (
+        {zone.permissions?.includes('zone.agent.create') && (
           <div>
             <Button iconId={ZONE_ICONS.addUser} linkProps={{href: `/zones/${zone.id}/agents/ajouter`}}>
               Ajouter un agent
@@ -88,14 +89,16 @@ const ZoneInstructorsList = ({zone, instructors}) => {
         </div>
 
         <div className='flex flex-wrap gap-2'>
-          <ZoneExportButton
-            columns={ZONE_INSTRUCTORS_EXPORT_COLUMNS}
-            filename={`agents-zone-${zone.code || zone.id}.xlsx`}
-            rows={filteredInstructors}
-            sheetName='Agents'
-          />
+          {zone.permissions?.includes('zone.agent.export') && (
+            <ZoneExportButton
+              columns={ZONE_INSTRUCTORS_EXPORT_COLUMNS}
+              filename={`agents-zone-${zone.code || zone.id}.xlsx`}
+              rows={filteredInstructors}
+              sheetName='Agents'
+            />
+          )}
 
-          {zone.isAdmin && (
+          {zone.permissions?.includes('zone.agent.create') && (
             <Button iconId={ZONE_ICONS.addUser} linkProps={{href: `/zones/${zone.id}/agents/ajouter`}}>
               Ajouter un agent
             </Button>
@@ -144,15 +147,10 @@ const ZoneInstructorsList = ({zone, instructors}) => {
               )}
               subtitle={instructor.email}
               tags={[
-                instructor.isAdmin
-                  ? {
-                    label: 'Admin de zone',
-                    severity: 'success'
-                  }
-                  : {
-                    label: 'Consultation',
-                    severity: 'info'
-                  },
+                {
+                  label: getHabilitationRoleLabel(instructor),
+                  severity: instructor.isAdmin ? 'success' : 'info'
+                },
                 instructor.isCurrentUser && {
                   label: 'Vous',
                   severity: 'new'
@@ -175,17 +173,19 @@ const ZoneInstructorsList = ({zone, instructors}) => {
             />
           </div>
 
-          <div className='flex gap-2 md:items-center md:flex-col md:justify-center'>
-            <Button
-              priority='tertiary no outline'
-              size='small'
-              linkProps={{
-                href: `/zones/${zone.id}/agents/${instructor.id}`
-              }}
-            >
-              Voir
-            </Button>
-          </div>
+          {zone.permissions?.includes('zone.agent.detail.read') && (
+            <div className='flex gap-2 md:items-center md:flex-col md:justify-center'>
+              <Button
+                priority='tertiary no outline'
+                size='small'
+                linkProps={{
+                  href: `/zones/${zone.id}/agents/${instructor.id}`
+                }}
+              >
+                Voir
+              </Button>
+            </div>
+          )}
         </Box>
       ))}
 

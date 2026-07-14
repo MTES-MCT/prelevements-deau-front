@@ -140,10 +140,10 @@ const ZoneDeclarantsList = ({zone, declarants, meta, collecteursOnly = false}) =
     return (
       <div className='flex flex-col gap-3'>
         <Alert severity='info'>{emptyTitle}</Alert>
-        {zone.isAdmin && !collecteursOnly && (
+        {zone.permissions?.includes('declarant.create') && !collecteursOnly && (
           <div className='flex flex-col md:flex-row gap-3 md:items-center md:justify-between'>
             <p className='fr-text--sm fr-mb-0'>
-              Créer un déclarant ne le rattache pas automatiquement à la zone. Pour le rattacher, créez ensuite une exploitation sur un point de cette zone.
+              Le déclarant créé depuis cette page sera rattaché à cette zone.
             </p>
             <Button iconId={ZONE_ICONS.addUser} linkProps={{href: `/declarants/new?zoneId=${zone.id}`}}>
               Créer un déclarant
@@ -160,15 +160,17 @@ const ZoneDeclarantsList = ({zone, declarants, meta, collecteursOnly = false}) =
         action={(
           <div className='flex flex-col md:items-end gap-2'>
             <div className='flex flex-wrap gap-2 justify-end'>
-              <ZoneExportButton
-                columns={getZoneDeclarantExportColumns({collecteursOnly})}
-                filename={`${collecteursOnly ? 'collecteurs' : 'declarants'}-zone-${zone.code || zone.id}.xlsx`}
-                resolveRows={resolveExportRows}
-                rows={declarants}
-                sheetName={collecteursOnly ? 'Collecteurs' : 'Déclarants'}
-              />
+              {zone.permissions?.includes('declarant.export') && (
+                <ZoneExportButton
+                  columns={getZoneDeclarantExportColumns({collecteursOnly})}
+                  filename={`${collecteursOnly ? 'collecteurs' : 'declarants'}-zone-${zone.code || zone.id}.xlsx`}
+                  resolveRows={resolveExportRows}
+                  rows={declarants}
+                  sheetName={collecteursOnly ? 'Collecteurs' : 'Déclarants'}
+                />
+              )}
 
-              {zone.isAdmin && !collecteursOnly && (
+              {zone.permissions?.includes('declarant.create') && !collecteursOnly && (
                 <Button iconId={ZONE_ICONS.addUser} linkProps={{href: `/declarants/new?zoneId=${zone.id}`}}>
                   Créer un déclarant
                 </Button>
@@ -193,43 +195,47 @@ const ZoneDeclarantsList = ({zone, declarants, meta, collecteursOnly = false}) =
       {declarants.map((declarant, index) => {
         const declarantId = getDeclarantId(declarant)
         const role = getDeclarantRole(declarant)
+        const canOpen = zone.permissions?.includes('declarant.detail.read')
+        const declarantItem = (
+          <ListItem
+            border
+            background={index % 2 === 0 ? 'primary' : 'secondary'}
+            title={(
+              <>
+                <span className={`${getDeclarantIcon(declarant)} mr-2`} />
+                {getDeclarantTitleFromUser(declarant)}
+              </>
+            )}
+            subtitle={getDeclarantSubtitle(declarant)}
+            tags={[
+              {
+                label: getDeclarantRoleLabel(role),
+                severity: role === 'COLLECTEUR' ? 'info' : 'success'
+              },
+              role === 'PRELEVEUR' && {
+                label: isDeclarantPhysique(declarant) ? 'Personne physique' : 'Personne morale',
+                severity: 'info'
+              },
+              !declarant.email && {
+                label: 'Sans email',
+                severity: 'warning'
+              }
+            ].filter(Boolean)}
+            metas={getDeclarantMetas(declarant)}
+          />
+        )
 
         return (
           <Box key={declarantId} className='flex flex-col md:flex-row gap-2 md:items-stretch'>
-            <Link className='flex-1' href={`/declarants/${declarantId}`}>
-              <ListItem
-                border
-                background={index % 2 === 0 ? 'primary' : 'secondary'}
-                title={(
-                  <>
-                    <span className={`${getDeclarantIcon(declarant)} mr-2`} />
-                    {getDeclarantTitleFromUser(declarant)}
-                  </>
-                )}
-                subtitle={getDeclarantSubtitle(declarant)}
-                tags={[
-                  {
-                    label: getDeclarantRoleLabel(role),
-                    severity: role === 'COLLECTEUR' ? 'info' : 'success'
-                  },
-                  role === 'PRELEVEUR' && {
-                    label: isDeclarantPhysique(declarant) ? 'Personne physique' : 'Personne morale',
-                    severity: 'info'
-                  },
-                  !declarant.email && {
-                    label: 'Sans email',
-                    severity: 'warning'
-                  }
-                ].filter(Boolean)}
-                metas={getDeclarantMetas(declarant)}
-              />
-            </Link>
+            {canOpen
+              ? <Link className='flex-1' href={`/declarants/${declarantId}`}>{declarantItem}</Link>
+              : <div className='flex-1'>{declarantItem}</div>}
 
             <div className='flex gap-2 md:items-center md:flex-col md:justify-center'>
-              <Button priority='tertiary no outline' size='small' linkProps={{href: `/declarants/${declarantId}`}}>
+              {canOpen && <Button priority='tertiary no outline' size='small' linkProps={{href: `/declarants/${declarantId}`}}>
                 Ouvrir
-              </Button>
-              {zone.isAdmin && role === 'PRELEVEUR' && (
+              </Button>}
+              {zone.permissions?.includes('exploitation.create') && role === 'PRELEVEUR' && (
                 <Button
                   priority='tertiary no outline'
                   size='small'

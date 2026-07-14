@@ -7,46 +7,55 @@ const ITEMS = [
   {
     key: 'overview',
     label: 'Vue d’ensemble',
+    permission: 'zone.detail.read',
     href: zone => `/zones/${zone.id}`
   },
   {
     key: 'points',
     label: 'Points de prélèvement',
+    permission: 'pp.list',
     href: zone => `/zones/${zone.id}/points-prelevement`
   },
   {
     key: 'monitoring-stations',
     label: 'Paramétrage des ressources',
+    permission: 'zone.resource.list',
     href: zone => `/zones/${zone.id}/parametres-ressources`
   },
   {
     key: 'declarants',
     label: 'Déclarants',
+    permission: 'declarant.list',
     href: zone => `/zones/${zone.id}/declarants`
   },
   {
     key: 'collecteurs',
     label: 'Collecteurs',
+    permission: 'declarant.list',
     href: zone => `/zones/${zone.id}/collecteurs`
   },
   {
     key: 'exploitations',
     label: 'Exploitations',
+    permission: 'exploitation.list',
     href: zone => `/zones/${zone.id}/exploitations`
   },
   {
     key: 'suivi-declarations',
     label: 'Suivi déclarations',
+    permission: 'declaration.followup.read',
     href: zone => `/zones/${zone.id}/suivi-declarations`
   },
   {
     key: 'declaration-settings',
     label: 'Paramètres déclaration',
+    permission: 'zone.declaration.settings.read',
     href: zone => `/zones/${zone.id}/parametres-declaration`
   },
   {
     key: 'agents',
     label: 'Agents',
+    permission: 'zone.agent.list',
     href: zone => `/zones/${zone.id}/agents`
   }
 ]
@@ -60,7 +69,7 @@ const ZoneSubNavigation = ({zone, current}) => (
   >
     <nav aria-label='Navigation de la zone'>
       <ul className='flex gap-1 flex-wrap fr-mb-0 p-0 list-none'>
-        {ITEMS.map(item => {
+        {ITEMS.filter(item => zone.permissions?.includes(item.permission)).map(item => {
           const isActive = item.key === current
 
           return (

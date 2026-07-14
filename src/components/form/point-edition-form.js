@@ -18,7 +18,7 @@ import {getPointFlowChangeDetails} from '@/lib/point-flow-types.js'
 import {editPointPrelevementAction, deletePointPrelevementAction} from '@/server/actions/index.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
-const PointEditionForm = ({pointPrelevement}) => {
+const PointEditionForm = ({canDelete = false, pointPrelevement}) => {
   const router = useRouter()
   const [payload, setPayload] = useState({})
   const point = {...pointPrelevement}
@@ -101,7 +101,7 @@ const PointEditionForm = ({pointPrelevement}) => {
         }}
       />
 
-      <div className='border border-red-500 rounded-sm p-5'>
+      {canDelete && <div className='border border-red-500 rounded-sm p-5'>
         <div className='text-red-500'>
           <InfoOutlined className='mr-3' />
           Action sensible : Supprimer le point de prélèvement
@@ -145,7 +145,7 @@ const PointEditionForm = ({pointPrelevement}) => {
             </Button>
           </DialogActions>
         </Dialog>
-      </div>
+      </div>}
 
       {error && (
         <div className='text-center p-5 pt-10 text-red-500'>

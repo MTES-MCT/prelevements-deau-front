@@ -1,18 +1,25 @@
 import AccountCreationNotificationCard from '@/components/accounts/account-creation-notification-card.js'
 import ImpersonateUserButton from '@/components/auth/impersonate-user-button.js'
 import DeclarantDeclarationTypesCard from '@/components/declarants/declarant-declaration-types-card.js'
+import DeclarantZonesCard from '@/components/declarants/declarant-zones-card.js'
 import DeclarationReminderCard from '@/components/declarations/declaration-reminder-card.js'
+import PreleveurDeleteSection from '@/components/form/preleveur-delete-section.js'
 import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
 
 const DeclarantManagementSection = ({
   canImpersonate,
-  canManageDeclarationTypes,
-  canManageWriteActions,
+  canDelete,
+  canInvite,
+  canManageZones,
+  canReadDeclarationTypes,
+  canSendReminder,
   declarant,
   declarantId,
-  declarationTypesPayload
+  declarationTypesPayload,
+  zoneItems,
+  zoneOptions
 }) => {
-  if (!canImpersonate && !canManageDeclarationTypes && !canManageWriteActions) {
+  if (!canImpersonate && !canDelete && !canInvite && !canReadDeclarationTypes && !canManageZones && !canSendReminder) {
     return null
   }
 
@@ -35,19 +42,26 @@ const DeclarantManagementSection = ({
         </section>
       )}
 
-      {canManageWriteActions && (
-        <>
-          <AccountCreationNotificationCard declarant={declarant} />
-          <DeclarationReminderCard declarant={declarant} />
-        </>
+      {canInvite && <AccountCreationNotificationCard declarant={declarant} />}
+
+      {canSendReminder && <DeclarationReminderCard declarant={declarant} />}
+
+      {canManageZones && (
+        <DeclarantZonesCard
+          availableZones={zoneOptions}
+          declarantId={declarantId}
+          initialItems={zoneItems}
+        />
       )}
 
-      {canManageDeclarationTypes && (
+      {canReadDeclarationTypes && (
         <DeclarantDeclarationTypesCard
           declarantId={declarantId}
           initialPayload={declarationTypesPayload}
         />
       )}
+
+      {canDelete && <PreleveurDeleteSection preleveur={declarant} />}
     </div>
   )
 }

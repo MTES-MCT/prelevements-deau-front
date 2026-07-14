@@ -34,6 +34,7 @@ import {
 } from '@/server/actions/index.js'
 import {getPointsPrelevementBatchAction} from '@/server/actions/points-prelevement.js'
 import {getAggregatedSeriesOptionsAction} from '@/server/actions/series.js'
+import {getCurrentUser} from '@/server/actions/user.js'
 
 const iconColorStyle = {color: fr.colors.decisions.text.label.blueFrance.default}
 
@@ -78,11 +79,17 @@ function getExploitationCreateHref(isCollecteur, declarantId) {
   return getNewExploitationURL({idPreleveur: declarantId})
 }
 
-function getDeclarantDataPromises({isCollecteur, declarantId, seriesScope}) {
+function getDeclarantDataPromises({
+  canReadDocuments,
+  canReadRules,
+  canReadVolumes,
+  declarantId,
+  seriesScope
+}) {
   return Promise.all([
-    isCollecteur ? Promise.resolve({data: []}) : getDocumentsFromPreleveurAction(declarantId),
-    isCollecteur ? Promise.resolve({data: []}) : getReglesFromPreleveurAction(declarantId),
-    seriesScope ? getAggregatedSeriesOptionsAction(seriesScope) : Promise.resolve({data: null})
+    canReadDocuments ? getDocumentsFromPreleveurAction(declarantId) : Promise.resolve({data: []}),
+    canReadRules ? getReglesFromPreleveurAction(declarantId) : Promise.resolve({data: []}),
+    canReadVolumes && seriesScope ? getAggregatedSeriesOptionsAction(seriesScope) : Promise.resolve({data: null})
   ])
 }
 
@@ -155,13 +162,21 @@ const InfoCard = ({declarant}) => {
 const Page = async ({params}) => {
   const {id} = await params
 
-  const declarantResult = await getDeclarantAction(id)
+  const [declarantResult, currentUserResult] = await Promise.all([
+    getDeclarantAction(id),
+    getCurrentUser()
+  ])
 
   if (!declarantResult.success || !declarantResult.data) {
     notFound()
   }
 
   const declarant = declarantResult.data
+  const currentRole = currentUserResult?.data?.role
+  const permissions = new Set(declarant.right?.permissions || [])
+  const can = permission => currentRole === 'ADMIN'
+    || (currentRole === 'INSTRUCTOR' && permissions.has(permission))
+  const isDeclarantViewer = currentRole === 'DECLARANT'
   const declarantId = getDeclarantId(declarant)
   const isCollecteur = getDeclarantRole(declarant) === 'COLLECTEUR'
   const exploitations = getDeclarantDetailExploitations(declarant)
@@ -169,7 +184,9 @@ const Page = async ({params}) => {
   const seriesScope = getDeclarantSeriesScope(declarant, declarantId, pointIds)
 
   const [documentsResult, reglesResult, seriesResult] = await getDeclarantDataPromises({
-    isCollecteur,
+    canReadDocuments: !isCollecteur && (isDeclarantViewer || can('declarant.document.read')),
+    canReadRules: !isCollecteur && (isDeclarantViewer || can('declarant.rule.read')),
+    canReadVolumes: isDeclarantViewer || can('declarant.volumes.read'),
     declarantId,
     seriesScope
   })
@@ -177,7 +194,9 @@ const Page = async ({params}) => {
   const documents = documentsResult.data || []
   const regles = reglesResult.data || []
   const seriesOptions = seriesResult.data
-  const pointsById = await getPointsById(pointIds)
+  const pointsById = isDeclarantViewer || can('pp.detail.read')
+    ? await getPointsById(pointIds)
+    : new Map()
   const exploitationsWithPoints = enrichExploitationsWithPoints(exploitations, pointsById)
   const pointsPrelevement = getPointsPrelevement(pointIds, pointsById, exploitations)
   const title = getDeclarantTitleFromDeclarant(declarant)
@@ -185,6 +204,14 @@ const Page = async ({params}) => {
   const hasMap = pointsPrelevement.length > 0
   const overviewClassName = getOverviewClassName(hasInfoCard, hasMap)
   const exploitationsLabel = getExploitationsLabel(exploitations.length, isCollecteur)
+  const canOpenManagement = [
+    'declarant.invite',
+    'declarant.delete',
+    'declarant.reminder.send',
+    'declarant.zone.update',
+    'declarant.declaration-type.read'
+  ].some(permission => can(permission))
+  const canReadExploitations = isDeclarantViewer || can('exploitation.list')
 
   return (
     <Box className='fr-container min-h-full w-full flex flex-col gap-5 mb-5'>
@@ -202,7 +229,7 @@ const Page = async ({params}) => {
             alt: '',
             priority: 'secondary',
             href: `/declarants/${declarantId}/gestion`,
-            hidden: !declarant.right?.canEdit,
+            hidden: !canOpenManagement,
             requireEditor: true
           },
           {
@@ -211,7 +238,7 @@ const Page = async ({params}) => {
             alt: '',
             priority: 'secondary',
             href: `/declarants/${declarantId}/edit`,
-            hidden: !declarant.right?.canEdit,
+            hidden: !can('declarant.update'),
             requireEditor: true
           }
         ]}
@@ -237,36 +264,46 @@ const Page = async ({params}) => {
         </div>
       )}
 
-      {seriesScope && (
+      {seriesScope && (isDeclarantViewer || can('declarant.volumes.read')) && (
         <SeriesExplorer
           {...seriesScope}
           seriesOptions={seriesOptions}
         />
       )}
 
-      {isCollecteur ? (
+      {canReadExploitations && (isCollecteur ? (
         <CollecteurExploitationsList exploitations={exploitationsWithPoints} />
       ) : (
         <ExploitationsList
           hidePreleveur
           exploitations={exploitationsWithPoints}
-          createHref={getExploitationCreateHref(isCollecteur, declarantId)}
+          createHref={can('exploitation.create') ? getExploitationCreateHref(isCollecteur, declarantId) : undefined}
         />
-      )}
+      ))}
 
-      {!isCollecteur && (
+      {!isCollecteur && (isDeclarantViewer || can('declarant.document.read') || can('declarant.rule.read')) && (
         <>
-          <DocumentsList
-            idPreleveur={declarantId}
-            documents={documents}
-            exploitations={exploitationsWithPoints}
-          />
+          {(isDeclarantViewer || can('declarant.document.read')) && (
+            <DocumentsList
+              canCreate={can('declarant.document.create')}
+              canDelete={can('declarant.document.delete')}
+              canUpdate={can('declarant.document.update')}
+              idPreleveur={declarantId}
+              documents={documents}
+              exploitations={exploitationsWithPoints}
+            />
+          )}
 
-          <ReglesListCard
-            hasExploitations={exploitations.length > 0}
-            preleveurId={declarantId}
-            regles={regles}
-          />
+          {(isDeclarantViewer || can('declarant.rule.read')) && (
+            <ReglesListCard
+              canCreate={can('declarant.rule.create')}
+              canDelete={can('declarant.rule.delete')}
+              canUpdate={can('declarant.rule.update')}
+              hasExploitations={exploitations.length > 0}
+              preleveurId={declarantId}
+              regles={regles}
+            />
+          )}
         </>
       )}
     </Box>

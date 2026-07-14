@@ -32,7 +32,8 @@ const NAV_ITEMS = [
       target: '_self'
     },
     text: 'Tableau de bord',
-    roles: ['DECLARANT', 'INSTRUCTOR', 'ADMIN']
+    roles: ['DECLARANT', 'INSTRUCTOR', 'ADMIN'],
+    permission: 'zone.dashboard.read'
   },
   {
     linkProps: {
@@ -57,7 +58,8 @@ const NAV_ITEMS = [
       target: '_self'
     },
     text: 'Déclarations',
-    roles: ['INSTRUCTOR', 'ADMIN']
+    roles: ['INSTRUCTOR', 'ADMIN'],
+    permission: 'declaration.list'
   },
   {
     linkProps: {
@@ -65,7 +67,8 @@ const NAV_ITEMS = [
       target: '_self'
     },
     text: 'Points de prélèvements',
-    roles: ['DECLARANT', 'INSTRUCTOR', 'ADMIN']
+    roles: ['DECLARANT', 'INSTRUCTOR', 'ADMIN'],
+    permission: 'pp.map.read'
   },
   {
     linkProps: {
@@ -73,7 +76,8 @@ const NAV_ITEMS = [
       target: '_self'
     },
     text: 'Déclarants',
-    roles: ['INSTRUCTOR', 'ADMIN']
+    roles: ['INSTRUCTOR', 'ADMIN'],
+    permission: 'declarant.list'
   },
   {
     linkProps: {
@@ -105,7 +109,8 @@ const NAV_ITEMS = [
       target: '_self'
     },
     text: 'Mes zones',
-    roles: ['INSTRUCTOR', 'ADMIN']
+    roles: ['INSTRUCTOR', 'ADMIN'],
+    permission: 'zone.detail.read'
   },
   {
     linkProps: {
@@ -113,7 +118,8 @@ const NAV_ITEMS = [
       target: '_self'
     },
     text: 'Exports',
-    roles: ['INSTRUCTOR', 'ADMIN']
+    roles: ['INSTRUCTOR', 'ADMIN'],
+    permission: 'export.volumes'
   }
 ]
 
@@ -156,6 +162,10 @@ const HeaderComponent = () => {
       }
 
       if (item.declarantRoles && !item.declarantRoles.includes(user?.declarantRole)) {
+        return false
+      }
+
+      if (item.permission && user?.role !== 'DECLARANT' && !user?.permissions?.includes(item.permission)) {
         return false
       }
 

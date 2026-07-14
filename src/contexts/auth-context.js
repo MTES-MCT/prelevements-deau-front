@@ -45,6 +45,8 @@ export const AuthProvider = ({children}) => {
       declarantType: session.user.declarantType || null,
       declarantRole: session.user.declarantRole || null,
       socialReason: session.user.socialReason || null,
+      permissions: session.user.permissions || [],
+      zoneAssignments: session.user.zoneAssignments || [],
       impersonation: session.user.impersonation || null
     }
   }, [session])

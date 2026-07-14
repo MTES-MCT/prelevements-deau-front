@@ -7,7 +7,10 @@ import ZoneHeader from '@/components/zones/zone-header.js'
 import ZoneInstructorForm from '@/components/zones/zone-instructor-form.js'
 import ZoneSubNavigation from '@/components/zones/zone-sub-navigation.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {getZoneAction} from '@/server/actions/zones.js'
+import {
+  getZoneAction,
+  getZoneAgentPermissionsAction
+} from '@/server/actions/zones.js'
 
 export async function generateMetadata({params}) {
   const {zoneId} = await params
@@ -21,15 +24,18 @@ export const dynamic = 'force-dynamic'
 const Page = async ({params}) => {
   const {zoneId} = await params
 
-  const zoneResult = await getZoneAction(zoneId)
+  const [zoneResult, catalogResult] = await Promise.all([
+    getZoneAction(zoneId),
+    getZoneAgentPermissionsAction()
+  ])
 
-  if (!zoneResult.success || !zoneResult.data) {
+  if (!zoneResult.success || !zoneResult.data || !catalogResult.success || !catalogResult.data) {
     notFound()
   }
 
   const zone = zoneResult.data
 
-  if (!zone.isAdmin) {
+  if (!zone.permissions?.includes('zone.agent.create')) {
     notFound()
   }
 
@@ -55,7 +61,7 @@ const Page = async ({params}) => {
 
         <ZoneSubNavigation zone={zone} current='agents' />
 
-        <ZoneInstructorForm zone={zone} />
+        <ZoneInstructorForm permissionCatalog={catalogResult.data} zone={zone} />
       </Box>
     </>
   )

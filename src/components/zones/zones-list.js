@@ -69,7 +69,7 @@ function getZoneSearchText(zone) {
     zone.code,
     zone.type,
     zoneTypePresentations[zone.type]?.label,
-    zone.isAdmin ? 'admin administrateur administration' : 'consultation'
+    zone.isAdmin ? 'acces complet' : `${zone.permissions?.length || 0} droits attribues`
   ].filter(Boolean).join(' '))
 }
 
@@ -198,7 +198,7 @@ const ZoneRow = ({zone}) => {
 
         <div className='min-w-0'>
           <span className={`inline-flex w-fit px-1.5 py-0.5 text-xs font-medium ${zone.isAdmin ? 'bg-[#e6f4ea] text-[#18753c]' : 'bg-[#eeeeff] text-[#000091]'}`}>
-            {zone.isAdmin ? 'Administration' : 'Consultation'}
+            {zone.isAdmin ? 'Accès complet' : pluralize(zone.permissions?.length || 0, 'droit', 'droits')}
           </span>
         </div>
 
@@ -279,6 +279,7 @@ const ZonesList = ({isGlobalAdmin, zones}) => {
   const currentPage = Math.min(page, totalPages)
   const firstItemIndex = (currentPage - 1) * pageSize
   const visibleZones = filteredZones.slice(firstItemIndex, firstItemIndex + pageSize)
+  const exportableZones = filteredZones.filter(zone => zone.permissions?.includes('zone.export'))
   const hasActiveFilters = Boolean(
     query.trim()
     || activityFilter !== defaultActivityFilter
@@ -427,14 +428,16 @@ const ZonesList = ({isGlobalAdmin, zones}) => {
 
         <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between lg:justify-end'>
           <ZonesPagination page={currentPage} setPage={setPage} totalPages={totalPages} />
-          <ZoneExportButton
-            columns={ZONES_EXPORT_COLUMNS}
-            filename='zones.xlsx'
-            label='Exporter la liste'
-            rows={filteredZones}
-            sheetName='Zones'
-            size='small'
-          />
+          {exportableZones.length > 0 && (
+            <ZoneExportButton
+              columns={ZONES_EXPORT_COLUMNS}
+              filename='zones.xlsx'
+              label='Exporter la liste'
+              rows={exportableZones}
+              sheetName='Zones'
+              size='small'
+            />
+          )}
         </div>
       </div>
 

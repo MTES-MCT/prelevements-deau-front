@@ -31,11 +31,11 @@ const ZoneHeader = ({zone, currentSection = 'overview'}) => (
     rightBadges={[
       zone.isAdmin
         ? {
-          label: 'Administration complète',
+          label: 'Accès complet',
           iconId: ZONE_ICONS.shieldCheck
         }
         : {
-          label: 'Consultation',
+          label: pluralize(zone.permissions?.length || 0, 'droit attribué', 'droits attribués'),
           iconId: ZONE_ICONS.eye
         }
     ]}
@@ -72,7 +72,7 @@ const ZoneHeader = ({zone, currentSection = 'overview'}) => (
         alt: '',
         priority: 'primary',
         href: `/zones/${zone.id}/points-prelevement/nouveau`,
-        hidden: !zone.isAdmin || currentSection === 'add-point'
+        hidden: !zone.permissions?.includes('pp.create') || currentSection === 'add-point'
       },
       {
         label: 'Créer une exploitation',
@@ -80,7 +80,7 @@ const ZoneHeader = ({zone, currentSection = 'overview'}) => (
         alt: '',
         priority: 'secondary',
         href: `/zones/${zone.id}/exploitations/nouvelle`,
-        hidden: !zone.isAdmin || currentSection === 'exploitations'
+        hidden: !zone.permissions?.includes('exploitation.create') || currentSection === 'exploitations'
       },
       {
         label: 'Ajouter un agent',
@@ -88,7 +88,7 @@ const ZoneHeader = ({zone, currentSection = 'overview'}) => (
         alt: '',
         priority: 'secondary',
         href: `/zones/${zone.id}/agents/ajouter`,
-        hidden: !zone.isAdmin || currentSection === 'add-agent'
+        hidden: !zone.permissions?.includes('zone.agent.create') || currentSection === 'add-agent'
       }
     ]}
   />

@@ -10,6 +10,7 @@ import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getInstructorName} from '@/lib/zone-instructors.js'
 import {
   getZoneAction,
+  getZoneAgentPermissionsAction,
   getZoneInstructorAction
 } from '@/server/actions/zones.js'
 
@@ -31,16 +32,17 @@ export const dynamic = 'force-dynamic'
 const Page = async ({params}) => {
   const {zoneId, instructorId} = await params
 
-  const [zoneResult, instructorResult] = await Promise.all([
+  const [zoneResult, instructorResult, catalogResult] = await Promise.all([
     getZoneAction(zoneId),
-    getZoneInstructorAction(zoneId, instructorId)
+    getZoneInstructorAction(zoneId, instructorId),
+    getZoneAgentPermissionsAction()
   ])
 
   if (!zoneResult.success || !zoneResult.data) {
     notFound()
   }
 
-  if (!instructorResult.success || !instructorResult.data) {
+  if (!instructorResult.success || !instructorResult.data || !catalogResult.success || !catalogResult.data) {
     notFound()
   }
 
@@ -70,7 +72,11 @@ const Page = async ({params}) => {
 
         <ZoneSubNavigation zone={zone} current='agents' />
 
-        <ZoneInstructorDetail zone={zone} instructor={instructor} />
+        <ZoneInstructorDetail
+          instructor={instructor}
+          permissionCatalog={catalogResult.data}
+          zone={zone}
+        />
       </Box>
     </>
   )

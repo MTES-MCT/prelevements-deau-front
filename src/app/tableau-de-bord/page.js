@@ -1,3 +1,5 @@
+import {forbidden} from 'next/navigation'
+
 import DashboardPage from '@/components/dashboard/dashboard-page.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {
@@ -42,6 +44,10 @@ const Page = async ({searchParams}) => {
   const requestedWaterBodyType = getSearchParamValue(resolvedSearchParams?.waterBodyType)
   const userResult = await getCurrentUser()
   const role = userResult.success ? userResult.data?.role : null
+  if (role === 'INSTRUCTOR' && !userResult.data?.permissions?.includes('zone.dashboard.read')) {
+    forbidden()
+  }
+
   const user = userResult.success && userResult.data?.user
     ? {
       ...userResult.data.user,

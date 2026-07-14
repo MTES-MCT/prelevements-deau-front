@@ -46,7 +46,7 @@ const transformRegleForForm = regle => ({
   comment: regle.comment || ''
 })
 
-const RegleEditionForm = ({preleveur, regle, exploitations, documents}) => {
+const RegleEditionForm = ({canDelete = false, preleveur, regle, exploitations, documents}) => {
   const router = useRouter()
   const {isSubmitting, error, validationErrors, resetErrors, withSubmit, setError} = useFormSubmit()
 
@@ -115,7 +115,7 @@ const RegleEditionForm = ({preleveur, regle, exploitations, documents}) => {
         validationErrors={validationErrors}
       />
 
-      <div className='border border-red-500 rounded-sm p-5 mt-6'>
+      {canDelete && <div className='border border-red-500 rounded-sm p-5 mt-6'>
         <div className='text-red-500'>
           <InfoOutlined className='mr-3' />
           Action sensible : Supprimer la règle
@@ -164,7 +164,7 @@ const RegleEditionForm = ({preleveur, regle, exploitations, documents}) => {
             </Button>
           </DialogActions>
         </Dialog>
-      </div>
+      </div>}
 
       <FormErrors
         error={error}

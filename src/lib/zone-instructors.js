@@ -66,5 +66,12 @@ export function getHabilitationStatusSeverity(status) {
 }
 
 export function getHabilitationRoleLabel(habilitation) {
-  return habilitation?.isAdmin ? 'Admin de zone' : 'Consultation'
+  if (habilitation?.isAdmin) {
+    return 'Accès complet'
+  }
+
+  const count = habilitation?.permissions?.length || 0
+  return count === 0
+    ? 'Aucun droit attribué'
+    : pluralize(count, 'droit attribué', 'droits attribués')
 }

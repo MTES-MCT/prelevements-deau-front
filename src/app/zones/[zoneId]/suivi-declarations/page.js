@@ -7,14 +7,9 @@ import ZoneDeclarationMonthlyMatrix from '@/components/zones/zone-declaration-mo
 import ZoneHeader from '@/components/zones/zone-header.js'
 import ZoneSubNavigation from '@/components/zones/zone-sub-navigation.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {unwrapPaginatedData} from '@/lib/zone-pagination.js'
 import {
   getZoneAction,
-  getZoneCollecteursAction,
-  getZoneDeclarationMonthlyStatusAction,
-  getZoneDeclarantsAction,
-  getZoneExploitationsAction,
-  getZonePointsPrelevementAction
+  getZoneDeclarationMonthlyStatusAction
 } from '@/server/actions/zones.js'
 
 export async function generateMetadata({params}) {
@@ -43,38 +38,16 @@ const Page = async ({params, searchParams}) => {
   const resolvedSearchParams = await searchParams
   const matrixOptions = readMatrixOptions(resolvedSearchParams)
 
-  const [
-    zoneResult,
-    matrixResult,
-    preleveursResult,
-    collecteursResult,
-    pointsResult,
-    exploitationsResult
-  ] = await Promise.all([
+  const [zoneResult, matrixResult] = await Promise.all([
     getZoneAction(zoneId),
-    getZoneDeclarationMonthlyStatusAction(zoneId, matrixOptions),
-    getZoneDeclarantsAction(zoneId, {perPage: 1, declarantRole: 'PRELEVEUR'}),
-    getZoneCollecteursAction(zoneId, {perPage: 1}),
-    getZonePointsPrelevementAction(zoneId, {perPage: 1}),
-    getZoneExploitationsAction(zoneId, {perPage: 1})
+    getZoneDeclarationMonthlyStatusAction(zoneId, matrixOptions)
   ])
 
   if (!zoneResult.success || !zoneResult.data || !matrixResult.success || !matrixResult.data) {
     notFound()
   }
 
-  const preleveursPayload = preleveursResult.success ? unwrapPaginatedData(preleveursResult.data) : {meta: {totalAll: 0}}
-  const collecteursPayload = collecteursResult.success ? unwrapPaginatedData(collecteursResult.data) : {meta: {totalAll: 0}}
-  const pointsPayload = pointsResult.success ? unwrapPaginatedData(pointsResult.data) : {meta: {totalAll: 0}}
-  const exploitationsPayload = exploitationsResult.success ? unwrapPaginatedData(exploitationsResult.data) : {meta: {totalAll: 0}}
-  const zone = {
-    ...zoneResult.data,
-    pointsCount: pointsPayload.meta.totalAll,
-    declarantsCount: preleveursPayload.meta.totalAll,
-    preleveursCount: preleveursPayload.meta.totalAll,
-    collecteursCount: collecteursPayload.meta.totalAll,
-    exploitationsCount: exploitationsPayload.meta.totalAll
-  }
+  const zone = zoneResult.data
 
   return (
     <>
@@ -84,7 +57,10 @@ const Page = async ({params, searchParams}) => {
         <ZoneBreadcrumb zone={zone} currentPageLabel='Suivi déclarations' />
         <ZoneHeader zone={zone} currentSection='suivi-declarations' />
         <ZoneSubNavigation zone={zone} current='suivi-declarations' />
-        <ZoneDeclarationMonthlyMatrix payload={matrixResult.data} />
+        <ZoneDeclarationMonthlyMatrix
+          canExport={zone.permissions?.includes('declaration.followup.export')}
+          payload={matrixResult.data}
+        />
       </Box>
     </>
   )

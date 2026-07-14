@@ -24,7 +24,7 @@ const PreleveurDeleteSection = ({preleveur}) => {
     setError(null)
 
     try {
-      const response = await deletePreleveurAction(preleveur._id)
+      const response = await deletePreleveurAction(preleveur.userId || preleveur.id || preleveur._id)
 
       if (!response.success) {
         setIsDialogOpen(false)
@@ -32,18 +32,18 @@ const PreleveurDeleteSection = ({preleveur}) => {
         return
       }
 
-      router.push('/preleveurs')
+      router.push('/declarants')
     } catch (error) {
       setError(error.message)
     }
   }
 
   return (
-    <div className='fr-container mb-8'>
+    <div>
       <div className='border border-red-500 rounded-sm p-5'>
         <div className='text-red-500'>
           <InfoOutlined className='mr-3' />
-          Action sensible : Supprimer le préleveur
+          Action sensible : supprimer le déclarant
         </div>
         <div className='ml-8'>
           Cette action est irréversible et peut avoir des conséquences importantes
@@ -65,9 +65,9 @@ const PreleveurDeleteSection = ({preleveur}) => {
           maxWidth='md'
           onClose={() => setIsDialogOpen(false)}
         >
-          <DialogTitle><InfoOutlined className='mr-3' />Confirmer la suppression de ce préleveur</DialogTitle>
+          <DialogTitle><InfoOutlined className='mr-3' />Confirmer la suppression de ce déclarant</DialogTitle>
           <DialogContent>
-            Êtes-vous sûr de vouloir supprimer ce préleveur ? Cette action est irréversible.
+            Êtes-vous sûr de vouloir supprimer ce déclarant ? Cette action est irréversible.
             <p>
               <small>Vous ne pourrez pas le supprimer s&apos;il dispose d&apos;exploitations en activité.</small>
             </p>
@@ -83,7 +83,7 @@ const PreleveurDeleteSection = ({preleveur}) => {
               style={{backgroundColor: 'red'}}
               onClick={handleDeletePreleveur}
             >
-              Supprimer ce préleveur
+              Supprimer ce déclarant
             </Button>
           </DialogActions>
         </Dialog>

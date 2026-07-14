@@ -15,7 +15,17 @@ const Home = async () => {
   }
 
   if (role === 'INSTRUCTOR') {
-    redirect('/tableau-de-bord')
+    const permissions = new Set(userResult.data?.permissions || [])
+    const firstAccessibleRoute = [
+      ['zone.dashboard.read', '/tableau-de-bord'],
+      ['declaration.list', '/declarations'],
+      ['pp.map.read', '/points-prelevement'],
+      ['declarant.list', '/declarants'],
+      ['zone.detail.read', '/zones'],
+      ['export.volumes', '/exports']
+    ].find(([permission]) => permissions.has(permission))?.[1]
+
+    redirect(firstAccessibleRoute || '/mon-compte')
   }
 
   if (role === 'DECLARANT') {

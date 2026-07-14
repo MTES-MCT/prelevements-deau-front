@@ -186,7 +186,7 @@ const MonComptePage = async () => {
                           <TableCell>Type</TableCell>
                           <TableCell>Zone</TableCell>
                           <TableCell>Période</TableCell>
-                          <TableCell>Rôles</TableCell>
+                          <TableCell>Droits</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -202,12 +202,10 @@ const MonComptePage = async () => {
                               { formatZonePeriod(z.startDate, z.endDate) }
                             </TableCell>
                             <TableCell>
-                              { z.isAdmin && (
-                                <Chip
-                                  label='Admin'
-                                  size='small'
-                                />
-                              ) }
+                              <Chip
+                                label={z.isAdmin ? 'Accès complet' : `${z.permissions?.length || 0} droits`}
+                                size='small'
+                              />
                             </TableCell>
                           </TableRow>
                         ))}

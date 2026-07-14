@@ -10,8 +10,6 @@ import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {readListOptions, unwrapPaginatedData} from '@/lib/zone-pagination.js'
 import {
   getZoneAction,
-  getZoneDeclarantsAction,
-  getZoneExploitationsAction,
   getZonePointsPrelevementAction
 } from '@/server/actions/zones.js'
 
@@ -28,11 +26,9 @@ const Page = async ({params, searchParams}) => {
   const {zoneId} = await params
   const listOptions = readListOptions(await searchParams)
 
-  const [zoneResult, pointsResult, declarantsResult, exploitationsResult] = await Promise.all([
+  const [zoneResult, pointsResult] = await Promise.all([
     getZoneAction(zoneId),
-    getZonePointsPrelevementAction(zoneId, listOptions),
-    getZoneDeclarantsAction(zoneId, {perPage: 1}),
-    getZoneExploitationsAction(zoneId, {perPage: 1})
+    getZonePointsPrelevementAction(zoneId, listOptions)
   ])
 
   if (!zoneResult.success || !zoneResult.data || !pointsResult.success) {
@@ -40,13 +36,9 @@ const Page = async ({params, searchParams}) => {
   }
 
   const pointsPayload = unwrapPaginatedData(pointsResult.data)
-  const declarantsPayload = declarantsResult.success ? unwrapPaginatedData(declarantsResult.data) : {meta: {totalAll: 0}}
-  const exploitationsPayload = exploitationsResult.success ? unwrapPaginatedData(exploitationsResult.data) : {meta: {totalAll: 0}}
   const zone = {
     ...zoneResult.data,
-    pointsCount: pointsPayload.meta.totalAll,
-    declarantsCount: declarantsPayload.meta.totalAll,
-    exploitationsCount: exploitationsPayload.meta.totalAll
+    pointsCount: pointsPayload.meta.totalAll
   }
 
   return (

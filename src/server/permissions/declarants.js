@@ -1,5 +1,5 @@
 import {getCurrentUser} from '@/server/actions/user.js'
-import {getZoneAction, getZonesAction} from '@/server/actions/zones.js'
+import {getZoneAction} from '@/server/actions/zones.js'
 
 export async function canCurrentUserCreateDeclarant({zoneId = null} = {}) {
   const currentUserResult = await getCurrentUser()
@@ -15,13 +15,8 @@ export async function canCurrentUserCreateDeclarant({zoneId = null} = {}) {
 
   if (zoneId) {
     const zoneResult = await getZoneAction(zoneId)
-    return Boolean(zoneResult.success && zoneResult.data?.isAdmin)
+    return Boolean(zoneResult.success && zoneResult.data?.permissions?.includes('declarant.create'))
   }
 
-  const zonesResult = await getZonesAction()
-  const zones = zonesResult.success && Array.isArray(zonesResult.data)
-    ? zonesResult.data
-    : []
-
-  return zones.some(zone => zone.isAdmin)
+  return Boolean(currentUserResult?.data?.permissions?.includes('declarant.create'))
 }

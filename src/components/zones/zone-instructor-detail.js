@@ -71,7 +71,7 @@ const HabilitationRow = ({habilitation}) => (
 )
 
 const AgentActions = ({zone, instructor}) => {
-  if (!zone.isAdmin || instructor.isCurrentUser) {
+  if (instructor.isCurrentUser) {
     return null
   }
 
@@ -84,11 +84,13 @@ const AgentActions = ({zone, instructor}) => {
         targetUserId={instructor.id}
       />
 
-      <ZoneInstructorNotificationActions
-        instructor={instructor}
-        type='account'
-        zone={zone}
-      />
+      {zone.permissions?.includes('zone.agent.notify') && (
+        <ZoneInstructorNotificationActions
+          instructor={instructor}
+          type='account'
+          zone={zone}
+        />
+      )}
     </Box>
   )
 }
@@ -96,32 +98,67 @@ const AgentActions = ({zone, instructor}) => {
 const ZoneAccessActions = ({zone, instructor}) => (
   <Box className='flex flex-col gap-2'>
     <Box className='flex flex-wrap gap-2'>
-      <Button
-        priority='secondary'
-        size='small'
-        linkProps={{
-          href: `/zones/${zone.id}/agents/${instructor.id}/modifier`
-        }}
-      >
-        Changer les droits ou la période
-      </Button>
+      {zone.permissions?.includes('zone.agent.update') && !instructor.isCurrentUser && (
+        <Button
+          priority='secondary'
+          size='small'
+          linkProps={{
+            href: `/zones/${zone.id}/agents/${instructor.id}/modifier`
+          }}
+        >
+          Changer les droits ou la période
+        </Button>
+      )}
 
-      {!instructor.isCurrentUser && (
+      {zone.permissions?.includes('zone.agent.remove') && !instructor.isCurrentUser && (
         <ZoneInstructorRemoveAction zone={zone} instructor={instructor} />
       )}
     </Box>
 
-    <ZoneInstructorNotificationActions
-      instructor={instructor}
-      type='attachment'
-      zone={zone}
-    />
+    {zone.permissions?.includes('zone.agent.notify') && (
+      <ZoneInstructorNotificationActions
+        instructor={instructor}
+        type='attachment'
+        zone={zone}
+      />
+    )}
   </Box>
 )
 
-const ZoneInstructorDetail = ({zone, instructor}) => {
+const PermissionDetails = ({catalog, permissions = []}) => {
+  const selected = new Set(permissions)
+  const groups = catalog.groups
+    .map(group => ({
+      ...group,
+      permissions: group.permissions.filter(permission => selected.has(permission.code))
+    }))
+    .filter(group => group.permissions.length > 0)
+
+  return (
+    <details className='border-t border-gray-200 pt-3'>
+      <summary className='cursor-pointer fr-text--sm fr-text--bold'>
+        {permissions.length === 1 ? '1 droit attribué' : `${permissions.length} droits attribués`}
+      </summary>
+      <div className='mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2'>
+        {groups.map(group => (
+          <div key={group.code}>
+            <p className='fr-text--xs fr-text--bold fr-mb-1v'>{group.label}</p>
+            <ul className='fr-text--xs fr-mb-0 pl-4'>
+              {group.permissions.map(permission => (
+                <li key={permission.code}>{permission.label}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </details>
+  )
+}
+
+const ZoneInstructorDetail = ({zone, instructor, permissionCatalog}) => {
   const currentHabilitation = instructor.habilitations?.find(habilitation => habilitation.isCurrentZone) || {
     isAdmin: instructor.isAdmin,
+    permissions: instructor.permissions,
     startDate: instructor.startDate,
     endDate: instructor.endDate,
     status: instructor.status,
@@ -153,7 +190,12 @@ const ZoneInstructorDetail = ({zone, instructor}) => {
 
           <HabilitationStatusChip habilitation={currentHabilitation} />
 
-          {zone.isAdmin && (
+          <PermissionDetails
+            catalog={permissionCatalog}
+            permissions={currentHabilitation.permissions || []}
+          />
+
+          {['zone.agent.update', 'zone.agent.remove', 'zone.agent.notify'].some(permission => zone.permissions?.includes(permission)) && (
             <ZoneAccessActions zone={zone} instructor={instructor} />
           )}
         </Box>

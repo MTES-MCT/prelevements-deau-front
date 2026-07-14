@@ -71,9 +71,9 @@ const ZoneInstructorRemoveAction = ({zone, instructor}) => {
               Son compte utilisateur sera conservé.
             </p>
 
-            {instructor.isAdmin && (
+            {['zone.agent.create', 'zone.agent.update', 'zone.agent.remove'].every(permission => instructor.permissions?.includes(permission)) && (
               <p className='fr-text--sm'>
-                Si cet agent est le dernier administrateur actif de la zone, le retrait sera refusé.
+                Si cet agent est le dernier gestionnaire actif des agents de la zone, le retrait sera refusé.
               </p>
             )}
 

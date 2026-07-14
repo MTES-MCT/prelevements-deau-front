@@ -55,6 +55,7 @@ const Page = async ({params}) => {
       </div>
 
       <PointEditionForm
+        canDelete={pointPrelevement.right.permissions?.includes('pp.delete')}
         pointPrelevement={pointPrelevement}
       />
     </>

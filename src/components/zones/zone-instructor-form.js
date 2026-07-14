@@ -12,6 +12,7 @@ import {
   Chip,
   CircularProgress,
   FormControlLabel,
+  FormGroup,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
@@ -26,8 +27,13 @@ import {
   pluralize
 } from '@/lib/zone-instructors.js'
 import {
+  addPermissionWithDependencies,
+  removePermissionWithDependents
+} from '@/lib/zone-permissions.js'
+import {
   addZoneInstructorAction,
-  getZoneInstructorOptionsAction
+  getZoneInstructorOptionsAction,
+  updateZoneInstructorAction
 } from '@/server/actions/zones.js'
 
 function todayAsInputValue() {
@@ -45,14 +51,14 @@ function dateToInputValue(value) {
   return String(value).slice(0, 10)
 }
 
-function getInitialForm(instructor) {
+function getInitialForm(instructor, defaultPermissions) {
   return {
     email: instructor?.email || '',
     firstName: instructor?.firstName || '',
     lastName: instructor?.lastName || '',
     phoneNumber: instructor?.phoneNumber || '',
     jobTitle: instructor?.jobTitle || '',
-    isAdmin: Boolean(instructor?.isAdmin),
+    permissions: instructor ? (instructor.permissions || []) : defaultPermissions,
     startDate: dateToInputValue(instructor?.startDate) || todayAsInputValue(),
     endDate: dateToInputValue(instructor?.endDate),
     notifyAccountCreation: false,
@@ -240,20 +246,121 @@ const ZoneAccessFields = ({form, updateField}) => (
       />
     </div>
 
-    <Box>
-      <FormControlLabel
-        sx={{margin: 0}}
-        control={(
-          <Checkbox
-            checked={form.isAdmin}
-            onChange={event => updateField('isAdmin', event.target.checked)}
-          />
-        )}
-        label='Donner les droits d’administration sur cette zone'
-      />
-    </Box>
   </FormSection>
 )
+
+const PermissionFields = ({
+  catalog,
+  grantablePermissions,
+  permissions,
+  setPermissions
+}) => {
+  const catalogByCode = useMemo(() => new Map(
+    catalog.groups.flatMap(group => group.permissions).map(item => [item.code, item])
+  ), [catalog.groups])
+  const grantable = useMemo(() => new Set(grantablePermissions), [grantablePermissions])
+  const selected = useMemo(() => new Set(permissions), [permissions])
+
+  const togglePermission = (code, checked) => {
+    const next = checked
+      ? addPermissionWithDependencies(permissions, code, catalogByCode)
+      : removePermissionWithDependents(permissions, code, catalogByCode)
+
+    setPermissions(next)
+  }
+
+  const toggleGroup = (group, checked) => {
+    let next = permissions
+    const groupCodes = group.permissions
+      .map(item => item.code)
+      .filter(code => grantable.has(code))
+
+    if (checked) {
+      for (const code of groupCodes) {
+        next = addPermissionWithDependencies(next, code, catalogByCode)
+      }
+    } else {
+      for (const code of groupCodes) {
+        next = removePermissionWithDependents(next, code, catalogByCode)
+      }
+    }
+
+    setPermissions(next)
+  }
+
+  return (
+    <FormSection title='Droits sur cette zone'>
+      <p className='fr-text--sm fr-mb-0' style={{color: 'var(--text-mention-grey)'}}>
+        Cochez précisément les actions autorisées. Les droits nécessaires à une action sont sélectionnés automatiquement.
+      </p>
+
+      <Box className='flex flex-col' sx={{borderTop: '1px solid var(--border-default-grey)'}}>
+        {catalog.groups.map(group => {
+          const grantableCodes = group.permissions
+            .map(item => item.code)
+            .filter(code => grantable.has(code))
+          const selectedCount = grantableCodes.filter(code => selected.has(code)).length
+          const isGroupChecked = grantableCodes.length > 0 && selectedCount === grantableCodes.length
+
+          return (
+            <fieldset
+              key={group.code}
+              className='border-0 py-4 m-0 min-w-0'
+              style={{borderBottom: '1px solid var(--border-default-grey)'}}
+            >
+              <legend className='sr-only'>{group.label}</legend>
+              <FormControlLabel
+                className='mb-2'
+                sx={{marginLeft: 0}}
+                control={(
+                  <Checkbox
+                    checked={isGroupChecked}
+                    disabled={grantableCodes.length === 0}
+                    indeterminate={selectedCount > 0 && !isGroupChecked}
+                    onChange={event => toggleGroup(group, event.target.checked)}
+                  />
+                )}
+                label={<span className='fr-text--sm fr-text--bold'>{group.label}</span>}
+              />
+
+              <FormGroup className='grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-1 pl-2 md:pl-4'>
+                {group.permissions.map(item => {
+                  const isChecked = selected.has(item.code)
+                  const canGrant = grantable.has(item.code)
+
+                  return (
+                    <FormControlLabel
+                      key={item.code}
+                      className='items-start rounded-sm px-1 py-1'
+                      sx={{margin: 0}}
+                      control={(
+                        <Checkbox
+                          checked={isChecked}
+                          disabled={!canGrant && !isChecked}
+                          size='small'
+                          onChange={event => togglePermission(item.code, event.target.checked)}
+                        />
+                      )}
+                      label={(
+                        <span className='flex flex-col pt-1'>
+                          <span className='fr-text--sm fr-mb-0'>{item.label}</span>
+                          <span className='fr-text--xs fr-mb-0' style={{color: 'var(--text-mention-grey)'}}>{item.description}</span>
+                          {!canGrant && (
+                            <span className='fr-text--xs fr-mb-0' style={{color: 'var(--text-default-warning)'}}>Non délégable avec vos droits actuels</span>
+                          )}
+                        </span>
+                      )}
+                    />
+                  )
+                })}
+              </FormGroup>
+            </fieldset>
+          )
+        })}
+      </Box>
+    </FormSection>
+  )
+}
 
 const NewInstructorFields = ({form, updateField}) => (
   <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
@@ -324,13 +431,16 @@ const NotificationFields = ({form, updateField, showAccountCreation}) => (
   </FormSection>
 )
 
-const ZoneInstructorForm = ({zone, instructor = null}) => {
+const ZoneInstructorForm = ({zone, instructor = null, permissionCatalog}) => {
   const router = useRouter()
   const isEditing = Boolean(instructor)
 
   const [mode, setMode] = useState('existing')
   const [selectedInstructor, setSelectedInstructor] = useState(null)
-  const [form, setForm] = useState(() => getInitialForm(instructor))
+  const [form, setForm] = useState(() => getInitialForm(
+    instructor,
+    permissionCatalog.defaults.filter(permission => zone.permissions?.includes(permission))
+  ))
   const [error, setError] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -340,7 +450,7 @@ const ZoneInstructorForm = ({zone, instructor = null}) => {
   const selectedInstructorIsAlreadyAttached = Boolean(selectedInstructor?.isAttachedToCurrentZone)
 
   const isDisabled = useMemo(() => {
-    if (isSubmitting || !form.startDate) {
+    if (isSubmitting || !form.startDate || form.permissions.length === 0) {
       return true
     }
 
@@ -357,6 +467,7 @@ const ZoneInstructorForm = ({zone, instructor = null}) => {
     form.email,
     form.firstName,
     form.lastName,
+    form.permissions.length,
     form.startDate,
     isEditing,
     isExistingMode,
@@ -374,7 +485,7 @@ const ZoneInstructorForm = ({zone, instructor = null}) => {
 
   const buildPayload = () => {
     const zonePayload = {
-      isAdmin: form.isAdmin,
+      permissions: form.permissions,
       startDate: form.startDate,
       endDate: form.endDate || null,
       notifyAccountCreation: false,
@@ -422,7 +533,10 @@ const ZoneInstructorForm = ({zone, instructor = null}) => {
     setIsSubmitting(true)
 
     try {
-      const result = await addZoneInstructorAction(zone.id, buildPayload())
+      const payload = buildPayload()
+      const result = isEditing
+        ? await updateZoneInstructorAction(zone.id, instructor.id, payload)
+        : await addZoneInstructorAction(zone.id, payload)
 
       if (!result.success) {
         setError(result.error || (isEditing ? 'Impossible d’enregistrer ces changements.' : 'Impossible d’ajouter cet agent.'))
@@ -487,7 +601,14 @@ const ZoneInstructorForm = ({zone, instructor = null}) => {
 
         <ZoneAccessFields form={form} updateField={updateField} />
 
-        {!isEditing && (
+        <PermissionFields
+          catalog={permissionCatalog}
+          grantablePermissions={zone.permissions || []}
+          permissions={form.permissions}
+          setPermissions={permissions => updateField('permissions', permissions)}
+        />
+
+        {!isEditing && zone.permissions?.includes('zone.agent.notify') && (
           <NotificationFields
             form={form}
             showAccountCreation={isNewMode}

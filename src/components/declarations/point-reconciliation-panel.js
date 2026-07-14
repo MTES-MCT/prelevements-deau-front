@@ -609,7 +609,9 @@ const PointReconciliationPanel = ({
   }, [chunks, selectedChunk])
 
   const canEditAssociations = canReconcile && isAssociationMode
-  const canSubmitReconciliation = canEditAssociations && Boolean(selectedChunk)
+  const canSubmitReconciliation = canEditAssociations
+    && Boolean(selectedChunk)
+    && selectedChunk.canReconcile !== false
   const shouldShowAssociationWorkflow = isAssociationMode && remainingCount > 0
   const nextUnmatchedChunk = useMemo(
     () => getNextUnmatchedChunk(chunks, selectedChunkId),

@@ -31,8 +31,10 @@ test('les libellés d’habilitation restent explicites', t => {
   t.is(getHabilitationStatusLabel('ACTIVE'), 'Active')
   t.is(getHabilitationStatusLabel('FUTURE'), 'À venir')
   t.is(getHabilitationStatusLabel('ENDED'), 'Terminée')
-  t.is(getHabilitationRoleLabel({isAdmin: true}), 'Admin de zone')
-  t.is(getHabilitationRoleLabel({isAdmin: false}), 'Consultation')
+  t.is(getHabilitationRoleLabel({isAdmin: true}), 'Accès complet')
+  t.is(getHabilitationRoleLabel({permissions: ['zone.detail.read']}), '1 droit attribué')
+  t.is(getHabilitationRoleLabel({permissions: ['zone.detail.read', 'pp.list']}), '2 droits attribués')
+  t.is(getHabilitationRoleLabel({permissions: []}), 'Aucun droit attribué')
 })
 
 test('getZoneLabel et pluralize formatent les résumés de sélection', t => {

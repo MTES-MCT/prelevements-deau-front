@@ -5,6 +5,7 @@ import ExploitationsList from '@/components/exploitations/exploitations-list.js'
 import PointIdentification from '@/components/points-prelevement/point-identification.js'
 import PointLocalisation from '@/components/points-prelevement/point-localisation.js'
 import SeriesExplorer from '@/components/points-prelevement/series-explorer.js'
+import ResourceDeleteAction from '@/components/ui/resource-delete-action.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getNewExploitationURL} from '@/lib/urls.js'
 import {getPointPrelevementAction, getExploitationsByPointIdAction} from '@/server/actions/points-prelevement.js'
@@ -40,10 +41,18 @@ const Page = async ({params}) => {
   }
 
   const pointPrelevement = pointResult.data
+  const permissions = new Set(pointPrelevement.right?.permissions || [])
+  const can = permission => role === 'ADMIN'
+    || (role === 'INSTRUCTOR' && permissions.has(permission))
+  const isDeclarantViewer = role === 'DECLARANT'
 
-  const seriesResult = await getAggregatedSeriesOptionsAction({pointIds: [pointPrelevement.id]})
+  const seriesResult = isDeclarantViewer || can('pp.volumes.read')
+    ? await getAggregatedSeriesOptionsAction({pointIds: [pointPrelevement.id]})
+    : {data: null}
   const seriesOptions = seriesResult.data
-  const exploitationsResult = await getExploitationsByPointIdAction(id)
+  const exploitationsResult = can('exploitation.list')
+    ? await getExploitationsByPointIdAction(id)
+    : {data: []}
   const exploitations = exploitationsResult.data || []
 
   return (
@@ -58,15 +67,24 @@ const Page = async ({params}) => {
         <PointLocalisation
           pointPrelevement={pointPrelevement}
         />
-        <SeriesExplorer
-          pointIds={[pointPrelevement.id]}
-          seriesOptions={seriesOptions}
-        />
-        {(role === 'INSTRUCTOR' || role === 'ADMIN') && (
+        {(isDeclarantViewer || can('pp.volumes.read')) && (
+          <SeriesExplorer
+            pointIds={[pointPrelevement.id]}
+            seriesOptions={seriesOptions}
+          />
+        )}
+        {can('exploitation.list') && (
           <ExploitationsList
             exploitations={exploitations}
-            createHref={getNewExploitationURL({idPoint: pointPrelevement.id})}
-            canCreate={pointPrelevement.right?.canEdit}
+            createHref={can('exploitation.create') ? getNewExploitationURL({idPoint: pointPrelevement.id}) : undefined}
+            canCreate={can('exploitation.create')}
+          />
+        )}
+        {can('pp.delete') && !can('pp.update') && (
+          <ResourceDeleteAction
+            id={pointPrelevement.id}
+            redirectHref='/points-prelevement'
+            resource='point'
           />
         )}
       </div>

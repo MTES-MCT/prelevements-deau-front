@@ -6,9 +6,11 @@ import DeclarantManagementSection from '@/components/declarants/declarant-manage
 import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
 import {
   getDeclarantAction,
-  getDeclarantDeclarationTypesAction
+  getDeclarantDeclarationTypesAction,
+  getDeclarantZonesAction
 } from '@/server/actions/index.js'
 import {getCurrentUser} from '@/server/actions/user.js'
+import {getZoneOptionsForPermissionAction} from '@/server/actions/zones.js'
 
 const emptyDeclarationTypesPayload = {
   data: [],
@@ -44,20 +46,30 @@ const Page = async ({params}) => {
   const currentRole = currentUserResult?.data?.role
   const currentUser = currentUserResult?.data?.user
   const isImpersonating = currentUserResult?.data?.impersonation?.active
-  const canManageWriteActions = Boolean(declarant.right?.canEdit)
-  const canManageDeclarationTypes = canManageWriteActions
+  const permissions = new Set(declarant.right?.permissions || [])
+  const canDelete = permissions.has('declarant.delete')
+  const canInvite = permissions.has('declarant.invite')
+  const canSendReminder = permissions.has('declarant.reminder.send')
+  const canReadDeclarationTypes = permissions.has('declarant.declaration-type.read')
+  const canManageZones = permissions.has('declarant.zone.update')
   const canImpersonate = currentRole === 'ADMIN' && !isImpersonating && currentUser?.id !== declarantId
 
-  if (!canImpersonate && !canManageDeclarationTypes && !canManageWriteActions) {
+  if (!canImpersonate && !canDelete && !canInvite && !canReadDeclarationTypes && !canManageZones && !canSendReminder) {
     notFound()
   }
 
-  const declarationTypesResult = canManageDeclarationTypes
+  const declarationTypesResult = canReadDeclarationTypes
     ? await getDeclarantDeclarationTypesAction(declarantId)
     : {success: true, data: emptyDeclarationTypesPayload}
   const declarationTypesPayload = declarationTypesResult.success
     ? declarationTypesResult.data
     : emptyDeclarationTypesPayload
+  const [declarantZonesResult, zoneOptionsResult] = canManageZones
+    ? await Promise.all([
+      getDeclarantZonesAction(declarantId),
+      getZoneOptionsForPermissionAction('declarant.zone.update')
+    ])
+    : [{success: true, data: {items: []}}, {success: true, data: []}]
 
   return (
     <div className='fr-container mb-8'>
@@ -67,11 +79,16 @@ const Page = async ({params}) => {
 
       <DeclarantManagementSection
         canImpersonate={canImpersonate}
-        canManageDeclarationTypes={canManageDeclarationTypes}
-        canManageWriteActions={canManageWriteActions}
+        canDelete={canDelete}
+        canInvite={canInvite}
+        canManageZones={canManageZones}
+        canReadDeclarationTypes={canReadDeclarationTypes}
+        canSendReminder={canSendReminder}
         declarant={declarant}
         declarantId={declarantId}
         declarationTypesPayload={declarationTypesPayload}
+        zoneItems={declarantZonesResult.success ? declarantZonesResult.data?.items || [] : []}
+        zoneOptions={zoneOptionsResult.success ? zoneOptionsResult.data || [] : []}
       />
     </div>
   )

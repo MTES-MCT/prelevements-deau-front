@@ -31,12 +31,13 @@ const PreleveurEmailAliasChip = ({
     <Chip
       disabled={disabled}
       label={email}
-      onDelete={handleDelete}
+      onDelete={onDelete ? handleDelete : undefined}
     />
   )
 }
 
 const PreleveurEmailAliasesForm = ({
+  canManage = false,
   declarantId,
   primaryEmail,
   initialAliases = []
@@ -176,7 +177,7 @@ const PreleveurEmailAliasesForm = ({
               aliasId={alias.id}
               disabled={deletingAliasId === alias.id}
               email={alias.email}
-              onDelete={handleDeleteAlias}
+              onDelete={canManage ? handleDeleteAlias : undefined}
             />
           ))}
         </div>
@@ -188,7 +189,7 @@ const PreleveurEmailAliasesForm = ({
         </Typography>
       )}
 
-      <div className='flex flex-col md:flex-row md:items-end gap-3'>
+      {canManage && <div className='flex flex-col md:flex-row md:items-end gap-3'>
         <div className='flex-1'>
           <Input
             label='Nouvel alias e-mail'
@@ -208,7 +209,7 @@ const PreleveurEmailAliasesForm = ({
             Ajouter cet alias
           </Button>
         </div>
-      </div>
+      </div>}
 
       {message && (
         <Alert severity='success' onClose={() => setMessage(null)}>

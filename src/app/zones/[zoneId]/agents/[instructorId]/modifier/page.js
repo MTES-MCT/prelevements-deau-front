@@ -9,6 +9,7 @@ import ZoneSubNavigation from '@/components/zones/zone-sub-navigation.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {
   getZoneAction,
+  getZoneAgentPermissionsAction,
   getZoneInstructorAction
 } from '@/server/actions/zones.js'
 
@@ -36,23 +37,24 @@ export const dynamic = 'force-dynamic'
 const Page = async ({params}) => {
   const {zoneId, instructorId} = await params
 
-  const [zoneResult, instructorResult] = await Promise.all([
+  const [zoneResult, instructorResult, catalogResult] = await Promise.all([
     getZoneAction(zoneId),
-    getZoneInstructorAction(zoneId, instructorId)
+    getZoneInstructorAction(zoneId, instructorId),
+    getZoneAgentPermissionsAction()
   ])
 
   if (!zoneResult.success || !zoneResult.data) {
     notFound()
   }
 
-  if (!instructorResult.success || !instructorResult.data) {
+  if (!instructorResult.success || !instructorResult.data || !catalogResult.success || !catalogResult.data) {
     notFound()
   }
 
   const zone = zoneResult.data
   const instructor = instructorResult.data
 
-  if (!zone.isAdmin) {
+  if (!zone.permissions?.includes('zone.agent.update') || instructor.isCurrentUser) {
     notFound()
   }
 
@@ -84,7 +86,11 @@ const Page = async ({params}) => {
 
         <ZoneSubNavigation zone={zone} current='agents' />
 
-        <ZoneInstructorForm zone={zone} instructor={instructor} />
+        <ZoneInstructorForm
+          instructor={instructor}
+          permissionCatalog={catalogResult.data}
+          zone={zone}
+        />
       </Box>
     </>
   )

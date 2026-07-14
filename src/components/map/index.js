@@ -438,21 +438,22 @@ const MapView = ({
       const detailedPoint = cachedDetails && typeof cachedDetails.then !== 'function'
         ? cachedDetails
         : null
-      const canLoadDetails = Boolean(loadPointDetailsRef.current)
+      const canReadDetail = point.canReadDetail !== false
+      const canLoadDetails = Boolean(loadPointDetailsRef.current) && canReadDetail
       const showDeclarants = canLoadDetails
         || Object.hasOwn(point, 'preleveurs')
         || Object.hasOwn(point, 'collecteurs')
       const renderPopup = ({details = detailedPoint, detailsError = false} = {}) => {
         root.render(
           <Popup
-            actionLabel={persistent ? pointPopupActionLabelRef.current : undefined}
+            actionLabel={persistent && canReadDetail ? pointPopupActionLabelRef.current : undefined}
             declarantsError={detailsError}
             declarantsLoading={canLoadDetails && !details && !detailsError}
             dismissable={persistent}
             point={details ?? point}
             preferUsageName={preferUsageNameRef.current}
             showDeclarants={showDeclarants}
-            onAction={persistent
+            onAction={persistent && canReadDetail
               ? () => onPointPopupActionRef.current?.(details ?? point)
               : undefined}
           />

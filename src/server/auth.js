@@ -2,6 +2,7 @@ import {getServerSession} from 'next-auth'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL
 const IS_DEV = process.env.NODE_ENV === 'development'
+const INFO_REFRESH_INTERVAL_MS = 5 * 60 * 1000
 
 // Session configuration shared between async and static exports
 const SESSION_CONFIG = {
@@ -18,15 +19,28 @@ const SESSION_CALLBACKS = {
       token.token = user.token
       token.role = user.role
       token.userInfo = user.userInfo
+      token.permissions = user.permissions || []
+      token.zoneAssignments = user.zoneAssignments || []
       token.impersonation = user.impersonation || null
+      token.infoRefreshedAt = Date.now()
     }
 
-    if (trigger === 'update' && session?.token) {
-      const info = await getInfo(session.token)
-      token.token = session.token
+    const authToken = session?.token || token.token
+    const shouldRefreshInfo = !user && authToken && (
+      trigger === 'update'
+      || !token.infoRefreshedAt
+      || Date.now() - token.infoRefreshedAt >= INFO_REFRESH_INTERVAL_MS
+    )
+
+    if (shouldRefreshInfo) {
+      const info = await getInfo(authToken)
+      token.token = authToken
       token.role = info.role
       token.userInfo = info.user || null
+      token.permissions = info.permissions || []
+      token.zoneAssignments = info.zoneAssignments || []
       token.impersonation = info.impersonation || null
+      token.infoRefreshedAt = Date.now()
     }
 
     return token
@@ -34,6 +48,8 @@ const SESSION_CALLBACKS = {
   async session({session, token}) {
     session.user.token = token.token
     session.user.role = token.role
+    session.user.permissions = token.permissions || []
+    session.user.zoneAssignments = token.zoneAssignments || []
     session.user.impersonation = token.impersonation || null
     if (token.userInfo) {
       session.user.id = token.userInfo.id || token.sub || 'anonymous'
@@ -141,6 +157,8 @@ export async function getAuthOptions() {
                 token: credentials.token,
                 role: info.role,
                 userInfo: info.user || null,
+                permissions: info.permissions || [],
+                zoneAssignments: info.zoneAssignments || [],
                 impersonation: info.impersonation || null
               }
             }

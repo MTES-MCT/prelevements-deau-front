@@ -3,7 +3,7 @@ import {forbidden} from 'next/navigation'
 
 import PreleveurForm from '@/components/form/preleveur-form.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {canCurrentUserCreateDeclarant} from '@/server/permissions/declarants.js'
+import {getZoneOptionsForPermissionAction} from '@/server/actions/zones.js'
 
 const DynamicBreadcrumb = dynamic(
   () => import('@codegouvfr/react-dsfr/Breadcrumb')
@@ -15,11 +15,20 @@ export const metadata = {
 
 const Page = async ({searchParams}) => {
   const resolvedSearchParams = await searchParams
-  const canCreateDeclarant = await canCurrentUserCreateDeclarant({
-    zoneId: resolvedSearchParams?.zoneId || null
-  })
+  const requestedZoneId = typeof resolvedSearchParams?.zoneId === 'string'
+    ? resolvedSearchParams.zoneId
+    : null
+  const [zonesResult, inviteZonesResult] = await Promise.all([
+    getZoneOptionsForPermissionAction('declarant.create'),
+    getZoneOptionsForPermissionAction('declarant.invite')
+  ])
+  const zones = zonesResult.success && Array.isArray(zonesResult.data) ? zonesResult.data : []
+  const inviteZoneIds = inviteZonesResult.success && Array.isArray(inviteZonesResult.data)
+    ? inviteZonesResult.data.map(zone => zone.id)
+    : []
+  const requestedZoneIsAllowed = !requestedZoneId || zones.some(zone => zone.id === requestedZoneId)
 
-  if (!canCreateDeclarant) {
+  if (zones.length === 0 || !requestedZoneIsAllowed) {
     forbidden()
   }
 
@@ -43,7 +52,11 @@ const Page = async ({searchParams}) => {
           ]}
         />
       </div>
-      <PreleveurForm />
+      <PreleveurForm
+        initialZoneIds={requestedZoneId ? [requestedZoneId] : []}
+        inviteZoneIds={inviteZoneIds}
+        zones={zones}
+      />
     </>
   )
 }

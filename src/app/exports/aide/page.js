@@ -172,6 +172,7 @@ const Page = async () => {
 
   const role = userResult.success ? userResult.data?.role : null
   const canExport = ['ADMIN', 'INSTRUCTOR'].includes(role)
+    && userResult?.data?.permissions?.includes('export.volumes')
 
   return (
     <>

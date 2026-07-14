@@ -27,6 +27,11 @@ export async function createPreleveurAction(payload) {
     })
     revalidatePath('/declarants')
     revalidatePath('/preleveurs')
+    for (const zoneId of payload.zoneIds || []) {
+      revalidatePath(`/zones/${zoneId}/declarants`)
+      revalidatePath(`/zones/${zoneId}/collecteurs`)
+    }
+
     return result
   })
 }
@@ -49,15 +54,35 @@ export async function updatePreleveurAction(idPreleveur, payload) {
 
 export async function sendDeclarantAccountCreationNotificationAction(declarantId) {
   return withErrorHandling(async () => {
-    const result = await fetchJSON(`api/declarants/${declarantId}`, {
-      method: 'PUT',
-      body: {
-        notifyAccountCreation: true
-      }
+    const result = await fetchJSON(`api/declarants/${declarantId}/notifications/account-creation`, {
+      method: 'POST'
     })
     revalidatePath('/declarants')
     revalidatePath(`/declarants/${declarantId}`)
     revalidatePath(`/declarants/${declarantId}/gestion`)
+    return result
+  })
+}
+
+export async function getDeclarantZonesAction(declarantId) {
+  return withErrorHandling(async () => fetchJSON(`api/declarants/${declarantId}/zones`))
+}
+
+export async function updateDeclarantZonesAction(declarantId, zoneIds) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(`api/declarants/${declarantId}/zones`, {
+      method: 'PUT',
+      body: {zoneIds}
+    })
+
+    revalidatePath('/declarants')
+    revalidatePath(`/declarants/${declarantId}`)
+    revalidatePath(`/declarants/${declarantId}/gestion`)
+    for (const zoneId of zoneIds) {
+      revalidatePath(`/zones/${zoneId}/declarants`)
+      revalidatePath(`/zones/${zoneId}/collecteurs`)
+    }
+
     return result
   })
 }

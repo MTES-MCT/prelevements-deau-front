@@ -11,7 +11,9 @@ const NEXTAUTH_BASEPATH = '/auth/nextauth'
  * basePath is set to avoid conflict with backend /api/auth routes
  */
 const NextAuthSessionProvider = ({children}) => (
-  <SessionProvider basePath={NEXTAUTH_BASEPATH}>{children}</SessionProvider>
+  <SessionProvider basePath={NEXTAUTH_BASEPATH} refetchInterval={5 * 60}>
+    {children}
+  </SessionProvider>
 )
 
 export default NextAuthSessionProvider

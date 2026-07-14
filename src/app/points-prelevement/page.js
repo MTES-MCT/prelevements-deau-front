@@ -235,6 +235,10 @@ const Page = () => {
   }, [defaultFilters, filtersInitialized])
 
   const handleOpenPoint = useEvent(point => {
+    if (point.canReadDetail === false) {
+      return
+    }
+
     router.push(getPointPrelevementURL(point))
   })
 
@@ -244,7 +248,10 @@ const Page = () => {
 
   const handleListPointSelect = useEvent(point => {
     if (!hasCoordinates(point)) {
-      handleOpenPoint(point)
+      if (point.canReadDetail !== false) {
+        handleOpenPoint(point)
+      }
+
       return
     }
 

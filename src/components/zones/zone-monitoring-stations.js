@@ -130,6 +130,10 @@ const StationForm = ({editingStation, form, isPending, onCancel, onChange, onSub
 )
 
 const ZoneMonitoringStations = ({initialStations, zone}) => {
+  const canCreate = zone.permissions?.includes('zone.resource.create')
+  const canUpdate = zone.permissions?.includes('zone.resource.update')
+  const canDelete = zone.permissions?.includes('zone.resource.delete')
+  const canManage = canCreate || canUpdate || canDelete
   const [stations, setStations] = useState(() => sortStations(initialStations))
   const [editingStation, setEditingStation] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -257,7 +261,7 @@ const ZoneMonitoringStations = ({initialStations, zone}) => {
                   <th className='px-2 py-3'>Ressource</th>
                   <th className='px-2 py-3'>Code fournisseur</th>
                   <th className='px-2 py-3'>État</th>
-                  {zone.isAdmin && <th className='px-2 py-3 text-right'>Actions</th>}
+                  {canManage && <th className='px-2 py-3 text-right'>Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -290,33 +294,39 @@ const ZoneMonitoringStations = ({initialStations, zone}) => {
                         <p className='fr-text--xs fr-mb-0 mt-2 max-w-[360px] text-red-700'>{station.sync.error}</p>
                       )}
                     </td>
-                    {zone.isAdmin && (
+                    {canManage && (
                       <td className='px-2 py-3'>
                         <div className='flex justify-end gap-2'>
-                          <button
-                            className='fr-btn fr-btn--tertiary fr-btn--sm'
-                            disabled={isPending}
-                            type='button'
-                            onClick={() => toggleStation(station)}
-                          >
-                            {station.enabled ? 'Désactiver' : 'Activer'}
-                          </button>
-                          <button
-                            className='fr-btn fr-btn--secondary fr-btn--sm'
-                            disabled={isPending}
-                            type='button'
-                            onClick={() => beginEdit(station)}
-                          >
-                            Modifier
-                          </button>
-                          <button
-                            className='fr-btn fr-btn--tertiary-no-outline fr-btn--sm'
-                            disabled={isPending}
-                            type='button'
-                            onClick={() => setStationToDelete(station)}
-                          >
-                            Supprimer
-                          </button>
+                          {canUpdate && (
+                            <>
+                              <button
+                                className='fr-btn fr-btn--tertiary fr-btn--sm'
+                                disabled={isPending}
+                                type='button'
+                                onClick={() => toggleStation(station)}
+                              >
+                                {station.enabled ? 'Désactiver' : 'Activer'}
+                              </button>
+                              <button
+                                className='fr-btn fr-btn--secondary fr-btn--sm'
+                                disabled={isPending}
+                                type='button'
+                                onClick={() => beginEdit(station)}
+                              >
+                                Modifier
+                              </button>
+                            </>
+                          )}
+                          {canDelete && (
+                            <button
+                              className='fr-btn fr-btn--tertiary-no-outline fr-btn--sm'
+                              disabled={isPending}
+                              type='button'
+                              onClick={() => setStationToDelete(station)}
+                            >
+                              Supprimer
+                            </button>
+                          )}
                         </div>
                       </td>
                     )}
@@ -328,7 +338,7 @@ const ZoneMonitoringStations = ({initialStations, zone}) => {
         )}
       </section>
 
-      {zone.isAdmin && (
+      {(canCreate || (canUpdate && editingStation)) && (
         <section id='monitoring-station-form' className='border border-gray-200 bg-white p-5 md:p-6'>
           <h2 className='fr-h4'>{editingStation ? 'Modifier la ressource' : 'Ajouter une ressource'}</h2>
           <StationForm

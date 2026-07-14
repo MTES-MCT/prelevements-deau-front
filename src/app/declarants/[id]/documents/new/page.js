@@ -31,9 +31,15 @@ const Page = async ({params}) => {
   }
 
   const declarant = declarantResult.data
+  if (!declarant.right?.permissions?.includes('declarant.document.create')) {
+    notFound()
+  }
+
   const declarantId = getDeclarantId(declarant)
 
-  const exploitationsResult = await getExploitationFromPreleveurAction(declarantId)
+  const exploitationsResult = declarant.right.permissions.includes('exploitation.list')
+    ? await getExploitationFromPreleveurAction(declarantId)
+    : {data: []}
   const exploitations = exploitationsResult.data || []
 
   return (

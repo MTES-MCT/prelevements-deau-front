@@ -106,37 +106,17 @@ function buildMatrixSearch(options = {}) {
   return search ? `?${search}` : ''
 }
 
-function dateToInputValue(value) {
-  if (!value) {
-    return null
-  }
-
-  return String(value).slice(0, 10)
-}
-
-function todayAsInputValue() {
-  const now = new Date()
-  const timezoneOffset = now.getTimezoneOffset() * 60_000
-
-  return new Date(now.getTime() - timezoneOffset).toISOString().slice(0, 10)
-}
-
-function buildInstructorPayload(instructor, notificationPayload) {
-  return {
-    instructorUserId: instructor.id,
-    isAdmin: Boolean(instructor.isAdmin),
-    startDate: dateToInputValue(instructor.startDate) || todayAsInputValue(),
-    endDate: dateToInputValue(instructor.endDate),
-    ...notificationPayload
-  }
-}
-
 export async function getZonesAction() {
   return withErrorHandling(async () => fetchJSON('api/zones'))
 }
 
 export async function getZonesActions() {
   return getZonesAction()
+}
+
+export async function getZoneOptionsForPermissionAction(permission) {
+  const search = new URLSearchParams({permission}).toString()
+  return withErrorHandling(async () => fetchJSON(`api/zones/options?${search}`))
 }
 
 export async function getZoneAction(zoneId) {
@@ -265,6 +245,10 @@ export async function getZoneInstructorAction(zoneId, instructorUserId) {
   return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/instructeurs/${instructorUserId}`))
 }
 
+export async function getZoneAgentPermissionsAction() {
+  return withErrorHandling(async () => fetchJSON('api/zone-agent-permissions'))
+}
+
 export async function addZoneInstructorAction(zoneId, payload) {
   return withErrorHandling(async () => {
     const result = await fetchJSON(`api/zones/${zoneId}/instructeurs`, {
@@ -278,14 +262,23 @@ export async function addZoneInstructorAction(zoneId, payload) {
   })
 }
 
+export async function updateZoneInstructorAction(zoneId, instructorUserId, payload) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(`api/zones/${zoneId}/instructeurs/${instructorUserId}`, {
+      method: 'PATCH',
+      body: payload
+    })
+
+    revalidateZonePaths(zoneId)
+
+    return result
+  })
+}
+
 export async function sendZoneInstructorAccountCreationNotificationAction(zoneId, instructor) {
   return withErrorHandling(async () => {
-    const result = await fetchJSON(`api/zones/${zoneId}/instructeurs`, {
-      method: 'POST',
-      body: buildInstructorPayload(instructor, {
-        notifyAccountCreation: true,
-        notifyZoneAttachment: false
-      })
+    const result = await fetchJSON(`api/zones/${zoneId}/instructeurs/${instructor.id}/notifications/account-creation`, {
+      method: 'POST'
     })
 
     revalidateZonePaths(zoneId)
@@ -296,12 +289,8 @@ export async function sendZoneInstructorAccountCreationNotificationAction(zoneId
 
 export async function sendZoneInstructorAttachmentNotificationAction(zoneId, instructor) {
   return withErrorHandling(async () => {
-    const result = await fetchJSON(`api/zones/${zoneId}/instructeurs`, {
-      method: 'POST',
-      body: buildInstructorPayload(instructor, {
-        notifyAccountCreation: false,
-        notifyZoneAttachment: true
-      })
+    const result = await fetchJSON(`api/zones/${zoneId}/instructeurs/${instructor.id}/notifications/zone-attachment`, {
+      method: 'POST'
     })
 
     revalidateZonePaths(zoneId)

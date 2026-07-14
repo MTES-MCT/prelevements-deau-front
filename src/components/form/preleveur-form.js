@@ -1,6 +1,6 @@
 'use client'
 
-import {useState} from 'react'
+import {useEffect, useMemo, useState} from 'react'
 
 import {useRouter} from '@bprogress/next/app'
 import {Button} from '@codegouvfr/react-dsfr/Button'
@@ -12,6 +12,7 @@ import PreleveurEmailAliasesForm from './preleveur-email-aliases-form.js'
 import PreleveurMoralForm from './preleveur-moral-form.js'
 import PreleveurPhysiqueForm from './preleveur-physique-form.js'
 
+import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import {isDeclarantPhysique as checkIsPreleveurPhysique, PRELEVEUR_TYPE_ICONS} from '@/lib/declarants.js'
 import {createPreleveurAction, updatePreleveurAction} from '@/server/actions/index.js'
 import {emptyStringToNull} from '@/utils/string.js'
@@ -109,10 +110,17 @@ function normalizeDeclarant(declarant) {
   }
 }
 
-const PreleveurForm = ({preleveur: initialPreleveur}) => {
+const PreleveurForm = ({
+  initialZoneIds = [],
+  inviteZoneIds = [],
+  preleveur: initialPreleveur,
+  zones = []
+}) => {
   const router = useRouter()
   const normalizedInitialPreleveur = normalizeDeclarant(initialPreleveur)
   const isEditing = Boolean(normalizedInitialPreleveur.id)
+  const canReadEmailAliases = initialPreleveur?.right?.permissions?.includes('declarant.email-alias.read')
+  const canManageEmailAliases = initialPreleveur?.right?.permissions?.includes('declarant.email-alias.update')
 
   const [isPreleveurPhysique, setIsPreleveurPhysique] = useState(
     checkIsPreleveurPhysique(normalizedInitialPreleveur)
@@ -120,6 +128,7 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
   const [error, setError] = useState(null)
   const [validationErrors, setValidationErrors] = useState([])
   const [notifyAccountCreation, setNotifyAccountCreation] = useState(false)
+  const [zoneIds, setZoneIds] = useState(initialZoneIds)
   const [preleveur, setPreleveur] = useState({
     declarantType: 'NATURAL_PERSON',
     declarantRole: 'PRELEVEUR',
@@ -143,11 +152,39 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
   })
 
   const isCollecteur = preleveur.declarantRole === 'COLLECTEUR'
-  const emailRequired = isCollecteur || notifyAccountCreation
+  const canInvite = zoneIds.some(zoneId => inviteZoneIds.includes(zoneId))
+
+  useEffect(() => {
+    if (!canInvite) {
+      setNotifyAccountCreation(false)
+    }
+  }, [canInvite])
+
+  const zoneOptions = useMemo(() => {
+    const groups = new Map()
+
+    for (const zone of zones) {
+      const type = zone.type || 'AUTRE'
+      if (!groups.has(type)) {
+        groups.set(type, [])
+      }
+
+      groups.get(type).push({
+        value: zone.id,
+        label: zone.name,
+        content: `${zone.name}${zone.code ? ` - ${zone.code}` : ''}`
+      })
+    }
+
+    return [...groups].map(([label, options]) => ({label, options}))
+  }, [zones])
+  const emailRequired = isCollecteur || (canInvite && notifyAccountCreation)
   const hasRequiredIdentity = isPreleveurPhysique
     ? trim(preleveur.lastName) && trim(preleveur.firstName)
     : trim(preleveur.socialReason)
-  const isDisabled = !hasRequiredIdentity || (emailRequired && !trim(preleveur.email))
+  const isDisabled = !hasRequiredIdentity
+    || (emailRequired && !trim(preleveur.email))
+    || (!isEditing && zoneIds.length === 0)
 
   const handleSubmit = async () => {
     setError(null)
@@ -179,7 +216,8 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
       const cleanedPreleveur = emptyStringToNull(filteredPreleveur)
 
       if (!isEditing) {
-        cleanedPreleveur.notifyAccountCreation = notifyAccountCreation && Boolean(cleanedPreleveur.email)
+        cleanedPreleveur.notifyAccountCreation = canInvite && notifyAccountCreation && Boolean(cleanedPreleveur.email)
+        cleanedPreleveur.zoneIds = zoneIds
       }
 
       let response
@@ -209,6 +247,25 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
       </Typography>
 
       <div className='flex flex-col gap-6'>
+        {!isEditing && (
+          <FormSection
+            title='Zones de rattachement'
+            description='Sélectionnez au moins une zone sur laquelle ce déclarant doit être visible et géré.'
+            icon='ri-map-pin-2-line'
+          >
+            <GroupedMultiselect
+              searchable
+              hint='Plusieurs zones peuvent être sélectionnées.'
+              id='declarant-zone-ids'
+              label='Zones *'
+              options={zoneOptions}
+              placeholder='Sélectionner une ou plusieurs zones'
+              value={zoneIds}
+              onChange={setZoneIds}
+            />
+          </FormSection>
+        )}
+
         <FormSection
           title='Informations du déclarant'
           description='Identité, rôle, contact et options de dépôt.'
@@ -309,7 +366,7 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
               Activé par défaut : le déclarant pourra recevoir les rappels et relances automatiques liés aux déclarations attendues.
             </Typography>
 
-            {!isEditing && (
+            {!isEditing && canInvite && (
               <FormControlLabel
                 control={(
                   <Checkbox
@@ -345,13 +402,14 @@ const PreleveurForm = ({preleveur: initialPreleveur}) => {
           </div>
         </FormSection>
 
-        {isEditing && (
+        {isEditing && canReadEmailAliases && (
           <FormSection
             title='Alias e-mail de connexion'
             description='Adresses secondaires autorisées pour ce même compte, gérées séparément des informations du déclarant.'
             icon='ri-at-line'
           >
             <PreleveurEmailAliasesForm
+              canManage={canManageEmailAliases}
               declarantId={normalizedInitialPreleveur.id}
               initialAliases={normalizedInitialPreleveur.emailAliases}
               primaryEmail={preleveur.email}

@@ -155,7 +155,7 @@ const ZoneDeclarationSettings = ({zone, settings}) => {
           <label className='fr-label' htmlFor='default-period-type'>Pas de temps</label>
           <select
             className='fr-select'
-            disabled={isPending || !zone.isAdmin}
+            disabled={isPending || !zone.permissions?.includes('zone.declaration.settings.update')}
             id='default-period-type'
             value={defaultPeriodType}
             onChange={updateDefaultPeriod}
@@ -171,7 +171,7 @@ const ZoneDeclarationSettings = ({zone, settings}) => {
         <Timeline overrides={overrides} />
       </section>
 
-      {zone.isAdmin && (
+      {zone.permissions?.includes('zone.declaration.override.create') && (
         <section className='border border-gray-200 bg-white p-5'>
           <h2 className='fr-h4'>Ajouter une période</h2>
           <form className='grid grid-cols-1 md:grid-cols-2 gap-4' onSubmit={submitOverride}>
@@ -236,7 +236,7 @@ const ZoneDeclarationSettings = ({zone, settings}) => {
         </section>
       )}
 
-      {overrides.length > 0 && zone.isAdmin && (
+      {overrides.length > 0 && zone.permissions?.includes('zone.declaration.override.delete') && (
         <section className='border border-gray-200 bg-white p-5'>
           <h2 className='fr-h4'>Périodes enregistrées</h2>
           <div className='flex flex-col gap-2'>

@@ -65,7 +65,7 @@ const ZonePointsList = ({zone, points, meta}) => {
     return (
       <div className='flex flex-col gap-3'>
         <Alert severity='info'>Aucun point de prélèvement n’est encore rattaché à cette zone.</Alert>
-        {zone.isAdmin && (
+        {zone.permissions?.includes('pp.create') && (
           <div>
             <Button iconId={ZONE_ICONS.add} linkProps={{href: `/zones/${zone.id}/points-prelevement/nouveau`}}>
               Créer le premier point
@@ -83,15 +83,17 @@ const ZonePointsList = ({zone, points, meta}) => {
       <ZoneResourceToolbar
         action={(
           <div className='flex flex-wrap gap-2 justify-end'>
-            <ZoneExportButton
-              columns={ZONE_POINTS_EXPORT_COLUMNS}
-              filename={`points-prelevement-zone-${zone.code || zone.id}.xlsx`}
-              resolveRows={() => resolveAllZonePoints(zone.id, meta)}
-              rows={points}
-              sheetName='Points'
-            />
+            {zone.permissions?.includes('pp.export') && (
+              <ZoneExportButton
+                columns={ZONE_POINTS_EXPORT_COLUMNS}
+                filename={`points-prelevement-zone-${zone.code || zone.id}.xlsx`}
+                resolveRows={() => resolveAllZonePoints(zone.id, meta)}
+                rows={points}
+                sheetName='Points'
+              />
+            )}
 
-            {zone.isAdmin && (
+            {zone.permissions?.includes('pp.create') && (
               <Button iconId={ZONE_ICONS.add} linkProps={{href: `/zones/${zone.id}/points-prelevement/nouveau`}}>
                 Créer un point
               </Button>
@@ -110,36 +112,40 @@ const ZonePointsList = ({zone, points, meta}) => {
       {points.map((point, index) => {
         const declarants = getPointDeclarants(point)
         const canEdit = Boolean(point.right?.canEdit)
+        const canOpen = zone.permissions?.includes('pp.detail.read')
+        const pointItem = (
+          <ListItem
+            border
+            background={index % 2 === 0 ? 'primary' : 'secondary'}
+            title={<><span className={`${ZONE_ICONS.water} mr-2`} />{point.name || 'Point sans nom'}</>}
+            subtitle={point.communeName || point.codeBSS || point.id}
+            tags={[
+              {label: point.waterBodyType || 'Milieu non renseigné', severity: 'info', hasIcon: false},
+              canEdit ? {label: 'Modifiable dans cette zone', severity: 'success'} : {label: 'Lecture seule', severity: 'info'}
+            ]}
+            metas={[
+              {iconId: ZONE_ICONS.user, content: pluralize(declarants.length, 'déclarant')},
+              point.usages?.length > 0 && {iconId: ZONE_ICONS.briefcase, content: `${point.usages.length} usage${point.usages.length > 1 ? 's' : ''}`},
+              point.codeBSS && {iconId: ZONE_ICONS.hashtag, content: `BSS ${point.codeBSS}`},
+              point.codeBNPE && {iconId: ZONE_ICONS.hashtag, content: `BNPE ${point.codeBNPE}`}
+            ].filter(Boolean)}
+          />
+        )
 
         return (
           <Box key={point.id} className='flex flex-col md:flex-row gap-2 md:items-stretch'>
-            <Link className='flex-1' href={`/points-prelevement/${point.id}`}>
-              <ListItem
-                border
-                background={index % 2 === 0 ? 'primary' : 'secondary'}
-                title={<><span className={`${ZONE_ICONS.water} mr-2`} />{point.name || 'Point sans nom'}</>}
-                subtitle={point.communeName || point.codeBSS || point.id}
-                tags={[
-                  {label: point.waterBodyType || 'Milieu non renseigné', severity: 'info', hasIcon: false},
-                  canEdit ? {label: 'Modifiable dans cette zone', severity: 'success'} : {label: 'Lecture seule', severity: 'info'}
-                ]}
-                metas={[
-                  {iconId: ZONE_ICONS.user, content: pluralize(declarants.length, 'déclarant')},
-                  point.usages?.length > 0 && {iconId: ZONE_ICONS.briefcase, content: `${point.usages.length} usage${point.usages.length > 1 ? 's' : ''}`},
-                  point.codeBSS && {iconId: ZONE_ICONS.hashtag, content: `BSS ${point.codeBSS}`},
-                  point.codeBNPE && {iconId: ZONE_ICONS.hashtag, content: `BNPE ${point.codeBNPE}`}
-                ].filter(Boolean)}
-              />
-            </Link>
+            {canOpen
+              ? <Link className='flex-1' href={`/points-prelevement/${point.id}`}>{pointItem}</Link>
+              : <div className='flex-1'>{pointItem}</div>}
 
             <div className='flex gap-2 md:items-center md:flex-col md:justify-center'>
-              <Button priority='tertiary no outline' size='small' linkProps={{href: `/points-prelevement/${point.id}`}}>Ouvrir</Button>
-              {canEdit && (
+              {canOpen && <Button priority='tertiary no outline' size='small' linkProps={{href: `/points-prelevement/${point.id}`}}>Ouvrir</Button>}
+              {canEdit && zone.permissions?.includes('pp.update') && (
                 <Button priority='tertiary no outline' size='small' linkProps={{href: `/zones/${zone.id}/points-prelevement/${point.id}/modifier`}}>
                   Éditer
                 </Button>
               )}
-              {canEdit && (
+              {zone.permissions?.includes('exploitation.create') && (
                 <Button
                   priority='tertiary no outline'
                   size='small'
@@ -148,7 +154,7 @@ const ZonePointsList = ({zone, points, meta}) => {
                   Créer une exploitation
                 </Button>
               )}
-              {canEdit && (
+              {zone.permissions?.includes('pp.delete') && (
                 <Button
                   disabled={deletingPointId === point.id}
                   priority='tertiary no outline'

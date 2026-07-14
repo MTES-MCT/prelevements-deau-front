@@ -32,11 +32,19 @@ const Page = async ({params}) => {
   }
 
   const declarant = declarantResult.data
+  if (!declarant.right?.permissions?.includes('declarant.rule.create')) {
+    notFound()
+  }
+
   const declarantId = getDeclarantId(declarant)
 
   const [exploitationsResult, documentsResult] = await Promise.all([
-    getExploitationFromPreleveurAction(declarantId),
-    getDocumentsFromPreleveurAction(declarantId)
+    declarant.right.permissions.includes('exploitation.list')
+      ? getExploitationFromPreleveurAction(declarantId)
+      : Promise.resolve({data: []}),
+    declarant.right.permissions.includes('declarant.document.read')
+      ? getDocumentsFromPreleveurAction(declarantId)
+      : Promise.resolve({data: []})
   ])
 
   const exploitations = exploitationsResult.data || []
