@@ -10,6 +10,7 @@ import EnvironmentBanner from '@/components/environment-banner.js'
 import Footer from '@/components/footer.js'
 import Header from '@/components/header.js'
 import MatomoTracker from '@/components/matomo-tracker.js'
+import NavigationProgressProvider from '@/components/providers/navigation-progress-provider.js'
 import NextAuthSessionProvider from '@/components/providers/session-provider.js'
 import {AuthProvider} from '@/contexts/auth-context.js'
 import {defaultColorScheme} from '@/dsfr-bootstrap/default-color-scheme.js'
@@ -62,26 +63,28 @@ const RootLayout = ({children}) => (
       )}
     </head>
     <body>
-      <EnvironmentBanner />
-      <NextAuthSessionProvider>
-        <AuthProvider>
-          <AppRouterCacheProvider>
-            <DsfrProvider>
-              <MuiDsfrThemeProvider>
-                <AuthSessionGuard />
-                <ImpersonationBanner />
-                <Header />
-                <MatomoTracker />
-                <CrispChat disabled={IS_CRISP_DISABLED} />
-                <main role='main' id='content'>
-                  {children}
-                </main>
-                <Footer />
-              </MuiDsfrThemeProvider>
-            </DsfrProvider>
-          </AppRouterCacheProvider>
-        </AuthProvider>
-      </NextAuthSessionProvider>
+      <NavigationProgressProvider>
+        <EnvironmentBanner />
+        <NextAuthSessionProvider>
+          <AuthProvider>
+            <AppRouterCacheProvider>
+              <DsfrProvider>
+                <MuiDsfrThemeProvider>
+                  <AuthSessionGuard />
+                  <ImpersonationBanner />
+                  <Header />
+                  <MatomoTracker />
+                  <CrispChat disabled={IS_CRISP_DISABLED} />
+                  <main role='main' id='content'>
+                    {children}
+                  </main>
+                  <Footer />
+                </MuiDsfrThemeProvider>
+              </DsfrProvider>
+            </AppRouterCacheProvider>
+          </AuthProvider>
+        </NextAuthSessionProvider>
+      </NavigationProgressProvider>
     </body>
   </html>
 )

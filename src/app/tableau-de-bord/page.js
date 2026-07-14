@@ -70,7 +70,7 @@ const Page = async ({searchParams}) => {
     shouldLoadDeclarantSeries
       ? getAggregatedSeriesOptionsAction({preleveurId: user.id})
       : Promise.resolve(null),
-    getDashboardPiezometryAction({zoneCodes: requestedZoneCodes, period: 'week'}),
+    getDashboardPiezometryAction({zoneCodes: requestedZoneCodes, period: 'month'}),
     getDashboardRiverFlowsAction({zoneCodes: requestedZoneCodes, period: 'week'})
   ])
   const declarationTypesResponse = declarationTypesResult?.success ? declarationTypesResult.data : null

@@ -2,8 +2,8 @@
 
 import {useCallback, useState} from 'react'
 
+import {useRouter} from '@bprogress/next/app'
 import Button from '@codegouvfr/react-dsfr/Button'
-import {useRouter} from 'next/navigation'
 
 import {useAuth} from '@/contexts/auth-context.js'
 
@@ -35,7 +35,7 @@ const ImpersonateUserButton = ({
     }
 
     router.push('/')
-    router.refresh()
+    router.refresh({showProgress: false})
   }, [router, startImpersonation, targetUserId])
 
   if (user?.role !== 'ADMIN' || user?.impersonation?.active) {

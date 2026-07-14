@@ -60,6 +60,10 @@ function buildWaterResourceSearch(options = {}) {
     parameters.set('period', options.period)
   }
 
+  if (options.includeIps) {
+    parameters.set('includeIps', 'true')
+  }
+
   const search = parameters.toString()
   return search ? `?${search}` : ''
 }

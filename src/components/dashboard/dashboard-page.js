@@ -16,6 +16,7 @@ import DashboardVolumesChart from '@/components/dashboard/dashboard-volumes-char
 import DashboardWaterResources from '@/components/dashboard/dashboard-water-resources.js'
 import SeriesExplorer from '@/components/points-prelevement/series-explorer.js'
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
+import {getMonitoringStationMapSummary} from '@/lib/monitoring-stations.js'
 import {
   getDeclarationsURL,
   getMyDeclarationsURL,
@@ -281,7 +282,7 @@ const DeclarationCreationCard = ({className = 'mt-6', declarationCreation}) => {
     <section className={`border border-gray-200 bg-white p-5 md:p-6 ${className}`}>
       <div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
         <div>
-          <h2 className='fr-h3 fr-mb-1w'>Déclarer mes prélèvements en eau</h2>
+          <h3 className='fr-h3 fr-mb-1w'>Déclarer mes prélèvements en eau</h3>
           <p className='fr-text--sm fr-mb-0 max-w-[680px] text-gray-700'>
             {DECLARATION_CREATION_INTRO}
           </p>
@@ -334,25 +335,20 @@ function getDashboardVariant(user, dashboard) {
   }
 }
 
-function getDashboardLinks({isDeclarant}) {
+function getDashboardLinks({isDeclarant, isPreleveurDeclarant}) {
   return {
     declarationsURL: isDeclarant ? getMyDeclarationsURL() : getDeclarationsURL(),
     declarationsURLLabel: isDeclarant ? 'Accéder au suivi' : 'Accéder à la page',
-    pointsSectionTitle: 'Ressources et prélèvements de mon territoire',
+    pointsLegendLabel: isPreleveurDeclarant ? 'Mes points de prélèvement' : 'Points de prélèvement',
+    pointsSectionTitle: isPreleveurDeclarant
+      ? 'Mes points de prélèvement'
+      : 'Ressources et prélèvements de mon territoire',
     pointsURL: getPointsPrelevementURL()
   }
 }
 
 function getMonitoringStationsSignature(stations) {
-  return JSON.stringify([...stations]
-    .sort((first, second) => first.id.localeCompare(second.id))
-    .map(station => [
-      station.id,
-      station.type,
-      station.label,
-      station.stationCode,
-      ...(station.coordinates?.coordinates ?? [])
-    ]))
+  return JSON.stringify([...stations].sort((first, second) => first.id.localeCompare(second.id)))
 }
 
 const KeyFiguresSection = ({
@@ -361,9 +357,7 @@ const KeyFiguresSection = ({
   totalPoints,
   usageDistribution
 }) => (
-  <section className='border border-gray-200 bg-white p-5 md:p-6'>
-    <h2 className='fr-h3 fr-mb-4w'>Chiffres clés du territoire</h2>
-
+  <div className='border border-gray-200 bg-white p-5 md:p-6'>
     <div className={`grid gap-4 ${showUsageDistribution ? 'md:grid-cols-2' : ''}`}>
       <div className='border border-gray-200 p-4'>
         <div className='flex items-start justify-between gap-4'>
@@ -415,7 +409,7 @@ const KeyFiguresSection = ({
         </div>
       )}
     </div>
-  </section>
+  </div>
 )
 
 const DashboardBlock = ({
@@ -432,7 +426,7 @@ const DashboardBlock = ({
   return (
     <section className={blockClassName}>
       <div className='mb-4 flex flex-col gap-4 md:flex-row md:items-start md:justify-between'>
-        <h2 className='fr-h2 fr-mb-0'>{title}</h2>
+        <h2 className='fr-h2 fr-mb-0 text-[#000091]'>{title}</h2>
         {actions}
       </div>
 
@@ -468,6 +462,7 @@ const PointsMapSection = ({
   isLoading,
   monitoringStations,
   points,
+  pointsLegendLabel,
   pointsSectionTitle,
   pointsURL,
   preferUsageName = false,
@@ -477,7 +472,7 @@ const PointsMapSection = ({
   <section className={`border border-gray-200 bg-white p-5 md:p-6 ${className}`}>
     <div className='mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between'>
       <div className='flex flex-wrap items-baseline gap-x-4 gap-y-1'>
-        <h2 className='fr-h3 fr-mb-0'>{pointsSectionTitle}</h2>
+        <h3 className='fr-h3 fr-mb-0'>{pointsSectionTitle}</h3>
         <Link className='fr-link text-sm' href={pointsURL}>
           Accéder à la page
         </Link>
@@ -489,6 +484,7 @@ const PointsMapSection = ({
     <DashboardPointsMap
       monitoringStations={monitoringStations}
       points={points}
+      pointsLegendLabel={pointsLegendLabel}
       preferUsageName={preferUsageName}
       showCollecteurs={showCollecteurs}
       showPreleveurs={showPreleveurs}
@@ -507,6 +503,7 @@ const DeclarantSeriesSection = ({
       seriesOptions={seriesOptions}
       subtitle='Volumes représentant uniquement vos prélèvements déclarés via Partageons l’Eau'
       title='Évolution de mes prélèvements'
+      titleComponent='h3'
     />
   </section>
 )
@@ -528,9 +525,9 @@ const RegisteredPrelevementsSection = ({
   <section className={`border border-gray-200 bg-white p-5 md:p-6 ${className}`}>
     <div className='mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between'>
       <div className='flex flex-wrap items-baseline gap-x-4 gap-y-1'>
-        <h2 className='fr-h3 fr-mb-0'>
+        <h3 className='fr-h3 fr-mb-0'>
           {title}
-        </h2>
+        </h3>
         <Link className='fr-link text-sm' href={declarationsURL}>
           {declarationsURLLabel}
         </Link>
@@ -713,7 +710,7 @@ const DashboardPage = ({
     const stations = [
       ...(initialPiezometry?.stations ?? EMPTY_ARRAY),
       ...(initialRiverFlows?.stations ?? EMPTY_ARRAY)
-    ]
+    ].map(station => getMonitoringStationMapSummary(station))
 
     return [...new Map(stations.map(station => [station.id, station])).values()]
   })
@@ -739,13 +736,15 @@ const DashboardPage = ({
   const {
     declarationsURL,
     declarationsURLLabel,
+    pointsLegendLabel,
     pointsSectionTitle,
     pointsURL
-  } = getDashboardLinks({isDeclarant})
+  } = getDashboardLinks({isDeclarant, isPreleveurDeclarant})
   const withdrawnChart = getVolumeChartForRole(volumesByUsage?.charts?.withdrawn, isDeclarant)
   const dischargedChart = getVolumeChartForRole(volumesByUsage?.charts?.discharged, isDeclarant)
   const hasSelectableZones = zones.length > 0
   const isZoneFilterDisabled = !hasSelectableZones || isTerritoryLoading
+  const showWaterResourcesTitle = user?.role !== 'ADMIN'
 
   const zoneOptions = useMemo(() =>
     zones.map(zone => {
@@ -992,6 +991,7 @@ const DashboardPage = ({
                 isLoading={false}
                 monitoringStations={monitoringStations}
                 points={activityPoints}
+                pointsLegendLabel={pointsLegendLabel}
                 pointsSectionTitle={pointsSectionTitle}
                 pointsURL={pointsURL}
                 showCollecteurs={!isCollector}
@@ -1046,11 +1046,21 @@ const DashboardPage = ({
                   onVolumeYearChange={handleVolumeYearChange}
                   onWaterBodyTypesChange={handleWaterBodyTypesChange}
                 />
+
+                <DashboardWaterResources
+                  initialPiezometry={initialPiezometry}
+                  initialPiezometryError={initialPiezometryError}
+                  initialRiverFlows={initialRiverFlows}
+                  initialRiverFlowsError={initialRiverFlowsError}
+                  selectedZoneCodes={selectedZoneCodes}
+                  showTitle={showWaterResourcesTitle}
+                  onStationsChange={handleMonitoringStationsChange}
+                />
               </DashboardBlock>
             )}
           </>
         ) : (
-          <>
+          <DashboardBlock className='mt-0' title='Chiffres clés du territoire'>
             <KeyFiguresSection
               showUsageDistribution
               pointsURL={pointsURL}
@@ -1063,6 +1073,7 @@ const DashboardPage = ({
               isLoading={isTerritoryLoading}
               monitoringStations={monitoringStations}
               points={points}
+              pointsLegendLabel={pointsLegendLabel}
               pointsSectionTitle={pointsSectionTitle}
               pointsURL={pointsURL}
               showCollecteurs={!isCollector}
@@ -1091,17 +1102,18 @@ const DashboardPage = ({
               onVolumeYearChange={handleVolumeYearChange}
               onWaterBodyTypesChange={handleWaterBodyTypesChange}
             />
-          </>
-        )}
 
-        <DashboardWaterResources
-          initialPiezometry={initialPiezometry}
-          initialPiezometryError={initialPiezometryError}
-          initialRiverFlows={initialRiverFlows}
-          initialRiverFlowsError={initialRiverFlowsError}
-          selectedZoneCodes={selectedZoneCodes}
-          onStationsChange={handleMonitoringStationsChange}
-        />
+            <DashboardWaterResources
+              initialPiezometry={initialPiezometry}
+              initialPiezometryError={initialPiezometryError}
+              initialRiverFlows={initialRiverFlows}
+              initialRiverFlowsError={initialRiverFlowsError}
+              selectedZoneCodes={selectedZoneCodes}
+              showTitle={showWaterResourcesTitle}
+              onStationsChange={handleMonitoringStationsChange}
+            />
+          </DashboardBlock>
+        )}
       </div>
     </main>
   )

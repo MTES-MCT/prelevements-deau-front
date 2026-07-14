@@ -2,7 +2,7 @@
 
 import {useState} from 'react'
 
-import {useRouter} from 'next/navigation'
+import {useRouter} from '@bprogress/next/app'
 
 import {getActionData} from '@/components/service-accounts/service-account-utils.js'
 import {createServiceAccountAction} from '@/server/actions/service-accounts.js'
@@ -27,7 +27,7 @@ const ServiceAccountCreateForm = () => {
       }))
 
       router.push(`/comptes-service/${serviceAccount.id}`)
-      router.refresh()
+      router.refresh({showProgress: false})
     } catch (error) {
       setMessage({type: 'error', text: error.message})
     } finally {

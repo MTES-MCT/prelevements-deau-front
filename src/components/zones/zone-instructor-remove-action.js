@@ -2,8 +2,8 @@
 
 import {useState} from 'react'
 
+import {useRouter} from '@bprogress/next/app'
 import {Button} from '@codegouvfr/react-dsfr/Button'
-import {useRouter} from 'next/navigation'
 
 import {getInstructorName} from '@/lib/zone-instructors.js'
 import {deleteZoneInstructorAction} from '@/server/actions/zones.js'
@@ -36,7 +36,7 @@ const ZoneInstructorRemoveAction = ({zone, instructor}) => {
 
       setOpen(false)
       router.push(`/zones/${zone.id}/agents`)
-      router.refresh()
+      router.refresh({showProgress: false})
     } catch (error) {
       setError(error.message)
       setIsDeleting(false)

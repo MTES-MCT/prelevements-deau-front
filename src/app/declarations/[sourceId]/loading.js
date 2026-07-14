@@ -1,9 +1,5 @@
-import {Box, CircularProgress} from '@mui/material'
+import PageLoading from '@/components/ui/page-loading.js'
 
-const Loading = () => (
-  <Box className='flex w-full h-full justify-center items-center'>
-    <CircularProgress />
-  </Box>
-)
+const Loading = () => <PageLoading />
 
 export default Loading

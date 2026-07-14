@@ -2,9 +2,9 @@
 
 import {useMemo, useState} from 'react'
 
+import {useRouter} from '@bprogress/next/app'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Alert} from '@mui/material'
-import {useRouter} from 'next/navigation'
 
 import PointForm from '@/components/form/point-form.js'
 import PointFlowReclassificationDialog from '@/components/points-prelevement/point-flow-reclassification-dialog.js'
@@ -105,7 +105,7 @@ const ZonePointForm = ({zone, point = null, mode = 'create', zoneGeometry = null
       }
 
       router.push(`/zones/${zone.id}/points-prelevement`)
-      router.refresh()
+      router.refresh({showProgress: false})
     } catch (error_) {
       setError(error_.message)
     } finally {

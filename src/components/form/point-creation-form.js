@@ -2,9 +2,9 @@
 
 import {useEffect, useState} from 'react'
 
+import {useRouter} from '@bprogress/next/app'
 import Button from '@codegouvfr/react-dsfr/Button'
 import {Typography} from '@mui/material'
-import {useRouter} from 'next/navigation'
 
 import PointForm from '@/components/form/point-form.js'
 import {createPointPrelevementAction} from '@/server/actions/points-prelevement.js'

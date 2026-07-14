@@ -2,6 +2,7 @@
 
 import {useState} from 'react'
 
+import {useRouter} from '@bprogress/next/app'
 import Button from '@codegouvfr/react-dsfr/Button'
 import InfoOutlined from '@mui/icons-material/InfoOutlined'
 import {
@@ -10,7 +11,6 @@ import {
   DialogContent,
   DialogTitle
 } from '@mui/material'
-import {useRouter} from 'next/navigation'
 
 import PointForm from '@/components/form/point-form.js'
 import PointFlowReclassificationDialog from '@/components/points-prelevement/point-flow-reclassification-dialog.js'

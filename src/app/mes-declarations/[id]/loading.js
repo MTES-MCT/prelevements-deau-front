@@ -2,8 +2,9 @@
 
 import {useEffect} from 'react'
 
-import {Box, CircularProgress, Typography} from '@mui/material'
 import {useRouter} from 'next/navigation'
+
+import PageLoading from '@/components/ui/page-loading.js'
 
 const Loading = () => {
   const router = useRouter()
@@ -16,15 +17,7 @@ const Loading = () => {
     return () => clearInterval(interval)
   }, [router])
 
-  return (
-    <Box className='flex flex-col w-full h-full justify-center items-center gap-4'>
-      <Typography>
-        La déclaration est en cours d’importation...
-      </Typography>
-
-      <CircularProgress />
-    </Box>
-  )
+  return <PageLoading message='La déclaration est en cours d’importation...' />
 }
 
 export default Loading

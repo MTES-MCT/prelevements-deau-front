@@ -4,8 +4,9 @@ import {
   useCallback, useDeferredValue, useEffect, useMemo, useState
 } from 'react'
 
+import {useRouter} from '@bprogress/next/app'
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
-import {useRouter, useSearchParams} from 'next/navigation'
+import {useSearchParams} from 'next/navigation'
 
 import PointsMap from '@/components/map/index.js'
 import MapStyleMenu from '@/components/points-prelevement/map-style-menu.js'

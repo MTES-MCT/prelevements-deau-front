@@ -2,8 +2,8 @@
 
 import {useCallback, useMemo, useState} from 'react'
 
+import {useRouter} from '@bprogress/next/app'
 import Button from '@codegouvfr/react-dsfr/Button'
-import {useRouter} from 'next/navigation'
 
 import {useAuth} from '@/contexts/auth-context.js'
 
@@ -43,7 +43,7 @@ const ImpersonationBanner = () => {
     }
 
     router.push('/')
-    router.refresh()
+    router.refresh({showProgress: false})
   }, [router, stopImpersonation])
 
   if (!impersonation?.active) {

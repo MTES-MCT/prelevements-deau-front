@@ -37,7 +37,8 @@ const SeriesExplorer = ({
   seriesOptions = null,
   startDate = null,
   subtitle = null,
-  title = 'Historique des prélèvements'
+  title = 'Historique des prélèvements',
+  titleComponent = 'h2'
 }) => {
   // Vérifie si des paramètres sont disponibles depuis l'API
   const hasParameters = seriesOptions?.parameters?.length > 0
@@ -465,7 +466,7 @@ const SeriesExplorer = ({
   return hasParameters ? (
     <Box className='flex flex-col gap-4'>
       <Box>
-        <Typography variant='h5' component='h2'>
+        <Typography variant='h5' component={titleComponent}>
           {title}
         </Typography>
 
@@ -501,7 +502,7 @@ const SeriesExplorer = ({
   ) : (
     <Box className='flex flex-col gap-4'>
       <Box>
-        <Typography variant='h5' component='h2'>
+        <Typography variant='h5' component={titleComponent}>
           {title}
         </Typography>
 

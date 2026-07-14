@@ -9,8 +9,21 @@ import {
 } from 'react'
 
 import {SegmentedControl} from '@codegouvfr/react-dsfr/SegmentedControl'
+import MuiTooltip from '@mui/material/Tooltip'
+
+import {
+  getPiezometryYAxisConfig,
+  isHistoricalPiezometryPeriod,
+  isIpsPiezometryPeriod,
+  PIEZOMETRY_IPS_BANDS
+} from './piezometry.js'
+import {
+  getIsolatedStationId,
+  toggleStationIsolation
+} from './station-visibility.js'
 
 import TimeSeriesChart from '@/components/ui/TimeSeriesChart/index.js'
+import {getMonitoringStationMapSummary} from '@/lib/monitoring-stations.js'
 import {
   getDashboardPiezometryAction,
   getDashboardRiverFlowsAction
@@ -35,17 +48,28 @@ const PIEZOMETRY_PERIODS = [
   {value: 'week', label: '7 jours'},
   {value: 'month', label: '30 jours'},
   {value: 'year', label: '12 mois'},
+  {value: 'five-years', label: '5 ans'},
+  {value: 'ten-years', label: '10 ans'},
   {value: 'twenty-years', label: '20 ans'}
 ]
+const PIEZOMETRY_IPS_PERIODS = PIEZOMETRY_PERIODS.filter(period =>
+  isIpsPiezometryPeriod(period.value)
+)
 const FLOW_PERIODS = [
   {value: 'week', label: '7 jours'},
   {value: 'month', label: '30 jours'},
   {value: 'year', label: '12 mois'}
 ]
 const PIEZOMETRY_MODES = [
-  {value: 'level', label: 'Cote NGF'},
-  {value: 'depth', label: 'Profondeur'}
+  {value: 'depth', label: 'Profondeur'},
+  {value: 'ips', label: 'Écart à la normale'},
+  {value: 'level', label: 'Cote NGF'}
 ]
+const IPS_REFERENCE_LINES = [{y: 0, color: '#6A6A6A'}]
+const PIEZOMETRY_NUMBER_FORMATTER = new Intl.NumberFormat('fr-FR', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2
+})
 
 function hashCode(value) {
   let hash = 0
@@ -82,21 +106,37 @@ function mergeVisibility(previous, stations) {
   return next
 }
 
-function buildPointMeta(parts) {
+function buildPointMeta(parts, detail = null, natureLabel = null) {
   const comment = parts.filter(Boolean).join(' · ')
-  return comment ? {comment} : null
+  if (!comment && !detail) {
+    return null
+  }
+
+  return {
+    ...(comment && {comment}),
+    ...(detail && {detail}),
+    ...(natureLabel && {natureLabel})
+  }
 }
 
-function getPiezometryFrequency(period) {
-  if (period === 'year' || period === 'twenty-years') {
+function getPiezometryFrequency(period, mode) {
+  if (mode === 'ips') {
+    return '1 month'
+  }
+
+  if (period === 'year' || isHistoricalPiezometryPeriod(period)) {
     return '1 month'
   }
 
   return '1 day'
 }
 
-function getPiezometryTooltipFrequency(period) {
-  return period === 'twenty-years' ? '1 week' : '1 day'
+function getPiezometryTooltipFrequency(period, mode) {
+  if (mode === 'ips') {
+    return '1 month'
+  }
+
+  return isHistoricalPiezometryPeriod(period) ? '1 week' : '1 day'
 }
 
 function getFlowFrequency(period) {
@@ -115,6 +155,85 @@ function getGroundwaterNature(value) {
   return value.origin === 'REALTIME' ? 'Temps réel non validée' : 'Donnée validée ADES'
 }
 
+function getPiezometryRawDetail(value) {
+  const details = []
+  if (Number.isFinite(value.depth)) {
+    details.push(`Profondeur moyenne : ${PIEZOMETRY_NUMBER_FORMATTER.format(value.depth)} m`)
+  }
+
+  if (Number.isFinite(value.levelNgf)) {
+    details.push(`Cote moyenne : ${PIEZOMETRY_NUMBER_FORMATTER.format(value.levelNgf)} m NGF`)
+  }
+
+  return details.join(' · ') || null
+}
+
+function getIpsDetail(value) {
+  const details = [getPiezometryRawDetail(value)]
+  if (Number.isFinite(value.changeFromPreviousMonth)) {
+    if (value.changeFromPreviousMonth === 0) {
+      details.push('Depuis le mois précédent : niveau stable')
+    } else {
+      const direction = value.changeFromPreviousMonth > 0 ? 'hausse' : 'baisse'
+      const amount = PIEZOMETRY_NUMBER_FORMATTER.format(Math.abs(value.changeFromPreviousMonth))
+      details.push(`Depuis le mois précédent : ${direction} de ${amount} m`)
+    }
+  }
+
+  details.push(`${value.referenceYears} années de référence`)
+  return details.filter(Boolean).join(' · ')
+}
+
+function getPiezometryUnit(mode) {
+  if (mode === 'depth') {
+    return 'm'
+  }
+
+  return mode === 'level' ? 'm NGF' : 'IPS'
+}
+
+function getPiezometryValue(value, mode) {
+  if (mode === 'depth') {
+    return value.depth
+  }
+
+  return mode === 'level' ? value.levelNgf : value.value
+}
+
+function getPiezometryUnavailableLabel(mode, station) {
+  if (mode !== 'ips') {
+    return 'mesure indisponible'
+  }
+
+  if (station.ips?.status === 'INSUFFICIENT_HISTORY') {
+    return 'historique insuffisant (15 ans minimum)'
+  }
+
+  if (station.ips?.status === 'NO_VARIATION') {
+    return 'niveau historique trop stable pour calculer l’indicateur'
+  }
+
+  return 'indicateur indisponible sur cette période'
+}
+
+function getPiezometryEmptyMessage(mode) {
+  return mode === 'ips'
+    ? 'Aucun indicateur disponible sur cette période. Il faut au moins 15 années de mesures pour le mois comparé.'
+    : 'Aucune mesure disponible sur cette période.'
+}
+
+function getPiezometryReferenceLines(mode) {
+  return mode === 'ips' ? IPS_REFERENCE_LINES : EMPTY_ARRAY
+}
+
+function getPiezometryBackgroundBands(mode) {
+  return mode === 'ips' ? PIEZOMETRY_IPS_BANDS : EMPTY_ARRAY
+}
+
+function getPiezometryChartHeight(period) {
+  return isHistoricalPiezometryPeriod(period) ? 440 : 360
+}
+
 function getFlowNature(value) {
   if (value.granularity === 'DAILY') {
     return 'Moyenne journalière'
@@ -128,20 +247,32 @@ function getFlowNature(value) {
 }
 
 function buildPiezometrySeries(stations, mode, colors, period) {
-  return stations.map(station => ({
-    id: station.id,
-    label: `${station.label} (${mode === 'depth' ? 'm' : 'm NGF'})`,
-    axis: 'left',
-    color: colors.get(station.id),
-    connectNulls: true,
-    frequency: period === 'twenty-years' ? '1 week' : undefined,
-    precision: 2,
-    data: station.values.map(value => ({
-      x: new Date(value.at),
-      y: mode === 'depth' ? value.depth : value.levelNgf,
-      meta: buildPointMeta([getGroundwaterNature(value)])
-    })).filter(point => Number.isFinite(point.y))
-  })).filter(series => series.data.length > 0)
+  const unit = getPiezometryUnit(mode)
+
+  return stations.map(station => {
+    const values = mode === 'ips'
+      ? station.ips?.values ?? EMPTY_ARRAY
+      : station.values
+
+    return {
+      id: station.id,
+      label: `${station.label} (${unit})`,
+      axis: 'left',
+      color: colors.get(station.id),
+      connectNulls: mode !== 'ips',
+      frequency: mode === 'ips'
+        ? '1 month'
+        : (isHistoricalPiezometryPeriod(period) ? '1 week' : undefined),
+      precision: 2,
+      data: values.map(value => ({
+        x: new Date(value.at),
+        y: getPiezometryValue(value, mode),
+        meta: mode === 'ips'
+          ? buildPointMeta([value.classLabel], getIpsDetail(value), 'Situation')
+          : buildPointMeta([getGroundwaterNature(value)])
+      })).filter(point => Number.isFinite(point.y))
+    }
+  }).filter(series => series.data.length > 0)
 }
 
 function buildFlowSeries(stations, colors) {
@@ -180,7 +311,7 @@ function updateResourceHash({flowPeriod, piezometryMode, piezometryPeriod}) {
     : ''
   const parameters = new URLSearchParams(rawHash)
 
-  if (piezometryPeriod === 'week') {
+  if (piezometryPeriod === 'month') {
     parameters.delete('piezoPeriod')
   } else {
     parameters.set('piezoPeriod', piezometryPeriod)
@@ -192,7 +323,7 @@ function updateResourceHash({flowPeriod, piezometryMode, piezometryPeriod}) {
     parameters.set('flowPeriod', flowPeriod)
   }
 
-  if (piezometryMode === 'level') {
+  if (piezometryMode === 'depth') {
     parameters.delete('piezoMode')
   } else {
     parameters.set('piezoMode', piezometryMode)
@@ -209,88 +340,137 @@ function readResourceHash() {
   }
 
   const parameters = new URLSearchParams(window.location.hash.slice('#dashboard?'.length))
-  const piezometryPeriod = parameters.get('piezoPeriod')
+  const requestedPiezometryPeriod = parameters.get('piezoPeriod')
   const flowPeriod = parameters.get('flowPeriod')
-  const piezometryMode = parameters.get('piezoMode')
+  const requestedPiezometryMode = parameters.get('piezoMode')
+  const piezometryMode = requestedPiezometryMode === 'relative'
+    ? 'ips'
+    : requestedPiezometryMode
+  const validPiezometryMode = PIEZOMETRY_MODES.some(item => item.value === piezometryMode)
+    ? piezometryMode
+    : 'depth'
+  let piezometryPeriod = PIEZOMETRY_PERIODS.some(item => item.value === requestedPiezometryPeriod)
+    ? requestedPiezometryPeriod
+    : 'month'
+
+  if (validPiezometryMode === 'ips' && !isIpsPiezometryPeriod(piezometryPeriod)) {
+    piezometryPeriod = 'year'
+  }
 
   return {
-    piezometryPeriod: PIEZOMETRY_PERIODS.some(item => item.value === piezometryPeriod)
-      ? piezometryPeriod
-      : 'week',
+    piezometryPeriod,
     flowPeriod: FLOW_PERIODS.some(item => item.value === flowPeriod) ? flowPeriod : 'week',
-    piezometryMode: PIEZOMETRY_MODES.some(item => item.value === piezometryMode)
-      ? piezometryMode
-      : 'level'
+    piezometryMode: validPiezometryMode
   }
 }
 
 const PeriodControl = ({disabled, id, onChange, options, value}) => (
-  <div>
-    <div className='sm:hidden'>
-      <label className='fr-label' htmlFor={id}>Période</label>
-      <select
-        className='fr-select cursor-pointer'
-        disabled={disabled}
-        id={id}
-        value={value}
-        onChange={event => onChange(event.target.value)}
-      >
-        {options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-      </select>
-    </div>
-    <div className='hidden sm:block'>
-      <SegmentedControl
-        hideLegend
-        small
-        legend='Période'
-        segments={options.map(option => ({
-          label: option.label,
-          nativeInputProps: {
-            checked: value === option.value,
-            disabled,
-            onChange: () => onChange(option.value)
-          }
-        }))}
-      />
-    </div>
+  <div className='flex min-w-[9rem] flex-col gap-1'>
+    <label className='text-xs font-medium text-gray-700' htmlFor={id}>Période</label>
+    <select
+      className='fr-select h-10 min-h-0 cursor-pointer py-1 pr-8 text-sm'
+      disabled={disabled}
+      id={id}
+      value={value}
+      onChange={event => onChange(event.target.value)}
+    >
+      {options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+    </select>
   </div>
 )
 
-const StationLegend = ({colors, onChange, stations, value}) => {
-  function isolate(stationId) {
-    onChange(Object.fromEntries(stations.map(station => [station.id, station.id === stationId])))
+const PiezometryModeControl = ({disabled, onChange, value}) => (
+  <div className='flex items-center gap-1'>
+    <SegmentedControl
+      hideLegend
+      small
+      legend='Mode d’affichage'
+      segments={PIEZOMETRY_MODES.map(option => ({
+        label: option.label,
+        nativeInputProps: {
+          checked: value === option.value,
+          disabled,
+          onChange: () => onChange(option.value)
+        }
+      }))}
+    />
+    <MuiTooltip
+      arrow
+      title='La cote NGF est l’altitude du niveau d’eau dans un référentiel national commun. Elle est calculée à partir de l’altitude du repère de mesure et de la profondeur de la nappe ; elle ne correspond pas à la profondeur sous le sol.'
+    >
+      <button
+        aria-label='Comprendre la cote NGF'
+        className='fr-btn fr-btn--tertiary-no-outline fr-btn--sm fr-icon-question-line h-8 min-h-0 w-8 shrink-0 p-0'
+        type='button'
+      />
+    </MuiTooltip>
+  </div>
+)
+
+const StationLegend = ({availableIds, colors, onChange, stations, unavailableLabel, value}) => {
+  const isolatedStationId = getIsolatedStationId(stations, value)
+
+  function toggleIsolation(stationId) {
+    onChange(toggleStationIsolation(stations, value, stationId))
   }
 
   return (
     <div className='mb-3 flex flex-wrap gap-x-4 gap-y-2' aria-label='Séries affichées'>
-      {stations.map(station => (
-        <div key={station.id} className='inline-flex items-center gap-1'>
-          <label className={`inline-flex items-center gap-1.5 text-xs ${station.values.length > 0 ? 'cursor-pointer text-gray-700' : 'cursor-not-allowed text-gray-500'}`}>
-            <input
-              checked={value[station.id] !== false}
-              className={`h-3.5 w-3.5 ${station.values.length > 0 ? 'cursor-pointer' : 'cursor-not-allowed'}`}
-              disabled={station.values.length === 0}
-              style={{accentColor: colors.get(station.id)}}
-              type='checkbox'
-              onChange={() => onChange({...value, [station.id]: value[station.id] === false})}
+      {stations.map(station => {
+        const isAvailable = availableIds.has(station.id)
+        const resolvedUnavailableLabel = typeof unavailableLabel === 'function'
+          ? unavailableLabel(station)
+          : unavailableLabel
+        const isIsolated = isolatedStationId === station.id
+        const isolationLabel = isIsolated
+          ? 'Réafficher toutes les séries'
+          : `Afficher uniquement ${station.label}`
+
+        return (
+          <div key={station.id} className='inline-flex items-center gap-1'>
+            <label className={`inline-flex items-center gap-1.5 text-xs ${isAvailable ? 'cursor-pointer text-gray-700' : 'cursor-not-allowed text-gray-500'}`}>
+              <input
+                checked={value[station.id] !== false}
+                className={`h-3.5 w-3.5 ${isAvailable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                disabled={!isAvailable}
+                style={{accentColor: colors.get(station.id)}}
+                type='checkbox'
+                onChange={() => onChange({...value, [station.id]: value[station.id] === false})}
+              />
+              <span>
+                {station.label}{isAvailable ? '' : ` · ${resolvedUnavailableLabel}`}
+              </span>
+            </label>
+            <button
+              aria-label={isolationLabel}
+              aria-pressed={isIsolated}
+              className='fr-btn fr-btn--tertiary-no-outline fr-btn--sm fr-icon-focus-3-line h-6 min-h-0 w-6 p-0'
+              disabled={!isAvailable}
+              title={isolationLabel}
+              type='button'
+              onClick={() => toggleIsolation(station.id)}
             />
-            <span>
-              {station.label}{station.values.length === 0 ? ' · aucune donnée' : ''}
-            </span>
-          </label>
-          <button
-            aria-label={`Afficher uniquement ${station.label}`}
-            className='fr-btn fr-btn--tertiary-no-outline fr-btn--sm fr-icon-focus-3-line h-6 min-h-0 w-6 p-0'
-            disabled={station.values.length === 0}
-            title={`Afficher uniquement ${station.label}`}
-            type='button'
-            onClick={() => isolate(station.id)}
-          />
-        </div>
-      ))}
+          </div>
+        )
+      })}
     </div>
   )
 }
+
+const IpsScaleLegend = () => (
+  <div className='mt-3' aria-label='Échelle de l’indicateur piézométrique standardisé'>
+    <div className='grid h-2 grid-cols-7 overflow-hidden rounded-sm border border-gray-300'>
+      {PIEZOMETRY_IPS_BANDS.map(band => (
+        <span key={band.minimum} style={{backgroundColor: band.color}} />
+      ))}
+    </div>
+    <div className='mt-1 flex justify-between gap-3 text-[0.7rem] leading-4 text-gray-600'>
+      <span>Très bas (-3)</span>
+      <span>Autour de la normale (0)</span>
+      <span>Très haut (+3)</span>
+    </div>
+  </div>
+)
 
 const ResourceWarnings = ({warnings}) => warnings.length > 0 && (
   <div className='fr-alert fr-alert--warning fr-alert--sm mb-4'>
@@ -309,6 +489,10 @@ const LoadingStatus = () => (
   </span>
 )
 
+const WaterResourcesTitle = ({visible}) => visible
+  ? <h3 className='fr-h3 fr-mb-4w'>Évolution de la ressource en eau</h3>
+  : null
+
 const ResourceChart = ({
   children,
   controls,
@@ -323,7 +507,7 @@ const ResourceChart = ({
   <article className='border border-gray-200 bg-white p-5 md:p-6'>
     <div className='mb-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between'>
       <div>
-        <h3 className='fr-h4 fr-mb-1v'>{title}</h3>
+        <h4 className='fr-h4 fr-mb-1v'>{title}</h4>
         <p className='fr-text--sm fr-mb-0 text-gray-600'>{subtitle}</p>
       </div>
       <div className='flex flex-col items-start gap-2 lg:items-end'>
@@ -349,13 +533,14 @@ const DashboardWaterResources = ({
   initialRiverFlows,
   initialRiverFlowsError = null,
   onStationsChange,
-  selectedZoneCodes
+  selectedZoneCodes,
+  showTitle = true
 }) => {
   const [piezometry, setPiezometry] = useState(initialPiezometry)
   const [riverFlows, setRiverFlows] = useState(initialRiverFlows)
-  const [piezometryPeriod, setPiezometryPeriod] = useState('week')
+  const [piezometryPeriod, setPiezometryPeriod] = useState('month')
   const [flowPeriod, setFlowPeriod] = useState('week')
-  const [piezometryMode, setPiezometryMode] = useState('level')
+  const [piezometryMode, setPiezometryMode] = useState('depth')
   const [piezometryVisibility, setPiezometryVisibility] = useState({})
   const [flowVisibility, setFlowVisibility] = useState({})
   const [piezometryError, setPiezometryError] = useState(initialPiezometryError)
@@ -363,6 +548,8 @@ const DashboardWaterResources = ({
   const [isPiezometryLoading, setIsPiezometryLoading] = useState(false)
   const [isFlowLoading, setIsFlowLoading] = useState(false)
   const requestIds = useRef({piezometry: 0, flow: 0})
+  const lastRawPiezometryPeriod = useRef('month')
+  const lastIpsPiezometryPeriod = useRef('year')
   const flowLoadingRef = useRef(false)
   const didMountZoneEffect = useRef(false)
   const zoneCodesKey = selectedZoneCodes.join(',')
@@ -378,6 +565,22 @@ const DashboardWaterResources = ({
     () => buildFlowSeries(flowStations, flowColors),
     [flowColors, flowStations]
   )
+  const piezometryAvailableIds = useMemo(
+    () => new Set(piezometrySeries.map(series => series.id)),
+    [piezometrySeries]
+  )
+  const flowAvailableIds = useMemo(
+    () => new Set(flowSeries.map(series => series.id)),
+    [flowSeries]
+  )
+  const piezometryYAxis = getPiezometryYAxisConfig(piezometryMode)
+  const latestPiezometryAt = useMemo(() => {
+    const dates = piezometryMode === 'ips'
+      ? piezometryStations.flatMap(station => station.ips?.values?.map(value => value.at) ?? EMPTY_ARRAY)
+      : piezometryStations.map(station => station.latestObservationAt).filter(Boolean)
+
+    return dates.sort().at(-1)
+  }, [piezometryMode, piezometryStations])
 
   useEffect(() => {
     setPiezometryVisibility(previous => mergeVisibility(previous, piezometryStations))
@@ -388,24 +591,23 @@ const DashboardWaterResources = ({
   }, [flowStations])
 
   useEffect(() => {
-    const stations = [...piezometryStations, ...flowStations].map(station => ({
-      id: station.id,
-      type: station.type,
-      label: station.label,
-      stationCode: station.stationCode,
-      coordinates: station.coordinates
-    }))
+    const stations = [...piezometryStations, ...flowStations]
+      .map(station => getMonitoringStationMapSummary(station))
     onStationsChange(stations)
   }, [flowStations, onStationsChange, piezometryStations])
 
-  const loadPiezometry = useCallback(async (period, zoneCodes = selectedZoneCodes) => {
+  const loadPiezometry = useCallback(async (
+    period,
+    zoneCodes = selectedZoneCodes,
+    {includeIps = false} = {}
+  ) => {
     const requestId = requestIds.current.piezometry + 1
     requestIds.current.piezometry = requestId
     setIsPiezometryLoading(true)
     setPiezometryError(null)
     let result
     try {
-      result = await getDashboardPiezometryAction({period, zoneCodes})
+      result = await getDashboardPiezometryAction({period, zoneCodes, includeIps})
     } catch {
       result = {success: false}
     }
@@ -464,8 +666,16 @@ const DashboardWaterResources = ({
     setPiezometryPeriod(hashState.piezometryPeriod)
     setFlowPeriod(hashState.flowPeriod)
 
-    if (hashState.piezometryPeriod !== 'week') {
-      loadPiezometry(hashState.piezometryPeriod)
+    if (hashState.piezometryMode === 'ips') {
+      lastIpsPiezometryPeriod.current = hashState.piezometryPeriod
+    } else {
+      lastRawPiezometryPeriod.current = hashState.piezometryPeriod
+    }
+
+    if (hashState.piezometryPeriod !== 'month' || hashState.piezometryMode === 'ips') {
+      loadPiezometry(hashState.piezometryPeriod, selectedZoneCodes, {
+        includeIps: hashState.piezometryMode === 'ips'
+      })
     }
 
     if (hashState.flowPeriod !== 'week') {
@@ -481,7 +691,9 @@ const DashboardWaterResources = ({
       return
     }
 
-    loadPiezometry(piezometryPeriod, selectedZoneCodes)
+    loadPiezometry(piezometryPeriod, selectedZoneCodes, {
+      includeIps: piezometryMode === 'ips'
+    })
     loadRiverFlows(flowPeriod, selectedZoneCodes)
   // Period changes have their own handlers; this effect follows zone changes only.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -504,10 +716,16 @@ const DashboardWaterResources = ({
   }, [flowPeriod, loadRiverFlows, selectedZoneCodes])
 
   const changePiezometryPeriod = useCallback(period => {
+    if (piezometryMode === 'ips') {
+      lastIpsPiezometryPeriod.current = period
+    } else {
+      lastRawPiezometryPeriod.current = period
+    }
+
     setPiezometryPeriod(period)
     updateResourceHash({flowPeriod, piezometryMode, piezometryPeriod: period})
-    loadPiezometry(period)
-  }, [flowPeriod, loadPiezometry, piezometryMode])
+    loadPiezometry(period, selectedZoneCodes, {includeIps: piezometryMode === 'ips'})
+  }, [flowPeriod, loadPiezometry, piezometryMode, selectedZoneCodes])
 
   const changeFlowPeriod = useCallback(period => {
     setFlowPeriod(period)
@@ -516,9 +734,18 @@ const DashboardWaterResources = ({
   }, [loadRiverFlows, piezometryMode, piezometryPeriod])
 
   const changePiezometryMode = useCallback(mode => {
+    const nextPeriod = mode === 'ips'
+      ? lastIpsPiezometryPeriod.current
+      : lastRawPiezometryPeriod.current
+
     setPiezometryMode(mode)
-    updateResourceHash({flowPeriod, piezometryMode: mode, piezometryPeriod})
-  }, [flowPeriod, piezometryPeriod])
+    setPiezometryPeriod(nextPeriod)
+    updateResourceHash({flowPeriod, piezometryMode: mode, piezometryPeriod: nextPeriod})
+
+    if (mode === 'ips' || piezometryMode === 'ips') {
+      loadPiezometry(nextPeriod, selectedZoneCodes, {includeIps: mode === 'ips'})
+    }
+  }, [flowPeriod, loadPiezometry, piezometryMode, selectedZoneCodes])
 
   const hasAnyStation = piezometryStations.length > 0 || flowStations.length > 0
   if (!hasAnyStation && !piezometryError && !flowError) {
@@ -526,30 +753,22 @@ const DashboardWaterResources = ({
   }
 
   return (
-    <section className='mt-8'>
-      <h2 className='fr-h2 fr-mb-4w'>Évolution de la ressource en eau</h2>
+    <section className='mt-6'>
+      <WaterResourcesTitle visible={showTitle} />
       <div className='flex flex-col gap-6'>
         {(piezometryStations.length > 0 || piezometryError) && (
           <ResourceChart
             controls={(
               <div className='flex flex-col gap-3 xl:flex-row xl:items-center'>
-                <SegmentedControl
-                  hideLegend
-                  small
-                  legend='Mode d’affichage'
-                  segments={PIEZOMETRY_MODES.map(option => ({
-                    label: option.label,
-                    nativeInputProps: {
-                      checked: piezometryMode === option.value,
-                      disabled: isPiezometryLoading,
-                      onChange: () => changePiezometryMode(option.value)
-                    }
-                  }))}
+                <PiezometryModeControl
+                  disabled={isPiezometryLoading}
+                  value={piezometryMode}
+                  onChange={changePiezometryMode}
                 />
                 <PeriodControl
                   disabled={isPiezometryLoading}
                   id='piezometry-period'
-                  options={PIEZOMETRY_PERIODS}
+                  options={piezometryMode === 'ips' ? PIEZOMETRY_IPS_PERIODS : PIEZOMETRY_PERIODS}
                   value={piezometryPeriod}
                   onChange={changePiezometryPeriod}
                 />
@@ -557,15 +776,19 @@ const DashboardWaterResources = ({
             )}
             error={piezometryError}
             isLoading={isPiezometryLoading}
-            latestObservationAt={piezometryStations.map(station => station.latestObservationAt).filter(Boolean).sort().at(-1)}
+            latestObservationAt={latestPiezometryAt}
             source={piezometry?.source}
-            subtitle='Niveaux mesurés sur les piézomètres configurés pour les zones sélectionnées.'
+            subtitle={piezometryMode === 'ips'
+              ? 'Situation de chaque nappe par rapport à son propre historique pour le même mois.'
+              : 'Niveaux mesurés sur les piézomètres configurés pour les zones sélectionnées.'}
             title='Niveaux piézométriques'
             warnings={piezometry?.warnings ?? EMPTY_ARRAY}
           >
             <StationLegend
+              availableIds={piezometryAvailableIds}
               colors={piezometryColors}
               stations={piezometryStations}
+              unavailableLabel={station => getPiezometryUnavailableLabel(piezometryMode, station)}
               value={piezometryVisibility}
               onChange={setPiezometryVisibility}
             />
@@ -574,25 +797,37 @@ const DashboardWaterResources = ({
                 enableAnnotations={false}
                 enableDecimation={false}
                 enableThresholds={false}
-                frequency={getPiezometryFrequency(piezometryPeriod)}
-                height={piezometryPeriod === 'twenty-years' ? 440 : 360}
+                backgroundBands={getPiezometryBackgroundBands(piezometryMode)}
+                frequency={getPiezometryFrequency(piezometryPeriod, piezometryMode)}
+                height={getPiezometryChartHeight(piezometryPeriod)}
                 includeZero={false}
                 locale='fr-FR'
-                reverseYAxis={piezometryMode === 'depth'}
+                referenceLines={getPiezometryReferenceLines(piezometryMode)}
+                reverseYAxis={piezometryYAxis.reverse}
                 series={piezometrySeries}
                 showLegend={false}
-                tooltipFrequency={getPiezometryTooltipFrequency(piezometryPeriod)}
+                tooltipFrequency={getPiezometryTooltipFrequency(piezometryPeriod, piezometryMode)}
                 visibilityModel={piezometryVisibility}
-                yAxisLabel={piezometryMode === 'depth' ? 'Profondeur (m)' : 'Cote (m NGF)'}
+                yAxisLabel={piezometryYAxis.label}
+                yAxisMax={piezometryYAxis.maximum}
+                yAxisMin={piezometryYAxis.minimum}
               />
             ) : (
               <div className='flex min-h-[300px] items-center justify-center bg-gray-50 text-sm text-gray-600'>
-                Aucune mesure disponible sur cette période.
+                {getPiezometryEmptyMessage(piezometryMode)}
               </div>
             )}
-            {piezometry?.aggregation?.frequency === '1 week' && (
+            {piezometryMode === 'ips' && (
+              <div className='mt-3 border-t border-gray-200 pt-3'>
+                <p className='fr-text--xs fr-mb-0 text-gray-600'>
+                  Chaque point compare la moyenne mensuelle validée du piézomètre aux valeurs du même mois sur son propre historique. L’indicateur suit les principes de la méthode IPS du BRGM et nécessite au moins 15 années de référence.
+                </p>
+                <IpsScaleLegend />
+              </div>
+            )}
+            {piezometryMode !== 'ips' && piezometry?.aggregation?.frequency === '1 week' && (
               <p className='fr-text--xs fr-mb-0 mt-3 text-gray-600'>
-                Sur 20 ans, chaque point correspond à la moyenne des mesures de la semaine.
+                Chaque point correspond à la moyenne des mesures de la semaine.
               </p>
             )}
           </ResourceChart>
@@ -618,8 +853,10 @@ const DashboardWaterResources = ({
             warnings={riverFlows?.warnings ?? EMPTY_ARRAY}
           >
             <StationLegend
+              availableIds={flowAvailableIds}
               colors={flowColors}
               stations={flowStations}
+              unavailableLabel='aucune donnée'
               value={flowVisibility}
               onChange={setFlowVisibility}
             />

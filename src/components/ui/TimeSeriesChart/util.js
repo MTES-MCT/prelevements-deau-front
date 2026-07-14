@@ -83,6 +83,8 @@ export const collectAxisTooltipRows = ({
       value: formattedValue,
       color: item.getColor?.(dataIndex) ?? item.color,
       nature: meta?.comment ?? null,
+      natureLabel: meta?.natureLabel ?? null,
+      detail: meta?.detail ?? null,
       alert: meta?.alert ?? null,
       syntheticLabel: origin?.synthetic ? translations.interpolatedPoint : null
     })
@@ -1007,6 +1009,14 @@ const buildSingleYAxis = (axisId, stats, locale, precision, label = null, option
   let axisMin = options.includeZero === false ? stats.min : Math.min(0, stats.min)
   let axisMax = options.includeZero === false ? stats.max : Math.max(0, stats.max)
 
+  if (axisId === AXIS_LEFT_ID && Number.isFinite(options.minimum)) {
+    axisMin = options.minimum
+  }
+
+  if (axisId === AXIS_LEFT_ID && Number.isFinite(options.maximum)) {
+    axisMax = options.maximum
+  }
+
   // Prevent collapsed axis when min equals max
   if (axisMin === axisMax) {
     axisMin -= 1
@@ -1047,10 +1057,14 @@ export const buildYAxisConfigurations = (
     axisLabels = {},
     axisPrecision = {},
     includeZero = true,
-    reverse = false
+    reverse = false,
+    minimum = null,
+    maximum = null
   } = {}
 ) => {
-  const options = {includeZero, reverse}
+  const options = {
+    includeZero, reverse, minimum, maximum
+  }
 
   return (
     [AXIS_LEFT_ID, AXIS_RIGHT_ID].map(axisId =>
@@ -1385,6 +1399,8 @@ export const buildSeriesModel = ({
   includeZero = true,
   reverseYAxis = false,
   yAxisLabel = null,
+  yAxisMin = null,
+  yAxisMax = null,
   visibilityModel = null
 }) => {
   const axisStats = {
@@ -1506,7 +1522,9 @@ export const buildSeriesModel = ({
     axisLabels,
     axisPrecision,
     includeZero,
-    reverse: reverseYAxis
+    reverse: reverseYAxis,
+    minimum: yAxisMin,
+    maximum: yAxisMax
   })
 
   return {

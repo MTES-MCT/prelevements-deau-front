@@ -2,10 +2,11 @@
 
 import {useEffect, useState} from 'react'
 
+import {useRouter} from '@bprogress/next/app'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import {Tab, Tabs} from '@mui/material'
 import Link from 'next/link'
-import {useRouter, useParams, usePathname} from 'next/navigation'
+import {useParams, usePathname} from 'next/navigation'
 
 const PointTabs = () => {
   const router = useRouter()

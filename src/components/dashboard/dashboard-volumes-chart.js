@@ -277,7 +277,7 @@ const DashboardVolumesChart = ({
     <section className='mt-6 border border-gray-200 bg-white p-5 md:p-6'>
       <div className='mb-3 flex flex-col gap-4 md:flex-row md:items-start md:justify-between'>
         <div>
-          <h2 className='fr-h3 fr-mb-1v'>{chart?.title}</h2>
+          <h3 className='fr-h3 fr-mb-1v'>{chart?.title}</h3>
           <p className='fr-text--xs fr-mb-0 max-w-[560px] text-gray-600'>
             {subtitle}
           </p>

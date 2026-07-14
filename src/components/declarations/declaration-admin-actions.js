@@ -2,7 +2,7 @@
 
 import {useState} from 'react'
 
-import {useRouter} from 'next/navigation'
+import {useRouter} from '@bprogress/next/app'
 
 import {
   deleteDeclarationAction,
@@ -141,7 +141,7 @@ const DeclarationAdminActions = ({
           router.push('/declarations')
         }
 
-        router.refresh()
+        router.refresh({showProgress: false})
         return
       }
 
@@ -154,7 +154,7 @@ const DeclarationAdminActions = ({
         action: pendingAction,
         result
       })
-      router.refresh()
+      router.refresh({showProgress: false})
     } finally {
       setBusyAction(null)
     }

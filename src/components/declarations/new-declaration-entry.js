@@ -4,9 +4,9 @@ import {
   useCallback, useEffect, useMemo, useRef, useState
 } from 'react'
 
+import {useRouter} from '@bprogress/next/app'
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {SegmentedControl} from '@codegouvfr/react-dsfr/SegmentedControl'
-import {useRouter} from 'next/navigation'
 
 import NewDeclarationForm from './new-declaration-form.js'
 import QuickDeclarationForm from './quick-declaration-form.js'

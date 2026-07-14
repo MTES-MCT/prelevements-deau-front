@@ -2,8 +2,8 @@
 
 import {useState} from 'react'
 
+import {useRouter} from '@bprogress/next/app'
 import {Button} from '@codegouvfr/react-dsfr/Button'
-import {useRouter} from 'next/navigation'
 
 import RegleForm from '@/components/form/regle-form.js'
 import FormErrors from '@/components/ui/FormErrors/index.js'

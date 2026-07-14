@@ -72,13 +72,19 @@ test('le tooltip regroupe les séries et n’affiche qu’une nature commune', t
   const rows = collectAxisTooltipRows({
     series,
     dataIndex: 0,
-    getPointMeta: () => ({comment: 'Temps réel'}),
+    getPointMeta: id => ({
+      comment: 'Temps réel',
+      natureLabel: 'Origine',
+      detail: id === 'station-a' ? 'Profondeur mesurée : 8,20 m' : null
+    }),
     getSegmentOrigin: () => null,
     translations: {interpolatedPoint: 'Point interpolé'}
   })
 
   t.is(rows.length, 2)
   t.deepEqual(rows.map(row => row.label), ['Station A (L/s)', 'Station B (L/s)'])
+  t.is(rows[0].detail, 'Profondeur mesurée : 8,20 m')
+  t.is(rows[0].natureLabel, 'Origine')
   t.is(getSharedTooltipNature(rows), 'Temps réel')
 })
 
@@ -113,6 +119,20 @@ test('buildYAxisConfigurations peut cadrer une série sans imposer zéro', t => 
   t.true(axes[0].reverse)
   t.is(axes[0].label, 'Profondeur (m)')
   t.false(axes[1].reverse)
+})
+
+test('buildYAxisConfigurations respecte les bornes fixes de l’indicateur', t => {
+  const axes = buildYAxisConfigurations({
+    [AXIS_LEFT_ID]: {min: -0.5, max: 0.8},
+    [AXIS_RIGHT_ID]: {min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY}
+  }, 'fr-FR', {
+    includeZero: false,
+    minimum: -3,
+    maximum: 3
+  })
+
+  t.is(axes[0].min, -3)
+  t.is(axes[0].max, 3)
 })
 
 test('buildSeriesModel recadre l’axe sur les séries visibles', t => {

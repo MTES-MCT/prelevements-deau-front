@@ -2,9 +2,9 @@
 
 import {useEffect, useMemo, useState} from 'react'
 
+import {useRouter} from '@bprogress/next/app'
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Button} from '@codegouvfr/react-dsfr/Button'
-import {useRouter} from 'next/navigation'
 
 import DocumentForm from '@/components/form/document-form.js'
 import DividerSection from '@/components/ui/DividerSection/index.js'

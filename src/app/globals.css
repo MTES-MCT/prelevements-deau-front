@@ -19,6 +19,17 @@ main {
   min-width: 0;
 }
 
+.bprogress .peg {
+  display: none !important;
+  box-shadow: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bprogress .bar {
+    transition: none !important;
+  }
+}
+
 .fr-footer {
   flex-shrink: 0;
 }

@@ -2,8 +2,8 @@
 
 import {useCallback} from 'react'
 
+import {useRouter} from '@bprogress/next/app'
 import {Box} from '@mui/material'
-import {useRouter} from 'next/navigation'
 
 import Map from '@/components/map/index.js'
 import {getPointPrelevementURL} from '@/lib/urls.js'

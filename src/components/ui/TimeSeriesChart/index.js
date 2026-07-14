@@ -59,6 +59,8 @@ const Y_AXIS_LABEL_OFFSET = 68
  * @property {number|null} y - Value at this point (null for missing data)
  * @property {Object} [meta] - Optional metadata for this point
  * @property {string} [meta.comment] - Comment or note about this data point
+ * @property {string} [meta.natureLabel] - Label describing the point comment
+ * @property {string} [meta.detail] - Secondary information displayed below the value
  * @property {string} [meta.alert] - Alert message for this point if an alert is triggered
  */
 
@@ -194,6 +196,9 @@ const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, g
     translations: t
   })
   const sharedNature = getSharedTooltipNature(rows)
+  const sharedNatureLabel = sharedNature
+    ? rows.find(row => row.nature)?.natureLabel || 'Nature des données'
+    : null
 
   return (
     <Box
@@ -240,7 +245,12 @@ const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, g
             <Typography variant='body2' sx={{overflowWrap: 'anywhere'}}>{row.label}</Typography>
             <Typography variant='body2' sx={{fontWeight: 600, whiteSpace: 'nowrap'}}>{row.value}</Typography>
             {!sharedNature && row.nature && (
-              <Typography color='text.secondary' sx={{fontSize: 12, gridColumn: '2 / -1'}}>{row.nature}</Typography>
+              <Typography color='text.secondary' sx={{fontSize: 12, gridColumn: '2 / -1'}}>
+                {row.natureLabel ? `${row.natureLabel} : ` : ''}{row.nature}
+              </Typography>
+            )}
+            {row.detail && (
+              <Typography color='text.secondary' sx={{fontSize: 12, gridColumn: '2 / -1'}}>{row.detail}</Typography>
             )}
             {row.syntheticLabel && (
               <Typography color='text.secondary' sx={{fontSize: 12, gridColumn: '2 / -1'}}>{row.syntheticLabel}</Typography>
@@ -257,7 +267,7 @@ const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, g
             borderTop: '1px solid', borderColor: 'divider', display: 'flex', gap: 1, justifyContent: 'space-between', pt: 1
           }}
         >
-          <Typography color='text.secondary' sx={{fontSize: 12}}>Nature des données</Typography>
+          <Typography color='text.secondary' sx={{fontSize: 12}}>{sharedNatureLabel}</Typography>
           <Typography sx={{fontSize: 12, fontWeight: 500, textAlign: 'right'}}>{sharedNature}</Typography>
         </Box>
       )}
@@ -400,6 +410,41 @@ const ChartAnnotations = ({annotations, onPointClick}) => {
   )
 }
 
+const ChartBackgroundBands = ({bands}) => {
+  const drawingArea = useDrawingArea()
+  const yScale = useYScale(AXIS_LEFT_ID)
+
+  if (!drawingArea || !yScale || bands.length === 0) {
+    return null
+  }
+
+  return (
+    <g aria-hidden='true' pointerEvents='none'>
+      {bands.map(band => {
+        const firstY = yScale(band.minimum)
+        const secondY = yScale(band.maximum)
+        if (!Number.isFinite(firstY) || !Number.isFinite(secondY)) {
+          return null
+        }
+
+        const top = Math.max(drawingArea.top, Math.min(firstY, secondY))
+        const bottom = Math.min(drawingArea.top + drawingArea.height, Math.max(firstY, secondY))
+
+        return (
+          <rect
+            key={`${band.minimum}-${band.maximum}`}
+            fill={band.color}
+            height={Math.max(0, bottom - top)}
+            width={drawingArea.width}
+            x={drawingArea.left}
+            y={top}
+          />
+        )
+      })}
+    </g>
+  )
+}
+
 /**
  * Helper function to create initial visibility state for all series
  * @param {Series[]} series - Array of series
@@ -489,6 +534,8 @@ const DEFAULT_TRANSLATIONS = {
  * @param {number} [props.maxPointsBeforeDecimation=MAX_POINTS_BEFORE_DECIMATION] - Point count that triggers decimation warning
  * @param {number} [props.height=360] - Chart height in pixels
  * @param {string} [props.tooltipFrequency] - Frequency used to format tooltip dates, when different from the axis frequency
+ * @param {Array<{y: number, color?: string}>} [props.referenceLines] - Horizontal reference lines
+ * @param {Array<{minimum: number, maximum: number, color: string}>} [props.backgroundBands] - Horizontal background bands on the left axis
  *
  * @returns {JSX.Element} Rendered time series chart
  */
@@ -511,6 +558,10 @@ const TimeSeriesChart = ({
   visibilityModel,
   onVisibilityModelChange,
   yAxisLabel = null,
+  yAxisMin = null,
+  yAxisMax = null,
+  referenceLines = [],
+  backgroundBands = [],
   height = CHART_HEIGHT
 }) => {
   // Validate that frequency is provided (required for date formatting)
@@ -572,8 +623,10 @@ const TimeSeriesChart = ({
     includeZero,
     reverseYAxis,
     yAxisLabel,
+    yAxisMin,
+    yAxisMax,
     visibilityModel: visibility
-  }), [enableThresholds, enableDecimation, decimationTarget, maxPointsBeforeDecimation, frequency, timelineRange, includeZero, reverseYAxis, visibility, yAxisLabel])
+  }), [enableThresholds, enableDecimation, decimationTarget, maxPointsBeforeDecimation, frequency, timelineRange, includeZero, reverseYAxis, visibility, yAxisLabel, yAxisMin, yAxisMax])
 
   const chartModel = useChartModel({
     series,
@@ -769,6 +822,7 @@ const TimeSeriesChart = ({
                 ...dashedStyles
               }}
             >
+              <ChartBackgroundBands bands={backgroundBands} />
               <ChartsGrid horizontal vertical />
               <ChartsAxis
                 leftAxis={leftAxisConfig}
@@ -814,6 +868,17 @@ const TimeSeriesChart = ({
                   y={threshold.value}
                   yAxisId={threshold.axisId}
                   lineStyle={{stroke: threshold.color, strokeDasharray: '4 4'}}
+                />
+              ))}
+              {referenceLines.map(referenceLine => (
+                <ChartsReferenceLine
+                  key={`reference-${referenceLine.y}`}
+                  y={referenceLine.y}
+                  yAxisId={AXIS_LEFT_ID}
+                  lineStyle={{
+                    stroke: referenceLine.color || theme.palette.grey[400],
+                    strokeDasharray: '4 4'
+                  }}
                 />
               ))}
               {annotations.length > 0 && <ChartAnnotations annotations={annotations} onPointClick={onPointClick} />}

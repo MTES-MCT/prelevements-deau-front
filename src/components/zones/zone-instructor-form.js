@@ -2,6 +2,7 @@
 
 import {useEffect, useMemo, useState} from 'react'
 
+import {useRouter} from '@bprogress/next/app'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {
   Alert,
@@ -16,7 +17,6 @@ import {
   ToggleButtonGroup,
   Typography
 } from '@mui/material'
-import {useRouter} from 'next/navigation'
 
 import SectionCard from '@/components/ui/SectionCard/index.js'
 import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
@@ -431,7 +431,7 @@ const ZoneInstructorForm = ({zone, instructor = null}) => {
       }
 
       router.push(`/zones/${zone.id}/agents/${result.data.id}`)
-      router.refresh()
+      router.refresh({showProgress: false})
     } catch (error) {
       setError(error.message)
       setIsSubmitting(false)

@@ -2,11 +2,12 @@
 
 import {useEffect, useState} from 'react'
 
+import {useRouter} from '@bprogress/next/app'
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import SelfTraining from '@codegouvfr/react-dsfr/picto/SelfTraining'
 import {Typography, Box, CircularProgress} from '@mui/material'
-import {useRouter, useSearchParams} from 'next/navigation'
+import {useSearchParams} from 'next/navigation'
 
 import Pictogram from '@/components/ui/Pictogram/index.js'
 import {useAuth} from '@/contexts/auth-context.js'

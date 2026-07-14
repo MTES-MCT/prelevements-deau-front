@@ -2,11 +2,11 @@
 
 import {useState} from 'react'
 
+import {useRouter} from '@bprogress/next/app'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {SegmentedControl} from '@codegouvfr/react-dsfr/SegmentedControl'
 import {Checkbox, FormControlLabel, Typography} from '@mui/material'
 import {pick, trim} from 'lodash-es'
-import {useRouter} from 'next/navigation'
 
 import PreleveurEmailAliasesForm from './preleveur-email-aliases-form.js'
 import PreleveurMoralForm from './preleveur-moral-form.js'
