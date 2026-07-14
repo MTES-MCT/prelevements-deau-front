@@ -70,6 +70,7 @@ const ZoneExportButton = ({
   label = 'Exporter Excel',
   rows,
   resolveRows,
+  size = 'medium',
   sheetName
 }) => {
   const [isExporting, setIsExporting] = useState(false)
@@ -121,6 +122,7 @@ const ZoneExportButton = ({
         disabled={isExporting}
         iconId='ri-download-line'
         priority='secondary'
+        size={size}
         onClick={handleExport}
       >
         {isExporting ? 'Export en cours…' : label}

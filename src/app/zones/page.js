@@ -1,8 +1,4 @@
-import {Box} from '@mui/material'
-
-import EntityHeader from '@/components/ui/EntityHeader/index.js'
 import ZoneBreadcrumb from '@/components/zones/zone-breadcrumb.js'
-import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
 import ZonesList from '@/components/zones/zones-list.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getCurrentUser} from '@/server/actions/user.js'
@@ -14,51 +10,35 @@ export const metadata = {
 
 export const dynamic = 'force-dynamic'
 
-function pluralize(count, singular, plural = `${singular}s`) {
-  return `${count} ${count > 1 ? plural : singular}`
-}
-
 const Page = async () => {
   const [result, userResult] = await Promise.all([
     getZonesAction(),
     getCurrentUser()
   ])
   const zones = result.data || []
-  const adminZonesCount = zones.filter(zone => zone.isAdmin).length
-  const pageLabel = userResult?.data?.role === 'ADMIN' ? 'Zones' : 'Mes zones'
+  const isGlobalAdmin = userResult?.data?.role === 'ADMIN'
+  const pageLabel = isGlobalAdmin ? 'Zones' : 'Mes zones'
 
   return (
     <>
       <StartDsfrOnHydration />
 
-      <Box className='fr-container h-full w-full flex flex-col gap-5 mb-8'>
-        <ZoneBreadcrumb currentPageLabel={pageLabel} />
+      <main className='min-h-screen bg-[#f7f7fb] pb-12'>
+        <div className='fr-container pt-6 md:pt-8'>
+          <ZoneBreadcrumb currentPageLabel={pageLabel} />
 
-        <EntityHeader
-          title={(
-            <>
-              <span className={ZONE_ICONS.mapPin2} />
-              {' '}
-              {pageLabel}
-            </>
-          )}
-          tags={[]}
-          rightBadges={[]}
-          hrefButtons={[]}
-          metas={[
-            {
-              iconId: ZONE_ICONS.mapPin,
-              content: pluralize(zones.length, 'zone')
-            },
-            {
-              iconId: ZONE_ICONS.shieldCheck,
-              content: pluralize(adminZonesCount, 'zone administrée', 'zones administrées')
-            }
-          ]}
-        />
+          <div className='mb-6'>
+            <h1 className='fr-h2 fr-mb-2w'>{pageLabel}</h1>
+            <p className='fr-text--sm fr-mb-0 text-gray-700'>
+              {isGlobalAdmin
+                ? 'Consultez les territoires configurés, leurs rattachements et leur niveau d’activité.'
+                : 'Consultez les territoires auxquels vous avez accès et leurs principaux rattachements.'}
+            </p>
+          </div>
 
-        <ZonesList zones={zones} />
-      </Box>
+          <ZonesList isGlobalAdmin={isGlobalAdmin} zones={zones} />
+        </div>
+      </main>
     </>
   )
 }
