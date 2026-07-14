@@ -20,6 +20,15 @@ export async function getPointsPrelevementAction() {
 }
 
 /**
+ * Get point summaries needed by the map and its filters.
+ * Detailed declarants are intentionally loaded only when a popup is opened.
+ * @returns {Promise<Object>} - Result object
+ */
+export async function getPointMapSummariesAction() {
+  return withErrorHandling(async () => fetchJSON('api/points-prelevement/map'))
+}
+
+/**
  * Get all light points de prélèvement
  * @returns {Promise<Object>} - Result object
  */

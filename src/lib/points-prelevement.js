@@ -2,12 +2,10 @@ import {legendColors} from '@/components/map/legend-colors.js'
 import {
   getUsageColor,
   getUsageKey,
+  getUsageRootCode,
   normalizeUsageOption
 } from '@/lib/water-uses.js'
-import {
-  getPointPrelevementDisplayName,
-  getPointPrelevementTechnicalReference
-} from '@/utils/point-prelevement.js'
+import {getPointPrelevementDisplayName} from '@/utils/point-prelevement.js'
 
 // Fonction utilitaire pour récupérer la couleur associée au type de milieu
 export const getTypeMilieuColor = typeMilieu => {
@@ -53,7 +51,29 @@ export function extractWaterBodyType(points) {
   return [...typeMilieuSet]
 }
 
-export function createPointPrelevementFeatures(points, {preferUsageName = false} = {}) {
+export function getPointMarkerUsages(point, visibleUsageKeys) {
+  if (!Array.isArray(visibleUsageKeys)) {
+    return point?.usages ?? []
+  }
+
+  const selectedUsageKeys = new Set(visibleUsageKeys)
+  return (point?.usages ?? [])
+    .filter(usage => selectedUsageKeys.has(getUsageRootCode(usage)))
+}
+
+export function getPointMarkerIconId(usages = []) {
+  const usageKeys = [...new Set(usages
+    .map(usage => getUsageRootCode(usage))
+    .filter(Boolean))]
+    .sort((left, right) => left.localeCompare(right, 'fr-FR', {numeric: true}))
+
+  return `marker-usages-${usageKeys.join('-') || 'none'}`
+}
+
+export function createPointPrelevementFeatures(points, {
+  preferUsageName = false,
+  visibleUsageKeys
+} = {}) {
   return {
     type: 'FeatureCollection',
     features: points.map(point => {
@@ -61,17 +81,18 @@ export function createPointPrelevementFeatures(points, {preferUsageName = false}
         fallback: 'Point de prélèvement',
         preferUsageName
       })
+      const markerUsages = getPointMarkerUsages(point, visibleUsageKeys)
 
       return {
         type: 'Feature',
         geometry: point.coordinates,
         id: point.id,
         properties: {
-          ...point,
+          icon: getPointMarkerIconId(markerUsages),
+          id: point.id,
           name: displayName,
-          nom: displayName,
-          technicalName: getPointPrelevementTechnicalReference(point, {preferUsageName}),
-          textOffset: [0, 1.5 + (0.07 * Math.min(displayName.length, 50))]
+          textOffset: [0, 1.5 + (0.07 * Math.min(displayName.length, 50))],
+          ...(point.status ? {status: point.status} : {})
         }
       }
     })
@@ -104,7 +125,16 @@ function resolveCssColor(color) {
  * Crée un "pie chart" (camembert) <svg> à partir d'un tableau d'usages (ex: ['Agriculture','Eau potable']).
  */
 export function createUsagePieChart(usages) {
-  const count = usages.length
+  const usagesByRoot = new Map()
+  for (const usage of usages) {
+    const key = getUsageRootCode(usage) ?? getUsageKey(usage)
+    if (key && !usagesByRoot.has(key)) {
+      usagesByRoot.set(key, usage)
+    }
+  }
+
+  const distinctUsages = [...usagesByRoot.values()]
+  const count = distinctUsages.length
   const container = document.createElement('div')
   container.style.display = 'block'
   const svgSize = 24
@@ -141,7 +171,7 @@ export function createUsagePieChart(usages) {
   }
 
   for (let i = 0; i < count; i++) {
-    const usage = usages[i]
+    const usage = distinctUsages[i]
     const color = getUsageColor(usage)
     const start = i / count
     const end = (i + 1) / count
@@ -198,7 +228,7 @@ function createPieSegment(cx, cy, r, start, end, color) {
 
 // Estimated popup dimensions (can be adjusted based on actual popup size)
 const ESTIMATED_POPUP_HEIGHT = 310
-const ESTIMATED_POPUP_WIDTH = 200
+const ESTIMATED_POPUP_WIDTH = 330
 
 export function computeBestPopupAnchor(map, coords) {
   // Calcul de la position du point en pixels

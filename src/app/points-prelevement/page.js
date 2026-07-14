@@ -1,66 +1,125 @@
 'use client'
 
 import {
-  useCallback, useEffect, useMemo, useState
+  useCallback, useDeferredValue, useEffect, useMemo, useState
 } from 'react'
 
-import {
-  Box,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  useTheme
-} from '@mui/material'
-import {deburr} from 'lodash-es'
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {useRouter, useSearchParams} from 'next/navigation'
 
-import SidePanelLayout from '@/components/layout/side-panel.js'
-import Map from '@/components/map/index.js'
-import Legend from '@/components/map/legend.js'
-import PointsListHeader from '@/components/map/points-list-header.js'
-import PointsList from '@/components/map/points-list.js'
+import PointsMap from '@/components/map/index.js'
+import MapStyleMenu from '@/components/points-prelevement/map-style-menu.js'
+import PointsMapFilters from '@/components/points-prelevement/points-map-filters.js'
+import PointsMapLegend from '@/components/points-prelevement/points-map-legend.js'
+import PointsMapList from '@/components/points-prelevement/points-map-list.js'
 import LoadingOverlay from '@/components/ui/LoadingOverlay/index.js'
 import {useAuth} from '@/contexts/auth-context.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
+import useDebouncedValue from '@/hook/use-debounced-value.js'
 import useEvent from '@/hook/use-event.js'
-import {downloadCsv} from '@/lib/export-csv.js'
-import {extractWaterBodyType, extractUsages} from '@/lib/points-prelevement.js'
+import {pointFlowTypeLabels} from '@/lib/point-flow-types.js'
+import {
+  MISSING_USAGE_KEY,
+  countPointsByUsage,
+  createPointFilterIndex,
+  filterPoints,
+  getPointFiltersFromSearchParams,
+  getSearchParamsWithPointFilters,
+  getUsageOptionsForPoints,
+  getWaterBodyTypeOptionsForPoints,
+  haveSameSelection
+} from '@/lib/points-prelevement-filters.js'
 import {getPointPrelevementURL} from '@/lib/urls.js'
-import {usageMatchesFilter} from '@/lib/water-uses.js'
-import {getPointsPrelevementAction} from '@/server/actions/points-prelevement.js'
+import {
+  getPointMapSummariesAction,
+  getPointPrelevementAction
+} from '@/server/actions/points-prelevement.js'
+
+const FLOW_TYPE_VALUES = Object.keys(pointFlowTypeLabels)
+const POINTS_MAP_OPTIONS = Object.freeze({hash: true, cooperativeGestures: false})
+
+const getDefaultFilters = (usageOptions = [], waterBodyTypeOptions = []) => ({
+  query: '',
+  usageKeys: usageOptions.map(option => option.value),
+  flowTypes: FLOW_TYPE_VALUES,
+  waterBodyTypes: waterBodyTypeOptions.map(option => option.value)
+})
+
+const hasCoordinates = point => Array.isArray(point?.coordinates?.coordinates)
+const getHighlightedPointId = (mapPointId, listPointId, selectedPointId) =>
+  mapPointId ?? listPointId ?? selectedPointId
+
+const MobileMapResultsAction = ({count, hasActiveFilters, loading, onClick}) => {
+  if (loading || !hasActiveFilters || count === 0) {
+    return null
+  }
+
+  return (
+    <div className='shrink-0 border-t border-gray-200 bg-white p-2.5 lg:hidden'>
+      <button
+        className='fr-btn fr-btn--sm fr-btn--icon-left fr-icon-map-pin-2-line w-full justify-center'
+        type='button'
+        onClick={onClick}
+      >
+        {count === 1
+          ? 'Voir le point sur la carte'
+          : `Voir les ${count} points sur la carte`}
+      </button>
+    </div>
+  )
+}
 
 const Page = () => {
   const {user} = useAuth()
-  const theme = useTheme()
-  const searchParams = useSearchParams()
   const router = useRouter()
-  const selectedPointId = searchParams.get('point-prelevement')
+  const searchParams = useSearchParams()
   const preferUsageName = user?.role === 'DECLARANT'
-  // État pour les données
+  const initialSelectedPointId = searchParams.get('point-prelevement')
+
   const [points, setPoints] = useState([])
+  const [filters, setFilters] = useState(getDefaultFilters())
+  const [filtersInitialized, setFiltersInitialized] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [mapStyle, setMapStyle] = useState('plan-ign')
+  const [mapRecenterRequestKey, setMapRecenterRequestKey] = useState(0)
+  const [pointSelectionRequestKey, setPointSelectionRequestKey] = useState(
+    initialSelectedPointId ? 1 : 0
+  )
+  const [selectedPointId, setSelectedPointId] = useState(
+    initialSelectedPointId
+  )
+  const [mobileView, setMobileView] = useState('map')
+  const [desktopListOpen, setDesktopListOpen] = useState(true)
+  const [listHighlightedPointId, setListHighlightedPointId] = useState(null)
+  const [mapHighlightedPointId, setMapHighlightedPointId] = useState(null)
 
-  // États locaux pour l'interface
-  const [expanded, setExpanded] = useState(false)
-  const [filters, setFilters] = useState({
-    name: '',
-    typeMilieu: '',
-    usages: []
-  })
-  const [filteredPoints, setFilteredPoints] = useState([])
-  const [style, setStyle] = useState('plan-ign')
-
-  // Récupération des données côté client via l'API
   useEffect(() => {
     async function fetchPoints() {
       try {
-        const result = await getPointsPrelevementAction()
-        if (result.success) {
-          setPoints(result.data)
+        const result = await getPointMapSummariesAction()
+        if (!result.success) {
+          setError('Les points de prélèvement n’ont pas pu être chargés.')
+          return
         }
-      } catch (error) {
-        console.error('Erreur lors du chargement des points:', error)
+
+        const loadedPoints = result.data ?? []
+        const loadedUsageOptions = getUsageOptionsForPoints(loadedPoints)
+        const loadedWaterBodyTypeOptions = getWaterBodyTypeOptionsForPoints(loadedPoints)
+        const loadedDefaultFilters = getDefaultFilters(
+          loadedUsageOptions,
+          loadedWaterBodyTypeOptions
+        )
+
+        setPoints(loadedPoints)
+        setFilters(getPointFiltersFromSearchParams(
+          new URLSearchParams(window.location.search),
+          loadedDefaultFilters
+        ))
+        setFiltersInitialized(true)
+      } catch (fetchError) {
+        console.error('Erreur lors du chargement des points :', fetchError)
+        setError('Les points de prélèvement n’ont pas pu être chargés.')
       } finally {
         setLoading(false)
       }
@@ -69,158 +128,283 @@ const Page = () => {
     fetchPoints()
   }, [])
 
-  // Calculer les options pour les filtres dès que les données sont disponibles
-  const {waterBodyTypeOptions, usagesOptions} = useMemo(() => {
-    const waterBodyTypeOptions = points ? extractWaterBodyType(points) : []
-    const usagesOptions = points ? extractUsages(points) : []
+  const usageOptions = useMemo(() => getUsageOptionsForPoints(points), [points])
+  const waterBodyTypeOptions = useMemo(() => getWaterBodyTypeOptionsForPoints(points), [points])
+  const pointFilterIndex = useMemo(() => createPointFilterIndex(points), [points])
+  const defaultFilters = useMemo(
+    () => getDefaultFilters(usageOptions, waterBodyTypeOptions),
+    [usageOptions, waterBodyTypeOptions]
+  )
+  const deferredQuery = useDeferredValue(filters.query)
+  const debouncedUrlQuery = useDebouncedValue(filters.query, 200)
+  const isSearchPending = deferredQuery !== filters.query
+  const deferredFilters = useMemo(() => ({
+    flowTypes: filters.flowTypes,
+    query: deferredQuery,
+    usageKeys: filters.usageKeys,
+    waterBodyTypes: filters.waterBodyTypes
+  }), [deferredQuery, filters.flowTypes, filters.usageKeys, filters.waterBodyTypes])
+  const filtersForUrl = useMemo(() => ({
+    flowTypes: filters.flowTypes,
+    query: debouncedUrlQuery,
+    usageKeys: filters.usageKeys,
+    waterBodyTypes: filters.waterBodyTypes
+  }), [debouncedUrlQuery, filters.flowTypes, filters.usageKeys, filters.waterBodyTypes])
 
-    return {
-      waterBodyTypeOptions,
-      usagesOptions
+  const filteredPoints = useMemo(
+    () => filterPoints(points, deferredFilters, pointFilterIndex),
+    [deferredFilters, pointFilterIndex, points]
+  )
+  const pointsBeforeUsageFilter = useMemo(() => filterPoints(points, {
+    ...deferredFilters,
+    usageKeys: defaultFilters.usageKeys
+  }, pointFilterIndex), [defaultFilters.usageKeys, deferredFilters, pointFilterIndex, points])
+  const usageCounts = useMemo(
+    () => countPointsByUsage(pointsBeforeUsageFilter, usageOptions, pointFilterIndex),
+    [pointFilterIndex, pointsBeforeUsageFilter, usageOptions]
+  )
+  const filteredPointIds = useMemo(
+    () => filteredPoints.map(point => point.id),
+    [filteredPoints]
+  )
+  const highlightedPointId = getHighlightedPointId(
+    mapHighlightedPointId,
+    listHighlightedPointId,
+    selectedPointId
+  )
+  const mappablePoints = useMemo(() => points.filter(point => hasCoordinates(point)), [points])
+  const mappablePointsById = useMemo(
+    () => new Map(mappablePoints.map(point => [point.id, point])),
+    [mappablePoints]
+  )
+  const visibleMappablePoints = useMemo(
+    () => filteredPoints.filter(point => hasCoordinates(point)),
+    [filteredPoints]
+  )
+  const visibleUsageKeys = useMemo(
+    () => filters.usageKeys.filter(key => key !== MISSING_USAGE_KEY),
+    [filters.usageKeys]
+  )
+  const hasActiveFilters = filters.query.trim().length > 0
+    || !haveSameSelection(filters.usageKeys, defaultFilters.usageKeys)
+    || !haveSameSelection(filters.flowTypes, defaultFilters.flowTypes)
+    || !haveSameSelection(filters.waterBodyTypes, defaultFilters.waterBodyTypes)
+
+  useEffect(() => {
+    const visiblePointIds = new Set(filteredPointIds)
+
+    setListHighlightedPointId(current => current && !visiblePointIds.has(current) ? null : current)
+    setMapHighlightedPointId(current => current && !visiblePointIds.has(current) ? null : current)
+    setSelectedPointId(current => current && !visiblePointIds.has(current) ? null : current)
+  }, [filteredPointIds])
+
+  useEffect(() => {
+    if (!filtersInitialized || debouncedUrlQuery !== filters.query) {
+      return
     }
-  }, [points])
 
-  // Gestion de la sélection d'un point sur la carte
-  const handleSelectedPoint = useEvent(point => {
+    const nextSearchParams = getSearchParamsWithPointFilters(
+      new URLSearchParams(window.location.search),
+      filtersForUrl,
+      defaultFilters
+    )
+    const search = nextSearchParams.toString()
+    const nextUrl = `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`
+    const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`
+
+    if (nextUrl !== currentUrl) {
+      window.history.replaceState(window.history.state, '', nextUrl)
+    }
+  }, [debouncedUrlQuery, defaultFilters, filters.query, filtersForUrl, filtersInitialized])
+
+  useEffect(() => {
+    if (!filtersInitialized) {
+      return
+    }
+
+    const handlePopState = () => {
+      setFilters(getPointFiltersFromSearchParams(
+        new URLSearchParams(window.location.search),
+        defaultFilters
+      ))
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [defaultFilters, filtersInitialized])
+
+  const handleOpenPoint = useEvent(point => {
     router.push(getPointPrelevementURL(point))
   })
 
-  const handleFilter = useCallback(newFilters => {
-    setFilters(prevFilters => ({...prevFilters, ...newFilters}))
+  const handleSelectedPoint = useEvent(point => {
+    setSelectedPointId(point.id)
+  })
+
+  const handleListPointSelect = useEvent(point => {
+    if (!hasCoordinates(point)) {
+      handleOpenPoint(point)
+      return
+    }
+
+    handleSelectedPoint(point)
+    setPointSelectionRequestKey(currentKey => currentKey + 1)
+    setMobileView('map')
+  })
+
+  const handleFilterChange = useCallback(changes => {
+    setFilters(current => ({...current, ...changes}))
   }, [])
 
-  // Mise à jour des points filtrés en fonction des filtres
-  useEffect(() => {
-    const filtered = points.filter(point => {
-      let matches = true
+  const handleLegendToggle = useCallback((usageKey, checked) => {
+    setFilters(current => ({
+      ...current,
+      usageKeys: usageOptions
+        .map(option => option.value)
+        .filter(key => key === usageKey ? checked : current.usageKeys.includes(key))
+    }))
+  }, [usageOptions])
 
-      if (filters.name) {
-        // Normalisation de la chaîne de recherche
-        const normalizedSearch = deburr(filters.name.toLowerCase().trim())
+  const handleReset = useCallback(() => {
+    setFilters(defaultFilters)
+  }, [defaultFilters])
 
-        // Normalisation des valeurs à comparer
-        const normalizedName = point.name ? deburr(point.name.toLowerCase().trim()) : ''
-        const normalizedUsageName = point.usageName ? deburr(point.usageName.toLowerCase().trim()) : ''
-        const idPointStr = String(point.id).toLowerCase()
-        const preleveurMatches = point.preleveurs.some(preleveur => {
-          const normalizedSocialReason = preleveur?.declarant?.socialReason ? deburr(preleveur?.declarant?.socialReason?.toLowerCase().trim()) : ''
-          const normalizedLastName = preleveur.lastName ? deburr(preleveur.lastName.toLowerCase().trim()) : ''
-          const normalizedFirstName = preleveur.firstName ? deburr(preleveur.firstName.toLowerCase().trim()) : ''
+  const handleCloseList = useCallback(() => {
+    setListHighlightedPointId(null)
+    setMobileView('map')
+    setDesktopListOpen(false)
+  }, [])
 
-          return (
-            normalizedSocialReason.includes(normalizedSearch)
-              || normalizedLastName.includes(normalizedSearch)
-              || normalizedFirstName.includes(normalizedSearch)
-          )
-        })
-
-        matches &&= normalizedUsageName.includes(normalizedSearch)
-          || normalizedName.includes(normalizedSearch)
-          || idPointStr.includes(normalizedSearch)
-          || preleveurMatches
-      }
-
-      if (filters.waterBodyType) {
-        matches &&= point.waterBodyType === filters.waterBodyType
-      }
-
-      if (filters.usages && filters.usages.length > 0) {
-        matches &&= filters.usages.some(usageFilter =>
-          (point.usages ?? []).some(usage => usageMatchesFilter(usage, usageFilter))
-        )
-      }
-
-      return matches
-    })
-
-    setFilteredPoints(filtered.map(point => point.id))
-  }, [filters, points])
-
-  const exportPointsList = () => {
-    const result = points
-      .filter(p => filteredPoints.includes(p.id))
-      .map(p => ({
-        id: p.id,
-        name: p.name,
-        waterBodyType: p.waterBodyType
-      }))
-
-    downloadCsv(result, 'points-prelevements-export.csv')
-  }
+  const handleShowFilteredPointsOnMap = useCallback(() => {
+    setMobileView('map')
+    setMapRecenterRequestKey(currentKey => currentKey + 1)
+  }, [])
 
   return (
     <>
       <StartDsfrOnHydration />
 
-      <SidePanelLayout
-        header={
-          <PointsListHeader
-            resultsCount={loading ? null : filteredPoints.length}
-            filters={filters}
-            typeMilieuOptions={waterBodyTypeOptions}
-            usagesOptions={usagesOptions}
-            exportList={exportPointsList}
-            onFilter={handleFilter}
-          />
-        }
-        isOpen={expanded}
-        handleOpen={setExpanded}
-        panelContent={
-          <PointsList
-            isLoading={loading}
-            points={points.filter(pt => filteredPoints.includes(pt.id))}
-            preferUsageName={preferUsageName}
-          />
-        }
-      >
-        <Box className='flex h-full flex-col relative'>
-          {loading && <LoadingOverlay />}
+      <div className='flex min-h-0 flex-1 flex-col bg-[#f7f7fb]'>
+        {error ? (
+          <div className='flex-1 px-4 py-6 md:px-6'>
+            <Alert
+              description={error}
+              severity='error'
+              title='Chargement impossible'
+            />
+          </div>
+        ) : (
+          <section className='relative min-h-0 flex-1 overflow-hidden border-t border-gray-200 bg-white' aria-label='Carte et liste des points de prélèvement'>
+            <div className={`absolute inset-0 grid min-h-0 grid-cols-1 ${desktopListOpen ? 'lg:grid-cols-[370px_minmax(0,1fr)]' : 'lg:grid-cols-1'}`}>
+              <aside className={`${mobileView === 'list' ? 'block' : 'hidden'} h-full min-h-0 border-r border-gray-200 ${desktopListOpen ? 'lg:block' : 'lg:hidden'}`}>
+                <div className='flex h-full min-h-0 flex-col bg-white'>
+                  <PointsMapFilters
+                    disabled={loading}
+                    filters={filters}
+                    hasActiveFilters={hasActiveFilters}
+                    resultsCount={loading ? null : filteredPoints.length}
+                    searchPending={isSearchPending}
+                    usageOptions={usageOptions}
+                    waterBodyTypeOptions={waterBodyTypeOptions}
+                    onChange={handleFilterChange}
+                    onReset={handleReset}
+                  />
 
-          {/* Composant de la carte interactive */}
-          <Map
-            points={points}
-            filteredPoints={filteredPoints}
-            selectedPoint={selectedPointId ? points.find(point => selectedPointId === point.id) : null}
-            handleSelectedPoint={handleSelectedPoint}
-            mapStyle={style}
-            options={{hash: true, cooperativeGestures: false}}
-            preferUsageName={preferUsageName}
-          />
-          <Box
-            sx={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              backgroundColor: theme.palette.background.default,
-              height: 70,
-              width: 300
-            }}
-          >
-            <FormControl
-              sx={{
-                m: 2,
-                position: 'absolute',
-                width: 270
-              }}
-              size='small'
-            >
-              <InputLabel>Style de la carte</InputLabel>
-              <Select
-                value={style}
-                label='Style de la carte'
-                variant='filled'
-                onChange={e => setStyle(e.target.value)}
-              >
-                <MenuItem value='vector'>Plan OpenMapTiles</MenuItem>
-                <MenuItem value='plan-ign'>Plan IGN</MenuItem>
-                <MenuItem value='photo'>Photographie aérienne</MenuItem>
-                <MenuItem value='vector-ign'>IGN vectoriel</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
-          <Legend />
-        </Box>
-      </SidePanelLayout>
+                  <div className='min-h-0 flex-1'>
+                    <PointsMapList
+                      highlightedPointId={highlightedPointId}
+                      isLoading={loading}
+                      points={filteredPoints}
+                      preferUsageName={preferUsageName}
+                      scrollHighlightedPointIntoView={Boolean(mapHighlightedPointId)}
+                      onPointHover={setListHighlightedPointId}
+                      onPointSelect={handleListPointSelect}
+                      onClose={handleCloseList}
+                    />
+                  </div>
+
+                  <MobileMapResultsAction
+                    count={visibleMappablePoints.length}
+                    hasActiveFilters={hasActiveFilters}
+                    loading={loading}
+                    onClick={handleShowFilteredPointsOnMap}
+                  />
+                </div>
+              </aside>
+
+              <div className={`${mobileView === 'map' ? 'block' : 'hidden'} relative h-full min-h-0 lg:block`}>
+                {loading && <LoadingOverlay />}
+
+                <PointsMap
+                  recenterControl
+                  showNavigationControls
+                  centerSelectedPointOnChange={false}
+                  filteredPoints={filteredPointIds}
+                  handleSelectedPoint={handleSelectedPoint}
+                  highlightedPoint={highlightedPointId
+                    ? mappablePointsById.get(highlightedPointId)
+                    : null}
+                  loadPointDetails={getPointPrelevementAction}
+                  mapStyle={mapStyle}
+                  options={POINTS_MAP_OPTIONS}
+                  points={mappablePoints}
+                  pointPopupActionLabel='Voir la fiche du point'
+                  preferUsageName={preferUsageName}
+                  recenterControlClassName='right-14 top-2'
+                  recenterControlLabel='Recentrer la carte'
+                  recenterRequestKey={mapRecenterRequestKey}
+                  selectedPoint={selectedPointId ? mappablePointsById.get(selectedPointId) : null}
+                  selectedPointRequestKey={pointSelectionRequestKey}
+                  visibleUsageKeys={visibleUsageKeys}
+                  onPointPopupAction={handleOpenPoint}
+                  onPointHover={setMapHighlightedPointId}
+                />
+
+                {mobileView === 'map' && (
+                  <button
+                    className='fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-list-unordered absolute left-2 top-2 z-10 bg-white shadow-sm lg:hidden'
+                    type='button'
+                    onClick={() => setMobileView('list')}
+                  >
+                    Liste
+                  </button>
+                )}
+
+                {!desktopListOpen && (
+                  <button
+                    className='fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-list-unordered absolute left-2 top-2 z-10 hidden bg-white shadow-sm lg:inline-flex'
+                    type='button'
+                    onClick={() => setDesktopListOpen(true)}
+                  >
+                    Liste
+                  </button>
+                )}
+
+                <div className='absolute bottom-2 left-2 z-10 flex items-end gap-2'>
+                  <MapStyleMenu value={mapStyle} onChange={setMapStyle} />
+
+                  {usageOptions.length > 0 && (
+                    <PointsMapLegend
+                      counts={usageCounts}
+                      options={usageOptions}
+                      selectedValues={filters.usageKeys}
+                      onToggle={handleLegendToggle}
+                    />
+                  )}
+                </div>
+
+                {!loading && visibleMappablePoints.length === 0 && (
+                  <div className='pointer-events-none absolute inset-0 z-[5] flex items-center justify-center bg-white/80 p-6 text-center text-sm text-gray-600'>
+                    {filteredPoints.length === 0
+                      ? 'Aucun point ne correspond aux filtres sélectionnés.'
+                      : 'Aucun des points affichés ne dispose de coordonnées.'}
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+      </div>
     </>
   )
 }

@@ -250,3 +250,32 @@ main {
 .dashboard-points-map-shell .maplibregl-popup-content {
   overflow-wrap: anywhere;
 }
+
+.points-prelevement-map-popup {
+  z-index: 30;
+}
+
+.points-prelevement-map-popup .maplibregl-popup-content {
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #cecece;
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+}
+
+.points-prelevement-map-popup .maplibregl-popup-close-button {
+  z-index: 1;
+  width: 2rem;
+  height: 2rem;
+  color: #161616;
+  font-size: 1.25rem;
+}
+
+.points-prelevement-map-popup .maplibregl-popup-close-button:hover {
+  background-color: #e3e3fd;
+}
+
+.points-prelevement-map-popup .maplibregl-popup-close-button:focus-visible {
+  outline: 2px solid #000091;
+  outline-offset: -2px;
+}

@@ -2,6 +2,7 @@
 // All server actions for API calls with NextAuth authentication
 export {
   getPointsPrelevementAction,
+  getPointMapSummariesAction,
   getPointPrelevementAction,
   createPointPrelevementAction,
   editPointPrelevementAction,

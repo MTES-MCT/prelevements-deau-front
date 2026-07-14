@@ -2,6 +2,7 @@
  * Constants used across PrelevementsSeriesExplorer components
  */
 
+import {pointFlowTypeColors} from '@/lib/point-flow-types.js'
 import {normalizeString} from '@/utils/string.js'
 
 /**
@@ -28,11 +29,11 @@ const PARAMETER_COLOR_ENTRIES = [
 
 const PARAMETER_FLOW_COLOR_ENTRIES = [
   ['volume:PRELEVEMENT', '#000091'],
-  ['volume:REJET', '#CE614A'],
+  ['volume:REJET', pointFlowTypeColors.REJET.accentColor],
   ['index:PRELEVEMENT', '#3B87FF'],
-  ['index:REJET', '#B34000'],
+  ['index:REJET', pointFlowTypeColors.REJET.accentColor],
   ['debit:PRELEVEMENT', '#0063CB'],
-  ['debit:REJET', '#009099']
+  ['debit:REJET', pointFlowTypeColors.REJET.accentColor]
 ]
 
 export const PARAMETER_COLOR_MAP = new Map(

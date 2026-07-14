@@ -4,7 +4,12 @@ import Launch from '@mui/icons-material/Launch'
 import {Box, Chip, Typography} from '@mui/material'
 
 import PointUsageNameEditor from '@/components/points-prelevement/point-usage-name-editor.js'
-import {getPointFlowType, getPointFlowTypeLabel, POINT_FLOW_TYPES} from '@/lib/point-flow-types.js'
+import {
+  getPointFlowType,
+  getPointFlowTypeColors,
+  getPointFlowTypeLabel,
+  POINT_FLOW_TYPES
+} from '@/lib/point-flow-types.js'
 import {getTypeMilieuColor} from '@/lib/points-prelevement.js'
 import {
   getPointPrelevementLabel,
@@ -108,6 +113,7 @@ const PointIdentification = ({
   const namesLabel = formatNameEntries(pointPrelevement.names)
   const canEditUsageName = preferUsageName && pointPrelevement.right?.canEditUsageName
   const flowType = getPointFlowType(pointPrelevement)
+  const flowTypeColors = getPointFlowTypeColors(flowType)
 
   return (
     <div className='flex flex-col gap-4'>
@@ -149,9 +155,10 @@ const PointIdentification = ({
         <Chip
           size='small'
           label={`Type de point : ${getPointFlowTypeLabel(flowType)}`}
-          sx={flowType === POINT_FLOW_TYPES.REJET
-            ? {backgroundColor: '#fee9e7', color: '#b34000'}
-            : {backgroundColor: '#e3e3fd', color: '#000091'}}
+          sx={{
+            backgroundColor: flowTypeColors.backgroundColor,
+            color: flowTypeColors.textColor
+          }}
         />
         {pointPrelevement.waterBodyType && (
           <Chip

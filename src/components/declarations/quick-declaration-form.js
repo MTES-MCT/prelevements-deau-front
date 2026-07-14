@@ -14,7 +14,12 @@ import QuickDeclarationMap from './quick-declaration-map.js'
 
 import {useAuth} from '@/contexts/auth-context.js'
 import {getDeclarantTitleFromUser} from '@/lib/declarants.js'
-import {getPointFlowType, getPointFlowTypeLabel, POINT_FLOW_TYPES} from '@/lib/point-flow-types.js'
+import {
+  getPointFlowType,
+  getPointFlowTypeColors,
+  getPointFlowTypeLabel,
+  POINT_FLOW_TYPES
+} from '@/lib/point-flow-types.js'
 import {
   buildPointDisplayNames,
   buildPointUsageNameChanges,
@@ -1511,6 +1516,7 @@ const QuickDeclarationEntryRow = ({
   const usageInputId = `quick-usage-${pointId}`
   const usageNameInputId = `quick-usage-name-${pointId}`
   const flowType = getPointFlowType(point)
+  const flowTypeColors = getPointFlowTypeColors(flowType)
 
   return (
     <div
@@ -1541,12 +1547,12 @@ const QuickDeclarationEntryRow = ({
               ({technicalName})
             </span>
           )}
-          <span className={classNames(
-            'inline-flex shrink-0 px-1.5 py-0.5 text-[0.64rem] font-semibold leading-none',
-            flowType === POINT_FLOW_TYPES.REJET
-              ? 'bg-[#fee9e7] text-[#b34000]'
-              : 'bg-[#e3e3fd] text-[#000091]'
-          )}
+          <span
+            className='inline-flex shrink-0 px-1.5 py-0.5 text-[0.64rem] font-semibold leading-none'
+            style={{
+              backgroundColor: flowTypeColors.backgroundColor,
+              color: flowTypeColors.textColor
+            }}
           >
             {getPointFlowTypeLabel(flowType)}
           </span>

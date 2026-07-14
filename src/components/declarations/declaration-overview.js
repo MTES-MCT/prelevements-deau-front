@@ -17,6 +17,7 @@ import {
   isTelemetrySource,
   sourceStateLabels
 } from '@/lib/declaration.js'
+import {pointFlowTypeColors} from '@/lib/point-flow-types.js'
 import {getDeclarantURL} from '@/lib/urls.js'
 import {formatNumber} from '@/utils/number.js'
 
@@ -76,8 +77,8 @@ const quickDeclarationMeasurementPresentation = {
     label: 'Volume prélevé'
   },
   VOLUME_REJETE: {
-    color: '#CE614A',
-    iconClassName: 'fr-icon-drop-line text-[#CE614A]',
+    color: pointFlowTypeColors.REJET.accentColor,
+    iconClassName: 'fr-icon-drop-line',
     label: 'Volume rejeté'
   }
 }

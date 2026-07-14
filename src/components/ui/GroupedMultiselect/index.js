@@ -1,5 +1,5 @@
 import {
-  useState, useRef, useEffect, useCallback, useMemo
+  useState, useRef, useEffect, useCallback, useId, useMemo
 } from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
@@ -28,6 +28,7 @@ const focusWithoutScroll = element => {
 
 const GroupedMultiselect = ({
   value = [],
+  id,
   label,
   hint,
   placeholder,
@@ -37,6 +38,8 @@ const GroupedMultiselect = ({
   searchable = false,
   hideLabel = false
 }) => {
+  const generatedId = useId()
+  const selectId = id ?? `grouped-multiselect-${generatedId}`
   const [open, setOpen] = useState(false)
   const [showMore, setShowMore] = useState(false)
   const [hiddenCount, setHiddenCount] = useState(0)
@@ -87,10 +90,11 @@ const GroupedMultiselect = ({
         ...group,
         options: group.options.filter(option => {
           const content = String(getOptionContent(option) || '').toLowerCase()
+          const label = String(getOptionLabel(option) || '').toLowerCase()
           const title = String(getOptionTitle(option) || '').toLowerCase()
           const optionValue = String(getOptionValue(option) || '').toLowerCase()
 
-          return content.includes(query) || title.includes(query) || optionValue.includes(query)
+          return content.includes(query) || label.includes(query) || title.includes(query) || optionValue.includes(query)
         })
       }))
       .filter(group => group.options.length > 0)
@@ -257,12 +261,12 @@ const GroupedMultiselect = ({
       style={{position: 'relative'}}
       className={disabled ? 'fr-select-group--disabled' : ''}
     >
-      <label className={hideLabel ? 'sr-only' : 'fr-label'} htmlFor='selector'>{label}</label>
+      <label className={hideLabel ? 'sr-only' : 'fr-label'} htmlFor={selectId}>{label}</label>
       {hint && <span className='fr-hint-text'>{hint}</span>}
 
       <Box
         ref={selectRef}
-        id='selector'
+        id={selectId}
         className={`fr-select${hideLabel ? '' : ' mt-2'}${disabled ? ' fr-bg-disabled-grey' : ''}`}
         aria-disabled={disabled}
         sx={{

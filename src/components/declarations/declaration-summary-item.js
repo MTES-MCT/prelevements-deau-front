@@ -13,6 +13,7 @@ import {
   isTelemetrySource,
   sourceStateLabels
 } from '@/lib/declaration.js'
+import {pointFlowTypeColors} from '@/lib/point-flow-types.js'
 import {formatNumber} from '@/utils/number.js'
 
 const rowGridClassName = 'md:grid-cols-[minmax(8.5rem,0.75fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(6.5rem,6.5rem)]'
@@ -58,8 +59,8 @@ const quickDeclarationMeasurementPresentation = {
     label: 'Volume prélevé'
   },
   VOLUME_REJETE: {
-    color: '#CE614A',
-    iconClassName: 'fr-icon-drop-line text-[#CE614A]',
+    color: pointFlowTypeColors.REJET.accentColor,
+    iconClassName: 'fr-icon-drop-line',
     label: 'Volume rejeté'
   }
 }
