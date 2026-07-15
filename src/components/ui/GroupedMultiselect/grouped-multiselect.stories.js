@@ -118,11 +118,11 @@ const restrictedOptions = [
     options: [
       {
         value: 'volume-2023',
-        content: formatOptionContent('Volume prélevé 2023', 'jours', 'cumulée')
+        content: formatOptionContent('Volume prélevé 2023', 'jours', 'Cumulée sur période')
       },
       {
         value: 'volume-2024',
-        content: formatOptionContent('Volume prélevé 2024', 'jours', 'cumulée')
+        content: formatOptionContent('Volume prélevé 2024', 'jours', 'Cumulée sur période')
       }
     ]
   },

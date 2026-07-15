@@ -9,13 +9,13 @@ export function normalizeUnitLabel(unit) {
 }
 
 const VALUE_TYPE_LABELS = new Map([
-  ['instantaneous', 'instantané'],
+  ['instantaneous', 'Ponctuelle'],
   ['average', 'moyenne'],
   ['minimum', 'minimum'],
   ['maximum', 'maximum'],
   ['median', 'médiane'],
   ['delta-index', 'delta-index'],
-  ['cumulative', 'cumulé'],
+  ['cumulative', 'Cumulée sur période'],
   ['raw', 'brut']
 ])
 

@@ -98,19 +98,19 @@ const fieldDescriptions = [
   },
   {
     name: 'Date de mesure',
-    description: 'Date UTC de la valeur instantanée, par exemple un index ou un débit. Vide pour les volumes.'
+    description: 'Date UTC de la valeur ponctuelle, par exemple un index ou un débit. Vide pour les volumes.'
   },
   {
     name: 'Heure de mesure',
-    description: 'Heure UTC de la valeur instantanée lorsque l’information est disponible. Vide pour les volumes.'
+    description: 'Heure UTC de la valeur ponctuelle lorsque l’information est disponible. Vide pour les volumes.'
   },
   {
     name: 'DateHeure de mesure',
-    description: 'Date et heure UTC de la valeur instantanée. Vide pour les volumes.'
+    description: 'Date et heure UTC de la valeur ponctuelle. Vide pour les volumes.'
   },
   {
     name: 'Date de début de période',
-    description: 'Date UTC de début pour une valeur cumulative, notamment un volume. Vide pour les index.'
+    description: 'Date UTC de début d’une valeur cumulée sur une période, notamment un volume. Vide pour les index.'
   },
   {
     name: 'Heure de début de période',
@@ -122,7 +122,7 @@ const fieldDescriptions = [
   },
   {
     name: 'Date de fin de période',
-    description: 'Date UTC de fin affichée pour une valeur cumulative. Pour les fréquences journalières ou supérieures, c’est le dernier jour inclus. Vide pour les index.'
+    description: 'Date UTC de fin affichée pour une valeur cumulée sur une période. Pour les fréquences journalières ou supérieures, c’est le dernier jour inclus. Vide pour les index.'
   },
   {
     name: 'Heure de fin de période',
@@ -146,7 +146,7 @@ const fieldDescriptions = [
   },
   {
     name: 'Type de valeur',
-    description: 'Type de valeur issu du référentiel interne : cumulatif, instantané ou autre qualification disponible.'
+    description: 'Indique si la valeur est « Cumulée sur période » ou « Ponctuelle ».'
   },
   {
     name: 'Origine de la donnée',
