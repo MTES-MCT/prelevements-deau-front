@@ -68,8 +68,9 @@ const DECLARATION_PERIOD_SEGMENTS = [
 ]
 const NO_WATER_BODY_TYPES_SENTINEL = '__none__'
 const PRELEVEUR_POINTS_MAP_DESCRIPTION = 'Cette carte affiche vos points de prélèvement. Vous pouvez aussi y afficher les points de suivi de la ressource (niveaux de nappe, débits des cours d\'eau) via la légende.'
-const WITHDRAWN_VOLUME_CHART_SUBTITLE = 'Eau prélevée dans le milieu naturel (cours d\'eau, nappe, plan d\'eau, retenue), qu\'elle y retourne ensuite ou non.'
-const DISCHARGED_VOLUME_CHART_SUBTITLE = 'Eau restituée, après utilisation, au milieu où elle a été prélevée.'
+const VOLUME_CHART_SCOPE_NOTICE = 'Volumes représentant uniquement les déclarations enregistrées sur Partageons l’Eau, pouvant être inférieurs aux volumes réels du territoire.'
+const WITHDRAWN_VOLUME_CHART_SUBTITLE = `Eau prélevée dans le milieu naturel (cours d'eau, nappe, plan d'eau, retenue), qu'elle y retourne ensuite ou non. ${VOLUME_CHART_SCOPE_NOTICE}`
+const DISCHARGED_VOLUME_CHART_SUBTITLE = `Eau restituée, après utilisation, au milieu où elle a été prélevée. ${VOLUME_CHART_SCOPE_NOTICE}`
 const EMPTY_ARRAY = []
 const DASHBOARD_HASH_PREFIX = 'dashboard?'
 
