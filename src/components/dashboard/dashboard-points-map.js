@@ -12,6 +12,11 @@ import {useRouter} from '@bprogress/next/app'
 import maplibre from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
+import {
+  getVisibleMapFeatures,
+  resolveMapLayerVisibility
+} from './dashboard-map-layers.js'
+
 import {cooperativeGesturesMapOptions} from '@/components/map/cooperative-gestures.js'
 import {IGN_RASTER_MAX_ZOOM} from '@/components/map/ign-raster.js'
 import planIGN from '@/components/map/styles/plan-ign.json'
@@ -747,6 +752,7 @@ function openPointPopup({
 }
 
 const DashboardPointsMap = ({
+  initialLayerVisibility,
   monitoringStations = [],
   points,
   pointsLegendLabel = 'Points de prélèvement',
@@ -766,11 +772,10 @@ const DashboardPointsMap = ({
   const shouldTrackMapMovesRef = useRef(false)
   const isRecenteringRef = useRef(false)
   const [hasMapMoved, setHasMapMoved] = useState(false)
-  const [visibleLayers, setVisibleLayers] = useState({
-    points: true,
-    piezometers: true,
-    flowStations: true
-  })
+  const [visibleLayers, setVisibleLayers] = useState(() =>
+    resolveMapLayerVisibility(initialLayerVisibility))
+  const visibleLayersRef = useRef(visibleLayers)
+  visibleLayersRef.current = visibleLayers
   const pointsWithVisibleUsages = useMemo(
     () => points.map(point => filterDashboardPointUsages(point)),
     [points]
@@ -786,9 +791,20 @@ const DashboardPointsMap = ({
   )
   const hasMonitoringStationsWithCoordinates = monitoringStationsWithCoordinates.length > 0
   const hasMapFeatures = hasPointsWithCoordinates || hasMonitoringStationsWithCoordinates
-  const mapGeometrySignature = useMemo(
-    () => getMapGeometrySignature(pointsWithCoordinates, monitoringStationsWithCoordinates),
-    [monitoringStationsWithCoordinates, pointsWithCoordinates]
+  const visibleMapFeatures = useMemo(
+    () => getVisibleMapFeatures({
+      monitoringStations: monitoringStationsWithCoordinates,
+      points: pointsWithCoordinates,
+      visibleLayers
+    }),
+    [monitoringStationsWithCoordinates, pointsWithCoordinates, visibleLayers]
+  )
+  const visibleMapGeometrySignature = useMemo(
+    () => getMapGeometrySignature(
+      visibleMapFeatures.points,
+      visibleMapFeatures.monitoringStations
+    ),
+    [visibleMapFeatures]
   )
   const piezometerCount = monitoringStationsWithCoordinates.filter(station => station.type === 'PIEZOMETER').length
   const flowStationCount = monitoringStationsWithCoordinates.filter(station => station.type === 'FLOW_STATION').length
@@ -825,8 +841,13 @@ const DashboardPointsMap = ({
 
     const initialPoints = pointsRef.current
     const initialMonitoringStations = monitoringStationsRef.current
-    const firstCoordinates = getPointCoordinates(initialPoints[0])
-      ?? getMonitoringStationCoordinates(initialMonitoringStations[0])
+    const initialVisibleFeatures = getVisibleMapFeatures({
+      monitoringStations: initialMonitoringStations,
+      points: initialPoints,
+      visibleLayers: visibleLayersRef.current
+    })
+    const firstCoordinates = getPointCoordinates(initialVisibleFeatures.points[0])
+      ?? getMonitoringStationCoordinates(initialVisibleFeatures.monitoringStations[0])
     const map = new maplibre.Map({
       container: containerRef.current,
       style: planIGN,
@@ -861,7 +882,8 @@ const DashboardPointsMap = ({
         layout: {
           'icon-image': ['get', 'icon'],
           'icon-size': 1,
-          'icon-allow-overlap': true
+          'icon-allow-overlap': true,
+          visibility: visibleLayersRef.current.points ? 'visible' : 'none'
         }
       })
 
@@ -873,7 +895,8 @@ const DashboardPointsMap = ({
         layout: {
           'icon-image': ['get', 'icon'],
           'icon-size': 1,
-          'icon-allow-overlap': true
+          'icon-allow-overlap': true,
+          visibility: visibleLayersRef.current.piezometers ? 'visible' : 'none'
         }
       })
 
@@ -885,14 +908,20 @@ const DashboardPointsMap = ({
         layout: {
           'icon-image': ['get', 'icon'],
           'icon-size': 1,
-          'icon-allow-overlap': true
+          'icon-allow-overlap': true,
+          visibility: visibleLayersRef.current.flowStations ? 'visible' : 'none'
         }
       })
 
-      fitPoints(map, pointsRef.current, monitoringStationsRef.current)
+      const visibleFeatures = getVisibleMapFeatures({
+        monitoringStations: monitoringStationsRef.current,
+        points: pointsRef.current,
+        visibleLayers: visibleLayersRef.current
+      })
+      fitPoints(map, visibleFeatures.points, visibleFeatures.monitoringStations)
       fittedGeometrySignatureRef.current = getMapGeometrySignature(
-        pointsRef.current,
-        monitoringStationsRef.current
+        visibleFeatures.points,
+        visibleFeatures.monitoringStations
       )
 
       const onMapMoveStart = () => {
@@ -1005,25 +1034,39 @@ const DashboardPointsMap = ({
     hoveredFeatureKeyRef.current = null
     removePopup(popupRef)
 
-    if (fittedGeometrySignatureRef.current === mapGeometrySignature) {
+    if (fittedGeometrySignatureRef.current === visibleMapGeometrySignature) {
       return
     }
 
-    fittedGeometrySignatureRef.current = mapGeometrySignature
+    fittedGeometrySignatureRef.current = visibleMapGeometrySignature
     setHasMapMoved(false)
 
-    if (pointsWithCoordinates.length === 0 && monitoringStationsWithCoordinates.length === 0) {
+    if (
+      visibleMapFeatures.points.length === 0
+      && visibleMapFeatures.monitoringStations.length === 0
+    ) {
       isRecenteringRef.current = false
       return
     }
 
     isRecenteringRef.current = true
-    fitPoints(map, pointsWithCoordinates, monitoringStationsWithCoordinates, {duration: 350})
+    fitPoints(
+      map,
+      visibleMapFeatures.points,
+      visibleMapFeatures.monitoringStations,
+      {duration: 350}
+    )
     map.once('moveend', () => {
       isRecenteringRef.current = false
       setHasMapMoved(false)
     })
-  }, [mapGeometrySignature, monitoringStationsWithCoordinates, pointsWithCoordinates, preferUsageName])
+  }, [
+    monitoringStationsWithCoordinates,
+    pointsWithCoordinates,
+    preferUsageName,
+    visibleMapFeatures,
+    visibleMapGeometrySignature
+  ])
 
   useEffect(() => {
     const map = mapRef.current
@@ -1053,12 +1096,17 @@ const DashboardPointsMap = ({
 
     isRecenteringRef.current = true
     setHasMapMoved(false)
-    fitPoints(map, pointsWithCoordinates, monitoringStationsWithCoordinates, {duration: 350})
+    fitPoints(
+      map,
+      visibleMapFeatures.points,
+      visibleMapFeatures.monitoringStations,
+      {duration: 350}
+    )
     map.once('moveend', () => {
       isRecenteringRef.current = false
       setHasMapMoved(false)
     })
-  }, [monitoringStationsWithCoordinates, pointsWithCoordinates])
+  }, [visibleMapFeatures])
 
   return (
     <div className='dashboard-points-map-shell relative h-[360px] w-full overflow-visible border border-gray-200 bg-gray-100 md:h-[430px]'>
@@ -1098,7 +1146,7 @@ const DashboardPointsMap = ({
                     type='checkbox'
                     onChange={event => setVisibleLayers(current => ({...current, piezometers: event.target.checked}))}
                   />
-                  <span className='min-w-0 flex-1'>Niveaux piézométriques</span>
+                  <span className='min-w-0 flex-1'>Points piézométriques</span>
                   <span className='shrink-0 tabular-nums text-gray-500'>
                     {NUMBER_FORMATTER.format(piezometerCount)}
                   </span>

@@ -12,9 +12,19 @@ import {SegmentedControl} from '@codegouvfr/react-dsfr/SegmentedControl'
 import MuiTooltip from '@mui/material/Tooltip'
 
 import {
+  buildResourceHash,
+  DEFAULT_FLOW_PERIOD,
+  DEFAULT_PIEZOMETRY_MODE,
+  DEFAULT_PIEZOMETRY_PERIOD,
+  FLOW_PERIODS,
+  PIEZOMETRY_IPS_PERIODS,
+  PIEZOMETRY_MODES,
+  PIEZOMETRY_PERIODS,
+  readResourceHash as parseResourceHash
+} from './dashboard-water-resource-state.js'
+import {
   getPiezometryYAxisConfig,
   isHistoricalPiezometryPeriod,
-  isIpsPiezometryPeriod,
   PIEZOMETRY_IPS_BANDS
 } from './piezometry.js'
 import {
@@ -43,27 +53,6 @@ const STATION_COLORS = [
   '#8B6F4B',
   '#0063CB',
   '#7A4E00'
-]
-const PIEZOMETRY_PERIODS = [
-  {value: 'week', label: '7 jours'},
-  {value: 'month', label: '30 jours'},
-  {value: 'year', label: '12 mois'},
-  {value: 'five-years', label: '5 ans'},
-  {value: 'ten-years', label: '10 ans'},
-  {value: 'twenty-years', label: '20 ans'}
-]
-const PIEZOMETRY_IPS_PERIODS = PIEZOMETRY_PERIODS.filter(period =>
-  isIpsPiezometryPeriod(period.value)
-)
-const FLOW_PERIODS = [
-  {value: 'week', label: '7 jours'},
-  {value: 'month', label: '30 jours'},
-  {value: 'year', label: '12 mois'}
-]
-const PIEZOMETRY_MODES = [
-  {value: 'depth', label: 'Profondeur'},
-  {value: 'ips', label: 'Écart à la normale'},
-  {value: 'level', label: 'Cote NGF'}
 ]
 const IPS_REFERENCE_LINES = [{y: 0, color: '#6A6A6A'}]
 const PIEZOMETRY_NUMBER_FORMATTER = new Intl.NumberFormat('fr-FR', {
@@ -306,62 +295,17 @@ function updateResourceHash({flowPeriod, piezometryMode, piezometryPeriod}) {
     return
   }
 
-  const rawHash = window.location.hash.startsWith('#dashboard?')
-    ? window.location.hash.slice('#dashboard?'.length)
-    : ''
-  const parameters = new URLSearchParams(rawHash)
-
-  if (piezometryPeriod === 'month') {
-    parameters.delete('piezoPeriod')
-  } else {
-    parameters.set('piezoPeriod', piezometryPeriod)
-  }
-
-  if (flowPeriod === 'week') {
-    parameters.delete('flowPeriod')
-  } else {
-    parameters.set('flowPeriod', flowPeriod)
-  }
-
-  if (piezometryMode === 'depth') {
-    parameters.delete('piezoMode')
-  } else {
-    parameters.set('piezoMode', piezometryMode)
-  }
-
-  const search = parameters.toString()
-  const url = `${window.location.pathname}${window.location.search}${search ? `#dashboard?${search}` : ''}`
+  const hash = buildResourceHash(window.location.hash, {
+    flowPeriod,
+    piezometryMode,
+    piezometryPeriod
+  })
+  const url = `${window.location.pathname}${window.location.search}${hash}`
   window.history.replaceState(window.history.state, '', url)
 }
 
 function readResourceHash() {
-  if (typeof window === 'undefined' || !window.location.hash.startsWith('#dashboard?')) {
-    return null
-  }
-
-  const parameters = new URLSearchParams(window.location.hash.slice('#dashboard?'.length))
-  const requestedPiezometryPeriod = parameters.get('piezoPeriod')
-  const flowPeriod = parameters.get('flowPeriod')
-  const requestedPiezometryMode = parameters.get('piezoMode')
-  const piezometryMode = requestedPiezometryMode === 'relative'
-    ? 'ips'
-    : requestedPiezometryMode
-  const validPiezometryMode = PIEZOMETRY_MODES.some(item => item.value === piezometryMode)
-    ? piezometryMode
-    : 'depth'
-  let piezometryPeriod = PIEZOMETRY_PERIODS.some(item => item.value === requestedPiezometryPeriod)
-    ? requestedPiezometryPeriod
-    : 'month'
-
-  if (validPiezometryMode === 'ips' && !isIpsPiezometryPeriod(piezometryPeriod)) {
-    piezometryPeriod = 'year'
-  }
-
-  return {
-    piezometryPeriod,
-    flowPeriod: FLOW_PERIODS.some(item => item.value === flowPeriod) ? flowPeriod : 'week',
-    piezometryMode: validPiezometryMode
-  }
+  return typeof window === 'undefined' ? null : parseResourceHash(window.location.hash)
 }
 
 const PeriodControl = ({disabled, id, onChange, options, value}) => (
@@ -538,9 +482,9 @@ const DashboardWaterResources = ({
 }) => {
   const [piezometry, setPiezometry] = useState(initialPiezometry)
   const [riverFlows, setRiverFlows] = useState(initialRiverFlows)
-  const [piezometryPeriod, setPiezometryPeriod] = useState('month')
-  const [flowPeriod, setFlowPeriod] = useState('week')
-  const [piezometryMode, setPiezometryMode] = useState('depth')
+  const [piezometryPeriod, setPiezometryPeriod] = useState(DEFAULT_PIEZOMETRY_PERIOD)
+  const [flowPeriod, setFlowPeriod] = useState(DEFAULT_FLOW_PERIOD)
+  const [piezometryMode, setPiezometryMode] = useState(DEFAULT_PIEZOMETRY_MODE)
   const [piezometryVisibility, setPiezometryVisibility] = useState({})
   const [flowVisibility, setFlowVisibility] = useState({})
   const [piezometryError, setPiezometryError] = useState(initialPiezometryError)
@@ -549,7 +493,7 @@ const DashboardWaterResources = ({
   const [isFlowLoading, setIsFlowLoading] = useState(false)
   const requestIds = useRef({piezometry: 0, flow: 0})
   const lastRawPiezometryPeriod = useRef('month')
-  const lastIpsPiezometryPeriod = useRef('year')
+  const lastIpsPiezometryPeriod = useRef(DEFAULT_PIEZOMETRY_PERIOD)
   const flowLoadingRef = useRef(false)
   const didMountZoneEffect = useRef(false)
   const zoneCodesKey = selectedZoneCodes.join(',')
@@ -672,7 +616,10 @@ const DashboardWaterResources = ({
       lastRawPiezometryPeriod.current = hashState.piezometryPeriod
     }
 
-    if (hashState.piezometryPeriod !== 'month' || hashState.piezometryMode === 'ips') {
+    if (
+      hashState.piezometryPeriod !== DEFAULT_PIEZOMETRY_PERIOD
+      || hashState.piezometryMode !== DEFAULT_PIEZOMETRY_MODE
+    ) {
       loadPiezometry(hashState.piezometryPeriod, selectedZoneCodes, {
         includeIps: hashState.piezometryMode === 'ips'
       })

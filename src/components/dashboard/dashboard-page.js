@@ -11,6 +11,7 @@ import {
 import {SegmentedControl} from '@codegouvfr/react-dsfr/SegmentedControl'
 import Link from 'next/link'
 
+import {PRELEVEUR_MAP_LAYER_VISIBILITY} from '@/components/dashboard/dashboard-map-layers.js'
 import DashboardPointsMap from '@/components/dashboard/dashboard-points-map.js'
 import DashboardVolumesChart from '@/components/dashboard/dashboard-volumes-chart.js'
 import DashboardWaterResources from '@/components/dashboard/dashboard-water-resources.js'
@@ -66,6 +67,7 @@ const DECLARATION_PERIOD_SEGMENTS = [
   }
 ]
 const NO_WATER_BODY_TYPES_SENTINEL = '__none__'
+const PRELEVEUR_POINTS_MAP_DESCRIPTION = 'Cette carte affiche vos points de prélèvement. Vous pouvez aussi y afficher les points de suivi de la ressource (niveaux de nappe, débits des cours d\'eau) via la légende.'
 const WITHDRAWN_VOLUME_CHART_SUBTITLE = 'Eau prélevée dans le milieu naturel (cours d\'eau, nappe, plan d\'eau, retenue), qu\'elle y retourne ensuite ou non.'
 const DISCHARGED_VOLUME_CHART_SUBTITLE = 'Eau restituée, après utilisation, au milieu où elle a été prélevée.'
 const EMPTY_ARRAY = []
@@ -472,6 +474,8 @@ const DashboardZoneFilter = ({
 
 const PointsMapSection = ({
   className = 'mt-6',
+  description,
+  initialLayerVisibility,
   isLoading,
   monitoringStations,
   points,
@@ -495,6 +499,7 @@ const PointsMapSection = ({
     </div>
 
     <DashboardPointsMap
+      initialLayerVisibility={initialLayerVisibility}
       monitoringStations={monitoringStations}
       points={points}
       pointsLegendLabel={pointsLegendLabel}
@@ -502,6 +507,12 @@ const PointsMapSection = ({
       showCollecteurs={showCollecteurs}
       showPreleveurs={showPreleveurs}
     />
+
+    {description && (
+      <p className='fr-text--sm fr-mb-0 fr-mt-2w text-gray-600'>
+        {description}
+      </p>
+    )}
   </section>
 )
 
@@ -1018,6 +1029,10 @@ const DashboardPage = ({
 
               <PointsMapSection
                 preferUsageName
+                description={isPreleveurDeclarant ? PRELEVEUR_POINTS_MAP_DESCRIPTION : null}
+                initialLayerVisibility={isPreleveurDeclarant
+                  ? PRELEVEUR_MAP_LAYER_VISIBILITY
+                  : undefined}
                 isLoading={false}
                 monitoringStations={monitoringStations}
                 points={activityPoints}
