@@ -116,17 +116,6 @@ export async function getExploitationFromPreleveurAction(idPreleveur) {
   return withErrorHandling(async () => fetchJSON(`api/preleveurs/${idPreleveur}/exploitations`))
 }
 
-export async function sendDeclarationReminderAction(declarantId) {
-  return withErrorHandling(async () => {
-    const result = await fetchJSON(`api/declarants/${declarantId}/send-reminder`, {
-      method: 'POST'
-    })
-    revalidatePath(`/declarants/${declarantId}`)
-    revalidatePath(`/declarants/${declarantId}/gestion`)
-    return result
-  })
-}
-
 export async function listDeclarantEmailAliasesAction(declarantId) {
   return withErrorHandling(async () => fetchJSON(`api/declarants/${declarantId}/email-aliases`))
 }

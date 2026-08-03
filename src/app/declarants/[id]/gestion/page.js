@@ -49,12 +49,11 @@ const Page = async ({params}) => {
   const permissions = new Set(declarant.right?.permissions || [])
   const canDelete = permissions.has('declarant.delete')
   const canInvite = permissions.has('declarant.invite')
-  const canSendReminder = permissions.has('declarant.reminder.send')
   const canReadDeclarationTypes = permissions.has('declarant.declaration-type.read')
   const canManageZones = permissions.has('declarant.zone.update')
   const canImpersonate = currentRole === 'ADMIN' && !isImpersonating && currentUser?.id !== declarantId
 
-  if (!canImpersonate && !canDelete && !canInvite && !canReadDeclarationTypes && !canManageZones && !canSendReminder) {
+  if (!canImpersonate && !canDelete && !canInvite && !canReadDeclarationTypes && !canManageZones) {
     notFound()
   }
 
@@ -83,7 +82,6 @@ const Page = async ({params}) => {
         canInvite={canInvite}
         canManageZones={canManageZones}
         canReadDeclarationTypes={canReadDeclarationTypes}
-        canSendReminder={canSendReminder}
         declarant={declarant}
         declarantId={declarantId}
         declarationTypesPayload={declarationTypesPayload}

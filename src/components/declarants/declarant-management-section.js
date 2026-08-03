@@ -2,7 +2,6 @@ import AccountCreationNotificationCard from '@/components/accounts/account-creat
 import ImpersonateUserButton from '@/components/auth/impersonate-user-button.js'
 import DeclarantDeclarationTypesCard from '@/components/declarants/declarant-declaration-types-card.js'
 import DeclarantZonesCard from '@/components/declarants/declarant-zones-card.js'
-import DeclarationReminderCard from '@/components/declarations/declaration-reminder-card.js'
 import PreleveurDeleteSection from '@/components/form/preleveur-delete-section.js'
 import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
 
@@ -12,14 +11,13 @@ const DeclarantManagementSection = ({
   canInvite,
   canManageZones,
   canReadDeclarationTypes,
-  canSendReminder,
   declarant,
   declarantId,
   declarationTypesPayload,
   zoneItems,
   zoneOptions
 }) => {
-  if (!canImpersonate && !canDelete && !canInvite && !canReadDeclarationTypes && !canManageZones && !canSendReminder) {
+  if (!canImpersonate && !canDelete && !canInvite && !canReadDeclarationTypes && !canManageZones) {
     return null
   }
 
@@ -43,8 +41,6 @@ const DeclarantManagementSection = ({
       )}
 
       {canInvite && <AccountCreationNotificationCard declarant={declarant} />}
-
-      {canSendReminder && <DeclarationReminderCard declarant={declarant} />}
 
       {canManageZones && (
         <DeclarantZonesCard

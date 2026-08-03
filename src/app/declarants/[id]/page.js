@@ -207,7 +207,6 @@ const Page = async ({params}) => {
   const canOpenManagement = [
     'declarant.invite',
     'declarant.delete',
-    'declarant.reminder.send',
     'declarant.zone.update',
     'declarant.declaration-type.read'
   ].some(permission => can(permission))
