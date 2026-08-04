@@ -20,11 +20,17 @@ Cette application est le front-end du projet de gestion des prélèvements d'eau
 
 | Nom                           | Description                                                                             |
 | ----------------------------- | --------------------------------------------------------------------------------------- |
+| `API_URL`                     | URL interne de l'API utilisée par le serveur Next.js. Retombe sur `NEXT_PUBLIC_API_URL`. |
+| `API_PERF_LOG`                | Mettre `1` pour journaliser tous les appels serveur vers l'API. Par défaut, seuls les appels lents le sont. |
+| `API_SLOW_REQUEST_MS`         | Seuil en millisecondes des appels API considérés comme lents (défaut : `1000`). |
 | `NEXT_PUBLIC_API_URL`         | URL de base de l'API métier à laquelle l'application se connecte.                      |
 | `NEXT_PUBLIC_FRONTEND_URL`    | URL de base du frontend. Optionnel en production. |
 | `NEXT_PUBLIC_PROCEDURE_DS_ID` | Identifiant de la procédure Démarche Numérique pour générer les liens vers les dossiers. |
 | `NEXT_PUBLIC_STORAGE_URL`     | URL de base du stockage des documents.                                                 |
 | `NEXT_PUBLIC_DEPLOY_ENV`      | Environnement d'affichage (`testing` affiche un bandeau, `prod` n'en affiche pas). Optionnel en dev local. |
+| `NEXT_PUBLIC_MATOMO_URL`      | URL de base Matomo. Active aussi la collecte anonymisée des Web Vitals si le site ID est défini. |
+| `NEXT_PUBLIC_MATOMO_SITE_ID`  | Identifiant du site Matomo. |
+| `NEXT_PUBLIC_BUILD_SHA`       | Révision déployée associée aux mesures Web Vitals ; injectée automatiquement par la CI. |
 | `NEXT_PUBLIC_CRISP_DISABLED`  | Mettre `true` pour désactiver le widget Crisp, par exemple en local. Par défaut, Crisp est actif. |
 | `NEXTAUTH_URL`                | URL de l'application NextAuth avec basePath (ex: `http://localhost:3000/auth/nextauth` en dev). |
 | `NEXTAUTH_SECRET`             | Clé secrète pour signer les JWT de session. Générez-la avec `openssl rand -base64 32`. |

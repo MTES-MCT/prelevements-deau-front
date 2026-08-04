@@ -12,7 +12,6 @@ import 'moment/locale/fr'
 import FileValidationResult from '@/components/declarations/validateur/file-validation-result.js'
 import ValidateurForm from '@/components/declarations/validateur/form.js'
 import {createLocalSeriesRegistry} from '@/lib/local-series-registry.js'
-import {extractTemplateFile} from '@/lib/template-file-parser/index.js'
 import {getMyDeclarationSubmissionSuccessURL} from '@/lib/urls.js'
 import {createDeclarationAction, revalidateDeclarationPaths} from '@/server/actions/declarations.js'
 
@@ -81,6 +80,7 @@ const buildUploadPayload = (files, declarationTypeCode) => {
 
 const validateTemplateFiles = async files => {
   const errors = []
+  const {extractTemplateFile} = await import('@/lib/template-file-parser/index.js')
 
   for (const selectedFile of files) {
     try {

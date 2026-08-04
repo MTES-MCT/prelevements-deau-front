@@ -7,10 +7,9 @@ import {
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {SegmentedControl} from '@codegouvfr/react-dsfr/SegmentedControl'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import {createPortal} from 'react-dom'
-
-import QuickDeclarationMap from './quick-declaration-map.js'
 
 import {useAuth} from '@/contexts/auth-context.js'
 import {getDeclarantTitleFromUser} from '@/lib/declarants.js'
@@ -39,6 +38,18 @@ import {
   previewQuickDeclarationConflictsAction
 } from '@/server/actions/declarations.js'
 import {formatNumber} from '@/utils/number.js'
+
+const QuickDeclarationMap = dynamic(
+  () => import('./quick-declaration-map.js'),
+  {
+    loading: () => (
+      <div className='flex h-full items-center justify-center bg-gray-100' role='status'>
+        Chargement de la carte…
+      </div>
+    ),
+    ssr: false
+  }
+)
 
 const POINTS_CONTACT_EMAIL = 'contact@partageonsleau.beta.gouv.fr'
 const POINTS_CONTACT_SUBJECT_SUFFIX = 'Modification sur mes points de prélèvements'

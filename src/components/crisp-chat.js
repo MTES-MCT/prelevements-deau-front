@@ -2,11 +2,15 @@
 
 import {useEffect, useRef} from 'react'
 
-import {Crisp} from 'crisp-sdk-web'
-
 import {useAuth} from '@/contexts/auth-context.js'
 
 const CRISP_WEBSITE_ID = '22b8b7d4-01e8-43e6-b2be-ba85c5624aeb'
+let crispModulePromise
+
+function loadCrisp() {
+  crispModulePromise ||= import('crisp-sdk-web')
+  return crispModulePromise
+}
 
 function compactObject(value) {
   return Object.fromEntries(
@@ -60,40 +64,69 @@ const CrispChat = ({disabled = false}) => {
       return
     }
 
-    Crisp.configure(CRISP_WEBSITE_ID)
-    Crisp.chat.show()
+    let cancelled = false
 
-    const previousUserId = identifiedUserIdRef.current
-    const userId = getCrispUserIdentifier(user)
-
-    if (!user) {
-      if (previousUserId) {
-        Crisp.session.reset(false)
-        identifiedUserIdRef.current = null
+    const configureCrisp = async () => {
+      const {Crisp} = await loadCrisp()
+      if (cancelled) {
+        return
       }
 
-      return
+      Crisp.configure(CRISP_WEBSITE_ID)
+      Crisp.chat.show()
+
+      const previousUserId = identifiedUserIdRef.current
+      const userId = getCrispUserIdentifier(user)
+
+      if (!user) {
+        if (previousUserId) {
+          Crisp.session.reset(false)
+          identifiedUserIdRef.current = null
+        }
+
+        return
+      }
+
+      if (previousUserId && userId && previousUserId !== userId) {
+        Crisp.session.reset(false)
+      }
+
+      if (user.email) {
+        Crisp.user.setEmail(user.email)
+      }
+
+      const userName = getCrispUserName(user)
+      if (userName) {
+        Crisp.user.setNickname(userName)
+      }
+
+      const sessionData = getCrispSessionData(user)
+      if (sessionData) {
+        Crisp.session.setData(sessionData)
+      }
+
+      identifiedUserIdRef.current = userId
     }
 
-    if (previousUserId && userId && previousUserId !== userId) {
-      Crisp.session.reset(false)
+    let timeoutId
+    let idleCallbackId
+
+    if ('requestIdleCallback' in window) {
+      idleCallbackId = window.requestIdleCallback(configureCrisp, {timeout: 3000})
+    } else {
+      timeoutId = window.setTimeout(configureCrisp, 1500)
     }
 
-    if (user.email) {
-      Crisp.user.setEmail(user.email)
-    }
+    return () => {
+      cancelled = true
+      if (idleCallbackId) {
+        window.cancelIdleCallback(idleCallbackId)
+      }
 
-    const userName = getCrispUserName(user)
-    if (userName) {
-      Crisp.user.setNickname(userName)
+      if (timeoutId) {
+        window.clearTimeout(timeoutId)
+      }
     }
-
-    const sessionData = getCrispSessionData(user)
-    if (sessionData) {
-      Crisp.session.setData(sessionData)
-    }
-
-    identifiedUserIdRef.current = userId
   }, [disabled, isLoading, user])
 
   return null

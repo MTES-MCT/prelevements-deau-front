@@ -3,7 +3,6 @@
 import {useState} from 'react'
 
 import {Download} from '@codegouvfr/react-dsfr/Download'
-import XlsxPopulate from 'xlsx-populate/browser/xlsx-populate'
 
 import {getPointsPrelevementOptionsAction} from '@/server/actions/points-prelevement.js'
 
@@ -55,6 +54,7 @@ const DeclarationTemplateDownload = ({inline = false, label = 'Télécharger le 
       const pointNames = points.map(point => point?.name).filter(Boolean)
 
       const arrayBuffer = await templateResponse.arrayBuffer()
+      const {default: XlsxPopulate} = await import('xlsx-populate/browser/xlsx-populate')
       const workbook = await XlsxPopulate.fromDataAsync(arrayBuffer)
 
       const sheet = workbook.sheet(SHEET_NAME)

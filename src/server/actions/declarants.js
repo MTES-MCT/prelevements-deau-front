@@ -2,21 +2,35 @@
 
 import {revalidatePath} from 'next/cache'
 
+import {buildDeclarantsSearchQuery} from '@/lib/declarant-search.js'
 import {
   fetchJSON,
   withErrorHandling
 } from '@/server/api-wrapper.js'
+import {cachePerRequest} from '@/server/request-cache.js'
 
 export async function getDeclarantsAction() {
   return withErrorHandling(async () => fetchJSON('api/declarants'))
+}
+
+const getCachedDeclarantsSearch = cachePerRequest(async query => withErrorHandling(
+  async () => fetchJSON(`api/declarants/search?${query}`)
+))
+
+export async function searchDeclarantsAction(options) {
+  return getCachedDeclarantsSearch(buildDeclarantsSearchQuery(options))
 }
 
 export async function getCollecteurPreleveursAction() {
   return withErrorHandling(async () => fetchJSON('api/collecteurs/me/preleveurs'))
 }
 
-export async function getDeclarantAction(id) {
-  return withErrorHandling(async () => fetchJSON(`api/declarants/${id}`))
+const getCachedDeclarantOverview = cachePerRequest(async id => withErrorHandling(
+  async () => fetchJSON(`api/declarants/${id}/overview`)
+))
+
+export async function getDeclarantOverviewAction(id) {
+  return getCachedDeclarantOverview(id)
 }
 
 export async function createPreleveurAction(payload) {

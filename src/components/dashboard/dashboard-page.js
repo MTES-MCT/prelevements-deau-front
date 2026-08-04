@@ -9,13 +9,13 @@ import {
 } from 'react'
 
 import {SegmentedControl} from '@codegouvfr/react-dsfr/SegmentedControl'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 
 import {PRELEVEUR_MAP_LAYER_VISIBILITY} from '@/components/dashboard/dashboard-map-layers.js'
-import DashboardPointsMap from '@/components/dashboard/dashboard-points-map.js'
 import DashboardVolumesChart from '@/components/dashboard/dashboard-volumes-chart.js'
-import DashboardWaterResources from '@/components/dashboard/dashboard-water-resources.js'
 import SeriesExplorer from '@/components/points-prelevement/series-explorer.js'
+import DeferredRender from '@/components/ui/deferred-render.js'
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
 import {getMonitoringStationMapSummary} from '@/lib/monitoring-stations.js'
@@ -30,6 +30,46 @@ import {
   isDashboardVisibleUsage
 } from '@/lib/water-uses.js'
 import {getDashboardTerritoryAction} from '@/server/actions/dashboard.js'
+
+const DeferredDashboardContent = ({children, minHeight}) => (
+  <DeferredRender
+    minHeight={minHeight}
+    placeholder={(
+      <div
+        className='flex items-center justify-center bg-gray-100 text-center'
+        role='status'
+        style={{minHeight}}
+      >
+        Chargement de la visualisation…
+      </div>
+    )}
+    rootMargin='400px 0px'
+  >
+    {children}
+  </DeferredRender>
+)
+
+const DynamicDashboardPointsMap = dynamic(
+  () => import('@/components/dashboard/dashboard-points-map.js'),
+  {ssr: false}
+)
+
+const DashboardPointsMap = props => (
+  <DeferredDashboardContent minHeight='clamp(360px, 56vw, 430px)'>
+    <DynamicDashboardPointsMap {...props} />
+  </DeferredDashboardContent>
+)
+
+const DynamicDashboardWaterResources = dynamic(
+  () => import('@/components/dashboard/dashboard-water-resources.js'),
+  {ssr: false}
+)
+
+const DashboardWaterResources = props => (
+  <DeferredDashboardContent minHeight={360}>
+    <DynamicDashboardWaterResources {...props} />
+  </DeferredDashboardContent>
+)
 
 const ZONE_TYPE_PRESENTATIONS = {
   REGION: {

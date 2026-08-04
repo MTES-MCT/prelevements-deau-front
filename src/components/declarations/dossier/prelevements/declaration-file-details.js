@@ -2,10 +2,30 @@
 
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Box} from '@mui/material'
+import dynamic from 'next/dynamic'
 
-import PrelevementsSeriesExplorer from '@/components/PrelevementsSeriesExplorer/index.js'
+import DeferredRender from '@/components/ui/deferred-render.js'
 import DividerSection from '@/components/ui/DividerSection/index.js'
 import {getSeriesValuesAction} from '@/server/actions/index.js'
+
+const DynamicPrelevementsSeriesExplorer = dynamic(
+  () => import('@/components/PrelevementsSeriesExplorer/index.js'),
+  {ssr: false}
+)
+
+const PrelevementsSeriesExplorer = props => (
+  <DeferredRender
+    minHeight={320}
+    placeholder={(
+      <div className='flex min-h-[320px] items-center justify-center bg-gray-50' role='status'>
+        Chargement de la visualisation…
+      </div>
+    )}
+    rootMargin='400px 0px'
+  >
+    <DynamicPrelevementsSeriesExplorer {...props} />
+  </DeferredRender>
+)
 
 // Wrapper to extract .data from Server Action result
 async function fetchSeriesValues(seriesId, options) {

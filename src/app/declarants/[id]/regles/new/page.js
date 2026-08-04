@@ -4,7 +4,7 @@ import {notFound} from 'next/navigation'
 import {buildPageTitle} from '@/app/metadata-utils.js'
 import RegleCreationForm from '@/components/form/regle-creation-form.js'
 import {
-  getDeclarantAction,
+  getDeclarantOverviewAction,
   getExploitationFromPreleveurAction,
   getDocumentsFromPreleveurAction
 } from '@/server/actions/index.js'
@@ -12,7 +12,7 @@ import {displayPreleveur} from '@/utils/preleveurs.js'
 
 export async function generateMetadata({params}) {
   const {id} = await params
-  const result = await getDeclarantAction(id)
+  const result = await getDeclarantOverviewAction(id)
 
   return buildPageTitle(['Nouvelle règle', result.success && result.data && displayPreleveur(result.data)], 'Nouvelle règle')
 }
@@ -25,7 +25,7 @@ function getDeclarantId(declarant) {
 
 const Page = async ({params}) => {
   const {id} = await params
-  const declarantResult = await getDeclarantAction(id)
+  const declarantResult = await getDeclarantOverviewAction(id)
 
   if (!declarantResult.success || !declarantResult.data) {
     notFound()

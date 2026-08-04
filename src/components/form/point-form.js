@@ -5,11 +5,39 @@ import {useState} from 'react'
 import Input from '@codegouvfr/react-dsfr/Input'
 import Select from '@codegouvfr/react-dsfr/SelectNext'
 import {Typography} from '@mui/material'
+import dynamic from 'next/dynamic'
 
-import MiniMapForm from '@/components/form/mini-map-form.js'
 import OptionalPointFieldsForm from '@/components/form/optional-point-fields-form.js'
 import AccordionCentered from '@/components/ui/AccordionCentered/index.js'
+import DeferredRender from '@/components/ui/deferred-render.js'
 import {POINT_FLOW_TYPES} from '@/lib/point-flow-types.js'
+
+const DynamicMiniMapForm = dynamic(
+  () => import('@/components/form/mini-map-form.js'),
+  {
+    loading: () => (
+      <div className='flex min-h-[420px] items-center justify-center bg-gray-100' role='status'>
+        Chargement de la carte…
+      </div>
+    ),
+    ssr: false
+  }
+)
+
+const MiniMapForm = props => (
+  <DeferredRender
+    className='h-full w-full'
+    minHeight='100%'
+    placeholder={(
+      <div className='flex h-full min-h-[420px] items-center justify-center bg-gray-100' role='status'>
+        Chargement de la carte…
+      </div>
+    )}
+    rootMargin='300px 0px'
+  >
+    <DynamicMiniMapForm {...props} />
+  </DeferredRender>
+)
 
 const waterBodyTypes = [
   {value: 'SUPERFICIELLE', label: 'Eau superficielle'},

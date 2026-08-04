@@ -1,4 +1,4 @@
-import {useEffect, useRef} from 'react'
+import {useEffect, useRef, useState} from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
 import {useIsDark} from '@codegouvfr/react-dsfr/useIsDark'
@@ -6,29 +6,51 @@ import {Box} from '@mui/system'
 import maplibre from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
-import photo from './styles/photo.json'
-import planIGN from './styles/plan-ign.json'
-import vectorIGN from './styles/vector-ign.json'
-import vector from './styles/vector.json'
-
 import {cooperativeGesturesMapOptions} from '@/components/map/cooperative-gestures.js'
 import {getMapMaxZoomForStyle} from '@/components/map/ign-raster.js'
+import {getInitialMapStyle, loadMapStyle} from '@/components/map/map-style-loader.js'
 import {createPointPrelevementFeatures} from '@/lib/points-prelevement.js'
-
-const stylesMap = {
-  photo,
-  'plan-ign': planIGN,
-  vector,
-  'vector-ign': vectorIGN
-}
 
 const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector', pointsStatus = {}}) => {
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
   const {isDark} = useIsDark()
+  const [loadedMapStyle, setLoadedMapStyle] = useState(() => getInitialMapStyle(style))
 
   useEffect(() => {
-    if (!mapContainerRef.current || !pointsPrelevement?.length) {
+    const bundledStyle = getInitialMapStyle(style)
+    if (bundledStyle) {
+      setLoadedMapStyle(current => current?.name === style ? current : bundledStyle)
+      return undefined
+    }
+
+    let active = true
+
+    setLoadedMapStyle(null)
+    const updateMapStyle = async () => {
+      try {
+        const loadedStyle = await loadMapStyle(style)
+        if (active) {
+          setLoadedMapStyle(loadedStyle)
+        }
+      } catch (error) {
+        console.error(`Impossible de charger le fond de carte « ${style} ».`, error)
+      }
+    }
+
+    updateMapStyle()
+
+    return () => {
+      active = false
+    }
+  }, [style])
+
+  useEffect(() => {
+    if (
+      !mapContainerRef.current
+      || !pointsPrelevement?.length
+      || loadedMapStyle?.name !== style
+    ) {
       return
     }
 
@@ -48,7 +70,7 @@ const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector'
 
     const map = new maplibre.Map({
       container: mapContainerRef.current,
-      style: stylesMap[style],
+      style: loadedMapStyle.definition,
       center,
       attributionControl: {compact: true},
       zoom: 10,
@@ -135,11 +157,16 @@ const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector'
     return () => {
       map.remove()
     }
-  }, [pointsPrelevement, handleClick, style, pointsStatus, isDark])
+  }, [handleClick, isDark, loadedMapStyle, pointsPrelevement, pointsStatus, style])
 
   return (
     <Box className='h-[300px] w-full relative'>
       <div ref={mapContainerRef} className='flex h-full w-full' />
+      {loadedMapStyle?.name !== style && (
+        <div className='absolute inset-0 flex items-center justify-center bg-gray-100' role='status'>
+          Chargement du fond de carte…
+        </div>
+      )}
     </Box>
   )
 }

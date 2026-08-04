@@ -4,14 +4,14 @@ import {notFound} from 'next/navigation'
 import {buildPageTitle} from '@/app/metadata-utils.js'
 import DocumentUploadForm from '@/components/form/document-upload-form.js'
 import {
-  getDeclarantAction,
+  getDeclarantOverviewAction,
   getExploitationFromPreleveurAction
 } from '@/server/actions/index.js'
 import {displayPreleveur} from '@/utils/preleveurs.js'
 
 export async function generateMetadata({params}) {
   const {id} = await params
-  const result = await getDeclarantAction(id)
+  const result = await getDeclarantOverviewAction(id)
 
   return buildPageTitle(['Nouveau document', result.success && result.data && displayPreleveur(result.data)], 'Nouveau document')
 }
@@ -24,7 +24,7 @@ function getDeclarantId(declarant) {
 
 const Page = async ({params}) => {
   const {id} = await params
-  const declarantResult = await getDeclarantAction(id)
+  const declarantResult = await getDeclarantOverviewAction(id)
 
   if (!declarantResult.success || !declarantResult.data) {
     notFound()

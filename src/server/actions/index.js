@@ -17,7 +17,7 @@ export {
 
 export {
   getDeclarantsAction,
-  getDeclarantAction,
+  getDeclarantOverviewAction,
   createPreleveurAction,
   updatePreleveurAction,
   sendDeclarantAccountCreationNotificationAction,

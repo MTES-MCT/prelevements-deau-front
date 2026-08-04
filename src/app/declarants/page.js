@@ -1,11 +1,14 @@
 import {Button} from '@codegouvfr/react-dsfr/Button'
-import {forbidden} from 'next/navigation'
+import {forbidden, redirect} from 'next/navigation'
 
 import DeclarantsList from '@/components/declarants/declarants-list.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {getDeclarantsAction} from '@/server/actions/declarants.js'
-import {getCurrentUser} from '@/server/actions/user.js'
-import {canCurrentUserCreateDeclarant} from '@/server/permissions/declarants.js'
+import {
+  buildDeclarantsSearchQuery,
+  readDeclarantsSearchOptions
+} from '@/lib/declarant-search.js'
+import {searchDeclarantsAction} from '@/server/actions/declarants.js'
+import {getCurrentSessionInfo} from '@/server/actions/user.js'
 
 export const metadata = {
   title: 'Déclarants'
@@ -13,18 +16,46 @@ export const metadata = {
 
 export const dynamic = 'force-dynamic'
 
-const Page = async () => {
-  const [result, canCreateDeclarant, userResult] = await Promise.all([
-    getDeclarantsAction(),
-    canCurrentUserCreateDeclarant(),
-    getCurrentUser()
+const EMPTY_COUNTS = {
+  total: 0,
+  preleveurs: 0,
+  collecteurs: 0,
+  withoutEmail: 0
+}
+
+const Page = async ({searchParams}) => {
+  const options = readDeclarantsSearchOptions(await searchParams)
+  const [result, userResult] = await Promise.all([
+    searchDeclarantsAction(options),
+    getCurrentSessionInfo()
   ])
-  if (userResult.data?.role === 'INSTRUCTOR'
-    && !userResult.data?.permissions?.includes('declarant.list')) {
+  const currentUser = userResult.data
+
+  if (currentUser?.role === 'INSTRUCTOR'
+    && !currentUser.permissions?.includes('declarant.list')) {
     forbidden()
   }
 
-  const declarants = result.data || []
+  const searchResult = result.data || {
+    items: [],
+    total: 0,
+    page: options.page,
+    pageSize: options.pageSize,
+    totalPages: 1,
+    counts: EMPTY_COUNTS
+  }
+
+  if (searchResult.page > searchResult.totalPages) {
+    const query = buildDeclarantsSearchQuery({
+      ...options,
+      page: searchResult.totalPages
+    })
+    redirect(`/declarants?${query}`)
+  }
+
+  const canCreateDeclarant = currentUser?.role === 'ADMIN'
+    || (currentUser?.role === 'INSTRUCTOR'
+      && currentUser.permissions?.includes('declarant.create'))
 
   return (
     <>
@@ -52,7 +83,15 @@ const Page = async () => {
             )}
           </div>
 
-          <DeclarantsList declarants={declarants} />
+          <DeclarantsList
+            counts={searchResult.counts || EMPTY_COUNTS}
+            declarants={searchResult.items || []}
+            filters={options}
+            page={searchResult.page}
+            pageSize={searchResult.pageSize}
+            total={searchResult.total}
+            totalPages={searchResult.totalPages}
+          />
         </div>
       </main>
     </>

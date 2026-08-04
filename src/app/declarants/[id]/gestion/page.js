@@ -5,11 +5,11 @@ import {buildPageTitle} from '@/app/metadata-utils.js'
 import DeclarantManagementSection from '@/components/declarants/declarant-management-section.js'
 import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
 import {
-  getDeclarantAction,
+  getDeclarantOverviewAction,
   getDeclarantDeclarationTypesAction,
   getDeclarantZonesAction
 } from '@/server/actions/index.js'
-import {getCurrentUser} from '@/server/actions/user.js'
+import {getCurrentSessionInfo} from '@/server/actions/user.js'
 import {getZoneOptionsForPermissionAction} from '@/server/actions/zones.js'
 
 const emptyDeclarationTypesPayload = {
@@ -26,7 +26,7 @@ function getDeclarantId(declarant) {
 
 export async function generateMetadata({params}) {
   const {id} = await params
-  const result = await getDeclarantAction(id)
+  const result = await getDeclarantOverviewAction(id)
 
   return buildPageTitle(['Gestion', result.success && result.data ? getDeclarantTitleFromDeclarant(result.data) : null], 'Gérer un déclarant')
 }
@@ -34,7 +34,7 @@ export async function generateMetadata({params}) {
 const Page = async ({params}) => {
   const {id} = await params
 
-  const declarantResult = await getDeclarantAction(id)
+  const declarantResult = await getDeclarantOverviewAction(id)
 
   if (!declarantResult.success || !declarantResult.data) {
     notFound()
@@ -42,7 +42,7 @@ const Page = async ({params}) => {
 
   const declarant = declarantResult.data
   const declarantId = getDeclarantId(declarant)
-  const currentUserResult = await getCurrentUser()
+  const currentUserResult = await getCurrentSessionInfo()
   const currentRole = currentUserResult?.data?.role
   const currentUser = currentUserResult?.data?.user
   const isImpersonating = currentUserResult?.data?.impersonation?.active

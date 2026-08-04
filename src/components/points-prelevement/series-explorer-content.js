@@ -1,0 +1,505 @@
+'use client'
+
+import {
+  useCallback, useEffect, useMemo, useRef, useState
+} from 'react'
+
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
+import {Box, Typography} from '@mui/material'
+
+import {resolveSelectedParametersDateRange} from '@/components/points-prelevement/series-date-range.js'
+import {
+  resolveInitialDisplayFrequency,
+  resolveSeriesDisplayFrequency
+} from '@/components/points-prelevement/series-display-frequency.js'
+import AggregatedSeriesExplorer from '@/components/PrelevementsSeriesExplorer/aggregated-series-explorer.js'
+import {getParameterFlowColor} from '@/components/PrelevementsSeriesExplorer/constants/colors.js'
+import {
+  getParameterMetadata,
+  MAX_DIFFERENT_UNITS,
+  OPERATOR_LABELS
+} from '@/components/PrelevementsSeriesExplorer/constants/parameters.js'
+import {
+  calculateSelectablePeriodsFromDateRange,
+  extractDefaultPeriodsFromDateRange
+} from '@/components/PrelevementsSeriesExplorer/utils/date-range-periods.js'
+import {getAggregatedSeriesAction} from '@/server/actions/series.js'
+import {pickAvailableFrequency} from '@/utils/frequency.js'
+
+const DEFAULT_METRIC_TYPE_CODES = ['volume', 'débit']
+const FALLBACK_VOLUME_TEMPORAL_OPERATORS = ['sum', 'mean', 'min', 'max']
+const FALLBACK_STANDARD_TEMPORAL_OPERATORS = ['mean', 'min', 'max']
+
+const SeriesExplorer = ({
+  collecteurId = null,
+  endDate = null,
+  pointIds = null,
+  preleveurId = null,
+  seriesOptions = null,
+  startDate = null,
+  subtitle = null,
+  title = 'Historique des prélèvements',
+  titleComponent = 'h2'
+}) => {
+  // Vérifie si des paramètres sont disponibles depuis l'API
+  const hasParameters = seriesOptions?.parameters?.length > 0
+
+  // Construit les options de paramètres depuis la réponse API
+  const parameterOptions = useMemo(
+    () => (seriesOptions?.parameters ?? []).map(param => {
+      const metadata = getParameterMetadata(param.name)
+      const metricTypeCode = param.metricTypeCode ?? param.code ?? param.name
+      return {
+        value: param.id ?? metricTypeCode,
+        label: param.label ?? param.name,
+        color: getParameterFlowColor(metricTypeCode, param.flowType),
+        metricTypeCode,
+        flowType: param.flowType ?? null,
+        unit: param.unit ?? metadata?.unit ?? '',
+        valueType: param.valueType ?? metadata?.valueType ?? metadata?.type ?? null
+      }
+    }),
+    [seriesOptions]
+  )
+
+  const parameterDefinitionMap = useMemo(() => {
+    if (!seriesOptions?.parameters) {
+      return new Map()
+    }
+
+    return new Map(
+      seriesOptions.parameters.map(param => {
+        const metadata = getParameterMetadata(param.name) ?? {}
+        const metricTypeCode = param.metricTypeCode ?? param.code ?? param.name
+        const parameterId = param.id ?? metricTypeCode
+        const normalizedName = param.name?.toLowerCase() ?? ''
+        const fallbackTemporalOperators = normalizedName.includes('volume')
+          ? FALLBACK_VOLUME_TEMPORAL_OPERATORS
+          : FALLBACK_STANDARD_TEMPORAL_OPERATORS
+
+        const temporalOperatorSource = (() => {
+          if (Array.isArray(param.temporalOperators) && param.temporalOperators.length > 0) {
+            return param.temporalOperators
+          }
+
+          if (Array.isArray(metadata.temporalOperators) && metadata.temporalOperators.length > 0) {
+            return metadata.temporalOperators
+          }
+
+          return fallbackTemporalOperators
+        })()
+
+        const temporalOperators = [...new Set(temporalOperatorSource)].filter(Boolean)
+
+        const unit = param.unit ?? metadata.unit ?? ''
+        const valueType = param.valueType ?? metadata.valueType ?? metadata.type ?? null
+        const defaultTemporalOperator = param.defaultTemporalOperator
+          ?? metadata.defaultTemporalOperator
+          ?? temporalOperators[0]
+
+        return [parameterId, {
+          ...metadata,
+          ...param,
+          parameter: metricTypeCode,
+          metricTypeCode,
+          temporalOperators,
+          defaultTemporalOperator,
+          unit,
+          valueType
+        }]
+      })
+    )
+  }, [seriesOptions])
+
+  // Prioritize withdrawn volume and flow rate on point details when available.
+  const derivedDefaultParameters = useMemo(() => {
+    const defaultParameters = DEFAULT_METRIC_TYPE_CODES
+      .map(metricTypeCode => parameterOptions.find(
+        option => option.metricTypeCode?.toLowerCase() === metricTypeCode
+      )?.value)
+      .filter(Boolean)
+
+    if (defaultParameters.length > 0) {
+      return defaultParameters
+    }
+
+    return parameterOptions[0]?.value ? [parameterOptions[0].value] : []
+  }, [parameterOptions])
+
+  const [selectedParameters, setSelectedParameters] = useState(derivedDefaultParameters)
+  const dateRange = useMemo(
+    () => resolveSelectedParametersDateRange({
+      endDate,
+      parameters: seriesOptions?.parameters,
+      selectedParameters,
+      startDate
+    }),
+    [endDate, selectedParameters, seriesOptions?.parameters, startDate]
+  )
+  const selectablePeriods = useMemo(
+    () => calculateSelectablePeriodsFromDateRange(dateRange.start, dateRange.end),
+    [dateRange.end, dateRange.start]
+  )
+  const defaultPeriods = useMemo(
+    () => extractDefaultPeriodsFromDateRange(dateRange.start, dateRange.end),
+    [dateRange.end, dateRange.start]
+  )
+  const dateRangeKey = `${dateRange.start ?? ''}:${dateRange.end ?? ''}`
+  const explorerStateKey = `${selectedParameters.join('|')}:${dateRangeKey}`
+  const initialDisplayFrequency = useMemo(
+    () => resolveInitialDisplayFrequency({
+      startDate: dateRange.start,
+      endDate: dateRange.end
+    }),
+    [dateRange.end, dateRange.start]
+  )
+  const [parameterTemporalOperators, setParameterTemporalOperators] = useState({})
+  const [targetDisplayFrequency, setTargetDisplayFrequency] = useState(initialDisplayFrequency)
+  const [aggregatedSeriesMap, setAggregatedSeriesMap] = useState(new Map())
+  const [isLoading, setIsLoading] = useState(false)
+  const [loadError, setLoadError] = useState(null)
+  const previousExplorerStateKeyRef = useRef(explorerStateKey)
+
+  useEffect(() => {
+    if (previousExplorerStateKeyRef.current === explorerStateKey) {
+      return
+    }
+
+    previousExplorerStateKeyRef.current = explorerStateKey
+    setTargetDisplayFrequency(initialDisplayFrequency)
+  }, [explorerStateKey, initialDisplayFrequency])
+
+  useEffect(() => {
+    if (parameterOptions.length === 0 || derivedDefaultParameters.length === 0) {
+      setSelectedParameters([])
+      return
+    }
+
+    setSelectedParameters(prev => {
+      // Keep only valid selections
+      const validSelections = prev.filter(p =>
+        parameterOptions.some(option => option.value === p)
+      )
+      return validSelections.length > 0 ? validSelections : derivedDefaultParameters
+    })
+  }, [parameterOptions, derivedDefaultParameters])
+
+  const resolveDefaultTemporalOperatorForParameter = useCallback((parameterName, definition) => {
+    const parameterDefinition = definition ?? parameterDefinitionMap.get(parameterName) ?? getParameterMetadata(parameterName)
+    if (!parameterDefinition) {
+      return null
+    }
+
+    // Priority 1: Use the default operator from the metricTypeCode definition (API or metadata)
+    if (parameterDefinition.defaultTemporalOperator) {
+      return parameterDefinition.defaultTemporalOperator
+    }
+
+    // Priority 2: Fall back to first available operator
+    return parameterDefinition.temporalOperators?.[0] ?? null
+  }, [parameterDefinitionMap])
+
+  const buildTemporalOperatorsForParameters = useCallback((parametersList, baseTemporalOperators = {}) => {
+    if (!Array.isArray(parametersList)) {
+      return {}
+    }
+
+    const result = {}
+
+    for (const param of parametersList) {
+      const definition = parameterDefinitionMap.get(param) ?? getParameterMetadata(param)
+      const availableTemporalOperators = definition?.temporalOperators ?? []
+      const requestedTemporalOperator = baseTemporalOperators[param]
+      const defaultTemporalOperator = resolveDefaultTemporalOperatorForParameter(param, definition)
+
+      const selectedTemporalOperator = availableTemporalOperators.includes(requestedTemporalOperator)
+        ? requestedTemporalOperator
+        : (availableTemporalOperators.includes(defaultTemporalOperator) ? defaultTemporalOperator : availableTemporalOperators[0])
+
+      if (selectedTemporalOperator) {
+        result[param] = selectedTemporalOperator
+      }
+    }
+
+    return result
+  }, [parameterDefinitionMap, resolveDefaultTemporalOperatorForParameter])
+
+  const temporalOperatorOptionsByParameter = useMemo(() => {
+    if (selectedParameters.length === 0) {
+      return {}
+    }
+
+    const optionsMap = {}
+
+    for (const param of selectedParameters) {
+      const definition = parameterDefinitionMap.get(param) ?? getParameterMetadata(param)
+      const temporalOperators = definition?.temporalOperators ?? []
+      optionsMap[param] = temporalOperators.map(temporalOperator => ({
+        value: temporalOperator,
+        label: OPERATOR_LABELS[temporalOperator] ?? temporalOperator.toUpperCase()
+      }))
+    }
+
+    return optionsMap
+  }, [parameterDefinitionMap, selectedParameters])
+
+  useEffect(() => {
+    if (selectedParameters.length === 0) {
+      setParameterTemporalOperators({})
+      return
+    }
+
+    // Use buildTemporalOperatorsForParameters directly to avoid code duplication
+    setParameterTemporalOperators(prev => buildTemporalOperatorsForParameters(selectedParameters, prev))
+  }, [selectedParameters, parameterDefinitionMap, buildTemporalOperatorsForParameters])
+
+  const resolvedTemporalOperatorsByParameter = useMemo(
+    () => buildTemporalOperatorsForParameters(selectedParameters, parameterTemporalOperators),
+    [buildTemporalOperatorsForParameters, parameterTemporalOperators, selectedParameters]
+  )
+
+  const defaultTemporalOperatorsByParameter = useMemo(
+    () => buildTemporalOperatorsForParameters(selectedParameters, {}),
+    [buildTemporalOperatorsForParameters, selectedParameters]
+  )
+
+  const fetchAggregatedSeries = useCallback(async (parameterId, temporalOperator, frequency) => {
+    const parameterDefinition = parameterDefinitionMap.get(parameterId)
+    const params = {
+      aggregationFrequency: frequency,
+      metricTypeCode: parameterDefinition?.metricTypeCode ?? parameterId,
+      temporalOperator
+    }
+
+    if (parameterDefinition?.flowType) {
+      params.pointFlowType = parameterDefinition.flowType
+    }
+
+    if (pointIds) {
+      params.pointIds = pointIds
+    }
+
+    if (collecteurId) {
+      params.collecteurId = collecteurId
+    }
+
+    if (preleveurId) {
+      params.preleveurId = preleveurId
+    }
+
+    if (dateRange.start) {
+      params.startDate = dateRange.start
+    }
+
+    if (dateRange.end) {
+      params.endDate = dateRange.end
+    }
+
+    // Server actions cannot receive AbortSignal (not serializable)
+    // Cancellation is handled client-side via isActive flag
+    const result = await getAggregatedSeriesAction(params)
+    return result.success ? result.data : null
+  }, [collecteurId, pointIds, preleveurId, dateRange, parameterDefinitionMap])
+
+  useEffect(() => {
+    // Clear the map only when no parameters are selected
+    if (selectedParameters.length === 0) {
+      setAggregatedSeriesMap(new Map())
+      setIsLoading(false)
+      return
+    }
+
+    // Don't load if frequency is missing
+    if (!targetDisplayFrequency) {
+      return
+    }
+
+    const allTemporalOperatorsResolved = selectedParameters.every(param => resolvedTemporalOperatorsByParameter[param])
+
+    let isActive = true
+    const abortController = new AbortController()
+
+    if (!allTemporalOperatorsResolved) {
+      setIsLoading(false)
+      return () => {
+        abortController.abort()
+      }
+    }
+
+    // Clear stale data immediately to prevent rendering old data during fetch
+    // This prevents the UI freeze caused by rendering large datasets from previous selections
+    // Note: The map is also cleared in handleFiltersChange for synchronous batching,
+    // but we keep this here for cases where useEffect triggers without going through the handler
+    setAggregatedSeriesMap(prev => {
+      // Only clear if there are stale entries that don't match current selection
+      const hasStaleData = [...prev.keys()].some(key => !selectedParameters.includes(key))
+      return hasStaleData ? new Map() : prev
+    })
+    setIsLoading(true)
+    setLoadError(null)
+
+    const loadAllSeries = async () => {
+      try {
+        const promises = selectedParameters.map(async param => {
+          const temporalOperator = resolvedTemporalOperatorsByParameter[param]
+          // Skip fetch if temporalOperator cannot be resolved for this metricTypeCode
+          if (!temporalOperator) {
+            return [param, null]
+          }
+
+          const parameterDefinition = parameterDefinitionMap.get(param) ?? getParameterMetadata(param)
+          const availableFrequencies = parameterDefinition?.availableFrequencies
+          const chosenFrequency = pickAvailableFrequency(
+            targetDisplayFrequency,
+            availableFrequencies
+          ) ?? targetDisplayFrequency
+
+          const response = await fetchAggregatedSeries(
+            param,
+            temporalOperator,
+            chosenFrequency
+          )
+
+          const normalizedResponse = response && typeof response === 'object'
+            ? {
+              ...response,
+              metadata: {
+                ...response.metadata,
+                frequency: response?.metadata?.frequency ?? chosenFrequency
+              }
+            }
+            : response
+
+          return [param, normalizedResponse]
+        })
+
+        const results = await Promise.all(promises)
+
+        if (isActive) {
+          setAggregatedSeriesMap(new Map(results))
+        }
+      } catch (error) {
+        if (error?.name === 'AbortError') {
+          return
+        }
+
+        if (isActive) {
+          setLoadError(error instanceof Error ? error.message : 'Impossible de charger les séries agrégées')
+        }
+      } finally {
+        if (isActive) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    loadAllSeries()
+
+    return () => {
+      isActive = false
+      abortController.abort()
+    }
+  }, [selectedParameters, resolvedTemporalOperatorsByParameter, targetDisplayFrequency, fetchAggregatedSeries, parameterDefinitionMap])
+
+  const handleFiltersChange = useCallback(({parameters, parameterTemporalOperators: nextParameterTemporalOperators}) => {
+    let nextParameters = selectedParameters
+
+    // Handle parameters change (multi-select)
+    if (parameters !== undefined && Array.isArray(parameters)) {
+      // Validate units
+      const units = new Set(
+        parameters
+          .map(param => {
+            const def = parameterDefinitionMap.get(param) ?? getParameterMetadata(param)
+            return def?.unit
+          })
+          .filter(Boolean)
+      )
+
+      if (units.size > MAX_DIFFERENT_UNITS) {
+        return
+      }
+
+      // Clear the map immediately to prevent rendering stale data during the transition
+      // This must happen in the same event handler to be batched with setSelectedParameters
+      setAggregatedSeriesMap(new Map())
+      setSelectedParameters(parameters)
+      nextParameters = parameters
+    }
+
+    if (nextParameterTemporalOperators !== undefined) {
+      setParameterTemporalOperators(buildTemporalOperatorsForParameters(nextParameters, nextParameterTemporalOperators))
+    }
+  }, [buildTemporalOperatorsForParameters, parameterDefinitionMap, selectedParameters])
+
+  const handleDisplayResolutionChange = useCallback(frequency => {
+    if (frequency) {
+      setTargetDisplayFrequency(resolveSeriesDisplayFrequency({
+        endDate: dateRange.end,
+        startDate: dateRange.start,
+        suggestedFrequency: frequency
+      }))
+    }
+  }, [dateRange.end, dateRange.start])
+
+  return hasParameters ? (
+    <Box className='flex flex-col gap-4'>
+      <Box>
+        <Typography variant='h5' component={titleComponent}>
+          {title}
+        </Typography>
+
+        {subtitle && (
+          <Typography color='text.secondary' variant='body2'>
+            {subtitle}
+          </Typography>
+        )}
+      </Box>
+
+      {selectedParameters.length > 0 && (
+        <AggregatedSeriesExplorer
+          key={explorerStateKey}
+          showRangeSlider
+          showPeriodSelector={false}
+          showCalendar={false}
+          series={aggregatedSeriesMap}
+          parameters={parameterOptions}
+          selectedParameters={selectedParameters}
+          defaultParameters={derivedDefaultParameters}
+          temporalOperatorOptionsByParameter={temporalOperatorOptionsByParameter}
+          selectedTemporalOperators={resolvedTemporalOperatorsByParameter}
+          defaultTemporalOperators={defaultTemporalOperatorsByParameter}
+          selectablePeriods={selectablePeriods}
+          defaultPeriods={defaultPeriods}
+          dateRangeOverride={dateRange}
+          error={loadError}
+          isLoading={isLoading}
+          seriesOptions={seriesOptions}
+          onFiltersChange={handleFiltersChange}
+          onDisplayResolutionChange={handleDisplayResolutionChange}
+        />
+      )}
+    </Box>
+  ) : (
+    <Box className='flex flex-col gap-4'>
+      <Box>
+        <Typography variant='h5' component={titleComponent}>
+          {title}
+        </Typography>
+
+        {subtitle && (
+          <Typography color='text.secondary' variant='body2'>
+            {subtitle}
+          </Typography>
+        )}
+      </Box>
+
+      <Alert
+        severity='info'
+        description='Aucun prélèvement connu pour cette entité.'
+      />
+    </Box>
+  )
+}
+
+export default SeriesExplorer

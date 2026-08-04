@@ -230,9 +230,14 @@ export async function getAggregatedSeriesAction(params = {}) {
  * @param {string} [params.preleveurId] - Préleveur ID
  * @param {string} [params.collecteurId] - Collecteur ID
  * @param {string} [params.sourceId] - Source ID
+ * @param {Object} handlingOptions - Error handling options
+ * @param {boolean} [handlingOptions.forbiddenOnAccessDenied=true] - Render the forbidden page on 403
  * @returns {Promise<Object>} - Result object
  */
-export async function getAggregatedSeriesOptionsAction({pointIds, preleveurId, collecteurId, sourceId} = {}) {
+export async function getAggregatedSeriesOptionsAction(
+  {pointIds, preleveurId, collecteurId, sourceId} = {},
+  {forbiddenOnAccessDenied = true} = {}
+) {
   return withErrorHandling(async () => {
     const params = new URLSearchParams()
 
@@ -255,5 +260,5 @@ export async function getAggregatedSeriesOptionsAction({pointIds, preleveurId, c
 
     const query = params.toString() ? `?${params.toString()}` : ''
     return fetchJSON(`api/aggregated-series/options${query}`)
-  })
+  }, {forbiddenOnAccessDenied})
 }

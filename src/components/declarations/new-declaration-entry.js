@@ -7,9 +7,23 @@ import {
 import {useRouter} from '@bprogress/next/app'
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {SegmentedControl} from '@codegouvfr/react-dsfr/SegmentedControl'
+import dynamic from 'next/dynamic'
 
-import NewDeclarationForm from './new-declaration-form.js'
-import QuickDeclarationForm from './quick-declaration-form.js'
+const FormLoadingState = () => (
+  <div className='flex min-h-[240px] items-center justify-center text-center' role='status'>
+    Chargement du formulaire…
+  </div>
+)
+
+const NewDeclarationForm = dynamic(
+  () => import('./new-declaration-form.js'),
+  {loading: FormLoadingState}
+)
+
+const QuickDeclarationForm = dynamic(
+  () => import('./quick-declaration-form.js'),
+  {loading: FormLoadingState}
+)
 
 const UnsavedQuickDeclarationModal = ({
   close,

@@ -1,6 +1,8 @@
 import {getServerSession} from 'next-auth'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL
+import {cachePerRequest} from '@/server/request-cache.js'
+
+const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL
 const IS_DEV = process.env.NODE_ENV === 'development'
 const INFO_REFRESH_INTERVAL_MS = 5 * 60 * 1000
 
@@ -211,7 +213,11 @@ export const authOptions = {
   providers: []
 }
 
-export async function getServerAuthSession() {
+const getCachedServerAuthSession = cachePerRequest(async () => {
   const options = await getAuthOptions()
   return getServerSession(options)
+})
+
+export async function getServerAuthSession() {
+  return getCachedServerAuthSession()
 }

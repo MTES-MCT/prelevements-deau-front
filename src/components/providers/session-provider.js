@@ -10,8 +10,8 @@ const NEXTAUTH_BASEPATH = '/auth/nextauth'
  * This needs to be a separate client component
  * basePath is set to avoid conflict with backend /api/auth routes
  */
-const NextAuthSessionProvider = ({children}) => (
-  <SessionProvider basePath={NEXTAUTH_BASEPATH} refetchInterval={5 * 60}>
+const NextAuthSessionProvider = ({children, session}) => (
+  <SessionProvider basePath={NEXTAUTH_BASEPATH} refetchInterval={5 * 60} session={session}>
     {children}
   </SessionProvider>
 )

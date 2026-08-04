@@ -6,6 +6,7 @@ import {
   fetchJSON,
   withErrorHandling
 } from '@/server/api-wrapper.js'
+import {cachePerRequest} from '@/server/request-cache.js'
 
 // ============================================================================
 // Points de prélèvement
@@ -24,8 +25,12 @@ export async function getPointsPrelevementAction() {
  * Detailed declarants are intentionally loaded only when a popup is opened.
  * @returns {Promise<Object>} - Result object
  */
+const getCachedPointMapSummaries = cachePerRequest(async () => withErrorHandling(
+  async () => fetchJSON('api/points-prelevement/map')
+))
+
 export async function getPointMapSummariesAction() {
-  return withErrorHandling(async () => fetchJSON('api/points-prelevement/map'))
+  return getCachedPointMapSummaries()
 }
 
 /**
@@ -41,8 +46,12 @@ export async function getPointsPrelevementOptionsAction() {
  * @param {string} id - Point ID
  * @returns {Promise<Object>} - Result object
  */
+const getCachedPointPrelevement = cachePerRequest(async id => withErrorHandling(
+  async () => fetchJSON(`api/points-prelevement/${id}`)
+))
+
 export async function getPointPrelevementAction(id) {
-  return withErrorHandling(async () => fetchJSON(`api/points-prelevement/${id}`))
+  return getCachedPointPrelevement(id)
 }
 
 export async function getPointsPrelevementBatchAction(ids) {

@@ -10,9 +10,10 @@ import {
 } from 'react'
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
+import dynamic from 'next/dynamic'
 
 import DeclarationPointsChangeRequestAction from '@/components/declarations/declaration-points-change-request-action.js'
-import PointReconciliationMap from '@/components/declarations/point-reconciliation-map.js'
+import DeferredRender from '@/components/ui/deferred-render.js'
 import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
 import {
   getDeclarationDisplayStatus,
@@ -28,6 +29,26 @@ import {
 } from '@/lib/water-uses.js'
 import {reconcileDeclarationChunkAction} from '@/server/actions/declarations.js'
 import {formatNumber} from '@/utils/number.js'
+
+const DynamicPointReconciliationMap = dynamic(
+  () => import('@/components/declarations/point-reconciliation-map.js'),
+  {ssr: false}
+)
+
+const PointReconciliationMap = props => (
+  <DeferredRender
+    className='w-full'
+    minHeight='clamp(380px, 62vh, 640px)'
+    placeholder={(
+      <div className='flex h-[clamp(380px,62vh,640px)] items-center justify-center bg-gray-100' role='status'>
+        Chargement de la carte…
+      </div>
+    )}
+    rootMargin='400px 0px'
+  >
+    <DynamicPointReconciliationMap {...props} />
+  </DeferredRender>
+)
 
 const CHUNK_LIST_SCROLL_FACTOR = 1.8
 const AVAILABLE_POINT_COLOR = '#000091'

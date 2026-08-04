@@ -1,19 +1,16 @@
 'use client'
 
-import {
-  useEffect, useMemo, useRef, useState
-} from 'react'
+import {useEffect, useMemo, useState} from 'react'
 
 import {Button} from '@codegouvfr/react-dsfr/Button'
-
-import FlexSearch from '../../../node_modules/flexsearch/dist/flexsearch.bundle.module.min.js'
+import {usePathname, useRouter, useSearchParams} from 'next/navigation'
 
 import Declarant from '@/components/declarants/declarant.js'
-import {getIdentifierAwareSearchQueries} from '@/lib/search-options.js'
-import {normalizeString} from '@/utils/string.js'
-
-const DEFAULT_PAGE_SIZE = 10
-const PAGE_SIZE_OPTIONS = [10, 25, 50]
+import useDebouncedValue from '@/hook/use-debounced-value.js'
+import {
+  DECLARANTS_PAGE_SIZE_OPTIONS,
+  buildDeclarantsPathname
+} from '@/lib/declarant-search.js'
 
 const ROLE_FILTERS = [
   {value: 'ALL', label: 'Tous'},
@@ -31,23 +28,6 @@ function getDeclarantId(declarant) {
   return declarant.id || declarant.userId || declarant.user?.id
 }
 
-function getDeclarantRole(declarant) {
-  return declarant.declarant?.declarantRole || declarant.declarantRole || 'PRELEVEUR'
-}
-
-function getDeclarantSearchDocument(declarant) {
-  return {
-    id: getDeclarantId(declarant),
-    lastName: normalizeString(declarant.lastName),
-    firstName: normalizeString(declarant.firstName),
-    socialReason: normalizeString(declarant?.declarant?.socialReason || declarant.socialReason),
-    email: normalizeString(declarant.email),
-    role: normalizeString(getDeclarantRole(declarant)),
-    city: normalizeString(declarant?.declarant?.city || declarant.city),
-    siret: normalizeString(declarant?.declarant?.siret || declarant.siret).replaceAll(/\D/g, '')
-  }
-}
-
 function pluralize(count, singular, plural = `${singular}s`) {
   return `${count} ${count > 1 ? plural : singular}`
 }
@@ -56,7 +36,7 @@ function buildPaginationItems(page, totalPages) {
   const pageNumbers = new Set([1, totalPages, page - 1, page, page + 1])
   const sortedPageNumbers = [...pageNumbers]
     .filter(candidate => candidate >= 1 && candidate <= totalPages)
-    .sort((a, b) => a - b)
+    .sort((left, right) => left - right)
   const items = []
 
   for (const [index, pageNumber] of sortedPageNumbers.entries()) {
@@ -84,7 +64,7 @@ const PageSizeSelect = ({pageSize, onPageSizeChange}) => (
         value={pageSize}
         onChange={event => onPageSizeChange(Number.parseInt(event.target.value, 10))}
       >
-        {PAGE_SIZE_OPTIONS.map(option => (
+        {DECLARANTS_PAGE_SIZE_OPTIONS.map(option => (
           <option key={option} value={option}>{option}</option>
         ))}
       </select>
@@ -99,11 +79,14 @@ const PageSizeSelect = ({pageSize, onPageSizeChange}) => (
 const DeclarantsPagination = ({
   className = '',
   currentPage,
-  setPage,
+  getPageHref,
   total,
   totalPages
 }) => {
-  const pageItems = useMemo(() => buildPaginationItems(currentPage, totalPages), [currentPage, totalPages])
+  const pageItems = useMemo(
+    () => buildPaginationItems(currentPage, totalPages),
+    [currentPage, totalPages]
+  )
 
   if (total === 0 || totalPages <= 1) {
     return null
@@ -119,7 +102,7 @@ const DeclarantsPagination = ({
           disabled={currentPage <= 1}
           priority='tertiary no outline'
           size='small'
-          onClick={() => setPage(currentPage - 1)}
+          linkProps={{href: getPageHref(currentPage - 1)}}
         >
           Précédent
         </Button>
@@ -138,7 +121,7 @@ const DeclarantsPagination = ({
               key={item}
               priority={item === currentPage ? 'primary' : 'tertiary no outline'}
               size='small'
-              onClick={() => setPage(item)}
+              linkProps={{href: getPageHref(item)}}
             >
               {item}
             </Button>
@@ -149,7 +132,7 @@ const DeclarantsPagination = ({
           disabled={currentPage >= totalPages}
           priority='tertiary no outline'
           size='small'
-          onClick={() => setPage(currentPage + 1)}
+          linkProps={{href: getPageHref(currentPage + 1)}}
         >
           Suivant
         </Button>
@@ -160,9 +143,9 @@ const DeclarantsPagination = ({
 
 const ResultsToolbar = ({
   currentPage,
+  getPageHref,
   onPageSizeChange,
   pageSize,
-  setPage,
   total,
   totalPages
 }) => {
@@ -176,7 +159,7 @@ const ResultsToolbar = ({
   return (
     <div className='fr-mb-2w flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
       <div className='flex flex-wrap items-center gap-x-4 gap-y-2'>
-        <p className='fr-text--sm fr-mb-0 font-medium text-gray-900'>
+        <p className='fr-text--sm fr-mb-0 font-medium text-gray-900' aria-live='polite'>
           {firstItem}-{lastItem} sur {total} déclarant{total > 1 ? 's' : ''}
         </p>
         <PageSizeSelect pageSize={pageSize} onPageSizeChange={onPageSizeChange} />
@@ -184,7 +167,7 @@ const ResultsToolbar = ({
 
       <DeclarantsPagination
         currentPage={currentPage}
-        setPage={setPage}
+        getPageHref={getPageHref}
         total={total}
         totalPages={totalPages}
       />
@@ -192,132 +175,79 @@ const ResultsToolbar = ({
   )
 }
 
-const DeclarantsList = ({declarants, basePath = '/declarants'}) => {
-  const [query, setQuery] = useState('')
-  const [roleFilter, setRoleFilter] = useState('ALL')
-  const [emailFilter, setEmailFilter] = useState('ALL')
-  const [matchingIds, setMatchingIds] = useState(null)
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
-  const index = useRef(null)
+const DeclarantsList = ({
+  basePath = '/declarants',
+  counts,
+  declarants,
+  filters,
+  page,
+  pageSize,
+  total,
+  totalPages
+}) => {
+  const pathname = usePathname()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [query, setQuery] = useState(filters.query)
+  const debouncedQuery = useDebouncedValue(query, 350)
+  const currentPage = Math.min(Math.max(page, 1), Math.max(totalPages, 1))
+  const roleFilter = filters.role || 'ALL'
+  const emailFilter = filters.emailStatus || 'ALL'
+  const hasActiveFilters = Boolean(filters.query || filters.role || filters.emailStatus)
 
   useEffect(() => {
-    index.current = new FlexSearch.Document({
-      document: {
-        id: 'id',
-        index: ['lastName', 'firstName', 'socialReason', 'email', 'role', 'city', 'siret'],
-        store: true
-      },
-      tokenize: 'full',
-      suggest: true,
-      depth: 2
-    })
+    setQuery(filters.query)
+  }, [filters.query])
 
-    for (const declarant of declarants) {
-      const id = getDeclarantId(declarant)
-      index.current.add(id, getDeclarantSearchDocument(declarant))
-    }
+  useEffect(() => {
+    const nextQuery = debouncedQuery.trim()
 
-    setMatchingIds(null)
-    setPage(1)
-  }, [declarants])
-
-  const handleFilter = event => {
-    const {value} = event.target
-    const searchQueries = getIdentifierAwareSearchQueries(value)
-
-    setQuery(value)
-    setPage(1)
-
-    if (searchQueries.length === 0) {
-      setMatchingIds(null)
+    if (nextQuery === filters.query) {
       return
     }
 
-    const ids = new Set()
+    router.replace(buildDeclarantsPathname(pathname, searchParams, {
+      query: nextQuery,
+      page: null
+    }), {scroll: false})
+  }, [debouncedQuery, filters.query, pathname, router, searchParams])
 
-    for (const searchQuery of searchQueries) {
-      const results = index.current.search(searchQuery, {
-        suggest: true,
-        enrich: true,
-        bool: 'or',
-        threshold: 5
-      })
-
-      for (const result of results) {
-        for (const doc of result.result) {
-          ids.add(doc.id)
-        }
-      }
-    }
-
-    setMatchingIds(ids)
+  const replaceFilters = values => {
+    router.replace(buildDeclarantsPathname(pathname, searchParams, {
+      query: query.trim(),
+      ...values,
+      page: null
+    }), {scroll: false})
   }
+
+  const getPageHref = nextPage => buildDeclarantsPathname(pathname, searchParams, {
+    query: query.trim(),
+    page: Math.max(1, nextPage)
+  })
+  const handlePageSizeChange = nextPageSize => replaceFilters({pageSize: nextPageSize})
 
   const resetFilters = () => {
     setQuery('')
-    setMatchingIds(null)
-    setRoleFilter('ALL')
-    setEmailFilter('ALL')
-    setPage(1)
+    replaceFilters({
+      query: null,
+      role: null,
+      emailStatus: null
+    })
   }
-
-  const handlePageSizeChange = nextPageSize => {
-    setPageSize(nextPageSize)
-    setPage(1)
-  }
-
-  const filteredDeclarants = useMemo(() => declarants.filter(declarant => {
-    const id = getDeclarantId(declarant)
-
-    if (matchingIds && !matchingIds.has(id)) {
-      return false
-    }
-
-    const role = getDeclarantRole(declarant)
-
-    if (roleFilter !== 'ALL' && role !== roleFilter) {
-      return false
-    }
-
-    if (emailFilter === 'WITH_EMAIL' && !declarant.email) {
-      return false
-    }
-
-    if (emailFilter === 'WITHOUT_EMAIL' && declarant.email) {
-      return false
-    }
-
-    return true
-  }), [declarants, matchingIds, roleFilter, emailFilter])
-
-  const totalPages = Math.max(1, Math.ceil(filteredDeclarants.length / pageSize))
-  const currentPage = Math.min(page, totalPages)
-
-  const paginatedDeclarants = useMemo(() => {
-    const start = (currentPage - 1) * pageSize
-    const end = start + pageSize
-    return filteredDeclarants.slice(start, end)
-  }, [filteredDeclarants, currentPage, pageSize])
-
-  const preleveursCount = declarants.filter(declarant => getDeclarantRole(declarant) === 'PRELEVEUR').length
-  const collecteursCount = declarants.filter(declarant => getDeclarantRole(declarant) === 'COLLECTEUR').length
-  const withoutEmailCount = declarants.filter(declarant => !declarant.email).length
-  const hasActiveFilters = Boolean(query.trim() || roleFilter !== 'ALL' || emailFilter !== 'ALL')
 
   return (
     <div className='flex w-full flex-col gap-4'>
       <div className='grid grid-cols-1 gap-3 md:grid-cols-3'>
         <div className='border border-gray-200 bg-white px-4 py-3'>
-          <p className='fr-text--lead fr-mb-1v'>{pluralize(declarants.length, 'déclarant')}</p>
+          <p className='fr-text--lead fr-mb-1v'>{pluralize(counts.total, 'déclarant')}</p>
           <p className='fr-text--sm fr-mb-0'>Total visible dans votre périmètre</p>
         </div>
         <div className='border border-gray-200 bg-white px-4 py-3'>
-          <p className='fr-text--lead fr-mb-1v'>{pluralize(preleveursCount, 'préleveur')}</p>
-          <p className='fr-text--sm fr-mb-0'>{pluralize(collecteursCount, 'collecteur')}</p>
+          <p className='fr-text--lead fr-mb-1v'>{pluralize(counts.preleveurs, 'préleveur')}</p>
+          <p className='fr-text--sm fr-mb-0'>{pluralize(counts.collecteurs, 'collecteur')}</p>
         </div>
         <div className='border border-gray-200 bg-white px-4 py-3'>
-          <p className='fr-text--lead fr-mb-0'>{pluralize(withoutEmailCount, 'déclarant sans email', 'déclarants sans email')}</p>
+          <p className='fr-text--lead fr-mb-0'>{pluralize(counts.withoutEmail, 'déclarant sans email', 'déclarants sans email')}</p>
         </div>
       </div>
 
@@ -346,7 +276,7 @@ const DeclarantsList = ({declarants, basePath = '/declarants'}) => {
               placeholder='Nom, prénom, raison sociale, email, ville ou SIRET'
               type='search'
               value={query}
-              onChange={handleFilter}
+              onChange={event => setQuery(event.target.value)}
             />
           </div>
 
@@ -356,10 +286,7 @@ const DeclarantsList = ({declarants, basePath = '/declarants'}) => {
               className='fr-select'
               id='declarants-role-filter'
               value={roleFilter}
-              onChange={event => {
-                setPage(1)
-                setRoleFilter(event.target.value)
-              }}
+              onChange={event => replaceFilters({role: event.target.value})}
             >
               {ROLE_FILTERS.map(filter => <option key={filter.value} value={filter.value}>{filter.label}</option>)}
             </select>
@@ -371,10 +298,7 @@ const DeclarantsList = ({declarants, basePath = '/declarants'}) => {
               className='fr-select'
               id='declarants-email-filter'
               value={emailFilter}
-              onChange={event => {
-                setPage(1)
-                setEmailFilter(event.target.value)
-              }}
+              onChange={event => replaceFilters({emailStatus: event.target.value})}
             >
               {EMAIL_FILTERS.map(filter => <option key={filter.value} value={filter.value}>{filter.label}</option>)}
             </select>
@@ -385,14 +309,14 @@ const DeclarantsList = ({declarants, basePath = '/declarants'}) => {
       <div className='fr-mt-1w'>
         <ResultsToolbar
           currentPage={currentPage}
+          getPageHref={getPageHref}
           pageSize={pageSize}
-          setPage={setPage}
-          total={filteredDeclarants.length}
+          total={total}
           totalPages={totalPages}
           onPageSizeChange={handlePageSizeChange}
         />
 
-        {paginatedDeclarants.length > 0 && paginatedDeclarants.map((declarant, index) => (
+        {declarants.map((declarant, index) => (
           <Declarant
             key={getDeclarantId(declarant)}
             declarant={declarant}
@@ -401,7 +325,7 @@ const DeclarantsList = ({declarants, basePath = '/declarants'}) => {
           />
         ))}
 
-        {filteredDeclarants.length === 0 && (
+        {total === 0 && (
           <div className='border border-gray-200 bg-white px-4 py-6'>
             <p className='fr-mb-0'><i>Aucun déclarant ne correspond à ces filtres</i></p>
           </div>
@@ -410,8 +334,8 @@ const DeclarantsList = ({declarants, basePath = '/declarants'}) => {
         <DeclarantsPagination
           className='fr-mt-3w'
           currentPage={currentPage}
-          setPage={setPage}
-          total={filteredDeclarants.length}
+          getPageHref={getPageHref}
+          total={total}
           totalPages={totalPages}
         />
       </div>

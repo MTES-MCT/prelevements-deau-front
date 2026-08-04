@@ -23,7 +23,6 @@
     "crisp-sdk-web": "^1.2.0",
     "date-fns": "^4.4.0",
     "file-type": "^21.1.0",
-    "flexsearch": "^0.7.43",
     "lodash-es": "^4.17.21",
     "maplibre-gl": "^5.24.0",
     "moment": "^2.30.1",

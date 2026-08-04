@@ -1,8 +1,39 @@
+import {randomUUID} from 'node:crypto'
+
 import {forbidden, redirect} from 'next/navigation'
 
+import {handleAccessDenied} from '@/server/access-denied.js'
+import {
+  getApiPerformancePath,
+  getApiSlowRequestThreshold
+} from '@/server/api-performance.js'
 import {getServerAuthSession} from '@/server/auth.js'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL
+const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL
+const API_SLOW_REQUEST_MS = getApiSlowRequestThreshold(process.env.API_SLOW_REQUEST_MS)
+
+function getHeaderValue(headers, searchedName) {
+  const entry = Object.entries(headers)
+    .find(([name]) => name.toLowerCase() === searchedName.toLowerCase())
+
+  return entry?.[1]
+}
+
+function logApiPerformance({durationMs, error, method, requestId, response, url}) {
+  if (process.env.API_PERF_LOG !== '1' && durationMs < API_SLOW_REQUEST_MS) {
+    return
+  }
+
+  console.info('[FRONT_API_PERF]', JSON.stringify({
+    requestId: response?.headers.get('x-request-id') || requestId,
+    route: getApiPerformancePath(url),
+    method,
+    status: response?.status || null,
+    durationMs: Math.round(durationMs),
+    serverTiming: response?.headers.get('server-timing') || null,
+    error: error?.name || null
+  }))
+}
 
 /**
  * Get authenticated session or throw if not authenticated
@@ -35,6 +66,7 @@ async function getAuthenticatedSession() {
  * @returns {Promise<Response>} - Fetch response
  */
 export async function authenticatedFetch(url, options = {}) {
+  const startedAt = performance.now()
   const {
     method = 'GET',
     body,
@@ -44,6 +76,11 @@ export async function authenticatedFetch(url, options = {}) {
   } = options
 
   const fetchHeaders = {...headers}
+  const requestId = getHeaderValue(fetchHeaders, 'x-request-id') || randomUUID()
+
+  if (!getHeaderValue(fetchHeaders, 'x-request-id')) {
+    fetchHeaders['X-Request-Id'] = requestId
+  }
 
   // Add authorization header if auth is required
   if (requireAuth) {
@@ -74,9 +111,25 @@ export async function authenticatedFetch(url, options = {}) {
 
   fetchOptions.headers = fetchHeaders
 
-  const response = await fetch(`${API_URL}/${url}`, fetchOptions)
+  let response
+  let fetchError
 
-  return response
+  try {
+    response = await fetch(`${API_URL}/${url}`, fetchOptions)
+    return response
+  } catch (error) {
+    fetchError = error
+    throw error
+  } finally {
+    logApiPerformance({
+      durationMs: performance.now() - startedAt,
+      error: fetchError,
+      method,
+      requestId,
+      response,
+      url
+    })
+  }
 }
 
 /**
@@ -165,10 +218,14 @@ export function errorResult(error) {
  * Wrapper for server actions that handles common error patterns
  * @param {Function} fn - Async function to execute
  * @param {Object} options - Error handling options
+ * @param {boolean} [options.forbiddenOnAccessDenied=true] - Render the forbidden page on 403
  * @param {boolean} [options.redirectOnUnauthorized=true] - Redirect to login on 401
  * @returns {Promise<Object>} - Result object with success/error pattern
  */
-export async function withErrorHandling(fn, {redirectOnUnauthorized = true} = {}) {
+export async function withErrorHandling(fn, {
+  forbiddenOnAccessDenied = true,
+  redirectOnUnauthorized = true
+} = {}) {
   try {
     const result = await fn()
     return successResult(result)
@@ -196,12 +253,10 @@ export async function withErrorHandling(fn, {redirectOnUnauthorized = true} = {}
     }
 
     if (error.code === 403) {
-      forbidden()
-      return {
-        success: false,
-        error: 'INSUFFICIENT_PERMISSIONS',
-        code: 403
-      }
+      return handleAccessDenied({
+        forbiddenOnAccessDenied,
+        renderForbidden: forbidden
+      })
     }
 
     return errorResult(error)
