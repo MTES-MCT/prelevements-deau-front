@@ -163,4 +163,40 @@ export function parseQuarterDate(dateString) {
   return new Date(year, month, 1, 0, 0, 0, 0)
 }
 
+/**
+ * Parse an ISO week label (YYYY-Www) as the Monday starting that week.
+ * The ISO week-year may start in the previous calendar year.
+ */
+export function parseIsoWeekDate(dateString) {
+  if (typeof dateString !== 'string') {
+    return null
+  }
+
+  const weekMatch = dateString.match(/^(\d{4})-W(\d{2})$/)
+  if (!weekMatch) {
+    return null
+  }
+
+  const isoYear = Number.parseInt(weekMatch[1], 10)
+  const isoWeek = Number.parseInt(weekMatch[2], 10)
+  if (isoWeek < 1 || isoWeek > 53) {
+    return null
+  }
+
+  // January 4 is always in ISO week 1. Walk back to its Monday, then add weeks.
+  const januaryFourth = new Date(isoYear, 0, 4, 0, 0, 0, 0)
+  const daysSinceMonday = (januaryFourth.getDay() + 6) % 7
+  const weekMonday = new Date(isoYear, 0, 4 - daysSinceMonday + ((isoWeek - 1) * 7), 0, 0, 0, 0)
+
+  // The Thursday determines the ISO week-year and rejects impossible week 53 labels.
+  const weekThursday = new Date(
+    weekMonday.getFullYear(),
+    weekMonday.getMonth(),
+    weekMonday.getDate() + 3,
+    0, 0, 0, 0
+  )
+
+  return weekThursday.getFullYear() === isoYear ? weekMonday : null
+}
+
 export default formatDate

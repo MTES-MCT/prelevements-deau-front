@@ -15,7 +15,6 @@ import {
   getDateFormatter,
   collectAxisTooltipRows,
   getSharedTooltipNature,
-  getTimelineTickStride,
   getRangeBasedDateFormatter,
   largestTriangleThreeBuckets,
   decimatePoints,
@@ -26,11 +25,19 @@ import {
   classifyPoint,
   buildYAxisConfigurations,
   buildSeriesModel,
+  buildTimelineXAxis,
+  buildTimelineTicks,
+  calendarCoordinateToDate,
+  projectDateToCalendarCoordinate,
   axisFormatterFactory,
   buildAnnotations,
   resampleSeriesData,
   detectNativeFrequency
 } from './util.js'
+
+import {prepareCumulativeSeriesData} from '@/components/PrelevementsSeriesExplorer/use-chart-series.js'
+import {buildDailyAndTimelineData} from '@/components/PrelevementsSeriesExplorer/utils/aggregation.js'
+import {processTimeSeriesData} from '@/components/PrelevementsSeriesExplorer/utils/gap-detection.js'
 
 const baseTheme = {
   palette: {
@@ -97,11 +104,409 @@ test('le tooltip conserve les natures différentes au niveau de chaque ligne', t
   t.is(getSharedTooltipNature(rows), null)
 })
 
-test('le quadrillage temporel adapte son pas au nombre de points et à la largeur', t => {
-  t.is(getTimelineTickStride(10, 1000), 1)
-  t.true(getTimelineTickStride(1000, 1000) > 1)
-  t.true(getTimelineTickStride(1000, 320) > getTimelineTickStride(1000, 1000))
-  t.is(getTimelineTickStride(1000, 0), 1)
+test('le tooltip ignore les bornes techniques de fin d’intervalle', t => {
+  const rows = collectAxisTooltipRows({
+    series: [{
+      id: 'volume__plain',
+      originalId: 'volume',
+      originalLabel: 'Volume (m³)',
+      data: [1000],
+      valueFormatter: String
+    }],
+    dataIndex: 0,
+    getPointMeta: () => null,
+    getSegmentOrigin: () => ({displayBoundary: true}),
+    translations: {interpolatedPoint: 'Point interpolé'}
+  })
+
+  t.deepEqual(rows, [])
+})
+
+test('le tooltip de fin d’intervalle reprend la date et les métadonnées du bucket', t => {
+  const tooltipDate = new Date(2025, 0, 1)
+  const rows = collectAxisTooltipRows({
+    series: [{
+      id: 'volume__plain',
+      originalId: 'volume',
+      originalLabel: 'Volume (m³)',
+      data: [1000],
+      valueFormatter: String
+    }],
+    dataIndex: 0,
+    getPointMeta: () => null,
+    getSegmentOrigin: () => ({
+      displayBoundary: true,
+      synthetic: true,
+      tooltipDate,
+      tooltipMeta: {comment: 'Déclaré sur la période'}
+    }),
+    translations: {interpolatedPoint: 'Point interpolé'}
+  })
+
+  t.is(rows.length, 1)
+  t.is(rows[0].tooltipDate, tooltipDate)
+  t.is(rows[0].nature, 'Déclaré sur la période')
+  t.is(rows[0].syntheticLabel, null)
+})
+
+test('une plage annuelle garde les données journalières mais gradue les mois', t => {
+  const start = new Date(2024, 11, 1)
+  const xAxisDates = Array.from({length: 337}, (_, index) => new Date(
+    start.getFullYear(),
+    start.getMonth(),
+    start.getDate() + index
+  ))
+  const ticks = buildTimelineTicks({
+    xAxisDates,
+    availableWidth: 1100,
+    locale: 'fr-FR',
+    frequency: '1 day'
+  })
+
+  t.is(ticks.granularity, 'month')
+  t.is(ticks.axisMode, 'calendar')
+  t.is(ticks.values.length, 12)
+  t.true(ticks.labels.get(ticks.values[0].getTime()).includes('2024'))
+  t.true(ticks.labels.get(ticks.values[1].getTime()).includes('2025'))
+  t.false(ticks.labels.get(ticks.values[2].getTime()).includes('2025'))
+  t.deepEqual(
+    ticks.values.map(date => date.getDate()),
+    Array.from({length: 12}, () => 1)
+  )
+})
+
+test('une plage courte exclut les ruptures et les bornes techniques des graduations', t => {
+  const xAxisDates = Array.from({length: 5}, (_, index) => new Date(2025, 0, index + 1))
+  const pointBySeries = new Map([
+    ['volume', [
+      {y: null},
+      {y: 1000},
+      {y: 1000, displayBoundary: true},
+      {y: 2000},
+      {y: null}
+    ]]
+  ])
+  const ticks = buildTimelineTicks({
+    xAxisDates,
+    pointBySeries,
+    availableWidth: 800,
+    locale: 'fr-FR',
+    frequency: '1 day'
+  })
+
+  t.deepEqual(ticks.values, [xAxisDates[1], xAxisDates[3]])
+})
+
+test('337 volumes journaliers traversent tout le pipeline sans rupture et forment une seule ligne', t => {
+  const apiValues = Array.from({length: 337}, (_, index) => {
+    const date = new Date(2024, 11, 1 + index)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+
+    return {
+      date: `${year}-${month}-${day}`,
+      value: 1000
+    }
+  })
+  const {timelineSamples} = buildDailyAndTimelineData({
+    loadedValues: {volume: apiValues},
+    selectedParams: ['volume']
+  })
+  const chartData = processTimeSeriesData(
+    timelineSamples.map(sample => ({
+      x: sample.timestamp,
+      y: sample.values[0],
+      meta: sample.metas[0]
+    })),
+    '1 day'
+  )
+  const model = buildSeriesModel({
+    series: [{
+      id: 'volume',
+      label: 'Volume prélevé (m³)',
+      color: '#000091',
+      curve: 'stepAfter',
+      data: chartData
+    }],
+    locale: 'fr-FR',
+    theme: baseTheme,
+    exposeAllMarks: false,
+    timelineFrequency: '1 day'
+  })
+
+  t.is(timelineSamples.length, 337)
+  t.is(chartData.filter(point => point.y === null || point.isGapPoint).length, 0)
+  t.is(model.xAxisDates.length, 337)
+  t.is(model.pointBySeries.get('volume').filter(point => point.y === null).length, 0)
+  t.is(model.segmentSeries.length, 1)
+  t.is(model.segmentSeries[0].curve, 'stepAfter')
+  t.falsy(model.segmentSeries[0].area)
+  t.is(model.segmentSeries[0].data.filter(value => Number.isFinite(value)).length, 337)
+})
+
+test('une ligne cumulative conserve sa borne temporelle sans l’exposer comme mesure', t => {
+  const start = new Date(2025, 0, 1)
+  const endExclusive = new Date(2025, 0, 2)
+  const data = prepareCumulativeSeriesData([{
+    x: start,
+    y: 1000,
+    bucketEnd: endExclusive
+  }], '1 day')
+  const model = buildSeriesModel({
+    series: [{
+      id: 'volume',
+      label: 'Volume prélevé (m³)',
+      color: '#000091',
+      curve: 'stepAfter',
+      data
+    }],
+    locale: 'fr-FR',
+    theme: baseTheme,
+    exposeAllMarks: false,
+    timelineFrequency: '1 day'
+  })
+  const points = model.pointBySeries.get('volume')
+
+  t.is(model.xAxisDates.length, 2)
+  t.is(model.xAxisDates[1].getTime(), endExclusive.getTime() - 1)
+  t.false(points[0].synthetic)
+  t.true(points[1].synthetic)
+  t.true(points[1].displayBoundary)
+  t.is(points[1].tooltipDate.getTime(), start.getTime())
+  t.is(model.segmentSeries[0].curve, 'stepAfter')
+  t.falsy(model.segmentSeries[0].area)
+  t.is(model.segmentSeries[0].data.filter(value => Number.isFinite(value)).length, 2)
+
+  const ticks = buildTimelineTicks({
+    xAxisDates: model.xAxisDates,
+    pointBySeries: model.pointBySeries,
+    availableWidth: 800,
+    locale: 'fr-FR',
+    frequency: '1 day'
+  })
+  t.deepEqual(ticks.values, [start])
+})
+
+test('les graduations calendaires ne dépendent pas du nombre de points', t => {
+  const start = new Date(2024, 0, 15)
+  const end = new Date(2025, 5, 20)
+  const denseDates = Array.from({length: 523}, (_, index) => new Date(2024, 0, 15 + index))
+  const sparseDates = [start, new Date(2024, 7, 2), end]
+
+  const denseTicks = buildTimelineTicks({
+    xAxisDates: denseDates,
+    availableWidth: 1200,
+    locale: 'fr-FR',
+    frequency: '1 day'
+  })
+  const sparseTicks = buildTimelineTicks({
+    xAxisDates: sparseDates,
+    availableWidth: 1200,
+    locale: 'fr-FR',
+    frequency: '1 day'
+  })
+
+  t.is(denseTicks.granularity, 'month')
+  t.deepEqual(
+    sparseTicks.values.map(date => date.getTime()),
+    denseTicks.values.map(date => date.getTime())
+  )
+  t.deepEqual(
+    sparseTicks.values.slice(1).map(date => date.getDate()),
+    Array.from({length: sparseTicks.values.length - 1}, () => 1)
+  )
+})
+
+test('les graduations calendaires se réduisent selon la largeur disponible', t => {
+  const xAxisDates = [new Date(2024, 0, 1), new Date(2025, 5, 1)]
+  const ticks = buildTimelineTicks({
+    xAxisDates,
+    availableWidth: 240,
+    locale: 'fr-FR',
+    frequency: '1 day'
+  })
+
+  t.is(ticks.granularity, 'month')
+  t.true(ticks.values.length <= 5)
+  t.is(new Set(ticks.labels.values()).size, ticks.labels.size)
+})
+
+test('les plages longues passent des trimestres aux années', t => {
+  const quarterlyRangeDates = Array.from({length: 25}, (_, index) => new Date(2024, index, 1))
+  const quarterlyTicks = buildTimelineTicks({
+    xAxisDates: quarterlyRangeDates,
+    availableWidth: 1100,
+    locale: 'fr-FR',
+    frequency: '1 month'
+  })
+
+  t.is(quarterlyTicks.granularity, 'quarter')
+  t.true([...quarterlyTicks.labels.values()][0].startsWith('T1 2024'))
+
+  const yearlyRangeDates = Array.from({length: 8}, (_, index) => new Date(2020 + index, 0, 1))
+  const yearlyTicks = buildTimelineTicks({
+    xAxisDates: yearlyRangeDates,
+    availableWidth: 1100,
+    locale: 'fr-FR',
+    frequency: '1 year'
+  })
+
+  t.is(yearlyTicks.granularity, 'year')
+  t.deepEqual([...yearlyTicks.labels.values()], yearlyRangeDates.map(date => String(date.getFullYear())))
+})
+
+test('les graduations annuelles restent décimées sur une très longue plage mobile', t => {
+  const ticks = buildTimelineTicks({
+    xAxisDates: [new Date(1900, 0, 1), new Date(2025, 0, 1)],
+    availableWidth: 240,
+    locale: 'fr-FR',
+    frequency: '1 year'
+  })
+
+  t.is(ticks.granularity, 'year')
+  t.true(ticks.values.length <= 5)
+  t.is(ticks.values[0].getFullYear(), 1900)
+  t.is([...ticks.values].pop().getFullYear(), 2025)
+})
+
+test('les graduations trimestrielles restent décimées sur cinq ans en mobile', t => {
+  const ticks = buildTimelineTicks({
+    xAxisDates: [new Date(2020, 0, 1), new Date(2024, 11, 31)],
+    availableWidth: 240,
+    locale: 'fr-FR',
+    frequency: '1 month'
+  })
+  const labels = [...ticks.labels.values()]
+
+  t.is(ticks.granularity, 'quarter')
+  t.true(ticks.values.length <= 5)
+  t.true(labels[0].includes('2020'))
+  t.true([...labels].pop().includes('2024'))
+})
+
+test('l’axe X utilise les dates comme valeurs d’une échelle temporelle continue', t => {
+  const xAxisDates = [
+    new Date(2025, 0, 1),
+    new Date(2025, 1, 1),
+    new Date(2025, 2, 1)
+  ]
+  const timelineTicks = buildTimelineTicks({
+    xAxisDates,
+    availableWidth: 800,
+    locale: 'fr-FR',
+    frequency: '1 day'
+  })
+  const axis = buildTimelineXAxis({
+    xAxisDates,
+    timelineTicks,
+    fallbackFormatter: date => String(date.getTime())
+  })
+
+  t.is(axis.scaleType, 'time')
+  t.is(axis.data, xAxisDates)
+  t.deepEqual(axis.tickInterval, timelineTicks.values)
+  t.deepEqual(axis.min, xAxisDates[0])
+  t.deepEqual(axis.max, [...xAxisDates].pop())
+  t.is(
+    xAxisDates[2].getTime() - xAxisDates[1].getTime(),
+    28 * 24 * 60 * 60 * 1000
+  )
+  t.is(
+    xAxisDates[1].getTime() - xAxisDates[0].getTime(),
+    31 * 24 * 60 * 60 * 1000
+  )
+})
+
+test('l’axe calendaire donne exactement la même largeur à chaque mois', t => {
+  const xAxisDates = [new Date(2024, 11, 1), new Date(2025, 10, 30, 23, 59, 59, 999)]
+  const timelineTicks = buildTimelineTicks({
+    xAxisDates,
+    availableWidth: 1100,
+    locale: 'fr-FR',
+    frequency: '1 day'
+  })
+  const axis = buildTimelineXAxis({
+    xAxisDates,
+    timelineTicks,
+    fallbackFormatter: date => String(date.getTime())
+  })
+  const monthWidths = axis.tickInterval
+    .slice(1)
+    .map((value, index) => value - axis.tickInterval[index])
+
+  t.is(timelineTicks.granularity, 'month')
+  t.is(timelineTicks.values.length, 12)
+  t.is(axis.scaleType, 'linear')
+  t.true(axis.data.every(value => typeof value === 'number'))
+  t.deepEqual(monthWidths, Array.from({length: 11}, () => 1))
+})
+
+test('la projection calendaire conserve la position et la date à l’intérieur du mois', t => {
+  const januaryStart = new Date(2025, 0, 1)
+  const januaryMiddle = new Date(2025, 0, 16, 12)
+  const februaryStart = new Date(2025, 1, 1)
+  const januaryCoordinate = projectDateToCalendarCoordinate(januaryStart)
+  const middleCoordinate = projectDateToCalendarCoordinate(januaryMiddle)
+  const februaryCoordinate = projectDateToCalendarCoordinate(februaryStart)
+  const roundTripDate = calendarCoordinateToDate(middleCoordinate)
+
+  t.is(februaryCoordinate - januaryCoordinate, 1)
+  t.true(middleCoordinate > januaryCoordinate)
+  t.true(middleCoordinate < februaryCoordinate)
+  t.is(roundTripDate.getTime(), januaryMiddle.getTime())
+})
+
+test('le domaine temporel conserve la borne de fin d’un intervalle affiché', t => {
+  const rangeEnd = new Date(2025, 0, 31)
+  const bucketEnd = new Date(2025, 1, 1, 0, 0, 0, -1)
+  const ticks = buildTimelineTicks({
+    xAxisDates: [new Date(2025, 0, 1), bucketEnd],
+    availableWidth: 800,
+    locale: 'fr-FR',
+    frequency: '1 day',
+    timelineRange: {start: new Date(2025, 0, 1), end: rangeEnd}
+  })
+
+  t.deepEqual(ticks.domain.end, bucketEnd)
+})
+
+test('le domaine temporel coupe le dernier mois partiel à la fin sélectionnée', t => {
+  const selectedStart = new Date(2024, 11, 1)
+  const selectedEnd = new Date(2025, 10, 2)
+  const fullMonthEnd = new Date(2025, 11, 1, 0, 0, 0, -1)
+  const ticks = buildTimelineTicks({
+    xAxisDates: [selectedStart, fullMonthEnd],
+    availableWidth: 1100,
+    locale: 'fr-FR',
+    frequency: '1 month',
+    timelineRange: {start: selectedStart, end: selectedEnd}
+  })
+  const axis = buildTimelineXAxis({
+    xAxisDates: [selectedStart, fullMonthEnd],
+    timelineTicks: ticks,
+    fallbackFormatter: date => String(date.getTime())
+  })
+  const selectedEndOfDay = new Date(2025, 10, 2, 23, 59, 59, 999)
+
+  t.is(ticks.axisMode, 'calendar')
+  t.deepEqual(ticks.domain.end, selectedEndOfDay)
+  t.is(axis.max, projectDateToCalendarCoordinate(selectedEndOfDay))
+  t.true([...axis.data].pop() > axis.max)
+})
+
+test('le domaine temporel ignore les bornes de sélection absentes', t => {
+  const start = new Date(2025, 0, 1)
+  const end = new Date(2025, 0, 31)
+  const ticks = buildTimelineTicks({
+    xAxisDates: [start, end],
+    availableWidth: 800,
+    locale: 'fr-FR',
+    frequency: '1 day',
+    timelineRange: {start: null, end: null}
+  })
+
+  t.deepEqual(ticks.domain, {start, end})
 })
 
 test('buildYAxisConfigurations peut cadrer une série sans imposer zéro', t => {
@@ -397,6 +802,27 @@ test('processInputSeries - should handle metadata in points', t => {
 
   const result = processInputSeries(inputSeries)
   t.deepEqual(result.sortedPoints[0].meta, {comment: 'test comment'})
+})
+
+test('processInputSeries - conserve les bornes techniques d’affichage', t => {
+  const result = processInputSeries({
+    id: 'volume',
+    label: 'Volume',
+    color: '#000091',
+    curve: 'stepAfter',
+    data: [{
+      x: new Date(2025, 0, 2, 0, 0, 0, -1),
+      y: 1000,
+      synthetic: true,
+      displayBoundary: true,
+      showMark: false
+    }]
+  })
+
+  t.true(result.sortedPoints[0].synthetic)
+  t.true(result.sortedPoints[0].displayBoundary)
+  t.false(result.sortedPoints[0].showMark)
+  t.is(result.curve, 'stepAfter')
 })
 
 // ComputeThresholdCrossings tests
@@ -827,7 +1253,7 @@ test('largestTriangleThreeBuckets decimates correctly', t => {
   const indices = largestTriangleThreeBuckets(points, 20)
   t.is(indices.length, 20)
   t.is(indices[0], 0) // First point always included
-  t.is(indices.at(-1), 99) // Last point always included
+  t.is([...indices].pop(), 99) // Last point always included
 })
 
 test('largestTriangleThreeBuckets preserves first and last points', t => {

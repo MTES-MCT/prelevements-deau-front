@@ -715,18 +715,11 @@ export function computeSliderMarks(dates, maxMarks = 5) {
     return []
   }
 
-  // Determine format based on time span
   const firstDate = dates[0]
   const lastDate = dates.at(-1)
-  const spanMs = lastDate.getTime() - firstDate.getTime()
-  const spanDays = spanMs / (1000 * 60 * 60 * 24)
-
-  // If span > 1 year or crosses year boundary, include year
+  const spanDays = (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)
   const crossesYear = firstDate.getFullYear() !== lastDate.getFullYear()
-  const needsYear = spanDays > 365 || crossesYear
-
-  // Format options based on span
-  const formatOptions = needsYear
+  const formatOptions = spanDays > 365 || crossesYear
     ? {day: 'numeric', month: 'short', year: 'numeric'}
     : {day: 'numeric', month: 'short'}
 

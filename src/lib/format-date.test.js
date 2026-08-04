@@ -8,6 +8,7 @@ import formatDate, {
   getDefaultDate,
   getMonthPeriodRange,
   getRange,
+  parseIsoWeekDate,
   parseQuarterDate,
   safeParseDate,
   startOfDay
@@ -121,4 +122,13 @@ test('parseQuarterDate retourne le premier jour du trimestre', t => {
   t.is(localIsoDate(parseQuarterDate('2026-Q4')), '2026-10-01')
   t.is(parseQuarterDate('2026-Q5'), null)
   t.is(parseQuarterDate(null), null)
+})
+
+test('parseIsoWeekDate retourne le lundi de la semaine ISO, y compris sur une autre année civile', t => {
+  t.is(localIsoDate(parseIsoWeekDate('2024-W48')), '2024-11-25')
+  t.is(localIsoDate(parseIsoWeekDate('2025-W01')), '2024-12-30')
+  t.is(localIsoDate(parseIsoWeekDate('2026-W01')), '2025-12-29')
+  t.is(parseIsoWeekDate('2025-W53'), null)
+  t.is(parseIsoWeekDate('2025-W1'), null)
+  t.is(parseIsoWeekDate(null), null)
 })

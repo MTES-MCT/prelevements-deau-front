@@ -2,9 +2,9 @@
  * Shared helpers to transform loaded series values into calendar/timeline data.
  */
 
-import {parseQuarterDate} from '@/lib/format-date.js'
+import {clampAggregationDateToRange, parseAggregationDate} from './aggregation-date.js'
+
 import {coerceNumericValue} from '@/utils/number.js'
-import {parseLocalDateTime} from '@/utils/time.js'
 
 // Normalize remarks (string or array) into a single comment string suitable for chart metadata.
 const normalizeMetaComment = entry => {
@@ -63,16 +63,17 @@ const getOrCreateDailyEntry = (context, date) => {
 
 // Lazily build a timestamped sample (potentially sub-daily) and store it in the context.
 const getOrCreateTimelineEntry = (context, {date, time = null}) => {
-  const {timelineMap, parametersCount} = context
+  const {timelineMap, parametersCount, dateRange} = context
   const key = `${date}::${time ?? ''}`
   const existingSample = timelineMap.get(key)
   if (existingSample) {
     return existingSample
   }
 
-  // Handle quarter format YYYY-Q[1-4] or regular date/time
-  const quarterDate = parseQuarterDate(date)
-  const timestamp = quarterDate || parseLocalDateTime(date, time ?? null)
+  const parsedTimestamp = parseAggregationDate(date, time ?? null)
+  const timestamp = time
+    ? parsedTimestamp
+    : clampAggregationDateToRange(date, dateRange)
 
   if (!timestamp) {
     return null
@@ -171,7 +172,8 @@ const assignSubDailyValues = ({context, date, subValues, paramIndex}) => {
  */
 export function buildDailyAndTimelineData({
   loadedValues,
-  selectedParams
+  selectedParams,
+  dateRange = null
 }) {
   if (
     !loadedValues
@@ -192,10 +194,9 @@ export function buildDailyAndTimelineData({
   const aggregationContext = {
     parametersCount,
     dailyMap,
-    timelineMap
+    timelineMap,
+    dateRange
   }
-
-  // Debugger
 
   for (const [paramIndex, paramLabel] of selectedParams.entries()) {
     const values = loadedValues[paramLabel] ?? []

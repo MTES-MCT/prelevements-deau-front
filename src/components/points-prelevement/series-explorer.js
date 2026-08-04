@@ -7,6 +7,7 @@ import {
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Box, Typography} from '@mui/material'
 
+import {resolveSelectedParametersDateRange} from '@/components/points-prelevement/series-date-range.js'
 import {
   resolveInitialDisplayFrequency,
   resolveSeriesDisplayFrequency
@@ -42,54 +43,6 @@ const SeriesExplorer = ({
 }) => {
   // Vérifie si des paramètres sont disponibles depuis l'API
   const hasParameters = seriesOptions?.parameters?.length > 0
-
-  // Compute dateRange: use explicit startDate/endDate props if provided,
-  // otherwise fall back to extracting min/max dates from seriesOptions.parameters.
-  const dateRange = useMemo(() => {
-    if (startDate && endDate) {
-      return {start: startDate, end: endDate}
-    }
-
-    // Compute from seriesOptions parameters
-    if (!seriesOptions?.parameters || seriesOptions.parameters.length === 0) {
-      return {start: null, end: null}
-    }
-
-    let minDate = null
-    let maxDate = null
-
-    for (const param of seriesOptions.parameters) {
-      if (param.minDate && (!minDate || param.minDate < minDate)) {
-        minDate = param.minDate
-      }
-
-      if (param.maxDate && (!maxDate || param.maxDate > maxDate)) {
-        maxDate = param.maxDate
-      }
-    }
-
-    return {start: minDate, end: maxDate}
-  }, [startDate, endDate, seriesOptions])
-
-  // Calcule les périodes sélectionnables en tenant compte de startDate/endDate
-  const selectablePeriods = useMemo(
-    () => calculateSelectablePeriodsFromDateRange(dateRange.start, dateRange.end),
-    [dateRange]
-  )
-
-  // Calcule les périodes par défaut en tenant compte de startDate/endDate
-  const defaultPeriods = useMemo(
-    () => extractDefaultPeriodsFromDateRange(dateRange.start, dateRange.end),
-    [dateRange]
-  )
-  const dateRangeKey = `${dateRange.start ?? ''}:${dateRange.end ?? ''}`
-  const initialDisplayFrequency = useMemo(
-    () => resolveInitialDisplayFrequency({
-      startDate: dateRange.start,
-      endDate: dateRange.end
-    }),
-    [dateRange.end, dateRange.start]
-  )
 
   // Construit les options de paramètres depuis la réponse API
   const parameterOptions = useMemo(
@@ -174,21 +127,47 @@ const SeriesExplorer = ({
   }, [parameterOptions])
 
   const [selectedParameters, setSelectedParameters] = useState(derivedDefaultParameters)
+  const dateRange = useMemo(
+    () => resolveSelectedParametersDateRange({
+      endDate,
+      parameters: seriesOptions?.parameters,
+      selectedParameters,
+      startDate
+    }),
+    [endDate, selectedParameters, seriesOptions?.parameters, startDate]
+  )
+  const selectablePeriods = useMemo(
+    () => calculateSelectablePeriodsFromDateRange(dateRange.start, dateRange.end),
+    [dateRange.end, dateRange.start]
+  )
+  const defaultPeriods = useMemo(
+    () => extractDefaultPeriodsFromDateRange(dateRange.start, dateRange.end),
+    [dateRange.end, dateRange.start]
+  )
+  const dateRangeKey = `${dateRange.start ?? ''}:${dateRange.end ?? ''}`
+  const explorerStateKey = `${selectedParameters.join('|')}:${dateRangeKey}`
+  const initialDisplayFrequency = useMemo(
+    () => resolveInitialDisplayFrequency({
+      startDate: dateRange.start,
+      endDate: dateRange.end
+    }),
+    [dateRange.end, dateRange.start]
+  )
   const [parameterTemporalOperators, setParameterTemporalOperators] = useState({})
   const [targetDisplayFrequency, setTargetDisplayFrequency] = useState(initialDisplayFrequency)
   const [aggregatedSeriesMap, setAggregatedSeriesMap] = useState(new Map())
   const [isLoading, setIsLoading] = useState(false)
   const [loadError, setLoadError] = useState(null)
-  const previousDateRangeKeyRef = useRef(dateRangeKey)
+  const previousExplorerStateKeyRef = useRef(explorerStateKey)
 
   useEffect(() => {
-    if (previousDateRangeKeyRef.current === dateRangeKey) {
+    if (previousExplorerStateKeyRef.current === explorerStateKey) {
       return
     }
 
-    previousDateRangeKeyRef.current = dateRangeKey
+    previousExplorerStateKeyRef.current = explorerStateKey
     setTargetDisplayFrequency(initialDisplayFrequency)
-  }, [dateRangeKey, initialDisplayFrequency])
+  }, [explorerStateKey, initialDisplayFrequency])
 
   useEffect(() => {
     if (parameterOptions.length === 0 || derivedDefaultParameters.length === 0) {
@@ -479,6 +458,7 @@ const SeriesExplorer = ({
 
       {selectedParameters.length > 0 && (
         <AggregatedSeriesExplorer
+          key={explorerStateKey}
           showRangeSlider
           showPeriodSelector={false}
           showCalendar={false}
@@ -491,6 +471,7 @@ const SeriesExplorer = ({
           defaultTemporalOperators={defaultTemporalOperatorsByParameter}
           selectablePeriods={selectablePeriods}
           defaultPeriods={defaultPeriods}
+          dateRangeOverride={dateRange}
           error={loadError}
           isLoading={isLoading}
           seriesOptions={seriesOptions}

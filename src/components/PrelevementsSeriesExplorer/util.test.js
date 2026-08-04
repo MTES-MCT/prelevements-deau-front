@@ -475,8 +475,21 @@ test('computeSliderMarks formats labels correctly', t => {
 
   const result = computeSliderMarks(dates)
 
-  t.true(result[0].label.includes('janv') || result[0].label.includes('1'))
-  t.true(result[1].label.includes('janv') || result[1].label.includes('15'))
+  t.true(result[0].label.includes('janv'))
+  t.true(result[1].label.includes('janv'))
+  t.false(result[0].label.includes('2024'))
+})
+
+test('computeSliderMarks includes the year only when it helps disambiguate marks', t => {
+  const dates = [
+    new Date(2024, 11, 1),
+    new Date(2025, 0, 15)
+  ]
+
+  const result = computeSliderMarks(dates)
+
+  t.true(result[0].label.includes('2024'))
+  t.true(result[1].label.includes('2025'))
 })
 
 // normalizeString tests

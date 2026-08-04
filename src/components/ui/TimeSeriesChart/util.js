@@ -69,13 +69,17 @@ export const collectAxisTooltipRows = ({
       continue
     }
 
+    const origin = getSegmentOrigin(baseId, dataIndex)
+    if (origin?.displayBoundary && !origin.tooltipDate) {
+      continue
+    }
+
     const formattedValue = item.valueFormatter?.(item.data?.[dataIndex] ?? null, {dataIndex})
     if (formattedValue === null || formattedValue === undefined) {
       continue
     }
 
-    const meta = getPointMeta(baseId, dataIndex)
-    const origin = getSegmentOrigin(baseId, dataIndex)
+    const meta = origin?.tooltipMeta ?? getPointMeta(baseId, dataIndex)
 
     rows.set(baseId, {
       id: baseId,
@@ -86,7 +90,10 @@ export const collectAxisTooltipRows = ({
       natureLabel: meta?.natureLabel ?? null,
       detail: meta?.detail ?? null,
       alert: meta?.alert ?? null,
-      syntheticLabel: origin?.synthetic ? translations.interpolatedPoint : null
+      syntheticLabel: origin?.synthetic && !origin?.displayBoundary
+        ? translations.interpolatedPoint
+        : null,
+      tooltipDate: origin?.tooltipDate ?? null
     })
   }
 
@@ -100,13 +107,399 @@ export const getSharedTooltipNature = rows => {
     : null
 }
 
-export const getTimelineTickStride = (pointCount, availableWidth, minimumSpacing = 72) => {
-  if (pointCount <= 0 || availableWidth <= 0 || minimumSpacing <= 0) {
-    return 1
+const getRealTimelineIndices = (xAxisDates, pointBySeries) => {
+  const realIndices = []
+  for (const [index] of xAxisDates.entries()) {
+    const hasRealValue = [...pointBySeries.values()].some(points => {
+      const point = points?.[index]
+      return point
+        && !point.synthetic
+        && !point.displayBoundary
+        && typeof point.y === 'number'
+        && Number.isFinite(point.y)
+    })
+
+    if (hasRealValue) {
+      realIndices.push(index)
+    }
   }
 
-  const maximumTickCount = Math.max(2, Math.floor(availableWidth / minimumSpacing))
-  return Math.max(1, Math.ceil(pointCount / maximumTickCount))
+  return realIndices
+}
+
+const getCalendarSpanInMonths = (start, end) => (
+  ((end.getFullYear() - start.getFullYear()) * 12)
+  + (end.getMonth() - start.getMonth())
+  + ((end.getDate() - start.getDate()) / 31)
+)
+
+const getMaximumTimelineTickCount = (availableWidth, minimumSpacing = 48) => {
+  if (!Number.isFinite(availableWidth) || availableWidth <= 0) {
+    return 2
+  }
+
+  return Math.max(2, Math.floor(availableWidth / minimumSpacing))
+}
+
+const toValidTimelineDate = value => {
+  if (value === null || value === undefined) {
+    return null
+  }
+
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+const MONTHS_PER_YEAR = 12
+
+/**
+ * Project a real date onto a calendar axis where every month occupies one
+ * unit. Dates remain continuous inside their month through a [0, 1[ fraction.
+ */
+export const projectDateToCalendarCoordinate = value => {
+  const date = toValidTimelineDate(value)
+  if (!date) {
+    return Number.NaN
+  }
+
+  const monthStart = new Date(date.getFullYear(), date.getMonth(), 1)
+  const nextMonthStart = new Date(date.getFullYear(), date.getMonth() + 1, 1)
+  const monthDuration = nextMonthStart - monthStart
+  const monthFraction = monthDuration > 0 ? (date - monthStart) / monthDuration : 0
+
+  return (date.getFullYear() * MONTHS_PER_YEAR) + date.getMonth() + monthFraction
+}
+
+export const calendarCoordinateToDate = value => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return null
+  }
+
+  const absoluteMonth = Math.floor(value)
+  const year = Math.floor(absoluteMonth / MONTHS_PER_YEAR)
+  const month = absoluteMonth - (year * MONTHS_PER_YEAR)
+  const monthStart = new Date(year, month, 1)
+  const nextMonthStart = new Date(year, month + 1, 1)
+  const monthFraction = value - absoluteMonth
+
+  return new Date(monthStart.getTime() + (monthFraction * (nextMonthStart - monthStart)))
+}
+
+export const getTimelineAxisValue = (value, axisMode) => (
+  axisMode === 'calendar'
+    ? projectDateToCalendarCoordinate(value)
+    : toValidTimelineDate(value)
+)
+
+const resolveTimelineDomain = (xAxisDates, timelineRange = null) => {
+  const dates = xAxisDates
+    .map(value => toValidTimelineDate(value))
+    .filter(Boolean)
+    .sort((first, second) => first - second)
+  if (dates.length === 0) {
+    return null
+  }
+
+  const requestedStart = toValidTimelineDate(timelineRange?.start)
+  const requestedEnd = toValidTimelineDate(timelineRange?.end)
+  const start = requestedStart ?? dates[0]
+  // The selected range end is an inclusive calendar day. Stop at its final
+  // millisecond so a partial weekly/monthly bucket cannot extend past the
+  // slider while the last daily bucket still remains fully visible.
+  const end = requestedEnd
+    ? new Date(
+      requestedEnd.getFullYear(),
+      requestedEnd.getMonth(),
+      requestedEnd.getDate() + 1,
+      0, 0, 0, -1
+    )
+    : [...dates].pop()
+
+  return start <= end
+    ? {start, end}
+    : {start: end, end: start}
+}
+
+const getCalendarBucketStart = (date, granularity) => {
+  if (granularity === 'month') {
+    return new Date(date.getFullYear(), date.getMonth(), 1)
+  }
+
+  if (granularity === 'quarter') {
+    return new Date(date.getFullYear(), Math.floor(date.getMonth() / 3) * 3, 1)
+  }
+
+  return new Date(date.getFullYear(), 0, 1)
+}
+
+const addCalendarBucket = (date, granularity) => {
+  if (granularity === 'month') {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 1)
+  }
+
+  if (granularity === 'quarter') {
+    return new Date(date.getFullYear(), date.getMonth() + 3, 1)
+  }
+
+  return new Date(date.getFullYear() + 1, 0, 1)
+}
+
+/**
+ * Generate calendar boundaries without relying on observed points. The first
+ * visible instant is retained so a partial first month still receives a label.
+ */
+const buildCalendarCandidates = (start, end, granularity) => {
+  const candidates = [new Date(start)]
+  const bucketStart = getCalendarBucketStart(start, granularity)
+  let cursor = addCalendarBucket(bucketStart, granularity)
+
+  while (cursor <= end) {
+    candidates.push(cursor)
+    cursor = addCalendarBucket(cursor, granularity)
+  }
+
+  return candidates
+}
+
+const decimateCalendarCandidates = (
+  candidates,
+  maximumTickCount,
+  {preserveYearTransitions = true} = {}
+) => {
+  if (candidates.length <= maximumTickCount) {
+    return candidates
+  }
+
+  const mandatoryCandidateIndices = new Set([0, candidates.length - 1])
+  if (preserveYearTransitions) {
+    for (let index = 1; index < candidates.length; index++) {
+      if (candidates[index].getFullYear() !== candidates[index - 1].getFullYear()) {
+        mandatoryCandidateIndices.add(index)
+      }
+    }
+  }
+
+  const targetCount = Math.max(maximumTickCount, mandatoryCandidateIndices.size)
+  while (mandatoryCandidateIndices.size < targetCount) {
+    let bestCandidateIndex = null
+    let bestDistance = -1
+
+    for (const [candidateIndex] of candidates.entries()) {
+      if (mandatoryCandidateIndices.has(candidateIndex)) {
+        continue
+      }
+
+      const distance = Math.min(
+        ...[...mandatoryCandidateIndices].map(selectedIndex => Math.abs(selectedIndex - candidateIndex))
+      )
+      if (distance > bestDistance) {
+        bestCandidateIndex = candidateIndex
+        bestDistance = distance
+      }
+    }
+
+    if (bestCandidateIndex === null) {
+      break
+    }
+
+    mandatoryCandidateIndices.add(bestCandidateIndex)
+  }
+
+  return [...mandatoryCandidateIndices]
+    .sort((first, second) => first - second)
+    .map(index => candidates[index])
+}
+
+const buildCalendarLabels = (candidates, formatLabel) => {
+  const labels = new Map()
+  let previousYear = null
+
+  for (const [candidateIndex, date] of candidates.entries()) {
+    const year = date.getFullYear()
+    labels.set(date.getTime(), formatLabel(date, {
+      showYear: candidateIndex === 0 || year !== previousYear
+    }))
+    previousYear = year
+  }
+
+  return labels
+}
+
+const selectEvenlySpacedDates = (dates, maximumTickCount) => {
+  if (dates.length <= maximumTickCount) {
+    return dates
+  }
+
+  const lastIndex = dates.length - 1
+  const selectedIndices = new Set([0, lastIndex])
+  for (let index = 1; index < maximumTickCount - 1; index++) {
+    selectedIndices.add(Math.round((index * lastIndex) / (maximumTickCount - 1)))
+  }
+
+  return [...selectedIndices]
+    .sort((first, second) => first - second)
+    .map(index => dates[index])
+}
+
+const deduplicateFormattedTicks = (dates, formatter) => {
+  const values = []
+  const labels = new Map()
+  let previousLabel = null
+
+  for (const date of dates) {
+    const label = formatter(date)
+    if (!label || label === previousLabel) {
+      continue
+    }
+
+    values.push(date)
+    labels.set(date.getTime(), label)
+    previousLabel = label
+  }
+
+  return {values, labels}
+}
+
+/**
+ * Build calendar-aware ticks independently from the data aggregation frequency.
+ * Short ranges retain date labels, annual ranges use months, then longer ranges
+ * progressively use quarters and years.
+ */
+export const buildTimelineTicks = ({
+  xAxisDates,
+  pointBySeries = null,
+  availableWidth,
+  locale,
+  frequency,
+  timelineRange = null
+}) => {
+  if (!Array.isArray(xAxisDates) || xAxisDates.length === 0) {
+    return {
+      values: [], labels: new Map(), granularity: 'date', axisMode: 'time', domain: null
+    }
+  }
+
+  const domain = resolveTimelineDomain(xAxisDates, timelineRange)
+  if (!domain) {
+    return {
+      values: [], labels: new Map(), granularity: 'date', axisMode: 'time', domain: null
+    }
+  }
+
+  const {start, end} = domain
+  const spanMonths = getCalendarSpanInMonths(start, end)
+  const maximumTickCount = getMaximumTimelineTickCount(availableWidth)
+
+  if (spanMonths < 3) {
+    const formatter = axisFormatterFactory(locale, xAxisDates, frequency)
+    const candidateDates = pointBySeries instanceof Map
+      ? getRealTimelineIndices(xAxisDates, pointBySeries).map(index => xAxisDates[index])
+      : xAxisDates
+    const candidates = candidateDates
+      .map(value => toValidTimelineDate(value))
+      .filter(date => date && date >= start && date <= end)
+      .sort((first, second) => first - second)
+    const ticks = deduplicateFormattedTicks(
+      selectEvenlySpacedDates(candidates, maximumTickCount),
+      formatter
+    )
+    return {
+      ...ticks,
+      granularity: 'date',
+      axisMode: 'time',
+      domain
+    }
+  }
+
+  if (spanMonths <= 18) {
+    const monthFormatter = new Intl.DateTimeFormat(locale, {month: 'short'})
+    const candidates = decimateCalendarCandidates(
+      buildCalendarCandidates(start, end, 'month'),
+      maximumTickCount
+    )
+    return {
+      values: candidates,
+      labels: buildCalendarLabels(candidates, (date, {showYear}) => {
+        const month = monthFormatter.format(date)
+        return showYear ? `${month} ${date.getFullYear()}` : month
+      }),
+      granularity: 'month',
+      axisMode: 'calendar',
+      domain
+    }
+  }
+
+  if (spanMonths <= 60) {
+    const candidates = decimateCalendarCandidates(
+      buildCalendarCandidates(start, end, 'quarter'),
+      maximumTickCount,
+      {preserveYearTransitions: false}
+    )
+    const quarterPrefix = locale?.startsWith('fr') ? 'T' : 'Q'
+    return {
+      values: candidates,
+      labels: buildCalendarLabels(candidates, (date, {showYear}) => {
+        const quarter = `${quarterPrefix}${Math.floor(date.getMonth() / 3) + 1}`
+        return showYear ? `${quarter} ${date.getFullYear()}` : quarter
+      }),
+      granularity: 'quarter',
+      axisMode: 'calendar',
+      domain
+    }
+  }
+
+  const candidates = decimateCalendarCandidates(
+    buildCalendarCandidates(start, end, 'year'),
+    maximumTickCount,
+    {preserveYearTransitions: false}
+  )
+  return {
+    values: candidates,
+    labels: new Map(candidates.map(date => [date.getTime(), String(date.getFullYear())])),
+    granularity: 'year',
+    axisMode: 'calendar',
+    domain
+  }
+}
+
+/**
+ * Build the MUI X axis configuration. Short ranges use real elapsed time;
+ * calendar views use equal-width months while keeping positions continuous
+ * inside each month.
+ */
+export const buildTimelineXAxis = ({xAxisDates, timelineTicks, fallbackFormatter}) => {
+  const {axisMode} = timelineTicks
+  const data = axisMode === 'calendar'
+    ? xAxisDates.map(date => getTimelineAxisValue(date, axisMode))
+    : xAxisDates
+  const tickInterval = axisMode === 'calendar'
+    ? timelineTicks.values.map(date => getTimelineAxisValue(date, axisMode))
+    : timelineTicks.values
+  const tickLabels = new Map(timelineTicks.values.map((date, index) => [
+    axisMode === 'calendar' ? tickInterval[index] : date.getTime(),
+    timelineTicks.labels.get(date.getTime())
+  ]))
+  const domain = timelineTicks.domain && {
+    start: getTimelineAxisValue(timelineTicks.domain.start, axisMode),
+    end: getTimelineAxisValue(timelineTicks.domain.end, axisMode)
+  }
+
+  return {
+    id: X_AXIS_ID,
+    scaleType: axisMode === 'calendar' ? 'linear' : 'time',
+    data,
+    domainLimit: 'strict',
+    ...(domain && {min: domain.start, max: domain.end}),
+    tickInterval,
+    valueFormatter(value) {
+      const date = axisMode === 'calendar'
+        ? calendarCoordinateToDate(value)
+        : toValidTimelineDate(value)
+      const tickKey = axisMode === 'calendar' ? value : date?.getTime()
+      return tickLabels.get(tickKey) ?? (date ? fallbackFormatter(date) : '')
+    },
+    tickLabelStyle: {fontSize: 12}
+  }
 }
 
 /**
@@ -396,6 +789,10 @@ export const processInputSeries = (inputSeries, options = {}) => {
       x: toTimestamp(point.x),
       y: point.y,
       meta: point.meta ?? null,
+      tooltipDate: point.tooltipDate ?? null,
+      tooltipMeta: point.tooltipMeta ?? null,
+      synthetic: Boolean(point.synthetic),
+      displayBoundary: Boolean(point.displayBoundary),
       // Preserve showMark property if present (used for segment boundary detection)
       showMark: point.showMark
     }))
@@ -420,6 +817,7 @@ export const processInputSeries = (inputSeries, options = {}) => {
     chartType,
     precision: inputSeries.precision ?? 0,
     connectNulls: Boolean(inputSeries.connectNulls),
+    ...(inputSeries.curve && {curve: inputSeries.curve}),
     ...(inputSeries.area && {area: true}),
     ...(inputSeries.stack && {stack: inputSeries.stack})
   }
@@ -657,7 +1055,7 @@ export const buildPointMap = (filteredPoints, thresholdCrossings, xValuesSet) =>
   }
 
   for (const point of filteredPoints) {
-    upsertPoint(point.x, {...point, synthetic: false})
+    upsertPoint(point.x, {...point, synthetic: Boolean(point.synthetic)})
     xValuesSet.add(point.x)
   }
 
@@ -715,7 +1113,10 @@ export const alignSeriesToXAxis = (
         x: xAxisDates[index],
         y,
         meta,
+        tooltipDate: entry?.tooltipDate ?? null,
+        tooltipMeta: entry?.tooltipMeta ?? null,
         synthetic,
+        displayBoundary: Boolean(entry?.displayBoundary),
         showMark,
         axisId: processed.axisId
       }
@@ -840,6 +1241,7 @@ export const buildSegments = (alignedData, xValues, options) => {
         color: currentSegment.classification === SEGMENT_ABOVE ? theme.palette.error.main : data.color,
         label: undefined,
         connectNulls: Boolean(data.connectNulls || data.area),
+        ...(data.curve && {curve: data.curve}),
         ...(data.area && {area: true}),
         ...(data.stack && {stack: data.stack}),
         showMark({index}) {
@@ -919,6 +1321,7 @@ export const buildPlainSeries = (alignedData, options) => {
       color: data.color,
       label: undefined,
       connectNulls: Boolean(data.connectNulls || data.area),
+      ...(data.curve && {curve: data.curve}),
       ...(data.area && {area: true}),
       ...(data.stack && {stack: data.stack}),
       showMark({index}) {
@@ -963,6 +1366,7 @@ export const buildStubSeries = (processedSeries, xValuesLength) => processedSeri
   connectNulls: Boolean(processed.connectNulls || processed.area),
   valueFormatter: () => null,
   chartType: processed.chartType,
+  ...(processed.curve && {curve: processed.curve}),
   ...(processed.area && {area: true}),
   ...(processed.stack && {stack: processed.stack})
 }))
@@ -1345,6 +1749,7 @@ const processSeriesWithDecimation = (series, options) => {
       precision: processed.precision,
       connectNulls: processed.connectNulls,
       nativeFrequency, // Store for later resampling
+      ...(processed.curve && {curve: processed.curve}),
       ...(processed.area && {area: true}),
       ...(processed.stack && {stack: processed.stack})
     }

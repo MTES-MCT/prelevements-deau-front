@@ -3,10 +3,12 @@ import {getFrequencyOrder} from '@/utils/frequency.js'
 export const DEFAULT_SERIES_DISPLAY_FREQUENCY = '1 day'
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000
+const WEEK_IN_DAYS = 7
 const MONTH_IN_DAYS = 30
 const QUARTER_IN_DAYS = 90
 const MIN_TARGET_POINTS = 180
 const MAX_TARGET_POINTS = 500
+const MAX_DAILY_POINTS = 200
 const PX_PER_TARGET_POINT = 3
 
 function hasValidRange(startDate, endDate) {
@@ -60,9 +62,18 @@ export function resolveInitialDisplayFrequency({
   const rangeDays = getRangeDays(startDate, endDate)
   const targetPoints = getTargetPoints(widthPx)
   const daysPerPoint = rangeDays / targetPoints
+  const maxDailyPoints = Math.min(MAX_DAILY_POINTS, targetPoints)
 
-  if (daysPerPoint <= 1) {
+  // A daily split makes cumulative volumes unnecessarily small on ranges close
+  // to a year, even when a wide screen could technically fit every day. Keep
+  // the daily view for shorter ranges, then favour weekly buckets before
+  // considering a month.
+  if (rangeDays <= maxDailyPoints) {
     return DEFAULT_SERIES_DISPLAY_FREQUENCY
+  }
+
+  if (daysPerPoint <= WEEK_IN_DAYS) {
+    return '1 week'
   }
 
   if (daysPerPoint <= MONTH_IN_DAYS) {

@@ -3,11 +3,8 @@
  */
 
 import {format} from 'date-fns'
-import {fr} from 'date-fns/locale'
 
 import {MONTH_NAMES} from './constants/colors.js'
-
-import {parseFrequency} from '@/utils/frequency-parsing.js'
 
 /**
  * Get color for a parameter based on its index
@@ -115,98 +112,15 @@ export function formatPeriodLabel(periods, fallback) {
 }
 
 /**
- * Check if frequency unit is sub-daily or daily
- * @param {string} unit - Frequency unit ('hour', 'day', etc.)
- * @returns {boolean} True if unit is hour, minute, second, day, or week
- */
-function isSubDailyOrDailyUnit(unit) {
-  return unit === 'hour' || unit === 'minute' || unit === 'second' || unit === 'day' || unit === 'week'
-}
-
-/**
- * Format slider mark label based on aggregation frequency
- * Slider marks show day precision (dd/MM) as minimum, never show time
+ * Format an exact slider date. The slider always manipulates day boundaries,
+ * independently from the aggregation resolution displayed in the chart.
  *
  * @param {Date} date - Date to format
- * @param {string} frequency - Aggregation frequency (e.g., '1 day', '1 month')
- * @param {string} locale - Locale string (default: 'fr-FR')
  * @returns {string} Formatted date
  */
-export function formatSliderMark(date, frequency, locale = 'fr-FR') {
-  if (!frequency) {
-    // Fallback to default format
-    return format(date, 'd MMM', {locale: fr})
-  }
-
-  const parsed = parseFrequency(frequency)
-
-  // For all daily or sub-daily aggregations, always show dd/MM format only
-  if (parsed && isSubDailyOrDailyUnit(parsed.unit)) {
-    return format(date, 'dd/MM', {locale: fr})
-  }
-
-  // For monthly aggregations, show month and year
-  if (parsed && parsed.unit === 'month') {
-    return format(date, 'MMM yyyy', {locale: fr})
-  }
-
-  // For quarterly aggregations, show quarter and year
-  if (parsed && parsed.unit === 'quarter') {
-    const quarter = Math.floor(date.getMonth() / 3) + 1
-    const year = date.getFullYear()
-    const prefix = locale.startsWith('fr') ? 'T' : 'Q'
-    return `${prefix}${quarter} ${year}`
-  }
-
-  // For yearly aggregations, show year only
-  if (parsed && parsed.unit === 'year') {
-    return format(date, 'yyyy', {locale: fr})
-  }
-
-  // Fallback to dd/MM
-  return format(date, 'dd/MM', {locale: fr})
-}
+export const formatSliderMark = date => format(date, 'dd/MM/yyyy')
 
 /**
- * Format slider value label (tooltip) based on aggregation frequency
- * Slider tooltips show day precision (dd/MM) as minimum, never show time
- *
- * @param {Date} date - Date to format
- * @param {string} frequency - Aggregation frequency (e.g., '1 day', '1 month')
- * @param {string} locale - Locale string (default: 'fr-FR')
- * @returns {string} Formatted date
+ * The accessible value uses the same exact date as the visible handle.
  */
-export function formatSliderValue(date, frequency, locale = 'fr-FR') {
-  if (!frequency) {
-    // Fallback to default format
-    return format(date, 'dd/MM', {locale: fr})
-  }
-
-  const parsed = parseFrequency(frequency)
-
-  // For all daily or sub-daily aggregations, always show dd/MM format only
-  if (parsed && isSubDailyOrDailyUnit(parsed.unit)) {
-    return format(date, 'dd/MM', {locale: fr})
-  }
-
-  // For monthly aggregations, show month and year without day
-  if (parsed && parsed.unit === 'month') {
-    return format(date, 'MMM yyyy', {locale: fr})
-  }
-
-  // For quarterly aggregations, show quarter and year
-  if (parsed && parsed.unit === 'quarter') {
-    const quarter = Math.floor(date.getMonth() / 3) + 1
-    const year = date.getFullYear()
-    const prefix = locale.startsWith('fr') ? 'T' : 'Q'
-    return `${prefix}${quarter} ${year}`
-  }
-
-  // For yearly aggregations, show year only
-  if (parsed && parsed.unit === 'year') {
-    return format(date, 'yyyy', {locale: fr})
-  }
-
-  // Fallback to dd/MM
-  return format(date, 'dd/MM', {locale: fr})
-}
+export const formatSliderValue = formatSliderMark

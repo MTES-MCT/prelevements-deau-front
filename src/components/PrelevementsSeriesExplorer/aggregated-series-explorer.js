@@ -23,6 +23,9 @@ import ParameterSelector from './parameter-selector.js'
 import {useChartSeries} from './use-chart-series.js'
 import {useTimeline} from './use-timeline.js'
 import {
+  aggregationDateOverlapsRange
+} from './utils/aggregation-date.js'
+import {
   buildCalendarData,
   calculateSelectablePeriodsFromSeries,
   extractDefaultPeriodsFromSeries,
@@ -42,8 +45,7 @@ import {
 import {buildDailyAndTimelineData} from '@/components/PrelevementsSeriesExplorer/utils/aggregation.js'
 import CalendarGrid from '@/components/ui/CalendarGrid/index.js'
 import PeriodSelectorHeader from '@/components/ui/PeriodSelectorHeader/index.js'
-import {parseQuarterDate} from '@/lib/format-date.js'
-import {formatFrequencyLabel, getFrequencyOrder, getSmallestFrequency} from '@/utils/frequency.js'
+import {formatFrequencyLabel} from '@/utils/frequency.js'
 import {normalizeString} from '@/utils/string.js'
 import {parseLocalDateTime} from '@/utils/time.js'
 
@@ -62,7 +64,6 @@ function isDefaultParameterOption(option) {
  * @param {Array<Object>} props.badges - Array of badge objects
  * @param {string} props.badges[].parameter - Parameter name
  * @param {string} props.badges[].frequency - Current frequency (may be aggregated)
- * @param {Array<string>} [props.badges[].availableFrequencies] - All available frequencies for this parameter
  * @returns {JSX.Element} Frequency badges display
  */
 const FrequencyBadges = ({badges}) => {
@@ -80,7 +81,7 @@ const FrequencyBadges = ({badges}) => {
           fontSize: '0.75rem'
         }}
       >
-        Résolution par série :
+        Résolution d’affichage :
       </Typography>
       <Box sx={{
         display: 'flex',
@@ -88,65 +89,38 @@ const FrequencyBadges = ({badges}) => {
         gap: 1
       }}
       >
-        {badges.map(({parameter, frequency, availableFrequencies}) => {
-          // A series is aggregated if its frequency is not the finest among its own available frequencies
-          let isAggregated = false
-          if (availableFrequencies && availableFrequencies.length > 0) {
-            // Find the finest frequency available for this specific parameter
-            const finestAvailable = getSmallestFrequency(availableFrequencies)
-
-            // It's aggregated if current frequency is coarser than the finest available
-            if (finestAvailable) {
-              isAggregated = frequency !== finestAvailable
-                && getFrequencyOrder(frequency) > getFrequencyOrder(finestAvailable)
-            }
-          }
-
-          return (
-            <Box
-              key={`${parameter}-${frequency}`}
+        {badges.map(({parameter, frequency}) => (
+          <Box
+            key={`${parameter}-${frequency}`}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              px: 1,
+              py: 0.5,
+              borderRadius: 1,
+              backgroundColor: 'action.hover'
+            }}
+          >
+            <Typography
+              variant='caption'
               sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                px: 1,
-                py: 0.5,
-                borderRadius: 1,
-                backgroundColor: 'action.hover'
+                color: 'text.secondary',
+                fontWeight: 600
               }}
             >
-              <Typography
-                variant='caption'
-                sx={{
-                  color: 'text.secondary',
-                  fontWeight: 600
-                }}
-              >
-                {parameter} :{' '}
-              </Typography>
-              <Typography
-                variant='caption'
-                sx={{
-                  color: 'text.secondary'
-                }}
-              >
-                {formatFrequencyLabel(frequency) ?? frequency}
-              </Typography>
-              {isAggregated && (
-                <Typography
-                  variant='caption'
-                  sx={{
-                    color: 'text.secondary',
-                    fontStyle: 'italic',
-                    fontSize: '0.7rem'
-                  }}
-                >
-                  (agrégé)
-                </Typography>
-              )}
-            </Box>
-          )
-        })}
+              {parameter} :{' '}
+            </Typography>
+            <Typography
+              variant='caption'
+              sx={{
+                color: 'text.secondary'
+              }}
+            >
+              {formatFrequencyLabel(frequency) ?? frequency}
+            </Typography>
+          </Box>
+        ))}
       </Box>
     </>
   )
@@ -273,7 +247,7 @@ function determineCurrentViewType(selectedPeriods, defaultInitialViewType) {
   return hasYearType ? 'years' : 'months'
 }
 
-const filterValuesByDateRange = (values, dateRange) => {
+export const filterValuesByDateRange = (values, dateRange) => {
   if (!Array.isArray(values) || values.length === 0) {
     return []
   }
@@ -287,15 +261,7 @@ const filterValuesByDateRange = (values, dateRange) => {
       return false
     }
 
-    // Handle quarter format YYYY-Q[1-4]
-    const quarterDate = parseQuarterDate(entry.date)
-    const parsed = quarterDate || parseLocalDateTime(entry.date)
-
-    if (!parsed) {
-      return false
-    }
-
-    return parsed >= dateRange.start && parsed <= dateRange.end
+    return aggregationDateOverlapsRange(entry.date, dateRange)
   })
 }
 
@@ -323,7 +289,8 @@ const AggregatedSeriesExplorer = ({
   isLoading = false,
   error = null,
   chartWidthPx = 1200,
-  seriesOptions = null
+  seriesOptions = null,
+  dateRangeOverride = null
 }) => {
   const t = {...DEFAULT_TRANSLATIONS, ...customTranslations}
 
@@ -516,10 +483,25 @@ const AggregatedSeriesExplorer = ({
     onFiltersChange?.({periods})
   }, [onFiltersChange])
 
-  const dateRange = useMemo(
-    () => periodsToDateRange(selectedPeriods),
-    [selectedPeriods]
-  )
+  const dateRange = useMemo(() => {
+    const periodRange = periodsToDateRange(selectedPeriods)
+    if (!dateRangeOverride?.start && !dateRangeOverride?.end) {
+      return periodRange
+    }
+
+    const parseBound = value => {
+      if (value instanceof Date) {
+        return Number.isNaN(value.getTime()) ? null : value
+      }
+
+      return parseLocalDateTime(value)
+    }
+
+    return {
+      start: parseBound(dateRangeOverride.start) ?? periodRange?.start ?? null,
+      end: parseBound(dateRangeOverride.end) ?? periodRange?.end ?? null
+    }
+  }, [dateRangeOverride?.end, dateRangeOverride?.start, selectedPeriods])
 
   // Build parameter map from current selection and series metadata
   const parameterMap = useMemo(() => {
@@ -586,6 +568,12 @@ const AggregatedSeriesExplorer = ({
     [currentParameters]
   )
 
+  const hasDistributedData = useMemo(
+    () => currentParameters.some(parameter =>
+      seriesMap.get(parameter)?.metadata?.distribution?.applied === true),
+    [currentParameters, seriesMap]
+  )
+
   const loadedValues = useMemo(() => {
     if (currentParameters.length === 0) {
       return {}
@@ -610,8 +598,9 @@ const AggregatedSeriesExplorer = ({
     timelineSamples
   } = useMemo(() => buildDailyAndTimelineData({
     loadedValues,
-    selectedParams
-  }), [loadedValues, selectedParams])
+    selectedParams,
+    dateRange
+  }), [dateRange, loadedValues, selectedParams])
 
   const {
     allDates,
@@ -776,6 +765,15 @@ const AggregatedSeriesExplorer = ({
     if (canDisplayChart) {
       return (
         <Box sx={{minHeight: 360, position: 'relative'}}>
+          {hasDistributedData && (
+            <Alert
+              severity='info'
+              role='status'
+              title='Données réparties pour l’affichage'
+              description='Les volumes déclarés sur une période sont répartis uniformément sur les jours couverts afin de faciliter la lecture. Cette répartition ne modifie pas les données déclarées et ne correspond pas à des mesures journalières.'
+              className='mb-4'
+            />
+          )}
           {(frequencyBadges.length > 0 || displayResolutionForUI) && (
             <Box sx={{
               display: 'flex',
@@ -797,7 +795,7 @@ const AggregatedSeriesExplorer = ({
                     fontSize: '0.75rem'
                   }}
                 >
-                  Résolution : {formatFrequencyLabel(displayFrequency) ?? displayResolutionForUI}
+                  Résolution d’affichage : {formatFrequencyLabel(displayFrequency) ?? displayResolutionForUI}
                 </Typography>
               )}
             </Box>

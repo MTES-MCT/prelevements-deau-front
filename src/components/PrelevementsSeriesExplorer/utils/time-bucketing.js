@@ -21,6 +21,7 @@ export const RESOLUTIONS = Object.freeze([
   {id: '1h', ms: 60 * 60 * 1000},
   {id: '6h', ms: 6 * 60 * 60 * 1000},
   {id: '1d', ms: DAY_MS},
+  {id: '1W', ms: 7 * DAY_MS},
   {id: '1M', ms: 30 * DAY_MS},
   {id: '1Q', ms: 90 * DAY_MS},
   {id: '1Y', ms: 365 * DAY_MS}
@@ -30,16 +31,17 @@ const RESOLUTION_MS_MAP = new Map(RESOLUTIONS.map(item => [item.id, item.ms]))
 const RESOLUTION_ORDER = RESOLUTIONS.map(item => item.id)
 
 const DEFAULT_WIDTH_PX = 1200
-// Reduced MIN_POINTS and increased PX_PER_POINT to prefer coarser resolutions
-// for better readability (e.g., monthly instead of daily for ~10 months of data)
-const MIN_POINTS = 12
-const PX_PER_POINT = 15
+const MIN_TARGET_POINTS = 180
+const MAX_TARGET_POINTS = 500
+const MAX_DAILY_POINTS = 200
+const PX_PER_TARGET_POINT = 3
 
 const RESOLUTION_TO_FREQUENCY = {
   '15m': '15 minutes',
   '1h': '1 hour',
   '6h': '6 hours',
   '1d': '1 day',
+  '1W': '1 week',
   '1M': '1 month',
   '1Q': '1 quarter',
   '1Y': '1 year'
@@ -168,10 +170,20 @@ export const chooseDisplayResolution = (rangeStart, rangeEnd, widthPx = DEFAULT_
   }
 
   const rangeMs = end.getTime() - start.getTime()
-  const maxPoints = Math.max(MIN_POINTS, Math.floor(widthPx / PX_PER_POINT))
-  const targetBucketMs = rangeMs / maxPoints
+  const targetPoints = Math.min(
+    MAX_TARGET_POINTS,
+    Math.max(MIN_TARGET_POINTS, Math.floor(widthPx / PX_PER_TARGET_POINT))
+  )
+  const targetBucketMs = rangeMs / targetPoints
+  const rangeDays = Math.ceil(rangeMs / DAY_MS)
+  const maxDailyPoints = Math.min(MAX_DAILY_POINTS, targetPoints)
+  const resolution = pickResolutionByMs(Math.max(targetBucketMs, RESOLUTIONS[0].ms), rangeMs)
 
-  return pickResolutionByMs(Math.max(targetBucketMs, RESOLUTIONS[0].ms), rangeMs)
+  if (resolution === '1d' && rangeDays > maxDailyPoints) {
+    return '1W'
+  }
+
+  return resolution
 }
 
 export const chooseSeriesBucketResolution = (displayResolution, nativeResolution) => {
@@ -207,6 +219,11 @@ export const floorToBucket = (date, resolution) => {
 
     case '1d': {
       return new Date(resolved.getFullYear(), resolved.getMonth(), resolved.getDate(), 0, 0, 0, 0)
+    }
+
+    case '1W': {
+      const daysSinceMonday = (resolved.getDay() + 6) % 7
+      return new Date(resolved.getFullYear(), resolved.getMonth(), resolved.getDate() - daysSinceMonday, 0, 0, 0, 0)
     }
 
     case '1M': {

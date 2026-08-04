@@ -97,3 +97,27 @@ test('buildDailyAndTimelineData attaches remarks to meta for sub-daily values', 
   t.is(morningSample?.metas?.[0]?.comment, 'Matin • Nuit')
   t.falsy(noonSample?.metas?.[0])
 })
+
+test('buildDailyAndTimelineData supports ISO week buckets and keeps a partial week visible', t => {
+  const loadedValues = {
+    volume: [
+      {date: '2024-W48', value: 1000},
+      {date: '2024-W49', value: 7000}
+    ]
+  }
+
+  const {timelineSamples} = buildDailyAndTimelineData({
+    loadedValues,
+    selectedParams: ['volume'],
+    dateRange: {
+      start: new Date(2024, 11, 1),
+      end: new Date(2024, 11, 31)
+    }
+  })
+
+  t.is(timelineSamples.length, 2)
+  t.is(timelineSamples[0].timestamp.getFullYear(), 2024)
+  t.is(timelineSamples[0].timestamp.getMonth(), 11)
+  t.is(timelineSamples[0].timestamp.getDate(), 1)
+  t.is(timelineSamples[0].values[0], 1000)
+})

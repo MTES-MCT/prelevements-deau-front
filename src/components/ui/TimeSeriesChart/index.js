@@ -28,7 +28,7 @@ import {
 import {ChartContainer} from '@mui/x-charts/ChartContainer'
 import {useDrawingArea, useXScale, useYScale} from '@mui/x-charts/hooks'
 
-import buildComposedSeries from './build-composed-series.js'
+import buildComposedSeries, {buildSeriesElementStyles} from './build-composed-series.js'
 import {
   AXIS_LEFT_ID,
   AXIS_RIGHT_ID,
@@ -38,10 +38,13 @@ import {
   axisFormatterFactory,
   buildAnnotations,
   buildSeriesModel,
+  buildTimelineXAxis,
+  buildTimelineTicks,
+  calendarCoordinateToDate,
   collectAxisTooltipRows,
+  getTimelineAxisValue,
   getSharedTooltipNature,
-  getDateFormatForFrequency,
-  getTimelineTickStride
+  getDateFormatForFrequency
 } from './util.js'
 
 import CompactAlert from '@/components/ui/CompactAlert/index.js'
@@ -181,13 +184,6 @@ const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, g
     return null
   }
 
-  const forceDateFormatting = resolvedAxisValue instanceof Date
-    || (typeof resolvedAxisValue === 'number' && Number.isFinite(resolvedAxisValue))
-  const defaultFormatter = value => value?.toString?.() ?? ''
-  const axisFormatter = forceDateFormatting
-    ? () => tooltipDateFormatter(resolvedAxisValue)
-    : (axis?.valueFormatter || defaultFormatter)
-
   const rows = collectAxisTooltipRows({
     series,
     dataIndex,
@@ -199,6 +195,23 @@ const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, g
   const sharedNatureLabel = sharedNature
     ? rows.find(row => row.nature)?.natureLabel || 'Nature des données'
     : null
+
+  if (rows.length === 0) {
+    return null
+  }
+
+  const rowTooltipDates = rows.map(row => row.tooltipDate).filter(Boolean)
+  const sharedRowTooltipDate = rowTooltipDates.length === rows.length
+    && rowTooltipDates.every(date => date.getTime() === rowTooltipDates[0].getTime())
+    ? rowTooltipDates[0]
+    : null
+  const tooltipAxisValue = sharedRowTooltipDate ?? resolvedAxisValue
+  const forceDateFormatting = tooltipAxisValue instanceof Date
+    || (typeof tooltipAxisValue === 'number' && Number.isFinite(tooltipAxisValue))
+  const defaultFormatter = value => value?.toString?.() ?? ''
+  const axisFormatter = forceDateFormatting
+    ? () => tooltipDateFormatter(tooltipAxisValue)
+    : (axis?.valueFormatter || defaultFormatter)
 
   return (
     <Box
@@ -214,7 +227,7 @@ const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, g
       }}
     >
       {axisValue !== undefined && (
-        <Typography sx={{fontWeight: 'bold'}}>{axisFormatter(resolvedAxisValue ?? axisValue)}</Typography>
+        <Typography sx={{fontWeight: 'bold'}}>{axisFormatter(tooltipAxisValue ?? axisValue)}</Typography>
       )}
       <Box
         component='ul'
@@ -285,10 +298,11 @@ const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, g
  * - Gray for other metadata
  * @param {Object} props - Component props
  * @param {Array} props.annotations - Array of annotation objects with position and metadata
+ * @param {Function} props.getXAxisValue - Project a real date to the configured X-axis value
  * @param {Function} [props.onPointClick] - Callback when an annotation is clicked
  * @returns {JSX.Element|null} SVG group with annotations or null if no annotations
  */
-const ChartAnnotations = ({annotations, onPointClick}) => {
+const ChartAnnotations = ({annotations, getXAxisValue, onPointClick}) => {
   const drawingArea = useDrawingArea()
   const xScale = useXScale(X_AXIS_ID)
 
@@ -344,13 +358,7 @@ const ChartAnnotations = ({annotations, onPointClick}) => {
 
         // Safely call the scale functions with try-catch for added safety
         try {
-          // Since x-axis is a band scale using indices, we must use the index
-          // and center the point in the band
-          x = xScale(annotation.index)
-          if (typeof xScale.bandwidth === 'function') {
-            x += xScale.bandwidth() / 2
-          }
-
+          x = xScale(getXAxisValue(annotation.x))
           y = yScale(annotation.y)
         } catch {
           return null
@@ -640,24 +648,27 @@ const TimeSeriesChart = ({
     () => axisFormatterFactory(locale, chartModel.xAxisDates, frequency),
     [chartModel.xAxisDates, locale, frequency]
   )
-  const timelineTickStride = useMemo(() => getTimelineTickStride(
-    chartModel.xAxisDates.length,
-    Math.max(0, (containerWidth ?? 0) - CHART_MARGIN.left - CHART_MARGIN.right)
-  ), [chartModel.xAxisDates.length, containerWidth])
-  const xAxisBand = useMemo(() => [{
-    id: X_AXIS_ID,
-    scaleType: 'band',
-    data: chartModel.xAxisDates.map((_date, index) => index), // Use indices for band scale
-    valueFormatter(value) {
-      // Value is index, get corresponding date
-      const date = chartModel.xAxisDates[value]
-      return date ? xAxisDateFormatter(date) : ''
-    },
-    tickInterval(_value, index, values) {
-      return index === 0 || index === values.length - 1 || index % timelineTickStride === 0
-    },
-    tickLabelStyle: {fontSize: 12}
-  }], [chartModel.xAxisDates, timelineTickStride, xAxisDateFormatter])
+  const timelineAvailableWidth = Math.max(
+    0,
+    (containerWidth ?? 0) - CHART_MARGIN.left - CHART_MARGIN.right
+  )
+  const timelineTicks = useMemo(() => buildTimelineTicks({
+    xAxisDates: chartModel.xAxisDates,
+    pointBySeries: chartModel.pointBySeries,
+    availableWidth: timelineAvailableWidth,
+    locale,
+    frequency,
+    timelineRange
+  }), [chartModel.pointBySeries, chartModel.xAxisDates, frequency, locale, timelineAvailableWidth, timelineRange])
+  const xAxisTimeline = useMemo(() => [buildTimelineXAxis({
+    xAxisDates: chartModel.xAxisDates,
+    timelineTicks,
+    fallbackFormatter: xAxisDateFormatter
+  })], [chartModel.xAxisDates, timelineTicks, xAxisDateFormatter])
+  const getXAxisValue = useCallback(
+    value => getTimelineAxisValue(value, timelineTicks.axisMode),
+    [timelineTicks.axisMode]
+  )
 
   const yAxis = useMemo(() => chartModel.yAxis, [chartModel.yAxis])
 
@@ -671,6 +682,10 @@ const TimeSeriesChart = ({
 
     if (axisValue instanceof Date) {
       return axisValue
+    }
+
+    if (timelineTicks.axisMode === 'calendar') {
+      return calendarCoordinateToDate(Number(axisValue))
     }
 
     if (Number.isInteger(axisValue)
@@ -691,7 +706,7 @@ const TimeSeriesChart = ({
     }
 
     return null
-  }, [chartModel.xAxisDates])
+  }, [chartModel.xAxisDates, timelineTicks.axisMode])
 
   const handleLegendClick = useCallback((event, item) => {
     event.preventDefault()
@@ -752,14 +767,10 @@ const TimeSeriesChart = ({
     return allAnnotations.filter(annotation => configuredAxisIds.has(annotation.axisId))
   }, [chartModel.pointBySeries, chartModel.metaBySeries, visibility, theme, yAxis, enableAnnotations])
 
-  const dashedStyles = useMemo(() => {
-    const styles = {}
-    for (const threshold of chartModel.dynamicThresholdSeries) {
-      styles[`& .MuiLineElement-series-${threshold.id}`] = {strokeDasharray: '4 4'}
-    }
-
-    return styles
-  }, [chartModel.dynamicThresholdSeries])
+  const seriesElementStyles = useMemo(() => buildSeriesElementStyles({
+    composedSeries,
+    dynamicThresholdSeries: chartModel.dynamicThresholdSeries
+  }), [chartModel.dynamicThresholdSeries, composedSeries])
 
   const leftAxis = useMemo(
     () => yAxis.find(item => item.position === 'left' && item.hasData) ?? null,
@@ -815,11 +826,11 @@ const TimeSeriesChart = ({
               width={containerWidth}
               height={height}
               series={composedSeries}
-              xAxis={xAxisBand}
+              xAxis={xAxisTimeline}
               yAxis={yAxis}
               margin={CHART_MARGIN}
               sx={{
-                ...dashedStyles
+                ...seriesElementStyles
               }}
             >
               <ChartBackgroundBands bands={backgroundBands} />
@@ -881,7 +892,13 @@ const TimeSeriesChart = ({
                   }}
                 />
               ))}
-              {annotations.length > 0 && <ChartAnnotations annotations={annotations} onPointClick={onPointClick} />}
+              {annotations.length > 0 && (
+                <ChartAnnotations
+                  annotations={annotations}
+                  getXAxisValue={getXAxisValue}
+                  onPointClick={onPointClick}
+                />
+              )}
             </ChartContainer>
           </div>
         ) : (

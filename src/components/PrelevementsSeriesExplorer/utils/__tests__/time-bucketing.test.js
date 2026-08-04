@@ -13,69 +13,50 @@ import {
 
 test('chooseDisplayResolution adapts to range length and width', t => {
   // 1 day range with 1200px width
-  // maxPoints = max(12, 1200/15) = 80
-  // targetBucketMs = 1 day / 80 = ~18 minutes -> picks 1h
+  // targetPoints = 1200/3 = 400
+  // targetBucketMs = 1 day / 400 = ~4 minutes -> picks 15m
   const start = new Date('2024-01-01T00:00:00')
   const end = new Date('2024-01-02T00:00:00')
   const resolutionDay = chooseDisplayResolution(start, end, 1200)
-  t.is(resolutionDay, '1h') // 1 day range with 80 target points -> hourly resolution
+  t.is(resolutionDay, '15m')
 
-  // 10 months range with standard width should prefer monthly resolution
-  // maxPoints = 80, targetBucketMs = 300 days / 80 = ~3.75 days -> picks 1M
-  const longStart = new Date('2024-01-01T00:00:00')
-  const longEnd = new Date('2024-11-01T00:00:00')
-  const resolutionLong = chooseDisplayResolution(longStart, longEnd, 1200)
-  t.is(resolutionLong, '1M') // ~10 months prefers monthly buckets for readability
+  // A short multi-month zoom remains daily.
+  const shortStart = new Date('2024-01-01T00:00:00')
+  const shortEnd = new Date('2024-05-01T00:00:00')
+  const resolutionShort = chooseDisplayResolution(shortStart, shortEnd, 1200)
+  t.is(resolutionShort, '1d')
+
+  // Around one year, weekly buckets keep volumes readable without jumping to months.
+  const yearEnd = new Date('2025-01-01T00:00:00')
+  t.is(chooseDisplayResolution(shortStart, yearEnd, 1200), '1W')
+  t.is(chooseDisplayResolution(shortStart, yearEnd, 2400), '1W')
 })
 
-test('chooseDisplayResolution excludes month resolution for ranges <= 3 months', t => {
-  // 2 months range - should not use month resolution
-  const start2m = new Date('2024-01-01T00:00:00')
-  const end2m = new Date('2024-03-01T00:00:00')
-  const resolution2m = chooseDisplayResolution(start2m, end2m, 50) // Small width to force coarse resolution
-  t.not(resolution2m, '1M') // Month should not be available
+test('chooseDisplayResolution moves from daily to weekly at the daily point budget', t => {
+  const start = new Date('2025-01-01T00:00:00')
 
-  // 6 months range - should allow month resolution
-  const start6m = new Date('2024-01-01T00:00:00')
-  const end6m = new Date('2024-07-01T00:00:00')
-  const resolution6m = chooseDisplayResolution(start6m, end6m, 50)
-  // With 6 months and small width, month could be selected
-  t.true(['1d', '1M'].includes(resolution6m))
+  t.is(chooseDisplayResolution(start, new Date('2025-07-20T00:00:00'), 1200), '1d')
+  t.is(chooseDisplayResolution(start, new Date('2025-07-21T00:00:00'), 1200), '1W')
+  t.is(chooseDisplayResolution(start, new Date('2025-06-30T00:00:00'), 540), '1d')
+  t.is(chooseDisplayResolution(start, new Date('2025-07-01T00:00:00'), 540), '1W')
 })
 
-test('chooseDisplayResolution excludes quarter resolution for ranges <= 9 months', t => {
-  // 6 months range - should not use quarter resolution
-  const start6m = new Date('2024-01-01T00:00:00')
-  const end6m = new Date('2024-07-01T00:00:00')
-  const resolution6m = chooseDisplayResolution(start6m, end6m, 50) // Small width to force coarse resolution
-  t.not(resolution6m, '1Q') // Quarter should not be available
+test('chooseDisplayResolution follows day, week, month, quarter and year thresholds', t => {
+  const start = new Date('1900-01-01T00:00:00')
+  const width = 540 // Minimum target of 180 points
 
-  // 12 months range - should allow quarter resolution
-  // maxPoints = max(12, 50/15) = 12, targetBucketMs = 365 days / 12 = ~30 days -> picks 1Q (90 days)
-  const start12m = new Date('2024-01-01T00:00:00')
-  const end12m = new Date('2025-01-01T00:00:00')
-  const resolution12m = chooseDisplayResolution(start12m, end12m, 50)
-  t.is(resolution12m, '1Q') // Quarter resolution expected for 12 months with small width
-})
-
-test('chooseDisplayResolution excludes year resolution for ranges <= 3 years', t => {
-  // 2 years range - should not use year resolution
-  const start2y = new Date('2022-01-01T00:00:00')
-  const end2y = new Date('2024-01-01T00:00:00')
-  const resolution2y = chooseDisplayResolution(start2y, end2y, 10) // Very small width to force coarse resolution
-  t.not(resolution2y, '1Y') // Year should not be available
-
-  // 5 years range - should allow year resolution
-  const start5y = new Date('2019-01-01T00:00:00')
-  const end5y = new Date('2024-01-01T00:00:00')
-  const resolution5y = chooseDisplayResolution(start5y, end5y, 10) // Very small width
-  // 1Q or 1Y are valid for 5 years with very small width
-  t.true(['1Q', '1Y'].includes(resolution5y))
+  t.is(chooseDisplayResolution(start, new Date('1900-06-30T00:00:00'), width), '1d')
+  t.is(chooseDisplayResolution(start, new Date('1901-01-01T00:00:00'), width), '1W')
+  t.is(chooseDisplayResolution(start, new Date('1903-01-01T00:00:00'), width), '1W')
+  t.is(chooseDisplayResolution(start, new Date('1908-01-01T00:00:00'), width), '1M')
+  t.is(chooseDisplayResolution(start, new Date('1920-01-01T00:00:00'), width), '1Q')
+  t.is(chooseDisplayResolution(start, new Date('1980-01-01T00:00:00'), width), '1Y')
 })
 
 test('chooseSeriesBucketResolution never goes finer than native resolution', t => {
   t.is(chooseSeriesBucketResolution('15m', '1h'), '1h')
   t.is(chooseSeriesBucketResolution('1d', '15m'), '1d')
+  t.is(chooseSeriesBucketResolution('1W', '1d'), '1W')
   t.is(chooseSeriesBucketResolution('1M', '1Q'), '1Q')
 })
 
@@ -97,6 +78,12 @@ test('floorToBucket floors dates correctly for calendar-based resolutions', t =>
   t.is(dayBucket?.getMonth(), 4)
   t.is(dayBucket?.getDate(), 17)
   t.is(dayBucket?.getHours(), 0)
+
+  const weekBucket = floorToBucket(new Date(2024, 4, 19, 10, 23), '1W')
+  t.is(weekBucket?.getFullYear(), 2024)
+  t.is(weekBucket?.getMonth(), 4)
+  t.is(weekBucket?.getDate(), 13)
+  t.is(weekBucket?.getDay(), 1)
 
   const monthBucket = floorToBucket(date, '1M')
   t.is(monthBucket?.getFullYear(), 2024)
@@ -179,17 +166,15 @@ test('bucketSeriesCollection picks display resolution and respects native resolu
     1200
   )
 
-  // ~9 days on 1200px with new settings:
-  // maxPoints = max(12, 1200/15) = 80
-  // targetBucketMs = 9 days / 80 = ~2.7 hours -> picks 6h
-  t.is(displayResolution, '6h')
+  // ~9 days / 400 target points = ~32 minutes -> picks 1h.
+  t.is(displayResolution, '1h')
 
   const fastResult = bucketedSeries.find(item => item.id === 'fast')
   const slowResult = bucketedSeries.find(item => item.id === 'slow')
 
   t.truthy(fastResult)
   t.truthy(slowResult)
-  t.is(fastResult.bucketResolution, '6h') // Uses display resolution (6h > 15m native)
+  t.is(fastResult.bucketResolution, '1h') // Uses display resolution (1h > 15m native)
   t.is(slowResult.bucketResolution, '1d') // Uses native resolution (1d > 6h display)
   t.true(fastResult.data.length <= fastSeries.data.length)
   t.true(slowResult.data.length <= slowSeries.data.length)
@@ -198,11 +183,13 @@ test('bucketSeriesCollection picks display resolution and respects native resolu
 test('frequency helpers convert between frequency strings and resolutions', t => {
   t.is(resolutionFromFrequency('15 minutes'), '15m')
   t.is(resolutionFromFrequency('6 hours'), '6h')
+  t.is(resolutionFromFrequency('1 week'), '1W')
   t.is(resolutionFromFrequency('1 quarter'), '1Q')
   t.is(resolutionFromFrequency('1 year'), '1Y')
 
   t.is(resolutionToFrequency('1h'), '1 hour')
   t.is(resolutionToFrequency('6h'), '6 hours')
+  t.is(resolutionToFrequency('1W'), '1 week')
   t.is(resolutionToFrequency(RESOLUTIONS[0].id), '15 minutes')
 })
 
