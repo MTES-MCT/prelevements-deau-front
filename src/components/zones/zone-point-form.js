@@ -8,6 +8,7 @@ import {Alert} from '@mui/material'
 
 import PointForm from '@/components/form/point-form.js'
 import PointFlowReclassificationDialog from '@/components/points-prelevement/point-flow-reclassification-dialog.js'
+import {POINT_KINDS} from '@/lib/point-characteristics.js'
 import {getPointFlowChangeDetails} from '@/lib/point-flow-types.js'
 import {
   createZonePointPrelevementAction,
@@ -41,6 +42,7 @@ const ZonePointForm = ({zone, point = null, mode = 'create', zoneGeometry = null
   const [draft, setDraft] = useState(() => (isEdit ? {} : {
     name: '',
     flowType: '',
+    pointKind: POINT_KINDS.PHYSIQUE,
     waterBodyType: '',
     geometryPrecision: ''
   }))

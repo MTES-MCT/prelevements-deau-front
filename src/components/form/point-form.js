@@ -7,9 +7,16 @@ import Select from '@codegouvfr/react-dsfr/SelectNext'
 import {Typography} from '@mui/material'
 import dynamic from 'next/dynamic'
 
+import NullableBooleanSelect from '@/components/form/nullable-boolean-select.js'
 import OptionalPointFieldsForm from '@/components/form/optional-point-fields-form.js'
 import AccordionCentered from '@/components/ui/AccordionCentered/index.js'
 import DeferredRender from '@/components/ui/deferred-render.js'
+import {
+  POINT_KINDS,
+  pointKindOptions,
+  pointOriginOptions,
+  pointWithdrawalTypeOptions
+} from '@/lib/point-characteristics.js'
 import {POINT_FLOW_TYPES} from '@/lib/point-flow-types.js'
 
 const DynamicMiniMapForm = dynamic(
@@ -43,21 +50,6 @@ const waterBodyTypes = [
   {value: 'SUPERFICIELLE', label: 'Eau superficielle'},
   {value: 'SOUTERRAIN', label: 'Eau souterraine'},
   {value: 'TRANSITION', label: 'Eau de transition'}
-]
-
-const pointNatures = [
-  {value: 'NAPPE', label: 'Nappe'},
-  {value: 'NAPPE_ACCOMPAGNEMENT', label: 'Nappe d’accompagnement'},
-  {value: 'COURS_EAU', label: 'Cours d’eau'},
-  {value: 'SOURCE', label: 'Source'},
-  {value: 'PLAN_EAU', label: 'Plan d’eau'}
-]
-
-const withdrawalTypes = [
-  {value: 'LITTORAL', label: 'Littoral'},
-  {value: 'CONTINENTAL', label: 'Continental'},
-  {value: 'SOUTERRAIN', label: 'Souterrain'},
-  {value: 'STOCKAGE', label: 'Stockage'}
 ]
 
 const pointFlowTypes = [
@@ -110,11 +102,20 @@ const PointForm = ({
           required: true,
           onChange: e => setPoint(prev => ({
             ...prev,
-            flowType: e.target.value,
-            ...(e.target.value === POINT_FLOW_TYPES.REJET ? {withdrawalType: null} : {})
+            flowType: e.target.value
           }))
         }}
         options={pointFlowTypes}
+      />
+
+      <Select
+        label='Nature du point *'
+        nativeSelectProps={{
+          value: point.pointKind || POINT_KINDS.PHYSIQUE,
+          required: true,
+          onChange: e => setPoint(prev => ({...prev, pointKind: e.target.value}))
+        }}
+        options={pointKindOptions}
       />
 
       <Select
@@ -128,25 +129,57 @@ const PointForm = ({
       />
 
       <Select
-        label='Nature du point'
-        placeholder='Sélectionner la nature du point'
+        label='Origine prélèvement / rejet'
+        placeholder='Sélectionner l’origine du prélèvement ou du rejet'
         nativeSelectProps={{
-          defaultValue: point.nature || '',
-          onChange: e => setPoint(prev => ({...prev, nature: e.target.value}))
+          value: point.nature || '',
+          onChange(e) {
+            const nature = e.target.value || null
+            setPoint(prev => ({
+              ...prev,
+              nature,
+              ...(nature === 'PLAN_EAU'
+                ? {}
+                : {
+                  isWaterBodyConnectedToStream: null,
+                  isWaterBodyConnectedToGroundwater: null
+                })
+            }))
+          }
         }}
-        options={pointNatures}
+        options={pointOriginOptions}
       />
 
-      {point.flowType !== POINT_FLOW_TYPES.REJET && (
-        <Select
-          label='Type de prélèvement'
-          placeholder='Sélectionner le type de prélèvement'
-          nativeSelectProps={{
-            defaultValue: point.withdrawalType || '',
-            onChange: e => setPoint(prev => ({...prev, withdrawalType: e.target.value}))
-          }}
-          options={withdrawalTypes}
-        />
+      <Select
+        label='Type de prélèvement / rejet'
+        placeholder='Sélectionner le type de prélèvement ou de rejet'
+        nativeSelectProps={{
+          value: point.withdrawalType || '',
+          onChange: e => setPoint(prev => ({...prev, withdrawalType: e.target.value || null}))
+        }}
+        options={pointWithdrawalTypeOptions}
+      />
+
+      {point.nature === 'PLAN_EAU' && (
+        <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+          <NullableBooleanSelect
+            label='Plan d’eau connecté au cours d’eau'
+            value={point.isWaterBodyConnectedToStream}
+            onChange={value => setPoint(prev => ({
+              ...prev,
+              isWaterBodyConnectedToStream: value
+            }))}
+          />
+
+          <NullableBooleanSelect
+            label='Plan d’eau connecté à la nappe'
+            value={point.isWaterBodyConnectedToGroundwater}
+            onChange={value => setPoint(prev => ({
+              ...prev,
+              isWaterBodyConnectedToGroundwater: value
+            }))}
+          />
+        </div>
       )}
 
       <div className='pb-5'>

@@ -4,11 +4,17 @@ import Launch from '@mui/icons-material/Launch'
 import {Box, Chip, Typography} from '@mui/material'
 
 import PointUsageNameEditor from '@/components/points-prelevement/point-usage-name-editor.js'
+import formatDate from '@/lib/format-date.js'
+import {
+  POINT_KINDS,
+  pointKindLabels,
+  pointOriginLabels,
+  pointWithdrawalTypeLabels
+} from '@/lib/point-characteristics.js'
 import {
   getPointFlowType,
   getPointFlowTypeColors,
-  getPointFlowTypeLabel,
-  POINT_FLOW_TYPES
+  getPointFlowTypeLabel
 } from '@/lib/point-flow-types.js'
 import {getTypeMilieuColor} from '@/lib/points-prelevement.js'
 import {
@@ -22,22 +28,19 @@ const waterBodyTypeLabels = {
   TRANSITION: 'Eau de transition'
 }
 
-const pointNatureLabels = {
-  NAPPE: 'Nappe',
-  NAPPE_ACCOMPAGNEMENT: 'Nappe d’accompagnement',
-  COURS_EAU: 'Cours d’eau',
-  SOURCE: 'Source',
-  PLAN_EAU: 'Plan d’eau'
-}
-
-const withdrawalTypeLabels = {
-  LITTORAL: 'Littoral',
-  CONTINENTAL: 'Continental',
-  SOUTERRAIN: 'Souterrain',
-  STOCKAGE: 'Stockage'
-}
-
 const formatLabel = (labels, value) => labels[value] ?? value
+
+const formatNullableBoolean = value => {
+  if (value === true) {
+    return 'Oui'
+  }
+
+  if (value === false) {
+    return 'Non'
+  }
+
+  return 'Non renseigné'
+}
 
 const LinkWithIcon = ({label, href}) => (
   <Box className='flex flex-wrap gap-1'>
@@ -160,6 +163,13 @@ const PointIdentification = ({
             color: flowTypeColors.textColor
           }}
         />
+        <Chip
+          size='small'
+          label={`Nature du point : ${formatLabel(
+            pointKindLabels,
+            pointPrelevement.pointKind ?? POINT_KINDS.PHYSIQUE
+          )}`}
+        />
         {pointPrelevement.waterBodyType && (
           <Chip
             size='small'
@@ -174,14 +184,14 @@ const PointIdentification = ({
         {pointPrelevement.nature && (
           <Chip
             size='small'
-            label={`Nature : ${formatLabel(pointNatureLabels, pointPrelevement.nature)}`}
+            label={`Origine prélèvement / rejet : ${formatLabel(pointOriginLabels, pointPrelevement.nature)}`}
           />
         )}
 
-        {flowType === POINT_FLOW_TYPES.PRELEVEMENT && pointPrelevement.withdrawalType && (
+        {pointPrelevement.withdrawalType && (
           <Chip
             size='small'
-            label={`Type de prélèvement : ${formatLabel(withdrawalTypeLabels, pointPrelevement.withdrawalType)}`}
+            label={`Type de prélèvement / rejet : ${formatLabel(pointWithdrawalTypeLabels, pointPrelevement.withdrawalType)}`}
           />
         )}
       </Box>
@@ -189,6 +199,30 @@ const PointIdentification = ({
       <div className='flex flex-col gap-1'>
         <LabelValue label='Autres noms' value={pointPrelevement.otherNames} />
         <LabelValue label='Noms structurés' value={namesLabel} />
+        <LabelValue
+          label='Date de mise en service'
+          value={formatDate(pointPrelevement.commissioningDate)}
+        />
+        <LabelValue
+          label='Identifiant interne Agence de l’eau'
+          value={pointPrelevement.waterAgencyInternalIdentifier}
+        />
+        <LabelValue
+          label='Point référent de l’ouvrage'
+          value={formatNullableBoolean(pointPrelevement.isReferencePoint)}
+        />
+        {pointPrelevement.nature === 'PLAN_EAU' && (
+          <>
+            <LabelValue
+              label='Plan d’eau connecté au cours d’eau'
+              value={formatNullableBoolean(pointPrelevement.isWaterBodyConnectedToStream)}
+            />
+            <LabelValue
+              label='Plan d’eau connecté à la nappe'
+              value={formatNullableBoolean(pointPrelevement.isWaterBodyConnectedToGroundwater)}
+            />
+          </>
+        )}
         <IdentifierList identifiers={pointPrelevement.identifiers} />
       </div>
 

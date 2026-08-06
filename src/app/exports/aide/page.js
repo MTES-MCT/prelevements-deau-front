@@ -25,6 +25,14 @@ const fieldDescriptions = [
     description: 'Indique si le point est configuré pour un prélèvement ou un rejet. Ce type qualifie les volumes, index et débits associés.'
   },
   {
+    name: 'Origine prélèvement / rejet',
+    description: 'Origine hydrologique configurée pour le point : nappe, nappe d’accompagnement, cours d’eau, source ou plan d’eau.'
+  },
+  {
+    name: 'Type prélèvement / rejet',
+    description: 'Type complémentaire configuré pour le point : littoral, continental, souterrain ou stockage.'
+  },
+  {
     name: 'Commune',
     description: 'Nom de la commune du point de prélèvement, lorsque l’information est disponible.'
   },
@@ -43,6 +51,10 @@ const fieldDescriptions = [
   {
     name: 'Type de milieu',
     description: 'Milieu associé au point de prélèvement : eau superficielle, eau souterraine ou eau de transition.'
+  },
+  {
+    name: 'ZRE',
+    description: 'Indique si le point se trouve en zone de répartition des eaux : « Oui », « Non » ou « Non renseigné ».'
   },
   {
     name: 'Code usage SANDRE',

@@ -6,6 +6,8 @@ import Input from '@codegouvfr/react-dsfr/Input'
 import {Typography} from '@mui/material'
 import dynamic from 'next/dynamic'
 
+import NullableBooleanSelect from '@/components/form/nullable-boolean-select.js'
+
 const DynamicCheckbox = dynamic(
   () => import('@codegouvfr/react-dsfr/Checkbox'),
   {ssr: false}
@@ -84,6 +86,8 @@ const validateIdentifiers = value => (
     : 'Le champ identifiers doit être un objet JSON.'
 )
 
+const getDateInputValue = value => value ? String(value).slice(0, 10) : ''
+
 const OptionalPointFieldsForm = ({point, setPoint}) => (
   <div>
     <Typography variant='h5' sx={{pb: 5}}>
@@ -97,6 +101,32 @@ const OptionalPointFieldsForm = ({point, setPoint}) => (
       label='Autres noms'
       hintText='Autres noms utilisés pour ce point de prélèvement dans d’autres systèmes d’information'
       placeholder='Entrer les autres noms, séparés par une virgule'
+    />
+
+    <Input
+      label='Date de mise en service'
+      nativeInputProps={{
+        type: 'date',
+        value: getDateInputValue(point?.commissioningDate),
+        onChange: event => setPoint(prev => ({
+          ...prev,
+          commissioningDate: event.target.value || null
+        }))
+      }}
+    />
+
+    <TextInput
+      point={point}
+      setPoint={setPoint}
+      field='waterAgencyInternalIdentifier'
+      label='Identifiant interne Agence de l’eau'
+      placeholder='Entrer l’identifiant interne Agence de l’eau'
+    />
+
+    <NullableBooleanSelect
+      label='Point référent de l’ouvrage'
+      value={point?.isReferencePoint}
+      onChange={value => setPoint(prev => ({...prev, isReferencePoint: value}))}
     />
 
     <JsonTextarea
@@ -303,16 +333,16 @@ const OptionalPointFieldsForm = ({point, setPoint}) => (
       point={point}
       setPoint={setPoint}
       field='managementUnit'
-      label='Unité de gestion'
-      placeholder='Entrer l’unité de gestion'
+      label='Unité de gestion des volumes prélevables'
+      placeholder='Entrer l’unité de gestion des volumes prélevables'
     />
 
     <TextInput
       point={point}
       setPoint={setPoint}
       field='managementSubUnit'
-      label='Sous-unité de gestion'
-      placeholder='Entrer la sous-unité de gestion'
+      label='Sous-unité de gestion des volumes prélevables'
+      placeholder='Entrer la sous-unité de gestion des volumes prélevables'
     />
 
     <TextInput

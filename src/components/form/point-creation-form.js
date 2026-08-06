@@ -7,6 +7,7 @@ import Button from '@codegouvfr/react-dsfr/Button'
 import {Typography} from '@mui/material'
 
 import PointForm from '@/components/form/point-form.js'
+import {POINT_KINDS} from '@/lib/point-characteristics.js'
 import {createPointPrelevementAction} from '@/server/actions/points-prelevement.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
@@ -15,6 +16,7 @@ const PointCreationForm = () => {
   const [point, setPoint] = useState({
     name: '',
     flowType: '',
+    pointKind: POINT_KINDS.PHYSIQUE,
     waterBodyType: '',
     geometryPrecision: ''
   })

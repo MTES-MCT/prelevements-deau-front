@@ -50,8 +50,8 @@ const surfaceFields = [
 ]
 
 const groundwaterFields = [
-  {key: 'managementUnit', label: 'Unité de gestion'},
-  {key: 'managementSubUnit', label: 'Sous-unité de gestion'},
+  {key: 'managementUnit', label: 'Unité de gestion des volumes prélevables'},
+  {key: 'managementSubUnit', label: 'Sous-unité de gestion des volumes prélevables'},
   {key: 'aquiferName', label: 'Nappe'}
 ]
 

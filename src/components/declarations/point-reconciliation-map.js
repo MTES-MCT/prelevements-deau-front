@@ -14,6 +14,10 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import {cooperativeGesturesMapOptions} from '@/components/map/cooperative-gestures.js'
 import {IGN_RASTER_MAX_ZOOM} from '@/components/map/ign-raster.js'
 import planIGN from '@/components/map/styles/plan-ign.json'
+import {
+  pointOriginLabels,
+  pointWithdrawalTypeLabels
+} from '@/lib/point-characteristics.js'
 import {getPointFlowType, getPointFlowTypeLabel} from '@/lib/point-flow-types.js'
 import {
   formatUsageReference,
@@ -37,21 +41,6 @@ const waterBodyTypeLabels = {
   SUPERFICIELLE: 'Eau superficielle',
   SOUTERRAIN: 'Eau souterraine',
   TRANSITION: 'Eau de transition'
-}
-
-const pointNatureLabels = {
-  NAPPE: 'Nappe',
-  NAPPE_ACCOMPAGNEMENT: 'Nappe d’accompagnement',
-  COURS_EAU: 'Cours d’eau',
-  SOURCE: 'Source',
-  PLAN_EAU: 'Plan d’eau'
-}
-
-const withdrawalTypeLabels = {
-  LITTORAL: 'Littoral',
-  CONTINENTAL: 'Continental',
-  SOUTERRAIN: 'Prélèvement souterrain',
-  STOCKAGE: 'Stockage'
 }
 
 function normalizeId(value) {
@@ -336,8 +325,8 @@ function appendPointDetails(parent, point) {
   const values = [
     getPointFlowTypeLabel(getPointFlowType(point)),
     waterBodyTypeLabels[point.waterBodyType] ?? point.waterBodyType,
-    pointNatureLabels[point.nature] ?? point.nature,
-    withdrawalTypeLabels[point.withdrawalType] ?? point.withdrawalType
+    pointOriginLabels[point.nature] ?? point.nature,
+    pointWithdrawalTypeLabels[point.withdrawalType] ?? point.withdrawalType
   ].filter(Boolean)
 
   if (values.length === 0) {
