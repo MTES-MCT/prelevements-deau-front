@@ -5,6 +5,7 @@ import {Box} from '@mui/material'
 import {notFound} from 'next/navigation'
 
 import {buildPageTitle} from '@/app/metadata-utils.js'
+import ResourceMutationHistory from '@/components/audit/resource-mutation-history.js'
 import PreleveurMap from '@/components/declarants/preleveur-map.js'
 import DocumentsList from '@/components/documents/documents-list.js'
 import CollecteurExploitationsList from '@/components/exploitations/collecteur-exploitations-list.js'
@@ -29,6 +30,7 @@ import {
 } from '@/lib/declarants.js'
 import {formatFullAddress} from '@/lib/declaration.js'
 import {getNewExploitationURL} from '@/lib/urls.js'
+import {getResourceAuditHistoryAction} from '@/server/actions/audit-events.js'
 import {
   getDeclarantOverviewAction,
   getDocumentsFromPreleveurAction,
@@ -338,6 +340,9 @@ const Page = async ({params}) => {
     'declarant.declaration-type.read'
   ].some(permission => can(permission))
   const canReadExploitations = isDeclarantViewer || can('exploitation.list')
+  const historyResult = can('declarant.update')
+    ? await getResourceAuditHistoryAction('DECLARANT', declarantId)
+    : {success: false}
 
   return (
     <Box className='fr-container min-h-full w-full flex flex-col gap-5 mb-5'>
@@ -440,6 +445,14 @@ const Page = async ({params}) => {
             </Suspense>
           )}
         </>
+      )}
+
+      {historyResult.success && (
+        <ResourceMutationHistory
+          initialData={historyResult.data?.data}
+          resourceId={declarantId}
+          resourceType='DECLARANT'
+        />
       )}
     </Box>
   )

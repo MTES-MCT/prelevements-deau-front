@@ -10,6 +10,7 @@ import {
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 
 import AdminPageShell from '@/components/admin/admin-page-shell.js'
+import MutationList from '@/components/audit/mutation-list.js'
 import DateRangePicker from '@/components/ui/date-range-picker.js'
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import {
@@ -19,7 +20,10 @@ import {
   getParisDateInput,
   isAuditPresetActive
 } from '@/lib/audit-events.js'
-import {getAuditEventsAction} from '@/server/actions/audit-events.js'
+import {
+  getAuditEventDetailAction,
+  getAuditEventsAction
+} from '@/server/actions/audit-events.js'
 
 const DATE_TIME_FORMATTER = new Intl.DateTimeFormat('fr-FR', {
   dateStyle: 'short',
@@ -175,46 +179,89 @@ const OutcomeBadge = ({outcome}) => {
 }
 
 const AuditDetails = ({event}) => {
-  const metadataEntries = Object.entries(event.metadata ?? {})
+  const [detail, setDetail] = useState(null)
+  const [error, setError] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    let active = true
+
+    const load = async () => {
+      const result = await getAuditEventDetailAction(event.id)
+
+      if (!active) {
+        return
+      }
+
+      if (result.success) {
+        setDetail(result.data?.data)
+      } else {
+        setError(result.error || 'Impossible de charger le détail de cette action.')
+      }
+
+      setIsLoading(false)
+    }
+
+    load()
+
+    return () => {
+      active = false
+    }
+  }, [event.id])
+
+  const displayedEvent = detail ?? event
+  const metadataEntries = Object.entries(displayedEvent.metadata ?? {})
 
   return (
-    <div className='grid gap-5 bg-[var(--background-alt-grey)] px-4 py-4 md:grid-cols-2'>
-      <div>
-        <h3 className='fr-text--sm fr-mb-2w font-semibold'>Contexte technique</h3>
-        <dl className='grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 text-sm'>
-          <dt className='text-[var(--text-mention-grey)]'>Requête</dt>
-          <dd className='min-w-0 break-all'><code>{event.httpMethod} {event.route}</code></dd>
-          <dt className='text-[var(--text-mention-grey)]'>Statut HTTP</dt>
-          <dd>{event.statusCode ?? 'Non renseigné'}</dd>
-          <dt className='text-[var(--text-mention-grey)]'>Request ID</dt>
-          <dd className='min-w-0 break-all'><code>{event.requestId}</code></dd>
-          {event.originRequestId && event.originRequestId !== event.requestId && (
-            <>
-              <dt className='text-[var(--text-mention-grey)]'>Corrélation front</dt>
-              <dd className='min-w-0 break-all'><code>{event.originRequestId}</code></dd>
-            </>
-          )}
-          <dt className='text-[var(--text-mention-grey)]'>Navigateur</dt>
-          <dd className='min-w-0 break-words'>{event.userAgent || 'Non renseigné'}</dd>
-          <dt className='text-[var(--text-mention-grey)]'>Fin</dt>
-          <dd>{formatDateTime(event.completedAt)}</dd>
-        </dl>
-      </div>
+    <div className='bg-[var(--background-alt-grey)] px-4 py-4'>
+      {isLoading && <p className='fr-text--sm fr-mb-0 text-[var(--text-mention-grey)]'>Chargement du détail…</p>}
+      {error && <Alert className='fr-mb-3w' severity='error' title='Détail indisponible' description={error} />}
 
-      <div>
-        <h3 className='fr-text--sm fr-mb-2w font-semibold'>Métadonnées autorisées</h3>
-        {metadataEntries.length === 0 ? (
-          <p className='fr-text--sm fr-mb-0 text-[var(--text-mention-grey)]'>Aucune métadonnée complémentaire.</p>
-        ) : (
+      {!isLoading && displayedEvent.mutations?.length > 0 && (
+        <div className='mb-5'>
+          <h3 className='fr-text--sm fr-mb-2w font-semibold'>Modifications enregistrées</h3>
+          <MutationList mutations={displayedEvent.mutations} />
+        </div>
+      )}
+
+      <div className='grid gap-5 md:grid-cols-2'>
+        <div>
+          <h3 className='fr-text--sm fr-mb-2w font-semibold'>Contexte technique</h3>
           <dl className='grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 text-sm'>
-            {metadataEntries.map(([key, value]) => (
-              <div key={key} className='contents'>
-                <dt className='text-[var(--text-mention-grey)]'>{METADATA_LABELS[key] || key}</dt>
-                <dd className='min-w-0 break-words'>{formatMetadataValue(key, value)}</dd>
-              </div>
-            ))}
+            <dt className='text-[var(--text-mention-grey)]'>Requête</dt>
+            <dd className='min-w-0 break-all'><code>{displayedEvent.httpMethod} {displayedEvent.route}</code></dd>
+            <dt className='text-[var(--text-mention-grey)]'>Statut HTTP</dt>
+            <dd>{displayedEvent.statusCode ?? 'Non renseigné'}</dd>
+            <dt className='text-[var(--text-mention-grey)]'>Request ID</dt>
+            <dd className='min-w-0 break-all'><code>{displayedEvent.requestId}</code></dd>
+            {displayedEvent.originRequestId && displayedEvent.originRequestId !== displayedEvent.requestId && (
+              <>
+                <dt className='text-[var(--text-mention-grey)]'>Corrélation front</dt>
+                <dd className='min-w-0 break-all'><code>{displayedEvent.originRequestId}</code></dd>
+              </>
+            )}
+            <dt className='text-[var(--text-mention-grey)]'>Navigateur</dt>
+            <dd className='min-w-0 break-words'>{displayedEvent.userAgent || 'Non renseigné'}</dd>
+            <dt className='text-[var(--text-mention-grey)]'>Fin</dt>
+            <dd>{formatDateTime(displayedEvent.completedAt)}</dd>
           </dl>
-        )}
+        </div>
+
+        <div>
+          <h3 className='fr-text--sm fr-mb-2w font-semibold'>Métadonnées autorisées</h3>
+          {metadataEntries.length === 0 ? (
+            <p className='fr-text--sm fr-mb-0 text-[var(--text-mention-grey)]'>Aucune métadonnée complémentaire.</p>
+          ) : (
+            <dl className='grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 text-sm'>
+              {metadataEntries.map(([key, value]) => (
+                <div key={key} className='contents'>
+                  <dt className='text-[var(--text-mention-grey)]'>{METADATA_LABELS[key] || key}</dt>
+                  <dd className='min-w-0 break-words'>{formatMetadataValue(key, value)}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -344,7 +391,7 @@ const AuditEventsPage = ({
           setIsLoading(false)
         }
       }
-    }, filters.actor || filters.subject ? 300 : 0)
+    }, filters.actor || filters.subject || filters.target ? 300 : 0)
 
     return () => window.clearTimeout(timeoutId)
   }, [filters])
@@ -405,6 +452,7 @@ const AuditEventsPage = ({
                 ...initialFilters,
                 actor: '',
                 subject: '',
+                target: '',
                 actionTypes: [],
                 outcomes: [],
                 from: defaultPreset.from,
@@ -418,7 +466,7 @@ const AuditEventsPage = ({
           </button>
         </div>
 
-        <div className='grid gap-4 lg:grid-cols-2 xl:grid-cols-4'>
+        <div className='grid gap-4 lg:grid-cols-2 xl:grid-cols-5'>
           <div className='fr-input-group fr-mb-0'>
             <label className='fr-label' htmlFor='audit-actor'>Auteur</label>
             <input
@@ -446,6 +494,22 @@ const AuditEventsPage = ({
               onChange={event => updateFilters(current => ({
                 ...current,
                 subject: event.target.value,
+                page: 1
+              }))}
+            />
+          </div>
+
+          <div className='fr-input-group fr-mb-0'>
+            <label className='fr-label' htmlFor='audit-target'>Cible</label>
+            <input
+              className='fr-input'
+              id='audit-target'
+              placeholder='Nom ou identifiant de ressource'
+              type='search'
+              value={filters.target}
+              onChange={event => updateFilters(current => ({
+                ...current,
+                target: event.target.value,
                 page: 1
               }))}
             />
@@ -575,6 +639,11 @@ const AuditEventsPage = ({
                       <td className='max-w-[260px] px-4 py-3'>
                         <span className='block font-medium'>{event.actionLabel}</span>
                         <span className='block text-xs text-[var(--text-mention-grey)]'>{event.categoryLabel}</span>
+                        {event.mutationCount > 0 && (
+                          <span className='mt-1 block text-xs text-[var(--text-action-high-blue-france)]'>
+                            {event.mutationCount} modification{event.mutationCount > 1 ? 's' : ''}
+                          </span>
+                        )}
                       </td>
                       <td className='max-w-[220px] px-4 py-3'>
                         <Identity

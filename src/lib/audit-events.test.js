@@ -21,6 +21,7 @@ test('normalizeAuditFilters valide pagination, listes et périodes spéciales', 
   const filters = normalizeAuditFilters({
     actor: 'Samy',
     subject: 'Nathalie',
+    target: 'Forage principal',
     period: '24h',
     actionTypes: 'AUTH.LOGOUT,AUTH.LOGOUT,POINT.UPDATED',
     outcomes: 'SUCCESS,DENIED',
@@ -30,6 +31,7 @@ test('normalizeAuditFilters valide pagination, listes et périodes spéciales', 
 
   t.deepEqual(filters.actionTypes, ['AUTH.LOGOUT', 'POINT.UPDATED'])
   t.deepEqual(filters.outcomes, ['SUCCESS', 'DENIED'])
+  t.is(filters.target, 'Forage principal')
   t.is(filters.period, '24h')
   t.is(filters.page, 3)
   t.is(filters.pageSize, 50)
@@ -43,6 +45,12 @@ test('buildAuditSearchParameters omet les valeurs par défaut inutiles', t => {
   t.is(parameters.get('to'), TODAY)
   t.false(parameters.has('page'))
   t.false(parameters.has('pageSize'))
+})
+
+test('buildAuditSearchParameters transmet la recherche de ressource', t => {
+  const filters = normalizeAuditFilters({target: 'Forage principal'}, {today: TODAY})
+
+  t.is(buildAuditSearchParameters(filters).get('target'), 'Forage principal')
 })
 
 test('les périodes rapides identifient correctement la sélection active', t => {
