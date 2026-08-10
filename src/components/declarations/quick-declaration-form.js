@@ -20,12 +20,12 @@ import {
 } from '@/lib/point-flow-types.js'
 import {
   buildPointDisplayNames,
-  buildPointUsageNameChanges,
   getPointDisplayName,
   getPointTechnicalName,
   getPointUsageNameDraft,
   MAX_POINT_USAGE_NAME_LENGTH,
-  normalizePointUsageName
+  normalizePointUsageName,
+  replacePointUsageName
 } from '@/lib/quick-declaration-point-name.js'
 import {
   getMyDeclarationSubmissionSuccessURL,
@@ -37,6 +37,7 @@ import {
   getQuickDeclarationContextAction,
   previewQuickDeclarationConflictsAction
 } from '@/server/actions/declarations.js'
+import {editPointUsageNameAction} from '@/server/actions/points-prelevement.js'
 import {formatNumber} from '@/utils/number.js'
 
 const QuickDeclarationMap = dynamic(
@@ -713,10 +714,12 @@ function canSubmitQuickDeclaration({
   entries,
   isContextLoading,
   isSubmitting,
+  isUsageNameSaving,
   validationErrors
 }) {
   return !isSubmitting
     && !isContextLoading
+    && !isUsageNameSaving
     && Boolean(context)
     && entries.length > 0
     && validationErrors.length === 0
@@ -749,7 +752,6 @@ function getQuickDeclarationSubmitSignature({
   measurementType,
   periodEndDate,
   periodStartDate,
-  pointUsageNames = [],
   readingDate
 }) {
   return JSON.stringify({
@@ -764,8 +766,6 @@ function getQuickDeclarationSubmitSignature({
     measurementType,
     periodEndDate,
     periodStartDate,
-    pointUsageNames: [...pointUsageNames]
-      .sort((a, b) => a.pointPrelevementId.localeCompare(b.pointPrelevementId)),
     readingDate
   })
 }
@@ -926,6 +926,7 @@ function isQuickDeclarationRowControl(target) {
 
 const QuickDeclarationToolbar = ({
   availablePreleveurs,
+  isUsageNameSaving,
   maxReadingDate,
   measurementType,
   onPreleveurChange,
@@ -964,6 +965,7 @@ const QuickDeclarationToolbar = ({
               <select
                 id='quick-preleveur'
                 className='fr-select'
+                disabled={isUsageNameSaving}
                 value={selectedPreleveurId}
                 onChange={event => onPreleveurChange(event.target.value)}
               >
@@ -1600,6 +1602,8 @@ const QuickDeclarationEntryRow = ({
   hoveredPointId,
   inputRefs,
   measurementType,
+  onUsageNameSaved,
+  onUsageNameSavingChange,
   point,
   readingDate,
   row,
@@ -1627,8 +1631,12 @@ const QuickDeclarationEntryRow = ({
   const pointName = getPointDisplayName(point, usageName)
   const hasDistinctUsageName = pointName !== technicalName
   const [isUsageNameEditing, setIsUsageNameEditing] = useState(false)
+  const [isUsageNameSaving, setIsUsageNameSaving] = useState(false)
   const [usageNameDraft, setUsageNameDraft] = useState(usageName)
   const [usageNameFeedback, setUsageNameFeedback] = useState(null)
+  const normalizedUsageNameDraft = normalizePointUsageName(usageNameDraft)
+  const normalizedUsageName = normalizePointUsageName(usageName)
+  const hasUsageNameChanged = normalizedUsageNameDraft !== normalizedUsageName
   const valueLabel = getMeasurementInputLabel(measurementType)
   const valueInputId = `quick-value-${pointId}`
   const usageInputId = `quick-usage-${pointId}`
@@ -1641,27 +1649,59 @@ const QuickDeclarationEntryRow = ({
     setIsUsageNameEditing(true)
   }
 
-  const validateUsageName = () => {
-    const normalizedUsageName = normalizePointUsageName(usageNameDraft)
-    const previousUsageName = normalizePointUsageName(usageName)
-    const hasChanged = normalizedUsageName !== previousUsageName
+  const saveUsageName = async event => {
+    event?.preventDefault()
 
-    if (hasChanged) {
-      updateRow(pointId, {usageName: normalizedUsageName})
+    if (!hasUsageNameChanged || isUsageNameSaving) {
+      return
     }
 
-    setIsUsageNameEditing(false)
-    setUsageNameFeedback(getUsageNameFeedback(previousUsageName, normalizedUsageName))
+    setUsageNameFeedback(null)
+    setIsUsageNameSaving(true)
+    onUsageNameSavingChange(pointId, true)
+
+    try {
+      const result = await editPointUsageNameAction(pointId, normalizedUsageNameDraft || null)
+
+      if (!result?.success) {
+        setUsageNameFeedback({
+          severity: 'error',
+          message: result?.error || 'Le nom d’usage n’a pas pu être enregistré.'
+        })
+        return
+      }
+
+      const savedUsageName = normalizePointUsageName(result.data?.usageName)
+      onUsageNameSaved(pointId, savedUsageName)
+      setUsageNameDraft(savedUsageName)
+      setIsUsageNameEditing(false)
+      setUsageNameFeedback({
+        severity: 'success',
+        message: getUsageNameFeedback(normalizedUsageName, savedUsageName) || 'Nom d’usage enregistré'
+      })
+    } catch (error) {
+      setUsageNameFeedback({
+        severity: 'error',
+        message: error?.message || 'Le nom d’usage n’a pas pu être enregistré.'
+      })
+    } finally {
+      setIsUsageNameSaving(false)
+      onUsageNameSavingChange(pointId, false)
+    }
   }
 
   const cancelUsageNameEditing = () => {
+    if (isUsageNameSaving) {
+      return
+    }
+
     setUsageNameDraft(usageName)
     setUsageNameFeedback(null)
     setIsUsageNameEditing(false)
   }
 
   useEffect(() => {
-    if (!usageNameFeedback) {
+    if (usageNameFeedback?.severity !== 'success') {
       return undefined
     }
 
@@ -1727,55 +1767,74 @@ const QuickDeclarationEntryRow = ({
                 </button>
               )}
             </div>
-            {usageNameFeedback && (
+            {usageNameFeedback?.severity === 'success' && (
               <span
-                className='inline-flex shrink-0 bg-[#eeeeff] px-1.5 py-0.5 text-[0.64rem] font-medium leading-tight text-[#000091]'
+                className='inline-flex shrink-0 items-center gap-1 px-1 py-0.5 text-[0.64rem] font-medium leading-tight text-[#18753c]'
                 role='status'
               >
-                {usageNameFeedback}
+                <span className='fr-icon-check-line text-[0.58rem]' aria-hidden='true' />
+                {usageNameFeedback.message}
               </span>
             )}
           </div>
         )}
         {isUsageNameEditing && (
-          <div
-            className='quick-declaration-usage-name-field'
-            onBlur={event => {
-              if (!event.currentTarget.contains(event.relatedTarget)) {
-                validateUsageName()
-              }
-            }}
-          >
-            <label className='sr-only' htmlFor={usageNameInputId}>
-              Nom d’usage facultatif pour {technicalName}
-            </label>
-            <input
-              autoFocus
-              id={usageNameInputId}
-              className='quick-declaration-usage-name-input'
-              type='text'
-              maxLength={MAX_POINT_USAGE_NAME_LENGTH}
-              value={usageNameDraft}
-              placeholder='Ex. Forage de la source'
-              onFocus={() => setActivePointId(pointId)}
-              onChange={event => setUsageNameDraft(event.target.value)}
-              onKeyDown={event => {
-                if (event.key === 'Enter') {
-                  event.preventDefault()
-                  validateUsageName()
-                } else if (event.key === 'Escape') {
-                  event.preventDefault()
+          <div className='min-w-0'>
+            <form
+              className='quick-declaration-usage-name-field'
+              aria-busy={isUsageNameSaving}
+              onBlur={event => {
+                if (!event.currentTarget.contains(event.relatedTarget)) {
                   cancelUsageNameEditing()
                 }
               }}
-            />
-            <button
-              type='button'
-              className='fr-icon-close-line inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-gray-600 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#0a76f6] [&::after]:![--icon-size:0.78rem] [&::before]:![--icon-size:0.78rem]'
-              aria-label='Annuler la modification du nom d’usage'
-              title='Annuler'
-              onClick={cancelUsageNameEditing}
-            />
+              onSubmit={saveUsageName}
+            >
+              <label className='sr-only' htmlFor={usageNameInputId}>
+                Nom d’usage facultatif pour {technicalName}
+              </label>
+              <input
+                autoFocus
+                id={usageNameInputId}
+                className='quick-declaration-usage-name-input'
+                type='text'
+                disabled={isUsageNameSaving}
+                maxLength={MAX_POINT_USAGE_NAME_LENGTH}
+                value={usageNameDraft}
+                placeholder='Ex. Forage de la source'
+                onFocus={() => setActivePointId(pointId)}
+                onChange={event => {
+                  setUsageNameDraft(event.target.value)
+                  setUsageNameFeedback(null)
+                }}
+                onKeyDown={event => {
+                  if (event.key === 'Escape') {
+                    event.preventDefault()
+                    cancelUsageNameEditing()
+                  }
+                }}
+              />
+              <button
+                type='submit'
+                className='fr-icon-check-line inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-[#000091] hover:bg-[var(--background-alt-blue-france-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#0a76f6] disabled:cursor-not-allowed disabled:opacity-40 [&::after]:![--icon-size:0.78rem] [&::before]:![--icon-size:0.78rem]'
+                aria-label='Enregistrer le nom d’usage'
+                disabled={!hasUsageNameChanged || isUsageNameSaving}
+                title='Enregistrer le nom d’usage'
+              />
+              <button
+                type='button'
+                className='fr-icon-close-line inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-gray-600 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#0a76f6] disabled:cursor-not-allowed disabled:opacity-40 [&::after]:![--icon-size:0.78rem] [&::before]:![--icon-size:0.78rem]'
+                aria-label='Annuler la modification du nom d’usage'
+                disabled={isUsageNameSaving}
+                title='Annuler'
+                onClick={cancelUsageNameEditing}
+              />
+            </form>
+            {usageNameFeedback?.severity === 'error' && (
+              <p className='fr-error-text fr-mb-0 mt-1 text-[0.68rem] leading-tight' role='alert'>
+                {usageNameFeedback.message}
+              </p>
+            )}
           </div>
         )}
         {lastReadingLabel && (
@@ -1854,6 +1913,8 @@ const QuickDeclarationEntryList = ({
   hoveredPointId,
   inputRefs,
   measurementType,
+  onUsageNameSaved,
+  onUsageNameSavingChange,
   readingDate,
   rows,
   setActivePointId,
@@ -1917,6 +1978,8 @@ const QuickDeclarationEntryList = ({
                       setActivePointId={setActivePointId}
                       setHoveredPointId={setHoveredPointId}
                       updateRow={updateRow}
+                      onUsageNameSaved={onUsageNameSaved}
+                      onUsageNameSavingChange={onUsageNameSavingChange}
                     />
                   )
                 })}
@@ -2070,6 +2133,8 @@ const QuickDeclarationEntriesPanel = ({
   hoveredPointId,
   inputRefs,
   measurementType,
+  onUsageNameSaved,
+  onUsageNameSavingChange,
   overwriteWarning,
   pointsCount,
   readingDate,
@@ -2104,6 +2169,8 @@ const QuickDeclarationEntriesPanel = ({
         setActivePointId={setActivePointId}
         setHoveredPointId={setHoveredPointId}
         updateRow={updateRow}
+        onUsageNameSaved={onUsageNameSaved}
+        onUsageNameSavingChange={onUsageNameSavingChange}
       />
 
       <div className='fr-input-group fr-mt-2w fr-mb-2w'>
@@ -2206,6 +2273,7 @@ const QuickDeclarationForm = ({
   const [focusRequestId, setFocusRequestId] = useState(0)
   const [hoveredPointId, setHoveredPointId] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [usageNameSavingPointIds, setUsageNameSavingPointIds] = useState([])
   const [submitResult, setSubmitResult] = useState(null)
   const [overwriteWarning, setOverwriteWarning] = useState(null)
   const [pendingPreleveurId, setPendingPreleveurId] = useState(null)
@@ -2250,10 +2318,6 @@ const QuickDeclarationForm = ({
       .filter(point => hasDeclarationHistory(point))
       .map(point => getPointId(point)),
     [points]
-  )
-  const pointUsageNames = useMemo(
-    () => buildPointUsageNameChanges(points, rows),
-    [points, rows]
   )
   const pointDisplayNames = useMemo(
     () => buildPointDisplayNames(points, rows),
@@ -2329,6 +2393,24 @@ const QuickDeclarationForm = ({
         ...changes
       }
     }))
+  }, [])
+
+  const handleUsageNameSaved = useCallback((pointId, usageName) => {
+    const normalizedUsageName = normalizePointUsageName(usageName)
+
+    setContext(previous => previous
+      ? {
+        ...previous,
+        points: replacePointUsageName(previous.points, pointId, normalizedUsageName)
+      }
+      : previous)
+    updateRow(pointId, {usageName: normalizedUsageName})
+  }, [updateRow])
+
+  const handleUsageNameSavingChange = useCallback((pointId, isSaving) => {
+    setUsageNameSavingPointIds(previous => isSaving
+      ? [...new Set([...previous, pointId])]
+      : previous.filter(savedPointId => savedPointId !== pointId))
   }, [])
 
   const focusPoint = useCallback(pointId => {
@@ -2430,17 +2512,17 @@ const QuickDeclarationForm = ({
     () => Object.values(rows).some(row => (row.value ?? row.index ?? '') !== ''),
     [rows]
   )
-  const hasPointUsageNameChanges = pointUsageNames.length > 0
+  const isUsageNameSaving = usageNameSavingPointIds.length > 0
 
   const hasUnsavedQuickDeclarationData = useMemo(() => (
     hasAnyValue
-      || hasPointUsageNameChanges
+      || isUsageNameSaving
       || comment.trim() !== ''
       || measurementType !== QUICK_DECLARATION_MEASUREMENT_TYPES.INDEX
       || readingDate !== maxReadingDate
       || periodStartDate !== ''
       || periodEndDate !== ''
-  ), [comment, hasAnyValue, hasPointUsageNameChanges, maxReadingDate, measurementType, periodEndDate, periodStartDate, readingDate])
+  ), [comment, hasAnyValue, isUsageNameSaving, maxReadingDate, measurementType, periodEndDate, periodStartDate, readingDate])
 
   useEffect(() => {
     onDirtyChange?.(hasUnsavedQuickDeclarationData)
@@ -2456,14 +2538,14 @@ const QuickDeclarationForm = ({
       return
     }
 
-    if (hasAnyValue || hasPointUsageNameChanges) {
+    if (hasAnyValue) {
       setPendingPreleveurId(nextPreleveurId)
       setPreleveurChangeModalOpen(true)
       return
     }
 
     applyPreleveurChange(nextPreleveurId)
-  }, [applyPreleveurChange, hasAnyValue, hasPointUsageNameChanges, selectedPreleveurId])
+  }, [applyPreleveurChange, hasAnyValue, selectedPreleveurId])
 
   const closePreleveurChangeModal = useCallback(() => {
     setPendingPreleveurId(null)
@@ -2481,6 +2563,7 @@ const QuickDeclarationForm = ({
     entries,
     isContextLoading,
     isSubmitting,
+    isUsageNameSaving,
     validationErrors
   })
   const submitButtonLabel = getSubmitButtonLabel(isSubmitting, entries.length, measurementType)
@@ -2490,9 +2573,8 @@ const QuickDeclarationForm = ({
     measurementType,
     periodEndDate,
     periodStartDate,
-    pointUsageNames,
     readingDate
-  }), [entries, measurementType, periodEndDate, periodStartDate, pointUsageNames, readingDate, targetDeclarantUserId])
+  }), [entries, measurementType, periodEndDate, periodStartDate, readingDate, targetDeclarantUserId])
   const activeOverwriteWarning = overwriteWarning?.signature === submitSignature
     ? overwriteWarning
     : null
@@ -2541,8 +2623,7 @@ const QuickDeclarationForm = ({
         measurementType,
         ...datePayload,
         comment,
-        entries,
-        pointUsageNames
+        entries
       })
 
       if (!result?.success || !result.data?.success) {
@@ -2570,7 +2651,6 @@ const QuickDeclarationForm = ({
     measurementType,
     periodEndDate,
     periodStartDate,
-    pointUsageNames,
     readingDate,
     onSubmitted,
     submitSignature,
@@ -2585,6 +2665,7 @@ const QuickDeclarationForm = ({
           <div className='order-1'>
             <QuickDeclarationToolbar
               availablePreleveurs={availablePreleveurs}
+              isUsageNameSaving={isUsageNameSaving}
               maxReadingDate={maxReadingDate}
               measurementType={measurementType}
               periodEndDate={periodEndDate}
@@ -2638,6 +2719,8 @@ const QuickDeclarationForm = ({
               submitResult={submitResult}
               updateRow={updateRow}
               validationErrors={validationErrors}
+              onUsageNameSaved={handleUsageNameSaved}
+              onUsageNameSavingChange={handleUsageNameSavingChange}
             />
           </section>
         </div>

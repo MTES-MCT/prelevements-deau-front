@@ -2,8 +2,8 @@ import test from 'ava'
 
 import {
   buildPointDisplayNames,
-  buildPointUsageNameChanges,
-  getPointDisplayName
+  getPointDisplayName,
+  replacePointUsageName
 } from './quick-declaration-point-name.js'
 
 test('getPointDisplayName privilégie le nom d’usage', t => {
@@ -17,22 +17,17 @@ test('getPointDisplayName revient au nom technique si le nom d’usage est vide'
   t.is(getPointDisplayName({name: '36-4=1234'}, '   '), '36-4=1234')
 })
 
-test('buildPointUsageNameChanges ne renvoie que les noms réellement modifiés', t => {
+test('replacePointUsageName met à jour uniquement le point concerné sans muter la source', t => {
   const points = [
     {id: 'point-1', name: 'PP 1', usageName: 'Forage'},
-    {id: 'point-2', name: 'PP 2', usageName: null},
-    {id: 'point-3', name: 'PP 3', usageName: 'Ancien nom'}
+    {id: 'point-2', name: 'PP 2', usageName: null}
   ]
-  const rows = {
-    'point-1': {usageName: ' Forage '},
-    'point-2': {usageName: 'Source communale', value: ''},
-    'point-3': {usageName: ''}
-  }
+  const updatedPoints = replacePointUsageName(points, 'point-2', ' Source communale ')
 
-  t.deepEqual(buildPointUsageNameChanges(points, rows), [
-    {pointPrelevementId: 'point-2', usageName: 'Source communale'},
-    {pointPrelevementId: 'point-3', usageName: null}
-  ])
+  t.is(updatedPoints[0], points[0])
+  t.deepEqual(updatedPoints[1], {id: 'point-2', name: 'PP 2', usageName: 'Source communale'})
+  t.is(points[1].usageName, null)
+  t.is(replacePointUsageName(points, 'point-1', '')[0].usageName, null)
 })
 
 test('buildPointDisplayNames utilise les brouillons sans modifier les points', t => {

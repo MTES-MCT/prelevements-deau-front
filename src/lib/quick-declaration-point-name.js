@@ -35,26 +35,12 @@ export function getPointDisplayName(point, usageName = point?.usageName) {
   })
 }
 
-export function buildPointUsageNameChanges(points = [], rows = {}) {
-  return points.flatMap(point => {
-    const pointPrelevementId = getQuickDeclarationPointId(point)
+export function replacePointUsageName(points = [], pointId, usageName) {
+  const normalizedUsageName = normalizePointUsageName(usageName) || null
 
-    if (!pointPrelevementId) {
-      return []
-    }
-
-    const currentUsageName = normalizePointUsageName(point.usageName)
-    const nextUsageName = normalizePointUsageName(getPointUsageNameDraft(point, rows[pointPrelevementId]))
-
-    if (currentUsageName === nextUsageName) {
-      return []
-    }
-
-    return [{
-      pointPrelevementId,
-      usageName: nextUsageName || null
-    }]
-  })
+  return points.map(point => getQuickDeclarationPointId(point) === pointId
+    ? {...point, usageName: normalizedUsageName}
+    : point)
 }
 
 export function buildPointDisplayNames(points = [], rows = {}) {
