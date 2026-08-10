@@ -14,3 +14,22 @@ export async function getAuditEventOptionsAction() {
   return withErrorHandling(async () =>
     fetchJSON('api/admin/audit-events/options'))
 }
+
+export async function getAuditEventDetailAction(eventId) {
+  return withErrorHandling(async () =>
+    fetchJSON(`api/admin/audit-events/${encodeURIComponent(eventId)}`))
+}
+
+export async function getResourceAuditHistoryAction(resourceType, resourceId, {
+  page = 1,
+  pageSize = 10
+} = {}) {
+  const query = new URLSearchParams({
+    page: String(page),
+    pageSize: String(pageSize)
+  })
+
+  return withErrorHandling(async () => fetchJSON(
+    `api/audit-history/${encodeURIComponent(resourceType)}/${encodeURIComponent(resourceId)}?${query}`
+  ), {forbiddenOnAccessDenied: false})
+}

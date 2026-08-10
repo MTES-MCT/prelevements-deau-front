@@ -1,6 +1,7 @@
 import {notFound} from 'next/navigation'
 
 import {buildPageTitle} from '@/app/metadata-utils.js'
+import ResourceMutationHistory from '@/components/audit/resource-mutation-history.js'
 import ExploitationsList from '@/components/exploitations/exploitations-list.js'
 import PointIdentification from '@/components/points-prelevement/point-identification.js'
 import PointLocalisation from '@/components/points-prelevement/point-localisation.js'
@@ -8,6 +9,7 @@ import SeriesExplorer from '@/components/points-prelevement/series-explorer.js'
 import ResourceDeleteAction from '@/components/ui/resource-delete-action.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getNewExploitationURL} from '@/lib/urls.js'
+import {getResourceAuditHistoryAction} from '@/server/actions/audit-events.js'
 import {getPointPrelevementAction, getExploitationsByPointIdAction} from '@/server/actions/points-prelevement.js'
 import {getAggregatedSeriesOptionsAction} from '@/server/actions/series.js'
 import {getCurrentUser} from '@/server/actions/user.js'
@@ -54,6 +56,9 @@ const Page = async ({params}) => {
     ? await getExploitationsByPointIdAction(id)
     : {data: []}
   const exploitations = exploitationsResult.data || []
+  const historyResult = can('pp.update')
+    ? await getResourceAuditHistoryAction('POINT', pointPrelevement.id)
+    : {success: false}
 
   return (
     <>
@@ -78,6 +83,13 @@ const Page = async ({params}) => {
             exploitations={exploitations}
             createHref={can('exploitation.create') ? getNewExploitationURL({idPoint: pointPrelevement.id}) : undefined}
             canCreate={can('exploitation.create')}
+          />
+        )}
+        {historyResult.success && (
+          <ResourceMutationHistory
+            initialData={historyResult.data?.data}
+            resourceId={pointPrelevement.id}
+            resourceType='POINT'
           />
         )}
         {can('pp.delete') && !can('pp.update') && (

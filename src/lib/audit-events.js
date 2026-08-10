@@ -80,6 +80,7 @@ export function normalizeAuditFilters(parameters = {}, {today = getParisDateInpu
   return {
     actor: String(getSingleValue(parameters.actor) || ''),
     subject: String(getSingleValue(parameters.subject) || ''),
+    target: String(getSingleValue(parameters.target) || ''),
     from: String(getSingleValue(parameters.from) || defaultRange.from),
     to: String(getSingleValue(parameters.to) || defaultRange.to),
     period,
@@ -101,6 +102,10 @@ export function buildAuditSearchParameters(filters) {
 
   if (filters.subject) {
     parameters.set('subject', filters.subject)
+  }
+
+  if (filters.target) {
+    parameters.set('target', filters.target)
   }
 
   if (filters.period) {
