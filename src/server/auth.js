@@ -1,5 +1,8 @@
+import {randomUUID} from 'node:crypto'
+
 import {getServerSession} from 'next-auth'
 
+import {getSignedAuditContextHeaders} from '@/server/audit-context.js'
 import {cachePerRequest} from '@/server/request-cache.js'
 
 const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL
@@ -94,6 +97,7 @@ const SESSION_CALLBACKS = {
  */
 export async function requestMagicLink(email) {
   const body = {email}
+  const requestId = randomUUID()
 
   // In dev mode, send prefixUrl so the magic link points to localhost
   // This allows using prod backend with local frontend
@@ -104,7 +108,9 @@ export async function requestMagicLink(email) {
   const res = await fetch(`${API_URL}/auth/request`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'X-Request-Id': requestId,
+      ...await getSignedAuditContextHeaders(requestId)
     },
     body: JSON.stringify(body)
   })
