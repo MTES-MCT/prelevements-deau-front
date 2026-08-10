@@ -1,7 +1,10 @@
+import {randomUUID} from 'node:crypto'
+
 import {NextResponse} from 'next/server'
 
 import {API_URL, FRONTEND_URL} from '@/app/api/util/request.js'
 import {getErrorReason} from '@/lib/auth-errors.js'
+import {buildSignedAuditContextHeaders} from '@/server/audit-context.js'
 
 /**
  * Route handler for magic link verification in dev mode.
@@ -25,11 +28,17 @@ export async function GET(request, {params}) {
   }
 
   try {
+    const requestId = randomUUID()
     // Call the new POST /auth/verify endpoint (no redirects)
     const response = await fetch(`${API_URL}/auth/verify`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Request-Id': requestId,
+        ...buildSignedAuditContextHeaders({
+          incomingHeaders: request.headers,
+          requestId
+        })
       },
       body: JSON.stringify({token})
     })

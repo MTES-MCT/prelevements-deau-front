@@ -7,6 +7,7 @@ import {
   getApiPerformancePath,
   getApiSlowRequestThreshold
 } from '@/server/api-performance.js'
+import {getSignedAuditContextHeaders} from '@/server/audit-context.js'
 import {getServerAuthSession} from '@/server/auth.js'
 
 const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL
@@ -81,6 +82,8 @@ export async function authenticatedFetch(url, options = {}) {
   if (!getHeaderValue(fetchHeaders, 'x-request-id')) {
     fetchHeaders['X-Request-Id'] = requestId
   }
+
+  Object.assign(fetchHeaders, await getSignedAuditContextHeaders(requestId))
 
   // Add authorization header if auth is required
   if (requireAuth) {

@@ -34,6 +34,13 @@ export const ADMIN_NAVIGATION_ITEMS = Object.freeze([
     description: 'Administrer les accès techniques et leurs identifiants.',
     href: '/comptes-service',
     iconClassName: 'ri-key-2-line'
+  },
+  {
+    key: 'audit-log',
+    label: 'Journal d’audit',
+    description: 'Consulter les actions sensibles réalisées sur la plateforme.',
+    href: '/administration/journal-audit',
+    iconClassName: 'ri-shield-check-line'
   }
 ])
 
@@ -43,6 +50,13 @@ export function isAdminNavigationPath(pathname = '') {
 }
 
 export function getActiveAdminNavigationItem(pathname = '') {
-  return ADMIN_NAVIGATION_ITEMS.find(item =>
-    pathname === item.href || pathname.startsWith(`${item.href}/`)) ?? null
+  const exactMatch = ADMIN_NAVIGATION_ITEMS.find(item => pathname === item.href)
+
+  if (exactMatch) {
+    return exactMatch
+  }
+
+  return [...ADMIN_NAVIGATION_ITEMS]
+    .sort((left, right) => right.href.length - left.href.length)
+    .find(item => pathname.startsWith(`${item.href}/`)) ?? null
 }
