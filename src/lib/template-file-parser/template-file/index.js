@@ -734,9 +734,9 @@ function parseDataRows(sheet, headerRow, range, columnMap, rows, errors, options
       continue
     }
 
-    if (dateFin <= dateDebut) {
+    if (dateFin < dateDebut) {
       errors.push({
-        message: `Ligne ${r + 1}: La date de fin doit être postérieure à la date de début.`,
+        message: `Ligne ${r + 1}: La date de fin doit être postérieure ou égale à la date de début.`,
         severity: 'error'
       })
       continue
@@ -871,6 +871,58 @@ function parseDataRows(sheet, headerRow, range, columnMap, rows, errors, options
   }
 }
 
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
+
+function parseTemplateDateOnly(date) {
+  return new Date(`${date}T00:00:00.000Z`)
+}
+
+export function getExclusiveTemplatePeriodEnd(dateEnd) {
+  const date = parseTemplateDateOnly(dateEnd)
+  return new Date(date.getTime() + MILLISECONDS_PER_DAY).toISOString().slice(0, 10)
+}
+
+function getUtcMonthIndex(date) {
+  return (date.getUTCFullYear() * 12) + date.getUTCMonth()
+}
+
+export function inferTemplateFrequency(dateStartValue, dateEndValue) {
+  const dateStart = parseTemplateDateOnly(dateStartValue)
+  const periodEnd = parseTemplateDateOnly(getExclusiveTemplatePeriodEnd(dateEndValue))
+  const durationDays = (periodEnd.getTime() - dateStart.getTime()) / MILLISECONDS_PER_DAY
+  const startsOnFirstDay = dateStart.getUTCDate() === 1
+  const endsBeforeFirstDay = periodEnd.getUTCDate() === 1
+  const monthCount = getUtcMonthIndex(periodEnd) - getUtcMonthIndex(dateStart)
+
+  if (
+    startsOnFirstDay
+    && endsBeforeFirstDay
+    && dateStart.getUTCMonth() === 0
+    && monthCount === 12
+  ) {
+    return '1 year'
+  }
+
+  if (
+    startsOnFirstDay
+    && endsBeforeFirstDay
+    && dateStart.getUTCMonth() % 3 === 0
+    && monthCount === 3
+  ) {
+    return '1 quarter'
+  }
+
+  if (startsOnFirstDay && endsBeforeFirstDay && monthCount === 1) {
+    return '1 month'
+  }
+
+  if (durationDays === 7) {
+    return '1 week'
+  }
+
+  return '1 day'
+}
+
 // Consolidation des séries :
 // - volumes uniquement aujourd'hui
 // - compatible avec un futur ajout d'index (nouvelle série par point+compteur)
@@ -882,15 +934,16 @@ function consolidateData(rawData) {
     return {series}
   }
 
-  // Grouper par point + paramètre + éventuel indice de fonction historique.
+  // Grouper par point + paramètre + fréquence + éventuel indice de fonction historique.
   const rowsByPointAndParameter = new Map()
   for (const row of volumeRows) {
-    const key = `${row.pointId}__${row.parameter}__${row.flowType ?? ''}`
+    const frequency = inferTemplateFrequency(row.dateDebut, row.dateFin)
+    const key = `${row.pointId}__${row.parameter}__${frequency}__${row.flowType ?? ''}`
     if (!rowsByPointAndParameter.has(key)) {
       rowsByPointAndParameter.set(key, [])
     }
 
-    rowsByPointAndParameter.get(key).push(row)
+    rowsByPointAndParameter.get(key).push({...row, frequency})
   }
 
   // Créer une série par point de prélèvement et par paramètre
@@ -902,6 +955,7 @@ function consolidateData(rawData) {
     const {pointId} = rows[0]
     const {parameter} = rows[0]
     const {flowType} = rows[0]
+    const {frequency} = rows[0]
 
     const valuesByPeriod = new Map()
     let minDate = null
@@ -914,7 +968,7 @@ function consolidateData(rawData) {
         valuesByPeriod.set(periodKey, {
           date: row.dateFin,
           periodStart: row.dateDebut,
-          periodEnd: row.dateFin,
+          periodEnd: getExclusiveTemplatePeriodEnd(row.dateFin),
           value: (existing?.value || 0) + row.volume
         })
       }
@@ -941,7 +995,7 @@ function consolidateData(rawData) {
       ...(flowType ? {flowType} : {}),
       parameter,
       unit: 'm³',
-      frequency: '1 day',
+      frequency,
       valueType: 'cumulative',
       minDate,
       maxDate,

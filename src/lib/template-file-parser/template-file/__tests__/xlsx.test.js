@@ -5,12 +5,23 @@ import {fileURLToPath} from 'node:url'
 
 import test from 'ava'
 
-import {extractTemplateFile} from '../index.js'
+import {
+  extractTemplateFile,
+  getExclusiveTemplatePeriodEnd,
+  inferTemplateFrequency
+} from '../index.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const testFilesPath = path.join(__dirname, 'test-files')
+
+test('template periods use an exclusive end and infer their frequency', t => {
+  t.is(getExclusiveTemplatePeriodEnd('2026-07-31'), '2026-08-01')
+  t.is(inferTemplateFrequency('2026-07-01', '2026-07-31'), '1 month')
+  t.is(inferTemplateFrequency('2026-07-06', '2026-07-12'), '1 week')
+  t.is(inferTemplateFrequency('2026-07-13', '2026-07-13'), '1 day')
+})
 
 test('extractTemplateFile - valid file', async t => {
   const filePath = path.join(testFilesPath, 'valid.xlsx')
