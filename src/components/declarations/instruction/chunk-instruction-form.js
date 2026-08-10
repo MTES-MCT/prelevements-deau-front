@@ -20,6 +20,7 @@ import {
 import {useRouter} from 'next/navigation'
 
 import {CHUNK_STATUS} from '@/components/declarations/instruction/chunk-instruction-badge.js'
+import {canChangeChunkPointAssociation} from '@/lib/chunk-point-associations.js'
 import {filterSearchAutocompleteOptions} from '@/lib/search-options.js'
 import {instructChunkAction} from '@/server/actions/chunks.js'
 
@@ -30,6 +31,7 @@ const ChunkInstructionForm = ({
   availablePoints = [],
   borderColor,
   pointPrelevementId,
+  pointAssociationOrigin,
   instructionStatus: initialInstructionStatus = 'PENDING',
   instructionComment: initialInstructionComment = '',
   conflictMessage = null
@@ -58,6 +60,10 @@ const ChunkInstructionForm = ({
   })), [availablePoints])
 
   const selectedPoint = useMemo(() => pointOptions.find(point => point.id === selectedPointId) ?? null, [pointOptions, selectedPointId])
+  const canChangePointAssociation = canChangeChunkPointAssociation({
+    pointPrelevementId,
+    pointAssociationOrigin
+  })
 
   const handleSubmit = event => {
     event.preventDefault()
@@ -138,7 +144,7 @@ const ChunkInstructionForm = ({
               value={selectedPoint}
               getOptionLabel={option => option.label ?? ''}
               isOptionEqualToValue={(option, value) => option.id === value.id}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !canChangePointAssociation}
               renderInput={params => (
                 <TextField
                   {...params}

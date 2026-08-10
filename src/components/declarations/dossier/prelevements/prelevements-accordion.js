@@ -280,6 +280,7 @@ const InstructionFormPanel = ({
   instructionComment,
   instructionStatus,
   pointPrelevementId,
+  pointAssociationOrigin,
   sourceId
 }) => {
   if (!canInstruct) {
@@ -294,6 +295,7 @@ const InstructionFormPanel = ({
       instructionStatus={instructionStatus}
       instructionComment={instructionComment}
       pointPrelevementId={pointPrelevementId}
+      pointAssociationOrigin={pointAssociationOrigin}
       availablePoints={availablePoints}
     />
   )
@@ -367,6 +369,7 @@ const VolumeDataAccordion = ({
 
 const PrelevementsAccordion = ({
   pointPrelevementId,
+  pointAssociationOrigin,
   pointPrelevementName,
   suggestedPointPrelevementName,
   chunkId,
@@ -445,6 +448,7 @@ const PrelevementsAccordion = ({
           instructionComment={instructionComment}
           instructionStatus={instructionStatus}
           pointPrelevementId={pointPrelevementId}
+          pointAssociationOrigin={pointAssociationOrigin}
           sourceId={sourceId}
         />
 

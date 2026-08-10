@@ -14,6 +14,10 @@ import dynamic from 'next/dynamic'
 
 import DeclarationPointsChangeRequestAction from '@/components/declarations/declaration-points-change-request-action.js'
 import DeferredRender from '@/components/ui/deferred-render.js'
+import {
+  POINT_ASSOCIATION_ORIGINS,
+  canChangeChunkPointAssociation
+} from '@/lib/chunk-point-associations.js'
 import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
 import {
   getDeclarationDisplayStatus,
@@ -630,10 +634,12 @@ const PointReconciliationPanel = ({
     }
   }, [chunks, selectedChunk])
 
+  const hasChangeablePointAssociations = chunks.some(chunk => canChangeChunkPointAssociation(chunk))
   const canEditAssociations = canReconcile && isAssociationMode
   const canSubmitReconciliation = canEditAssociations
     && Boolean(selectedChunk)
     && selectedChunk.canReconcile !== false
+    && canChangeChunkPointAssociation(selectedChunk)
   const shouldShowAssociationWorkflow = isAssociationMode && remainingCount > 0
   const nextUnmatchedChunk = useMemo(
     () => getNextUnmatchedChunk(chunks, selectedChunkId),
@@ -768,7 +774,11 @@ const PointReconciliationPanel = ({
     }
   }, [handleSelectChunk, isAssociationMode, nextUnmatchedChunk, selectedChunk, showOnlyUnmatched])
 
-  const updateSelectedChunkAssociation = useCallback(({globalInstructionStatus, point}) => {
+  const updateSelectedChunkAssociation = useCallback(({
+    globalInstructionStatus,
+    point,
+    pointAssociationOrigin
+  }) => {
     if (!selectedChunk) {
       return
     }
@@ -788,7 +798,9 @@ const PointReconciliationPanel = ({
             ...chunk,
             instructionStatus: nextPointPrelevementId ? 'VALIDATED' : 'PENDING',
             pointPrelevementId: nextPointPrelevementId,
-            pointPrelevement: point ?? null
+            pointPrelevement: point ?? null,
+            pointAssociationOrigin: pointAssociationOrigin
+              ?? (nextPointPrelevementId ? POINT_ASSOCIATION_ORIGINS.MANUAL : null)
           }
         })
       }
@@ -832,7 +844,8 @@ const PointReconciliationPanel = ({
 
       updateSelectedChunkAssociation({
         globalInstructionStatus: result.data?.data?.globalInstructionStatus,
-        point
+        point,
+        pointAssociationOrigin: result.data?.data?.pointAssociationOrigin
       })
 
       if (showOnlyUnmatched && nextUnmatchedChunk) {
@@ -885,7 +898,8 @@ const PointReconciliationPanel = ({
 
       updateSelectedChunkAssociation({
         globalInstructionStatus: result.data?.data?.globalInstructionStatus,
-        point: null
+        point: null,
+        pointAssociationOrigin: null
       })
       setActivePointId(null)
       setSubmitSuccess('Association retirée')
@@ -939,7 +953,7 @@ const PointReconciliationPanel = ({
           )}
         </div>
 
-        {canReconcile && (
+        {canReconcile && hasChangeablePointAssociations && (
           <div className='flex shrink-0 flex-wrap gap-2'>
             {isAssociationMode ? (
               remainingCount === 0 && (
@@ -1059,6 +1073,7 @@ const PointReconciliationPanel = ({
                     canEditAssociations
                     && chunk.id === selectedChunkId
                     && Boolean(chunk.pointPrelevementId)
+                    && canChangeChunkPointAssociation(chunk)
                   }
                   chunk={chunk}
                   feedbackMessage={chunk.id === selectedChunkId ? submitSuccess : null}
@@ -1129,7 +1144,7 @@ const PointReconciliationPanel = ({
             showSelectedChunkUsage={!isAssociationMode}
             onFocusPoint={setActivePointId}
             onHoverPoint={setHoveredPointId}
-            onReconcilePoint={isAssociationMode ? handleReconcilePoint : undefined}
+            onReconcilePoint={canSubmitReconciliation ? handleReconcilePoint : undefined}
             onSelectConflictChunk={isAssociationMode ? handleSelectConflictChunk : undefined}
           />
 
