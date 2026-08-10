@@ -56,7 +56,9 @@ const ZonePointForm = ({zone, point = null, mode = 'create', zoneGeometry = null
     [draft, isEdit, point]
   )
 
-  const isDisabled = isSubmitting || (!isEdit && !(visiblePoint.name && visiblePoint.flowType && visiblePoint.waterBodyType && visiblePoint.coordinates))
+  const isDisabled = isSubmitting
+    || !visiblePoint.waterBodyType
+    || (!isEdit && !(visiblePoint.name && visiblePoint.flowType && visiblePoint.coordinates))
 
   const handleSetPoint = updater => {
     setError(null)

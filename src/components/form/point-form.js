@@ -122,7 +122,8 @@ const PointForm = ({
         label='Type de milieu *'
         placeholder='Sélectionner le type de milieu'
         nativeSelectProps={{
-          defaultValue: point.waterBodyType || '',
+          value: point.waterBodyType || '',
+          required: true,
           onChange: e => setPoint(prev => ({...prev, waterBodyType: e.target.value}))
         }}
         options={waterBodyTypes}

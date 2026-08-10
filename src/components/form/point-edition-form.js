@@ -22,6 +22,7 @@ const PointEditionForm = ({canDelete = false, pointPrelevement}) => {
   const router = useRouter()
   const [payload, setPayload] = useState({})
   const point = {...pointPrelevement}
+  const visiblePoint = {...point, ...payload}
   const [validationErrors, setValidationErrors] = useState([])
   const [error, setError] = useState(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -86,7 +87,7 @@ const PointEditionForm = ({canDelete = false, pointPrelevement}) => {
   return (
     <div>
       <PointForm
-        point={{...point, ...payload}}
+        point={visiblePoint}
         setPoint={setPayload}
         handleSetGeom={handleSetGeom}
       />
@@ -164,7 +165,7 @@ const PointEditionForm = ({canDelete = false, pointPrelevement}) => {
       )}
 
       <div className='w-full flex justify-center p-5 my-5'>
-        <Button onClick={() => handleSubmit()}>
+        <Button disabled={!visiblePoint.waterBodyType} onClick={() => handleSubmit()}>
           Valider les modifications sur le point de prélèvement {point.name}
         </Button>
       </div>
