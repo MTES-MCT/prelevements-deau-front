@@ -8,6 +8,7 @@ import {
   getUsageId,
   getUsageKey,
   getUsageLabel,
+  getUsageParent,
   getUsageReferenceLabel,
   getUsageRootCode,
   getUsageTextColor,
@@ -50,6 +51,23 @@ test('isSubUsage détecte les sous-usages via kind ou code', t => {
   t.true(isSubUsage('2A'))
   t.false(isSubUsage('2'))
   t.false(isSubUsage(null))
+})
+
+test('getUsageParent expose l’usage principal et son code couleur', t => {
+  t.deepEqual(getUsageParent({code: '2A', kind: 'SUB_USAGE'}), {
+    code: '2',
+    label: 'Irrigation',
+    color: '#2E7D32',
+    textColor: 'var(--text-inverted-grey)'
+  })
+  t.deepEqual(getUsageParent('6C2'), {
+    code: '6',
+    label: 'Énergie',
+    color: '#C97900',
+    textColor: 'var(--text-default-grey)'
+  })
+  t.is(getUsageParent('2'), null)
+  t.is(getUsageParent(null), null)
 })
 
 test('getUsageReferenceLabel et formatUsageReference rendent les usages lisibles', t => {

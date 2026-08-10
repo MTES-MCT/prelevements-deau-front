@@ -31,7 +31,7 @@ import {
   getMyDeclarationSubmissionSuccessURL,
   getMyDeclarationURL
 } from '@/lib/urls.js'
-import {normalizeUsageOption} from '@/lib/water-uses.js'
+import {getUsageParent, normalizeUsageOption} from '@/lib/water-uses.js'
 import {
   createQuickDeclarationAction,
   getQuickDeclarationContextAction,
@@ -563,7 +563,10 @@ function buildUsageOptionsForPoint(point, globalUsageOptions) {
     const option = normalizeUsageOption(usage)
 
     if (option.value) {
-      byValue.set(option.value, option)
+      byValue.set(option.value, {
+        ...option,
+        parentUsage: getUsageParent(usage)
+      })
     }
   }
 
@@ -594,7 +597,20 @@ function formatUsageOptionLabel(option) {
 }
 
 function getUsageOptionSearchText(option) {
-  return [option.code, option.label].filter(Boolean).join(' ')
+  return [
+    option.code,
+    option.label,
+    option.parentUsage?.code,
+    option.parentUsage?.label
+  ].filter(Boolean).join(' ')
+}
+
+function formatUsageParentLabel(parentUsage) {
+  return parentUsage?.label || parentUsage?.code || ''
+}
+
+function getUsageOptionColor(option) {
+  return option.parentUsage?.color ?? option.color
 }
 
 function normalizeSearchText(value) {
@@ -1103,6 +1119,9 @@ const UsageCombobox = ({
   const listboxRef = useRef(null)
   const normalizedSearch = normalizeSearchText(value)
   const selectedUsage = findUsageOptionBySearchValue(options, value)
+  const parentDescriptionId = selectedUsage?.parentUsage ? `${id}-parent-usage` : undefined
+  const warningId = warning ? `${id}-warning` : undefined
+  const describedBy = [parentDescriptionId, warningId].filter(Boolean).join(' ') || undefined
   const visibleOptions = useMemo(() => {
     if (!isFiltering || !normalizedSearch) {
       return options
@@ -1211,10 +1230,10 @@ const UsageCombobox = ({
             role='option'
             aria-selected={isSelected}
             className={classNames(
-              'relative block w-full cursor-pointer border-b border-gray-100 py-2 pr-3 text-left text-xs last:border-b-0',
-              isSelected ? 'pl-7' : 'pl-3',
+              'flex w-full cursor-pointer items-start gap-1.5 border-b border-gray-100 px-2 py-2 text-left text-xs last:border-b-0',
               isActive ? 'bg-blue-50 text-blue-900' : 'bg-white hover:bg-gray-50',
-              isSelected && 'font-semibold'
+              isSelected && 'font-semibold',
+              !usage.parentUsage && 'font-medium'
             )}
             onMouseEnter={() => setActiveIndex(index)}
             onMouseDown={event => {
@@ -1222,17 +1241,27 @@ const UsageCombobox = ({
               selectUsage(usage)
             }}
           >
-            {isSelected && (
+            <span className='inline-flex h-4 w-3 shrink-0 items-center justify-center' aria-hidden='true'>
+              {isSelected && <span className='fr-icon-check-line text-[#18753c]' />}
+            </span>
+            <span className={classNames(
+              'flex min-w-0 flex-1 items-start gap-2',
+              usage.parentUsage && 'ml-3'
+            )}
+            >
               <span
-                className='fr-icon-check-line absolute left-3 top-[0.62rem] text-[#18753c]'
+                className={classNames(
+                  'mt-[0.2rem] shrink-0 rounded-sm ring-1 ring-inset ring-black/15',
+                  usage.parentUsage ? 'h-2 w-2' : 'h-2.5 w-2.5'
+                )}
+                style={{backgroundColor: getUsageOptionColor(usage)}}
                 aria-hidden='true'
               />
-            )}
-            <span className='min-w-0'>
-              <span className='block'>{formatUsageOptionLabel(usage)}</span>
-              {usage.definition && (
-                <span className='mt-0.5 block text-xs font-normal text-gray-600'>{usage.definition}</span>
-              )}
+              <span className='min-w-0'>
+                <span className='quick-declaration-usage-option-label block' title={formatUsageOptionLabel(usage)}>
+                  {formatUsageOptionLabel(usage)}
+                </span>
+              </span>
             </span>
           </button>
         )
@@ -1244,81 +1273,104 @@ const UsageCombobox = ({
   const activeDescendant = open && visibleOptions[activeIndex] ? `${id}-option-${activeIndex}` : undefined
 
   return (
-    <div ref={containerRef} className='quick-declaration-combobox relative'>
-      <input
-        ref={inputRef}
-        id={id}
-        className='fr-input quick-declaration-control quick-declaration-combobox-input text-xs'
-        type='text'
-        role='combobox'
-        aria-autocomplete='list'
-        aria-activedescendant={activeDescendant}
-        aria-expanded={open}
-        aria-controls={`${id}-listbox`}
-        aria-haspopup='listbox'
-        value={value}
-        placeholder='Rechercher'
-        autoComplete='off'
-        onFocus={event => {
-          onFocus?.()
-          event.target.select()
-          openDropdown({filter: false})
-        }}
-        onChange={event => {
-          const usageSearch = event.target.value
-          const selectedUsage = findUsageOptionBySearchValue(options, usageSearch)
+    <div ref={containerRef} className='quick-declaration-combobox'>
+      <div className='relative'>
+        {selectedUsage && (
+          <span
+            className='pointer-events-none absolute left-2 top-1/2 z-10 h-2.5 w-2.5 -translate-y-1/2 rounded-sm ring-1 ring-inset ring-black/15'
+            style={{backgroundColor: getUsageOptionColor(selectedUsage)}}
+            aria-hidden='true'
+          />
+        )}
+        <input
+          ref={inputRef}
+          id={id}
+          className={classNames(
+            'fr-input quick-declaration-control quick-declaration-combobox-input text-xs',
+            selectedUsage && 'quick-declaration-combobox-input--with-color'
+          )}
+          type='text'
+          role='combobox'
+          aria-autocomplete='list'
+          aria-activedescendant={activeDescendant}
+          aria-expanded={open}
+          aria-controls={`${id}-listbox`}
+          aria-haspopup='listbox'
+          aria-describedby={describedBy}
+          value={value}
+          placeholder='Rechercher'
+          autoComplete='off'
+          onFocus={event => {
+            onFocus?.()
+            event.target.select()
+            openDropdown({filter: false})
+          }}
+          onChange={event => {
+            const usageSearch = event.target.value
+            const selectedUsage = findUsageOptionBySearchValue(options, usageSearch)
 
-          onUsageChange({
-            usageSearch,
-            usageId: selectedUsage?.value ?? ''
-          })
-          openDropdown({filter: true})
-        }}
-        onKeyDown={event => {
-          if (event.key === 'ArrowDown') {
-            event.preventDefault()
-            openDropdown({filter: open ? isFiltering : false})
-            setActiveIndex(index => Math.min(index + 1, Math.max(visibleOptions.length - 1, 0)))
-          }
+            onUsageChange({
+              usageSearch,
+              usageId: selectedUsage?.value ?? ''
+            })
+            openDropdown({filter: true})
+          }}
+          onKeyDown={event => {
+            if (event.key === 'ArrowDown') {
+              event.preventDefault()
+              openDropdown({filter: open ? isFiltering : false})
+              setActiveIndex(index => Math.min(index + 1, Math.max(visibleOptions.length - 1, 0)))
+            }
 
-          if (event.key === 'ArrowUp') {
-            event.preventDefault()
-            openDropdown({filter: open ? isFiltering : false})
-            setActiveIndex(index => Math.max(index - 1, 0))
-          }
+            if (event.key === 'ArrowUp') {
+              event.preventDefault()
+              openDropdown({filter: open ? isFiltering : false})
+              setActiveIndex(index => Math.max(index - 1, 0))
+            }
 
-          if (event.key === 'Enter' && open && visibleOptions[activeIndex]) {
-            event.preventDefault()
-            selectUsage(visibleOptions[activeIndex])
-          }
+            if (event.key === 'Enter' && open && visibleOptions[activeIndex]) {
+              event.preventDefault()
+              selectUsage(visibleOptions[activeIndex])
+            }
 
-          if (event.key === 'Escape') {
-            setOpen(false)
-          }
-        }}
-      />
-      <button
-        type='button'
-        tabIndex={-1}
-        className='quick-declaration-combobox-toggle fr-icon-arrow-down-s-line'
-        aria-label={open ? 'Fermer la liste des usages' : 'Ouvrir la liste des usages'}
-        onMouseDown={event => event.preventDefault()}
-        onClick={() => {
-          inputRef.current?.focus()
-          inputRef.current?.select()
+            if (event.key === 'Escape') {
+              setOpen(false)
+            }
+          }}
+        />
+        <button
+          type='button'
+          tabIndex={-1}
+          className='quick-declaration-combobox-toggle fr-icon-arrow-down-s-line'
+          aria-label={open ? 'Fermer la liste des usages' : 'Ouvrir la liste des usages'}
+          onMouseDown={event => event.preventDefault()}
+          onClick={() => {
+            inputRef.current?.focus()
+            inputRef.current?.select()
 
-          if (open) {
-            setOpen(false)
-            return
-          }
+            if (open) {
+              setOpen(false)
+              return
+            }
 
-          openDropdown({filter: false})
-        }}
-      />
-      {isInlineDropdown ? listbox : (typeof document === 'undefined' ? null : createPortal(listbox, document.body))}
+            openDropdown({filter: false})
+          }}
+        />
+        {isInlineDropdown ? listbox : (typeof document === 'undefined' ? null : createPortal(listbox, document.body))}
+      </div>
+
+      {selectedUsage?.parentUsage && (
+        <p
+          id={parentDescriptionId}
+          className='fr-mb-0 mt-1 truncate text-[0.66rem] leading-tight text-gray-600'
+          title={`Usage principal : ${formatUsageParentLabel(selectedUsage.parentUsage)}`}
+        >
+          Usage : <span className='font-medium text-gray-800'>{formatUsageParentLabel(selectedUsage.parentUsage)}</span>
+        </p>
+      )}
 
       {warning && (
-        <p className='fr-hint-text fr-mb-0 mt-2 text-[0.72rem] leading-tight text-orange-700'>
+        <p id={warningId} className='fr-hint-text fr-mb-0 mt-2 text-[0.72rem] leading-tight text-orange-700'>
           {warning}
         </p>
       )}

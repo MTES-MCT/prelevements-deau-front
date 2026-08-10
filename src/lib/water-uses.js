@@ -103,6 +103,26 @@ export function getUsageTextColor(usage) {
     ?? 'var(--text-default-grey)'
 }
 
+export function getUsageParent(usage) {
+  if (!isSubUsage(usage)) {
+    return null
+  }
+
+  const code = getUsageCode(usage)
+  const rootCode = getUsageRootCode(usage)
+
+  if (!rootCode || rootCode === code) {
+    return null
+  }
+
+  return {
+    code: rootCode,
+    label: getUsageLabel(rootCode),
+    color: getUsageColor(rootCode),
+    textColor: getUsageTextColor(rootCode)
+  }
+}
+
 export function getUsageIcon(usage) {
   const code = getUsageCode(usage)
   const rootCode = getUsageRootCode(usage)

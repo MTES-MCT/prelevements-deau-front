@@ -153,6 +153,15 @@ main {
   cursor: text;
 }
 
+.quick-declaration-combobox-input--with-color {
+  padding-left: 1.5rem !important;
+}
+
+.quick-declaration-usage-field {
+  height: auto;
+  min-height: 2.25rem;
+}
+
 .quick-declaration-combobox-toggle {
   position: absolute;
   top: 0;
@@ -184,11 +193,15 @@ main {
   --icon-size: 0.7rem;
 }
 
-@media (max-width: 47.999rem) {
-  .quick-declaration-usage-field {
-    height: auto;
-  }
+.quick-declaration-usage-option-label {
+  display: -webkit-box;
+  overflow: hidden;
+  line-height: 1.2;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
 
+@media (max-width: 47.999rem) {
   .quick-declaration-usage-listbox {
     max-height: min(18rem, 62vh) !important;
   }
