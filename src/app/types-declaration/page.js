@@ -1,9 +1,11 @@
 import {CallOut} from '@codegouvfr/react-dsfr/CallOut'
-import {Box, Typography} from '@mui/material'
+import {forbidden} from 'next/navigation'
 
+import AdminPageShell from '@/components/admin/admin-page-shell.js'
 import DeclarationTypesAdmin from '@/components/declaration-types/declaration-types-admin.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {listDeclarationTypesAction} from '@/server/actions/declaration-types.js'
+import {getCurrentUser} from '@/server/actions/user.js'
 
 export const metadata = {
   title: 'Types de déclaration'
@@ -12,6 +14,12 @@ export const metadata = {
 export const dynamic = 'force-dynamic'
 
 const Page = async () => {
+  const userResult = await getCurrentUser()
+
+  if (!userResult.success || userResult.data?.role !== 'ADMIN') {
+    forbidden()
+  }
+
   const result = await listDeclarationTypesAction()
   const payload = result.success ? result.data : {data: [], meta: {}}
 
@@ -19,15 +27,10 @@ const Page = async () => {
     <>
       <StartDsfrOnHydration />
 
-      <Box className='fr-container h-full w-full flex flex-col gap-5 mb-8'>
-        <Box className='fr-mt-4w'>
-          <Typography variant='h4'>Types de déclaration</Typography>
-          <p className='fr-text--sm'>
-            Gérez les types de déclaration disponibles sur la plateforme. Un type actif peut ensuite être autorisé
-            sur un déclarant par un administrateur ou un agent ayant accès à sa fiche.
-          </p>
-        </Box>
-
+      <AdminPageShell
+        description='Gérez les formats disponibles sur la plateforme et leur attribution aux déclarants.'
+        title='Types de déclaration'
+      >
         <CallOut
           iconId='ri-information-line'
           title='À quoi sert cette configuration ?'
@@ -37,7 +40,7 @@ const Page = async () => {
         </CallOut>
 
         <DeclarationTypesAdmin initialPayload={payload} />
-      </Box>
+      </AdminPageShell>
     </>
   )
 }

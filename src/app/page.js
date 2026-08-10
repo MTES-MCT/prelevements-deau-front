@@ -11,7 +11,7 @@ const Home = async () => {
   const role = userResult?.data?.role
 
   if (role === 'ADMIN') {
-    redirect('/tableau-de-bord')
+    redirect('/administration')
   }
 
   if (role === 'INSTRUCTOR') {

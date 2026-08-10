@@ -2,7 +2,6 @@
 
 import {useEffect, useState} from 'react'
 
-import {fr} from '@codegouvfr/react-dsfr'
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import Link from 'next/link'
 
@@ -31,39 +30,6 @@ function buildMissingSource(declaration) {
     declaration
   }
 }
-
-function formatReplayableCount(count) {
-  return `${count} déclaration${count > 1 ? 's' : ''} en erreur à rejouer`
-}
-
-const ReplayableDeclarationsSummary = ({count}) => (
-  <section
-    className='fr-mb-4w border border-orange-200 border-l-4 bg-white px-4 py-3'
-    role='status'
-  >
-    <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
-      <div className='flex min-w-0 gap-3'>
-        <span
-          aria-hidden='true'
-          className='fr-icon-warning-fill mt-1 shrink-0'
-          style={{color: fr.colors.decisions.text.default.warning.default}}
-        />
-        <div className='min-w-0'>
-          <p className='fr-text--md fr-mb-0 font-semibold text-gray-900'>
-            {formatReplayableCount(count)}
-          </p>
-          <p className='fr-text--sm fr-mb-0 text-gray-600'>
-            Ces déclarations doivent être vérifiées et relancées depuis la liste dédiée.
-          </p>
-        </div>
-      </div>
-
-      <Link className='fr-btn fr-btn--secondary fr-btn--sm shrink-0' href='/declarations/a-rejouer'>
-        Ouvrir la liste
-      </Link>
-    </div>
-  </section>
-)
 
 function getFileLabel(file, declarationType) {
   return file.filename || getDeclarationTypeLabel(file.type, declarationType)
@@ -122,7 +88,7 @@ const ReplayableDeclarationActions = ({
   </div>
 )
 
-const ReplayableDeclarationsPanel = ({mode = 'list'}) => {
+const ReplayableDeclarationsPanel = () => {
   const {user, isLoading} = useAuth()
   const [items, setItems] = useState([])
   const [isLoaded, setIsLoaded] = useState(false)
@@ -173,49 +139,33 @@ const ReplayableDeclarationsPanel = ({mode = 'list'}) => {
   }
 
   if (user?.role !== 'ADMIN') {
-    if (mode === 'list') {
-      return (
-        <Alert
-          severity='error'
-          title='Accès réservé aux administrateurs'
-          description='Cette vue est réservée aux administrateurs.'
-        />
-      )
-    }
-
-    return null
+    return (
+      <Alert
+        severity='error'
+        title='Accès réservé aux administrateurs'
+        description='Cette vue est réservée aux administrateurs.'
+      />
+    )
   }
 
   if (fetchError) {
-    if (mode === 'list') {
-      return (
-        <Alert
-          severity='error'
-          title='Déclarations à rejouer indisponibles'
-          description={fetchError}
-        />
-      )
-    }
-
-    return null
+    return (
+      <Alert
+        severity='error'
+        title='Déclarations à rejouer indisponibles'
+        description={fetchError}
+      />
+    )
   }
 
   if (items.length === 0) {
-    if (mode === 'list') {
-      return (
-        <Alert
-          severity='success'
-          title='Aucune déclaration à rejouer'
-          description='Toutes les déclarations traitées disposent d’une source exploitable.'
-        />
-      )
-    }
-
-    return null
-  }
-
-  if (mode === 'summary') {
-    return <ReplayableDeclarationsSummary count={items.length} />
+    return (
+      <Alert
+        severity='success'
+        title='Aucune déclaration à rejouer'
+        description='Toutes les déclarations traitées disposent d’une source exploitable.'
+      />
+    )
   }
 
   const removeItem = declarationId => {

@@ -16,7 +16,6 @@ const FooterComponent = () => {
   return (
     <DSFRFooter
       bottomItems={[headerFooterDisplayItem]}
-      accessibility='fully compliant'
       contentDescription=''
     />
   )

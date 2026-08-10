@@ -6,6 +6,7 @@ import {Header as DSFRHeader} from '@codegouvfr/react-dsfr/Header'
 import {Chip} from '@mui/material'
 import {usePathname} from 'next/navigation'
 
+import HeaderDropdownMenu from '@/components/admin/header-dropdown-menu.js'
 import {useAuth} from '@/contexts/auth-context.js'
 
 const ROLE_LABELS = {
@@ -78,30 +79,6 @@ const NAV_ITEMS = [
     text: 'Déclarants',
     roles: ['INSTRUCTOR', 'ADMIN'],
     permission: 'declarant.list'
-  },
-  {
-    linkProps: {
-      href: '/types-declaration',
-      target: '_self'
-    },
-    text: 'Types de déclaration',
-    roles: ['ADMIN']
-  },
-  {
-    linkProps: {
-      href: '/notifications-declarations',
-      target: '_self'
-    },
-    text: 'Notifications',
-    roles: ['ADMIN']
-  },
-  {
-    linkProps: {
-      href: '/comptes-service',
-      target: '_self'
-    },
-    text: 'Comptes de service',
-    roles: ['ADMIN']
   },
   {
     linkProps: {
@@ -227,22 +204,42 @@ const HeaderComponent = () => {
       )
     }
 
-    items.push({
-      iconId: 'ri-account-circle-fill',
-      text: 'Mon compte',
-      linkProps: {
-        href: '/mon-compte'
-      }
-    }, {
-      iconId: 'ri-logout-box-r-line',
-      text: 'Se déconnecter',
-      buttonProps: {
-        onClick: handleLogout
-      }
-    })
+    if (user.role === 'ADMIN' && !user.impersonation?.active) {
+      items.push({
+        iconId: 'ri-admin-line',
+        text: 'Administration',
+        linkProps: {
+          href: '/administration'
+        }
+      })
+    }
+
+    items.push(
+      <HeaderDropdownMenu
+        key='account'
+        active={pathname.startsWith('/mon-compte')}
+        iconClassName='ri-account-circle-fill'
+        items={[
+          {
+            key: 'account',
+            label: 'Mon compte',
+            href: '/mon-compte',
+            iconClassName: 'ri-account-circle-line',
+            active: pathname.startsWith('/mon-compte')
+          },
+          {
+            key: 'logout',
+            label: 'Se déconnecter',
+            iconClassName: 'ri-logout-box-r-line',
+            onSelect: handleLogout
+          }
+        ]}
+        label='Mon compte'
+      />
+    )
 
     return items
-  }, [user, isLoadingUser, handleLogout])
+  }, [user, isLoadingUser, handleLogout, pathname])
 
   return (
     <DSFRHeader

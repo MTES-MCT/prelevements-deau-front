@@ -6,7 +6,6 @@ import {usePathname, useRouter, useSearchParams} from 'next/navigation'
 
 import DeclarationFilters from '@/components/declarations/instruction/declaration-filters.js'
 import DeclarationList from '@/components/declarations/instruction/declaration-list.js'
-import ReplayableDeclarationsPanel from '@/components/declarations/instruction/replayable-declarations-panel.js'
 
 const DEFAULT_PAGE = '1'
 const DEFAULT_PAGE_SIZE = '25'
@@ -58,7 +57,6 @@ const DeclarationTabs = () => {
 
   return (
     <div>
-      <ReplayableDeclarationsPanel mode='summary' />
       <DeclarationFilters
         filters={filters}
         setFilters={handleSetFilters}

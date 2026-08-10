@@ -1,9 +1,13 @@
+import {forbidden} from 'next/navigation'
+
+import AdminPageShell from '@/components/admin/admin-page-shell.js'
 import DeclarationNotificationsAdmin from '@/components/declaration-notifications/declaration-notifications-admin.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {
   listDeclarationNotificationRunsAction,
   listUpcomingDeclarationNotificationsAction
 } from '@/server/actions/declaration-notifications.js'
+import {getCurrentUser} from '@/server/actions/user.js'
 
 export const metadata = {
   title: 'Notifications de déclaration | Partageons l’eau'
@@ -12,6 +16,12 @@ export const metadata = {
 export const dynamic = 'force-dynamic'
 
 const Page = async () => {
+  const userResult = await getCurrentUser()
+
+  if (!userResult.success || userResult.data?.role !== 'ADMIN') {
+    forbidden()
+  }
+
   const [upcomingResult, runsResult] = await Promise.all([
     listUpcomingDeclarationNotificationsAction(),
     listDeclarationNotificationRunsAction({limit: 100})
@@ -24,16 +34,12 @@ const Page = async () => {
     <>
       <StartDsfrOnHydration />
 
-      <div className='fr-container fr-py-5w'>
-        <div className='fr-mb-4w'>
-          <h1 className='fr-h2 fr-mb-1w'>Notifications de déclaration</h1>
-          <p className='fr-text--sm fr-mb-0'>
-            Suivez les rappels et relances automatiques envoyés via Brevo.
-          </p>
-        </div>
-
+      <AdminPageShell
+        description='Suivez les rappels et relances automatiques envoyés via Brevo.'
+        title='Notifications de déclaration'
+      >
         <DeclarationNotificationsAdmin upcoming={upcoming} runs={runs} />
-      </div>
+      </AdminPageShell>
     </>
   )
 }
