@@ -82,6 +82,15 @@ export function isPointReconciliationRelevant(declaration, source = declaration?
   return source?.type === 'DECLARATION' && declaration?.dataSourceType === 'SPREADSHEET'
 }
 
+export function shouldLoadAvailablePointsForDeclaration({currentRole, declaration, source}) {
+  const canViewAvailablePoints = currentRole === 'ADMIN'
+    || (source?.chunks?.some(chunk => chunk.canReconcile) ?? false)
+
+  return canViewAvailablePoints
+    && source?.status === 'COMPLETED'
+    && isPointReconciliationRelevant(declaration, source)
+}
+
 export function getTelemetrySourceTitle(source) {
   const connector = source?.metadata?.connector
   return connector ? `Télérelève ${connector}` : 'Données télérelevées'
