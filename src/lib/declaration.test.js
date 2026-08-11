@@ -14,7 +14,8 @@ import {
   isDeclarationTreatmentPending,
   isManualQuickDeclarationSource,
   isPointReconciliationRelevant,
-  isTelemetrySource
+  isTelemetrySource,
+  shouldLoadAvailablePointsForDeclaration
 } from './declaration.js'
 
 test('isTelemetrySource détecte les sources API et les déclarations API', t => {
@@ -35,6 +36,37 @@ test('isPointReconciliationRelevant cible uniquement les fichiers déclaratifs',
   t.false(isPointReconciliationRelevant({
     dataSourceType: 'SPREADSHEET',
     source: {type: 'API'}
+  }))
+})
+
+test('shouldLoadAvailablePointsForDeclaration conserve la carte en lecture seule pour un admin', t => {
+  const declaration = {dataSourceType: 'SPREADSHEET'}
+  const source = {
+    type: 'DECLARATION',
+    status: 'COMPLETED',
+    chunks: [
+      {canReconcile: false},
+      {canReconcile: false}
+    ]
+  }
+
+  t.true(shouldLoadAvailablePointsForDeclaration({
+    currentRole: 'ADMIN',
+    declaration,
+    source
+  }))
+  t.false(shouldLoadAvailablePointsForDeclaration({
+    currentRole: 'INSTRUCTOR',
+    declaration,
+    source
+  }))
+  t.true(shouldLoadAvailablePointsForDeclaration({
+    currentRole: 'INSTRUCTOR',
+    declaration,
+    source: {
+      ...source,
+      chunks: [{canReconcile: true}]
+    }
   }))
 })
 

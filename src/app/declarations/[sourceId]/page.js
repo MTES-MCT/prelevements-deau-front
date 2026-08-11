@@ -11,7 +11,7 @@ import {
   getDeclarationDisplayStatus,
   getSourcePeriodLabel,
   getPointsPrelevementIdsFromSource,
-  isPointReconciliationRelevant
+  shouldLoadAvailablePointsForDeclaration
 } from '@/lib/declaration.js'
 import {getAvailablePointsPrelevementsForDeclarationAction} from '@/server/actions/declarations.js'
 import {getMySourceAction} from '@/server/actions/sources.js'
@@ -51,10 +51,12 @@ const SourcePage = async ({params}) => {
   const displayStatus = getDeclarationDisplayStatus(declaration, source)
   const idPoints = getPointsPrelevementIdsFromSource(source)
   const periodLabel = getSourcePeriodLabel(source)
-  const canReconcile = source.chunks?.some(chunk => chunk.canReconcile) ?? currentRole === 'ADMIN'
-  const shouldLoadAvailablePoints = canReconcile
-    && source.status === 'COMPLETED'
-    && isPointReconciliationRelevant(declaration, source)
+  const canReconcile = source.chunks?.some(chunk => chunk.canReconcile) ?? false
+  const shouldLoadAvailablePoints = shouldLoadAvailablePointsForDeclaration({
+    currentRole,
+    declaration,
+    source
+  })
   const canAdminManageDeclaration = currentRole === 'ADMIN' && Boolean(source.declaration?.id)
   const canReplayDeclaration = canAdminManageDeclaration
     && (source.declaration?.files?.length ?? 0) > 0
