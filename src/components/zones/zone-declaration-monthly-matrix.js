@@ -16,16 +16,19 @@ const CELL_LABELS = {
 
 const CELL_STYLES = {
   DECLARED: {
-    backgroundColor: '#b8fec9',
-    borderColor: '#18753c'
+    backgroundColor: 'var(--app-matrix-declared-background, #b8fec9)',
+    borderColor: 'var(--app-matrix-declared-border, #18753c)',
+    color: 'var(--app-matrix-declared-text, #161616)'
   },
   MISSING: {
-    backgroundColor: '#ffe9e6',
-    borderColor: '#ce0500'
+    backgroundColor: 'var(--app-matrix-missing-background, #ffe9e6)',
+    borderColor: 'var(--app-matrix-missing-border, #ce0500)',
+    color: 'var(--app-matrix-missing-text, #161616)'
   },
   INACTIVE: {
-    backgroundColor: '#eeeeee',
-    borderColor: '#dddddd'
+    backgroundColor: 'var(--app-matrix-inactive-background, #eeeeee)',
+    borderColor: 'var(--app-matrix-inactive-border, #dddddd)',
+    color: 'var(--app-matrix-inactive-text, #666666)'
   }
 }
 
@@ -207,7 +210,7 @@ const MatrixCell = ({row, cell}) => {
           lineHeight: '16px',
           border: `1px solid ${style.borderColor}`,
           backgroundColor: style.backgroundColor,
-          color: cell.status === 'INACTIVE' ? '#666666' : '#161616'
+          color: style.color
         }}
       >
         {cell.status === 'DECLARED' ? (cell.declarationsCount > 1 ? cell.declarationsCount : '✓') : (cell.status === 'MISSING' ? '!' : '·')}

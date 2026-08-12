@@ -54,7 +54,7 @@ const STATION_COLORS = [
   '#0063CB',
   '#7A4E00'
 ]
-const IPS_REFERENCE_LINES = [{y: 0, color: '#6A6A6A'}]
+const IPS_REFERENCE_LINES = [{y: 0, color: 'var(--app-color-muted, #6A6A6A)'}]
 const PIEZOMETRY_NUMBER_FORMATTER = new Intl.NumberFormat('fr-FR', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2

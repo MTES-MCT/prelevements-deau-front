@@ -19,7 +19,10 @@ import {
   buildValueMap
 } from './util.js'
 
-import {CALENDAR_STATUS_COLORS} from '@/lib/calendar-colors.js'
+import {
+  CALENDAR_STATUS_COLORS,
+  getCalendarStatusClassName
+} from '@/lib/calendar-colors.js'
 
 // ===================== Generic cell ===================== //
 const BaseCell = ({label, ariaLabel, interactive, color, size, onActivate, tooltipComponent: TooltipComponent}) => {
@@ -28,10 +31,10 @@ const BaseCell = ({label, ariaLabel, interactive, color, size, onActivate, toolt
 
   if (color) {
     style = {...style, backgroundColor: color}
-    classes += ' text-white'
+    classes += ` text-white ${getCalendarStatusClassName(color)}`
   } else {
     style = {...style, backgroundColor: CALENDAR_STATUS_COLORS.notDeclared}
-    classes += ' text-white'
+    classes += ` text-white ${getCalendarStatusClassName(CALENDAR_STATUS_COLORS.notDeclared)}`
   }
 
   if (interactive) {

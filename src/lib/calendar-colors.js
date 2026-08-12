@@ -47,6 +47,13 @@ export async function getCalendarStatusColors(isDark = false) {
  */
 export const CALENDAR_STATUS_COLORS = STATIC_CALENDAR_STATUS_COLORS
 
+export function getCalendarStatusClassName(color) {
+  const status = Object.entries(CALENDAR_STATUS_COLORS)
+    .find(([, statusColor]) => statusColor === color)?.[0]
+
+  return status ? `app-calendar-status--${status}` : ''
+}
+
 /**
  * Default legend labels for calendar status colors
  * @param {Object} [colors=CALENDAR_STATUS_COLORS] - Custom colors to use

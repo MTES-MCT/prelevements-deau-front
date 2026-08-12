@@ -68,14 +68,14 @@ const MONITORING_STATION_TYPES = {
   PIEZOMETER: {
     label: 'Niveau piézométrique',
     source: 'Hub’Eau / ADES (BRGM)',
-    background: '#E3E3FD',
-    color: '#000091'
+    background: 'var(--app-monitoring-piezo-background, #E3E3FD)',
+    color: 'var(--app-monitoring-piezo-text, #000091)'
   },
   FLOW_STATION: {
     label: 'Mesure de débit',
     source: 'Hub’Eau / Hydrométrie',
-    background: '#B8FEC9',
-    color: '#18753C'
+    background: 'var(--app-monitoring-flow-background, #B8FEC9)',
+    color: 'var(--app-monitoring-flow-text, #18753C)'
   }
 }
 

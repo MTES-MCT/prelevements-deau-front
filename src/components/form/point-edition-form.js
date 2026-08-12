@@ -114,8 +114,8 @@ const PointEditionForm = ({canDelete = false, pointPrelevement}) => {
           <Button
             priority='secondary'
             style={{
-              color: 'red',
-              boxShadow: '0 0 0 1px red'
+              color: 'var(--app-color-error, red)',
+              boxShadow: '0 0 0 1px var(--app-delete-border, red)'
             }}
             onClick={() => setIsDialogOpen(!isDialogOpen)}
           >
@@ -139,7 +139,7 @@ const PointEditionForm = ({canDelete = false, pointPrelevement}) => {
               Annuler
             </Button>
             <Button
-              style={{backgroundColor: 'red'}}
+              style={{backgroundColor: 'var(--app-delete-background, red)'}}
               onClick={handleDeletePoint}
             >
               Supprimer le point de prélèvement

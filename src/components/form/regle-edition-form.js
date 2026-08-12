@@ -127,8 +127,8 @@ const RegleEditionForm = ({canDelete = false, preleveur, regle, exploitations, d
           <Button
             priority='secondary'
             style={{
-              color: 'red',
-              boxShadow: '0 0 0 1px red'
+              color: 'var(--app-color-error, red)',
+              boxShadow: '0 0 0 1px var(--app-delete-border, red)'
             }}
             onClick={() => setIsDialogOpen(true)}
           >
@@ -157,7 +157,7 @@ const RegleEditionForm = ({canDelete = false, preleveur, regle, exploitations, d
             </Button>
             <Button
               disabled={isDeleting}
-              style={{backgroundColor: 'red'}}
+              style={{backgroundColor: 'var(--app-delete-background, red)'}}
               onClick={handleDelete}
             >
               {isDeleting ? 'Suppression...' : 'Supprimer cette règle'}

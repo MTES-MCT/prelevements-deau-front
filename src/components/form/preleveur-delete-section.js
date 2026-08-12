@@ -52,8 +52,8 @@ const PreleveurDeleteSection = ({preleveur}) => {
           <Button
             priority='secondary'
             style={{
-              color: 'red',
-              boxShadow: '0 0 0 1px red'
+              color: 'var(--app-color-error, red)',
+              boxShadow: '0 0 0 1px var(--app-delete-border, red)'
             }}
             onClick={() => setIsDialogOpen(!isDialogOpen)}
           >
@@ -80,7 +80,7 @@ const PreleveurDeleteSection = ({preleveur}) => {
               Annuler
             </Button>
             <Button
-              style={{backgroundColor: 'red'}}
+              style={{backgroundColor: 'var(--app-delete-background, red)'}}
               onClick={handleDeletePreleveur}
             >
               Supprimer ce déclarant

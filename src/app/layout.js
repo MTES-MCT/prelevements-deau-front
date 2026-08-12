@@ -20,6 +20,7 @@ import {getHtmlAttributes, DsfrHead} from '@/dsfr-bootstrap/server-only-index.js
 import {getServerAuthSession} from '@/server/auth.js'
 
 import '@/app/globals.css'
+import '@/app/dark-mode.css'
 
 export const metadata = {
   title: {

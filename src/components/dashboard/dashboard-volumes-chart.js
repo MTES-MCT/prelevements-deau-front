@@ -368,7 +368,7 @@ const DashboardVolumesChart = ({
               return (
                 <g key={tick}>
                   <line
-                    stroke='#e5e7eb'
+                    stroke='var(--app-chart-grid, #e5e7eb)'
                     strokeDasharray='4 5'
                     strokeWidth='1'
                     x1={MARGIN.left}
@@ -377,7 +377,7 @@ const DashboardVolumesChart = ({
                     y2={y}
                   />
                   <text
-                    fill='#6b7280'
+                    fill='var(--app-chart-text, #6b7280)'
                     fontSize='12'
                     textAnchor='end'
                     x={MARGIN.left - 10}
@@ -390,7 +390,7 @@ const DashboardVolumesChart = ({
             })}
 
             <text
-              fill='#4b5563'
+              fill='var(--app-chart-strong-text, #4b5563)'
               fontSize='12'
               textAnchor='middle'
               transform={`rotate(-90 ${18} ${MARGIN.top + (CHART_HEIGHT / 2)})`}
@@ -444,7 +444,7 @@ const DashboardVolumesChart = ({
 
                   {total > 0 && (
                     <text
-                      fill='#4b5563'
+                      fill='var(--app-chart-strong-text, #4b5563)'
                       fontSize='12'
                       fontWeight='600'
                       textAnchor='middle'
@@ -456,7 +456,7 @@ const DashboardVolumesChart = ({
                   )}
 
                   <text
-                    fill='#4b5563'
+                    fill='var(--app-chart-strong-text, #4b5563)'
                     fontSize='12'
                     textAnchor='middle'
                     x={x + (barWidth / 2)}

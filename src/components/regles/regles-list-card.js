@@ -336,7 +336,7 @@ const ReglesListCard = ({canCreate = false, canDelete = false, canUpdate = false
           </Button>
           <Button
             disabled={deleting}
-            style={{backgroundColor: '#ce0500'}}
+            style={{backgroundColor: 'var(--app-delete-background, #ce0500)'}}
             onClick={handleDelete}
           >
             {deleting ? 'Suppression…' : 'Supprimer cette règle'}

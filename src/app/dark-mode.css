@@ -1,0 +1,405 @@
+/*
+ * Compatibility layer for legacy Tailwind colors. DSFR and MUI already expose
+ * theme-aware colors; these rules only apply when DSFR activates its dark theme.
+ */
+:root[data-fr-theme='dark'] {
+  --app-color-blue-france: var(--text-action-high-blue-france);
+  --app-color-blue-ecume: var(--text-action-high-blue-ecume);
+  --app-color-success: var(--text-default-success);
+  --app-color-warning: var(--text-default-warning);
+  --app-color-error: var(--text-default-error);
+  --app-color-muted: var(--text-mention-grey);
+  --app-delete-background: var(--background-action-high-error);
+  --app-delete-border: var(--border-plain-error);
+  --app-flow-prelevement-background: var(--background-contrast-info);
+  --app-flow-prelevement-border: var(--border-default-blue-france);
+  --app-flow-rejet-background: var(--background-contrast-orange-terre-battue);
+  --app-flow-rejet-border: var(--border-plain-orange-terre-battue);
+  --app-flow-rejet-text: var(--text-action-high-orange-terre-battue);
+  --app-chart-grid: var(--border-default-grey);
+  --app-chart-text: var(--text-mention-grey);
+  --app-chart-strong-text: var(--text-default-grey);
+  --app-chart-marker-background: var(--background-default-grey);
+  --app-monitoring-piezo-background: var(--background-contrast-info);
+  --app-monitoring-piezo-text: var(--text-default-info);
+  --app-monitoring-flow-background: var(--background-contrast-success);
+  --app-monitoring-flow-text: var(--text-default-success);
+  --app-matrix-declared-background: var(--background-contrast-success);
+  --app-matrix-declared-border: var(--border-plain-success);
+  --app-matrix-declared-text: var(--text-default-success);
+  --app-matrix-missing-background: var(--background-contrast-error);
+  --app-matrix-missing-border: var(--border-plain-error);
+  --app-matrix-missing-text: var(--text-default-error);
+  --app-matrix-inactive-background: var(--background-contrast-grey);
+  --app-matrix-inactive-border: var(--border-default-grey);
+  --app-matrix-inactive-text: var(--text-mention-grey);
+  color-scheme: dark;
+}
+
+:root[data-fr-theme='dark'] body {
+  color: var(--text-default-grey);
+  background-color: var(--background-default-grey);
+}
+
+/* Neutral surfaces */
+:root[data-fr-theme='dark'] .bg-white,
+:root[data-fr-theme='dark'] [class~='odd:bg-white']:nth-child(odd) {
+  background-color: var(--background-default-grey);
+}
+
+:root[data-fr-theme='dark'] .bg-gray-50,
+:root[data-fr-theme='dark'] [class~='bg-[#f7f7fb]'] {
+  background-color: var(--background-alt-grey);
+}
+
+:root[data-fr-theme='dark'] .bg-gray-100,
+:root[data-fr-theme='dark'] .bg-slate-100,
+:root[data-fr-theme='dark'] [class~='bg-[#f6f6f6]'] {
+  background-color: var(--background-contrast-grey);
+}
+
+:root[data-fr-theme='dark'] .bg-gray-200,
+:root[data-fr-theme='dark'] .bg-slate-200 {
+  background-color: var(--background-contrast-grey-hover);
+}
+
+:root[data-fr-theme='dark'] [class~='bg-white/80'] {
+  background-color: color-mix(in srgb, var(--background-default-grey) 80%, transparent);
+}
+
+:root[data-fr-theme='dark'] [class~='bg-white/95'] {
+  background-color: color-mix(in srgb, var(--background-raised-grey) 95%, transparent);
+}
+
+:root[data-fr-theme='dark'] [class~='focus:bg-white']:focus {
+  background-color: var(--background-default-grey);
+}
+
+:root[data-fr-theme='dark'] [class~='disabled:bg-gray-100']:disabled {
+  background-color: var(--background-disabled-grey);
+}
+
+:root[data-fr-theme='dark'] [class~='hover:bg-gray-50']:hover,
+:root[data-fr-theme='dark'] [class~='hover:bg-[#f7f7ff]']:hover,
+:root[data-fr-theme='dark'] [class~='hover:bg-[#f6f6fe]']:hover {
+  background-color: var(--background-alt-blue-france-hover);
+}
+
+:root[data-fr-theme='dark'] [class~='hover:bg-gray-100']:hover,
+:root[data-fr-theme='dark'] [class~='hover:bg-gray-200']:hover,
+:root[data-fr-theme='dark'] [class~='hover:bg-slate-200']:hover {
+  background-color: var(--background-contrast-grey-hover);
+}
+
+:root[data-fr-theme='dark'] [class~='hover:bg-[#eeeeff]']:hover {
+  background-color: var(--background-contrast-info-hover);
+}
+
+/* Neutral text */
+:root[data-fr-theme='dark'] .text-gray-900,
+:root[data-fr-theme='dark'] .text-gray-800 {
+  color: var(--text-title-grey);
+}
+
+:root[data-fr-theme='dark'] .text-gray-700,
+:root[data-fr-theme='dark'] .text-gray-600,
+:root[data-fr-theme='dark'] .text-slate-700 {
+  color: var(--text-default-grey);
+}
+
+:root[data-fr-theme='dark'] .text-gray-500,
+:root[data-fr-theme='dark'] .text-gray-400,
+:root[data-fr-theme='dark'] .text-gray-300,
+:root[data-fr-theme='dark'] .text-slate-500,
+:root[data-fr-theme='dark'] .text-slate-400,
+:root[data-fr-theme='dark'] .text-slate-300 {
+  color: var(--text-mention-grey);
+}
+
+:root[data-fr-theme='dark'] [class~='placeholder:text-gray-500']::placeholder {
+  color: var(--text-mention-grey);
+}
+
+:root[data-fr-theme='dark'] [class~='disabled:text-gray-500']:disabled {
+  color: var(--text-disabled-grey);
+}
+
+:root[data-fr-theme='dark'] [class~='hover:text-gray-900']:hover {
+  color: var(--text-title-grey);
+}
+
+/* Neutral borders and separators */
+:root[data-fr-theme='dark'] .border-gray-100,
+:root[data-fr-theme='dark'] .border-gray-200,
+:root[data-fr-theme='dark'] .border-gray-300 {
+  border-color: var(--border-default-grey);
+}
+
+:root[data-fr-theme='dark'] .border-gray-400,
+:root[data-fr-theme='dark'] .border-gray-600,
+:root[data-fr-theme='dark'] .border-gray-700 {
+  border-color: var(--border-plain-grey);
+}
+
+:root[data-fr-theme='dark'] .border-b-gray-200,
+:root[data-fr-theme='dark'] .border-r-gray-200 {
+  border-color: var(--border-default-grey);
+}
+
+:root[data-fr-theme='dark'] .border-b-gray-700 {
+  border-bottom-color: var(--border-plain-grey);
+}
+
+:root[data-fr-theme='dark'] .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+:root[data-fr-theme='dark'] .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--border-default-grey);
+}
+
+:root[data-fr-theme='dark'] .ring-gray-300 {
+  --tw-ring-color: var(--border-default-grey);
+}
+
+:root[data-fr-theme='dark'] [class~='hover:border-gray-400']:hover {
+  border-color: var(--border-plain-grey);
+}
+
+/* Informational and status surfaces */
+:root[data-fr-theme='dark'] .bg-blue-50,
+:root[data-fr-theme='dark'] [class~='bg-[#eeeeff]'],
+:root[data-fr-theme='dark'] [class~='bg-[#ececfe]'],
+:root[data-fr-theme='dark'] [class~='bg-[#f5f5fe]'],
+:root[data-fr-theme='dark'] [class~='even:bg-[#f5f5fe]']:nth-child(even) {
+  background-color: var(--background-contrast-info);
+}
+
+:root[data-fr-theme='dark'] [class~='bg-[#f7f7ff]'],
+:root[data-fr-theme='dark'] [class~='bg-[#f6f6fe]'] {
+  background-color: var(--background-alt-blue-france);
+}
+
+:root[data-fr-theme='dark'] .bg-green-50,
+:root[data-fr-theme='dark'] [class~='bg-[#e6f4ea]'],
+:root[data-fr-theme='dark'] [class~='bg-[#e6feda]'],
+:root[data-fr-theme='dark'] [class~='bg-[#f3fbf6]'] {
+  background-color: var(--background-contrast-success);
+}
+
+:root[data-fr-theme='dark'] .bg-amber-50,
+:root[data-fr-theme='dark'] .bg-yellow-50,
+:root[data-fr-theme='dark'] [class~='bg-[#fff3cd]'],
+:root[data-fr-theme='dark'] [class~='bg-[#fff4f0]'] {
+  background-color: var(--background-contrast-warning);
+}
+
+:root[data-fr-theme='dark'] .bg-red-50,
+:root[data-fr-theme='dark'] [class~='bg-red-50/50'],
+:root[data-fr-theme='dark'] [class~='bg-[#ffe9e9]'],
+:root[data-fr-theme='dark'] [class~='bg-[#fff4f3]'] {
+  background-color: var(--background-contrast-error);
+}
+
+:root[data-fr-theme='dark'] .text-blue-900,
+:root[data-fr-theme='dark'] [class~='text-[#000091]'] {
+  color: var(--text-action-high-blue-france);
+}
+
+:root[data-fr-theme='dark'] .text-blue-500,
+:root[data-fr-theme='dark'] [class~='text-[#3B87FF]'] {
+  color: var(--text-action-high-blue-ecume);
+}
+
+:root[data-fr-theme='dark'] .group:hover [class~='group-hover:text-[#000091]'],
+:root[data-fr-theme='dark'] [class~='hover:text-[#000091]']:hover {
+  color: var(--text-action-high-blue-france);
+}
+
+:root[data-fr-theme='dark'] [class~='text-[#18753c]'] {
+  color: var(--text-default-success);
+}
+
+:root[data-fr-theme='dark'] .text-amber-700,
+:root[data-fr-theme='dark'] .text-orange-700,
+:root[data-fr-theme='dark'] [class~='text-[#8d533e]'],
+:root[data-fr-theme='dark'] [class~='text-[#716043]'] {
+  color: var(--text-default-warning);
+}
+
+:root[data-fr-theme='dark'] .text-red-500,
+:root[data-fr-theme='dark'] .text-red-700,
+:root[data-fr-theme='dark'] [class~='text-[#ce0500]'] {
+  color: var(--text-default-error);
+}
+
+:root[data-fr-theme='dark'] [class~='text-[#b34000]'],
+:root[data-fr-theme='dark'] [class~='text-[#6b1f00]'] {
+  color: var(--text-action-high-orange-terre-battue);
+}
+
+:root[data-fr-theme='dark'] .border-blue-600,
+:root[data-fr-theme='dark'] [class~='border-[#000091]'] {
+  border-color: var(--border-active-blue-france);
+}
+
+:root[data-fr-theme='dark'] .border-l-blue-500,
+:root[data-fr-theme='dark'] .border-l-blue-600 {
+  border-left-color: var(--border-plain-info);
+}
+
+:root[data-fr-theme='dark'] .border-l-green-600 {
+  border-left-color: var(--border-plain-success);
+}
+
+:root[data-fr-theme='dark'] .border-l-yellow-600 {
+  border-left-color: var(--border-plain-warning);
+}
+
+:root[data-fr-theme='dark'] .border-l-red-600 {
+  border-left-color: var(--border-plain-error);
+}
+
+:root[data-fr-theme='dark'] .border-l-gray-400 {
+  border-left-color: var(--border-plain-grey);
+}
+
+:root[data-fr-theme='dark'] [class~='border-[#18753c]'] {
+  border-color: var(--border-plain-success);
+}
+
+:root[data-fr-theme='dark'] .border-amber-200,
+:root[data-fr-theme='dark'] [class~='border-[#8d533e]'] {
+  border-color: var(--border-plain-warning);
+}
+
+:root[data-fr-theme='dark'] .border-red-200,
+:root[data-fr-theme='dark'] .border-red-500 {
+  border-color: var(--border-plain-error);
+}
+
+:root[data-fr-theme='dark'] [class~='border-[#ce614a]'] {
+  border-color: var(--border-plain-orange-terre-battue);
+}
+
+:root[data-fr-theme='dark'] [class~='focus:outline-[#000091]']:focus,
+:root[data-fr-theme='dark'] [class~='focus-visible:outline-[#000091]']:focus-visible,
+:root[data-fr-theme='dark'] [class~='focus-visible:outline-[#0a76f6]']:focus-visible {
+  outline-color: var(--border-active-blue-france);
+}
+
+:root[data-fr-theme='dark'] [class~='focus:border-[#000091]']:focus,
+:root[data-fr-theme='dark'] [class~='focus:border-b-[#000091]']:focus {
+  border-color: var(--border-active-blue-france);
+}
+
+:root[data-fr-theme='dark'] [class~='border-t-[#000091]'] {
+  border-top-color: var(--border-active-blue-france);
+}
+
+:root[data-fr-theme='dark'] [class~='border-[#000091]/20'],
+:root[data-fr-theme='dark'] [class~='border-[#000091]/25'] {
+  border-color: color-mix(in srgb, var(--border-active-blue-france) 35%, transparent);
+}
+
+:root[data-fr-theme='dark'] [class~='ring-[#000091]'],
+:root[data-fr-theme='dark'] [class~='focus-visible:ring-[#000091]']:focus-visible,
+:root[data-fr-theme='dark'] [class~='focus:ring-blue-500']:focus {
+  --tw-ring-color: var(--border-active-blue-france);
+}
+
+:root[data-fr-theme='dark'] [class~='ring-[#000091]/20'],
+:root[data-fr-theme='dark'] [class~='ring-[#000091]/25'] {
+  --tw-ring-color: color-mix(in srgb, var(--border-active-blue-france) 35%, transparent);
+}
+
+:root[data-fr-theme='dark'] [class~='ring-[#18753c]/25'] {
+  --tw-ring-color: color-mix(in srgb, var(--border-plain-success) 40%, transparent);
+}
+
+:root[data-fr-theme='dark'] [class~='shadow-[inset_0_0_0_2px_#000091]'] {
+  --tw-shadow: inset 0 0 0 2px var(--border-active-blue-france);
+  --tw-shadow-colored: inset 0 0 0 2px var(--tw-shadow-color);
+}
+
+:root[data-fr-theme='dark'] [class~='bg-[#000091]'] {
+  color: var(--text-inverted-blue-france);
+  background-color: var(--background-active-blue-france);
+}
+
+:root[data-fr-theme='dark'] .quick-declaration-combobox-toggle {
+  color: var(--text-mention-grey);
+}
+
+/* Calendar status colors are otherwise written as inline light-theme values. */
+:root[data-fr-theme='dark'] .app-calendar-status--present {
+  color: var(--text-inverted-blue-france) !important;
+  background-color: var(--background-active-blue-france) !important;
+}
+
+:root[data-fr-theme='dark'] .app-calendar-status--noSampling {
+  color: var(--text-default-info) !important;
+  background-color: var(--background-contrast-info) !important;
+}
+
+:root[data-fr-theme='dark'] .app-calendar-status--notDeclared {
+  color: var(--text-mention-grey) !important;
+  background-color: var(--background-contrast-grey) !important;
+}
+
+/* MapLibre controls and popovers */
+:root[data-fr-theme='dark'] .maplibregl-popup-content,
+:root[data-fr-theme='dark'] .maplibregl-ctrl-group,
+:root[data-fr-theme='dark'] .maplibregl-ctrl-attrib,
+:root[data-fr-theme='dark'] .maplibregl-ctrl-scale {
+  color: var(--text-default-grey);
+  background-color: var(--background-raised-grey);
+  border-color: var(--border-default-grey);
+}
+
+:root[data-fr-theme='dark'] .maplibregl-popup-close-button {
+  color: var(--text-default-grey);
+}
+
+:root[data-fr-theme='dark'] .maplibregl-popup-close-button:hover,
+:root[data-fr-theme='dark'] .maplibregl-ctrl button:hover {
+  background-color: var(--background-raised-grey-hover);
+}
+
+:root[data-fr-theme='dark'] .maplibregl-ctrl button .maplibregl-ctrl-icon {
+  filter: invert(1);
+}
+
+:root[data-fr-theme='dark'] .maplibregl-popup-anchor-top .maplibregl-popup-tip,
+:root[data-fr-theme='dark'] .maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+:root[data-fr-theme='dark'] .maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
+  border-bottom-color: var(--background-raised-grey);
+}
+
+:root[data-fr-theme='dark'] .maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+:root[data-fr-theme='dark'] .maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+:root[data-fr-theme='dark'] .maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
+  border-top-color: var(--background-raised-grey);
+}
+
+:root[data-fr-theme='dark'] .maplibregl-popup-anchor-left .maplibregl-popup-tip {
+  border-right-color: var(--background-raised-grey);
+}
+
+:root[data-fr-theme='dark'] .maplibregl-popup-anchor-right .maplibregl-popup-tip {
+  border-left-color: var(--background-raised-grey);
+}
+
+:root[data-fr-theme='dark'] .points-prelevement-map-popup .maplibregl-popup-content {
+  border-color: var(--border-default-grey);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 45%);
+}
+
+:root[data-fr-theme='dark'] .points-prelevement-map-popup .maplibregl-popup-close-button {
+  color: var(--text-default-grey);
+}
+
+:root[data-fr-theme='dark'] .points-prelevement-map-popup .maplibregl-popup-close-button:hover {
+  background-color: var(--background-action-low-blue-france-hover);
+}
+
+:root[data-fr-theme='dark'] .points-prelevement-map-popup .maplibregl-popup-close-button:focus-visible {
+  outline-color: var(--border-active-blue-france);
+}

@@ -73,7 +73,10 @@ const ResourceDeleteAction = ({id, redirectHref, resource}) => {
           iconId='fr-icon-delete-line'
           priority='secondary'
           size='small'
-          style={{boxShadow: 'inset 0 0 0 1px #ce0500', color: '#ce0500'}}
+          style={{
+            boxShadow: 'inset 0 0 0 1px var(--app-delete-border, #ce0500)',
+            color: 'var(--app-color-error, #ce0500)'
+          }}
           onClick={() => setOpen(true)}
         >
           Supprimer
@@ -103,7 +106,7 @@ const ResourceDeleteAction = ({id, redirectHref, resource}) => {
           </Button>
           <Button
             disabled={deleting}
-            style={{backgroundColor: '#ce0500'}}
+            style={{backgroundColor: 'var(--app-delete-background, #ce0500)'}}
             onClick={handleDelete}
           >
             {deleting ? 'Suppression…' : 'Confirmer la suppression'}
