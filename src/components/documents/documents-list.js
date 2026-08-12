@@ -142,7 +142,7 @@ const DocumentsList = ({
               Annuler
             </Button>
             <Button
-              style={{backgroundColor: 'red'}}
+              style={{backgroundColor: 'var(--app-delete-background, red)'}}
               onClick={handleConfirmDelete}
             >
               Supprimer ce document

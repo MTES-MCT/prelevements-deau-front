@@ -1,3 +1,5 @@
+import {getCalendarStatusClassName} from '@/lib/calendar-colors.js'
+
 const LegendItem = ({color, label}) => (
   <div className='flex items-center gap-2'>
     <span
@@ -6,7 +8,7 @@ const LegendItem = ({color, label}) => (
         width: '1em',
         backgroundColor: color
       }}
-      className='fr-p-1w aspect-square block rounded'
+      className={`fr-p-1w aspect-square block rounded ${getCalendarStatusClassName(color)}`}
     />
     <span>{label}</span>
   </div>

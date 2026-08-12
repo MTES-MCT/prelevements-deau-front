@@ -44,17 +44,17 @@ const sourceKindPresentation = {
 
 const quickDeclarationMeasurementPresentation = {
   INDEX: {
-    color: '#3B87FF',
+    color: 'var(--app-color-blue-ecume, #3B87FF)',
     iconClassName: 'fr-icon-dashboard-3-line text-[#3B87FF]',
     label: 'Index'
   },
   VOLUME: {
-    color: '#000091',
+    color: 'var(--app-color-blue-france, #000091)',
     iconClassName: 'fr-icon-drop-line text-[#000091]',
     label: 'Volume'
   },
   VOLUME_PRELEVE: {
-    color: '#000091',
+    color: 'var(--app-color-blue-france, #000091)',
     iconClassName: 'fr-icon-drop-line text-[#000091]',
     label: 'Volume prélevé'
   },
@@ -457,7 +457,7 @@ function getNatureSection({declaration, isManual, isTelemetry, kind, periodLabel
       secondary: getTelemetryReadingsLabel(source),
       tag: connectorLabel
         ? {
-          color: '#000091',
+          color: 'var(--app-color-blue-france, #000091)',
           iconClassName: 'fr-icon-focus-3-line text-[#000091]',
           label: connectorLabel
         }
@@ -479,7 +479,7 @@ function getNatureSection({declaration, isManual, isTelemetry, kind, periodLabel
       primary: periodLabel,
       tag: declarationType
         ? {
-          color: '#8d533e',
+          color: 'var(--app-color-warning, #8d533e)',
           iconClassName: 'fr-icon-file-text-line text-[#8d533e]',
           label: declarationType
         }

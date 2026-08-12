@@ -282,14 +282,14 @@ const AdminDashboard = ({initialData, initialError = null}) => {
     {
       data: chart.items.map(item => item.manualDeclarations),
       label: 'Saisies rapides',
-      color: '#18753c',
+      color: 'var(--app-color-success, #18753c)',
       stack: 'declarations',
       valueFormatter: value => formatNumber(value)
     },
     {
       data: chart.items.map(item => item.spreadsheetDeclarations),
       label: 'Fichiers déposés',
-      color: '#8d533e',
+      color: 'var(--app-color-warning, #8d533e)',
       stack: 'declarations',
       valueFormatter: value => formatNumber(value)
     },
@@ -297,7 +297,7 @@ const AdminDashboard = ({initialData, initialError = null}) => {
       ? [{
         data: chart.items.map(item => item.otherDeclarations),
         label: 'Autres dépôts',
-        color: '#666666',
+        color: 'var(--app-color-muted, #666666)',
         stack: 'declarations',
         valueFormatter: value => formatNumber(value)
       }]
@@ -305,7 +305,7 @@ const AdminDashboard = ({initialData, initialError = null}) => {
     {
       data: chart.items.map(item => item.failed),
       label: 'Échecs de traitement',
-      color: '#e1000f',
+      color: 'var(--app-color-error, #e1000f)',
       valueFormatter: value => formatNumber(value)
     }
   ]

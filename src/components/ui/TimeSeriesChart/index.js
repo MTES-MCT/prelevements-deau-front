@@ -220,7 +220,7 @@ const AxisTooltipContent = ({axisValue, dataIndex, series, axis, getPointMeta, g
         display: 'flex',
         flexDirection: 'column',
         gap: 1,
-        backgroundColor: 'white',
+        backgroundColor: 'background.paper',
         borderRadius: 1,
         minWidth: 260,
         maxWidth: 380
@@ -402,12 +402,12 @@ const ChartAnnotations = ({annotations, getXAxisValue, onPointClick}) => {
           >
             {pointShape === 'square' ? (
               <>
-                <rect x={-6} y={-6} width={12} height={12} fill='white' stroke={annotation.color} strokeWidth={2} />
+                <rect x={-6} y={-6} width={12} height={12} fill='var(--app-chart-marker-background, white)' stroke={annotation.color} strokeWidth={2} />
                 <rect x={-3} y={-3} width={6} height={6} fill={pointFillColor} />
               </>
             ) : (
               <>
-                <circle r={6} fill='white' stroke={annotation.color} strokeWidth={2} />
+                <circle r={6} fill='var(--app-chart-marker-background, white)' stroke={annotation.color} strokeWidth={2} />
                 <circle r={2.5} fill={pointFillColor} />
               </>
             )}

@@ -356,7 +356,7 @@ const VolumeDataAccordion = ({
           px: 2.25,
           pt: 0,
           pb: 2,
-          backgroundColor: '#fff',
+          backgroundColor: 'background.paper',
           borderTop: '1px solid',
           borderColor
         }}
@@ -406,7 +406,7 @@ const PrelevementsAccordion = ({
         overflow: 'hidden',
         border: '1px solid',
         borderColor,
-        backgroundColor: '#fff',
+        backgroundColor: 'background.paper',
         transition: 'box-shadow 0.15s ease, border-color 0.15s ease',
         boxShadow: isOpen ? 2 : 0,
         '&:hover': {
@@ -418,7 +418,7 @@ const PrelevementsAccordion = ({
         sx={{
           borderLeft: '4px solid',
           borderLeftColor: accentColor,
-          backgroundColor: '#fff'
+          backgroundColor: 'background.paper'
         }}
       >
         <PrelevementsHeader
