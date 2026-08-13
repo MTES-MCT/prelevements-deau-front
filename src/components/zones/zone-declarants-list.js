@@ -24,6 +24,8 @@ import {
 import {
   getDeclarantRoleLabel,
   getDeclarantTitleFromUser,
+  getPreleveurType,
+  getPreleveurTypeLabel,
   isDeclarantPhysique
 } from '@/lib/declarants.js'
 
@@ -195,6 +197,7 @@ const ZoneDeclarantsList = ({zone, declarants, meta, collecteursOnly = false}) =
       {declarants.map((declarant, index) => {
         const declarantId = getDeclarantId(declarant)
         const role = getDeclarantRole(declarant)
+        const preleveurTypeLabel = getPreleveurTypeLabel(getPreleveurType(declarant))
         const canOpen = zone.permissions?.includes('declarant.detail.read')
         const declarantItem = (
           <ListItem
@@ -211,6 +214,10 @@ const ZoneDeclarantsList = ({zone, declarants, meta, collecteursOnly = false}) =
               {
                 label: getDeclarantRoleLabel(role),
                 severity: role === 'COLLECTEUR' ? 'info' : 'success'
+              },
+              role === 'PRELEVEUR' && {
+                label: preleveurTypeLabel || 'Type non renseigné',
+                severity: preleveurTypeLabel ? 'info' : 'warning'
               },
               role === 'PRELEVEUR' && {
                 label: isDeclarantPhysique(declarant) ? 'Personne physique' : 'Personne morale',

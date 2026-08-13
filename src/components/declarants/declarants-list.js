@@ -281,7 +281,7 @@ const DeclarantsList = ({
           </div>
 
           <div className='fr-select-group fr-mb-0 min-w-0'>
-            <label className='fr-label min-h-6' htmlFor='declarants-role-filter'>Type</label>
+            <label className='fr-label min-h-6' htmlFor='declarants-role-filter'>Rôle</label>
             <select
               className='fr-select'
               id='declarants-role-filter'

@@ -5,6 +5,7 @@ import {useEffect, useMemo, useState} from 'react'
 import {useRouter} from '@bprogress/next/app'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {SegmentedControl} from '@codegouvfr/react-dsfr/SegmentedControl'
+import {Select} from '@codegouvfr/react-dsfr/SelectNext'
 import {Checkbox, FormControlLabel, Typography} from '@mui/material'
 import {pick, trim} from 'lodash-es'
 
@@ -13,13 +14,20 @@ import PreleveurMoralForm from './preleveur-moral-form.js'
 import PreleveurPhysiqueForm from './preleveur-physique-form.js'
 
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
-import {isDeclarantPhysique as checkIsPreleveurPhysique, PRELEVEUR_TYPE_ICONS} from '@/lib/declarants.js'
+import {
+  getPreleveurType,
+  isDeclarantPhysique as checkIsPreleveurPhysique,
+  normalizePreleveurTypeForRole,
+  PRELEVEUR_TYPE_ICONS,
+  PRELEVEUR_TYPE_OPTIONS
+} from '@/lib/declarants.js'
 import {createPreleveurAction, updatePreleveurAction} from '@/server/actions/index.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
 const COMMON_FIELDS = [
   'declarantType',
   'declarantRole',
+  'preleveurType',
   'quickDeclarationEnabled',
   'declarationNotificationsEnabled',
   'civility',
@@ -91,6 +99,7 @@ function normalizeDeclarant(declarant) {
     id: firstTruthy(declarant?.userId, declarant?.id),
     declarantType: getDeclarantType(declarant),
     declarantRole: getDeclarantRole(declarant),
+    preleveurType: getPreleveurType(declarant) || '',
     quickDeclarationEnabled: getQuickDeclarationEnabled(declarant),
     declarationNotificationsEnabled: getDeclarationNotificationsEnabled(declarant),
     civility: firstTruthy(declarant?.civility),
@@ -132,6 +141,7 @@ const PreleveurForm = ({
   const [preleveur, setPreleveur] = useState({
     declarantType: 'NATURAL_PERSON',
     declarantRole: 'PRELEVEUR',
+    preleveurType: '',
     quickDeclarationEnabled: true,
     declarationNotificationsEnabled: true,
     civility: '',
@@ -184,6 +194,7 @@ const PreleveurForm = ({
     : trim(preleveur.socialReason)
   const isDisabled = !hasRequiredIdentity
     || (emailRequired && !trim(preleveur.email))
+    || (!isCollecteur && !preleveur.preleveurType)
     || (!isEditing && zoneIds.length === 0)
 
   const handleSubmit = async () => {
@@ -211,8 +222,16 @@ const PreleveurForm = ({
       const fieldsToSend = isPreleveurPhysique
         ? COMMON_FIELDS
         : [...COMMON_FIELDS, ...MORAL_ONLY_FIELDS]
+      const preleveurType = normalizePreleveurTypeForRole(
+        preleveur.declarantRole,
+        preleveur.preleveurType
+      )
 
-      const filteredPreleveur = pick({...preleveur, declarantType}, fieldsToSend)
+      const filteredPreleveur = pick({
+        ...preleveur,
+        declarantType,
+        preleveurType
+      }, fieldsToSend)
       const cleanedPreleveur = emptyStringToNull(filteredPreleveur)
 
       if (!isEditing) {
@@ -294,6 +313,22 @@ const PreleveurForm = ({
                 }
               ]}
             />
+
+            {!isCollecteur && (
+              <Select
+                label='Type de préleveur *'
+                placeholder='Sélectionner le type de préleveur'
+                nativeSelectProps={{
+                  required: true,
+                  value: preleveur.preleveurType || '',
+                  onChange: event => setPreleveur(previous => ({
+                    ...previous,
+                    preleveurType: event.target.value
+                  }))
+                }}
+                options={PRELEVEUR_TYPE_OPTIONS}
+              />
+            )}
 
             <SegmentedControl
               className='mb-4'

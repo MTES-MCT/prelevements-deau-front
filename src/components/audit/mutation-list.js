@@ -1,3 +1,9 @@
+import {
+  DECLARANT_PERSON_TYPE_LABELS,
+  DECLARANT_ROLE_LABELS,
+  PRELEVEUR_TYPE_LABELS
+} from '@/lib/declarants.js'
+
 const OPERATION_CONFIG = {
   CREATE: {label: 'Création', className: 'fr-badge--success'},
   UPDATE: {label: 'Modification', className: 'fr-badge--info'},
@@ -44,7 +50,7 @@ const FIELD_LABELS = {
   declarationNotificationsEnabled: 'Rappels et relances',
   declarationTypeId: 'Type de déclaration',
   declarantRole: 'Rôle déclarant',
-  declarantType: 'Type de déclarant',
+  declarantType: 'Type de personne',
   declarantUserId: 'Déclarant',
   defaultPeriodType: 'Périodicité par défaut',
   deletedAt: 'Date de suppression',
@@ -76,6 +82,7 @@ const FIELD_LABELS = {
   pointPrelevementId: 'Point de prélèvement',
   pointPrelevementNameAliases: 'Alias du point',
   postalCode: 'Code postal',
+  preleveurType: 'Type de préleveur',
   quickDeclarationEnabled: 'Déclaration rapide',
   reason: 'Motif',
   reference: 'Référence',
@@ -96,14 +103,26 @@ const FIELD_LABELS = {
   zones: 'Zones'
 }
 
+const FIELD_VALUE_LABELS = {
+  declarantRole: DECLARANT_ROLE_LABELS,
+  declarantType: DECLARANT_PERSON_TYPE_LABELS,
+  preleveurType: PRELEVEUR_TYPE_LABELS
+}
+
 function looksLikeDate(value) {
   return typeof value === 'string'
     && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)
 }
 
-function formatValue(value) {
+function formatValue(value, field) {
   if (value === null || value === undefined || value === '') {
     return <span className='text-[var(--text-mention-grey)]'>Non renseigné</span>
+  }
+
+  const fieldValueLabel = FIELD_VALUE_LABELS[field]?.[value]
+
+  if (fieldValueLabel) {
+    return fieldValueLabel
   }
 
   if (typeof value === 'boolean') {
@@ -169,8 +188,8 @@ const Mutation = ({mutation}) => {
               {changedFields.map(field => (
                 <tr key={field}>
                   <th className='px-3 py-2 font-medium' scope='row'>{FIELD_LABELS[field] || field}</th>
-                  <td className='whitespace-pre-wrap break-words px-3 py-2'>{formatValue(mutation.before?.[field])}</td>
-                  <td className='whitespace-pre-wrap break-words px-3 py-2'>{formatValue(mutation.after?.[field])}</td>
+                  <td className='whitespace-pre-wrap break-words px-3 py-2'>{formatValue(mutation.before?.[field], field)}</td>
+                  <td className='whitespace-pre-wrap break-words px-3 py-2'>{formatValue(mutation.after?.[field], field)}</td>
                 </tr>
               ))}
             </tbody>

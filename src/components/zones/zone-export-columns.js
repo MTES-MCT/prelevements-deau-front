@@ -1,6 +1,8 @@
 import {
   getDeclarantRoleLabel,
-  getDeclarantTitleFromDeclarant
+  getDeclarantTitleFromDeclarant,
+  getPreleveurType,
+  getPreleveurTypeLabel
 } from '@/lib/declarants.js'
 import {formatUsages, getUsageLabel} from '@/lib/water-uses.js'
 
@@ -62,7 +64,7 @@ function getDeclarantRole(declarant) {
   return declarant?.declarantRole || declarant?.declarant?.declarantRole || ''
 }
 
-function getDeclarantTypeLabel(declarant) {
+function getDeclarantPersonTypeLabel(declarant) {
   return declarant?.declarantType === 'LEGAL_PERSON' || declarant?.declarant?.declarantType === 'LEGAL_PERSON'
     ? 'Personne morale'
     : 'Personne physique'
@@ -166,8 +168,20 @@ export function getZoneDeclarantExportColumns({collecteursOnly = false} = {}) {
   const columns = [
     {label: 'ID déclarant', value: declarant => getDeclarantId(declarant)},
     {label: 'Rôle', value: declarant => getDeclarantRoleLabel(getDeclarantRole(declarant))},
-    {label: 'Type', value: declarant => getDeclarantTypeLabel(declarant)},
+    ...(collecteursOnly
+      ? []
+      : [{
+        label: 'Type de préleveur',
+        value: declarant => getPreleveurTypeLabel(getPreleveurType(declarant)) || ''
+      }]),
+    {label: 'Type de personne', value: declarant => getDeclarantPersonTypeLabel(declarant)},
     {label: collecteursOnly ? 'Collecteur' : 'Déclarant', value: declarant => getDeclarantTitleFromDeclarant(declarant)},
+    ...(collecteursOnly
+      ? []
+      : [{
+        label: 'Collecteur',
+        value: declarant => formatList(getDeclarantCollecteurLabels(declarant))
+      }]),
     {label: 'Raison sociale', value: declarant => declarant.socialReason || declarant.declarant?.socialReason},
     {label: 'SIRET', value: declarant => declarant.siret},
     {label: 'Prénom', value: declarant => declarant.firstName || declarant.user?.firstName},
@@ -181,13 +195,6 @@ export function getZoneDeclarantExportColumns({collecteursOnly = false} = {}) {
     {label: 'Exploitations / rattachements', value: declarant => declarant.exploitationsCount || declarant.pointPrelevements?.length || declarant.collecteurExploitations?.length || ''},
     {label: 'Préleveurs accessibles', value: declarant => formatList(declarant.preleveurs, getDeclarantTitleFromDeclarant)}
   ]
-
-  if (!collecteursOnly) {
-    columns.splice(4, 0, {
-      label: 'Collecteur',
-      value: declarant => formatList(getDeclarantCollecteurLabels(declarant))
-    })
-  }
 
   return columns
 }
