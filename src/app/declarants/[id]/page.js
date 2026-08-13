@@ -24,8 +24,11 @@ import {
   hasDeclarantContactInfo
 } from '@/lib/declarant-detail.js'
 import {
+  getDeclarantRoleLabel,
   getDeclarantTitleFromDeclarant,
   getDeclarantTypeIcon,
+  getPreleveurType,
+  getPreleveurTypeLabel,
   isDeclarationNotificationsEnabled
 } from '@/lib/declarants.js'
 import {formatFullAddress} from '@/lib/declaration.js'
@@ -309,7 +312,9 @@ const Page = async ({params}) => {
     || (currentRole === 'INSTRUCTOR' && permissions.has(permission))
   const isDeclarantViewer = currentRole === 'DECLARANT'
   const declarantId = getDeclarantId(declarant)
-  const isCollecteur = getDeclarantRole(declarant) === 'COLLECTEUR'
+  const declarantRole = getDeclarantRole(declarant)
+  const isCollecteur = declarantRole === 'COLLECTEUR'
+  const preleveurTypeLabel = getPreleveurTypeLabel(getPreleveurType(declarant))
   const exploitations = getDeclarantDetailExploitations(declarant)
   const pointIds = getExploitationPointIds(exploitations)
   const seriesScope = getDeclarantSeriesScope(declarant, declarantId, pointIds)
@@ -353,6 +358,16 @@ const Page = async ({params}) => {
             {' '}{title}
           </>
         }
+        tags={[
+          {
+            label: getDeclarantRoleLabel(declarantRole),
+            severity: isCollecteur ? 'info' : 'success'
+          },
+          !isCollecteur && {
+            label: preleveurTypeLabel || 'Type non renseigné',
+            severity: preleveurTypeLabel ? 'info' : 'warning'
+          }
+        ].filter(Boolean)}
         hrefButtons={[
           {
             label: 'Gérer le déclarant',
