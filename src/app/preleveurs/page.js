@@ -1,7 +1,13 @@
 import {Box, Typography} from '@mui/material'
+import {redirect} from 'next/navigation'
 
 import DeclarantsList from '@/components/declarants/declarants-list.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
+import {searchCollecteurPreleveurs} from '@/lib/collecteur-preleveurs.js'
+import {
+  buildDeclarantsSearchQuery,
+  readDeclarantsSearchOptions
+} from '@/lib/declarant-search.js'
 import {getCollecteurPreleveursAction} from '@/server/actions/declarants.js'
 
 export const metadata = {
@@ -10,9 +16,19 @@ export const metadata = {
 
 export const dynamic = 'force-dynamic'
 
-const Page = async () => {
+const Page = async ({searchParams}) => {
+  const options = readDeclarantsSearchOptions(await searchParams)
   const result = await getCollecteurPreleveursAction()
   const preleveurs = result.data || []
+  const searchResult = searchCollecteurPreleveurs(preleveurs, options)
+
+  if (searchResult.page > searchResult.totalPages) {
+    const query = buildDeclarantsSearchQuery({
+      ...options,
+      page: searchResult.totalPages
+    })
+    redirect(`/preleveurs?${query}`)
+  }
 
   return (
     <>
@@ -25,7 +41,16 @@ const Page = async () => {
         <p className='fr-text--sm fr-mt-2w'>
           Ces préleveurs sont accessibles car votre compte collecteur est rattaché à leurs exploitations.
         </p>
-        <DeclarantsList declarants={preleveurs} basePath='/preleveurs' />
+        <DeclarantsList
+          basePath='/preleveurs'
+          counts={searchResult.counts}
+          declarants={searchResult.items}
+          filters={options}
+          page={searchResult.page}
+          pageSize={searchResult.pageSize}
+          total={searchResult.total}
+          totalPages={searchResult.totalPages}
+        />
       </Box>
     </>
   )
