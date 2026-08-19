@@ -12,6 +12,7 @@ import {
   WATER_BODY_TYPE_LABELS,
   getPointUsageRootKeys
 } from '@/lib/points-prelevement-filters.js'
+import {SEARCH_SORT_MODES} from '@/lib/smart-search.js'
 import {getUsageColor, getUsageLabel} from '@/lib/water-uses.js'
 import {
   getPointPrelevementDisplayName,
@@ -160,17 +161,29 @@ const PointsMapList = memo(({
   onClose,
   points,
   preferUsageName,
+  hasSearchQuery,
+  searchScores,
   scrollHighlightedPointIntoView,
+  sortMode,
   onPointHover,
   onPointSelect
 }) => {
   const scrollContainerRef = useRef(null)
   const pendingFocusIndexRef = useRef(null)
   const [activeIndex, setActiveIndex] = useState(0)
-  const sortedPoints = useMemo(() => [...points].sort((left, right) => collator.compare(
-    getPointPrelevementDisplayName(left, {preferUsageName}),
-    getPointPrelevementDisplayName(right, {preferUsageName})
-  )), [points, preferUsageName])
+  const sortedPoints = useMemo(() => [...points].sort((left, right) => {
+    if (hasSearchQuery && sortMode === SEARCH_SORT_MODES.RELEVANCE) {
+      const scoreDifference = (searchScores?.get(right.id) ?? 0) - (searchScores?.get(left.id) ?? 0)
+      if (scoreDifference !== 0) {
+        return scoreDifference
+      }
+    }
+
+    return collator.compare(
+      getPointPrelevementDisplayName(left, {preferUsageName}),
+      getPointPrelevementDisplayName(right, {preferUsageName})
+    ) || collator.compare(left.id, right.id)
+  }), [hasSearchQuery, points, preferUsageName, searchScores, sortMode])
   const pointIndexesById = useMemo(
     () => new Map(sortedPoints.map((point, index) => [point.id, index])),
     [sortedPoints]

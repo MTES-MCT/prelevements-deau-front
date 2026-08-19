@@ -1,12 +1,14 @@
 'use client'
 
 import {
-  useEffect, useRef, useState
+  useEffect, useMemo, useRef, useState
 } from 'react'
 
 import {getPointFlowTypeColors, pointFlowTypeLabels} from '@/lib/point-flow-types.js'
+import {haveSameSelection} from '@/lib/points-prelevement-filters.js'
+import {SEARCH_SORT_MODES} from '@/lib/smart-search.js'
 
-const FilterCheckbox = ({checked, color, label, showColorMarker = true, onChange}) => (
+const FilterCheckbox = ({checked, color, count, label, showColorMarker = true, onChange}) => (
   <label className='flex min-h-7 cursor-pointer items-center gap-2 px-1 py-0.5 text-xs hover:bg-gray-50'>
     <input
       checked={checked}
@@ -23,6 +25,9 @@ const FilterCheckbox = ({checked, color, label, showColorMarker = true, onChange
       />
     )}
     <span className='min-w-0 flex-1 leading-4'>{label}</span>
+    {Number.isInteger(count) && (
+      <span className='shrink-0 text-[0.65rem] tabular-nums text-gray-500'>{count}</span>
+    )}
   </label>
 )
 
@@ -30,10 +35,63 @@ const toggleSelection = (values, value, checked) => checked
   ? [...values, value]
   : values.filter(item => item !== value)
 
+const FilterFieldset = ({
+  className = '',
+  counts,
+  legend,
+  options,
+  scrollable = false,
+  selectedValues,
+  showColorMarker = true,
+  onChange
+}) => {
+  if (options.length === 0) {
+    return null
+  }
+
+  const allValues = options.map(option => option.value)
+  const hasPartialSelection = !haveSameSelection(selectedValues, allValues)
+
+  return (
+    <fieldset className={`relative border-0 border-t border-gray-200 p-0 pt-2 ${className}`}>
+      <legend className='mb-1 text-xs font-semibold text-gray-900'>{legend}</legend>
+      {hasPartialSelection && (
+        <button
+          className='absolute right-0 top-2 cursor-pointer text-xs text-[#000091] underline decoration-1 underline-offset-2'
+          type='button'
+          onClick={() => onChange(allValues)}
+        >
+          Tout afficher
+        </button>
+      )}
+      <div className={`clear-both flex flex-col ${scrollable ? 'max-h-44 overflow-y-auto pr-1' : ''}`}>
+        {options.map(option => (
+          <FilterCheckbox
+            key={option.value}
+            checked={selectedValues.includes(option.value)}
+            color={option.color}
+            count={counts?.[option.value]}
+            label={option.label}
+            showColorMarker={showColorMarker}
+            onChange={checked => onChange(toggleSelection(selectedValues, option.value, checked))}
+          />
+        ))}
+      </div>
+    </fieldset>
+  )
+}
+
 const PointsMapFilters = ({
+  collecteurStatusOptions,
+  connectorStatusOptions,
   disabled,
+  exploitationStatusOptions,
+  facetCounts,
   filters,
   hasActiveFilters,
+  managementZoneOptions,
+  openRequestKey,
+  preleveurTypeOptions,
   resultsCount,
   searchPending,
   usageOptions,
@@ -44,16 +102,25 @@ const PointsMapFilters = ({
   const [open, setOpen] = useState(false)
   const containerRef = useRef(null)
   const searchInputRef = useRef(null)
-  const flowTypeOptions = Object.entries(pointFlowTypeLabels).map(([value, label]) => ({
-    color: getPointFlowTypeColors(value).accentColor,
-    value,
-    label
-  }))
+  const flowTypeOptions = useMemo(() => Object.entries(pointFlowTypeLabels)
+    .map(([value, label]) => ({
+      color: getPointFlowTypeColors(value).accentColor,
+      value,
+      label
+    })), [])
   const advancedFilterCount = [
-    filters.usageKeys.length !== usageOptions.length,
-    filters.flowTypes.length !== flowTypeOptions.length,
-    filters.waterBodyTypes.length !== waterBodyTypeOptions.length
+    !haveSameSelection(filters.usageKeys, usageOptions.map(option => option.value)),
+    !haveSameSelection(filters.flowTypes, flowTypeOptions.map(option => option.value)),
+    !haveSameSelection(filters.waterBodyTypes, waterBodyTypeOptions.map(option => option.value)),
+    !haveSameSelection(filters.managementZoneIds, managementZoneOptions.map(option => option.value)),
+    !haveSameSelection(filters.exploitationStatuses, exploitationStatusOptions.map(option => option.value)),
+    !haveSameSelection(filters.collecteurStatuses, collecteurStatusOptions.map(option => option.value)),
+    !haveSameSelection(filters.connectorStatuses, connectorStatusOptions.map(option => option.value)),
+    !haveSameSelection(filters.preleveurTypes, preleveurTypeOptions.map(option => option.value))
   ].filter(Boolean).length
+  const effectiveSort = filters.query.trim()
+    ? filters.sort
+    : SEARCH_SORT_MODES.NAME
 
   useEffect(() => {
     const handleOutsideClick = event => {
@@ -78,10 +145,19 @@ const PointsMapFilters = ({
   }, [])
 
   useEffect(() => {
-    if (!disabled) {
+    if (!disabled && globalThis.matchMedia?.('(min-width: 1024px)').matches) {
       searchInputRef.current?.focus()
     }
   }, [disabled])
+
+  useEffect(() => {
+    if (!openRequestKey) {
+      return
+    }
+
+    setOpen(true)
+    searchInputRef.current?.focus()
+  }, [openRequestKey])
 
   return (
     <section ref={containerRef} className='relative z-20 shrink-0 border-b border-gray-200 bg-white p-3' aria-label='Filtres des points de prélèvement'>
@@ -97,7 +173,7 @@ const PointsMapFilters = ({
             className='h-10 w-full border border-gray-300 border-b-2 border-b-gray-700 bg-[#f6f6f6] pl-10 pr-10 text-sm text-gray-900 outline-none placeholder:text-gray-500 hover:bg-gray-100 focus:border-[#000091] focus:border-b-[#000091] focus:bg-white focus:outline focus:outline-2 focus:outline-offset-[-2px] focus:outline-[#000091] disabled:cursor-not-allowed disabled:bg-gray-100 [&::-webkit-search-cancel-button]:appearance-none'
             disabled={disabled}
             id='points-prelevement-search'
-            placeholder='Nom ou code BSS'
+            placeholder='Nom, commune, code, usage ou préleveur'
             type='search'
             value={filters.query}
             onChange={event => onChange({query: event.target.value})}
@@ -124,8 +200,9 @@ const PointsMapFilters = ({
         </div>
       </div>
 
-      <div className='mt-2 flex min-h-8 items-center gap-2'>
+      <div className='mt-2 flex min-h-8 flex-wrap items-center gap-2'>
         <button
+          aria-controls='points-prelevement-advanced-filters'
           aria-expanded={open}
           className={`inline-flex h-8 cursor-pointer items-center gap-1.5 border px-2.5 text-xs font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#000091] ${advancedFilterCount > 0 ? 'border-[#000091] bg-[#ececfe] text-[#000091]' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}
           disabled={disabled}
@@ -142,6 +219,17 @@ const PointsMapFilters = ({
           <span aria-hidden='true' className={`${open ? 'fr-icon-arrow-up-s-line' : 'fr-icon-arrow-down-s-line'} text-xs`} />
         </button>
 
+        <label className='sr-only' htmlFor='points-prelevement-sort'>Trier les points</label>
+        <select
+          className='h-8 max-w-28 border border-gray-300 bg-white px-1.5 text-xs text-gray-700'
+          id='points-prelevement-sort'
+          value={effectiveSort}
+          onChange={event => onChange({sort: event.target.value})}
+        >
+          <option disabled={!filters.query.trim()} value={SEARCH_SORT_MODES.RELEVANCE}>Pertinence</option>
+          <option value={SEARCH_SORT_MODES.NAME}>Nom</option>
+        </select>
+
         <p className='fr-mb-0 ml-auto whitespace-nowrap text-xs text-gray-600' aria-live='polite'>
           {resultsCount === null
             ? 'Chargement…'
@@ -154,74 +242,79 @@ const PointsMapFilters = ({
             type='button'
             onClick={onReset}
           >
-            Effacer les filtres
+            Effacer
           </button>
         )}
       </div>
 
       {open && (
-        <div className='absolute left-3 right-3 top-[calc(100%-0.25rem)] z-30 max-h-[min(520px,calc(100dvh-15rem))] overflow-y-auto border border-gray-300 bg-white p-3 shadow-lg'>
-          <fieldset className='m-0 border-0 p-0'>
-            <legend className='mb-1 text-xs font-semibold text-gray-900'>Type de point</legend>
-            <div className='grid grid-cols-2 gap-x-2'>
-              {flowTypeOptions.map(option => (
-                <FilterCheckbox
-                  key={option.value}
-                  checked={filters.flowTypes.includes(option.value)}
-                  color={option.color}
-                  label={option.label}
-                  showColorMarker={false}
-                  onChange={checked => onChange({
-                    flowTypes: toggleSelection(filters.flowTypes, option.value, checked)
-                  })}
-                />
-              ))}
-            </div>
-          </fieldset>
-
-          <fieldset className='mt-3 border-0 border-t border-gray-200 p-0 pt-2'>
-            <legend className='mb-1 text-xs font-semibold text-gray-900'>Type de milieu</legend>
-            <div className='flex flex-col'>
-              {waterBodyTypeOptions.map(option => (
-                <FilterCheckbox
-                  key={option.value}
-                  checked={filters.waterBodyTypes.includes(option.value)}
-                  label={option.label}
-                  onChange={checked => onChange({
-                    waterBodyTypes: toggleSelection(filters.waterBodyTypes, option.value, checked)
-                  })}
-                />
-              ))}
-            </div>
-          </fieldset>
-
-          <fieldset className='relative mt-3 border-0 border-t border-gray-200 p-0 pt-2'>
-            <legend className='mb-1 text-xs font-semibold text-gray-900'>Usages</legend>
-            {filters.usageKeys.length !== usageOptions.length && (
-              <button
-                className='absolute right-0 top-2 cursor-pointer text-xs text-[#000091] underline decoration-1 underline-offset-2'
-                type='button'
-                onClick={() => onChange({
-                  usageKeys: usageOptions.map(option => option.value)
-                })}
-              >
-                Afficher tous les usages
-              </button>
-            )}
-            <div className='clear-both flex flex-col'>
-              {usageOptions.map(option => (
-                <FilterCheckbox
-                  key={option.value}
-                  checked={filters.usageKeys.includes(option.value)}
-                  color={option.color}
-                  label={option.label}
-                  onChange={checked => onChange({
-                    usageKeys: toggleSelection(filters.usageKeys, option.value, checked)
-                  })}
-                />
-              ))}
-            </div>
-          </fieldset>
+        <div id='points-prelevement-advanced-filters' className='absolute left-3 right-3 top-[calc(100%-0.25rem)] z-30 max-h-[min(560px,calc(100dvh-13rem))] overflow-y-auto border border-gray-300 bg-white p-3 shadow-lg'>
+          <FilterFieldset
+            className='border-t-0 pt-0'
+            counts={facetCounts.flowTypes}
+            legend='Type de point'
+            options={flowTypeOptions}
+            selectedValues={filters.flowTypes}
+            showColorMarker={false}
+            onChange={flowTypes => onChange({flowTypes})}
+          />
+          <FilterFieldset
+            className='mt-3'
+            counts={facetCounts.waterBodyTypes}
+            legend='Type de milieu'
+            options={waterBodyTypeOptions}
+            selectedValues={filters.waterBodyTypes}
+            onChange={waterBodyTypes => onChange({waterBodyTypes})}
+          />
+          <FilterFieldset
+            className='mt-3'
+            counts={facetCounts.usageKeys}
+            legend='Usages'
+            options={usageOptions}
+            selectedValues={filters.usageKeys}
+            onChange={usageKeys => onChange({usageKeys})}
+          />
+          <FilterFieldset
+            scrollable
+            className='mt-3'
+            counts={facetCounts.managementZoneIds}
+            legend='Zones de gestion'
+            options={managementZoneOptions}
+            selectedValues={filters.managementZoneIds}
+            onChange={managementZoneIds => onChange({managementZoneIds})}
+          />
+          <FilterFieldset
+            className='mt-3'
+            counts={facetCounts.exploitationStatuses}
+            legend='État des exploitations'
+            options={exploitationStatusOptions}
+            selectedValues={filters.exploitationStatuses}
+            onChange={exploitationStatuses => onChange({exploitationStatuses})}
+          />
+          <FilterFieldset
+            className='mt-3'
+            counts={facetCounts.collecteurStatuses}
+            legend='Collecteurs'
+            options={collecteurStatusOptions}
+            selectedValues={filters.collecteurStatuses}
+            onChange={collecteurStatuses => onChange({collecteurStatuses})}
+          />
+          <FilterFieldset
+            className='mt-3'
+            counts={facetCounts.connectorStatuses}
+            legend='Connecteurs'
+            options={connectorStatusOptions}
+            selectedValues={filters.connectorStatuses}
+            onChange={connectorStatuses => onChange({connectorStatuses})}
+          />
+          <FilterFieldset
+            className='mt-3'
+            counts={facetCounts.preleveurTypes}
+            legend='Types de préleveur'
+            options={preleveurTypeOptions}
+            selectedValues={filters.preleveurTypes}
+            onChange={preleveurTypes => onChange({preleveurTypes})}
+          />
         </div>
       )}
     </section>
