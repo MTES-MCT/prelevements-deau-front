@@ -19,6 +19,16 @@ const SCORE = Object.freeze({
   fuzzyTerm: 480
 })
 
+const TECHNICAL_SEARCH_TERMS = new Set([
+  'aiot',
+  'bdlisa',
+  'bnpe',
+  'bss',
+  'ptp',
+  'siret',
+  'uuid'
+])
+
 export function normalizeSearchValue(value) {
   if (value === null || value === undefined) {
     return ''
@@ -81,12 +91,20 @@ export function createSearchDocument(fields = []) {
   return {entries}
 }
 
-function getMaximumEditDistance(token) {
-  if (token.length < 4) {
+function getMaximumEditDistance(queryToken, entryToken, identifier) {
+  if (
+    identifier
+    || queryToken.length < 4
+    || entryToken.length < 4
+    || !/^[a-z]+$/.test(queryToken)
+    || !/^[a-z]+$/.test(entryToken)
+    || TECHNICAL_SEARCH_TERMS.has(queryToken)
+    || TECHNICAL_SEARCH_TERMS.has(entryToken)
+  ) {
     return 0
   }
 
-  return token.length < 8 ? 1 : 2
+  return 1
 }
 
 function getBoundedEditDistance(left, right, maximumDistance) {
@@ -138,11 +156,6 @@ function getBoundedEditDistance(left, right, maximumDistance) {
   return previous[right.length]
 }
 
-function isIdentifierToken(token) {
-  const digitCount = [...token].filter(character => /\d/.test(character)).length
-  return digitCount >= 3 || (/\d/.test(token) && /[a-z]/.test(token))
-}
-
 function getTermMatchScore(queryToken, entryToken, {identifier, weight}) {
   const weightBonus = Math.min(weight, 20) * 10
 
@@ -158,9 +171,7 @@ function getTermMatchScore(queryToken, entryToken, {identifier, weight}) {
     return SCORE.termPartial + weightBonus
   }
 
-  const maximumDistance = identifier || isIdentifierToken(queryToken)
-    ? 0
-    : getMaximumEditDistance(queryToken)
+  const maximumDistance = getMaximumEditDistance(queryToken, entryToken, identifier)
 
   if (maximumDistance === 0 || Math.abs(entryToken.length - queryToken.length) > maximumDistance) {
     return null
