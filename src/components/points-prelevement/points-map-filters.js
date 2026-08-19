@@ -82,6 +82,7 @@ const FilterFieldset = ({
 }
 
 const PointsMapFilters = ({
+  canSearchDeclarants,
   collecteurStatusOptions,
   connectorStatusOptions,
   disabled,
@@ -173,7 +174,9 @@ const PointsMapFilters = ({
             className='h-10 w-full border border-gray-300 border-b-2 border-b-gray-700 bg-[#f6f6f6] pl-10 pr-10 text-sm text-gray-900 outline-none placeholder:text-gray-500 hover:bg-gray-100 focus:border-[#000091] focus:border-b-[#000091] focus:bg-white focus:outline focus:outline-2 focus:outline-offset-[-2px] focus:outline-[#000091] disabled:cursor-not-allowed disabled:bg-gray-100 [&::-webkit-search-cancel-button]:appearance-none'
             disabled={disabled}
             id='points-prelevement-search'
-            placeholder='Nom, commune, code, usage ou préleveur'
+            placeholder={canSearchDeclarants
+              ? 'Nom, commune, code, usage ou préleveur'
+              : 'Nom, commune, code ou usage'}
             type='search'
             value={filters.query}
             onChange={event => onChange({query: event.target.value})}

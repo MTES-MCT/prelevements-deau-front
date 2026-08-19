@@ -40,6 +40,10 @@ const GroupedMultiselect = ({
 }) => {
   const generatedId = useId()
   const selectId = id ?? `grouped-multiselect-${generatedId}`
+  const listboxId = `${selectId}-listbox`
+  const searchLabel = label
+    ? `Rechercher dans ${label.toLocaleLowerCase('fr-FR')}`
+    : 'Rechercher dans les options'
   const [open, setOpen] = useState(false)
   const [showMore, setShowMore] = useState(false)
   const [hiddenCount, setHiddenCount] = useState(0)
@@ -51,6 +55,7 @@ const GroupedMultiselect = ({
   const searchInputRef = useRef(null)
   const optionRefs = useRef([])
   const wasOpenRef = useRef(false)
+  const restoreFocusOnCloseRef = useRef(false)
 
   const normalizedOptions = useMemo(() => normalizeOptions(options), [options])
 
@@ -103,6 +108,7 @@ const GroupedMultiselect = ({
   useEffect(() => {
     const handleClickOutside = e => {
       if (ref.current && !ref.current.contains(e.target)) {
+        restoreFocusOnCloseRef.current = false
         setOpen(false)
         setFocusedIndex(-1)
       }
@@ -186,7 +192,7 @@ const GroupedMultiselect = ({
     if (!open) {
       if (e.key === 'Enter' || e.key === ' ') {
         setOpen(true)
-        setFocusedIndex(0)
+        setFocusedIndex(searchable ? -1 : 0)
         e.preventDefault()
       }
 
@@ -201,7 +207,7 @@ const GroupedMultiselect = ({
       }
 
       case 'ArrowUp': {
-        setFocusedIndex(i => Math.max(i - 1, 0))
+        setFocusedIndex(i => searchable && i === 0 ? -1 : Math.max(i - 1, 0))
         e.preventDefault()
         break
       }
@@ -217,6 +223,7 @@ const GroupedMultiselect = ({
       }
 
       case 'Escape': {
+        restoreFocusOnCloseRef.current = true
         setOpen(false)
         setFocusedIndex(-1)
         e.preventDefault()
@@ -227,24 +234,26 @@ const GroupedMultiselect = ({
         break
       }
     }
-  }, [open, toggleOption, flatOptions, focusedIndex])
+  }, [open, toggleOption, flatOptions, focusedIndex, searchable])
 
   useEffect(() => {
     if (!open && !wasOpenRef.current) {
       return
     }
 
-    if (open && searchable && searchInputRef.current) {
-      focusWithoutScroll(searchInputRef.current)
-      wasOpenRef.current = true
-      return
-    }
-
     if (open && focusedIndex >= 0 && optionRefs.current[focusedIndex]) {
+      focusWithoutScroll(optionRefs.current[focusedIndex])
       optionRefs.current[focusedIndex].scrollIntoView({block: 'nearest'})
       wasOpenRef.current = true
-    } else if (!open && selectRef.current) {
-      focusWithoutScroll(selectRef.current)
+    } else if (open && searchable && searchInputRef.current) {
+      focusWithoutScroll(searchInputRef.current)
+      wasOpenRef.current = true
+    } else if (!open) {
+      if (restoreFocusOnCloseRef.current && selectRef.current) {
+        focusWithoutScroll(selectRef.current)
+      }
+
+      restoreFocusOnCloseRef.current = false
     }
 
     wasOpenRef.current = open
@@ -260,6 +269,13 @@ const GroupedMultiselect = ({
       ref={ref}
       style={{position: 'relative'}}
       className={disabled ? 'fr-select-group--disabled' : ''}
+      onBlur={event => {
+        if (open && !event.currentTarget.contains(event.relatedTarget)) {
+          restoreFocusOnCloseRef.current = false
+          setOpen(false)
+          setFocusedIndex(-1)
+        }
+      }}
     >
       <label className={hideLabel ? 'sr-only' : 'fr-label'} htmlFor={selectId}>{label}</label>
       {hint && <span className='fr-hint-text'>{hint}</span>}
@@ -269,6 +285,8 @@ const GroupedMultiselect = ({
         id={selectId}
         className={`fr-select${hideLabel ? '' : ' mt-2'}${disabled ? ' fr-bg-disabled-grey' : ''}`}
         aria-disabled={disabled}
+        aria-controls={listboxId}
+        aria-label={label || placeholder || 'Sélection multiple'}
         sx={{
           cursor: disabled ? 'not-allowed' : 'pointer'
         }}
@@ -276,7 +294,15 @@ const GroupedMultiselect = ({
         aria-expanded={open}
         role='button'
         tabIndex={disabled ? -1 : 0}
-        onClick={disabled ? undefined : () => setOpen(prev => !prev)}
+        onClick={disabled ? undefined : () => setOpen(previousOpen => {
+          restoreFocusOnCloseRef.current = previousOpen
+
+          if (!previousOpen) {
+            setFocusedIndex(searchable ? -1 : 0)
+          }
+
+          return !previousOpen
+        })}
         onKeyDown={disabled ? undefined : handleKeyDown}
       >
         <Box sx={{overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
@@ -286,6 +312,7 @@ const GroupedMultiselect = ({
 
       {open && (
         <List
+          id={listboxId}
           sx={{
             position: 'absolute',
             backgroundColor: fr.colors.decisions.background.default.grey.default,
@@ -299,6 +326,8 @@ const GroupedMultiselect = ({
             overflowY: 'auto'
           }}
           role='listbox'
+          aria-label={label || placeholder || 'Sélection multiple'}
+          aria-multiselectable='true'
           tabIndex={-1}
         >
           {searchable && (
@@ -307,17 +336,23 @@ const GroupedMultiselect = ({
                 ref={searchInputRef}
                 label=''
                 nativeInputProps={{
+                  'aria-controls': listboxId,
+                  'aria-label': searchLabel,
                   value: search,
                   onChange(e) {
                     setSearch(e.target.value)
-                    setFocusedIndex(0)
+                    setFocusedIndex(-1)
                   },
                   placeholder: 'Rechercher...',
                   onKeyDown(e) {
                     if (e.key === 'ArrowDown') {
-                      setFocusedIndex(0)
+                      if (flatOptions.length > 0) {
+                        setFocusedIndex(0)
+                      }
+
                       e.preventDefault()
                     } else if (e.key === 'Escape') {
+                      restoreFocusOnCloseRef.current = true
                       setOpen(false)
                       setFocusedIndex(-1)
                       e.preventDefault()
@@ -374,7 +409,7 @@ const GroupedMultiselect = ({
                     aria-selected={isSelected}
                     className={`list-item selector-option${isSelected ? ' selected' : ''}${focusedIndex === flatIdx ? ' focused' : ''}${isDisabled ? ' disabled' : ''} p-2 radius-4`}
                     role='option'
-                    tabIndex={-1}
+                    tabIndex={focusedIndex === flatIdx ? 0 : -1}
                     title={tooltip}
                     onClick={isDisabled ? undefined : () => toggleOption(option)}
                     onKeyDown={handleKeyDown}

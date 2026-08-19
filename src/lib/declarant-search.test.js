@@ -4,6 +4,9 @@ import {
   DEFAULT_DECLARANTS_PAGE_SIZE,
   buildDeclarantsPathname,
   buildDeclarantsSearchQuery,
+  getEffectiveDeclarantsSort,
+  hasNonCanonicalDeclarantsSort,
+  isDeclarantsSearchResult,
   readDeclarantsSearchOptions
 } from './declarant-search.js'
 
@@ -23,7 +26,8 @@ test('readDeclarantsSearchOptions applique les valeurs par défaut', t => {
     usageCodes: [],
     waterBodyTypes: [],
     exploitationStatuses: [],
-    sort: null
+    sort: null,
+    order: null
   })
 })
 
@@ -43,7 +47,8 @@ test('readDeclarantsSearchOptions normalise la pagination et les filtres', t => 
     usageCodes: '2,5',
     waterBodyTypes: ['souterrain', 'transition', 'unknown'],
     exploitationStatuses: 'en_activite,terminee',
-    sort: 'last_declaration'
+    sort: 'last_declaration',
+    order: 'asc'
   }), {
     page: 3,
     pageSize: 25,
@@ -59,7 +64,8 @@ test('readDeclarantsSearchOptions normalise la pagination et les filtres', t => 
     usageCodes: ['2', '5'],
     waterBodyTypes: ['SOUTERRAIN', 'TRANSITION'],
     exploitationStatuses: ['EN_ACTIVITE', 'TERMINEE'],
-    sort: 'LAST_DECLARATION'
+    sort: 'LAST_DECLARATION',
+    order: 'ASC'
   })
 })
 
@@ -84,7 +90,8 @@ test('readDeclarantsSearchOptions rejette les valeurs hors contrat', t => {
     usageCodes: [],
     waterBodyTypes: [],
     exploitationStatuses: [],
-    sort: null
+    sort: null,
+    order: null
   })
 })
 
@@ -104,8 +111,9 @@ test('buildDeclarantsSearchQuery encode le contrat de l’API', t => {
     usageCodes: ['2'],
     waterBodyTypes: ['SUPERFICIELLE'],
     exploitationStatuses: ['EN_ACTIVITE'],
-    sort: 'RELEVANCE'
-  }), 'page=2&pageSize=50&query=ASA+%26+fils&role=COLLECTEUR&declarantType=LEGAL_PERSON&emailStatus=WITH_EMAIL&connectorStatus=WITH_CONNECTOR&activityRange=LT_30_DAYS&zoneIds=zone-a&zoneIds=zone-b&usageCodes=2&waterBodyTypes=SUPERFICIELLE&exploitationStatuses=EN_ACTIVITE&sort=RELEVANCE')
+    sort: 'RELEVANCE',
+    order: 'ASC'
+  }), 'page=2&pageSize=50&query=ASA+%26+fils&role=COLLECTEUR&declarantType=LEGAL_PERSON&emailStatus=WITH_EMAIL&connectorStatus=WITH_CONNECTOR&activityRange=LT_30_DAYS&zoneIds=zone-a&zoneIds=zone-b&usageCodes=2&waterBodyTypes=SUPERFICIELLE&exploitationStatuses=EN_ACTIVITE&sort=RELEVANCE&order=ASC')
 })
 
 test('buildDeclarantsPathname conserve les paramètres étrangers et omet les valeurs par défaut', t => {
@@ -120,4 +128,50 @@ test('buildDeclarantsPathname conserve les paramètres étrangers et omet les va
       zoneIds: ['zone-a', 'zone-b']
     }
   ), '/declarants?conserve=oui&emailStatus=WITH_EMAIL&zoneIds=zone-a&zoneIds=zone-b')
+})
+
+test('buildDeclarantsPathname accepte les searchParams Next et retire les paramètres forcés', t => {
+  t.is(buildDeclarantsPathname(
+    '/preleveurs',
+    {
+      conserve: 'oui',
+      role: 'COLLECTEUR',
+      collecteurStatus: 'WITH_COLLECTEUR',
+      collecteur: 'WITH_COLLECTEUR',
+      zoneIds: ['zone-a', 'zone-b']
+    },
+    {
+      role: null,
+      collecteurStatus: null,
+      collecteur: null
+    }
+  ), '/preleveurs?conserve=oui&zoneIds=zone-a&zoneIds=zone-b')
+})
+
+test('getEffectiveDeclarantsSort réserve la pertinence aux recherches textuelles', t => {
+  t.is(getEffectiveDeclarantsSort(), 'NAME')
+  t.is(getEffectiveDeclarantsSort({sort: 'RELEVANCE'}), 'NAME')
+  t.is(getEffectiveDeclarantsSort({query: 'forage'}), 'RELEVANCE')
+  t.is(getEffectiveDeclarantsSort({query: 'forage', sort: 'NAME'}), 'NAME')
+})
+
+test('seule une pertinence explicite sans recherche nécessite une URL canonique', t => {
+  t.false(hasNonCanonicalDeclarantsSort())
+  t.false(hasNonCanonicalDeclarantsSort({sort: 'NAME'}))
+  t.false(hasNonCanonicalDeclarantsSort({query: 'forage', sort: 'RELEVANCE'}))
+  t.true(hasNonCanonicalDeclarantsSort({sort: 'RELEVANCE'}))
+})
+
+test('isDeclarantsSearchResult refuse les erreurs et anciens payloads de liste', t => {
+  t.true(isDeclarantsSearchResult({
+    items: [],
+    page: 1,
+    pageSize: 10,
+    total: 0,
+    totalPages: 1
+  }))
+  t.false(isDeclarantsSearchResult({items: []}))
+  t.false(isDeclarantsSearchResult([]))
+  t.false(isDeclarantsSearchResult({data: []}))
+  t.false(isDeclarantsSearchResult(null))
 })

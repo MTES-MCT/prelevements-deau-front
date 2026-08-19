@@ -6,12 +6,14 @@ import {Button} from '@codegouvfr/react-dsfr/Button'
 import {usePathname, useRouter, useSearchParams} from 'next/navigation'
 
 import Declarant from '@/components/declarants/declarant.js'
+import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import useDebouncedValue from '@/hook/use-debounced-value.js'
 import {
   DECLARANTS_MULTI_FILTER_KEYS,
   DECLARANTS_PAGE_SIZE_OPTIONS,
   DECLARANTS_SCALAR_FILTER_KEYS,
-  buildDeclarantsPathname
+  buildDeclarantsPathname,
+  getEffectiveDeclarantsSort
 } from '@/lib/declarant-search.js'
 
 const FILTER_CONFIGS = [
@@ -27,7 +29,7 @@ const FILTER_CONFIGS = [
   },
   {
     name: 'preleveurType',
-    label: 'Type métier',
+    label: 'Type de préleveur',
     emptyLabel: 'Tous les types',
     facetKeys: ['preleveurTypes'],
     options: [
@@ -167,7 +169,7 @@ function getFacetOptions(facets, config, selectedValues = []) {
   const facetItems = facetKey ? normalizeFacetItems(facets[facetKey]) : []
 
   if (!facetKey) {
-    return staticOptions
+    return []
   }
 
   const options = facetItems.map(item => {
@@ -255,6 +257,28 @@ const DeclarantFilterSelect = ({config, facets, filters, onChange}) => {
   const value = selectedValues[0] || ''
   const id = `declarants-${config.name}-filter`
 
+  if (config.multiple) {
+    return (
+      <div className='min-w-0'>
+        <GroupedMultiselect
+          searchable={options.length > 8}
+          id={id}
+          label={config.label}
+          placeholder={config.emptyLabel || 'Tous'}
+          value={selectedValues}
+          options={options.map(option => ({
+            value: option.value,
+            label: option.label,
+            content: option.count === null || option.count === undefined
+              ? option.label
+              : `${option.label} (${option.count})`
+          }))}
+          onChange={values => onChange({[config.name]: values})}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className='fr-select-group fr-mb-0 min-w-0'>
       <label className='fr-label min-h-6' htmlFor={id}>{config.label}</label>
@@ -263,11 +287,7 @@ const DeclarantFilterSelect = ({config, facets, filters, onChange}) => {
         id={id}
         value={value}
         onChange={event => {
-          const nextValue = config.multiple && event.target.value
-            ? [event.target.value]
-            : event.target.value
-
-          onChange({[config.name]: nextValue})
+          onChange({[config.name]: event.target.value})
         }}
       >
         <option value=''>{config.emptyLabel || 'Tous'}</option>
@@ -434,9 +454,10 @@ const DeclarantsList = ({
     }),
     [isPreleveursList]
   )
-  const hasActiveFilters = Boolean(filters.query || filters.sort
+  const hasActiveFilters = Boolean(filters.query || filters.sort || filters.order
     || filterConfigs.some(config => hasFilterValue(filters[config.name])))
-  const selectedSort = filters.sort || (filters.query ? 'RELEVANCE' : 'NAME')
+  const hasSearchQuery = Boolean(filters.query?.trim())
+  const selectedSort = getEffectiveDeclarantsSort(filters)
 
   useEffect(() => {
     setQuery(filters.query)
@@ -473,7 +494,8 @@ const DeclarantsList = ({
     setQuery('')
     const resetValues = {
       query: null,
-      sort: null
+      sort: null,
+      order: null
     }
 
     for (const key of [...DECLARANTS_SCALAR_FILTER_KEYS, ...DECLARANTS_MULTI_FILTER_KEYS]) {
@@ -554,7 +576,13 @@ const DeclarantsList = ({
               onChange={event => replaceFilters({sort: event.target.value})}
             >
               {SORT_OPTIONS.map(option => (
-                <option key={option.value} value={option.value}>{option.label}</option>
+                <option
+                  key={option.value}
+                  disabled={option.value === 'RELEVANCE' && !hasSearchQuery}
+                  value={option.value}
+                >
+                  {option.label}
+                </option>
               ))}
             </select>
           </div>
@@ -588,12 +616,19 @@ const DeclarantsList = ({
             declarant={declarant}
             index={((currentPage - 1) * pageSize) + index}
             basePath={basePath}
+            trustedCollectorScope={isPreleveursList}
           />
         ))}
 
         {total === 0 && (
-          <div className='border border-gray-200 bg-white px-4 py-6'>
-            <p className='fr-mb-0'><i>Aucun déclarant ne correspond à ces filtres</i></p>
+          <div
+            aria-live='polite'
+            className='border border-gray-200 bg-white px-4 py-6'
+            role='status'
+          >
+            <p className='fr-mb-0'>
+              <i>Aucun {isPreleveursList ? 'préleveur' : 'déclarant'} ne correspond à ces filtres</i>
+            </p>
           </div>
         )}
 

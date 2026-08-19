@@ -15,6 +15,7 @@ const ACTIVITY_RANGES = new Set([
   'GT_365_DAYS'
 ])
 const DECLARANTS_SORTS = new Set(['RELEVANCE', 'NAME', 'LAST_DECLARATION'])
+const DECLARANTS_ORDERS = new Set(['ASC', 'DESC'])
 const WATER_BODY_TYPES = new Set(['SUPERFICIELLE', 'SOUTERRAIN', 'TRANSITION'])
 const EXPLOITATION_STATUSES = new Set([
   'EN_ACTIVITE',
@@ -100,8 +101,37 @@ export function readDeclarantsSearchOptions(searchParams = {}) {
       'exploitationStatuses',
       EXPLOITATION_STATUSES
     ),
-    sort: readEnum(searchParams, 'sort', DECLARANTS_SORTS)
+    sort: readEnum(searchParams, 'sort', DECLARANTS_SORTS),
+    order: readEnum(searchParams, 'order', DECLARANTS_ORDERS)
   }
+}
+
+export function getEffectiveDeclarantsSort({query = '', sort = null} = {}) {
+  if (!query.trim() && sort === 'RELEVANCE') {
+    return 'NAME'
+  }
+
+  return sort || (query.trim() ? 'RELEVANCE' : 'NAME')
+}
+
+export function hasNonCanonicalDeclarantsSort(options = {}) {
+  return options.sort === 'RELEVANCE'
+    && getEffectiveDeclarantsSort(options) !== 'RELEVANCE'
+}
+
+export function isDeclarantsSearchResult(value) {
+  return Boolean(
+    value
+    && Array.isArray(value.items)
+    && Number.isInteger(value.page)
+    && value.page >= 1
+    && Number.isInteger(value.pageSize)
+    && value.pageSize >= 1
+    && Number.isInteger(value.total)
+    && value.total >= 0
+    && Number.isInteger(value.totalPages)
+    && value.totalPages >= 1
+  )
 }
 
 export function buildDeclarantsSearchQuery(options) {
@@ -130,34 +160,63 @@ export function buildDeclarantsSearchQuery(options) {
     params.set('sort', options.sort)
   }
 
+  if (options.order) {
+    params.set('order', options.order)
+  }
+
   return params.toString()
 }
 
+function appendSearchParamValues(params, key, value) {
+  const items = Array.isArray(value) ? value : [value]
+
+  for (const item of items) {
+    if (item !== undefined && item !== null) {
+      params.append(key, String(item))
+    }
+  }
+}
+
+function copySearchParams(params, searchParams) {
+  if (searchParams && typeof searchParams.entries === 'function') {
+    for (const [key, value] of searchParams.entries()) {
+      params.append(key, value)
+    }
+
+    return
+  }
+
+  for (const [key, value] of Object.entries(searchParams ?? {})) {
+    appendSearchParamValues(params, key, value)
+  }
+}
+
+function shouldOmitPathnameValue(key, value) {
+  const isDefaultPage = key === 'page' && Number(value) === 1
+  const isDefaultPageSize = key === 'pageSize'
+    && Number(value) === DEFAULT_DECLARANTS_PAGE_SIZE
+  const isEmpty = value === null || value === undefined || value === '' || value === 'ALL'
+
+  return isEmpty || (Array.isArray(value) && value.length === 0)
+    || isDefaultPage || isDefaultPageSize
+}
+
 export function buildDeclarantsPathname(pathname, searchParams, values) {
-  const params = new URLSearchParams(searchParams.toString())
+  const params = new URLSearchParams()
+  copySearchParams(params, searchParams)
 
   for (const [key, value] of Object.entries(values)) {
-    const isDefaultPage = key === 'page' && Number(value) === 1
-    const isDefaultPageSize = key === 'pageSize'
-      && Number(value) === DEFAULT_DECLARANTS_PAGE_SIZE
-
     params.delete(key)
 
-    if (value === null || value === undefined || value === '' || value === 'ALL'
-      || (Array.isArray(value) && value.length === 0)
-      || isDefaultPage || isDefaultPageSize) {
+    if (shouldOmitPathnameValue(key, value)) {
       continue
     }
 
-    if (Array.isArray(value)) {
-      for (const item of value) {
-        if (item !== null && item !== undefined && item !== '' && item !== 'ALL') {
-          params.append(key, String(item))
-        }
-      }
-    } else {
-      params.set(key, String(value))
-    }
+    appendSearchParamValues(
+      params,
+      key,
+      Array.isArray(value) ? value.filter(item => item !== '' && item !== 'ALL') : value
+    )
   }
 
   const query = params.toString()

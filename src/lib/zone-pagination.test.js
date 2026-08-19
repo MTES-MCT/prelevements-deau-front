@@ -2,6 +2,8 @@ import test from 'ava'
 
 import {
   DEFAULT_ZONE_PER_PAGE,
+  getCanonicalListFilterValues,
+  getEffectiveListSort,
   readListOptions,
   unwrapPaginatedData
 } from './zone-pagination.js'
@@ -48,6 +50,44 @@ test('readListOptions ignore les nombres invalides et garde les filtres non vide
     sort: 'LAST_DECLARATION',
     order: 'desc'
   })
+})
+
+test('les filtres canoniques de la méta priment sur les alias URL', t => {
+  const filters = {
+    exploitationStatuses: ['EN_ACTIVITE', 'TERMINEE'],
+    collecteurStatus: 'WITH_COLLECTEUR'
+  }
+
+  t.deepEqual(getCanonicalListFilterValues(
+    filters,
+    ['exploitationStatuses', 'status'],
+    {multiple: true}
+  ), ['EN_ACTIVITE', 'TERMINEE'])
+  t.deepEqual(getCanonicalListFilterValues(
+    filters,
+    ['collecteurStatus', 'collecteur']
+  ), ['WITH_COLLECTEUR'])
+  t.is(getCanonicalListFilterValues(filters, ['usageCodes', 'usage']), null)
+})
+
+test('le tri effectif désactive la pertinence sans recherche', t => {
+  t.is(getEffectiveListSort({
+    availableSorts: ['RELEVANCE', 'NAME'],
+    search: '',
+    sort: 'RELEVANCE'
+  }), 'NAME')
+  t.is(getEffectiveListSort({
+    availableSorts: ['RELEVANCE', 'CREATED_AT', 'NAME'],
+    fallbackSort: 'CREATED_AT',
+    search: '',
+    sort: 'RELEVANCE'
+  }), 'CREATED_AT')
+  t.is(getEffectiveListSort({
+    availableSorts: ['RELEVANCE', 'CREATED_AT', 'NAME'],
+    fallbackSort: 'CREATED_AT',
+    search: 'asa',
+    sort: null
+  }), 'RELEVANCE')
 })
 
 test('unwrapPaginatedData enveloppe un tableau simple', t => {

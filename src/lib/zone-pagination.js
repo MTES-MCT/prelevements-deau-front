@@ -44,6 +44,51 @@ function readStrings(searchParams, key) {
     .filter(Boolean))]
 }
 
+export function getCanonicalListFilterValues(
+  filters = {},
+  keys = [],
+  {multiple = false} = {}
+) {
+  const key = keys.find(candidate => Object.hasOwn(filters, candidate))
+
+  if (!key) {
+    return null
+  }
+
+  const rawValue = filters[key]
+  const values = [...new Set((Array.isArray(rawValue) ? rawValue : [rawValue])
+    .flatMap(value => typeof value === 'string' ? value.split(',') : [])
+    .map(value => value.trim())
+    .filter(Boolean))]
+
+  return multiple ? values : values.slice(0, 1)
+}
+
+export function getEffectiveListSort({
+  availableSorts = [],
+  fallbackSort = 'NAME',
+  search = '',
+  sort = null
+} = {}) {
+  const allowed = new Set(availableSorts)
+  const fallback = allowed.has(fallbackSort) ? fallbackSort : availableSorts[0] ?? null
+  const candidate = typeof sort === 'string' ? sort.toUpperCase() : null
+
+  if (!search && candidate === 'RELEVANCE') {
+    return fallback
+  }
+
+  if (candidate && allowed.has(candidate)) {
+    return candidate
+  }
+
+  if (search && allowed.has('RELEVANCE')) {
+    return 'RELEVANCE'
+  }
+
+  return fallback
+}
+
 function normalizeMeta(meta, fallbackCount = 0) {
   const count = Number(meta?.count ?? fallbackCount)
   const total = Number(meta?.total ?? fallbackCount)

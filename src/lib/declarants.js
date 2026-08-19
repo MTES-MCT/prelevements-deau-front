@@ -51,6 +51,15 @@ export function isDeclarationNotificationsEnabled(declarant) {
   return declarant?.declarationNotificationsEnabled ?? declarant?.declarant?.declarationNotificationsEnabled ?? true
 }
 
+export function canDisplayDeclarantExploitationSummary(
+  declarant,
+  {trustedCollectorScope = false} = {}
+) {
+  return trustedCollectorScope
+    || declarant?.right?.isAdmin === true
+    || declarant?.right?.permissions?.includes('exploitation.list') === true
+}
+
 export function getDeclarantTypeIcon(declarant) {
   if (declarant?.declarantRole === 'COLLECTEUR' || declarant?.declarant?.declarantRole === 'COLLECTEUR') {
     return PRELEVEUR_TYPE_ICONS.collecteur

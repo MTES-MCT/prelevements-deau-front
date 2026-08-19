@@ -6,14 +6,20 @@ import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Box} from '@mui/material'
 import {usePathname, useRouter, useSearchParams} from 'next/navigation'
 
+import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import useDebouncedValue from '@/hook/use-debounced-value.js'
+import {
+  getCanonicalListFilterValues,
+  getEffectiveListSort
+} from '@/lib/zone-pagination.js'
+import {hasRequiredZonePermissions} from '@/lib/zone-permissions.js'
 
 export const DEFAULT_ZONE_PER_PAGE = 20
 
 export const ZONE_DECLARANT_FILTERS = [
   {
     name: 'preleveurType',
-    label: 'Type métier',
+    label: 'Type de préleveur',
     emptyLabel: 'Tous les types',
     facetKeys: ['preleveurTypes'],
     options: [
@@ -50,7 +56,8 @@ export const ZONE_DECLARANT_FILTERS = [
     emptyLabel: 'Tous les usages',
     facetKeys: ['usages'],
     legacyNames: ['usage'],
-    multiple: true
+    multiple: true,
+    requiredPermissions: ['exploitation.list']
   },
   {
     name: 'exploitationStatuses',
@@ -59,6 +66,7 @@ export const ZONE_DECLARANT_FILTERS = [
     facetKeys: ['exploitationStatuses'],
     legacyNames: ['status'],
     multiple: true,
+    requiredPermissions: ['exploitation.list'],
     options: [
       {value: 'EN_ACTIVITE', label: 'En activité'},
       {value: 'TERMINEE', label: 'Terminée'},
@@ -67,10 +75,23 @@ export const ZONE_DECLARANT_FILTERS = [
     ]
   },
   {
+    name: 'collecteurStatus',
+    label: 'Collecteur',
+    emptyLabel: 'Avec ou sans collecteur',
+    facetKeys: ['collecteurStatuses'],
+    legacyNames: ['collecteur', 'collector'],
+    requiredPermissions: ['exploitation.list'],
+    options: [
+      {value: 'WITH_COLLECTEUR', label: 'Avec collecteur'},
+      {value: 'WITHOUT_COLLECTEUR', label: 'Sans collecteur'}
+    ]
+  },
+  {
     name: 'connectorStatus',
     label: 'Connecteur',
     emptyLabel: 'Tous les connecteurs',
     facetKeys: ['connectorStatuses'],
+    requiredPermissions: ['exploitation.list'],
     options: [
       {value: 'WITH_CONNECTOR', label: 'Configuré'},
       {value: 'WITHOUT_CONNECTOR', label: 'Non configuré'}
@@ -122,7 +143,8 @@ export const ZONE_EXPLOITATION_FILTERS = [
     emptyLabel: 'Tous les usages',
     facetKeys: ['usages'],
     legacyNames: ['usage'],
-    multiple: true
+    multiple: true,
+    requiredPermissions: ['exploitation.list']
   },
   {
     name: 'exploitationStatuses',
@@ -131,6 +153,7 @@ export const ZONE_EXPLOITATION_FILTERS = [
     facetKeys: ['exploitationStatuses'],
     legacyNames: ['status'],
     multiple: true,
+    requiredPermissions: ['exploitation.list'],
     options: [
       {value: 'EN_ACTIVITE', label: 'En activité'},
       {value: 'TERMINEE', label: 'Terminées'},
@@ -144,6 +167,7 @@ export const ZONE_EXPLOITATION_FILTERS = [
     emptyLabel: 'Avec ou sans collecteur',
     facetKeys: ['collecteurStatuses'],
     legacyNames: ['collecteur', 'collector'],
+    requiredPermissions: ['exploitation.list'],
     options: [
       {value: 'WITH_COLLECTEUR', label: 'Avec collecteur'},
       {value: 'WITHOUT_COLLECTEUR', label: 'Sans collecteur'}
@@ -154,6 +178,7 @@ export const ZONE_EXPLOITATION_FILTERS = [
     label: 'Connecteur',
     emptyLabel: 'Tous les connecteurs',
     facetKeys: ['connectorStatuses'],
+    requiredPermissions: ['exploitation.list'],
     options: [
       {value: 'WITH_CONNECTOR', label: 'Configuré'},
       {value: 'WITHOUT_CONNECTOR', label: 'Non configuré'}
@@ -181,7 +206,8 @@ export const ZONE_POINT_FILTERS = [
     emptyLabel: 'Tous les usages',
     facetKeys: ['usages'],
     legacyNames: ['usage'],
-    multiple: true
+    multiple: true,
+    requiredPermissions: ['exploitation.list']
   },
   {
     name: 'waterBodyTypes',
@@ -213,6 +239,7 @@ export const ZONE_POINT_FILTERS = [
     facetKeys: ['exploitationStatuses'],
     legacyNames: ['status'],
     multiple: true,
+    requiredPermissions: ['exploitation.list'],
     options: [
       {value: 'EN_ACTIVITE', label: 'En activité'},
       {value: 'TERMINEE', label: 'Terminée'},
@@ -226,6 +253,7 @@ export const ZONE_POINT_FILTERS = [
     emptyLabel: 'Avec ou sans collecteur',
     facetKeys: ['collecteurStatuses'],
     legacyNames: ['collecteur', 'collector'],
+    requiredPermissions: ['exploitation.list'],
     options: [
       {value: 'WITH_COLLECTEUR', label: 'Avec collecteur'},
       {value: 'WITHOUT_COLLECTEUR', label: 'Sans collecteur'}
@@ -236,6 +264,7 @@ export const ZONE_POINT_FILTERS = [
     label: 'Connecteur',
     emptyLabel: 'Tous les connecteurs',
     facetKeys: ['connectorStatuses'],
+    requiredPermissions: ['exploitation.list'],
     options: [
       {value: 'WITH_CONNECTOR', label: 'Configuré'},
       {value: 'WITHOUT_CONNECTOR', label: 'Non configuré'}
@@ -247,6 +276,8 @@ export const ZONE_POINT_FILTERS = [
     emptyLabel: 'Tous les types',
     facetKeys: ['preleveurTypes'],
     multiple: true,
+    requiredPermissions: ['exploitation.list', 'declarant.list'],
+    requireAllPermissions: true,
     options: [
       {value: 'ICPE', label: 'ICPE'},
       {value: 'IRRIGANT', label: 'Irrigant'},
@@ -263,6 +294,13 @@ export const ZONE_NAME_SORT_OPTIONS = [
 
 export const ZONE_ACTIVITY_SORT_OPTIONS = [
   ...ZONE_NAME_SORT_OPTIONS,
+  {value: 'LAST_DECLARATION', label: 'Dernière déclaration'}
+]
+
+export const ZONE_EXPLOITATION_SORT_OPTIONS = [
+  {value: 'RELEVANCE', label: 'Pertinence'},
+  {value: 'CREATED_AT', label: 'Plus récentes'},
+  {value: 'NAME', label: 'Nom'},
   {value: 'LAST_DECLARATION', label: 'Dernière déclaration'}
 ]
 
@@ -300,7 +338,7 @@ function getFacetOptions(facets, filter, selectedValues = []) {
   const facetItems = facetKey ? normalizeFacetItems(facets[facetKey]) : []
 
   if (!facetKey) {
-    return staticOptions
+    return []
   }
 
   const options = facetItems.map(item => {
@@ -329,11 +367,33 @@ function getFacetOptions(facets, filter, selectedValues = []) {
   return options
 }
 
-function getSelectedFilterValues(searchParams, filter) {
+function getSelectedFilterValues(searchParams, filter, metaFilters = {}) {
   const names = [filter.name, ...(filter.legacyNames || [])]
-  const values = names.flatMap(name => searchParams.getAll(name)).filter(Boolean)
+  const canonicalValues = getCanonicalListFilterValues(
+    metaFilters,
+    [filter.name, ...(filter.facetKeys || []), ...(filter.legacyNames || [])],
+    {multiple: filter.multiple}
+  )
+
+  if (canonicalValues !== null) {
+    return canonicalValues
+  }
+
+  const values = names
+    .flatMap(name => searchParams.getAll(name))
+    .flatMap(value => value.split(','))
+    .map(value => value.trim())
+    .filter(Boolean)
 
   return filter.multiple ? [...new Set(values)] : values.slice(0, 1)
+}
+
+export function canUseZoneFilter(filter, permissions = []) {
+  return hasRequiredZonePermissions(
+    permissions,
+    filter.requiredPermissions,
+    {requireAll: filter.requireAllPermissions}
+  )
 }
 
 function normalizeMeta(meta, fallbackCount = 0) {
@@ -455,18 +515,55 @@ export const ZoneSearchControl = ({label = 'Rechercher', placeholder = 'Recherch
   )
 }
 
-const ZoneFilterSelect = ({facets, filter}) => {
+const ZoneFilterSelect = ({facets, filter, metaFilters}) => {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const id = `zone-filter-${filter.name}`
-  const selectedValues = getSelectedFilterValues(searchParams, filter)
+  const selectedValues = getSelectedFilterValues(searchParams, filter, metaFilters)
   const options = getFacetOptions(facets, filter, selectedValues)
   const hasFacet = [filter.name, ...(filter.facetKeys || [])]
     .some(key => facets && Object.hasOwn(facets, key))
 
   if (options.length === 0 || (hasFacet && options.length <= 1 && selectedValues.length === 0)) {
     return null
+  }
+
+  const replaceSelection = values => {
+    const params = new URLSearchParams(searchParams.toString())
+
+    for (const name of [filter.name, ...(filter.legacyNames || [])]) {
+      params.delete(name)
+    }
+
+    for (const value of values) {
+      params.append(filter.name, value)
+    }
+
+    params.delete('page')
+    router.replace(buildPathnameWithParams(pathname, params), {scroll: false})
+  }
+
+  if (filter.multiple) {
+    return (
+      <div className='min-w-56'>
+        <GroupedMultiselect
+          searchable={options.length > 8}
+          id={id}
+          label={filter.label}
+          placeholder={filter.emptyLabel || 'Tous'}
+          value={selectedValues}
+          options={options.map(option => ({
+            value: option.value,
+            label: option.label,
+            content: option.count === null || option.count === undefined
+              ? option.label
+              : `${option.label} (${option.count})`
+          }))}
+          onChange={replaceSelection}
+        />
+      </div>
+    )
   }
 
   return (
@@ -477,19 +574,7 @@ const ZoneFilterSelect = ({facets, filter}) => {
         id={id}
         value={selectedValues[0] || ''}
         onChange={event => {
-          const params = new URLSearchParams(searchParams.toString())
-          const {value} = event.target
-
-          for (const name of [filter.name, ...(filter.legacyNames || [])]) {
-            params.delete(name)
-          }
-
-          if (value) {
-            params.append(filter.name, value)
-          }
-
-          params.delete('page')
-          router.replace(buildPathnameWithParams(pathname, params), {scroll: false})
+          replaceSelection(event.target.value ? [event.target.value] : [])
         }}
       >
         <option value=''>{filter.emptyLabel || 'Tous'}</option>
@@ -503,12 +588,16 @@ const ZoneFilterSelect = ({facets, filter}) => {
   )
 }
 
-const ZoneFilters = ({facets = {}, filters = []}) => {
+const ZoneFilters = ({facets = {}, filters = [], metaFilters = {}, permissions = []}) => {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const visibleFilters = filters.filter(filter => {
-    const selectedValues = getSelectedFilterValues(searchParams, filter)
+    if (!canUseZoneFilter(filter, permissions)) {
+      return false
+    }
+
+    const selectedValues = getSelectedFilterValues(searchParams, filter, metaFilters)
     const options = getFacetOptions(facets, filter, selectedValues)
     const hasFacet = [filter.name, ...(filter.facetKeys || [])]
       .some(key => Object.hasOwn(facets, key))
@@ -516,9 +605,8 @@ const ZoneFilters = ({facets = {}, filters = []}) => {
     return options.length > 0
       && (!hasFacet || options.length > 1 || selectedValues.length > 0)
   })
-  const hasActiveFilter = visibleFilters.some(filter => (
-    [filter.name, ...(filter.legacyNames || [])].some(name => searchParams.get(name))
-  ))
+  const hasActiveFilter = visibleFilters.some(filter =>
+    getSelectedFilterValues(searchParams, filter, metaFilters).length > 0)
 
   if (visibleFilters.length === 0) {
     return null
@@ -528,7 +616,12 @@ const ZoneFilters = ({facets = {}, filters = []}) => {
     <div className='flex flex-col md:flex-row md:items-end gap-3'>
       <div className='flex flex-col md:flex-row gap-3 flex-wrap'>
         {visibleFilters.map(filter => (
-          <ZoneFilterSelect key={filter.name} facets={facets} filter={filter} />
+          <ZoneFilterSelect
+            key={filter.name}
+            facets={facets}
+            filter={filter}
+            metaFilters={metaFilters}
+          />
         ))}
       </div>
 
@@ -556,7 +649,7 @@ const ZoneFilters = ({facets = {}, filters = []}) => {
   )
 }
 
-const ZoneSortSelect = ({options = []}) => {
+const ZoneSortSelect = ({options = [], search = '', sort = null}) => {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -565,8 +658,15 @@ const ZoneSortSelect = ({options = []}) => {
     return null
   }
 
-  const currentSort = searchParams.get('sort')
-    || (searchParams.get('search') ? 'RELEVANCE' : 'NAME')
+  const hasSearch = Boolean(search?.trim())
+  const availableSorts = options.map(option => option.value)
+  const fallbackSort = availableSorts.includes('CREATED_AT') ? 'CREATED_AT' : 'NAME'
+  const currentSort = getEffectiveListSort({
+    availableSorts,
+    fallbackSort,
+    search,
+    sort
+  })
 
   return (
     <div className='fr-select-group fr-mb-0 min-w-56'>
@@ -583,7 +683,13 @@ const ZoneSortSelect = ({options = []}) => {
         }}
       >
         {options.map(option => (
-          <option key={option.value} value={option.value}>{option.label}</option>
+          <option
+            key={option.value}
+            disabled={option.value === 'RELEVANCE' && !hasSearch}
+            value={option.value}
+          >
+            {option.label}
+          </option>
         ))}
       </select>
     </div>
@@ -670,6 +776,7 @@ export const ZoneResourceToolbar = ({
   searchLabel,
   searchPlaceholder,
   filters = [],
+  permissions = [],
   sortOptions = [],
   action = null
 }) => {
@@ -684,9 +791,18 @@ export const ZoneResourceToolbar = ({
 
       <div className='grid grid-cols-1 gap-3 md:grid-cols-[minmax(18rem,1fr)_minmax(14rem,.35fr)] md:items-end'>
         <ZoneSearchControl label={searchLabel} placeholder={searchPlaceholder} />
-        <ZoneSortSelect options={sortOptions} />
+        <ZoneSortSelect
+          options={sortOptions}
+          search={normalizedMeta.search ?? ''}
+          sort={normalizedMeta.sort}
+        />
       </div>
-      <ZoneFilters facets={normalizedMeta.facets} filters={filters} />
+      <ZoneFilters
+        facets={normalizedMeta.facets}
+        filters={filters}
+        metaFilters={normalizedMeta.filters}
+        permissions={permissions}
+      />
     </div>
   )
 }

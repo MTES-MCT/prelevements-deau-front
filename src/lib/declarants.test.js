@@ -3,6 +3,7 @@ import test from 'ava'
 import {
   PRELEVEUR_TYPE_LABELS,
   PRELEVEUR_TYPE_OPTIONS,
+  canDisplayDeclarantExploitationSummary,
   getPreleveurType,
   getPreleveurTypeLabel,
   normalizePreleveurTypeForRole
@@ -48,4 +49,24 @@ test('un type absent ou inconnu ne devient pas implicitement Autre', t => {
   t.is(getPreleveurTypeLabel(null), null)
   t.is(getPreleveurTypeLabel('INCONNU'), null)
   t.is(getPreleveurTypeLabel('AUTRE'), 'Autre')
+})
+
+test('les résumés d’exploitations suivent les droits de chaque déclarant', t => {
+  t.true(canDisplayDeclarantExploitationSummary({
+    right: {permissions: ['exploitation.list']}
+  }))
+  t.true(canDisplayDeclarantExploitationSummary({
+    right: {isAdmin: true, permissions: []}
+  }))
+  t.false(canDisplayDeclarantExploitationSummary({
+    right: {permissions: ['declarant.list']}
+  }))
+  t.false(canDisplayDeclarantExploitationSummary({}))
+})
+
+test('la liste collecteur est un périmètre relationnel fiable malgré READ_ONLY', t => {
+  t.true(canDisplayDeclarantExploitationSummary(
+    {right: {permissions: []}},
+    {trustedCollectorScope: true}
+  ))
 })
