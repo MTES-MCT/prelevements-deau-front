@@ -6,6 +6,7 @@ import {
   MISSING_WATER_BODY_TYPE,
   NO_EXPLOITATION_STATUS,
   countPointsByUsage,
+  createPointFilterModel,
   createPointFilterIndex,
   filterPoints,
   filterPointsWithScores,
@@ -145,6 +146,20 @@ test('l’index de filtres pré-calcule les recherches et les facettes sans modi
     query: 'source nord'
   }, index).map(point => point.id), ['point-1'])
   t.false(Object.hasOwn(points[0], 'searchText'))
+})
+
+test('le modèle de filtres partage un seul index entre options, recherche et valeurs par défaut', t => {
+  const model = createPointFilterModel(points, {
+    flowTypes: ['PRELEVEMENT', 'REJET']
+  })
+
+  t.deepEqual(model.options.preleveurTypeOptions.map(option => option.value), ['IRRIGANT'])
+  t.deepEqual(model.defaultFilters.flowTypes, ['PRELEVEMENT', 'REJET'])
+  t.deepEqual(
+    filterPoints(points, {...model.defaultFilters, query: 'source nord'}, model.index)
+      .map(point => point.id),
+    ['point-1']
+  )
 })
 
 test('les sous-usages sont regroupés sous leur usage racine', t => {

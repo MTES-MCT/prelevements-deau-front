@@ -2,6 +2,7 @@ import test from 'ava'
 
 import {
   DEFAULT_DECLARANTS_PAGE_SIZE,
+  buildDeclarantsApiSearchQuery,
   buildDeclarantsPathname,
   buildDeclarantsSearchQuery,
   getEffectiveDeclarantsSort,
@@ -114,6 +115,19 @@ test('buildDeclarantsSearchQuery encode le contrat de l’API', t => {
     sort: 'RELEVANCE',
     order: 'ASC'
   }), 'page=2&pageSize=50&query=ASA+%26+fils&role=COLLECTEUR&declarantType=LEGAL_PERSON&emailStatus=WITH_EMAIL&connectorStatus=WITH_CONNECTOR&activityRange=LT_30_DAYS&zoneIds=zone-a&zoneIds=zone-b&usageCodes=2&waterBodyTypes=SUPERFICIELLE&exploitationStatuses=EN_ACTIVITE&sort=RELEVANCE&order=ASC')
+})
+
+test('le format compact est demandé uniquement par la requête API serveur', t => {
+  const options = {page: 1, pageSize: 10, query: 'ferme'}
+
+  t.is(
+    buildDeclarantsSearchQuery(options),
+    'page=1&pageSize=10&query=ferme'
+  )
+  t.is(
+    buildDeclarantsApiSearchQuery(options),
+    'page=1&pageSize=10&query=ferme&format=compact'
+  )
 })
 
 test('buildDeclarantsPathname conserve les paramètres étrangers et omet les valeurs par défaut', t => {

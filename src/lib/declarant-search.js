@@ -167,6 +167,13 @@ export function buildDeclarantsSearchQuery(options) {
   return params.toString()
 }
 
+export function buildDeclarantsApiSearchQuery(options) {
+  const params = new URLSearchParams(buildDeclarantsSearchQuery(options))
+  params.set('format', 'compact')
+
+  return params.toString()
+}
+
 function appendSearchParamValues(params, key, value) {
   const items = Array.isArray(value) ? value : [value]
 

@@ -20,11 +20,9 @@ import useEvent from '@/hook/use-event.js'
 import {pointFlowTypeLabels} from '@/lib/point-flow-types.js'
 import {
   MISSING_USAGE_KEY,
-  createPointFilterIndex,
+  createPointFilterModel,
   filterPointsWithScores,
-  getDefaultPointFilters,
   getPointFacetCounts,
-  getPointFilterOptions,
   getPointFiltersFromSearchParams,
   getSearchParamsWithPointFilters,
   haveSameSelection
@@ -90,19 +88,20 @@ const PointsMapPage = ({initialPointsResult}) => {
   )
   const canSearchDeclarants = points.some(point => point?.searchAccess?.declarants === true)
 
-  const [filters, setFilters] = useState(() => {
-    const pointFilterIndex = createPointFilterIndex(points)
-    const pointFilterOptions = getPointFilterOptions(points, pointFilterIndex)
-    const defaultFilters = getDefaultPointFilters({
-      ...pointFilterOptions,
-      flowTypes: FLOW_TYPE_VALUES
-    })
+  const pointFilterModel = useMemo(
+    () => createPointFilterModel(points, {flowTypes: FLOW_TYPE_VALUES}),
+    [points]
+  )
+  const {
+    defaultFilters,
+    index: pointFilterIndex,
+    options: pointFilterOptions
+  } = pointFilterModel
 
-    return getPointFiltersFromSearchParams(
-      new URLSearchParams(searchParams.toString()),
-      defaultFilters
-    )
-  })
+  const [filters, setFilters] = useState(() => getPointFiltersFromSearchParams(
+    new URLSearchParams(searchParams.toString()),
+    defaultFilters
+  ))
   const error = initialPointsResult?.success
     ? null
     : 'Les points de prélèvement n’ont pas pu être chargés.'
@@ -120,11 +119,6 @@ const PointsMapPage = ({initialPointsResult}) => {
   const [listHighlightedPointId, setListHighlightedPointId] = useState(null)
   const [mapHighlightedPointId, setMapHighlightedPointId] = useState(null)
 
-  const pointFilterIndex = useMemo(() => createPointFilterIndex(points), [points])
-  const pointFilterOptions = useMemo(
-    () => getPointFilterOptions(points, pointFilterIndex),
-    [pointFilterIndex, points]
-  )
   const {
     collecteurStatusOptions,
     connectorStatusOptions,
@@ -134,13 +128,6 @@ const PointsMapPage = ({initialPointsResult}) => {
     usageOptions,
     waterBodyTypeOptions
   } = pointFilterOptions
-  const defaultFilters = useMemo(
-    () => getDefaultPointFilters({
-      ...pointFilterOptions,
-      flowTypes: FLOW_TYPE_VALUES
-    }),
-    [pointFilterOptions]
-  )
   const deferredQuery = useDeferredValue(filters.query)
   const debouncedUrlQuery = useDebouncedValue(filters.query, SMART_SEARCH_DEBOUNCE_MS)
   const isSearchPending = deferredQuery !== filters.query
