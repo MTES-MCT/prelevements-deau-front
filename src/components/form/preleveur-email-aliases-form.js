@@ -4,8 +4,9 @@ import {useCallback, useMemo, useState} from 'react'
 
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Input} from '@codegouvfr/react-dsfr/Input'
-import {Alert, Chip, Typography} from '@mui/material'
+import {Alert, Typography} from '@mui/material'
 
+import {CopyEmailButton} from '@/components/ui/CopyableEmail/index.js'
 import {
   createDeclarantEmailAliasAction,
   deleteDeclarantEmailAliasAction
@@ -28,11 +29,20 @@ const PreleveurEmailAliasChip = ({
   }, [aliasId, onDelete])
 
   return (
-    <Chip
-      disabled={disabled}
-      label={email}
-      onDelete={onDelete ? handleDelete : undefined}
-    />
+    <span className={`group inline-flex max-w-full items-center gap-0.5 rounded-full bg-[var(--background-contrast-grey)] py-1 pl-3 text-sm text-[var(--text-default-grey)] ${onDelete ? 'pr-1' : 'pr-2'} ${disabled ? 'opacity-60' : ''}`}>
+      <span className='min-w-0 truncate'>{email}</span>
+      <CopyEmailButton revealOnHover email={email} />
+      {onDelete && (
+        <button
+          aria-label={`Supprimer l’alias ${email}`}
+          className='fr-btn fr-btn--sm fr-btn--tertiary-no-outline fr-icon-close-line !h-6 !min-h-6 !w-6 !min-w-6 !p-1 opacity-70 transition-opacity hover:opacity-100 focus-visible:opacity-100'
+          disabled={disabled}
+          style={{color: 'var(--text-mention-grey)'}}
+          type='button'
+          onClick={handleDelete}
+        />
+      )}
+    </span>
   )
 }
 

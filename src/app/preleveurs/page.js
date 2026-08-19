@@ -1,5 +1,4 @@
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
-import {Box, Typography} from '@mui/material'
 import {redirect} from 'next/navigation'
 
 import DeclarantsList from '@/components/declarants/declarants-list.js'
@@ -58,36 +57,38 @@ const Page = async ({searchParams}) => {
     <>
       <StartDsfrOnHydration />
 
-      <Box className='flex flex-col fr-container h-full w-full'>
-        <div className='flex justify-between items-end'>
-          <Typography variant='h4' className='fr-pt-3w'>Préleveurs</Typography>
+      <main className='min-h-screen bg-[#f7f7fb] pb-12'>
+        <div className='fr-container pt-8 md:pt-10'>
+          <div className='mb-6'>
+            <h1 className='fr-h2 fr-mb-1w'>Préleveurs</h1>
+            <p className='fr-text--sm fr-mb-0 max-w-3xl'>
+              Retrouvez les préleveurs dont votre compte collecteur suit au moins un point.
+            </p>
+          </div>
+
+          {hasSearchError
+            ? (
+              <Alert
+                description='La liste des préleveurs ne peut pas être affichée pour le moment.'
+                severity='error'
+                title='Liste indisponible'
+              />
+            )
+            : (
+              <DeclarantsList
+                basePath='/preleveurs'
+                declarants={searchResult.items}
+                facets={searchResult.facets}
+                filters={options}
+                listKind='preleveurs'
+                page={searchResult.page}
+                pageSize={searchResult.pageSize}
+                total={searchResult.total}
+                totalPages={searchResult.totalPages}
+              />
+            )}
         </div>
-        <p className='fr-text--sm fr-mt-2w'>
-          Ces préleveurs sont accessibles car votre compte collecteur est rattaché à leurs exploitations.
-        </p>
-        {hasSearchError
-          ? (
-            <Alert
-              description='La liste des préleveurs ne peut pas être affichée pour le moment.'
-              severity='error'
-              title='Liste indisponible'
-            />
-          )
-          : (
-            <DeclarantsList
-              basePath='/preleveurs'
-              counts={searchResult.counts}
-              declarants={searchResult.items}
-              facets={searchResult.facets}
-              filters={options}
-              listKind='preleveurs'
-              page={searchResult.page}
-              pageSize={searchResult.pageSize}
-              total={searchResult.total}
-              totalPages={searchResult.totalPages}
-            />
-          )}
-      </Box>
+      </main>
     </>
   )
 }
