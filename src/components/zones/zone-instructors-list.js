@@ -12,6 +12,7 @@ import {ZONE_INSTRUCTORS_EXPORT_COLUMNS} from '@/components/zones/zone-export-co
 import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
 import useDebouncedValue from '@/hook/use-debounced-value.js'
 import {matchesSearchTerms} from '@/lib/search-options.js'
+import {SMART_SEARCH_DEBOUNCE_MS} from '@/lib/search-timing.js'
 import {
   formatAccessPeriod,
   getHabilitationRoleLabel,
@@ -43,7 +44,7 @@ function getInstructorSearchText(instructor) {
 const ZoneInstructorsList = ({zone, instructors}) => {
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
-  const debouncedQuery = useDebouncedValue(query)
+  const debouncedQuery = useDebouncedValue(query, SMART_SEARCH_DEBOUNCE_MS)
 
   const filteredInstructors = useMemo(() => instructors.filter(instructor => matchesSearchTerms(
     getInstructorSearchText(instructor),

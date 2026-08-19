@@ -16,6 +16,7 @@ import {
   buildDeclarantsPathname,
   getEffectiveDeclarantsSort
 } from '@/lib/declarant-search.js'
+import {SMART_SEARCH_DEBOUNCE_MS} from '@/lib/search-timing.js'
 
 const FILTER_CONFIGS = [
   {
@@ -446,7 +447,7 @@ const DeclarantsList = ({
     setValue: setQuery,
     value: query
   } = useSearchDraft(filters.query, 'query')
-  const debouncedQuery = useDebouncedValue(query, 350)
+  const debouncedQuery = useDebouncedValue(query, SMART_SEARCH_DEBOUNCE_MS)
   const currentPage = Math.min(Math.max(page, 1), Math.max(totalPages, 1))
   const isPreleveursList = listKind === 'preleveurs'
   const filterConfigs = useMemo(
