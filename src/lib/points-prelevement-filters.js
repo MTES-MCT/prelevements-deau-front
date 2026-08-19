@@ -1,6 +1,9 @@
-import {deburr} from 'lodash-es'
-
 import {getPointFlowType} from '@/lib/point-flow-types.js'
+import {
+  SEARCH_SORT_MODES,
+  createSearchDocument,
+  scoreSearchDocument
+} from '@/lib/smart-search.js'
 import {
   getUsageColor,
   getUsageLabel,
@@ -9,14 +12,33 @@ import {
 
 export const MISSING_USAGE_KEY = '__MISSING_USAGE__'
 export const MISSING_WATER_BODY_TYPE = '__MISSING_WATER_BODY_TYPE__'
+export const NO_EXPLOITATION_STATUS = '__WITHOUT_EXPLOITATION__'
+export const MISSING_PRELEVEUR_TYPE = '__MISSING_PRELEVEUR_TYPE__'
 
 const EMPTY_SELECTION_VALUE = 'aucun'
 const FILTER_QUERY_PARAMETERS = Object.freeze({
+  collecteurStatuses: 'collecteur',
+  connectorStatuses: 'connecteur',
+  exploitationStatuses: 'statut-exploitation',
   flowTypes: 'type-point',
+  managementZoneIds: 'zone',
+  preleveurTypes: 'type-preleveur',
   query: 'recherche',
+  sort: 'tri',
   usageKeys: 'usage',
   waterBodyTypes: 'type-milieu'
 })
+
+const FACET_KEYS = Object.freeze([
+  'flowTypes',
+  'waterBodyTypes',
+  'usageKeys',
+  'managementZoneIds',
+  'exploitationStatuses',
+  'collecteurStatuses',
+  'connectorStatuses',
+  'preleveurTypes'
+])
 
 export const WATER_BODY_TYPE_LABELS = Object.freeze({
   SUPERFICIELLE: 'Eau superficielle',
@@ -25,25 +47,43 @@ export const WATER_BODY_TYPE_LABELS = Object.freeze({
   [MISSING_WATER_BODY_TYPE]: 'Milieu non renseigné'
 })
 
+export const EXPLOITATION_STATUS_LABELS = Object.freeze({
+  EN_ACTIVITE: 'En activité',
+  TERMINEE: 'Terminée',
+  ABANDONNEE: 'Abandonnée',
+  NON_RENSEIGNE: 'Non renseigné',
+  [NO_EXPLOITATION_STATUS]: 'Sans exploitation'
+})
+
+export const COLLECTEUR_STATUS_LABELS = Object.freeze({
+  WITH_COLLECTEUR: 'Avec collecteur',
+  WITHOUT_COLLECTEUR: 'Sans collecteur'
+})
+
+export const CONNECTOR_STATUS_LABELS = Object.freeze({
+  WITH_CONNECTOR: 'Avec connecteur',
+  WITHOUT_CONNECTOR: 'Sans connecteur'
+})
+
+export const PRELEVEUR_TYPE_LABELS = Object.freeze({
+  ICPE: 'ICPE',
+  IRRIGANT: 'Irrigant',
+  GESTIONNAIRE_AEP: 'Gestionnaire AEP',
+  AUTRE: 'Autre',
+  [MISSING_PRELEVEUR_TYPE]: 'Type non renseigné'
+})
+
 const MISSING_USAGE_OPTION = Object.freeze({
   value: MISSING_USAGE_KEY,
   label: 'Sans usage renseigné',
   color: '#929292'
 })
 
-const normalizeText = value => deburr(String(value ?? '').trim().toLocaleLowerCase('fr-FR'))
+function uniqueValues(values = []) {
+  return [...new Set(values.filter(Boolean))]
+}
 
-const createPointFilterMetadata = point => ({
-  flowType: getPointFlowType(point),
-  searchText: [point?.name, point?.usageName, point?.codeBSS, point?.id]
-    .map(value => normalizeText(value))
-    .filter(Boolean)
-    .join('\n'),
-  usageKeys: getPointUsageRootKeys(point),
-  waterBodyType: point?.waterBodyType || MISSING_WATER_BODY_TYPE
-})
-
-const compareUsageCodes = (left, right) => {
+function compareUsageCodes(left, right) {
   if (left === MISSING_USAGE_KEY) {
     return 1
   }
@@ -53,6 +93,87 @@ const compareUsageCodes = (left, right) => {
   }
 
   return left.localeCompare(right, 'fr-FR', {numeric: true})
+}
+
+function getManagementZones(point) {
+  return Array.isArray(point?.managementZones) ? point.managementZones : []
+}
+
+function getSearchAccess(point) {
+  return {
+    declarants: point?.searchAccess?.declarants === true,
+    exploitations: point?.searchAccess?.exploitations === true
+  }
+}
+
+function getExploitationStatuses(point, canSearchExploitations) {
+  if (!canSearchExploitations) {
+    return []
+  }
+
+  const statuses = uniqueValues(point?.exploitationStatuses)
+  return statuses.length > 0 ? statuses : [NO_EXPLOITATION_STATUS]
+}
+
+function getPreleveurTypes(point, canSearchDeclarants, hasExploitation) {
+  if (!canSearchDeclarants || !hasExploitation) {
+    return []
+  }
+
+  const types = uniqueValues(point?.preleveurTypes)
+  return types.length > 0 ? types : [MISSING_PRELEVEUR_TYPE]
+}
+
+function getPointSearchDocument(point, searchAccess) {
+  const usages = point?.usages ?? []
+  const managementZones = getManagementZones(point)
+  const declarantFields = searchAccess.declarants
+    ? [
+      {value: point?.preleveurLabels, weight: 5},
+      {value: point?.preleveurSirets, weight: 9, identifier: true}
+    ]
+    : []
+
+  return createSearchDocument([
+    {value: point?.id, weight: 10, identifier: true},
+    {value: point?.codeBSS, weight: 10, identifier: true},
+    {value: point?.codeBNPE, weight: 10, identifier: true},
+    {value: point?.searchIdentifiers, weight: 9, identifier: true},
+    {value: point?.name, weight: 8},
+    {value: point?.usageName, weight: 7},
+    {value: point?.searchAliases, weight: 6},
+    {value: point?.communeName, weight: 5},
+    {value: usages.flatMap(usage => [usage?.label, usage?.code]), weight: 4},
+    {value: managementZones.flatMap(zone => [zone?.name, zone?.code]), weight: 3},
+    ...declarantFields
+  ])
+}
+
+function createPointFilterMetadata(point) {
+  const searchAccess = getSearchAccess(point)
+  const rawExploitationStatuses = uniqueValues(point?.exploitationStatuses)
+  const hasExploitation = rawExploitationStatuses.length > 0
+  const collecteurStatus = searchAccess.exploitations && point?.collecteurStatus
+    ? [point.collecteurStatus]
+    : []
+  const connectorStatus = searchAccess.exploitations && point?.connectorStatus
+    ? [point.connectorStatus]
+    : []
+
+  return {
+    facets: {
+      collecteurStatuses: collecteurStatus,
+      connectorStatuses: connectorStatus,
+      exploitationStatuses: getExploitationStatuses(point, searchAccess.exploitations),
+      flowTypes: [getPointFlowType(point)],
+      managementZoneIds: uniqueValues(getManagementZones(point).map(zone => zone?.id)),
+      preleveurTypes: getPreleveurTypes(point, searchAccess.declarants, hasExploitation),
+      usageKeys: getPointUsageRootKeys(point),
+      waterBodyTypes: [point?.waterBodyType || MISSING_WATER_BODY_TYPE]
+    },
+    searchAccess,
+    searchDocument: getPointSearchDocument(point, searchAccess)
+  }
 }
 
 export function getPointUsageRootKeys(point) {
@@ -121,8 +242,78 @@ export function getWaterBodyTypeOptionsForPoints(points = []) {
     }))
 }
 
+function getOrderedOptions(values, labels) {
+  return Object.entries(labels)
+    .filter(([value]) => values.has(value))
+    .map(([value, label]) => ({value, label}))
+}
+
+function getManagementZoneOptions(points) {
+  const zonesById = new Map()
+
+  for (const point of points) {
+    for (const zone of getManagementZones(point)) {
+      if (zone?.id) {
+        const zoneLabel = zone.name || zone.code || zone.id
+        zonesById.set(zone.id, {
+          value: zone.id,
+          label: zone.code && zone.code !== zoneLabel
+            ? `${zoneLabel} (${zone.code})`
+            : zoneLabel,
+          code: zone.code || null
+        })
+      }
+    }
+  }
+
+  return [...zonesById.values()].sort((left, right) =>
+    left.label.localeCompare(right.label, 'fr-FR', {numeric: true, sensitivity: 'base'}))
+}
+
+export function getPointFilterOptions(points = [], pointFilterIndex) {
+  const index = pointFilterIndex ?? createPointFilterIndex(points)
+  const values = index.facetValues
+
+  return {
+    collecteurStatusOptions: getOrderedOptions(values.collecteurStatuses, COLLECTEUR_STATUS_LABELS),
+    connectorStatusOptions: getOrderedOptions(values.connectorStatuses, CONNECTOR_STATUS_LABELS),
+    exploitationStatusOptions: getOrderedOptions(values.exploitationStatuses, EXPLOITATION_STATUS_LABELS),
+    managementZoneOptions: getManagementZoneOptions(points),
+    preleveurTypeOptions: getOrderedOptions(values.preleveurTypes, PRELEVEUR_TYPE_LABELS),
+    usageOptions: getUsageOptionsForPoints(points),
+    waterBodyTypeOptions: getWaterBodyTypeOptionsForPoints(points)
+  }
+}
+
+export function getDefaultPointFilters(options = {}) {
+  return {
+    collecteurStatuses: (options.collecteurStatusOptions ?? []).map(option => option.value),
+    connectorStatuses: (options.connectorStatusOptions ?? []).map(option => option.value),
+    exploitationStatuses: (options.exploitationStatusOptions ?? []).map(option => option.value),
+    flowTypes: options.flowTypes ?? [],
+    managementZoneIds: (options.managementZoneOptions ?? []).map(option => option.value),
+    preleveurTypes: (options.preleveurTypeOptions ?? []).map(option => option.value),
+    query: '',
+    sort: SEARCH_SORT_MODES.RELEVANCE,
+    usageKeys: (options.usageOptions ?? []).map(option => option.value),
+    waterBodyTypes: (options.waterBodyTypeOptions ?? []).map(option => option.value)
+  }
+}
+
 export function createPointFilterIndex(points = []) {
-  return new Map(points.map(point => [point.id, createPointFilterMetadata(point)]))
+  const index = new Map(points.map(point => [point.id, createPointFilterMetadata(point)]))
+  const facetValues = Object.fromEntries(FACET_KEYS.map(key => [key, new Set()]))
+
+  for (const metadata of index.values()) {
+    for (const key of FACET_KEYS) {
+      for (const value of metadata.facets[key]) {
+        facetValues[key].add(value)
+      }
+    }
+  }
+
+  index.facetValues = facetValues
+  return index
 }
 
 function getPointFilterMetadata(point, pointFilterIndex) {
@@ -130,47 +321,81 @@ function getPointFilterMetadata(point, pointFilterIndex) {
 }
 
 export function pointMatchesSearch(point, query, pointFilterIndex) {
-  const normalizedQuery = normalizeText(query)
-  if (!normalizedQuery) {
+  const metadata = getPointFilterMetadata(point, pointFilterIndex)
+  return scoreSearchDocument(metadata.searchDocument, query) !== null
+}
+
+export function haveSameSelection(left = [], right = []) {
+  return left.length === right.length && left.every(value => right.includes(value))
+}
+
+function matchesFacet(metadata, filters, pointFilterIndex, key) {
+  const selectedValues = filters[key]
+  if (!Array.isArray(selectedValues)) {
     return true
   }
 
-  return getPointFilterMetadata(point, pointFilterIndex)
-    .searchText.includes(normalizedQuery)
+  const allValues = [...(pointFilterIndex?.facetValues?.[key] ?? [])]
+  if (haveSameSelection(selectedValues, allValues)) {
+    return true
+  }
+
+  return metadata.facets[key].some(value => selectedValues.includes(value))
+}
+
+function matchesFilters(metadata, filters, pointFilterIndex, excludedFacet) {
+  return FACET_KEYS.every(key => key === excludedFacet
+    || matchesFacet(metadata, filters, pointFilterIndex, key))
+}
+
+export function filterPointsWithScores(points = [], filters, pointFilterIndex) {
+  const index = pointFilterIndex ?? createPointFilterIndex(points)
+  const scores = new Map()
+  const matchingPoints = []
+
+  for (const point of points) {
+    const metadata = getPointFilterMetadata(point, index)
+    const score = scoreSearchDocument(metadata.searchDocument, filters.query)
+
+    if (score !== null) {
+      scores.set(point.id, score)
+    }
+
+    if (score !== null && matchesFilters(metadata, filters, index)) {
+      matchingPoints.push(point)
+    }
+  }
+
+  return {points: matchingPoints, scores}
 }
 
 export function filterPoints(points = [], filters, pointFilterIndex) {
-  const selectedUsageKeys = new Set(filters.usageKeys)
-  const selectedFlowTypes = new Set(filters.flowTypes)
-  const selectedWaterBodyTypes = new Set(filters.waterBodyTypes)
-  const normalizedQuery = normalizeText(filters.query)
-
-  return points.filter(point => {
-    const metadata = getPointFilterMetadata(point, pointFilterIndex)
-    if (normalizedQuery && !metadata.searchText.includes(normalizedQuery)) {
-      return false
-    }
-
-    if (!selectedFlowTypes.has(metadata.flowType)) {
-      return false
-    }
-
-    if (!selectedWaterBodyTypes.has(metadata.waterBodyType)) {
-      return false
-    }
-
-    return metadata.usageKeys.some(key => selectedUsageKeys.has(key))
-  })
+  return filterPointsWithScores(points, filters, pointFilterIndex).points
 }
 
-export function countPointsByUsage(points = [], usageOptions = [], pointFilterIndex) {
-  const counts = Object.fromEntries(usageOptions.map(option => [option.value, 0]))
+export function getPointFacetCounts(points = [], filters, pointFilterIndex, searchScores) {
+  const index = pointFilterIndex ?? createPointFilterIndex(points)
+  const counts = Object.fromEntries(FACET_KEYS.map(key => [key, Object.fromEntries(
+    [...(index.facetValues[key] ?? [])].map(value => [value, 0])
+  )]))
 
   for (const point of points) {
-    const metadata = getPointFilterMetadata(point, pointFilterIndex)
-    for (const key of metadata.usageKeys) {
-      if (Object.hasOwn(counts, key)) {
-        counts[key] += 1
+    const metadata = getPointFilterMetadata(point, index)
+    const matchesSearch = searchScores instanceof Map
+      ? searchScores.has(point.id)
+      : scoreSearchDocument(metadata.searchDocument, filters.query) !== null
+
+    if (!matchesSearch) {
+      continue
+    }
+
+    for (const key of FACET_KEYS) {
+      if (!matchesFilters(metadata, filters, index, key)) {
+        continue
+      }
+
+      for (const value of metadata.facets[key]) {
+        counts[key][value] = (counts[key][value] ?? 0) + 1
       }
     }
   }
@@ -178,8 +403,19 @@ export function countPointsByUsage(points = [], usageOptions = [], pointFilterIn
   return counts
 }
 
-export function haveSameSelection(left = [], right = []) {
-  return left.length === right.length && left.every(value => right.includes(value))
+export function countPointsByUsage(points = [], usageOptions = [], pointFilterIndex) {
+  const counts = Object.fromEntries(usageOptions.map(option => [option.value, 0]))
+
+  for (const point of points) {
+    const metadata = getPointFilterMetadata(point, pointFilterIndex)
+    for (const key of metadata.facets.usageKeys) {
+      if (Object.hasOwn(counts, key)) {
+        counts[key] += 1
+      }
+    }
+  }
+
+  return counts
 }
 
 function getSelectionFromSearchParams(searchParams, parameter, defaultValues) {
@@ -197,24 +433,22 @@ function getSelectionFromSearchParams(searchParams, parameter, defaultValues) {
 }
 
 export function getPointFiltersFromSearchParams(searchParams, defaultFilters) {
-  return {
+  const filters = {
     query: searchParams.get(FILTER_QUERY_PARAMETERS.query) ?? '',
-    usageKeys: getSelectionFromSearchParams(
+    sort: searchParams.get(FILTER_QUERY_PARAMETERS.sort) === 'nom'
+      ? SEARCH_SORT_MODES.NAME
+      : SEARCH_SORT_MODES.RELEVANCE
+  }
+
+  for (const key of FACET_KEYS) {
+    filters[key] = getSelectionFromSearchParams(
       searchParams,
-      FILTER_QUERY_PARAMETERS.usageKeys,
-      defaultFilters.usageKeys
-    ),
-    flowTypes: getSelectionFromSearchParams(
-      searchParams,
-      FILTER_QUERY_PARAMETERS.flowTypes,
-      defaultFilters.flowTypes
-    ),
-    waterBodyTypes: getSelectionFromSearchParams(
-      searchParams,
-      FILTER_QUERY_PARAMETERS.waterBodyTypes,
-      defaultFilters.waterBodyTypes
+      FILTER_QUERY_PARAMETERS[key],
+      defaultFilters[key]
     )
   }
+
+  return filters
 }
 
 function setSelectionSearchParams(searchParams, parameter, values, defaultValues) {
@@ -246,24 +480,20 @@ export function getSearchParamsWithPointFilters(searchParams, filters, defaultFi
     nextSearchParams.delete(FILTER_QUERY_PARAMETERS.query)
   }
 
-  setSelectionSearchParams(
-    nextSearchParams,
-    FILTER_QUERY_PARAMETERS.usageKeys,
-    filters.usageKeys,
-    defaultFilters.usageKeys
-  )
-  setSelectionSearchParams(
-    nextSearchParams,
-    FILTER_QUERY_PARAMETERS.flowTypes,
-    filters.flowTypes,
-    defaultFilters.flowTypes
-  )
-  setSelectionSearchParams(
-    nextSearchParams,
-    FILTER_QUERY_PARAMETERS.waterBodyTypes,
-    filters.waterBodyTypes,
-    defaultFilters.waterBodyTypes
-  )
+  if (normalizedQuery && filters.sort === SEARCH_SORT_MODES.NAME) {
+    nextSearchParams.set(FILTER_QUERY_PARAMETERS.sort, 'nom')
+  } else {
+    nextSearchParams.delete(FILTER_QUERY_PARAMETERS.sort)
+  }
+
+  for (const key of FACET_KEYS) {
+    setSelectionSearchParams(
+      nextSearchParams,
+      FILTER_QUERY_PARAMETERS[key],
+      filters[key],
+      defaultFilters[key]
+    )
+  }
 
   return nextSearchParams
 }

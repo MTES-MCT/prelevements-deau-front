@@ -20,13 +20,13 @@ import useEvent from '@/hook/use-event.js'
 import {pointFlowTypeLabels} from '@/lib/point-flow-types.js'
 import {
   MISSING_USAGE_KEY,
-  countPointsByUsage,
   createPointFilterIndex,
-  filterPoints,
+  filterPointsWithScores,
+  getDefaultPointFilters,
+  getPointFacetCounts,
+  getPointFilterOptions,
   getPointFiltersFromSearchParams,
   getSearchParamsWithPointFilters,
-  getUsageOptionsForPoints,
-  getWaterBodyTypeOptionsForPoints,
   haveSameSelection
 } from '@/lib/points-prelevement-filters.js'
 import {getPointPrelevementURL} from '@/lib/urls.js'
@@ -35,16 +35,25 @@ import {getPointPrelevementAction} from '@/server/actions/points-prelevement.js'
 const FLOW_TYPE_VALUES = Object.keys(pointFlowTypeLabels)
 const POINTS_MAP_OPTIONS = Object.freeze({hash: true, cooperativeGestures: false})
 
-const getDefaultFilters = (usageOptions = [], waterBodyTypeOptions = []) => ({
-  query: '',
-  usageKeys: usageOptions.map(option => option.value),
-  flowTypes: FLOW_TYPE_VALUES,
-  waterBodyTypes: waterBodyTypeOptions.map(option => option.value)
-})
-
 const hasCoordinates = point => Array.isArray(point?.coordinates?.coordinates)
 const getHighlightedPointId = (mapPointId, listPointId, selectedPointId) =>
   mapPointId ?? listPointId ?? selectedPointId
+const SELECTION_FILTER_KEYS = Object.freeze([
+  'collecteurStatuses',
+  'connectorStatuses',
+  'exploitationStatuses',
+  'flowTypes',
+  'managementZoneIds',
+  'preleveurTypes',
+  'usageKeys',
+  'waterBodyTypes'
+])
+
+function hasNonDefaultFilters(filters, defaultFilters) {
+  return filters.query.trim().length > 0
+    || SELECTION_FILTER_KEYS.some(key =>
+      !haveSameSelection(filters[key], defaultFilters[key]))
+}
 
 const MobileMapResultsAction = ({count, hasActiveFilters, onClick}) => {
   if (!hasActiveFilters || count === 0) {
@@ -80,9 +89,12 @@ const PointsMapPage = ({initialPointsResult}) => {
   )
 
   const [filters, setFilters] = useState(() => {
-    const usageOptions = getUsageOptionsForPoints(points)
-    const waterBodyTypeOptions = getWaterBodyTypeOptionsForPoints(points)
-    const defaultFilters = getDefaultFilters(usageOptions, waterBodyTypeOptions)
+    const pointFilterIndex = createPointFilterIndex(points)
+    const pointFilterOptions = getPointFilterOptions(points, pointFilterIndex)
+    const defaultFilters = getDefaultPointFilters({
+      ...pointFilterOptions,
+      flowTypes: FLOW_TYPE_VALUES
+    })
 
     return getPointFiltersFromSearchParams(
       new URLSearchParams(searchParams.toString()),
@@ -101,44 +113,57 @@ const PointsMapPage = ({initialPointsResult}) => {
     initialSelectedPointId
   )
   const [mobileView, setMobileView] = useState('map')
+  const [filterOpenRequestKey, setFilterOpenRequestKey] = useState(0)
   const [desktopListOpen, setDesktopListOpen] = useState(true)
   const [listHighlightedPointId, setListHighlightedPointId] = useState(null)
   const [mapHighlightedPointId, setMapHighlightedPointId] = useState(null)
 
-  const usageOptions = useMemo(() => getUsageOptionsForPoints(points), [points])
-  const waterBodyTypeOptions = useMemo(() => getWaterBodyTypeOptionsForPoints(points), [points])
   const pointFilterIndex = useMemo(() => createPointFilterIndex(points), [points])
+  const pointFilterOptions = useMemo(
+    () => getPointFilterOptions(points, pointFilterIndex),
+    [pointFilterIndex, points]
+  )
+  const {
+    collecteurStatusOptions,
+    connectorStatusOptions,
+    exploitationStatusOptions,
+    managementZoneOptions,
+    preleveurTypeOptions,
+    usageOptions,
+    waterBodyTypeOptions
+  } = pointFilterOptions
   const defaultFilters = useMemo(
-    () => getDefaultFilters(usageOptions, waterBodyTypeOptions),
-    [usageOptions, waterBodyTypeOptions]
+    () => getDefaultPointFilters({
+      ...pointFilterOptions,
+      flowTypes: FLOW_TYPE_VALUES
+    }),
+    [pointFilterOptions]
   )
   const deferredQuery = useDeferredValue(filters.query)
   const debouncedUrlQuery = useDebouncedValue(filters.query, 200)
   const isSearchPending = deferredQuery !== filters.query
-  const deferredFilters = useMemo(() => ({
-    flowTypes: filters.flowTypes,
-    query: deferredQuery,
-    usageKeys: filters.usageKeys,
-    waterBodyTypes: filters.waterBodyTypes
-  }), [deferredQuery, filters.flowTypes, filters.usageKeys, filters.waterBodyTypes])
-  const filtersForUrl = useMemo(() => ({
-    flowTypes: filters.flowTypes,
-    query: debouncedUrlQuery,
-    usageKeys: filters.usageKeys,
-    waterBodyTypes: filters.waterBodyTypes
-  }), [debouncedUrlQuery, filters.flowTypes, filters.usageKeys, filters.waterBodyTypes])
+  const deferredFilters = useMemo(
+    () => ({...filters, query: deferredQuery}),
+    [deferredQuery, filters]
+  )
+  const filtersForUrl = useMemo(
+    () => ({...filters, query: debouncedUrlQuery}),
+    [debouncedUrlQuery, filters]
+  )
 
-  const filteredPoints = useMemo(
-    () => filterPoints(points, deferredFilters, pointFilterIndex),
+  const filteredPointsResult = useMemo(
+    () => filterPointsWithScores(points, deferredFilters, pointFilterIndex),
     [deferredFilters, pointFilterIndex, points]
   )
-  const pointsBeforeUsageFilter = useMemo(() => filterPoints(points, {
-    ...deferredFilters,
-    usageKeys: defaultFilters.usageKeys
-  }, pointFilterIndex), [defaultFilters.usageKeys, deferredFilters, pointFilterIndex, points])
-  const usageCounts = useMemo(
-    () => countPointsByUsage(pointsBeforeUsageFilter, usageOptions, pointFilterIndex),
-    [pointFilterIndex, pointsBeforeUsageFilter, usageOptions]
+  const filteredPoints = filteredPointsResult.points
+  const facetCounts = useMemo(
+    () => getPointFacetCounts(
+      points,
+      deferredFilters,
+      pointFilterIndex,
+      filteredPointsResult.scores
+    ),
+    [deferredFilters, filteredPointsResult.scores, pointFilterIndex, points]
   )
   const filteredPointIds = useMemo(
     () => filteredPoints.map(point => point.id),
@@ -162,10 +187,7 @@ const PointsMapPage = ({initialPointsResult}) => {
     () => filters.usageKeys.filter(key => key !== MISSING_USAGE_KEY),
     [filters.usageKeys]
   )
-  const hasActiveFilters = filters.query.trim().length > 0
-    || !haveSameSelection(filters.usageKeys, defaultFilters.usageKeys)
-    || !haveSameSelection(filters.flowTypes, defaultFilters.flowTypes)
-    || !haveSameSelection(filters.waterBodyTypes, defaultFilters.waterBodyTypes)
+  const hasActiveFilters = hasNonDefaultFilters(filters, defaultFilters)
 
   useEffect(() => {
     const visiblePointIds = new Set(filteredPointIds)
@@ -260,6 +282,11 @@ const PointsMapPage = ({initialPointsResult}) => {
     setMapRecenterRequestKey(currentKey => currentKey + 1)
   }, [])
 
+  const handleOpenMobileSearch = useCallback(() => {
+    setMobileView('list')
+    setFilterOpenRequestKey(currentKey => currentKey + 1)
+  }, [])
+
   return (
     <>
       <StartDsfrOnHydration />
@@ -279,9 +306,16 @@ const PointsMapPage = ({initialPointsResult}) => {
               <aside className={`${mobileView === 'list' ? 'block' : 'hidden'} h-full min-h-0 border-r border-gray-200 ${desktopListOpen ? 'lg:block' : 'lg:hidden'}`}>
                 <div className='flex h-full min-h-0 flex-col bg-white'>
                   <PointsMapFilters
+                    collecteurStatusOptions={collecteurStatusOptions}
+                    connectorStatusOptions={connectorStatusOptions}
                     disabled={false}
+                    exploitationStatusOptions={exploitationStatusOptions}
+                    facetCounts={facetCounts}
                     filters={filters}
                     hasActiveFilters={hasActiveFilters}
+                    managementZoneOptions={managementZoneOptions}
+                    openRequestKey={filterOpenRequestKey}
+                    preleveurTypeOptions={preleveurTypeOptions}
                     resultsCount={filteredPoints.length}
                     searchPending={isSearchPending}
                     usageOptions={usageOptions}
@@ -296,6 +330,9 @@ const PointsMapPage = ({initialPointsResult}) => {
                       isLoading={false}
                       points={filteredPoints}
                       preferUsageName={preferUsageName}
+                      searchScores={filteredPointsResult.scores}
+                      sortMode={filters.sort}
+                      hasSearchQuery={Boolean(deferredQuery.trim())}
                       scrollHighlightedPointIntoView={Boolean(mapHighlightedPointId)}
                       onPointHover={setListHighlightedPointId}
                       onPointSelect={handleListPointSelect}
@@ -338,13 +375,22 @@ const PointsMapPage = ({initialPointsResult}) => {
                 />
 
                 {mobileView === 'map' && (
-                  <button
-                    className='fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-list-unordered absolute left-2 top-2 z-10 bg-white shadow-sm lg:hidden'
-                    type='button'
-                    onClick={() => setMobileView('list')}
-                  >
-                    Liste
-                  </button>
+                  <div className='absolute left-2 top-2 z-10 flex gap-2 lg:hidden'>
+                    <button
+                      className='fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-search-line bg-white shadow-sm'
+                      type='button'
+                      onClick={handleOpenMobileSearch}
+                    >
+                      Rechercher
+                    </button>
+                    <button
+                      aria-label='Afficher la liste des points'
+                      className='fr-btn fr-btn--secondary fr-btn--sm fr-icon-list-unordered bg-white shadow-sm'
+                      title='Afficher la liste'
+                      type='button'
+                      onClick={() => setMobileView('list')}
+                    />
+                  </div>
                 )}
 
                 {!desktopListOpen && (
@@ -362,7 +408,7 @@ const PointsMapPage = ({initialPointsResult}) => {
 
                   {usageOptions.length > 0 && (
                     <PointsMapLegend
-                      counts={usageCounts}
+                      counts={facetCounts.usageKeys}
                       options={usageOptions}
                       selectedValues={filters.usageKeys}
                       onToggle={handleLegendToggle}
