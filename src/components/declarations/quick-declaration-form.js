@@ -28,6 +28,7 @@ import {
   normalizePointUsageName,
   replacePointUsageName
 } from '@/lib/quick-declaration-point-name.js'
+import {matchesSearchTerms} from '@/lib/search-options.js'
 import {
   getMyDeclarationSubmissionSuccessURL,
   getMyDeclarationURL
@@ -995,7 +996,7 @@ const UsageCombobox = ({
       return options
     }
 
-    return options.filter(option => normalizeSearchText(getUsageOptionSearchText(option)).includes(normalizedSearch))
+    return options.filter(option => matchesSearchTerms(getUsageOptionSearchText(option), normalizedSearch))
   }, [isFiltering, normalizedSearch, options])
 
   const updateDropdownPosition = useCallback(() => {

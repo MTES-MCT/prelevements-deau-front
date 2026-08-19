@@ -11,6 +11,7 @@ import ZoneExportButton from '@/components/zones/zone-export-button.js'
 import {ZONE_INSTRUCTORS_EXPORT_COLUMNS} from '@/components/zones/zone-export-columns.js'
 import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
 import useDebouncedValue from '@/hook/use-debounced-value.js'
+import {matchesSearchTerms} from '@/lib/search-options.js'
 import {
   formatAccessPeriod,
   getHabilitationRoleLabel,
@@ -44,15 +45,10 @@ const ZoneInstructorsList = ({zone, instructors}) => {
   const [page, setPage] = useState(1)
   const debouncedQuery = useDebouncedValue(query)
 
-  const filteredInstructors = useMemo(() => {
-    const normalizedQuery = normalizeSearch(debouncedQuery)
-
-    if (!normalizedQuery) {
-      return instructors
-    }
-
-    return instructors.filter(instructor => getInstructorSearchText(instructor).includes(normalizedQuery))
-  }, [instructors, debouncedQuery])
+  const filteredInstructors = useMemo(() => instructors.filter(instructor => matchesSearchTerms(
+    getInstructorSearchText(instructor),
+    debouncedQuery
+  )), [instructors, debouncedQuery])
 
   const pages = Math.max(1, Math.ceil(filteredInstructors.length / CLIENT_PAGE_SIZE))
   const currentPage = Math.min(page, pages)

@@ -18,6 +18,8 @@ import {
   getOptionTitle
 } from './utils.js'
 
+import {matchesSearchTerms} from '@/lib/search-options.js'
+
 const focusWithoutScroll = element => {
   try {
     element.focus({preventScroll: true})
@@ -84,9 +86,7 @@ const GroupedMultiselect = ({
       return normalizedOptions
     }
 
-    const query = search.trim().toLowerCase()
-
-    if (!query) {
+    if (!search.trim()) {
       return normalizedOptions
     }
 
@@ -94,12 +94,14 @@ const GroupedMultiselect = ({
       .map(group => ({
         ...group,
         options: group.options.filter(option => {
-          const content = String(getOptionContent(option) || '').toLowerCase()
-          const label = String(getOptionLabel(option) || '').toLowerCase()
-          const title = String(getOptionTitle(option) || '').toLowerCase()
-          const optionValue = String(getOptionValue(option) || '').toLowerCase()
+          const searchableValue = [
+            getOptionContent(option),
+            getOptionLabel(option),
+            getOptionTitle(option),
+            getOptionValue(option)
+          ].filter(Boolean).join(' ')
 
-          return content.includes(query) || label.includes(query) || title.includes(query) || optionValue.includes(query)
+          return matchesSearchTerms(searchableValue, search)
         })
       }))
       .filter(group => group.options.length > 0)

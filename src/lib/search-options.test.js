@@ -3,7 +3,8 @@ import test from 'ava'
 import {
   filterSearchAutocompleteOptions,
   getIdentifierAwareSearchQueries,
-  getSearchableOptionText
+  getSearchableOptionText,
+  matchesSearchTerms
 } from './search-options.js'
 
 test('les requêtes sur un identifiant acceptent les séparateurs', t => {
@@ -37,4 +38,31 @@ test('la limite est appliquée après le filtrage', t => {
   ]
 
   t.deepEqual(filterSearchAutocompleteOptions(options, {inputValue: 'bss'}, {limit: 1}), [options[0]])
+})
+
+test('la recherche textuelle exige tous les termes sans imposer une phrase contiguë', t => {
+  const beauvert = {label: 'Ferme de Beauvert'}
+  const autreFerme = {label: 'Ferme des Alouettes'}
+
+  t.true(matchesSearchTerms('Ferme de Beauvert', 'ferme beauvert'))
+  t.true(matchesSearchTerms('Préleveur Beauvert · Ferme communale', 'ferme beauvert'))
+  t.false(matchesSearchTerms('Ferme des Alouettes', 'ferme beauvert'))
+  t.deepEqual(
+    filterSearchAutocompleteOptions([beauvert, autreFerme], {inputValue: 'ferme beauvert'}),
+    [beauvert]
+  )
+})
+
+test('la recherche par termes conserve le support des identifiants compacts', t => {
+  t.true(matchesSearchTerms('SIRET 12345678900012', '123 456 789 00012'))
+  t.true(matchesSearchTerms('Point 10972X0137/PONT', '10972X 0137 PONT'))
+  t.true(matchesSearchTerms('Ferme de Beauvert · SIRET 12345678900012', 'ferme 123 456'))
+  t.false(matchesSearchTerms('SIRET 12345678900012', '789 123'))
+  t.false(matchesSearchTerms('Ferme de Beauvert · SIRET 12345678900012', 'ferme 789 123'))
+  t.false(matchesSearchTerms('SIRET 12345678900012', '123 555 000 00012'))
+})
+
+test('la recherche aligne les ligatures avec leur saisie développée', t => {
+  t.true(matchesSearchTerms('Pompage au cœur du marais', 'coeur marais'))
+  t.true(matchesSearchTerms('Exploitation CÆSAR', 'caesar'))
 })
