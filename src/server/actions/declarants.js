@@ -2,6 +2,7 @@
 
 import {revalidatePath} from 'next/cache'
 
+import {buildCollecteurAssociationQuery} from '@/lib/collecteur-association-search.js'
 import {buildDeclarantsSearchQuery} from '@/lib/declarant-search.js'
 import {
   fetchJSON,
@@ -31,6 +32,45 @@ export async function searchCollecteurPreleveursAction(options) {
 
 export async function getCollecteurPreleveursAction() {
   return withErrorHandling(async () => fetchJSON('api/collecteurs/me/preleveurs'))
+}
+
+export async function getCollecteurExploitationCandidatesAction(
+  collecteurId,
+  options,
+  {idsOnly = false} = {}
+) {
+  const query = buildCollecteurAssociationQuery(options, {idsOnly})
+
+  return withErrorHandling(async () => (
+    fetchJSON(`api/collecteurs/${collecteurId}/exploitations/candidates?${query}`)
+  ), {forbiddenOnAccessDenied: false})
+}
+
+export async function updateCollecteurExploitationAssociationsAction(
+  collecteurId,
+  payload,
+  associationVersion
+) {
+  return withErrorHandling(async () => {
+    const hasRemoval = Array.isArray(payload?.removeExploitationIds)
+      && payload.removeExploitationIds.length > 0
+    const result = await fetchJSON(`api/collecteurs/${collecteurId}/exploitations`, {
+      method: 'PATCH',
+      headers: hasRemoval && associationVersion
+        ? {'If-Match': associationVersion}
+        : {},
+      body: payload
+    })
+
+    revalidatePath('/declarants')
+    revalidatePath(`/declarants/${collecteurId}`)
+    revalidatePath(`/declarants/${collecteurId}/exploitations`)
+    revalidatePath('/exploitations/[id]', 'page')
+    revalidatePath('/exploitations/[id]/edit', 'page')
+    revalidatePath('/zones/[zoneId]/exploitations', 'page')
+
+    return result
+  }, {forbiddenOnAccessDenied: false})
 }
 
 const getCachedDeclarantOverview = cachePerRequest(async id => withErrorHandling(

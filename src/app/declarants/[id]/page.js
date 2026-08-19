@@ -373,6 +373,15 @@ const Page = async ({params}) => {
         ].filter(Boolean)}
         hrefButtons={[
           {
+            label: 'Gérer les exploitations',
+            icon: 'fr-icon-link',
+            alt: '',
+            priority: 'secondary',
+            href: `/declarants/${declarantId}/exploitations`,
+            hidden: !isCollecteur || !can('exploitation.update') || !can('exploitation.list'),
+            requireEditor: true
+          },
+          {
             label: 'Gérer le déclarant',
             icon: 'fr-icon-settings-5-line',
             alt: '',

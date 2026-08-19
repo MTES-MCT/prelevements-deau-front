@@ -18,6 +18,8 @@ export {
 export {
   getDeclarantsAction,
   getDeclarantOverviewAction,
+  getCollecteurExploitationCandidatesAction,
+  updateCollecteurExploitationAssociationsAction,
   createPreleveurAction,
   updatePreleveurAction,
   sendDeclarantAccountCreationNotificationAction,
