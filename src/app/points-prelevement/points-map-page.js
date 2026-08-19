@@ -29,6 +29,7 @@ import {
   getSearchParamsWithPointFilters,
   haveSameSelection
 } from '@/lib/points-prelevement-filters.js'
+import {SMART_SEARCH_DEBOUNCE_MS} from '@/lib/search-timing.js'
 import {getPointPrelevementURL} from '@/lib/urls.js'
 import {getPointPrelevementAction} from '@/server/actions/points-prelevement.js'
 
@@ -141,7 +142,7 @@ const PointsMapPage = ({initialPointsResult}) => {
     [pointFilterOptions]
   )
   const deferredQuery = useDeferredValue(filters.query)
-  const debouncedUrlQuery = useDebouncedValue(filters.query, 200)
+  const debouncedUrlQuery = useDebouncedValue(filters.query, SMART_SEARCH_DEBOUNCE_MS)
   const isSearchPending = deferredQuery !== filters.query
   const deferredFilters = useMemo(
     () => ({...filters, query: deferredQuery}),

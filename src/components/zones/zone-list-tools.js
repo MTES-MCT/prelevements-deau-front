@@ -9,6 +9,7 @@ import {usePathname, useRouter, useSearchParams} from 'next/navigation'
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import useDebouncedValue from '@/hook/use-debounced-value.js'
 import useSearchDraft from '@/hook/use-search-draft.js'
+import {SMART_SEARCH_DEBOUNCE_MS} from '@/lib/search-timing.js'
 import {
   getCanonicalListFilterValues,
   getEffectiveListSort
@@ -469,7 +470,11 @@ export const ZoneResultsSummary = ({meta, itemLabel = 'élément', itemPlural = 
   )
 }
 
-export const ZoneSearchControl = ({label = 'Rechercher', placeholder = 'Rechercher', delay = 350}) => {
+export const ZoneSearchControl = ({
+  label = 'Rechercher',
+  placeholder = 'Rechercher',
+  delay = SMART_SEARCH_DEBOUNCE_MS
+}) => {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
