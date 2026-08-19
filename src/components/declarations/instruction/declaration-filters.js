@@ -1,9 +1,24 @@
 'use client'
 
-import {useEffect, useMemo, useState} from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react'
 
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {debounce} from 'lodash-es'
+
+import {
+  getCanonicalTextFilterValue,
+  getCanonicalTextFilterSnapshot,
+  registerPendingTextFilterNavigation,
+  reconcileTextFilterSnapshotDrafts,
+  textFilterSnapshotsAreEqual,
+  withTextFilterSnapshot
+} from '@/lib/text-filter-draft.js'
 
 const declarationTypeFilterOptions = [
   {
@@ -74,33 +89,129 @@ function serializeSelectedTypes(types) {
 const DeclarationFilters = ({filters, setFilters}) => {
   const [declarantValue, setDeclarantValue] = useState(filters.declarant || '')
   const [dossierNumberValue, setDossierNumberValue] = useState(filters.dossierNumber || '')
+  const currentFiltersRef = useRef(filters)
+  const setFiltersRef = useRef(setFilters)
+  const textFilterDraftsRef = useRef({
+    declarant: filters.declarant || '',
+    dossierNumber: filters.dossierNumber || ''
+  })
+  const committedTextFiltersRef = useRef(getCanonicalTextFilterSnapshot(filters))
+  const pendingTextFilterNavigationsRef = useRef([])
   const selectedTypes = useMemo(() => parseSelectedTypes(filters.types), [filters.types])
   const selectedTypesSet = useMemo(() => new Set(selectedTypes), [selectedTypes])
   const hasSpreadsheetType = selectedTypesSet.has(spreadsheetDeclarationType)
   const pointsToAssociateOnly = filters.pointsToAssociate === pointsToAssociateFilterValue
 
-  const debouncedSetTextFilter = useMemo(
-    () => debounce((name, value) => {
-      setFilters(previous => ({
-        ...previous,
-        [name]: value || undefined,
-        page: undefined
-      }))
-    }, 300),
-    [setFilters]
+  currentFiltersRef.current = filters
+  setFiltersRef.current = setFilters
+
+  const submitTextFilter = useCallback((name, rawValue) => {
+    const value = getCanonicalTextFilterValue(rawValue)
+    committedTextFiltersRef.current[name] = value
+    const committedValues = getCanonicalTextFilterSnapshot(committedTextFiltersRef.current)
+    const currentValues = getCanonicalTextFilterSnapshot(currentFiltersRef.current)
+
+    if (textFilterSnapshotsAreEqual(committedValues, currentValues)) {
+      return
+    }
+
+    pendingTextFilterNavigationsRef.current = registerPendingTextFilterNavigation(
+      pendingTextFilterNavigationsRef.current,
+      committedValues
+    )
+
+    setFiltersRef.current(previous => withTextFilterSnapshot({
+      ...previous,
+      page: undefined
+    }, committedValues))
+  }, [])
+
+  const debouncedTextFilters = useMemo(
+    () => ({
+      declarant: debounce(value => submitTextFilter('declarant', value), 300),
+      dossierNumber: debounce(value => submitTextFilter('dossierNumber', value), 300)
+    }),
+    [submitTextFilter]
   )
 
   useEffect(() => {
-    setDeclarantValue(filters.declarant || '')
-    setDossierNumberValue(filters.dossierNumber || '')
-  }, [filters.declarant, filters.dossierNumber])
+    const externalValues = getCanonicalTextFilterSnapshot({
+      declarant: filters.declarant,
+      dossierNumber: filters.dossierNumber
+    })
+    const reconciliation = reconcileTextFilterSnapshotDrafts(
+      textFilterDraftsRef.current,
+      externalValues,
+      pendingTextFilterNavigationsRef.current
+    )
+    pendingTextFilterNavigationsRef.current = reconciliation.pendingNavigations
+    textFilterDraftsRef.current = reconciliation.drafts
+    setDeclarantValue(reconciliation.drafts.declarant)
+    setDossierNumberValue(reconciliation.drafts.dossierNumber)
+
+    if (!reconciliation.isOwnResponse) {
+      for (const debouncedTextFilter of Object.values(debouncedTextFilters)) {
+        debouncedTextFilter.cancel()
+      }
+
+      committedTextFiltersRef.current = externalValues
+      return
+    }
+
+    const committedValues = committedTextFiltersRef.current
+    const hasLatestNavigationPending = pendingTextFilterNavigationsRef.current.some(navigation => (
+      textFilterSnapshotsAreEqual(navigation, committedValues)
+    ))
+    const draftsAreLatest = textFilterSnapshotsAreEqual(reconciliation.drafts, committedValues)
+
+    if (
+      !textFilterSnapshotsAreEqual(externalValues, committedValues)
+      && !hasLatestNavigationPending
+      && draftsAreLatest
+    ) {
+      submitTextFilter('declarant', committedValues.declarant)
+    }
+  }, [debouncedTextFilters, filters.declarant, filters.dossierNumber, submitTextFilter])
 
   useEffect(() => () => {
-    debouncedSetTextFilter.cancel()
-  }, [debouncedSetTextFilter])
+    for (const debouncedTextFilter of Object.values(debouncedTextFilters)) {
+      debouncedTextFilter.cancel()
+    }
+  }, [debouncedTextFilters])
+
+  const updateTextFilterDraft = (name, value, setValue) => {
+    textFilterDraftsRef.current[name] = value
+    setValue(value)
+    debouncedTextFilters[name](value)
+  }
+
+  /*
+   * Text filters use independent debouncers. This keeps a declarant search from
+   * cancelling a dossier-number search, and lets us identify router responses
+   * that belong to an older draft without replacing what the user is typing.
+   */
+  const setFiltersImmediately = (updater, values = textFilterDraftsRef.current) => {
+    for (const [name, value] of Object.entries(values)) {
+      debouncedTextFilters[name].cancel()
+      const canonicalValue = getCanonicalTextFilterValue(value)
+      committedTextFiltersRef.current[name] = canonicalValue
+      textFilterDraftsRef.current[name] = value
+    }
+
+    const committedValues = getCanonicalTextFilterSnapshot(committedTextFiltersRef.current)
+
+    if (!textFilterSnapshotsAreEqual(currentFiltersRef.current, committedValues)) {
+      pendingTextFilterNavigationsRef.current = registerPendingTextFilterNavigation(
+        pendingTextFilterNavigationsRef.current,
+        committedValues
+      )
+    }
+
+    setFiltersRef.current(previous => withTextFilterSnapshot(updater(previous), committedValues))
+  }
 
   const updateDateFilter = (name, value) => {
-    setFilters(previous => ({
+    setFiltersImmediately(previous => ({
       ...previous,
       [name]: value || undefined,
       page: undefined
@@ -108,10 +219,12 @@ const DeclarationFilters = ({filters, setFilters}) => {
   }
 
   const resetFilters = () => {
-    debouncedSetTextFilter.cancel()
+    setFiltersImmediately(
+      previous => withoutEmptyValues({pageSize: previous.pageSize}),
+      {declarant: '', dossierNumber: ''}
+    )
     setDeclarantValue('')
     setDossierNumberValue('')
-    setFilters(previous => withoutEmptyValues({pageSize: previous.pageSize}))
   }
 
   const toggleType = type => {
@@ -123,7 +236,7 @@ const DeclarationFilters = ({filters, setFilters}) => {
 
     const normalizedTypes = declarationTypeFilterValues.filter(value => nextTypes.includes(value))
 
-    setFilters(previous => {
+    setFiltersImmediately(previous => {
       const nextFilters = {
         ...previous,
         page: undefined,
@@ -139,7 +252,7 @@ const DeclarationFilters = ({filters, setFilters}) => {
   }
 
   const togglePointsToAssociate = () => {
-    setFilters(previous => ({
+    setFiltersImmediately(previous => ({
       ...previous,
       page: undefined,
       pointsToAssociate: pointsToAssociateOnly ? undefined : pointsToAssociateFilterValue
@@ -181,9 +294,7 @@ const DeclarationFilters = ({filters, setFilters}) => {
             type='search'
             value={declarantValue}
             onChange={event => {
-              const {value} = event.target
-              setDeclarantValue(value)
-              debouncedSetTextFilter('declarant', value.trim())
+              updateTextFilterDraft('declarant', event.target.value, setDeclarantValue)
             }}
           />
         </div>
@@ -196,9 +307,7 @@ const DeclarationFilters = ({filters, setFilters}) => {
             inputMode='numeric'
             value={dossierNumberValue}
             onChange={event => {
-              const {value} = event.target
-              setDossierNumberValue(value)
-              debouncedSetTextFilter('dossierNumber', value.trim())
+              updateTextFilterDraft('dossierNumber', event.target.value, setDossierNumberValue)
             }}
           />
         </div>

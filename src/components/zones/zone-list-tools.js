@@ -1,6 +1,6 @@
 'use client'
 
-import {useEffect, useMemo, useState} from 'react'
+import {useEffect, useMemo} from 'react'
 
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Box} from '@mui/material'
@@ -8,6 +8,7 @@ import {usePathname, useRouter, useSearchParams} from 'next/navigation'
 
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import useDebouncedValue from '@/hook/use-debounced-value.js'
+import useSearchDraft from '@/hook/use-search-draft.js'
 import {
   getCanonicalListFilterValues,
   getEffectiveListSort
@@ -473,12 +474,12 @@ export const ZoneSearchControl = ({label = 'Rechercher', placeholder = 'Recherch
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const initialSearch = searchParams.get('search') || ''
-  const [value, setValue] = useState(initialSearch)
+  const {
+    registerLocalNavigation: registerLocalSearchNavigation,
+    setValue,
+    value
+  } = useSearchDraft(initialSearch, 'search')
   const debouncedValue = useDebouncedValue(value, delay)
-
-  useEffect(() => {
-    setValue(initialSearch)
-  }, [initialSearch])
 
   useEffect(() => {
     const current = searchParams.get('search') || ''
@@ -497,8 +498,9 @@ export const ZoneSearchControl = ({label = 'Rechercher', placeholder = 'Recherch
     }
 
     params.delete('page')
+    registerLocalSearchNavigation(nextSearch)
     router.replace(buildPathnameWithParams(pathname, params), {scroll: false})
-  }, [debouncedValue, pathname, router, searchParams])
+  }, [debouncedValue, pathname, registerLocalSearchNavigation, router, searchParams])
 
   return (
     <div className='fr-input-group fr-mb-0'>

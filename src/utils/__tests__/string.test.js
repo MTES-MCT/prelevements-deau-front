@@ -4,6 +4,7 @@ import {normalizeString, emptyStringToNull} from '../string.js'
 
 test('normalizeString', t => {
   t.is(normalizeString('  Hello World!  '), 'hello world!')
+  t.is(normalizeString('Cœur et CÆSAR'), 'coeur et caesar')
   t.is(normalizeString(''), '')
   t.is(normalizeString(null), '')
 })

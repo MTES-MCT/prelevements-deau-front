@@ -9,6 +9,7 @@ import ZoneExportButton from '@/components/zones/zone-export-button.js'
 import {ZONES_EXPORT_COLUMNS} from '@/components/zones/zone-export-columns.js'
 import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
 import useDebouncedValue from '@/hook/use-debounced-value.js'
+import {matchesSearchTerms} from '@/lib/search-options.js'
 
 const activityFilterOptions = [
   {label: 'Toutes les zones', value: 'ALL'},
@@ -255,25 +256,21 @@ const ZonesList = ({isGlobalAdmin, zones}) => {
   const debouncedQuery = useDebouncedValue(query, 250)
   const selectedTypesSet = useMemo(() => new Set(selectedTypes), [selectedTypes])
 
-  const filteredZones = useMemo(() => {
-    const normalizedQuery = normalizeSearch(debouncedQuery)
+  const filteredZones = useMemo(() => zones.filter(zone => {
+    if (!selectedTypesSet.has(zone.type)) {
+      return false
+    }
 
-    return zones.filter(zone => {
-      if (!selectedTypesSet.has(zone.type)) {
-        return false
-      }
+    if (activityFilter === 'WITH_ACTIVITY' && !hasZoneActivity(zone)) {
+      return false
+    }
 
-      if (activityFilter === 'WITH_ACTIVITY' && !hasZoneActivity(zone)) {
-        return false
-      }
+    if (activityFilter === 'WITHOUT_ACTIVITY' && hasZoneActivity(zone)) {
+      return false
+    }
 
-      if (activityFilter === 'WITHOUT_ACTIVITY' && hasZoneActivity(zone)) {
-        return false
-      }
-
-      return !normalizedQuery || getZoneSearchText(zone).includes(normalizedQuery)
-    })
-  }, [activityFilter, debouncedQuery, selectedTypesSet, zones])
+    return matchesSearchTerms(getZoneSearchText(zone), debouncedQuery)
+  }), [activityFilter, debouncedQuery, selectedTypesSet, zones])
 
   const totalPages = Math.max(1, Math.ceil(filteredZones.length / pageSize))
   const currentPage = Math.min(page, totalPages)

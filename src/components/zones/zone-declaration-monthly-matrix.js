@@ -6,6 +6,7 @@ import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Alert, Box} from '@mui/material'
 import {usePathname, useRouter, useSearchParams} from 'next/navigation'
 
+import {matchesSearchTerms} from '@/lib/search-options.js'
 import {formatUsages} from '@/lib/water-uses.js'
 
 const CELL_LABELS = {
@@ -227,24 +228,20 @@ const ZoneDeclarationMonthlyMatrix = ({canExport = false, payload}) => {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
 
-  const filteredGroups = useMemo(() => {
-    const query = normalize(search)
-
-    return groups
-      .map(group => {
-        const rows = group.rows.filter(row => {
-          const matchesSearch = !query || buildSearchText(row).includes(query)
-          const matchesStatus = statusFilter === 'ALL' || row.cells.some(cell => cell.status === statusFilter)
-          return matchesSearch && matchesStatus
-        })
-
-        return {
-          ...group,
-          rows
-        }
+  const filteredGroups = useMemo(() => groups
+    .map(group => {
+      const rows = group.rows.filter(row => {
+        const matchesSearch = matchesSearchTerms(buildSearchText(row), search)
+        const matchesStatus = statusFilter === 'ALL' || row.cells.some(cell => cell.status === statusFilter)
+        return matchesSearch && matchesStatus
       })
-      .filter(group => group.rows.length > 0)
-  }, [groups, search, statusFilter])
+
+      return {
+        ...group,
+        rows
+      }
+    })
+    .filter(group => group.rows.length > 0), [groups, search, statusFilter])
 
   const flattenedRows = flattenGroups(filteredGroups)
 

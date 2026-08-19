@@ -9,6 +9,8 @@ export function normalizeString(string) {
     .toLowerCase()
     .normalize('NFD')
     .replaceAll(/[\u0300-\u036F]/g, '')
+    .replaceAll('œ', 'oe')
+    .replaceAll('æ', 'ae')
     .replaceAll(/['\u2019]/g, '') // Remove both straight (') and curly (') apostrophes
     .replaceAll(/\s+/g, ' ')
 }

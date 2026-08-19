@@ -25,6 +25,7 @@ import {
 } from '@/lib/declaration.js'
 import {formatDateRange} from '@/lib/format-date.js'
 import {getPointFlowType, getPointFlowTypeLabel, POINT_FLOW_TYPES} from '@/lib/point-flow-types.js'
+import {matchesSearchTerms} from '@/lib/search-options.js'
 import {
   formatUsageReference,
   getUsageColor,
@@ -649,7 +650,6 @@ const PointReconciliationPanel = ({
     () => getLocalConflictByPointId(chunks, selectedChunk),
     [chunks, selectedChunk]
   )
-  const normalizedChunkSearch = normalizeSearchValue(chunkSearch)
   const chunkItems = useMemo(
     () => chunks.map((chunk, index) => ({chunk, index})),
     [chunks]
@@ -661,27 +661,22 @@ const PointReconciliationPanel = ({
     [chunkItems, shouldShowAssociationWorkflow, showOnlyUnmatched]
   )
   const visibleChunkItems = useMemo(() => searchableChunkItems
-    .filter(({chunk, index}) => {
-      if (!normalizedChunkSearch) {
-        return true
-      }
-
-      return getChunkSearchText(chunk, index).includes(normalizedChunkSearch)
-    }), [normalizedChunkSearch, searchableChunkItems])
+    .filter(({chunk, index}) => matchesSearchTerms(
+      getChunkSearchText(chunk, index),
+      chunkSearch
+    )), [chunkSearch, searchableChunkItems])
   const visibleChunkCounterLabel = `${visibleChunkItems.length}/${totalCount} ligne${totalCount > 1 ? 's' : ''}`
   const totalChunkCounterLabel = `${totalCount} ligne${totalCount > 1 ? 's' : ''}`
-  const normalizedPointSearch = normalizeSearchValue(pointSearch)
   const filteredAvailablePoints = useMemo(() => {
     const sourceFlowType = getChunkSourceFlowType(selectedChunk)
 
     return availablePoints.filter(point => {
       const hasCompatibleFlowType = !sourceFlowType || getPointFlowType(point) === sourceFlowType
-      const matchesSearch = !normalizedPointSearch
-        || getPointSearchText(point).includes(normalizedPointSearch)
+      const matchesSearch = matchesSearchTerms(getPointSearchText(point), pointSearch)
 
       return hasCompatibleFlowType && matchesSearch
     })
-  }, [availablePoints, normalizedPointSearch, selectedChunk])
+  }, [availablePoints, pointSearch, selectedChunk])
   const visibleAvailablePoints = useMemo(() => {
     const pointOptions = isAssociationMode ? filteredAvailablePoints : availablePoints
 
@@ -924,7 +919,7 @@ const PointReconciliationPanel = ({
     mapEmptyMessage = 'Aucun type de point sélectionné.'
   } else if (!isAssociationMode) {
     mapEmptyMessage = 'Aucun point associé géolocalisé.'
-  } else if (normalizedPointSearch && filteredAvailablePoints.length === 0) {
+  } else if (pointSearch.trim() && filteredAvailablePoints.length === 0) {
     mapEmptyMessage = 'Aucun point ne correspond à la recherche.'
   }
 

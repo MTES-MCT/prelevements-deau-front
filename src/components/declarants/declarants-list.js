@@ -1,6 +1,6 @@
 'use client'
 
-import {useEffect, useMemo, useState} from 'react'
+import {useEffect, useMemo} from 'react'
 
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {usePathname, useRouter, useSearchParams} from 'next/navigation'
@@ -8,6 +8,7 @@ import {usePathname, useRouter, useSearchParams} from 'next/navigation'
 import Declarant from '@/components/declarants/declarant.js'
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import useDebouncedValue from '@/hook/use-debounced-value.js'
+import useSearchDraft from '@/hook/use-search-draft.js'
 import {
   DECLARANTS_MULTI_FILTER_KEYS,
   DECLARANTS_PAGE_SIZE_OPTIONS,
@@ -440,7 +441,11 @@ const DeclarantsList = ({
   const pathname = usePathname()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [query, setQuery] = useState(filters.query)
+  const {
+    registerLocalNavigation: registerLocalSearchNavigation,
+    setValue: setQuery,
+    value: query
+  } = useSearchDraft(filters.query, 'query')
   const debouncedQuery = useDebouncedValue(query, 350)
   const currentPage = Math.min(Math.max(page, 1), Math.max(totalPages, 1))
   const isPreleveursList = listKind === 'preleveurs'
@@ -460,23 +465,28 @@ const DeclarantsList = ({
   const selectedSort = getEffectiveDeclarantsSort(filters)
 
   useEffect(() => {
-    setQuery(filters.query)
-  }, [filters.query])
-
-  useEffect(() => {
     const nextQuery = debouncedQuery.trim()
 
     if (nextQuery === filters.query) {
       return
     }
 
+    registerLocalSearchNavigation(nextQuery)
     router.replace(buildDeclarantsPathname(pathname, searchParams, {
       query: nextQuery,
       page: null
     }), {scroll: false})
-  }, [debouncedQuery, filters.query, pathname, router, searchParams])
+  }, [
+    debouncedQuery,
+    filters.query,
+    pathname,
+    registerLocalSearchNavigation,
+    router,
+    searchParams
+  ])
 
   const replaceFilters = values => {
+    registerLocalSearchNavigation(values.query === null ? '' : (values.query ?? query).trim())
     router.replace(buildDeclarantsPathname(pathname, searchParams, {
       query: query.trim(),
       ...values,

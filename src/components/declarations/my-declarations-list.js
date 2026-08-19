@@ -14,6 +14,7 @@ import {
   getDeclarationDisplayStatus,
   getDeclarationEntryKind
 } from '@/lib/declaration.js'
+import {matchesSearchTerms} from '@/lib/search-options.js'
 import {
   getMyDeclarationURL,
   getMyTelemetrySourceURL
@@ -98,14 +99,6 @@ function getCountsByKind(entries) {
   }
 
   return countsByKind
-}
-
-function normalizeSearchValue(value) {
-  return String(value ?? '')
-    .normalize('NFD')
-    .replaceAll(/\p{Diacritic}/gu, '')
-    .toLowerCase()
-    .trim()
 }
 
 function getShortSourceCode(source) {
@@ -246,13 +239,7 @@ function hasPointsToAssociate(entry) {
 }
 
 function matchesSearch(text, query) {
-  const normalizedQuery = normalizeSearchValue(query)
-
-  if (!normalizedQuery) {
-    return true
-  }
-
-  return normalizeSearchValue(text).includes(normalizedQuery)
+  return matchesSearchTerms(text, query)
 }
 
 const MyDeclarationsList = ({

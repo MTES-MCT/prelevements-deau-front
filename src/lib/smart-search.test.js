@@ -39,6 +39,12 @@ test('retrouve des termes partiels dans des champs différents et dans un ordre 
   t.is(scoreSearchDocument(document, 'perpi inconnu'), null)
 })
 
+test('retrouve des mots séparés par un mot de liaison dans le libellé', t => {
+  const ferme = createSearchDocument([{value: 'Ferme de Beauvert', weight: 8}])
+
+  t.not(scoreSearchDocument(ferme, 'ferme beauvert'), null)
+})
+
 test('tolère prudemment les fautes longues mais pas les mots courts ni les identifiants', t => {
   t.not(scoreSearchDocument(document, 'forrage'), null)
   t.not(scoreSearchDocument(document, 'froage'), null)
