@@ -42,6 +42,7 @@ import {
   resolutionToFrequency
 } from './utils/time-bucketing.js'
 
+import DistributedVolumeRuleInfo from '@/components/PrelevementsSeriesExplorer/distributed-volume-rule-info.js'
 import {buildDailyAndTimelineData} from '@/components/PrelevementsSeriesExplorer/utils/aggregation.js'
 import CalendarGrid from '@/components/ui/CalendarGrid/index.js'
 import PeriodSelectorHeader from '@/components/ui/PeriodSelectorHeader/index.js'
@@ -66,23 +67,32 @@ function isDefaultParameterOption(option) {
  * @param {string} props.badges[].frequency - Current frequency (may be aggregated)
  * @returns {JSX.Element} Frequency badges display
  */
-const FrequencyBadges = ({badges}) => {
+const FrequencyBadges = ({badges, showDistributedVolumeRule = false}) => {
   if (!badges || badges.length === 0) {
     return null
   }
 
   return (
     <>
-      <Typography
-        variant='caption'
-        sx={{
-          color: 'text.secondary',
-          fontStyle: 'italic',
-          fontSize: '0.75rem'
-        }}
+      <Box sx={{
+        display: 'flex',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: 0.75
+      }}
       >
-        Résolution d’affichage :
-      </Typography>
+        <Typography
+          variant='caption'
+          sx={{
+            color: 'text.secondary',
+            fontStyle: 'italic',
+            fontSize: '0.75rem'
+          }}
+        >
+          Résolution d’affichage :
+        </Typography>
+        {showDistributedVolumeRule && <DistributedVolumeRuleInfo />}
+      </Box>
       <Box sx={{
         display: 'flex',
         flexWrap: 'wrap',
@@ -765,15 +775,6 @@ const AggregatedSeriesExplorer = ({
     if (canDisplayChart) {
       return (
         <Box sx={{minHeight: 360, position: 'relative'}}>
-          {hasDistributedData && (
-            <Alert
-              severity='info'
-              role='status'
-              title='Données réparties pour l’affichage'
-              description='Les volumes déclarés sur une période sont répartis uniformément sur les jours couverts afin de faciliter la lecture. Cette répartition ne modifie pas les données déclarées et ne correspond pas à des mesures journalières.'
-              className='mb-4'
-            />
-          )}
           {(frequencyBadges.length > 0 || displayResolutionForUI) && (
             <Box sx={{
               display: 'flex',
@@ -785,18 +786,30 @@ const AggregatedSeriesExplorer = ({
             }}
             >
               {frequencyBadges.length > 0 ? (
-                <FrequencyBadges badges={frequencyBadges} />
+                <FrequencyBadges
+                  badges={frequencyBadges}
+                  showDistributedVolumeRule={hasDistributedData}
+                />
               ) : (
-                <Typography
-                  variant='caption'
-                  sx={{
-                    color: 'text.secondary',
-                    fontStyle: 'italic',
-                    fontSize: '0.75rem'
-                  }}
+                <Box sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: 0.75
+                }}
                 >
-                  Résolution d’affichage : {formatFrequencyLabel(displayFrequency) ?? displayResolutionForUI}
-                </Typography>
+                  <Typography
+                    variant='caption'
+                    sx={{
+                      color: 'text.secondary',
+                      fontStyle: 'italic',
+                      fontSize: '0.75rem'
+                    }}
+                  >
+                    Résolution d’affichage : {formatFrequencyLabel(displayFrequency) ?? displayResolutionForUI}
+                  </Typography>
+                  {hasDistributedData && <DistributedVolumeRuleInfo />}
+                </Box>
               )}
             </Box>
           )}
