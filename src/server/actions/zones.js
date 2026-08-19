@@ -15,7 +15,20 @@ const LIST_FILTER_KEYS = [
   'collecteur',
   'collector',
   'email',
-  'emailStatus'
+  'emailStatus',
+  'declarantType',
+  'preleveurType',
+  'collecteurStatus',
+  'connectorStatus',
+  'activityRange'
+]
+
+const LIST_MULTI_FILTER_KEYS = [
+  'usageCodes',
+  'waterBodyTypes',
+  'flowTypes',
+  'exploitationStatuses',
+  'preleveurTypes'
 ]
 
 function revalidateZonePaths(zoneId) {
@@ -73,6 +86,22 @@ function buildListSearch(options = {}) {
     if (options[key]) {
       searchParams.set(key, String(options[key]))
     }
+  }
+
+  for (const key of LIST_MULTI_FILTER_KEYS) {
+    const values = Array.isArray(options[key]) ? options[key] : [options[key]]
+
+    for (const value of values.filter(Boolean)) {
+      searchParams.append(key, String(value))
+    }
+  }
+
+  if (options.sort) {
+    searchParams.set('sort', String(options.sort))
+  }
+
+  if (options.order) {
+    searchParams.set('order', String(options.order))
   }
 
   const search = searchParams.toString()

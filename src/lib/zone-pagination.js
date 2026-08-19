@@ -8,7 +8,20 @@ const LIST_FILTER_KEYS = [
   'collecteur',
   'collector',
   'email',
-  'emailStatus'
+  'emailStatus',
+  'declarantType',
+  'preleveurType',
+  'collecteurStatus',
+  'connectorStatus',
+  'activityRange'
+]
+
+const LIST_MULTI_FILTER_KEYS = [
+  'usageCodes',
+  'waterBodyTypes',
+  'flowTypes',
+  'exploitationStatuses',
+  'preleveurTypes'
 ]
 
 function readString(searchParams, key) {
@@ -19,6 +32,16 @@ function readString(searchParams, key) {
   }
 
   return typeof value === 'string' ? value.trim() : ''
+}
+
+function readStrings(searchParams, key) {
+  const value = searchParams?.[key]
+  const values = Array.isArray(value) ? value : [value]
+
+  return [...new Set(values
+    .flatMap(item => typeof item === 'string' ? item.split(',') : [])
+    .map(item => item.trim())
+    .filter(Boolean))]
 }
 
 function normalizeMeta(meta, fallbackCount = 0) {
@@ -37,7 +60,10 @@ function normalizeMeta(meta, fallbackCount = 0) {
     totalAll,
     count,
     search: meta?.search ?? null,
-    filters: meta?.filters ?? {}
+    filters: meta?.filters ?? {},
+    facets: meta?.facets ?? {},
+    sort: meta?.sort ?? null,
+    order: meta?.order ?? null
   }
 }
 
@@ -58,6 +84,26 @@ export function readListOptions(searchParams = {}) {
     }
   }
 
+  for (const key of LIST_MULTI_FILTER_KEYS) {
+    const values = readStrings(searchParams, key)
+
+    if (values.length > 0) {
+      options[key] = values
+    }
+  }
+
+  const sort = readString(searchParams, 'sort')
+
+  if (sort) {
+    options.sort = sort
+  }
+
+  const order = readString(searchParams, 'order')
+
+  if (order) {
+    options.order = order
+  }
+
   return options
 }
 
@@ -73,6 +119,9 @@ export function unwrapPaginatedData(payload, fallback = []) {
 
   return {
     data,
-    meta: normalizeMeta(payload?.meta, data.length)
+    meta: normalizeMeta({
+      ...payload?.meta,
+      facets: payload?.facets ?? payload?.meta?.facets
+    }, data.length)
   }
 }

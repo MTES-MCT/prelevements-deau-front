@@ -18,8 +18,10 @@ import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
 import {
   ZonePagination,
   ZoneResourceToolbar,
+  ZONE_ACTIVITY_SORT_OPTIONS,
   ZONE_COLLECTEUR_FILTERS,
-  ZONE_DECLARANT_FILTERS
+  ZONE_DECLARANT_FILTERS,
+  ZONE_NAME_SORT_OPTIONS
 } from '@/components/zones/zone-list-tools.js'
 import {
   getDeclarantRoleLabel,
@@ -186,6 +188,7 @@ const ZoneDeclarantsList = ({zone, declarants, meta, collecteursOnly = false}) =
         meta={meta}
         searchLabel={`Rechercher un ${itemLabel}`}
         searchPlaceholder={collecteursOnly ? 'Nom, raison sociale, email, SIRET, préleveur, point…' : 'Nom, raison sociale, email, SIRET, ville, point…'}
+        sortOptions={collecteursOnly ? ZONE_NAME_SORT_OPTIONS : ZONE_ACTIVITY_SORT_OPTIONS}
       />
 
       {hasNoResult && (

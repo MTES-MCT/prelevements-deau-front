@@ -14,7 +14,9 @@ import {resolveAllZonePoints} from '@/components/zones/zone-export-resolvers.js'
 import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
 import {
   ZonePagination,
-  ZoneResourceToolbar
+  ZoneResourceToolbar,
+  ZONE_NAME_SORT_OPTIONS,
+  ZONE_POINT_FILTERS
 } from '@/components/zones/zone-list-tools.js'
 import {deleteZonePointPrelevementAction} from '@/server/actions/zones.js'
 
@@ -102,9 +104,11 @@ const ZonePointsList = ({zone, points, meta}) => {
         )}
         itemLabel='point'
         itemPlural='points'
+        filters={ZONE_POINT_FILTERS}
         meta={meta}
         searchLabel='Rechercher un point de prélèvement'
         searchPlaceholder='Nom, commune, code BSS, code BNPE, déclarant…'
+        sortOptions={ZONE_NAME_SORT_OPTIONS}
       />
 
       {hasNoResult && <Alert severity='info'>Aucun point ne correspond à cette recherche.</Alert>}

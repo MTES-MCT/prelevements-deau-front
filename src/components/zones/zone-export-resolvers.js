@@ -19,6 +19,14 @@ function getOptionsFromMeta(meta, extraOptions = {}) {
     options.search = meta.search
   }
 
+  if (meta?.sort) {
+    options.sort = meta.sort
+  }
+
+  if (meta?.order) {
+    options.order = meta.order
+  }
+
   return Object.fromEntries(
     Object.entries(options).filter(([, value]) => value !== undefined && value !== null && value !== '')
   )
