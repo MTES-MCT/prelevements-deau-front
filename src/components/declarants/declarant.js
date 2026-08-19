@@ -3,7 +3,6 @@ import Link from 'next/link'
 import CopyableEmail from '@/components/ui/CopyableEmail/index.js'
 import {getDeclarantUsageSummary} from '@/lib/declarant-usages.js'
 import {
-  canDisplayDeclarantExploitationSummary,
   getDeclarantRoleLabel,
   getDeclarantTitleFromUser,
   getDeclarantTypeIcon,
@@ -39,12 +38,7 @@ function formatDate(value) {
 }
 
 function getDeclarantLocation(declarant) {
-  return declarant.declarant?.city ?? declarant.city ?? null
-}
-
-function canDisplayDeclarantActivity(declarant) {
-  return declarant.right?.isAdmin === true
-    || declarant.right?.permissions?.includes('declaration.list') === true
+  return declarant.city ?? null
 }
 
 const ProfileChip = ({isCollecteur, label}) => (
@@ -66,7 +60,7 @@ const PreleveurTypeChip = ({type}) => {
 
 const DeclarantIdentity = ({declarant}) => {
   const location = getDeclarantLocation(declarant)
-  const organizationName = declarant.declarant?.socialReason ?? declarant.socialReason
+  const organizationName = declarant.socialReason
   const displayName = organizationName || getDeclarantTitleFromUser(declarant)
 
   return (
@@ -95,7 +89,7 @@ const DeclarantIdentity = ({declarant}) => {
 }
 
 const DeclarantProfile = ({declarant, showRole}) => {
-  const role = declarant.declarant?.declarantRole ?? declarant.declarantRole ?? 'PRELEVEUR'
+  const role = declarant.declarantRole ?? 'PRELEVEUR'
   const isCollecteur = role === 'COLLECTEUR'
   const preleveurType = getPreleveurType(declarant)
 
@@ -118,24 +112,22 @@ const DeclarantProfile = ({declarant, showRole}) => {
 }
 
 const DeclarantActivity = ({declarant, showLastDeclaration, trustedCollectorScope}) => {
-  const role = declarant.declarant?.declarantRole ?? declarant.declarantRole ?? 'PRELEVEUR'
+  const role = declarant.declarantRole ?? 'PRELEVEUR'
   const isCollecteur = role === 'COLLECTEUR'
-  const directExploitationsCount = declarant.declarant?._count?.pointPrelevements ?? 0
-  const collectorRightsCount = declarant.declarant?._count?.collecteurExploitations
-    ?? declarant.declarant?.collecteurExploitations?.length
-    ?? 0
-  const count = isCollecteur ? collectorRightsCount : directExploitationsCount
+  const {
+    canDisplayActivity,
+    canDisplayPoints,
+    lastDeclarationAt,
+    pointCount: count = 0,
+    usages
+  } = declarant
   const countLabel = isCollecteur
     ? pluralize(count, 'point accessible', 'points accessibles')
     : pluralize(count, 'point')
-  const canDisplayExploitationSummary = canDisplayDeclarantExploitationSummary(
-    declarant,
-    {trustedCollectorScope}
-  )
-  const canDisplayActivity = canDisplayDeclarantActivity(declarant)
-  const lastDeclarationDate = formatDate(declarant.declarant?.lastDeclarationAt ?? declarant.lastDeclarationAt)
+  const canDisplayExploitationSummary = trustedCollectorScope || canDisplayPoints
+  const lastDeclarationDate = formatDate(lastDeclarationAt)
   const {remainingCount, visibleUsages} = getDeclarantUsageSummary(
-    declarant.searchSummary?.usages
+    usages
   )
 
   if (!canDisplayExploitationSummary && !canDisplayActivity) {
@@ -215,8 +207,7 @@ const Declarant = ({
   showRole = true,
   trustedCollectorScope = false
 }) => {
-  const canRead = declarant.right?.permissions?.includes('declarant.detail.read') === true
-  const detailHref = canRead ? `${basePath}/${declarant.id}` : null
+  const detailHref = declarant.canReadDetail ? `${basePath}/${declarant.id}` : null
 
   return (
     <DeclarantSummaryContent

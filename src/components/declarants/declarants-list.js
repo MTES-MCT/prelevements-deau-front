@@ -249,7 +249,7 @@ function getFilterValues(filters, config) {
 }
 
 function getDeclarantId(declarant) {
-  return declarant.id || declarant.userId || declarant.user?.id
+  return declarant.id
 }
 
 function buildPaginationItems(page, totalPages) {

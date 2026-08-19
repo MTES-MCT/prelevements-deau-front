@@ -3,7 +3,8 @@
 import {revalidatePath} from 'next/cache'
 
 import {buildCollecteurAssociationQuery} from '@/lib/collecteur-association-search.js'
-import {buildDeclarantsSearchQuery} from '@/lib/declarant-search.js'
+import {toDeclarantsListResult} from '@/lib/declarant-list.js'
+import {buildDeclarantsApiSearchQuery} from '@/lib/declarant-search.js'
 import {
   fetchJSON,
   withErrorHandling
@@ -15,19 +16,21 @@ export async function getDeclarantsAction() {
 }
 
 const getCachedDeclarantsSearch = cachePerRequest(async query => withErrorHandling(
-  async () => fetchJSON(`api/declarants/search?${query}`)
+  async () => toDeclarantsListResult(await fetchJSON(`api/declarants/search?${query}`))
 ))
 
 export async function searchDeclarantsAction(options) {
-  return getCachedDeclarantsSearch(buildDeclarantsSearchQuery(options))
+  return getCachedDeclarantsSearch(buildDeclarantsApiSearchQuery(options))
 }
 
 const getCachedCollecteurPreleveursSearch = cachePerRequest(async query => withErrorHandling(
-  async () => fetchJSON(`api/collecteurs/me/preleveurs/search?${query}`)
+  async () => toDeclarantsListResult(
+    await fetchJSON(`api/collecteurs/me/preleveurs/search?${query}`)
+  )
 ))
 
 export async function searchCollecteurPreleveursAction(options) {
-  return getCachedCollecteurPreleveursSearch(buildDeclarantsSearchQuery(options))
+  return getCachedCollecteurPreleveursSearch(buildDeclarantsApiSearchQuery(options))
 }
 
 export async function getCollecteurPreleveursAction() {

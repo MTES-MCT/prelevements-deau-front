@@ -318,6 +318,17 @@ export function createPointFilterIndex(points = []) {
   return index
 }
 
+export function createPointFilterModel(points = [], {flowTypes = []} = {}) {
+  const index = createPointFilterIndex(points)
+  const options = getPointFilterOptions(points, index)
+
+  return {
+    index,
+    options,
+    defaultFilters: getDefaultPointFilters({...options, flowTypes})
+  }
+}
+
 function getPointFilterMetadata(point, pointFilterIndex) {
   return pointFilterIndex?.get(point.id) ?? createPointFilterMetadata(point)
 }
