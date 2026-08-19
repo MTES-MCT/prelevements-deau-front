@@ -65,7 +65,11 @@ function getDistinctPreleveursFromCollecteur(declarant) {
   return [...byId.values()].filter(Boolean)
 }
 
-function getDeclarantSubtitle(declarant) {
+function getDeclarantSubtitle(declarant, {canReadExploitations}) {
+  if (!canReadExploitations) {
+    return null
+  }
+
   const role = getDeclarantRole(declarant)
 
   if (role === 'COLLECTEUR') {
@@ -93,7 +97,7 @@ function getDeclarantSubtitle(declarant) {
   return `${pluralize(count, 'point')} dans la zone — ${names}${suffix}`
 }
 
-function getDeclarantMetas(declarant) {
+function getDeclarantMetas(declarant, {canReadExploitations}) {
   const role = getDeclarantRole(declarant)
 
   if (role === 'COLLECTEUR') {
@@ -101,8 +105,8 @@ function getDeclarantMetas(declarant) {
     const preleveurs = getDistinctPreleveursFromCollecteur(declarant)
 
     return [
-      {iconId: ZONE_ICONS.briefcase, content: pluralize(links.length, 'exploitation accessible', 'exploitations accessibles')},
-      {iconId: ZONE_ICONS.user, content: pluralize(preleveurs.length, 'préleveur')},
+      canReadExploitations && {iconId: ZONE_ICONS.briefcase, content: pluralize(links.length, 'exploitation accessible', 'exploitations accessibles')},
+      canReadExploitations && {iconId: ZONE_ICONS.user, content: pluralize(preleveurs.length, 'préleveur')},
       declarant.email && {iconId: ZONE_ICONS.at, content: declarant.email},
       declarant.phoneNumber && {iconId: ZONE_ICONS.phone, content: declarant.phoneNumber},
       declarant.city && {iconId: ZONE_ICONS.mapPin, content: declarant.city}
@@ -114,8 +118,8 @@ function getDeclarantMetas(declarant) {
   const collectorIds = new Set(collectorLinks.map(link => link.collecteurUserId || link.collecteur?.userId).filter(Boolean))
 
   return [
-    {iconId: ZONE_ICONS.water, content: pluralize(pointsCount, 'point')},
-    collectorIds.size > 0 && {iconId: ZONE_ICONS.team, content: pluralize(collectorIds.size, 'collecteur')},
+    canReadExploitations && {iconId: ZONE_ICONS.water, content: pluralize(pointsCount, 'point')},
+    canReadExploitations && collectorIds.size > 0 && {iconId: ZONE_ICONS.team, content: pluralize(collectorIds.size, 'collecteur')},
     declarant.email && {iconId: ZONE_ICONS.at, content: declarant.email},
     !declarant.email && {iconId: ZONE_ICONS.at, content: 'Sans email'},
     declarant.phoneNumber && {iconId: ZONE_ICONS.phone, content: declarant.phoneNumber},
@@ -131,6 +135,7 @@ const ZoneDeclarantsList = ({zone, declarants, meta, collecteursOnly = false}) =
   const emptyTitle = collecteursOnly
     ? 'Aucun collecteur n’est autorisé sur cette zone pour le moment.'
     : 'Aucun déclarant n’est rattaché à cette zone pour le moment.'
+  const canReadExploitations = zone.permissions?.includes('exploitation.list')
 
   const resolveExportRows = useCallback(async () => {
     const rows = collecteursOnly
@@ -183,11 +188,16 @@ const ZoneDeclarantsList = ({zone, declarants, meta, collecteursOnly = false}) =
           </div>
         )}
         filters={collecteursOnly ? ZONE_COLLECTEUR_FILTERS : ZONE_DECLARANT_FILTERS}
+        permissions={zone.permissions}
         itemLabel={itemLabel}
         itemPlural={itemPlural}
         meta={meta}
         searchLabel={`Rechercher un ${itemLabel}`}
-        searchPlaceholder={collecteursOnly ? 'Nom, raison sociale, email, SIRET, préleveur, point…' : 'Nom, raison sociale, email, SIRET, ville, point…'}
+        searchPlaceholder={canReadExploitations
+          ? (collecteursOnly
+            ? 'Nom, raison sociale, email, SIRET, préleveur, point…'
+            : 'Nom, raison sociale, email, SIRET, ville, point…')
+          : 'Nom, raison sociale, email, SIRET ou ville…'}
         sortOptions={collecteursOnly ? ZONE_NAME_SORT_OPTIONS : ZONE_ACTIVITY_SORT_OPTIONS}
       />
 
@@ -212,7 +222,7 @@ const ZoneDeclarantsList = ({zone, declarants, meta, collecteursOnly = false}) =
                 {getDeclarantTitleFromUser(declarant)}
               </>
             )}
-            subtitle={getDeclarantSubtitle(declarant)}
+            subtitle={getDeclarantSubtitle(declarant, {canReadExploitations})}
             tags={[
               {
                 label: getDeclarantRoleLabel(role),
@@ -231,7 +241,7 @@ const ZoneDeclarantsList = ({zone, declarants, meta, collecteursOnly = false}) =
                 severity: 'warning'
               }
             ].filter(Boolean)}
-            metas={getDeclarantMetas(declarant)}
+            metas={getDeclarantMetas(declarant, {canReadExploitations})}
           />
         )
 

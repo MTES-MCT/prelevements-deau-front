@@ -13,6 +13,7 @@ import {
   getPointUsageRootKeys
 } from '@/lib/points-prelevement-filters.js'
 import {SEARCH_SORT_MODES} from '@/lib/smart-search.js'
+import {keepActiveIndexInRenderedRange} from '@/lib/virtualized-list.js'
 import {getUsageColor, getUsageLabel} from '@/lib/water-uses.js'
 import {
   getPointPrelevementDisplayName,
@@ -223,6 +224,18 @@ const PointsMapList = memo(({
       target.focus()
     }
   }, [activeIndex, firstVirtualIndex, lastVirtualIndex])
+
+  useEffect(() => {
+    if (pendingFocusIndexRef.current !== null) {
+      return
+    }
+
+    setActiveIndex(currentIndex => keepActiveIndexInRenderedRange(
+      currentIndex,
+      firstVirtualIndex,
+      lastVirtualIndex
+    ))
+  }, [firstVirtualIndex, lastVirtualIndex])
 
   useEffect(() => {
     if (sortedPoints.length === 0) {

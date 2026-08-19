@@ -34,6 +34,9 @@ const ZonePointsList = ({zone, points, meta}) => {
   const [deletingPointId, setDeletingPointId] = useState(null)
   const hasNoPointInZone = (meta?.totalAll ?? points.length) === 0
   const hasNoResult = !hasNoPointInZone && points.length === 0
+  const canReadExploitations = zone.permissions?.includes('exploitation.list')
+  const canSearchDeclarants = zone.permissions?.includes('declarant.list')
+    && canReadExploitations
 
   async function handleDelete(point) {
     setError(null)
@@ -105,9 +108,12 @@ const ZonePointsList = ({zone, points, meta}) => {
         itemLabel='point'
         itemPlural='points'
         filters={ZONE_POINT_FILTERS}
+        permissions={zone.permissions}
         meta={meta}
         searchLabel='Rechercher un point de prélèvement'
-        searchPlaceholder='Nom, commune, code BSS, code BNPE, déclarant…'
+        searchPlaceholder={canSearchDeclarants
+          ? 'Nom, commune, code BSS, code BNPE, déclarant…'
+          : 'Nom, commune, code BSS ou code BNPE…'}
         sortOptions={ZONE_NAME_SORT_OPTIONS}
       />
 
@@ -128,8 +134,8 @@ const ZonePointsList = ({zone, points, meta}) => {
               canEdit ? {label: 'Modifiable dans cette zone', severity: 'success'} : {label: 'Lecture seule', severity: 'info'}
             ]}
             metas={[
-              {iconId: ZONE_ICONS.user, content: pluralize(declarants.length, 'déclarant')},
-              point.usages?.length > 0 && {iconId: ZONE_ICONS.briefcase, content: `${point.usages.length} usage${point.usages.length > 1 ? 's' : ''}`},
+              canSearchDeclarants && {iconId: ZONE_ICONS.user, content: pluralize(declarants.length, 'déclarant')},
+              canReadExploitations && point.usages?.length > 0 && {iconId: ZONE_ICONS.briefcase, content: `${point.usages.length} usage${point.usages.length > 1 ? 's' : ''}`},
               point.codeBSS && {iconId: ZONE_ICONS.hashtag, content: `BSS ${point.codeBSS}`},
               point.codeBNPE && {iconId: ZONE_ICONS.hashtag, content: `BNPE ${point.codeBNPE}`}
             ].filter(Boolean)}

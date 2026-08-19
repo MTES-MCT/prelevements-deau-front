@@ -2,6 +2,7 @@ import test from 'ava'
 
 import {
   addPermissionWithDependencies,
+  hasRequiredZonePermissions,
   removePermissionWithDependents
 } from './zone-permissions.js'
 
@@ -33,4 +34,23 @@ test('retire récursivement les droits devenus incohérents', t => {
     removePermissionWithDependents(selected, 'declarant.detail.read', catalog),
     ['zone.detail.read', 'declarant.list']
   )
+})
+
+test('masque les filtres métier sans les droits de zone nécessaires', t => {
+  t.true(hasRequiredZonePermissions(['pp.list'], []))
+  t.false(hasRequiredZonePermissions(['pp.list'], ['exploitation.list']))
+  t.true(hasRequiredZonePermissions(
+    ['pp.list', 'exploitation.list'],
+    ['exploitation.list']
+  ))
+  t.false(hasRequiredZonePermissions(
+    ['exploitation.list'],
+    ['exploitation.list', 'declarant.list'],
+    {requireAll: true}
+  ))
+  t.true(hasRequiredZonePermissions(
+    ['exploitation.list', 'declarant.list'],
+    ['exploitation.list', 'declarant.list'],
+    {requireAll: true}
+  ))
 })

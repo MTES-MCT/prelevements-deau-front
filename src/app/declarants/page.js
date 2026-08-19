@@ -1,10 +1,14 @@
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {forbidden, redirect} from 'next/navigation'
 
 import DeclarantsList from '@/components/declarants/declarants-list.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {
+  buildDeclarantsPathname,
   buildDeclarantsSearchQuery,
+  hasNonCanonicalDeclarantsSort,
+  isDeclarantsSearchResult,
   readDeclarantsSearchOptions
 } from '@/lib/declarant-search.js'
 import {searchDeclarantsAction} from '@/server/actions/declarants.js'
@@ -24,7 +28,16 @@ const EMPTY_COUNTS = {
 }
 
 const Page = async ({searchParams}) => {
-  const options = readDeclarantsSearchOptions(await searchParams)
+  const resolvedSearchParams = await searchParams
+  const options = readDeclarantsSearchOptions(resolvedSearchParams)
+
+  if (hasNonCanonicalDeclarantsSort(options)) {
+    redirect(buildDeclarantsPathname('/declarants', resolvedSearchParams, {
+      page: null,
+      sort: null
+    }))
+  }
+
   const [result, userResult] = await Promise.all([
     searchDeclarantsAction(options),
     getCurrentSessionInfo()
@@ -36,17 +49,10 @@ const Page = async ({searchParams}) => {
     forbidden()
   }
 
-  const searchResult = result.data || {
-    items: [],
-    total: 0,
-    page: options.page,
-    pageSize: options.pageSize,
-    totalPages: 1,
-    counts: EMPTY_COUNTS,
-    facets: {}
-  }
+  const hasSearchError = !result.success || !isDeclarantsSearchResult(result.data)
+  const searchResult = hasSearchError ? null : result.data
 
-  if (searchResult.page > searchResult.totalPages) {
+  if (searchResult && searchResult.page > searchResult.totalPages) {
     const query = buildDeclarantsSearchQuery({
       ...options,
       page: searchResult.totalPages
@@ -84,16 +90,26 @@ const Page = async ({searchParams}) => {
             )}
           </div>
 
-          <DeclarantsList
-            counts={searchResult.counts || EMPTY_COUNTS}
-            declarants={searchResult.items || []}
-            facets={searchResult.facets || {}}
-            filters={options}
-            page={searchResult.page}
-            pageSize={searchResult.pageSize}
-            total={searchResult.total}
-            totalPages={searchResult.totalPages}
-          />
+          {hasSearchError
+            ? (
+              <Alert
+                description='La liste des déclarants ne peut pas être affichée pour le moment.'
+                severity='error'
+                title='Liste indisponible'
+              />
+            )
+            : (
+              <DeclarantsList
+                counts={searchResult.counts || EMPTY_COUNTS}
+                declarants={searchResult.items}
+                facets={searchResult.facets || {}}
+                filters={options}
+                page={searchResult.page}
+                pageSize={searchResult.pageSize}
+                total={searchResult.total}
+                totalPages={searchResult.totalPages}
+              />
+            )}
         </div>
       </main>
     </>

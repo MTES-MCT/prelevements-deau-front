@@ -1,10 +1,14 @@
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Box, Typography} from '@mui/material'
 import {redirect} from 'next/navigation'
 
 import DeclarantsList from '@/components/declarants/declarants-list.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {
+  buildDeclarantsPathname,
   buildDeclarantsSearchQuery,
+  hasNonCanonicalDeclarantsSort,
+  isDeclarantsSearchResult,
   readDeclarantsSearchOptions
 } from '@/lib/declarant-search.js'
 import {searchCollecteurPreleveursAction} from '@/server/actions/declarants.js'
@@ -16,28 +20,33 @@ export const metadata = {
 export const dynamic = 'force-dynamic'
 
 const Page = async ({searchParams}) => {
+  const resolvedSearchParams = await searchParams
+  const parsedOptions = readDeclarantsSearchOptions(resolvedSearchParams)
+
+  const shouldRemoveUnsupportedFilters = resolvedSearchParams.role
+    || resolvedSearchParams.collecteurStatus
+    || resolvedSearchParams.collecteur
+  const shouldRemoveRelevanceSort = hasNonCanonicalDeclarantsSort(parsedOptions)
+
+  if (shouldRemoveUnsupportedFilters || shouldRemoveRelevanceSort) {
+    redirect(buildDeclarantsPathname('/preleveurs', resolvedSearchParams, {
+      role: null,
+      collecteurStatus: null,
+      collecteur: null,
+      ...(shouldRemoveRelevanceSort && {page: null, sort: null})
+    }))
+  }
+
   const options = {
-    ...readDeclarantsSearchOptions(await searchParams),
+    ...parsedOptions,
     role: null,
     collecteurStatus: null
   }
   const result = await searchCollecteurPreleveursAction(options)
-  const searchResult = result.data || {
-    items: [],
-    total: 0,
-    page: options.page,
-    pageSize: options.pageSize,
-    totalPages: 1,
-    counts: {
-      total: 0,
-      preleveurs: 0,
-      collecteurs: 0,
-      withoutEmail: 0
-    },
-    facets: {}
-  }
+  const hasSearchError = !result.success || !isDeclarantsSearchResult(result.data)
+  const searchResult = hasSearchError ? null : result.data
 
-  if (searchResult.page > searchResult.totalPages) {
+  if (searchResult && searchResult.page > searchResult.totalPages) {
     const query = buildDeclarantsSearchQuery({
       ...options,
       page: searchResult.totalPages
@@ -56,18 +65,28 @@ const Page = async ({searchParams}) => {
         <p className='fr-text--sm fr-mt-2w'>
           Ces préleveurs sont accessibles car votre compte collecteur est rattaché à leurs exploitations.
         </p>
-        <DeclarantsList
-          basePath='/preleveurs'
-          counts={searchResult.counts}
-          declarants={searchResult.items}
-          facets={searchResult.facets}
-          filters={options}
-          listKind='preleveurs'
-          page={searchResult.page}
-          pageSize={searchResult.pageSize}
-          total={searchResult.total}
-          totalPages={searchResult.totalPages}
-        />
+        {hasSearchError
+          ? (
+            <Alert
+              description='La liste des préleveurs ne peut pas être affichée pour le moment.'
+              severity='error'
+              title='Liste indisponible'
+            />
+          )
+          : (
+            <DeclarantsList
+              basePath='/preleveurs'
+              counts={searchResult.counts}
+              declarants={searchResult.items}
+              facets={searchResult.facets}
+              filters={options}
+              listKind='preleveurs'
+              page={searchResult.page}
+              pageSize={searchResult.pageSize}
+              total={searchResult.total}
+              totalPages={searchResult.totalPages}
+            />
+          )}
       </Box>
     </>
   )

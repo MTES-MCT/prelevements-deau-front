@@ -10,6 +10,21 @@ export function hasAnyZonePermission(user, permission) {
   return Boolean(user?.permissions?.includes(permission))
 }
 
+export function hasRequiredZonePermissions(
+  permissions = [],
+  requiredPermissions = [],
+  {requireAll = false} = {}
+) {
+  if (requiredPermissions.length === 0) {
+    return true
+  }
+
+  const permissionSet = new Set(permissions)
+  return requireAll
+    ? requiredPermissions.every(permission => permissionSet.has(permission))
+    : requiredPermissions.some(permission => permissionSet.has(permission))
+}
+
 export function addPermissionWithDependencies(values, code, catalogByCode) {
   const selected = new Set(values)
   const add = permission => {

@@ -87,6 +87,7 @@ const PointsMapPage = ({initialPointsResult}) => {
       : [],
     [initialPointsResult]
   )
+  const canSearchDeclarants = points.some(point => point?.searchAccess?.declarants === true)
 
   const [filters, setFilters] = useState(() => {
     const pointFilterIndex = createPointFilterIndex(points)
@@ -307,6 +308,7 @@ const PointsMapPage = ({initialPointsResult}) => {
                 <div className='flex h-full min-h-0 flex-col bg-white'>
                   <PointsMapFilters
                     collecteurStatusOptions={collecteurStatusOptions}
+                    canSearchDeclarants={canSearchDeclarants}
                     connectorStatusOptions={connectorStatusOptions}
                     disabled={false}
                     exploitationStatusOptions={exploitationStatusOptions}
