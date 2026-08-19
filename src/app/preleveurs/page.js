@@ -3,12 +3,11 @@ import {redirect} from 'next/navigation'
 
 import DeclarantsList from '@/components/declarants/declarants-list.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {searchCollecteurPreleveurs} from '@/lib/collecteur-preleveurs.js'
 import {
   buildDeclarantsSearchQuery,
   readDeclarantsSearchOptions
 } from '@/lib/declarant-search.js'
-import {getCollecteurPreleveursAction} from '@/server/actions/declarants.js'
+import {searchCollecteurPreleveursAction} from '@/server/actions/declarants.js'
 
 export const metadata = {
   title: 'Préleveurs'
@@ -17,10 +16,26 @@ export const metadata = {
 export const dynamic = 'force-dynamic'
 
 const Page = async ({searchParams}) => {
-  const options = readDeclarantsSearchOptions(await searchParams)
-  const result = await getCollecteurPreleveursAction()
-  const preleveurs = result.data || []
-  const searchResult = searchCollecteurPreleveurs(preleveurs, options)
+  const options = {
+    ...readDeclarantsSearchOptions(await searchParams),
+    role: null,
+    collecteurStatus: null
+  }
+  const result = await searchCollecteurPreleveursAction(options)
+  const searchResult = result.data || {
+    items: [],
+    total: 0,
+    page: options.page,
+    pageSize: options.pageSize,
+    totalPages: 1,
+    counts: {
+      total: 0,
+      preleveurs: 0,
+      collecteurs: 0,
+      withoutEmail: 0
+    },
+    facets: {}
+  }
 
   if (searchResult.page > searchResult.totalPages) {
     const query = buildDeclarantsSearchQuery({
@@ -45,7 +60,9 @@ const Page = async ({searchParams}) => {
           basePath='/preleveurs'
           counts={searchResult.counts}
           declarants={searchResult.items}
+          facets={searchResult.facets}
           filters={options}
+          listKind='preleveurs'
           page={searchResult.page}
           pageSize={searchResult.pageSize}
           total={searchResult.total}

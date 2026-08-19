@@ -32,13 +32,21 @@ test('readListOptions ignore les nombres invalides et garde les filtres non vide
     perPage: '0',
     usage: ' 2 ',
     status: ['active'],
-    email: '   '
+    email: '   ',
+    usageCodes: ['2', '5'],
+    waterBodyTypes: 'SOUTERRAIN,SUPERFICIELLE',
+    sort: 'LAST_DECLARATION',
+    order: 'desc'
   }), {
     page: 1,
     perPage: DEFAULT_ZONE_PER_PAGE,
     search: '',
     usage: '2',
-    status: 'active'
+    status: 'active',
+    usageCodes: ['2', '5'],
+    waterBodyTypes: ['SOUTERRAIN', 'SUPERFICIELLE'],
+    sort: 'LAST_DECLARATION',
+    order: 'desc'
   })
 })
 
@@ -53,7 +61,10 @@ test('unwrapPaginatedData enveloppe un tableau simple', t => {
       totalAll: 2,
       count: 2,
       search: null,
-      filters: {}
+      filters: {},
+      facets: {},
+      sort: null,
+      order: null
     }
   })
 })
@@ -69,7 +80,12 @@ test('unwrapPaginatedData conserve les métadonnées API', t => {
       totalAll: 100,
       count: 10,
       search: 'asa',
-      filters: {usage: '2'}
+      filters: {usage: '2'},
+      facets: {
+        usageCodes: [{value: '2', label: 'Irrigation', count: 20}]
+      },
+      sort: 'RELEVANCE',
+      order: 'desc'
     }
   }), {
     data: [{id: 1}],
@@ -81,7 +97,12 @@ test('unwrapPaginatedData conserve les métadonnées API', t => {
       totalAll: 100,
       count: 10,
       search: 'asa',
-      filters: {usage: '2'}
+      filters: {usage: '2'},
+      facets: {
+        usageCodes: [{value: '2', label: 'Irrigation', count: 20}]
+      },
+      sort: 'RELEVANCE',
+      order: 'desc'
     }
   })
 })
@@ -97,7 +118,10 @@ test('unwrapPaginatedData utilise le fallback quand la donnée API est absente',
       totalAll: 0,
       count: 1,
       search: null,
-      filters: {}
+      filters: {},
+      facets: {},
+      sort: null,
+      order: null
     }
   })
 })

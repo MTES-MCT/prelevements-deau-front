@@ -42,7 +42,8 @@ const Page = async ({searchParams}) => {
     page: options.page,
     pageSize: options.pageSize,
     totalPages: 1,
-    counts: EMPTY_COUNTS
+    counts: EMPTY_COUNTS,
+    facets: {}
   }
 
   if (searchResult.page > searchResult.totalPages) {
@@ -86,6 +87,7 @@ const Page = async ({searchParams}) => {
           <DeclarantsList
             counts={searchResult.counts || EMPTY_COUNTS}
             declarants={searchResult.items || []}
+            facets={searchResult.facets || {}}
             filters={options}
             page={searchResult.page}
             pageSize={searchResult.pageSize}

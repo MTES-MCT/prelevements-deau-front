@@ -21,6 +21,14 @@ export async function searchDeclarantsAction(options) {
   return getCachedDeclarantsSearch(buildDeclarantsSearchQuery(options))
 }
 
+const getCachedCollecteurPreleveursSearch = cachePerRequest(async query => withErrorHandling(
+  async () => fetchJSON(`api/collecteurs/me/preleveurs/search?${query}`)
+))
+
+export async function searchCollecteurPreleveursAction(options) {
+  return getCachedCollecteurPreleveursSearch(buildDeclarantsSearchQuery(options))
+}
+
 export async function getCollecteurPreleveursAction() {
   return withErrorHandling(async () => fetchJSON('api/collecteurs/me/preleveurs'))
 }
