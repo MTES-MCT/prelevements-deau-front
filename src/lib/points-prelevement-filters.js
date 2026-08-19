@@ -143,8 +143,10 @@ function getPointSearchDocument(point, searchAccess) {
     {value: point?.usageName, weight: 7},
     {value: point?.searchAliases, weight: 6},
     {value: point?.communeName, weight: 5},
-    {value: usages.flatMap(usage => [usage?.label, usage?.code]), weight: 4},
-    {value: managementZones.flatMap(zone => [zone?.name, zone?.code]), weight: 3},
+    {value: usages.map(usage => usage?.label), weight: 4},
+    {value: usages.map(usage => usage?.code), weight: 4, identifier: true},
+    {value: managementZones.map(zone => zone?.name), weight: 3},
+    {value: managementZones.map(zone => zone?.code), weight: 3, identifier: true},
     ...declarantFields
   ])
 }

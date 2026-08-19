@@ -112,6 +112,21 @@ test('la recherche intelligente couvre aliases, commune, codes, usages, zones et
   t.false(pointMatchesSearch(points[2], 'preleveur masque', index))
 })
 
+test('les codes alphabétiques restent exacts sans correction approximative', t => {
+  const point = {
+    id: 'point-code',
+    name: 'Captage communal',
+    usages: [{id: 'usage-code', code: 'IRRG', label: 'Irrigation'}],
+    managementZones: [{id: 'zone-code', name: 'Secteur nord', code: 'ZONEA'}],
+    searchAccess: {declarants: false, exploitations: false}
+  }
+
+  t.true(pointMatchesSearch(point, 'irrg'))
+  t.true(pointMatchesSearch(point, 'zonea'))
+  t.false(pointMatchesSearch(point, 'irrd'))
+  t.false(pointMatchesSearch(point, 'zoneb'))
+})
+
 test('le score place un identifiant exact avant un nom approximatif', t => {
   const index = createPointFilterIndex(points)
   const result = filterPointsWithScores(points, {...allFilters, query: '10972X0137/PONT'}, index)

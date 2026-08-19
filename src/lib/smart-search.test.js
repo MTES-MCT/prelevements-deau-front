@@ -45,12 +45,48 @@ test('retrouve des mots séparés par un mot de liaison dans le libellé', t => 
   t.not(scoreSearchDocument(ferme, 'ferme beauvert'), null)
 })
 
-test('tolère prudemment les fautes longues mais pas les mots courts ni les identifiants', t => {
-  t.not(scoreSearchDocument(document, 'forrage'), null)
-  t.not(scoreSearchDocument(document, 'froage'), null)
-  t.not(scoreSearchDocument(document, 'perpignam'), null)
+test('tolère une seule édition sur les mots humains alphabétiques dès quatre lettres', t => {
+  const ferme = createSearchDocument([{value: 'Ferme de Beauvert', weight: 8}])
+
+  for (const query of ['ferne', 'ferm', 'fermee', 'femre', 'ferne beauvert']) {
+    t.not(scoreSearchDocument(ferme, query), null, `requête ${query}`)
+  }
+})
+
+test('refuse les doubles fautes et l’approximation des mots courts', t => {
+  const ferme = createSearchDocument([{value: 'Ferme de Beauvert', weight: 8}])
+
+  t.is(scoreSearchDocument(ferme, 'farni'), null)
+  t.is(scoreSearchDocument(ferme, 'fem'), null)
   t.is(scoreSearchDocument(document, 'asb'), null)
-  t.is(scoreSearchDocument(document, '10972X0138/PONT'), null)
+  t.is(scoreSearchDocument(document, 'asaa'), null)
+})
+
+test('ne corrige jamais approximativement les identifiants et codes techniques', t => {
+  const identifiers = createSearchDocument([
+    {value: '10972X0137/PONT', identifier: true},
+    {value: '12345678900012', identifier: true},
+    {value: 'contact@example.fr', identifier: true},
+    {value: '0612345678', identifier: true},
+    {value: 'ABCD', identifier: true}
+  ])
+  const technicalTerms = createSearchDocument([
+    {value: 'SIRET BSS BNPE AIOT BDLISA PTP UUID'}
+  ])
+
+  for (const query of [
+    '10972X0138/PONT',
+    '12345678900013',
+    'contact@examplf.fr',
+    '0612345679',
+    'ABCE'
+  ]) {
+    t.is(scoreSearchDocument(identifiers, query), null, `requête ${query}`)
+  }
+
+  for (const query of ['sirex', 'bsa', 'bnpa', 'aiop', 'bdliza', 'ptq', 'uvid']) {
+    t.is(scoreSearchDocument(technicalTerms, query), null, `requête ${query}`)
+  }
 })
 
 test('rankSearchItems utilise la pertinence seulement avec une requête et stabilise les égalités', t => {
