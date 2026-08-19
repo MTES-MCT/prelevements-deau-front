@@ -4,6 +4,7 @@ import {
   PRELEVEUR_TYPE_LABELS,
   PRELEVEUR_TYPE_OPTIONS,
   canDisplayDeclarantExploitationSummary,
+  getDeclarantTitleFromUser,
   getPreleveurType,
   getPreleveurTypeLabel,
   normalizePreleveurTypeForRole
@@ -36,6 +37,19 @@ test('getPreleveurType lit les représentations directe et imbriquée du déclar
 test('getPreleveurType ne propose jamais de type pour un collecteur', t => {
   t.is(getPreleveurType({declarantRole: 'COLLECTEUR', preleveurType: 'AUTRE'}), null)
   t.is(getPreleveurType({declarant: {declarantRole: 'COLLECTEUR', preleveurType: 'ICPE'}}), null)
+})
+
+test('la raison sociale est prioritaire sur le nom du contact', t => {
+  t.is(getDeclarantTitleFromUser({
+    firstName: 'Laurent',
+    lastName: 'Bruget',
+    declarant: {socialReason: 'ARGELÈS VACANCES'}
+  }), 'ARGELÈS VACANCES')
+  t.is(getDeclarantTitleFromUser({
+    firstName: 'Laurent',
+    lastName: 'Bruget',
+    declarant: {socialReason: null}
+  }), 'Laurent Bruget')
 })
 
 test('normalizePreleveurTypeForRole force la valeur null dans le payload collecteur', t => {

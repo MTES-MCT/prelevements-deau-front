@@ -12,6 +12,7 @@ import CollecteurExploitationsList from '@/components/exploitations/collecteur-e
 import ExploitationsList from '@/components/exploitations/exploitations-list.js'
 import SeriesExplorer from '@/components/points-prelevement/series-explorer.js'
 import ReglesListCard from '@/components/regles/regles-list-card.js'
+import CopyableEmail from '@/components/ui/CopyableEmail/index.js'
 import EntityHeader from '@/components/ui/EntityHeader/index.js'
 import Icon from '@/components/ui/Icon/index.js'
 import SectionCard from '@/components/ui/SectionCard/index.js'
@@ -166,7 +167,9 @@ const InfoCard = ({declarant}) => {
         </li>
         <li>
           <Icon iconId='ri-at-line' style={iconColorStyle} />
-          <span>{declarant.email || 'Non renseigné'}</span>
+          {declarant.email
+            ? <CopyableEmail email={declarant.email} />
+            : <span>Non renseigné</span>}
         </li>
         <li>
           <Icon iconId='ri-phone-line' style={iconColorStyle} />

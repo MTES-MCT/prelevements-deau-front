@@ -355,15 +355,17 @@ const PreleveurForm = ({
 
             {isPreleveurPhysique ? (
               <PreleveurPhysiqueForm
-                preleveur={preleveur}
-                setPreleveur={setPreleveur}
                 emailRequired={emailRequired}
+                preleveur={preleveur}
+                showCopyEmail={isEditing}
+                setPreleveur={setPreleveur}
               />
             ) : (
               <PreleveurMoralForm
-                preleveur={preleveur}
-                setPreleveur={setPreleveur}
                 emailRequired={emailRequired}
+                preleveur={preleveur}
+                showCopyEmail={isEditing}
+                setPreleveur={setPreleveur}
               />
             )}
 

@@ -10,8 +10,14 @@ import {Typography} from '@mui/material'
 import OptionalPreleveurFieldsForm from '@/components/form/optional-preleveur-fields-form.js'
 import SearchByStructure from '@/components/form/search-by-structure.js'
 import AccordionCentered from '@/components/ui/AccordionCentered/index.js'
+import {CopyEmailButton} from '@/components/ui/CopyableEmail/index.js'
 
-const PreleveurMoralForm = ({preleveur, setPreleveur, emailRequired = false}) => {
+const PreleveurMoralForm = ({
+  emailRequired = false,
+  preleveur,
+  showCopyEmail = false,
+  setPreleveur
+}) => {
   const [isExpanded, setIsExpanded] = useState(false)
 
   useEffect(() => {
@@ -105,15 +111,18 @@ const PreleveurMoralForm = ({preleveur, setPreleveur, emailRequired = false}) =>
           }}
         />
       </div>
-      <Input
-        label={`Adresse email du contact${emailRequired ? ' *' : ''}`}
-        hintText={emailRequired ? 'Obligatoire pour permettre la connexion ou l’envoi de notification.' : 'Facultative pour un préleveur non déclarant.'}
-        nativeInputProps={{
-          placeholder: 'Entrer l’adresse email de contact',
-          value: preleveur?.email || '',
-          onChange: e => setPreleveur(prev => ({...prev, email: e.target.value}))
-        }}
-      />
+      <div className='group'>
+        <Input
+          action={showCopyEmail ? <CopyEmailButton revealOnHover email={preleveur?.email} /> : undefined}
+          hintText={emailRequired ? 'Obligatoire pour permettre la connexion ou l’envoi de notification.' : 'Facultative pour un préleveur non déclarant.'}
+          label={`Adresse email du contact${emailRequired ? ' *' : ''}`}
+          nativeInputProps={{
+            placeholder: 'Entrer l’adresse email de contact',
+            value: preleveur?.email || '',
+            onChange: e => setPreleveur(prev => ({...prev, email: e.target.value}))
+          }}
+        />
+      </div>
       <AccordionCentered
         isExpanded={isExpanded}
         setIsExpanded={setIsExpanded}

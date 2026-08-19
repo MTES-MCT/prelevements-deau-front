@@ -20,13 +20,6 @@ export const metadata = {
 
 export const dynamic = 'force-dynamic'
 
-const EMPTY_COUNTS = {
-  total: 0,
-  preleveurs: 0,
-  collecteurs: 0,
-  withoutEmail: 0
-}
-
 const Page = async ({searchParams}) => {
   const resolvedSearchParams = await searchParams
   const options = readDeclarantsSearchOptions(resolvedSearchParams)
@@ -100,7 +93,6 @@ const Page = async ({searchParams}) => {
             )
             : (
               <DeclarantsList
-                counts={searchResult.counts || EMPTY_COUNTS}
                 declarants={searchResult.items}
                 facets={searchResult.facets || {}}
                 filters={options}
