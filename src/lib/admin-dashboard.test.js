@@ -1,6 +1,7 @@
 import test from 'ava'
 
 import {
+  ADMIN_DASHBOARD_CHART_COLORS,
   ADMIN_DASHBOARD_LATEST_DECLARATIONS_HREF,
   aggregateAdminDashboardActivity,
   buildAdminDashboardDateRangePresets,
@@ -8,6 +9,12 @@ import {
   getParisDateInput,
   hasAdminDashboardDeclarationActivity
 } from './admin-dashboard.js'
+
+test('les couleurs du graphe sont concrètes pour MUI X Charts', t => {
+  for (const [key, color] of Object.entries(ADMIN_DASHBOARD_CHART_COLORS)) {
+    t.regex(color, /^#[\da-f]{6}$/i, `Invalid chart color for ${key}`)
+  }
+})
 
 test('la période par défaut couvre le mois courant jusqu’à aujourd’hui', t => {
   t.deepEqual(getAdminDashboardDefaultRange(new Date(2026, 7, 10)), {

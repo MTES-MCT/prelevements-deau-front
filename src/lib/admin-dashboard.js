@@ -10,6 +10,15 @@ import {
 export const ADMIN_DASHBOARD_MAX_RANGE_DAYS = 366
 export const ADMIN_DASHBOARD_WEEKLY_THRESHOLD_DAYS = 90
 export const ADMIN_DASHBOARD_LATEST_DECLARATIONS_HREF = '/declarations?types=MANUAL,SPREADSHEET,API'
+// MUI X Charts manipulates series colors through d3-color on highlight. Keep
+// concrete values here instead of CSS custom properties, which d3-color cannot
+// parse even when they provide a hexadecimal fallback.
+export const ADMIN_DASHBOARD_CHART_COLORS = Object.freeze({
+  manualDeclarations: '#18753C',
+  spreadsheetDeclarations: '#8D533E',
+  otherDeclarations: '#666666',
+  failed: '#E1000F'
+})
 
 const ACTIVITY_FIELDS = [
   'declarations',
