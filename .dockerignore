@@ -1,0 +1,15 @@
+.git
+**/.git
+.github
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.sample
+node_modules
+.next
+out
+coverage
+**/*.test.js
+npm-debug.log*
+*.log

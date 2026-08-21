@@ -27,9 +27,10 @@ Cette application est le front-end du projet de gestion des prélèvements d'eau
 | `NEXT_PUBLIC_FRONTEND_URL`    | URL de base du frontend. Optionnel en production. |
 | `NEXT_PUBLIC_PROCEDURE_DS_ID` | Identifiant de la procédure Démarche Numérique pour générer les liens vers les dossiers. |
 | `NEXT_PUBLIC_STORAGE_URL`     | URL de base du stockage des documents.                                                 |
-| `NEXT_PUBLIC_DEPLOY_ENV`      | Environnement d'affichage (`testing` affiche un bandeau, `prod` n'en affiche pas). Optionnel en dev local. |
+| `NEXT_PUBLIC_DEPLOY_ENV`      | Environnement d'affichage (`testing` et `demo` affichent un bandeau, `prod` n'en affiche pas). Optionnel en dev local. |
 | `NEXT_PUBLIC_MATOMO_URL`      | URL de base Matomo. Active aussi la collecte anonymisée des Web Vitals si le site ID est défini. |
 | `NEXT_PUBLIC_MATOMO_SITE_ID`  | Identifiant du site Matomo. |
+| `NEXT_PUBLIC_MATOMO_DISABLED` | Mettre `true` pour désactiver explicitement Matomo, même lorsque son URL et son site sont configurés. |
 | `NEXT_PUBLIC_BUILD_SHA`       | Révision déployée associée aux mesures Web Vitals ; injectée automatiquement par la CI. |
 | `NEXT_PUBLIC_CRISP_DISABLED`  | Mettre `true` pour désactiver le widget Crisp, par exemple en local. Par défaut, Crisp est actif. |
 | `NEXTAUTH_URL`                | URL de l'application NextAuth avec basePath (ex: `http://localhost:3000/auth/nextauth` en dev). |

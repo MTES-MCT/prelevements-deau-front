@@ -3,7 +3,8 @@ const ENVIRONMENT_LABELS = {
   development: 'DEV',
   local: 'DEV',
   test: 'TESTING',
-  testing: 'TESTING'
+  testing: 'TESTING',
+  demo: 'DÉMO'
 }
 
 function getEnvironmentLabel() {

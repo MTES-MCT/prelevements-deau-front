@@ -1,0 +1,283 @@
+name: Deploy (demo) to Scaleway
+
+on:
+  push:
+    branches: ["demo"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-demo-front
+  cancel-in-progress: true
+
+jobs:
+  test_build_deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      TZ: Europe/Paris
+      SCW_REGION: ${{ vars.SCW_REGION }}
+      SCW_REGISTRY_ENDPOINT: ${{ vars.SCW_REGISTRY_ENDPOINT }}
+      SCW_IMAGE_NAME: ${{ vars.SCW_IMAGE_NAME }}
+      SCW_EXPECTED_PROJECT_ID: 8b2f67a8-b474-4596-967f-fe1e0adba1b3
+      SCW_EXPECTED_ORGANIZATION_ID: aae4422f-c198-4638-b9e5-977938791f14
+      SCW_DEMO_NAMESPACE_ID: c90182ec-fb81-4fca-ad36-0e37ce351466
+      SCW_DEMO_REGISTRY_NAMESPACE_ID: 4b8049e1-c77b-472d-a29b-3ea3a1bb9a39
+      SCW_DEMO_CONTAINER_ID_FRONT: e3f57295-eef7-4b7f-a556-c20212535d11
+      API_URL: https://demopartageonsleauc90182ec-demo-prelevement-deau-api.functions.fnc.fr-par.scw.cloud
+      FRONT_URL: https://app.demo.partageonsleau.beta.gouv.fr
+      NEXTAUTH_URL: https://app.demo.partageonsleau.beta.gouv.fr/auth/nextauth
+      NEXT_PUBLIC_API_URL: https://demopartageonsleauc90182ec-demo-prelevement-deau-api.functions.fnc.fr-par.scw.cloud
+      NEXT_PUBLIC_FRONTEND_URL: https://app.demo.partageonsleau.beta.gouv.fr
+      NEXT_PUBLIC_DEPLOY_ENV: demo
+      NEXT_PUBLIC_PROCEDURE_DS_ID: ""
+      NEXT_PUBLIC_STORAGE_URL: ""
+      NEXT_PUBLIC_MATOMO_URL: ""
+      NEXT_PUBLIC_MATOMO_SITE_ID: ""
+      NEXT_PUBLIC_MATOMO_DISABLED: "true"
+      NEXT_PUBLIC_CRISP_DISABLED: "true"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate demo CI configuration
+        env:
+          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+          SCW_CONFIGURED_PROJECT_ID: ${{ secrets.SCW_DEFAULT_PROJECT_ID }}
+          SCW_CONFIGURED_ORGANIZATION_ID: ${{ secrets.SCW_DEFAULT_ORGANIZATION_ID }}
+        run: |
+          set -euo pipefail
+
+          [[ "$GITHUB_REPOSITORY" == "MTES-MCT/prelevements-deau-front" ]] || {
+            echo "::error::Unexpected GitHub repository"
+            exit 1
+          }
+          [[ "$GITHUB_REF_TYPE" == "branch" && "$GITHUB_REF_NAME" == "demo" ]] || {
+            echo "::error::This workflow can only deploy the demo branch"
+            exit 1
+          }
+
+          required_settings=(
+            SCW_ACCESS_KEY
+            SCW_SECRET_KEY
+            SCW_CONFIGURED_PROJECT_ID
+            SCW_CONFIGURED_ORGANIZATION_ID
+            SCW_REGION
+            SCW_REGISTRY_ENDPOINT
+            SCW_IMAGE_NAME
+          )
+
+          for setting in "${required_settings[@]}"; do
+            [[ -n "${!setting:-}" ]] || {
+              echo "::error::Missing GitHub configuration: $setting"
+              exit 1
+            }
+          done
+
+          [[ "$SCW_CONFIGURED_PROJECT_ID" == "$SCW_EXPECTED_PROJECT_ID" ]] || {
+            echo "::error::Unexpected Scaleway project for demo"
+            exit 1
+          }
+          [[ "$SCW_CONFIGURED_ORGANIZATION_ID" == "$SCW_EXPECTED_ORGANIZATION_ID" ]] || {
+            echo "::error::Unexpected Scaleway organization for demo"
+            exit 1
+          }
+          [[ "$SCW_REGION" == "fr-par" ]] || {
+            echo "::error::Unexpected Scaleway region for demo"
+            exit 1
+          }
+          [[ "$SCW_REGISTRY_ENDPOINT" == "rg.fr-par.scw.cloud/prelevements-deau-front" ]] || {
+            echo "::error::Unexpected front registry endpoint"
+            exit 1
+          }
+          [[ "$SCW_IMAGE_NAME" == "prelevements-deau-front" ]] || {
+            echo "::error::Unexpected front image name"
+            exit 1
+          }
+
+          protected_ids=(
+            bfb37e50-4bd4-42dc-94ca-2064f8b46898
+            fa4179ac-8658-4440-963b-66d669a452d5
+            275df624-d21d-4a27-9f28-d28b5fb0d63c
+            9e8f735f-c823-45a0-8e57-33f816c6bf30
+          )
+
+          for protected_id in "${protected_ids[@]}"; do
+            [[ "$SCW_DEMO_NAMESPACE_ID" != "$protected_id" \
+              && "$SCW_DEMO_CONTAINER_ID_FRONT" != "$protected_id" ]] || {
+              echo "::error::Refusing a testing or production resource"
+              exit 1
+            }
+          done
+
+      - name: Use Node.js 24.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.x"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --allow-remote=root
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build (Next.js)
+        run: npm run build
+
+      - name: Install Scaleway CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/scaleway/scaleway-cli/master/scripts/get.sh \
+            | VERSION=2.58.3 sh
+          scw version
+
+      - name: Validate Scaleway demo resource ownership
+        env:
+          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+          SCW_DEFAULT_PROJECT_ID: ${{ env.SCW_EXPECTED_PROJECT_ID }}
+          SCW_DEFAULT_ORGANIZATION_ID: ${{ env.SCW_EXPECTED_ORGANIZATION_ID }}
+          SCW_DEFAULT_REGION: ${{ env.SCW_REGION }}
+        run: |
+          set -euo pipefail
+
+          namespace="$(scw container namespace get "$SCW_DEMO_NAMESPACE_ID" \
+            region="$SCW_REGION" \
+            -o json)"
+          [[ "$(jq -er '.project_id' <<< "$namespace")" == "$SCW_EXPECTED_PROJECT_ID" \
+            && "$(jq -er '.name' <<< "$namespace")" == "demo-partageons-leau" ]] || {
+            echo "::error::Unexpected demo namespace"
+            exit 1
+          }
+
+          registry_namespace="$(scw registry namespace get "$SCW_DEMO_REGISTRY_NAMESPACE_ID" \
+            region="$SCW_REGION" \
+            -o json)"
+          [[ "$(jq -er '.project_id' <<< "$registry_namespace")" == "$SCW_EXPECTED_PROJECT_ID" \
+            && "$(jq -er '.name' <<< "$registry_namespace")" == "prelevements-deau-front" \
+            && "$(jq -er '.endpoint' <<< "$registry_namespace")" == "$SCW_REGISTRY_ENDPOINT" \
+            && "$(jq -er '.is_public' <<< "$registry_namespace")" == "false" ]] || {
+            echo "::error::Unexpected front registry namespace"
+            exit 1
+          }
+
+          container="$(scw container container get "$SCW_DEMO_CONTAINER_ID_FRONT" \
+            region="$SCW_REGION" \
+            -o json)"
+          [[ "$(jq -er '.name' <<< "$container")" == "demo-prelevement-deau-front" \
+            && "$(jq -er '.namespace_id' <<< "$container")" == "$SCW_DEMO_NAMESPACE_ID" ]] || {
+            echo "::error::Unexpected demo front container"
+            exit 1
+          }
+          for key in NEXTAUTH_SECRET AUDIT_CONTEXT_SECRET; do
+            if ! jq -e --arg key "$key" \
+              '(.secret_environment_variables // {}) | has($key)' \
+              <<< "$namespace" >/dev/null \
+              && ! jq -e --arg key "$key" \
+              '(.secret_environment_variables // {}) | has($key)' \
+              <<< "$container" >/dev/null; then
+              echo "::error::Missing demo front secret: $key"
+              exit 1
+            fi
+          done
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Scaleway Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: rg.fr-par.scw.cloud
+          username: nologin
+          password: ${{ secrets.SCW_SECRET_KEY }}
+
+      - name: Build and push image (demo-latest + sha)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./deploy/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.SCW_REGISTRY_ENDPOINT }}/${{ env.SCW_IMAGE_NAME }}:demo-latest
+            ${{ env.SCW_REGISTRY_ENDPOINT }}/${{ env.SCW_IMAGE_NAME }}:demo-${{ github.sha }}
+          build-args: |
+            NPM_CONFIG_ALLOW_REMOTE=root
+            API_URL=${{ env.API_URL }}
+            FRONT_URL=${{ env.FRONT_URL }}
+            NEXTAUTH_URL=${{ env.NEXTAUTH_URL }}
+            NEXT_PUBLIC_API_URL=${{ env.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_FRONTEND_URL=${{ env.NEXT_PUBLIC_FRONTEND_URL }}
+            NEXT_PUBLIC_PROCEDURE_DS_ID=${{ env.NEXT_PUBLIC_PROCEDURE_DS_ID }}
+            NEXT_PUBLIC_STORAGE_URL=${{ env.NEXT_PUBLIC_STORAGE_URL }}
+            NEXT_PUBLIC_DEPLOY_ENV=${{ env.NEXT_PUBLIC_DEPLOY_ENV }}
+            NEXT_PUBLIC_BUILD_SHA=${{ github.sha }}
+            NEXT_PUBLIC_MATOMO_URL=${{ env.NEXT_PUBLIC_MATOMO_URL }}
+            NEXT_PUBLIC_MATOMO_SITE_ID=${{ env.NEXT_PUBLIC_MATOMO_SITE_ID }}
+            NEXT_PUBLIC_MATOMO_DISABLED=${{ env.NEXT_PUBLIC_MATOMO_DISABLED }}
+            NEXT_PUBLIC_CRISP_DISABLED=${{ env.NEXT_PUBLIC_CRISP_DISABLED }}
+
+      - name: Deploy immutable demo image
+        env:
+          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+          SCW_DEFAULT_PROJECT_ID: ${{ env.SCW_EXPECTED_PROJECT_ID }}
+          SCW_DEFAULT_ORGANIZATION_ID: ${{ env.SCW_EXPECTED_ORGANIZATION_ID }}
+          SCW_DEFAULT_REGION: ${{ env.SCW_REGION }}
+        run: |
+          set -euo pipefail
+
+          image_ref="$SCW_REGISTRY_ENDPOINT/$SCW_IMAGE_NAME:demo-${{ github.sha }}"
+          [[ "$image_ref" =~ :demo-[0-9a-f]{40}$ ]] || {
+            echo "::error::Refusing a non-demo image tag"
+            exit 1
+          }
+
+          scw container container update "$SCW_DEMO_CONTAINER_ID_FRONT" \
+            image="$image_ref" \
+            port=8080 \
+            mvcpu-limit=2000 \
+            memory-limit-bytes=2.048GB \
+            local-storage-limit-bytes=1GB \
+            min-scale=1 \
+            max-scale=20 \
+            timeout=300s \
+            privacy=public \
+            protocol=http1 \
+            https-connection-only=true \
+            sandbox=v2 \
+            scaling-option.concurrent-requests-threshold=15 \
+            environment-variables.API_URL="$API_URL" \
+            environment-variables.FRONT_URL="$FRONT_URL" \
+            environment-variables.NEXTAUTH_URL="$NEXTAUTH_URL" \
+            environment-variables.NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" \
+            environment-variables.NEXT_PUBLIC_FRONTEND_URL="$NEXT_PUBLIC_FRONTEND_URL" \
+            environment-variables.NEXT_PUBLIC_DEPLOY_ENV=demo \
+            liveness-probe.http.path=/healthz \
+            liveness-probe.interval=10s \
+            liveness-probe.timeout=2s \
+            liveness-probe.failure-threshold=5 \
+            startup-probe.http.path=/healthz \
+            startup-probe.interval=5s \
+            startup-probe.timeout=2s \
+            startup-probe.failure-threshold=30 \
+            region="$SCW_REGION" \
+            --wait
+
+          updated="$(scw container container get "$SCW_DEMO_CONTAINER_ID_FRONT" \
+            region="$SCW_REGION" \
+            -o json)"
+          [[ "$(jq -er '.image' <<< "$updated")" == "$image_ref" \
+            && "$(jq -er '.namespace_id' <<< "$updated")" == "$SCW_DEMO_NAMESPACE_ID" \
+            && "$(jq -er '.https_connections_only' <<< "$updated")" == "true" \
+            && "$(jq -er '.port' <<< "$updated")" == "8080" ]] || {
+            echo "::error::Unexpected front deployment result"
+            exit 1
+          }

@@ -17,6 +17,10 @@ import {AuthProvider} from '@/contexts/auth-context.js'
 import {defaultColorScheme} from '@/dsfr-bootstrap/default-color-scheme.js'
 import {StartDsfrOnHydration, DsfrProvider} from '@/dsfr-bootstrap/index.js'
 import {getHtmlAttributes, DsfrHead} from '@/dsfr-bootstrap/server-only-index.js'
+import {
+  isEnvironmentFlagEnabled,
+  resolveMatomoConfig
+} from '@/lib/integration-config.js'
 import {getServerAuthSession} from '@/server/auth.js'
 
 import '@/app/globals.css'
@@ -30,12 +34,17 @@ export const metadata = {
   description: 'Suivre les prélèvements d’eau'
 }
 
-const MATOMO_URL = process.env.NEXT_PUBLIC_MATOMO_URL
-const MATOMO_SITE_ID = process.env.NEXT_PUBLIC_MATOMO_SITE_ID
-const IS_MATOMO_ENABLED = Boolean(MATOMO_URL && MATOMO_SITE_ID)
-const CRISP_DISABLED_VALUES = new Set(['1', 'true', 'yes', 'on'])
-const IS_CRISP_DISABLED = CRISP_DISABLED_VALUES.has(
-  process.env.NEXT_PUBLIC_CRISP_DISABLED?.trim().toLowerCase()
+const {
+  enabled: IS_MATOMO_ENABLED,
+  siteId: MATOMO_SITE_ID,
+  url: MATOMO_URL
+} = resolveMatomoConfig({
+  disabled: process.env.NEXT_PUBLIC_MATOMO_DISABLED,
+  siteId: process.env.NEXT_PUBLIC_MATOMO_SITE_ID,
+  url: process.env.NEXT_PUBLIC_MATOMO_URL
+})
+const IS_CRISP_DISABLED = isEnvironmentFlagEnabled(
+  process.env.NEXT_PUBLIC_CRISP_DISABLED
 )
 
 const RootLayout = async ({children}) => {
