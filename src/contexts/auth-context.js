@@ -21,6 +21,7 @@ const AuthContext = createContext({
   isAuthenticated: false,
   isLoading: true,
   async login() {},
+  async loginWithPassword() {},
   async logout() {},
   async refreshUser() {},
   async startImpersonation() {},
@@ -50,10 +51,10 @@ export const AuthProvider = ({children}) => {
     }
   }, [session])
 
-  const login = useCallback(async magicLinkToken => {
+  const login = useCallback(async sessionToken => {
     try {
       const result = await signIn('credentials', {
-        token: magicLinkToken,
+        token: sessionToken,
         redirect: false,
         callbackUrl: '/'
       })
@@ -66,6 +67,25 @@ export const AuthProvider = ({children}) => {
     } catch (error) {
       console.error('[Auth] signIn error:', error)
       return {success: false, error: error.message}
+    }
+  }, [])
+
+  const loginWithPassword = useCallback(async (email, password) => {
+    try {
+      const result = await signIn('password', {
+        email,
+        password,
+        redirect: false,
+        callbackUrl: '/'
+      })
+
+      if (!result?.ok || result.error) {
+        return {success: false, error: 'INVALID_CREDENTIALS'}
+      }
+
+      return {success: true}
+    } catch {
+      return {success: false, error: 'INVALID_CREDENTIALS'}
     }
   }, [])
 
@@ -121,12 +141,13 @@ export const AuthProvider = ({children}) => {
       isAuthenticated: Boolean(session?.user),
       isLoading: status === 'loading',
       login,
+      loginWithPassword,
       logout,
       refreshUser,
       startImpersonation,
       stopImpersonation
     }),
-    [user, session, status, login, logout, refreshUser, startImpersonation, stopImpersonation]
+    [user, session, status, login, loginWithPassword, logout, refreshUser, startImpersonation, stopImpersonation]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

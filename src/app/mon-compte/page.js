@@ -12,6 +12,7 @@ import {
 import moment from 'moment'
 import 'moment/locale/fr'
 
+import PasswordChangeSection from '@/components/auth/password-change-section.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getCurrentUser} from '@/server/actions/user.js'
 import {getZonesActions} from '@/server/actions/zones.js'
@@ -145,6 +146,8 @@ const MonComptePage = async () => {
                 </div>
               )}
             </div>
+
+            <PasswordChangeSection />
 
             <div className='flex flex-col gap-2'>
               <Typography gutterBottom variant='h6'>
