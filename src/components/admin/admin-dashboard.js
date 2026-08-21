@@ -15,6 +15,7 @@ import Link from 'next/link'
 import AdminPageShell from '@/components/admin/admin-page-shell.js'
 import DateRangePicker from '@/components/ui/date-range-picker.js'
 import {
+  ADMIN_DASHBOARD_CHART_COLORS,
   ADMIN_DASHBOARD_LATEST_DECLARATIONS_HREF,
   ADMIN_DASHBOARD_MAX_RANGE_DAYS,
   aggregateAdminDashboardActivity,
@@ -282,14 +283,14 @@ const AdminDashboard = ({initialData, initialError = null}) => {
     {
       data: chart.items.map(item => item.manualDeclarations),
       label: 'Saisies rapides',
-      color: 'var(--app-color-success, #18753c)',
+      color: ADMIN_DASHBOARD_CHART_COLORS.manualDeclarations,
       stack: 'declarations',
       valueFormatter: value => formatNumber(value)
     },
     {
       data: chart.items.map(item => item.spreadsheetDeclarations),
       label: 'Fichiers déposés',
-      color: 'var(--app-color-warning, #8d533e)',
+      color: ADMIN_DASHBOARD_CHART_COLORS.spreadsheetDeclarations,
       stack: 'declarations',
       valueFormatter: value => formatNumber(value)
     },
@@ -297,7 +298,7 @@ const AdminDashboard = ({initialData, initialError = null}) => {
       ? [{
         data: chart.items.map(item => item.otherDeclarations),
         label: 'Autres dépôts',
-        color: 'var(--app-color-muted, #666666)',
+        color: ADMIN_DASHBOARD_CHART_COLORS.otherDeclarations,
         stack: 'declarations',
         valueFormatter: value => formatNumber(value)
       }]
@@ -305,7 +306,7 @@ const AdminDashboard = ({initialData, initialError = null}) => {
     {
       data: chart.items.map(item => item.failed),
       label: 'Échecs de traitement',
-      color: 'var(--app-color-error, #e1000f)',
+      color: ADMIN_DASHBOARD_CHART_COLORS.failed,
       valueFormatter: value => formatNumber(value)
     }
   ]
