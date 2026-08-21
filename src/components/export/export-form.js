@@ -12,6 +12,10 @@ import Input from '@codegouvfr/react-dsfr/Input'
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
 import {
+  buildSandreZoneOptions,
+  getSandreZoneFilterLabels
+} from '@/lib/data-export-filters.js'
+import {
   createDataExportAction,
   deleteDataExportAction,
   getDataExportDownloadAction,
@@ -177,7 +181,7 @@ function buildZoneOptions(zones = []) {
 function buildWaterBodyTypeOptions(waterBodyTypes = []) {
   return [
     {
-      label: 'Types de milieu',
+      label: 'Types de milieu du point',
       options: sortOptions(waterBodyTypes.map(waterBodyType => ({
         value: waterBodyType.value,
         content: waterBodyType.label,
@@ -251,10 +255,22 @@ function formatSelectedFilterValues(values, labelMap) {
   return `${visibleLabels.join(', ')} + ${hiddenCount}`
 }
 
+function formatSelectedFilterLabels(labels) {
+  const visibleLabels = labels.slice(0, 2)
+  const hiddenCount = Math.max(0, labels.length - visibleLabels.length)
+
+  if (hiddenCount === 0) {
+    return visibleLabels.join(', ')
+  }
+
+  return `${visibleLabels.join(', ')} + ${hiddenCount}`
+}
+
 function buildExportFilterSummary(item, optionLabelMaps) {
   const usageIds = getArrayFilter(item.filters, 'usageIds')
   const zoneIds = getArrayFilter(item.filters, 'zoneIds')
   const waterBodyTypes = getArrayFilter(item.filters, 'waterBodyTypes')
+  const sandreZoneLabels = getSandreZoneFilterLabels(item.filters, optionLabelMaps.sandreZone)
 
   return [
     {
@@ -270,7 +286,13 @@ function buildExportFilterSummary(item, optionLabelMaps) {
         : 'Toutes accessibles'
     },
     {
-      label: 'Milieux',
+      label: 'Zones SANDRE',
+      value: sandreZoneLabels.length > 0
+        ? formatSelectedFilterLabels(sandreZoneLabels)
+        : 'Toutes'
+    },
+    {
+      label: 'Milieux des points',
       value: waterBodyTypes.length > 0
         ? formatSelectedFilterValues(waterBodyTypes, optionLabelMaps.waterBodyType)
         : 'Tous'
@@ -477,6 +499,7 @@ const ExportForm = ({
   const [exports, setExports] = useState(initialExports)
   const [selectedUsageIds, setSelectedUsageIds] = useState([])
   const [selectedZoneIds, setSelectedZoneIds] = useState([])
+  const [selectedSandreZoneIds, setSelectedSandreZoneIds] = useState([])
   const [selectedWaterBodyTypes, setSelectedWaterBodyTypes] = useState([])
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -494,6 +517,10 @@ const ExportForm = ({
   const periodPresets = useMemo(() => buildPeriodPresets(new Date()), [])
   const usageOptions = useMemo(() => buildUsageOptions(options.usages), [options.usages])
   const zoneOptions = useMemo(() => buildZoneOptions(options.zones), [options.zones])
+  const sandreZoneOptions = useMemo(
+    () => buildSandreZoneOptions(options.sandreZones),
+    [options.sandreZones]
+  )
   const waterBodyTypeOptions = useMemo(
     () => buildWaterBodyTypeOptions(options.waterBodyTypes),
     [options.waterBodyTypes]
@@ -501,8 +528,9 @@ const ExportForm = ({
   const optionLabelMaps = useMemo(() => ({
     usage: buildUsageLabelMap(options.usages),
     zone: buildOptionLabelMap(zoneOptions),
+    sandreZone: buildOptionLabelMap(sandreZoneOptions),
     waterBodyType: buildOptionLabelMap(waterBodyTypeOptions)
-  }), [options.usages, zoneOptions, waterBodyTypeOptions])
+  }), [options.usages, sandreZoneOptions, zoneOptions, waterBodyTypeOptions])
   const hasRunningExport = exports.some(item => ['PENDING', 'PROCESSING'].includes(item.status))
   const feedbackExports = feedbackExportIds
     .map(exportId => exports.find(item => item.id === exportId))
@@ -562,6 +590,7 @@ const ExportForm = ({
         endDate,
         usageIds: selectedUsageIds,
         zoneIds: selectedZoneIds,
+        sandreZoneIds: selectedSandreZoneIds,
         waterBodyTypes: selectedWaterBodyTypes
       })
 
@@ -726,7 +755,17 @@ const ExportForm = ({
             />
 
             <GroupedMultiselect
-              label='Types de milieu'
+              searchable
+              label='Zones hydrologiques SANDRE'
+              hint='Les points situés dans au moins une des zones sélectionnées seront inclus.'
+              placeholder='Toutes les zones hydrologiques SANDRE'
+              options={sandreZoneOptions}
+              value={selectedSandreZoneIds}
+              onChange={setSelectedSandreZoneIds}
+            />
+
+            <GroupedMultiselect
+              label='Type de milieu du point'
               placeholder='Tous les types de milieu'
               options={waterBodyTypeOptions}
               value={selectedWaterBodyTypes}
