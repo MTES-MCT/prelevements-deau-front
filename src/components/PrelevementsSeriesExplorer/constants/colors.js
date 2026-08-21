@@ -2,7 +2,6 @@
  * Constants used across PrelevementsSeriesExplorer components
  */
 
-import {pointFlowTypeColors} from '@/lib/point-flow-types.js'
 import {normalizeString} from '@/utils/string.js'
 
 /**
@@ -27,13 +26,19 @@ const PARAMETER_COLOR_ENTRIES = [
   ['autre', '#AEA397']
 ]
 
+// MUI X Charts manipulates series colors through d3-color (for example to
+// brighten an area on hover). It therefore needs concrete colors: CSS custom
+// properties such as `var(--color, #fallback)` are valid in the browser but
+// cannot be parsed by d3-color.
+const REJET_CHART_COLOR = '#CE614A'
+
 const PARAMETER_FLOW_COLOR_ENTRIES = [
   ['volume:PRELEVEMENT', '#000091'],
-  ['volume:REJET', pointFlowTypeColors.REJET.accentColor],
+  ['volume:REJET', REJET_CHART_COLOR],
   ['index:PRELEVEMENT', '#3B87FF'],
-  ['index:REJET', pointFlowTypeColors.REJET.accentColor],
+  ['index:REJET', REJET_CHART_COLOR],
   ['debit:PRELEVEMENT', '#0063CB'],
-  ['debit:REJET', pointFlowTypeColors.REJET.accentColor]
+  ['debit:REJET', REJET_CHART_COLOR]
 ]
 
 export const PARAMETER_COLOR_MAP = new Map(
