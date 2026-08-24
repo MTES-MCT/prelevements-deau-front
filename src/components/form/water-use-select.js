@@ -158,7 +158,7 @@ const WaterUseSelect = ({
         <span className='flex min-w-0 items-center gap-2'>
           <span
             aria-hidden='true'
-            className='h-2.5 w-2.5 shrink-0 rounded-sm'
+            className='h-2 w-2 shrink-0 rounded-full'
             style={{backgroundColor: getUsageColor(usage)}}
           />
           <span className='min-w-0 whitespace-normal break-words'>{formatOptionLabel(usage)}</span>
