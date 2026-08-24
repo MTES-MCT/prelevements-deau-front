@@ -14,6 +14,7 @@ import NavigationProgressProvider from '@/components/providers/navigation-progre
 import NextAuthSessionProvider from '@/components/providers/session-provider.js'
 import WebVitalsReporter from '@/components/web-vitals-reporter.js'
 import {AuthProvider} from '@/contexts/auth-context.js'
+import {AuthMethodsProvider} from '@/contexts/auth-methods-context.js'
 import {defaultColorScheme} from '@/dsfr-bootstrap/default-color-scheme.js'
 import {StartDsfrOnHydration, DsfrProvider} from '@/dsfr-bootstrap/index.js'
 import {getHtmlAttributes, DsfrHead} from '@/dsfr-bootstrap/server-only-index.js'
@@ -21,6 +22,8 @@ import {
   isEnvironmentFlagEnabled,
   resolveMatomoConfig
 } from '@/lib/integration-config.js'
+import {PASSWORD_ACTIVATION_STORAGE_KEY} from '@/lib/password-activation.js'
+import {getAuthConfigState} from '@/server/auth-config.js'
 import {getServerAuthSession} from '@/server/auth.js'
 
 import '@/app/globals.css'
@@ -46,13 +49,43 @@ const {
 const IS_CRISP_DISABLED = isEnvironmentFlagEnabled(
   process.env.NEXT_PUBLIC_CRISP_DISABLED
 )
+const PASSWORD_ACTIVATION_FRAGMENT_SCRUB_SCRIPT = `
+  (function () {
+    if (window.location.pathname !== '/activation-mot-de-passe' || !window.location.hash) {
+      return;
+    }
+
+    var parameters = new URLSearchParams(window.location.hash.slice(1));
+    var value = parameters.get('token');
+
+    try {
+      if (value) {
+        window.sessionStorage.setItem(${JSON.stringify(PASSWORD_ACTIVATION_STORAGE_KEY)}, value);
+      }
+    } catch (error) {
+      // A storage refusal invalidates the link locally but must not expose it.
+    }
+
+    window.history.replaceState(
+      window.history.state,
+      '',
+      window.location.pathname + window.location.search
+    );
+  })();
+`
 
 const RootLayout = async ({children}) => {
-  const session = await getServerAuthSession()
+  const [session, authConfigState] = await Promise.all([
+    getServerAuthSession(),
+    getAuthConfigState()
+  ])
 
   return (
     <html {...getHtmlAttributes({defaultColorScheme})} >
       <head>
+        <Script id='password-activation-fragment-scrub' strategy='beforeInteractive'>
+          {PASSWORD_ACTIVATION_FRAGMENT_SCRUB_SCRIPT}
+        </Script>
         <StartDsfrOnHydration />
         <DsfrHead Link={Link}
           preloadFonts={[
@@ -78,24 +111,29 @@ const RootLayout = async ({children}) => {
         <NavigationProgressProvider>
           <EnvironmentBanner />
           <NextAuthSessionProvider session={session}>
-            <AuthProvider>
-              <AppRouterCacheProvider>
-                <DsfrProvider>
-                  <MuiDsfrThemeProvider>
-                    <AuthSessionGuard />
-                    <ImpersonationBanner />
-                    <Header />
-                    <MatomoTracker enabled={IS_MATOMO_ENABLED} />
-                    <WebVitalsReporter enabled={IS_MATOMO_ENABLED} />
-                    <CrispChat disabled={IS_CRISP_DISABLED} />
-                    <main role='main' id='content'>
-                      {children}
-                    </main>
-                    <Footer />
-                  </MuiDsfrThemeProvider>
-                </DsfrProvider>
-              </AppRouterCacheProvider>
-            </AuthProvider>
+            <AuthMethodsProvider
+              available={authConfigState.available}
+              methods={authConfigState.config.methods}
+            >
+              <AuthProvider>
+                <AppRouterCacheProvider>
+                  <DsfrProvider>
+                    <MuiDsfrThemeProvider>
+                      <AuthSessionGuard />
+                      <ImpersonationBanner />
+                      <Header />
+                      <MatomoTracker enabled={IS_MATOMO_ENABLED} />
+                      <WebVitalsReporter enabled={IS_MATOMO_ENABLED} />
+                      <CrispChat disabled={IS_CRISP_DISABLED} />
+                      <main role='main' id='content'>
+                        {children}
+                      </main>
+                      <Footer />
+                    </MuiDsfrThemeProvider>
+                  </DsfrProvider>
+                </AppRouterCacheProvider>
+              </AuthProvider>
+            </AuthMethodsProvider>
           </NextAuthSessionProvider>
         </NavigationProgressProvider>
       </body>

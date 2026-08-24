@@ -36,6 +36,14 @@ export const ADMIN_NAVIGATION_ITEMS = Object.freeze([
     iconClassName: 'ri-key-2-line'
   },
   {
+    key: 'password-accesses',
+    label: 'Accès par mot de passe',
+    description: 'Activer, réinitialiser ou révoquer les accès par mot de passe.',
+    href: '/administration/acces-mot-de-passe',
+    iconClassName: 'ri-lock-password-line',
+    authMethod: 'password'
+  },
+  {
     key: 'audit-log',
     label: 'Journal d’audit',
     description: 'Consulter les actions sensibles réalisées sur la plateforme.',
@@ -59,4 +67,9 @@ export function getActiveAdminNavigationItem(pathname = '') {
   return [...ADMIN_NAVIGATION_ITEMS]
     .sort((left, right) => right.href.length - left.href.length)
     .find(item => pathname.startsWith(`${item.href}/`)) ?? null
+}
+
+export function getVisibleAdminNavigationItems({available = false, authMethods = []} = {}) {
+  return ADMIN_NAVIGATION_ITEMS.filter(item =>
+    !item.authMethod || (available && authMethods.includes(item.authMethod)))
 }

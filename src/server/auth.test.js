@@ -41,3 +41,26 @@ test('n’expose pas les habilitations détaillées dans le JWT NextAuth', async
   t.false(Object.hasOwn(session.user, 'zoneAssignments'))
   t.deepEqual(session.user.permissions, ['zone.detail.read'])
 })
+
+test('conserve uniquement l’échéance API dans la session, sans credential', async t => {
+  const expiresAt = '2026-08-22T01:00:00.000Z'
+  const token = await authOptions.callbacks.jwt({
+    token: {},
+    user: {
+      token: 'api-token',
+      expiresAt,
+      role: 'DECLARANT',
+      userInfo: {id: 'user-1'},
+      password: 'ne-doit-jamais-apparaitre'
+    }
+  })
+
+  const session = await authOptions.callbacks.session({
+    session: {user: {}},
+    token
+  })
+
+  t.is(session.expires, expiresAt)
+  t.false(Object.hasOwn(token, 'password'))
+  t.false(Object.hasOwn(session.user, 'password'))
+})
