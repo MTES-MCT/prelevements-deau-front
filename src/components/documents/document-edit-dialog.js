@@ -13,8 +13,8 @@ import {
 
 import DocumentForm from '@/components/form/document-form.js'
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
+import {formatExploitationUsages} from '@/lib/exploitation-usages.js'
 import {formatFullDateFr} from '@/lib/format-date.js'
-import {getUsageLabel} from '@/lib/water-uses.js'
 import {updateDocumentAction} from '@/server/actions/index.js'
 import {emptyStringToNull} from '@/utils/string.js'
 
@@ -27,9 +27,7 @@ const statusLabels = {
 
 function getExploitationLabel(exploitation) {
   const pointName = exploitation.pointPrelevement?.name || 'Point inconnu'
-  const usageText = exploitation.usage
-    ? getUsageLabel(exploitation.usage)
-    : 'Usage non renseigné'
+  const usageText = formatExploitationUsages(exploitation)
 
   return `${pointName} - ${usageText}`
 }

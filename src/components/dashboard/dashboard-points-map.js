@@ -21,6 +21,7 @@ import {cooperativeGesturesMapOptions} from '@/components/map/cooperative-gestur
 import {IGN_RASTER_MAX_ZOOM} from '@/components/map/ign-raster.js'
 import planIGN from '@/components/map/styles/plan-ign.json'
 import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
+import {getExploitationUsages} from '@/lib/exploitation-usages.js'
 import {getMonitoringStationURL} from '@/lib/monitoring-stations.js'
 import {
   computeBestPopupAnchor,
@@ -326,11 +327,12 @@ function removePopup(popupRef) {
   popupRef.current = null
 }
 
-function createUsageChip(usage) {
+function createUsageChip(usage, {isPrimary = false} = {}) {
   const chip = document.createElement('span')
   chip.className = 'inline-flex max-w-full items-center rounded px-2 py-1 text-xs font-medium'
-  chip.textContent = usage ? getUsageLabel(usage) : 'Usage non renseigné'
-  chip.title = chip.textContent
+  const usageLabel = usage ? getUsageLabel(usage) : 'Usage non renseigné'
+  chip.textContent = isPrimary ? `Principal · ${usageLabel}` : usageLabel
+  chip.title = `${isPrimary ? 'Usage principal' : 'Usage secondaire'} : ${usageLabel}`
   chip.style.backgroundColor = usage ? getUsageColor(usage) : '#eeeeee'
   chip.style.color = usage ? getUsageTextColor(usage) : 'var(--text-default-grey)'
 
@@ -589,10 +591,17 @@ function appendExploitationDetails(parent, exploitations, {showCollecteurs = tru
     const item = document.createElement('div')
     item.className = 'min-w-0 border border-gray-200 bg-gray-50 p-2'
 
-    if (isDashboardVisibleUsage(exploitation.usage)) {
+    const visibleUsages = getExploitationUsages(exploitation)
+      .filter(usage => isDashboardVisibleUsage(usage))
+
+    if (visibleUsages.length > 0) {
       const header = document.createElement('div')
-      header.className = 'fr-mb-2v'
-      header.append(createUsageChip(exploitation.usage))
+      header.className = 'fr-mb-2v flex flex-wrap gap-1'
+
+      for (const usage of visibleUsages) {
+        header.append(createUsageChip(usage, {isPrimary: usage === exploitation.usage}))
+      }
+
       item.append(header)
     }
 

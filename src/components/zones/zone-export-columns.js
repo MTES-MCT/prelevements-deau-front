@@ -4,6 +4,7 @@ import {
   getPreleveurType,
   getPreleveurTypeLabel
 } from '@/lib/declarants.js'
+import {getExploitationSecondaryUsages} from '@/lib/exploitation-usages.js'
 import {formatUsages, getUsageLabel} from '@/lib/water-uses.js'
 
 const ZONE_TYPE_LABELS = {
@@ -232,6 +233,7 @@ export const ZONE_EXPLOITATIONS_EXPORT_COLUMNS = [
   {label: 'Emails collecteurs', value: exploitation => formatList(getCollecteurs(exploitation), collecteur => collecteur.email || collecteur.user?.email)},
   {label: 'Alias e-mail collecteurs', value: exploitation => formatList(getCollecteurs(exploitation), formatEmailAliases)},
   {label: 'Usage', value: exploitation => getUsageLabel(exploitation.usage)},
+  {label: 'Usages secondaires', value: exploitation => formatUsages(getExploitationSecondaryUsages(exploitation))},
   {label: 'Dernière déclaration', value: exploitation => formatDate(exploitation.lastDeclarationAt)},
   {label: 'Connecteurs', value: exploitation => exploitation.connectors?.length || 0},
   {label: 'Modifiable', value: exploitation => formatBoolean(exploitation.right?.canEdit)}

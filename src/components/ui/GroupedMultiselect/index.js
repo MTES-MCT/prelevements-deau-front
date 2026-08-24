@@ -38,11 +38,14 @@ const GroupedMultiselect = ({
   onChange,
   disabled,
   searchable = false,
-  hideLabel = false
+  hideLabel = false,
+  state = 'default',
+  stateRelatedMessage = null
 }) => {
   const generatedId = useId()
   const selectId = id ?? `grouped-multiselect-${generatedId}`
   const listboxId = `${selectId}-listbox`
+  const stateDescriptionId = `${selectId}-desc`
   const searchLabel = label
     ? `Rechercher dans ${label.toLocaleLowerCase('fr-FR')}`
     : 'Rechercher dans les options'
@@ -270,7 +273,10 @@ const GroupedMultiselect = ({
     <div
       ref={ref}
       style={{position: 'relative'}}
-      className={disabled ? 'fr-select-group--disabled' : ''}
+      className={[
+        disabled ? 'fr-select-group--disabled' : '',
+        state === 'default' ? '' : `fr-select-group--${state}`
+      ].filter(Boolean).join(' ')}
       onBlur={event => {
         if (open && !event.currentTarget.contains(event.relatedTarget)) {
           restoreFocusOnCloseRef.current = false
@@ -288,6 +294,7 @@ const GroupedMultiselect = ({
         className={`fr-select${hideLabel ? '' : ' mt-2'}${disabled ? ' fr-bg-disabled-grey' : ''}`}
         aria-disabled={disabled}
         aria-controls={listboxId}
+        aria-describedby={state !== 'default' && stateRelatedMessage ? stateDescriptionId : undefined}
         aria-label={label || placeholder || 'Sélection multiple'}
         sx={{
           cursor: disabled ? 'not-allowed' : 'pointer'
@@ -428,6 +435,16 @@ const GroupedMultiselect = ({
             </Box>
           ))}
         </List>
+      )}
+
+      {state !== 'default' && stateRelatedMessage && (
+        <p
+          id={stateDescriptionId}
+          className={state === 'error' ? 'fr-error-text' : 'fr-info-text'}
+          role={state === 'error' ? 'alert' : undefined}
+        >
+          {stateRelatedMessage}
+        </p>
       )}
     </div>
   )

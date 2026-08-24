@@ -8,7 +8,7 @@ import MetasList from '@/components/ui/MetasList/index.js'
 import TagsList from '@/components/ui/TagsList/index.js'
 import './style.css'
 
-const CardTitle = ({title, subtitle, subtitleIcon: SubtitleIcon, rightIcons}) => (
+const CardTitle = ({title, subtitle, subtitleIcon: SubtitleIcon, rightIcons, titleBadges}) => (
   <Box>
     <Box sx={{
       display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%'
@@ -27,6 +27,8 @@ const CardTitle = ({title, subtitle, subtitleIcon: SubtitleIcon, rightIcons}) =>
         </Box>
       )}
     </Box>
+
+    {titleBadges && <Box sx={{mt: 1}}>{titleBadges}</Box>}
 
     {subtitle && (
       <Typography
@@ -59,6 +61,7 @@ const ListItem = ({
   subtitle,
   subtitleIcon,
   rightIcons,
+  titleBadges,
   tags,
   metas,
   border
@@ -66,7 +69,7 @@ const ListItem = ({
   (
     <Card
       start={<TagsList tags={tags} />}
-      title={<CardTitle title={title} subtitle={subtitle} subtitleIcon={subtitleIcon} rightIcons={rightIcons} />}
+      title={<CardTitle title={title} subtitle={subtitle} subtitleIcon={subtitleIcon} rightIcons={rightIcons} titleBadges={titleBadges} />}
       end={metas?.length > 0 ? <Box className='mt-2'><MetasList metas={metas} /></Box> : null}
       border={border || false}
       size='small'

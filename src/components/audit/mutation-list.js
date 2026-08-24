@@ -88,12 +88,15 @@ const FIELD_LABELS = {
   reference: 'Référence',
   siret: 'SIRET',
   socialReason: 'Raison sociale',
+  secondaryUsageIds: 'Usages secondaires (historique)',
+  secondaryUsages: 'Usages secondaires',
   startDate: 'Début',
   status: 'Statut',
   title: 'Titre',
   type: 'Type',
   unit: 'Unité',
-  usageId: 'Usage',
+  usage: 'Usage principal',
+  usageId: 'Usage principal (historique)',
   usageName: 'Nom d’usage',
   value: 'Valeur',
   version: 'Version',
@@ -112,6 +115,16 @@ const FIELD_VALUE_LABELS = {
 function looksLikeDate(value) {
   return typeof value === 'string'
     && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)
+}
+
+function formatAuditUsage(value) {
+  if (!value || typeof value !== 'object') {
+    return String(value ?? '')
+  }
+
+  return [value.code, value.label || value.mnemonic || value.id]
+    .filter(Boolean)
+    .join(' — ')
 }
 
 function formatValue(value, field) {
@@ -137,7 +150,17 @@ function formatValue(value, field) {
     }).format(new Date(value))
   }
 
+  if (field === 'usage' && typeof value === 'object') {
+    return formatAuditUsage(value)
+  }
+
   if (Array.isArray(value)) {
+    if (field === 'secondaryUsages') {
+      return value.length > 0
+        ? value.map(item => formatAuditUsage(item)).join(', ')
+        : <span className='text-[var(--text-mention-grey)]'>Aucun</span>
+    }
+
     return value.length > 0
       ? value.map(item => typeof item === 'object'
         ? item.name || item.label || item.code || item.id || JSON.stringify(item)
