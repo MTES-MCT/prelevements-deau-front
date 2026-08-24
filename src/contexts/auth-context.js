@@ -10,11 +10,10 @@ import {
 import {useSession, signIn, signOut} from 'next-auth/react'
 
 import {
+  logoutAction,
   startImpersonationAction,
   stopImpersonationAction
 } from '@/server/actions/auth.js'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL
 
 const AuthContext = createContext({
   user: null,
@@ -92,12 +91,7 @@ export const AuthProvider = ({children}) => {
   const logout = useCallback(async () => {
     if (session?.user?.token) {
       try {
-        await fetch(`${API_URL}/auth/logout`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${session.user.token}`
-          }
-        })
+        await logoutAction()
       } catch (error) {
         console.error('Backend logout failed:', error)
       }

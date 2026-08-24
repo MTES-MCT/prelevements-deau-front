@@ -25,6 +25,13 @@ export async function requestMagicLinkAction(email) {
   }
 }
 
+export async function logoutAction() {
+  return withErrorHandling(
+    async () => fetchJSON('auth/logout', {method: 'POST'}),
+    {redirectOnUnauthorized: false}
+  )
+}
+
 export async function startImpersonationAction(userId) {
   return withErrorHandling(async () => fetchJSON('api/admin/impersonations', {
     method: 'POST',
