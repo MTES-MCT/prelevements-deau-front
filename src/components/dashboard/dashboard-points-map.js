@@ -331,7 +331,7 @@ function createUsageChip(usage, {isPrimary = false} = {}) {
   const chip = document.createElement('span')
   chip.className = 'inline-flex max-w-full items-center rounded px-2 py-1 text-xs font-medium'
   const usageLabel = usage ? getUsageLabel(usage) : 'Usage non renseigné'
-  chip.textContent = isPrimary ? `Principal · ${usageLabel}` : usageLabel
+  chip.textContent = usageLabel
   chip.title = `${isPrimary ? 'Usage principal' : 'Usage secondaire'} : ${usageLabel}`
   chip.style.backgroundColor = usage ? getUsageColor(usage) : '#eeeeee'
   chip.style.color = usage ? getUsageTextColor(usage) : 'var(--text-default-grey)'
