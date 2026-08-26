@@ -1665,7 +1665,7 @@ const OverwriteConflictListItem = ({conflict}) => {
           )}
         </div>
         {declarationURL ? (
-          <Link className='fr-link shrink-0 text-sm' href={declarationURL}>
+          <Link prefetch={false} className='fr-link shrink-0 text-sm' href={declarationURL}>
             {declarationLabel}
           </Link>
         ) : (

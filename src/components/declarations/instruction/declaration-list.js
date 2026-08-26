@@ -1,21 +1,18 @@
 'use client'
 
-import {useEffect, useMemo, useState} from 'react'
+import {useMemo} from 'react'
 
+import Alert from '@codegouvfr/react-dsfr/Alert'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 
 import {DeclarationSummaryListHeader} from '@/components/declarations/declaration-summary-item.js'
 import DeclarationItemCard from '@/components/declarations/instruction/declaration-item-card.js'
 import SimpleLoading from '@/components/ui/SimpleLoading/index.js'
 import {getDeclarationURL} from '@/lib/urls.js'
-import {getMySourcesAction} from '@/server/actions/sources.js'
 
 const DEFAULT_PAGE = 1
 const DEFAULT_PAGE_SIZE = 25
 const PAGE_SIZE_OPTIONS = [25, 50, 100]
-const tabStatusMap = {
-  'a-rapprocher': ['TO_INSTRUCT', 'INSTRUCTION_IN_PROGRESS', 'PARTIALLY_VALIDATED']
-}
 
 function toPositiveInteger(value, fallback) {
   const number = Number.parseInt(String(value ?? ''), 10)
@@ -55,7 +52,7 @@ function buildPaginationItems(page, totalPages) {
   return items
 }
 
-const PageSizeSelect = ({pageSize, setFilters}) => {
+const PageSizeSelect = ({disabled = false, pageSize, setFilters}) => {
   const setPageSize = value => {
     setFilters(previous => ({
       ...previous,
@@ -72,6 +69,7 @@ const PageSizeSelect = ({pageSize, setFilters}) => {
       <div className='relative'>
         <select
           className='h-8 w-16 appearance-none border border-gray-300 bg-white pl-2 pr-6 text-sm'
+          disabled={disabled}
           id='declarations-page-size'
           value={pageSize}
           onChange={event => setPageSize(event.target.value)}
@@ -89,7 +87,7 @@ const PageSizeSelect = ({pageSize, setFilters}) => {
   )
 }
 
-const DeclarationsPagination = ({className = '', pagination, setFilters}) => {
+const DeclarationsPagination = ({className = '', disabled = false, pagination, setFilters}) => {
   const {page, total, totalPages} = pagination
 
   const pageItems = useMemo(() => buildPaginationItems(page, totalPages), [page, totalPages])
@@ -112,7 +110,7 @@ const DeclarationsPagination = ({className = '', pagination, setFilters}) => {
     >
       <div className='flex flex-wrap items-center justify-center gap-1'>
         <Button
-          disabled={page <= 1}
+          disabled={disabled || page <= 1}
           priority='tertiary no outline'
           size='small'
           onClick={() => setPage(page - 1)}
@@ -132,6 +130,7 @@ const DeclarationsPagination = ({className = '', pagination, setFilters}) => {
           return (
             <Button
               key={item}
+              disabled={disabled}
               priority={item === page ? 'primary' : 'tertiary no outline'}
               size='small'
               onClick={() => setPage(item)}
@@ -142,7 +141,7 @@ const DeclarationsPagination = ({className = '', pagination, setFilters}) => {
         })}
 
         <Button
-          disabled={page >= totalPages}
+          disabled={disabled || page >= totalPages}
           priority='tertiary no outline'
           size='small'
           onClick={() => setPage(page + 1)}
@@ -167,79 +166,50 @@ const ResultsToolbar = ({isLoading, pagination, setFilters}) => {
   return (
     <div className='fr-mb-2w flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
       <div className='flex flex-wrap items-center gap-x-4 gap-y-2'>
-        <p className='fr-text--sm fr-mb-0 font-medium text-gray-900'>
+        <p
+          className='fr-text--sm fr-mb-0 font-medium text-gray-900'
+          role={isLoading ? 'status' : undefined}
+        >
           {isLoading
             ? 'Actualisation…'
             : `${firstItem}-${lastItem} sur ${total} déclaration${total > 1 ? 's' : ''}`}
         </p>
-        <PageSizeSelect pageSize={pageSize} setFilters={setFilters} />
+        <PageSizeSelect
+          disabled={isLoading}
+          pageSize={pageSize}
+          setFilters={setFilters}
+        />
       </div>
 
-      <DeclarationsPagination pagination={pagination} setFilters={setFilters} />
+      <DeclarationsPagination
+        disabled={isLoading}
+        pagination={pagination}
+        setFilters={setFilters}
+      />
     </div>
   )
 }
 
-const DeclarationList = ({status, filters, setFilters}) => {
-  const [isLoading, setIsLoading] = useState(true)
-  const [sources, setSources] = useState([])
-  const [pagination, setPagination] = useState(() => normalizePagination(null, 0, filters))
-
-  const page = toPositiveInteger(filters.page, DEFAULT_PAGE)
-  const pageSize = toPositiveInteger(filters.pageSize, DEFAULT_PAGE_SIZE)
-
-  useEffect(() => {
-    let cancelled = false
-
-    async function fetchSources() {
-      setIsLoading(true)
-
-      const result = await getMySourcesAction({
-        declarant: filters.declarant,
-        dossierNumber: filters.dossierNumber,
-        endDate: filters.endDate,
-        page,
-        pageSize,
-        pointsToAssociate: filters.pointsToAssociate,
-        startDate: filters.startDate,
-        statuses: tabStatusMap[status] || [],
-        types: filters.types
-      })
-
-      if (!cancelled && result.success) {
-        const payload = result.data.data
-        const items = Array.isArray(payload?.items) ? payload.items : []
-        setSources(items)
-        setPagination(normalizePagination(payload?.pagination, items.length, {page, pageSize}))
-      }
-
-      if (!cancelled) {
-        setIsLoading(false)
-      }
-    }
-
-    fetchSources()
-
-    return () => {
-      cancelled = true
-    }
-  }, [
-    filters.declarant,
-    filters.dossierNumber,
-    filters.endDate,
-    filters.pointsToAssociate,
-    filters.startDate,
-    filters.types,
-    page,
-    pageSize,
-    status
-  ])
+const DeclarationList = ({error, filters, isLoading = false, payload, setFilters}) => {
+  const sources = Array.isArray(payload?.items) ? payload.items : []
+  const pagination = normalizePagination(payload?.pagination, sources.length, filters)
 
   if (isLoading && sources.length === 0) {
     return <SimpleLoading />
   }
 
-  if (!isLoading && sources.length === 0) {
+  if (error && sources.length === 0) {
+    return (
+      <Alert
+        small
+        description={error}
+        severity='error'
+        title='Impossible de charger les déclarations'
+      />
+    )
+  }
+
+  if (sources.length === 0) {
     return (
       <div className='fr-mb-4w border border-gray-200 bg-white px-4 py-6'>
         <p className='fr-mb-0'><i>Aucune déclaration ne correspond à ces paramètres</i></p>
@@ -248,7 +218,7 @@ const DeclarationList = ({status, filters, setFilters}) => {
   }
 
   return (
-    <div className='fr-mb-4w'>
+    <div className='fr-mb-4w' aria-busy={isLoading}>
       <ResultsToolbar
         isLoading={isLoading}
         pagination={pagination}
@@ -268,6 +238,7 @@ const DeclarationList = ({status, filters, setFilters}) => {
 
       <DeclarationsPagination
         className='fr-mt-3w'
+        disabled={isLoading}
         pagination={pagination}
         setFilters={setFilters}
       />

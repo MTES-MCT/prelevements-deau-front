@@ -20,7 +20,8 @@ import {StartDsfrOnHydration, DsfrProvider} from '@/dsfr-bootstrap/index.js'
 import {getHtmlAttributes, DsfrHead} from '@/dsfr-bootstrap/server-only-index.js'
 import {
   isEnvironmentFlagEnabled,
-  resolveMatomoConfig
+  resolveMatomoConfigFromEnvironment,
+  serializeInlineScriptValue
 } from '@/lib/integration-config.js'
 import {PASSWORD_ACTIVATION_STORAGE_KEY} from '@/lib/password-activation.js'
 import {getAuthConfigState} from '@/server/auth-config.js'
@@ -37,15 +38,6 @@ export const metadata = {
   description: 'Suivre les prélèvements d’eau'
 }
 
-const {
-  enabled: IS_MATOMO_ENABLED,
-  siteId: MATOMO_SITE_ID,
-  url: MATOMO_URL
-} = resolveMatomoConfig({
-  disabled: process.env.NEXT_PUBLIC_MATOMO_DISABLED,
-  siteId: process.env.NEXT_PUBLIC_MATOMO_SITE_ID,
-  url: process.env.NEXT_PUBLIC_MATOMO_URL
-})
 const IS_CRISP_DISABLED = isEnvironmentFlagEnabled(
   process.env.NEXT_PUBLIC_CRISP_DISABLED
 )
@@ -75,6 +67,10 @@ const PASSWORD_ACTIVATION_FRAGMENT_SCRUB_SCRIPT = `
 `
 
 const RootLayout = async ({children}) => {
+  const matomoConfig = resolveMatomoConfigFromEnvironment(process.env)
+  const matomoTrackerUrl = `${matomoConfig.url}matomo.php`
+  const serializedMatomoSiteId = serializeInlineScriptValue(matomoConfig.siteId)
+  const serializedMatomoTrackerUrl = serializeInlineScriptValue(matomoTrackerUrl)
   const [session, authConfigState] = await Promise.all([
     getServerAuthSession(),
     getAuthConfigState()
@@ -93,18 +89,18 @@ const RootLayout = async ({children}) => {
             'Marianne-Bold'
           ]}
         />
-        {IS_MATOMO_ENABLED && (
+        {matomoConfig.enabled && (
           <Script id='matomo-init' strategy='beforeInteractive'>
             {`
               var _paq = window._paq = window._paq || [];
               _paq.push(['enableLinkTracking']);
-              _paq.push(['setTrackerUrl', '${MATOMO_URL}matomo.php']);
-              _paq.push(['setSiteId', '${MATOMO_SITE_ID}']);
+              _paq.push(['setTrackerUrl', ${serializedMatomoTrackerUrl}]);
+              _paq.push(['setSiteId', ${serializedMatomoSiteId}]);
             `}
           </Script>
         )}
-        {IS_MATOMO_ENABLED && (
-          <Script src={`${MATOMO_URL}matomo.js`} strategy='lazyOnload' />
+        {matomoConfig.enabled && (
+          <Script src={`${matomoConfig.url}matomo.js`} strategy='lazyOnload' />
         )}
       </head>
       <body>
@@ -122,8 +118,8 @@ const RootLayout = async ({children}) => {
                       <AuthSessionGuard />
                       <ImpersonationBanner />
                       <Header />
-                      <MatomoTracker enabled={IS_MATOMO_ENABLED} />
-                      <WebVitalsReporter enabled={IS_MATOMO_ENABLED} />
+                      <MatomoTracker enabled={matomoConfig.enabled} />
+                      <WebVitalsReporter enabled={matomoConfig.enabled} />
                       <CrispChat disabled={IS_CRISP_DISABLED} />
                       <main role='main' id='content'>
                         {children}

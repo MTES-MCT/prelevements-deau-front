@@ -734,7 +734,7 @@ const DeclarationSummaryItem = ({
   }
 
   return (
-    <Link href={url} className='block no-underline'>
+    <Link prefetch={false} href={url} className='block no-underline'>
       {content}
     </Link>
   )

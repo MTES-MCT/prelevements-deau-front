@@ -5,7 +5,9 @@ import {
   DEFAULT_FLOW_PERIOD,
   DEFAULT_PIEZOMETRY_MODE,
   DEFAULT_PIEZOMETRY_PERIOD,
-  readResourceHash
+  getInitialResourceState,
+  readResourceHash,
+  shouldHideEmptyWaterResources
 } from './dashboard-water-resource-state.js'
 
 const DEFAULT_STATE = {
@@ -16,6 +18,38 @@ const DEFAULT_STATE = {
 
 test('le hash utilise par défaut l’écart à la normale annuel', t => {
   t.deepEqual(readResourceHash('#dashboard?'), DEFAULT_STATE)
+})
+
+test('le chargement différé utilise les périodes par défaut sans hash', t => {
+  t.deepEqual(getInitialResourceState(''), DEFAULT_STATE)
+})
+
+test('le chargement différé restaure les périodes demandées dans le hash', t => {
+  t.deepEqual(getInitialResourceState('#dashboard?piezoMode=depth&flowPeriod=month'), {
+    flowPeriod: 'month',
+    piezometryMode: 'depth',
+    piezometryPeriod: 'month'
+  })
+})
+
+test('les ressources en eau conservent leur état de chargement différé visible', t => {
+  t.false(shouldHideEmptyWaterResources({
+    flowError: null,
+    hasAnyStation: false,
+    isFlowLoading: true,
+    isPiezometryLoading: true,
+    piezometryError: null
+  }))
+})
+
+test('les ressources en eau vides disparaissent une fois les chargements terminés', t => {
+  t.true(shouldHideEmptyWaterResources({
+    flowError: null,
+    hasAnyStation: false,
+    isFlowLoading: false,
+    isPiezometryLoading: false,
+    piezometryError: null
+  }))
 })
 
 test('un choix piézométrique explicite est restauré', t => {

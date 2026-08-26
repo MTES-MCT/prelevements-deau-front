@@ -2,6 +2,7 @@ import {parseAuthConfig} from '@/lib/auth-methods.js'
 import {cachePerRequest} from '@/server/request-cache.js'
 
 const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL
+const AUTH_CONFIG_REVALIDATE_SECONDS = 60
 
 const getCachedAuthConfig = cachePerRequest(async () => {
   if (!API_URL) {
@@ -9,10 +10,10 @@ const getCachedAuthConfig = cachePerRequest(async () => {
   }
 
   const response = await fetch(`${API_URL}/auth/config`, {
-    cache: 'no-store',
     headers: {
       Accept: 'application/json'
-    }
+    },
+    next: {revalidate: AUTH_CONFIG_REVALIDATE_SECONDS}
   })
 
   if (!response.ok) {

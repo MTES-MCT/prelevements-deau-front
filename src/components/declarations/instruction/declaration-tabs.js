@@ -1,59 +1,31 @@
 'use client'
 
-import {useCallback} from 'react'
+import {useCallback, useTransition} from 'react'
 
 import {usePathname, useRouter, useSearchParams} from 'next/navigation'
 
 import DeclarationFilters from '@/components/declarations/instruction/declaration-filters.js'
 import DeclarationList from '@/components/declarations/instruction/declaration-list.js'
+import {
+  getDeclarationInstructionFilters,
+  getDeclarationInstructionURL
+} from '@/lib/declaration-instruction-filters.js'
 
-const DEFAULT_PAGE = '1'
-const DEFAULT_PAGE_SIZE = '25'
-const DEFAULT_TYPES = 'MANUAL,SPREADSHEET'
-const FILTER_KEYS = ['declarant', 'dossierNumber', 'endDate', 'page', 'pageSize', 'pointsToAssociate', 'startDate', 'types']
-
-const DeclarationTabs = () => {
+const DeclarationTabs = ({initialError = null, initialPayload = null}) => {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-
-  const getFiltersFromURL = () => {
-    const filters = {}
-
-    for (const key of FILTER_KEYS) {
-      const value = searchParams.get(key)
-      if (value) {
-        filters[key] = value
-      }
-    }
-
-    return {
-      ...filters,
-      types: filters.types ?? DEFAULT_TYPES
-    }
-  }
-
-  const filters = getFiltersFromURL()
+  const [isPending, startTransition] = useTransition()
+  const filters = getDeclarationInstructionFilters(searchParams)
 
   const handleSetFilters = useCallback(updater => {
     const next = updater(filters)
-    const params = new URLSearchParams()
+    const url = getDeclarationInstructionURL(pathname, next)
 
-    for (const [key, value] of Object.entries(next)) {
-      if (
-        !value
-        || (key === 'page' && value === DEFAULT_PAGE)
-        || (key === 'pageSize' && value === DEFAULT_PAGE_SIZE)
-        || (key === 'types' && value === DEFAULT_TYPES)
-      ) {
-        continue
-      }
-
-      params.set(key, value)
-    }
-
-    router.replace(params.toString() ? `${pathname}?${params.toString()}` : pathname, {scroll: false})
-  }, [filters, pathname, router])
+    startTransition(() => {
+      router.replace(url, {scroll: false})
+    })
+  }, [filters, pathname, router, startTransition])
 
   return (
     <div>
@@ -62,7 +34,10 @@ const DeclarationTabs = () => {
         setFilters={handleSetFilters}
       />
       <DeclarationList
+        error={initialError}
         filters={filters}
+        isLoading={isPending}
+        payload={initialPayload}
         setFilters={handleSetFilters}
       />
     </div>

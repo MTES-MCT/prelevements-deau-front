@@ -17,10 +17,11 @@ import {
   DEFAULT_PIEZOMETRY_MODE,
   DEFAULT_PIEZOMETRY_PERIOD,
   FLOW_PERIODS,
+  getInitialResourceState,
   PIEZOMETRY_IPS_PERIODS,
   PIEZOMETRY_MODES,
   PIEZOMETRY_PERIODS,
-  readResourceHash as parseResourceHash
+  shouldHideEmptyWaterResources
 } from './dashboard-water-resource-state.js'
 import {
   getPiezometryYAxisConfig,
@@ -304,10 +305,6 @@ function updateResourceHash({flowPeriod, piezometryMode, piezometryPeriod}) {
   window.history.replaceState(window.history.state, '', url)
 }
 
-function readResourceHash() {
-  return typeof window === 'undefined' ? null : parseResourceHash(window.location.hash)
-}
-
 const PeriodControl = ({disabled, id, onChange, options, value}) => (
   <div className='flex min-w-[9rem] flex-col gap-1'>
     <label className='text-xs font-medium text-gray-700' htmlFor={id}>Période</label>
@@ -472,9 +469,9 @@ const ResourceChart = ({
 )
 
 const DashboardWaterResources = ({
-  initialPiezometry,
+  initialPiezometry = null,
   initialPiezometryError = null,
-  initialRiverFlows,
+  initialRiverFlows = null,
   initialRiverFlowsError = null,
   onStationsChange,
   selectedZoneCodes,
@@ -489,8 +486,8 @@ const DashboardWaterResources = ({
   const [flowVisibility, setFlowVisibility] = useState({})
   const [piezometryError, setPiezometryError] = useState(initialPiezometryError)
   const [flowError, setFlowError] = useState(initialRiverFlowsError)
-  const [isPiezometryLoading, setIsPiezometryLoading] = useState(false)
-  const [isFlowLoading, setIsFlowLoading] = useState(false)
+  const [isPiezometryLoading, setIsPiezometryLoading] = useState(initialPiezometry === null)
+  const [isFlowLoading, setIsFlowLoading] = useState(initialRiverFlows === null)
   const requestIds = useRef({piezometry: 0, flow: 0})
   const lastRawPiezometryPeriod = useRef('month')
   const lastIpsPiezometryPeriod = useRef(DEFAULT_PIEZOMETRY_PERIOD)
@@ -601,10 +598,9 @@ const DashboardWaterResources = ({
   }, [selectedZoneCodes])
 
   useEffect(() => {
-    const hashState = readResourceHash()
-    if (!hashState) {
-      return
-    }
+    const hashState = getInitialResourceState(
+      typeof window === 'undefined' ? '' : window.location.hash
+    )
 
     setPiezometryMode(hashState.piezometryMode)
     setPiezometryPeriod(hashState.piezometryPeriod)
@@ -616,17 +612,17 @@ const DashboardWaterResources = ({
       lastRawPiezometryPeriod.current = hashState.piezometryPeriod
     }
 
-    if (
+    if (initialPiezometry === null || (
       hashState.piezometryPeriod !== DEFAULT_PIEZOMETRY_PERIOD
       || hashState.piezometryMode !== DEFAULT_PIEZOMETRY_MODE
-    ) {
+    )) {
       loadPiezometry(hashState.piezometryPeriod, selectedZoneCodes, {
         includeIps: hashState.piezometryMode === 'ips'
       })
     }
 
-    if (hashState.flowPeriod !== 'week') {
-      loadRiverFlows(hashState.flowPeriod)
+    if (initialRiverFlows === null || hashState.flowPeriod !== DEFAULT_FLOW_PERIOD) {
+      loadRiverFlows(hashState.flowPeriod, selectedZoneCodes)
     }
   // The initial hash is intentionally applied once after hydration.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -695,7 +691,13 @@ const DashboardWaterResources = ({
   }, [flowPeriod, loadPiezometry, piezometryMode, selectedZoneCodes])
 
   const hasAnyStation = piezometryStations.length > 0 || flowStations.length > 0
-  if (!hasAnyStation && !piezometryError && !flowError) {
+  if (shouldHideEmptyWaterResources({
+    flowError,
+    hasAnyStation,
+    isFlowLoading,
+    isPiezometryLoading,
+    piezometryError
+  })) {
     return null
   }
 
@@ -703,6 +705,11 @@ const DashboardWaterResources = ({
     <section className='mt-6'>
       <WaterResourcesTitle visible={showTitle} />
       <div className='flex flex-col gap-6'>
+        {!hasAnyStation && (isPiezometryLoading || isFlowLoading) && (
+          <div className='flex min-h-60 items-center justify-center border border-gray-200 bg-white p-5'>
+            <LoadingStatus />
+          </div>
+        )}
         {(piezometryStations.length > 0 || piezometryError) && (
           <ResourceChart
             controls={(

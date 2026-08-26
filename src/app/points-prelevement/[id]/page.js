@@ -1,3 +1,5 @@
+import {Suspense} from 'react'
+
 import {notFound} from 'next/navigation'
 
 import {buildPageTitle} from '@/app/metadata-utils.js'
@@ -5,21 +7,36 @@ import ResourceMutationHistory from '@/components/audit/resource-mutation-histor
 import ExploitationsList from '@/components/exploitations/exploitations-list.js'
 import PointIdentification from '@/components/points-prelevement/point-identification.js'
 import PointLocalisation from '@/components/points-prelevement/point-localisation.js'
-import SeriesExplorer from '@/components/points-prelevement/series-explorer.js'
+import SeriesOptionsLoader from '@/components/points-prelevement/series-options-loader.js'
 import ResourceDeleteAction from '@/components/ui/resource-delete-action.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getNewExploitationURL} from '@/lib/urls.js'
 import {getResourceAuditHistoryAction} from '@/server/actions/audit-events.js'
 import {getPointPrelevementAction, getExploitationsByPointIdAction} from '@/server/actions/points-prelevement.js'
-import {getAggregatedSeriesOptionsAction} from '@/server/actions/series.js'
-import {getCurrentUser} from '@/server/actions/user.js'
+import {getCurrentSessionInfo} from '@/server/actions/user.js'
 import {getPointPrelevementLabel} from '@/utils/point-prelevement.js'
+
+const PointHistory = async ({historyPromise, pointId}) => {
+  const historyResult = await historyPromise
+
+  if (!historyResult.success) {
+    return null
+  }
+
+  return (
+    <ResourceMutationHistory
+      initialData={historyResult.data?.data}
+      resourceId={pointId}
+      resourceType='POINT'
+    />
+  )
+}
 
 export async function generateMetadata({params}) {
   const {id} = await params
   const [result, userResult] = await Promise.all([
     getPointPrelevementAction(id),
-    getCurrentUser()
+    getCurrentSessionInfo()
   ])
   const preferUsageName = userResult?.data?.role === 'DECLARANT'
 
@@ -31,13 +48,14 @@ export async function generateMetadata({params}) {
 }
 
 const Page = async ({params}) => {
-  const userResult = await getCurrentUser()
+  const {id} = await params
+  const [userResult, pointResult] = await Promise.all([
+    getCurrentSessionInfo(),
+    getPointPrelevementAction(id)
+  ])
   const role = userResult?.data?.role ?? null
   const preferUsageName = role === 'DECLARANT'
 
-  const {id} = (await params)
-
-  const pointResult = await getPointPrelevementAction(id)
   if (!pointResult.success || !pointResult.data) {
     notFound()
   }
@@ -48,17 +66,14 @@ const Page = async ({params}) => {
     || (role === 'INSTRUCTOR' && permissions.has(permission))
   const isDeclarantViewer = role === 'DECLARANT'
 
-  const seriesResult = isDeclarantViewer || can('pp.volumes.read')
-    ? await getAggregatedSeriesOptionsAction({pointIds: [pointPrelevement.id]})
-    : {data: null}
-  const seriesOptions = seriesResult.data
-  const exploitationsResult = can('exploitation.list')
-    ? await getExploitationsByPointIdAction(id)
-    : {data: []}
+  const exploitationsPromise = can('exploitation.list')
+    ? getExploitationsByPointIdAction(id)
+    : Promise.resolve({data: []})
+  const historyPromise = can('pp.update')
+    ? getResourceAuditHistoryAction('POINT', pointPrelevement.id)
+    : null
+  const exploitationsResult = await exploitationsPromise
   const exploitations = exploitationsResult.data || []
-  const historyResult = can('pp.update')
-    ? await getResourceAuditHistoryAction('POINT', pointPrelevement.id)
-    : {success: false}
 
   return (
     <>
@@ -73,9 +88,8 @@ const Page = async ({params}) => {
           pointPrelevement={pointPrelevement}
         />
         {(isDeclarantViewer || can('pp.volumes.read')) && (
-          <SeriesExplorer
+          <SeriesOptionsLoader
             pointIds={[pointPrelevement.id]}
-            seriesOptions={seriesOptions}
           />
         )}
         {can('exploitation.list') && (
@@ -85,12 +99,13 @@ const Page = async ({params}) => {
             canCreate={can('exploitation.create')}
           />
         )}
-        {historyResult.success && (
-          <ResourceMutationHistory
-            initialData={historyResult.data?.data}
-            resourceId={pointPrelevement.id}
-            resourceType='POINT'
-          />
+        {historyPromise && (
+          <Suspense fallback={null}>
+            <PointHistory
+              historyPromise={historyPromise}
+              pointId={pointPrelevement.id}
+            />
+          </Suspense>
         )}
         {can('pp.delete') && !can('pp.update') && (
           <ResourceDeleteAction

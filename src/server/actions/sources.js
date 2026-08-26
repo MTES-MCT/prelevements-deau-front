@@ -3,6 +3,7 @@
 import {revalidatePath} from 'next/cache'
 
 import {fetchJSON, withErrorHandling} from '@/server/api-wrapper.js'
+import {cachePerRequest} from '@/server/request-cache.js'
 
 function buildSourcesSearch({
   declarant,
@@ -62,8 +63,12 @@ export async function getMySourcesAction(options = {}) {
  * @param {string} sourceId - Source ID
  * @returns {Promise<Object>} Result object
  */
+const getCachedMySource = cachePerRequest(async sourceId => withErrorHandling(
+  async () => fetchJSON(`api/sources/${sourceId}`)
+))
+
 export async function getMySourceAction(sourceId) {
-  return withErrorHandling(async () => fetchJSON(`api/sources/${sourceId}`))
+  return getCachedMySource(sourceId)
 }
 
 /**

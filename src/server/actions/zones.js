@@ -6,6 +6,7 @@ import {
   fetchJSON,
   withErrorHandling
 } from '@/server/api-wrapper.js'
+import {cachePerRequest} from '@/server/request-cache.js'
 
 const LIST_FILTER_KEYS = [
   'declarantRole',
@@ -148,8 +149,12 @@ export async function getZoneOptionsForPermissionAction(permission) {
   return withErrorHandling(async () => fetchJSON(`api/zones/options?${search}`))
 }
 
+const getCachedZone = cachePerRequest(async zoneId => withErrorHandling(
+  async () => fetchJSON(`api/zones/${zoneId}`)
+))
+
 export async function getZoneAction(zoneId) {
-  return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}`))
+  return getCachedZone(zoneId)
 }
 
 export async function getZoneGeometryAction(zoneId) {
@@ -270,8 +275,12 @@ export async function getZoneInstructorOptionsAction(zoneId, options = {}) {
   return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/instructeurs/options${buildListSearch(options)}`))
 }
 
+const getCachedZoneInstructor = cachePerRequest(async (zoneId, instructorUserId) => withErrorHandling(
+  async () => fetchJSON(`api/zones/${zoneId}/instructeurs/${instructorUserId}`)
+))
+
 export async function getZoneInstructorAction(zoneId, instructorUserId) {
-  return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/instructeurs/${instructorUserId}`))
+  return getCachedZoneInstructor(zoneId, instructorUserId)
 }
 
 export async function getZoneAgentPermissionsAction() {
@@ -348,8 +357,12 @@ export async function getZonePointsPrelevementOptionsAction(zoneId) {
   return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/points-prelevement/options`))
 }
 
+const getCachedZonePointPrelevement = cachePerRequest(async (zoneId, pointId) => withErrorHandling(
+  async () => fetchJSON(`api/zones/${zoneId}/points-prelevement/${pointId}`)
+))
+
 export async function getZonePointPrelevementAction(zoneId, pointId) {
-  return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/points-prelevement/${pointId}`))
+  return getCachedZonePointPrelevement(zoneId, pointId)
 }
 
 export async function createZonePointPrelevementAction(zoneId, payload) {
@@ -394,8 +407,12 @@ export async function getZoneExploitationsAction(zoneId, options = {}) {
   return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/exploitations${buildListSearch(options)}`))
 }
 
+const getCachedZoneExploitation = cachePerRequest(async (zoneId, exploitationId) => withErrorHandling(
+  async () => fetchJSON(`api/zones/${zoneId}/exploitations/${exploitationId}`)
+))
+
 export async function getZoneExploitationAction(zoneId, exploitationId) {
-  return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/exploitations/${exploitationId}`))
+  return getCachedZoneExploitation(zoneId, exploitationId)
 }
 
 export async function createZoneExploitationAction(zoneId, payload) {

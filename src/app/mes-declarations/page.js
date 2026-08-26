@@ -1,11 +1,11 @@
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import moment from 'moment'
 
 import MyDeclarationsList from '@/components/declarations/my-declarations-list.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {
-  getMyDeclarationsAction,
-  getMyTelemetrySourcesAction
+  getMyDeclarationFeedAction
 } from '@/server/actions/declarations.js'
 import 'moment/locale/fr'
 
@@ -18,20 +18,64 @@ export const metadata = {
 export const dynamic = 'force-dynamic'
 
 const DECLARATION_CREATION_INTRO = 'Saisissez vos index, volumes prélevés ou volumes rejetés directement sur la plateforme, ou déposez un fichier.'
+const INITIAL_FEED_LIMIT = 20
 
 const Dossiers = async () => {
-  const [result, telemetrySourcesResult] = await Promise.all([
-    getMyDeclarationsAction(),
-    getMyTelemetrySourcesAction()
-  ])
-  const response = result?.success ? result.data : null
-  const dossiers = response?.data ?? []
-  const telemetrySources = telemetrySourcesResult?.success ? telemetrySourcesResult.data?.data ?? [] : []
+  const result = await getMyDeclarationFeedAction({limit: INITIAL_FEED_LIMIT})
+  const response = result?.success && result.data?.success ? result.data : null
+  const entries = response?.data ?? []
   const meta = response?.meta ?? {}
   const allowedDeclarationTypes = meta.allowedDeclarationTypes ?? []
   const canCreateDeclaration = meta.canCreateDeclaration ?? allowedDeclarationTypes.length > 0
   const canCreateQuickDeclaration = meta.canCreateQuickDeclaration ?? false
   const canCreateAnyDeclaration = canCreateDeclaration || canCreateQuickDeclaration
+  let declarationsContent
+
+  if (!response) {
+    declarationsContent = (
+      <div className='flex flex-col gap-3'>
+        <Alert
+          severity='error'
+          title='Déclarations indisponibles'
+          description='Le chargement de vos déclarations a échoué. Vous pouvez réessayer sans perdre de données.'
+        />
+        <div>
+          <Button
+            priority='secondary'
+            iconId='fr-icon-refresh-line'
+            linkProps={{href: '/mes-declarations'}}
+          >
+            Réessayer
+          </Button>
+        </div>
+      </div>
+    )
+  } else if (meta.total === 0) {
+    declarationsContent = (
+      <div className='border border-gray-200 bg-white p-5 md:p-6'>
+        <div className='flex max-w-2xl flex-col gap-2'>
+          <span
+            className='fr-icon-file-text-line text-[#000091] [&::after]:![--icon-size:1.25rem] [&::before]:![--icon-size:1.25rem]'
+            aria-hidden='true'
+          />
+          <h2 className='fr-h4 fr-mb-0'>
+            Aucune déclaration
+          </h2>
+          <p className='fr-text--sm fr-mb-0 text-gray-700'>
+            Vous n’avez pas encore déposé de déclaration de prélèvements d’eau.
+          </p>
+        </div>
+      </div>
+    )
+  } else {
+    declarationsContent = (
+      <MyDeclarationsList
+        initialEntries={entries}
+        initialMeta={meta}
+        showDeclarant={meta.declarantRole === 'COLLECTEUR'}
+      />
+    )
+  }
 
   return (
     <main className='min-h-screen bg-[#f7f7fb] pb-12'>
@@ -77,28 +121,7 @@ const Dossiers = async () => {
         ) }
 
         <section>
-          {dossiers.length === 0 && telemetrySources.length === 0 ? (
-            <div className='border border-gray-200 bg-white p-5 md:p-6'>
-              <div className='flex max-w-2xl flex-col gap-2'>
-                <span
-                  className='fr-icon-file-text-line text-[#000091] [&::after]:![--icon-size:1.25rem] [&::before]:![--icon-size:1.25rem]'
-                  aria-hidden='true'
-                />
-                <h2 className='fr-h4 fr-mb-0'>
-                  Aucune déclaration
-                </h2>
-                <p className='fr-text--sm fr-mb-0 text-gray-700'>
-                  Vous n’avez pas encore déposé de déclaration de prélèvements d’eau.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <MyDeclarationsList
-              declarations={dossiers}
-              showDeclarant={meta.declarantRole === 'COLLECTEUR'}
-              telemetrySources={telemetrySources}
-            />
-          )}
+          {declarationsContent}
         </section>
       </div>
     </main>

@@ -2,7 +2,25 @@
 
 import {revalidatePath} from 'next/cache'
 
+import {buildDeclarationFeedSearchParams} from '@/lib/declaration-feed.js'
 import {fetchJSON, withErrorHandling} from '@/server/api-wrapper.js'
+import {cachePerRequest} from '@/server/request-cache.js'
+
+const getCachedMyTelemetrySource = cachePerRequest(async sourceId => withErrorHandling(async () => {
+  if (!sourceId) {
+    throw new Error('sourceId est requis.')
+  }
+
+  return fetchJSON(`api/declarations/telemetry-sources/${sourceId}`)
+}))
+
+const getCachedDeclaration = cachePerRequest(async declarationId => withErrorHandling(async () => {
+  if (!declarationId) {
+    throw new Error('declarationId est requis.')
+  }
+
+  return fetchJSON(`api/declarations/${declarationId}`)
+}))
 
 export async function createDeclarationAction({
   type,
@@ -66,6 +84,13 @@ export async function getMyDeclarationsAction() {
   return withErrorHandling(async () => fetchJSON('api/declarations/me'))
 }
 
+export async function getMyDeclarationFeedAction({cursor, includeMeta, limit} = {}) {
+  return withErrorHandling(async () => {
+    const searchParameters = buildDeclarationFeedSearchParams({cursor, includeMeta, limit})
+    return fetchJSON(`api/declarations/me/feed?${searchParameters}`)
+  })
+}
+
 export async function getReplayableDeclarationsAction() {
   return withErrorHandling(async () => fetchJSON('api/admin/declarations/replayable'))
 }
@@ -75,17 +100,12 @@ export async function getMyTelemetrySourcesAction() {
 }
 
 export async function getMyTelemetrySourceAction(sourceId) {
-  return withErrorHandling(async () => {
-    if (!sourceId) {
-      throw new Error('sourceId est requis.')
-    }
-
-    return fetchJSON(`api/declarations/telemetry-sources/${sourceId}`)
-  })
+  return getCachedMyTelemetrySource(sourceId)
 }
 
-export async function getAllowedDeclarationTypesAction() {
-  return withErrorHandling(async () => fetchJSON('api/declarations/allowed-types'))
+export async function getAllowedDeclarationTypesAction({includePreleveurs = true} = {}) {
+  const search = includePreleveurs ? '' : '?includePreleveurs=false'
+  return withErrorHandling(async () => fetchJSON(`api/declarations/allowed-types${search}`))
 }
 
 export async function getQuickDeclarationContextAction({declarantUserId} = {}) {
@@ -180,13 +200,7 @@ export async function createQuickDeclarationAction(payload) {
 }
 
 export async function getDeclarationAction(declarationId) {
-  return withErrorHandling(async () => {
-    if (!declarationId) {
-      throw new Error('declarationId est requis.')
-    }
-
-    return fetchJSON(`api/declarations/${declarationId}`)
-  })
+  return getCachedDeclaration(declarationId)
 }
 
 export async function getAvailablePointsPrelevementsForDeclarationAction(declarationId) {

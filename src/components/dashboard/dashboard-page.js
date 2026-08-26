@@ -14,11 +14,9 @@ import Link from 'next/link'
 
 import {PRELEVEUR_MAP_LAYER_VISIBILITY} from '@/components/dashboard/dashboard-map-layers.js'
 import DashboardVolumesChart from '@/components/dashboard/dashboard-volumes-chart.js'
-import SeriesExplorer from '@/components/points-prelevement/series-explorer.js'
 import DeferredRender from '@/components/ui/deferred-render.js'
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
-import {getMonitoringStationMapSummary} from '@/lib/monitoring-stations.js'
 import {
   getDeclarationsURL,
   getMyDeclarationsURL,
@@ -50,7 +48,7 @@ const DeferredDashboardContent = ({children, minHeight}) => (
 )
 
 const DynamicDashboardPointsMap = dynamic(
-  () => import('@/components/dashboard/dashboard-points-map.js'),
+  () => import('@/components/dashboard/dashboard-points-map-loader.js'),
   {ssr: false}
 )
 
@@ -66,9 +64,12 @@ const DynamicDashboardWaterResources = dynamic(
 )
 
 const DashboardWaterResources = props => (
-  <DeferredDashboardContent minHeight={360}>
-    <DynamicDashboardWaterResources {...props} />
-  </DeferredDashboardContent>
+  <DynamicDashboardWaterResources {...props} />
+)
+
+const DynamicDashboardSeries = dynamic(
+  () => import('@/components/points-prelevement/series-options-loader.js'),
+  {ssr: false}
 )
 
 const ZONE_TYPE_PRESENTATIONS = {
@@ -518,12 +519,13 @@ const PointsMapSection = ({
   description,
   initialLayerVisibility,
   isLoading,
+  mapScope,
   monitoringStations,
-  points,
   pointsLegendLabel,
   pointsSectionTitle,
   pointsURL,
   preferUsageName = false,
+  selectedZoneCodes,
   showCollecteurs,
   showPreleveurs
 }) => (
@@ -541,10 +543,11 @@ const PointsMapSection = ({
 
     <DashboardPointsMap
       initialLayerVisibility={initialLayerVisibility}
+      scope={mapScope}
       monitoringStations={monitoringStations}
-      points={points}
       pointsLegendLabel={pointsLegendLabel}
       preferUsageName={preferUsageName}
+      selectedZoneCodes={selectedZoneCodes}
       showCollecteurs={showCollecteurs}
       showPreleveurs={showPreleveurs}
     />
@@ -559,17 +562,17 @@ const PointsMapSection = ({
 
 const DeclarantSeriesSection = ({
   className = 'mt-6',
-  seriesOptions,
   user
 }) => (
   <section className={`border border-gray-200 bg-white p-5 md:p-6 ${className}`}>
-    <SeriesExplorer
-      preleveurId={user?.id}
-      seriesOptions={seriesOptions}
-      subtitle='Volumes représentant uniquement vos prélèvements déclarés via Partageons l’Eau'
-      title='Évolution de mes prélèvements'
-      titleComponent='h3'
-    />
+    <DeferredDashboardContent minHeight={240}>
+      <DynamicDashboardSeries
+        preleveurId={user?.id}
+        subtitle='Volumes représentant uniquement vos prélèvements déclarés via Partageons l’Eau'
+        title='Évolution de mes prélèvements'
+        titleComponent='h3'
+      />
+    </DeferredDashboardContent>
   </section>
 )
 
@@ -744,13 +747,8 @@ const DashboardVolumeCharts = ({
 
 const DashboardPage = ({
   declarationCreation = null,
-  declarantSeriesOptions = null,
   initialDashboard,
   initialError,
-  initialPiezometry,
-  initialPiezometryError,
-  initialRiverFlows,
-  initialRiverFlowsError,
   user
 }) => {
   const hasAppliedInitialHashRef = useRef(false)
@@ -771,17 +769,9 @@ const DashboardPage = ({
   )
   const [error, setError] = useState(initialError)
   const [isTerritoryLoading, setIsTerritoryLoading] = useState(false)
-  const [monitoringStations, setMonitoringStations] = useState(() => {
-    const stations = [
-      ...(initialPiezometry?.stations ?? EMPTY_ARRAY),
-      ...(initialRiverFlows?.stations ?? EMPTY_ARRAY)
-    ].map(station => getMonitoringStationMapSummary(station))
-
-    return [...new Map(stations.map(station => [station.id, station])).values()]
-  })
+  const [monitoringStations, setMonitoringStations] = useState(EMPTY_ARRAY)
 
   const zones = dashboard?.zones ?? EMPTY_ARRAY
-  const points = dashboard?.points ?? EMPTY_ARRAY
   const usageDistribution = (dashboard?.metrics?.usageDistribution ?? EMPTY_ARRAY)
     .filter(item => isDashboardVisibleUsage(item.usage))
   const registeredPrelevements = dashboard?.registeredPrelevements
@@ -791,7 +781,6 @@ const DashboardPage = ({
   const volumesByUsage = dashboard?.volumesByUsage
   const volumeYearOptions = volumesByUsage?.yearOptions ?? EMPTY_ARRAY
   const totalPoints = dashboard?.metrics?.totalPoints ?? 0
-  const activityPoints = dashboard?.activityPoints ?? points
   const {
     isCollector,
     isDeclarant,
@@ -858,16 +847,10 @@ const DashboardPage = ({
 
     setIsTerritoryLoading(true)
     setError(null)
-    replaceDashboardHash({
-      period,
-      periodType,
-      waterBodyTypes,
-      year,
-      zoneCodes
-    })
 
     try {
       const result = await getDashboardTerritoryAction({
+        includePoints: false,
         period,
         periodType,
         waterBodyTypes,
@@ -968,7 +951,6 @@ const DashboardPage = ({
       return
     }
 
-    setSelectedZoneCodes(nextFilters.zoneCodes)
     setSelectedPeriodType(nextFilters.periodType)
     setSelectedPeriod(nextFilters.period)
     setSelectedVolumeYear(nextFilters.year)
@@ -996,7 +978,6 @@ const DashboardPage = ({
       return
     }
 
-    setSelectedZoneCodes(nextZoneCodes)
     await reloadDashboard({zoneCodes: nextZoneCodes})
   }, [normalizeZoneCodes, reloadDashboard])
 
@@ -1075,18 +1056,18 @@ const DashboardPage = ({
                   ? PRELEVEUR_MAP_LAYER_VISIBILITY
                   : undefined}
                 isLoading={false}
+                mapScope='activity'
                 monitoringStations={monitoringStations}
-                points={activityPoints}
                 pointsLegendLabel={pointsLegendLabel}
                 pointsSectionTitle={pointsSectionTitle}
                 pointsURL={pointsURL}
+                selectedZoneCodes={EMPTY_ARRAY}
                 showCollecteurs={!isCollector}
                 showPreleveurs={!isPreleveurDeclarant}
               />
 
               {isPreleveurDeclarant && (
                 <DeclarantSeriesSection
-                  seriesOptions={declarantSeriesOptions}
                   user={user}
                 />
               )}
@@ -1134,10 +1115,6 @@ const DashboardPage = ({
                 />
 
                 <DashboardWaterResources
-                  initialPiezometry={initialPiezometry}
-                  initialPiezometryError={initialPiezometryError}
-                  initialRiverFlows={initialRiverFlows}
-                  initialRiverFlowsError={initialRiverFlowsError}
                   selectedZoneCodes={selectedZoneCodes}
                   showTitle={showWaterResourcesTitle}
                   onStationsChange={handleMonitoringStationsChange}
@@ -1157,11 +1134,12 @@ const DashboardPage = ({
             <PointsMapSection
               showPreleveurs
               isLoading={isTerritoryLoading}
+              mapScope='territory'
               monitoringStations={monitoringStations}
-              points={points}
               pointsLegendLabel={pointsLegendLabel}
               pointsSectionTitle={pointsSectionTitle}
               pointsURL={pointsURL}
+              selectedZoneCodes={selectedZoneCodes}
               showCollecteurs={!isCollector}
             />
 
@@ -1190,10 +1168,6 @@ const DashboardPage = ({
             />
 
             <DashboardWaterResources
-              initialPiezometry={initialPiezometry}
-              initialPiezometryError={initialPiezometryError}
-              initialRiverFlows={initialRiverFlows}
-              initialRiverFlowsError={initialRiverFlowsError}
               selectedZoneCodes={selectedZoneCodes}
               showTitle={showWaterResourcesTitle}
               onStationsChange={handleMonitoringStationsChange}

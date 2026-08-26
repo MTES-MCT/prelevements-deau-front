@@ -28,6 +28,28 @@ export const PIEZOMETRY_MODES = [
   {value: 'level', label: 'Cote NGF'}
 ]
 
+export function getInitialResourceState(rawHash) {
+  return readResourceHash(rawHash) ?? {
+    flowPeriod: DEFAULT_FLOW_PERIOD,
+    piezometryMode: DEFAULT_PIEZOMETRY_MODE,
+    piezometryPeriod: DEFAULT_PIEZOMETRY_PERIOD
+  }
+}
+
+export function shouldHideEmptyWaterResources({
+  flowError,
+  hasAnyStation,
+  isFlowLoading,
+  isPiezometryLoading,
+  piezometryError
+}) {
+  return !hasAnyStation
+    && !flowError
+    && !piezometryError
+    && !isFlowLoading
+    && !isPiezometryLoading
+}
+
 function getDefaultPiezometryPeriod(mode) {
   return mode === 'ips' ? DEFAULT_PIEZOMETRY_PERIOD : 'month'
 }

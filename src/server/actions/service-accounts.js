@@ -3,6 +3,7 @@
 import {revalidatePath} from 'next/cache'
 
 import {fetchJSON, withErrorHandling} from '@/server/api-wrapper.js'
+import {cachePerRequest} from '@/server/request-cache.js'
 
 function revalidateServiceAccountPaths(serviceAccountId) {
   revalidatePath('/comptes-service')
@@ -35,14 +36,16 @@ export async function listServiceAccountsAction(options = {}) {
   })
 }
 
-export async function getServiceAccountAction(serviceAccountId) {
-  return withErrorHandling(async () => {
-    if (!serviceAccountId) {
-      throw new Error('serviceAccountId est requis.')
-    }
+const getCachedServiceAccount = cachePerRequest(async serviceAccountId => withErrorHandling(async () => {
+  if (!serviceAccountId) {
+    throw new Error('serviceAccountId est requis.')
+  }
 
-    return fetchAdminServiceAccountData(`api/admin/service-accounts/${serviceAccountId}`)
-  })
+  return fetchAdminServiceAccountData(`api/admin/service-accounts/${serviceAccountId}`)
+}))
+
+export async function getServiceAccountAction(serviceAccountId) {
+  return getCachedServiceAccount(serviceAccountId)
 }
 
 export async function listServiceAccountDeclarantOptionsAction() {

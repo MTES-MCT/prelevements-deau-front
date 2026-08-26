@@ -2,14 +2,9 @@ import {forbidden} from 'next/navigation'
 
 import DashboardPage from '@/components/dashboard/dashboard-page.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {
-  getDashboardPiezometryAction,
-  getDashboardRiverFlowsAction,
-  getDashboardTerritoryAction
-} from '@/server/actions/dashboard.js'
+import {getDashboardTerritoryAction} from '@/server/actions/dashboard.js'
 import {getAllowedDeclarationTypesAction} from '@/server/actions/declarations.js'
-import {getAggregatedSeriesOptionsAction} from '@/server/actions/series.js'
-import {getCurrentUser} from '@/server/actions/user.js'
+import {getCurrentSessionInfo} from '@/server/actions/user.js'
 
 export const metadata = {
   title: 'Tableau de bord'
@@ -42,29 +37,31 @@ const Page = async ({searchParams}) => {
   const requestedYear = getSearchParamValue(resolvedSearchParams?.year)
   const requestedWaterBodyTypes = getSearchParamValue(resolvedSearchParams?.waterBodyTypes)
   const requestedWaterBodyType = getSearchParamValue(resolvedSearchParams?.waterBodyType)
-  const userResult = await getCurrentUser()
+  const userResult = await getCurrentSessionInfo()
   const role = userResult.success ? userResult.data?.role : null
   if (role === 'INSTRUCTOR' && !userResult.data?.permissions?.includes('zone.dashboard.read')) {
     forbidden()
   }
 
-  const user = userResult.success && userResult.data?.user
+  const sessionUser = userResult.success ? userResult.data?.user : null
+  const user = sessionUser
     ? {
-      ...userResult.data.user,
+      id: sessionUser.id,
+      declarantRole: userResult.data?.declarantRole ?? sessionUser.declarantRole,
+      firstName: sessionUser.firstName,
+      lastName: sessionUser.lastName,
+      name: sessionUser.name,
+      socialReason: sessionUser.socialReason,
       role
     }
     : null
   const isDeclarant = role === 'DECLARANT'
-  const isCollector = isDeclarant && user?.declarantRole === 'COLLECTEUR'
-  const shouldLoadDeclarantSeries = isDeclarant && !isCollector && user?.id
   const [
     dashboardResult,
-    declarationTypesResult,
-    seriesOptionsResult,
-    piezometryResult,
-    riverFlowsResult
+    declarationTypesResult
   ] = await Promise.all([
     getDashboardTerritoryAction({
+      includePoints: false,
       period: requestedPeriod,
       periodType: requestedPeriodType,
       waterBodyType: requestedWaterBodyType,
@@ -72,16 +69,9 @@ const Page = async ({searchParams}) => {
       year: requestedYear,
       zoneCodes: requestedZoneCodes
     }),
-    isDeclarant ? getAllowedDeclarationTypesAction() : Promise.resolve(null),
-    shouldLoadDeclarantSeries
-      ? getAggregatedSeriesOptionsAction({preleveurId: user.id})
-      : Promise.resolve(null),
-    getDashboardPiezometryAction({
-      zoneCodes: requestedZoneCodes,
-      period: 'year',
-      includeIps: true
-    }),
-    getDashboardRiverFlowsAction({zoneCodes: requestedZoneCodes, period: 'week'})
+    isDeclarant
+      ? getAllowedDeclarationTypesAction({includePreleveurs: false})
+      : Promise.resolve(null)
   ])
   const declarationTypesResponse = declarationTypesResult?.success ? declarationTypesResult.data : null
   const declarationCreation = isDeclarant
@@ -97,13 +87,8 @@ const Page = async ({searchParams}) => {
 
       <DashboardPage
         declarationCreation={declarationCreation}
-        declarantSeriesOptions={seriesOptionsResult?.success ? seriesOptionsResult.data : null}
         initialDashboard={dashboardResult.success ? dashboardResult.data : null}
         initialError={dashboardResult.success ? null : dashboardResult.error}
-        initialPiezometry={piezometryResult.success ? piezometryResult.data : null}
-        initialPiezometryError={piezometryResult.success ? null : piezometryResult.error}
-        initialRiverFlows={riverFlowsResult.success ? riverFlowsResult.data : null}
-        initialRiverFlowsError={riverFlowsResult.success ? null : riverFlowsResult.error}
         user={user}
       />
     </>

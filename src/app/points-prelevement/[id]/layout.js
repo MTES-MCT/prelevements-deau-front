@@ -4,7 +4,7 @@ import {notFound} from 'next/navigation'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getPointsPrelevementURL} from '@/lib/urls.js'
 import {getPointPrelevementAction} from '@/server/actions/points-prelevement.js'
-import {getCurrentUser} from '@/server/actions/user.js'
+import {getCurrentSessionInfo} from '@/server/actions/user.js'
 import {getPointPrelevementLabel} from '@/utils/point-prelevement.js'
 
 const Layout = async ({params, children}) => {
@@ -12,7 +12,7 @@ const Layout = async ({params, children}) => {
 
   const [result, userResult] = await Promise.all([
     getPointPrelevementAction(id),
-    getCurrentUser()
+    getCurrentSessionInfo()
   ])
   if (!result.success || !result.data) {
     notFound()

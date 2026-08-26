@@ -1,7 +1,14 @@
 'use client'
 
-import {useMemo, useState} from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react'
 
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 
 import DeclarationSummaryItem, {
@@ -9,6 +16,10 @@ import DeclarationSummaryItem, {
 } from '@/components/declarations/declaration-summary-item.js'
 import {useAuth} from '@/contexts/auth-context.js'
 import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
+import {
+  mergeDeclarationFeedEntries,
+  normalizeDeclarationFeedPagination
+} from '@/lib/declaration-feed.js'
 import {
   buildDeclarationViewFromSource,
   getDeclarationDisplayStatus,
@@ -19,6 +30,7 @@ import {
   getMyDeclarationURL,
   getMyTelemetrySourceURL
 } from '@/lib/urls.js'
+import {getMyDeclarationFeedAction} from '@/server/actions/declarations.js'
 
 const pointsToAssociateStatuses = new Set(['TO_INSTRUCT', 'INSTRUCTION_IN_PROGRESS', 'PARTIALLY_VALIDATED'])
 
@@ -244,10 +256,29 @@ function matchesSearch(text, query) {
 
 const MyDeclarationsList = ({
   declarations = [],
+  initialEntries = null,
+  initialMeta = null,
   showDeclarant: showDeclarantFromProps,
   telemetrySources = []
 }) => {
   const {user} = useAuth()
+  const hasPaginatedFeed = Array.isArray(initialEntries)
+  const legacyEntries = useMemo(
+    () => [
+      ...declarations.map(declaration => buildDeclarationEntry(declaration)),
+      ...telemetrySources.map(source => buildTelemetryEntry(source))
+    ].sort(compareEntries),
+    [declarations, telemetrySources]
+  )
+  const [entries, setEntries] = useState(() => hasPaginatedFeed
+    ? mergeDeclarationFeedEntries([], initialEntries)
+    : legacyEntries)
+  const [feedMeta, setFeedMeta] = useState(() => initialMeta ?? {})
+  const [pagination, setPagination] = useState(() => normalizeDeclarationFeedPagination(
+    hasPaginatedFeed ? initialMeta?.pagination : null
+  ))
+  const [loadingMode, setLoadingMode] = useState(null)
+  const [paginationError, setPaginationError] = useState(null)
   const [filters, setFilters] = useState({
     declarant: '',
     dossierNumber: '',
@@ -256,17 +287,17 @@ const MyDeclarationsList = ({
   })
   const [selectedKinds, setSelectedKinds] = useState(defaultDeclarationTypeFilterValues)
   const [pointsToAssociateOnly, setPointsToAssociateOnly] = useState(false)
+  const entriesRef = useRef(entries)
+  const paginationRef = useRef(pagination)
+  const isLoadingRef = useRef(false)
+  const isMountedRef = useRef(true)
+  const shouldLoadAllRef = useRef(false)
   const showDeclarant = typeof showDeclarantFromProps === 'boolean'
     ? showDeclarantFromProps
-    : user?.declarantRole === 'COLLECTEUR'
-  const entries = useMemo(
-    () => [
-      ...declarations.map(declaration => buildDeclarationEntry(declaration)),
-      ...telemetrySources.map(source => buildTelemetryEntry(source))
-    ].sort(compareEntries),
-    [declarations, telemetrySources]
-  )
-  const countsByKind = useMemo(() => getCountsByKind(entries), [entries])
+    : (feedMeta.declarantRole ?? user?.declarantRole) === 'COLLECTEUR'
+  const loadedCountsByKind = useMemo(() => getCountsByKind(entries), [entries])
+  const countsByKind = feedMeta.countsByKind ?? loadedCountsByKind
+  const totalEntries = Number.isInteger(feedMeta.total) ? feedMeta.total : entries.length
   const availableTypeOptions = useMemo(
     () => declarationTypeFilterOptions.filter(option => countsByKind[option.value] > 0),
     [countsByKind]
@@ -310,6 +341,105 @@ const MyDeclarationsList = ({
     || pointsToAssociateOnly
     || hasActiveTypeFilter
   )
+  shouldLoadAllRef.current = hasActiveFilters
+
+  const loadFeedPages = useCallback(async ({all = false} = {}) => {
+    if (!hasPaginatedFeed || isLoadingRef.current || !paginationRef.current.hasNext) {
+      return
+    }
+
+    isLoadingRef.current = true
+    setLoadingMode(all ? 'all' : 'next')
+    setPaginationError(null)
+
+    try {
+      let currentPagination = paginationRef.current
+      let shouldContinue = true
+
+      while (shouldContinue) {
+        const requestedCursor = currentPagination.nextCursor
+        const requestedLimit = all ? 50 : currentPagination.limit
+
+        if (!requestedCursor) {
+          throw new Error('Le curseur de pagination est manquant.')
+        }
+
+        // Les pages sont chargées séquentiellement pour conserver l’ordre du flux.
+        // eslint-disable-next-line no-await-in-loop
+        const actionResult = await getMyDeclarationFeedAction({
+          cursor: requestedCursor,
+          includeMeta: false,
+          limit: requestedLimit
+        })
+
+        if (!isMountedRef.current) {
+          return
+        }
+
+        const response = actionResult?.success ? actionResult.data : null
+
+        if (!response?.success || !Array.isArray(response.data)) {
+          throw new Error(actionResult?.error || 'Le chargement des déclarations a échoué.')
+        }
+
+        const nextPagination = normalizeDeclarationFeedPagination(
+          response.meta?.pagination,
+          requestedLimit
+        )
+
+        if (nextPagination.hasNext
+          && (!nextPagination.nextCursor || nextPagination.nextCursor === requestedCursor)) {
+          throw new Error('La pagination des déclarations ne peut pas continuer.')
+        }
+
+        const mergedEntries = mergeDeclarationFeedEntries(entriesRef.current, response.data)
+        entriesRef.current = mergedEntries
+        paginationRef.current = nextPagination
+        currentPagination = nextPagination
+        setEntries(mergedEntries)
+        setPagination(nextPagination)
+        setFeedMeta(previousMeta => ({
+          ...previousMeta,
+          ...response.meta,
+          pagination: nextPagination
+        }))
+        shouldContinue = all && shouldLoadAllRef.current && currentPagination.hasNext
+      }
+    } catch (error) {
+      if (isMountedRef.current) {
+        setPaginationError(error.message || 'Le chargement des déclarations a échoué.')
+      }
+    } finally {
+      isLoadingRef.current = false
+      if (isMountedRef.current) {
+        setLoadingMode(null)
+      }
+    }
+  }, [hasPaginatedFeed])
+
+  useEffect(() => {
+    isMountedRef.current = true
+
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (hasActiveFilters && pagination.hasNext && !paginationError) {
+      const completeFeed = async () => {
+        await loadFeedPages({all: true})
+      }
+
+      completeFeed()
+    }
+  }, [
+    hasActiveFilters,
+    loadFeedPages,
+    pagination.hasNext,
+    pagination.nextCursor,
+    paginationError
+  ])
 
   const updateFilter = (name, value) => {
     setFilters(previous => ({
@@ -341,7 +471,16 @@ const MyDeclarationsList = ({
     setPointsToAssociateOnly(false)
   }
 
-  if (entries.length === 0) {
+  const isPreparingFilteredResults = hasActiveFilters && pagination.hasNext
+  let paginationButtonLabel = 'Charger plus'
+
+  if (loadingMode === 'next') {
+    paginationButtonLabel = 'Chargement…'
+  } else if (paginationError) {
+    paginationButtonLabel = 'Réessayer le chargement'
+  }
+
+  if (totalEntries === 0) {
     return null
   }
 
@@ -462,37 +601,101 @@ const MyDeclarationsList = ({
           )}
         </div>
 
-        <p className='fr-text--sm fr-mb-0 mt-3 text-gray-600'>
-          {visibleEntries.length === 1
-            ? '1 élément affiché'
-            : `${visibleEntries.length} éléments affichés`}
-          {' '}
-          sur
-          {' '}
-          {entries.length}
-          {' '}
-          {entries.length === 1 ? 'déclaration' : 'déclarations'}
+        <p className='fr-text--sm fr-mb-0 mt-3 text-gray-600' aria-live='polite'>
+          {isPreparingFilteredResults
+            ? `Chargement de toutes les déclarations avant application des filtres (${entries.length} sur ${totalEntries})`
+            : (
+              <>
+                {visibleEntries.length === 1
+                  ? '1 élément affiché'
+                  : `${visibleEntries.length} éléments affichés`}
+                {' '}
+                sur
+                {' '}
+                {totalEntries}
+                {' '}
+                {totalEntries === 1 ? 'déclaration' : 'déclarations'}
+              </>
+            )}
         </p>
       </section>
 
-      {visibleEntries.length === 0 ? (
-        <div className='border border-dashed border-gray-300 bg-white p-4 text-center text-sm text-gray-600'>
-          Aucune déclaration ne correspond à ces filtres.
-        </div>
-      ) : (
-        <div className='divide-y divide-gray-200 border border-gray-300 bg-white'>
-          <DeclarationSummaryListHeader showDeclarant={showDeclarant} />
-          {visibleEntries.map(entry => (
-            <DeclarationSummaryItem
-              key={entry.id}
-              preferUsageName
-              declaration={entry.declaration}
-              source={entry.source}
-              url={entry.url}
-              showDeclarant={showDeclarant}
+      {isPreparingFilteredResults ? (
+        paginationError ? (
+          <div className='flex flex-col gap-3' aria-live='polite'>
+            <Alert
+              severity='error'
+              title='Impossible d’appliquer les filtres'
+              description={`${paginationError} Aucun résultat partiel n’est affiché.`}
             />
-          ))}
-        </div>
+            <div>
+              <Button
+                priority='secondary'
+                iconId='fr-icon-refresh-line'
+                disabled={loadingMode !== null}
+                onClick={() => loadFeedPages({all: true})}
+              >
+                Réessayer
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div
+            className='border border-gray-200 bg-white p-5 text-center text-sm text-gray-700'
+            aria-busy='true'
+            aria-live='polite'
+          >
+            <span
+              className='fr-icon-refresh-line mr-2 inline-block animate-spin'
+              aria-hidden='true'
+            />
+            {' '}
+            Chargement de l’ensemble des déclarations pour garantir un résultat complet…
+          </div>
+        )
+      ) : (
+        <>
+          {paginationError && (
+            <Alert
+              severity='error'
+              title='Chargement interrompu'
+              description={paginationError}
+            />
+          )}
+
+          {visibleEntries.length === 0 ? (
+            <div className='border border-dashed border-gray-300 bg-white p-4 text-center text-sm text-gray-600'>
+              Aucune déclaration ne correspond à ces filtres.
+            </div>
+          ) : (
+            <div className='divide-y divide-gray-200 border border-gray-300 bg-white'>
+              <DeclarationSummaryListHeader showDeclarant={showDeclarant} />
+              {visibleEntries.map(entry => (
+                <DeclarationSummaryItem
+                  key={entry.id}
+                  preferUsageName
+                  declaration={entry.declaration}
+                  source={entry.source}
+                  url={entry.url}
+                  showDeclarant={showDeclarant}
+                />
+              ))}
+            </div>
+          )}
+
+          {pagination.hasNext && (
+            <div className='flex justify-center pt-1'>
+              <Button
+                priority='secondary'
+                iconId='fr-icon-arrow-down-line'
+                disabled={loadingMode !== null}
+                onClick={() => loadFeedPages()}
+              >
+                {paginationButtonLabel}
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

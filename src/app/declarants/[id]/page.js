@@ -296,6 +296,22 @@ const DeclarantRules = async ({
   )
 }
 
+const DeclarantHistory = async ({declarantId, historyPromise}) => {
+  const historyResult = await historyPromise
+
+  if (!historyResult.success) {
+    return null
+  }
+
+  return (
+    <ResourceMutationHistory
+      initialData={historyResult.data?.data}
+      resourceId={declarantId}
+      resourceType='DECLARANT'
+    />
+  )
+}
+
 const Page = async ({params}) => {
   const {id} = await params
 
@@ -348,9 +364,9 @@ const Page = async ({params}) => {
     'declarant.declaration-type.read'
   ].some(permission => can(permission))
   const canReadExploitations = isDeclarantViewer || can('exploitation.list')
-  const historyResult = can('declarant.update')
-    ? await getResourceAuditHistoryAction('DECLARANT', declarantId)
-    : {success: false}
+  const historyPromise = can('declarant.update')
+    ? getResourceAuditHistoryAction('DECLARANT', declarantId)
+    : null
 
   return (
     <Box className='fr-container min-h-full w-full flex flex-col gap-5 mb-5'>
@@ -474,12 +490,13 @@ const Page = async ({params}) => {
         </>
       )}
 
-      {historyResult.success && (
-        <ResourceMutationHistory
-          initialData={historyResult.data?.data}
-          resourceId={declarantId}
-          resourceType='DECLARANT'
-        />
+      {historyPromise && (
+        <Suspense fallback={null}>
+          <DeclarantHistory
+            declarantId={declarantId}
+            historyPromise={historyPromise}
+          />
+        </Suspense>
       )}
     </Box>
   )

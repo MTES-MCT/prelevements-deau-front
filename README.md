@@ -28,13 +28,19 @@ Cette application est le front-end du projet de gestion des prélèvements d'eau
 | `NEXT_PUBLIC_PROCEDURE_DS_ID` | Identifiant de la procédure Démarche Numérique pour générer les liens vers les dossiers. |
 | `NEXT_PUBLIC_STORAGE_URL`     | URL de base du stockage des documents.                                                 |
 | `NEXT_PUBLIC_DEPLOY_ENV`      | Environnement d'affichage (`testing` et `demo` affichent un bandeau, `prod` n'en affiche pas). Optionnel en dev local. |
-| `NEXT_PUBLIC_MATOMO_URL`      | URL de base Matomo. Active aussi la collecte anonymisée des Web Vitals si le site ID est défini. |
-| `NEXT_PUBLIC_MATOMO_SITE_ID`  | Identifiant du site Matomo. |
-| `NEXT_PUBLIC_MATOMO_DISABLED` | Mettre `true` pour désactiver explicitement Matomo, même lorsque son URL et son site sont configurés. |
+| `MATOMO_URL`                  | URL de base Matomo, lue à l’exécution depuis Scaleway. Active aussi la collecte anonymisée des Web Vitals si le site ID est défini. |
+| `MATOMO_SITE_ID`              | Identifiant du site Matomo, lu à l’exécution depuis Scaleway. |
+| `MATOMO_DISABLED`             | Mettre `true` pour désactiver explicitement Matomo, même lorsque son URL et son site sont configurés. |
 | `NEXT_PUBLIC_BUILD_SHA`       | Révision déployée associée aux mesures Web Vitals ; injectée automatiquement par la CI. |
 | `NEXT_PUBLIC_CRISP_DISABLED`  | Mettre `true` pour désactiver le widget Crisp, par exemple en local. Par défaut, Crisp est actif. |
 | `NEXTAUTH_URL`                | URL de l'application NextAuth avec basePath (ex: `http://localhost:3000/auth/nextauth` en dev). |
 | `NEXTAUTH_SECRET`             | Clé secrète pour signer les JWT de session. Générez-la avec `openssl rand -base64 32`. |
+
+Les anciennes variables `NEXT_PUBLIC_MATOMO_URL`, `NEXT_PUBLIC_MATOMO_SITE_ID`
+et `NEXT_PUBLIC_MATOMO_DISABLED` restent temporairement prises en charge en
+repli. Les variables serveur `MATOMO_*`, configurées dans Scaleway, sont
+prioritaires et sont lues au démarrage et à chaque rendu serveur ; elles ne
+sont pas injectées par la CI ni figées dans l’image lors du build.
 
 > **Note** : Cette application utilise NextAuth.js pour établir la session côté front.
 > - L’API expose les méthodes actives et leur ordre via `GET /auth/config` ; le front ne propose que ces méthodes.

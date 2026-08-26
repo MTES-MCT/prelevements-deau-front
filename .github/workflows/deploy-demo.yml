@@ -34,9 +34,6 @@ jobs:
       NEXT_PUBLIC_DEPLOY_ENV: demo
       NEXT_PUBLIC_PROCEDURE_DS_ID: ""
       NEXT_PUBLIC_STORAGE_URL: ""
-      NEXT_PUBLIC_MATOMO_URL: ""
-      NEXT_PUBLIC_MATOMO_SITE_ID: ""
-      NEXT_PUBLIC_MATOMO_DISABLED: "true"
       NEXT_PUBLIC_CRISP_DISABLED: "true"
 
     steps:
@@ -219,9 +216,6 @@ jobs:
             NEXT_PUBLIC_STORAGE_URL=${{ env.NEXT_PUBLIC_STORAGE_URL }}
             NEXT_PUBLIC_DEPLOY_ENV=${{ env.NEXT_PUBLIC_DEPLOY_ENV }}
             NEXT_PUBLIC_BUILD_SHA=${{ github.sha }}
-            NEXT_PUBLIC_MATOMO_URL=${{ env.NEXT_PUBLIC_MATOMO_URL }}
-            NEXT_PUBLIC_MATOMO_SITE_ID=${{ env.NEXT_PUBLIC_MATOMO_SITE_ID }}
-            NEXT_PUBLIC_MATOMO_DISABLED=${{ env.NEXT_PUBLIC_MATOMO_DISABLED }}
             NEXT_PUBLIC_CRISP_DISABLED=${{ env.NEXT_PUBLIC_CRISP_DISABLED }}
 
       - name: Deploy immutable demo image
@@ -254,12 +248,6 @@ jobs:
             https-connection-only=true \
             sandbox=v2 \
             scaling-option.concurrent-requests-threshold=15 \
-            environment-variables.API_URL="$API_URL" \
-            environment-variables.FRONT_URL="$FRONT_URL" \
-            environment-variables.NEXTAUTH_URL="$NEXTAUTH_URL" \
-            environment-variables.NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" \
-            environment-variables.NEXT_PUBLIC_FRONTEND_URL="$NEXT_PUBLIC_FRONTEND_URL" \
-            environment-variables.NEXT_PUBLIC_DEPLOY_ENV=demo \
             liveness-probe.http.path=/healthz \
             liveness-probe.interval=10s \
             liveness-probe.timeout=2s \
