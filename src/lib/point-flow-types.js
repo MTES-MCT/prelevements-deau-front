@@ -16,10 +16,10 @@ export const pointFlowTypeColors = Object.freeze({
     textColor: 'var(--app-color-blue-france, #000091)'
   }),
   [POINT_FLOW_TYPES.REJET]: Object.freeze({
-    accentColor: 'var(--app-flow-rejet-border, #CE614A)',
-    backgroundColor: 'var(--app-flow-rejet-background, #FEE9E7)',
-    borderColor: 'var(--app-flow-rejet-border, #CE614A)',
-    textColor: 'var(--app-flow-rejet-text, #B34000)'
+    accentColor: 'var(--app-flow-rejet-accent, #745B47)',
+    backgroundColor: 'var(--app-flow-rejet-background, #F7ECE4)',
+    borderColor: 'var(--app-flow-rejet-border, #BD987A)',
+    textColor: 'var(--app-flow-rejet-text, #745B47)'
   })
 })
 

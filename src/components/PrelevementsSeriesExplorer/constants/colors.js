@@ -30,7 +30,7 @@ const PARAMETER_COLOR_ENTRIES = [
 // brighten an area on hover). It therefore needs concrete colors: CSS custom
 // properties such as `var(--color, #fallback)` are valid in the browser but
 // cannot be parsed by d3-color.
-const REJET_CHART_COLOR = '#CE614A'
+const REJET_CHART_COLOR = '#745B47'
 
 const PARAMETER_FLOW_COLOR_ENTRIES = [
   ['volume:PRELEVEMENT', '#000091'],

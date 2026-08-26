@@ -13,9 +13,10 @@
   --app-delete-border: var(--border-plain-error);
   --app-flow-prelevement-background: var(--background-contrast-info);
   --app-flow-prelevement-border: var(--border-default-blue-france);
-  --app-flow-rejet-background: var(--background-contrast-orange-terre-battue);
-  --app-flow-rejet-border: var(--border-plain-orange-terre-battue);
-  --app-flow-rejet-text: var(--text-action-high-orange-terre-battue);
+  --app-flow-rejet-accent: var(--text-action-high-brown-opera);
+  --app-flow-rejet-background: var(--background-contrast-brown-opera);
+  --app-flow-rejet-border: var(--border-plain-brown-opera);
+  --app-flow-rejet-text: var(--text-action-high-brown-opera);
   --app-chart-grid: var(--border-default-grey);
   --app-chart-text: var(--text-mention-grey);
   --app-chart-strong-text: var(--text-default-grey);

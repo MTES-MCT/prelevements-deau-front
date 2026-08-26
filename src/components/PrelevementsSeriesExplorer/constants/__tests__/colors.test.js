@@ -15,7 +15,7 @@ test('getParameterFlowColor keeps distinct colors for withdrawals and discharges
 
 test('getParameterFlowColor returns concrete colors for discharge charts', t => {
   for (const metricTypeCode of ['volume', 'index', 'debit']) {
-    t.is(getParameterFlowColor(metricTypeCode, 'REJET'), '#CE614A')
+    t.is(getParameterFlowColor(metricTypeCode, 'REJET'), '#745B47')
   }
 })
 
