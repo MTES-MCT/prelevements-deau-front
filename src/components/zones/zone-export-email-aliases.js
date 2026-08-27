@@ -1,43 +1,76 @@
 'use client'
 
-import {listDeclarantEmailAliasesAction} from '@/server/actions/declarants.js'
+import {
+  listDeclarantContactEmailsAction,
+  listDeclarantEmailAliasesAction
+} from '@/server/actions/declarants.js'
 
 function getDeclarantId(declarant) {
   return declarant?.id || declarant?.userId || declarant?.user?.id || declarant?.declarant?.userId || null
 }
 
-function alreadyHasAliases(declarant) {
-  return Array.isArray(declarant?.emailAliases) || Array.isArray(declarant?.user?.emailAliases)
+async function loadContactEmails(declarantId) {
+  const response = await listDeclarantContactEmailsAction(declarantId)
+  return response.success ? response.data?.contactEmails ?? [] : []
 }
 
-async function getAliasesForDeclarant(declarant, cache) {
+async function loadEmailAliases(declarantId) {
+  const response = await listDeclarantEmailAliasesAction(declarantId)
+  return response.success ? response.data?.emailAliases ?? [] : []
+}
+
+async function getEmailsForDeclarant(declarant, cache, {includeContacts, includeAliases}) {
   const declarantId = getDeclarantId(declarant)
 
   if (!declarantId) {
-    return []
+    return {contactEmails: [], emailAliases: []}
   }
 
-  if (cache.has(declarantId)) {
-    return cache.get(declarantId)
+  let entry = cache.get(declarantId)
+  if (!entry) {
+    entry = {}
+    cache.set(declarantId, entry)
   }
 
-  const response = await listDeclarantEmailAliasesAction(declarantId)
-  const aliases = response.success ? response.data?.emailAliases ?? [] : []
+  if (includeContacts && !entry.contactEmails) {
+    entry.contactEmails = loadContactEmails(declarantId)
+  }
 
-  cache.set(declarantId, aliases)
+  if (includeAliases && !entry.emailAliases) {
+    entry.emailAliases = loadEmailAliases(declarantId)
+  }
 
-  return aliases
+  const [contactEmails, emailAliases] = await Promise.all([
+    includeContacts ? entry.contactEmails : undefined,
+    includeAliases ? entry.emailAliases : undefined
+  ])
+
+  return {contactEmails, emailAliases}
 }
 
 async function withDeclarantEmailAliases(declarant, cache) {
-  if (!declarant || alreadyHasAliases(declarant)) {
+  if (!declarant) {
     return declarant
   }
 
-  const aliases = await getAliasesForDeclarant(declarant, cache)
+  const hasAliases = Array.isArray(declarant.emailAliases) || Array.isArray(declarant.user?.emailAliases)
+  const hasContacts = Array.isArray(declarant.contactEmails)
+
+  if (hasAliases && hasContacts) {
+    return declarant
+  }
+
+  const {contactEmails, emailAliases} = await getEmailsForDeclarant(declarant, cache, {
+    includeContacts: !hasContacts,
+    includeAliases: !hasAliases
+  })
+  const aliases = hasAliases
+    ? declarant.emailAliases ?? declarant.user?.emailAliases ?? []
+    : emailAliases
 
   return {
     ...declarant,
+    contactEmails: hasContacts ? declarant.contactEmails : contactEmails,
     emailAliases: aliases,
     user: declarant.user
       ? {

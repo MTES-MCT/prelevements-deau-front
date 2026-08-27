@@ -6,19 +6,28 @@ import {Box, Typography} from '@mui/material'
 
 import formatDate from '@/lib/format-date.js'
 
-const formatExploitation = exploitation => {
-  if (!exploitation) {
-    return null
+const formatExploitations = exploitations => {
+  const names = [...new Set(exploitations.map(exploitation =>
+    exploitation.point?.name || exploitation.pointPrelevement?.name
+  ).filter(Boolean))]
+
+  if (names.length > 0) {
+    return names.join(', ')
   }
 
-  return exploitation.point?.name || exploitation.pointPrelevement?.name || '1 exploitation'
+  return exploitations.length > 0
+    ? `${exploitations.length} exploitation${exploitations.length > 1 ? 's' : ''}`
+    : null
 }
 
 const Document = ({document, exploitations = [], handleDelete, handleEdit, ...props}) => {
-  const linkedExploitation = exploitations.find(exploitation =>
-    exploitation.id === document.declarantPointPrelevementId
+  const linkedIds = new Set(
+    document.declarantPointPrelevementIds
+      ?? document.exploitations?.map(({id, declarantPointPrelevementId}) => declarantPointPrelevementId ?? id)
+      ?? (document.declarantPointPrelevementId ? [document.declarantPointPrelevementId] : [])
   )
-  const exploitationText = formatExploitation(linkedExploitation)
+  const linkedExploitations = exploitations.filter(exploitation => linkedIds.has(exploitation.id))
+  const exploitationText = formatExploitations(linkedExploitations)
 
   return (
     <Box

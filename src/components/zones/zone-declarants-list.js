@@ -23,6 +23,7 @@ import {
   ZONE_DECLARANT_FILTERS,
   ZONE_NAME_SORT_OPTIONS
 } from '@/components/zones/zone-list-tools.js'
+import {getPrimaryDeclarantContactEmail} from '@/lib/declarant-detail.js'
 import {
   getDeclarantRoleLabel,
   getDeclarantTitleFromUser,
@@ -99,6 +100,7 @@ function getDeclarantSubtitle(declarant, {canReadExploitations}) {
 
 function getDeclarantMetas(declarant, {canReadExploitations}) {
   const role = getDeclarantRole(declarant)
+  const contactEmail = getPrimaryDeclarantContactEmail(declarant)
 
   if (role === 'COLLECTEUR') {
     const links = declarant.collecteurExploitations || []
@@ -107,7 +109,7 @@ function getDeclarantMetas(declarant, {canReadExploitations}) {
     return [
       canReadExploitations && {iconId: ZONE_ICONS.briefcase, content: pluralize(links.length, 'exploitation accessible', 'exploitations accessibles')},
       canReadExploitations && {iconId: ZONE_ICONS.user, content: pluralize(preleveurs.length, 'préleveur')},
-      declarant.email && {iconId: ZONE_ICONS.at, content: declarant.email},
+      contactEmail && {iconId: ZONE_ICONS.at, content: contactEmail},
       declarant.phoneNumber && {iconId: ZONE_ICONS.phone, content: declarant.phoneNumber},
       declarant.city && {iconId: ZONE_ICONS.mapPin, content: declarant.city}
     ].filter(Boolean)
@@ -120,8 +122,8 @@ function getDeclarantMetas(declarant, {canReadExploitations}) {
   return [
     canReadExploitations && {iconId: ZONE_ICONS.water, content: pluralize(pointsCount, 'point')},
     canReadExploitations && collectorIds.size > 0 && {iconId: ZONE_ICONS.team, content: pluralize(collectorIds.size, 'collecteur')},
-    declarant.email && {iconId: ZONE_ICONS.at, content: declarant.email},
-    !declarant.email && {iconId: ZONE_ICONS.at, content: 'Sans email'},
+    contactEmail && {iconId: ZONE_ICONS.at, content: contactEmail},
+    !contactEmail && {iconId: ZONE_ICONS.at, content: 'Sans e-mail de contact'},
     declarant.phoneNumber && {iconId: ZONE_ICONS.phone, content: declarant.phoneNumber},
     declarant.city && {iconId: ZONE_ICONS.mapPin, content: declarant.city}
   ].filter(Boolean)
@@ -210,6 +212,7 @@ const ZoneDeclarantsList = ({zone, declarants, meta, collecteursOnly = false}) =
       {declarants.map((declarant, index) => {
         const declarantId = getDeclarantId(declarant)
         const role = getDeclarantRole(declarant)
+        const contactEmail = getPrimaryDeclarantContactEmail(declarant)
         const preleveurTypeLabel = getPreleveurTypeLabel(getPreleveurType(declarant))
         const canOpen = zone.permissions?.includes('declarant.detail.read')
         const declarantItem = (
@@ -236,8 +239,8 @@ const ZoneDeclarantsList = ({zone, declarants, meta, collecteursOnly = false}) =
                 label: isDeclarantPhysique(declarant) ? 'Personne physique' : 'Personne morale',
                 severity: 'info'
               },
-              !declarant.email && {
-                label: 'Sans email',
+              !contactEmail && {
+                label: 'Sans e-mail de contact',
                 severity: 'warning'
               }
             ].filter(Boolean)}

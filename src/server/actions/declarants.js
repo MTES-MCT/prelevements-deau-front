@@ -185,6 +185,25 @@ export async function listDeclarantEmailAliasesAction(declarantId) {
   return withErrorHandling(async () => fetchJSON(`api/declarants/${declarantId}/email-aliases`))
 }
 
+export async function listDeclarantContactEmailsAction(declarantId) {
+  return withErrorHandling(async () => fetchJSON(`api/declarants/${declarantId}/contact-emails`))
+}
+
+export async function updateDeclarantContactEmailsAction(declarantId, contactEmails) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(`api/declarants/${declarantId}/contact-emails`, {
+      method: 'PUT',
+      body: {contactEmails}
+    })
+
+    revalidatePath('/declarants')
+    revalidatePath(`/declarants/${declarantId}`)
+    revalidatePath(`/declarants/${declarantId}/edit`)
+
+    return result
+  })
+}
+
 export async function createDeclarantEmailAliasAction(declarantId, email) {
   return withErrorHandling(async () => {
     const result = await fetchJSON(`api/declarants/${declarantId}/email-aliases`, {

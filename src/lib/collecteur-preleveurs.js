@@ -1,3 +1,4 @@
+import {getEffectiveDeclarantContactEmails, getPrimaryDeclarantContactEmail} from '@/lib/declarant-detail.js'
 import {getIdentifierAwareSearchQueries} from '@/lib/search-options.js'
 import {normalizeString} from '@/utils/string.js'
 
@@ -7,8 +8,9 @@ function getDeclarantRole(preleveur) {
 
 function getSearchTexts(preleveur) {
   const declarant = preleveur?.declarant || preleveur || {}
+  const contactEmails = getEffectiveDeclarantContactEmails(preleveur)
   const searchText = normalizeString([
-    preleveur?.email,
+    ...contactEmails,
     preleveur?.firstName,
     preleveur?.lastName,
     declarant.socialReason,
@@ -49,15 +51,17 @@ export function searchCollecteurPreleveurs(preleveurs = [], {
 } = {}) {
   const source = Array.isArray(preleveurs) ? preleveurs : []
   const items = source.filter(preleveur => {
+    const hasContactEmail = Boolean(getPrimaryDeclarantContactEmail(preleveur))
+
     if (role && getDeclarantRole(preleveur) !== role) {
       return false
     }
 
-    if (emailStatus === 'WITH_EMAIL' && !preleveur.email) {
+    if (emailStatus === 'WITH_EMAIL' && !hasContactEmail) {
       return false
     }
 
-    if (emailStatus === 'WITHOUT_EMAIL' && preleveur.email) {
+    if (emailStatus === 'WITHOUT_EMAIL' && hasContactEmail) {
       return false
     }
 
@@ -76,7 +80,7 @@ export function searchCollecteurPreleveurs(preleveurs = [], {
       total: source.length,
       preleveurs: source.filter(preleveur => getDeclarantRole(preleveur) === 'PRELEVEUR').length,
       collecteurs: source.filter(preleveur => getDeclarantRole(preleveur) === 'COLLECTEUR').length,
-      withoutEmail: source.filter(preleveur => !preleveur.email).length
+      withoutEmail: source.filter(preleveur => !getPrimaryDeclarantContactEmail(preleveur)).length
     }
   }
 }

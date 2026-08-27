@@ -115,9 +115,9 @@ const PreleveurMoralForm = ({
         <Input
           action={showCopyEmail ? <CopyEmailButton revealOnHover email={preleveur?.email} /> : undefined}
           hintText={emailRequired ? 'Obligatoire pour permettre la connexion ou l’envoi de notification.' : 'Facultative pour un préleveur non déclarant.'}
-          label={`Adresse email du contact${emailRequired ? ' *' : ''}`}
+          label={`Adresse e-mail de connexion${emailRequired ? ' *' : ''}`}
           nativeInputProps={{
-            placeholder: 'Entrer l’adresse email de contact',
+            placeholder: 'Entrer l’adresse e-mail de connexion',
             value: preleveur?.email || '',
             onChange: e => setPreleveur(prev => ({...prev, email: e.target.value}))
           }}

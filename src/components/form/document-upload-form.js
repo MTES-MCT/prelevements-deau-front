@@ -94,15 +94,11 @@ const DocumentUploadForm = ({preleveur, exploitations = []}) => {
     [exploitations]
   )
 
-  const handleExploitationsChange = exploitationIds => {
-    setSelectedExploitations(exploitationIds.slice(-1))
-  }
-
   const handleDocument = withSubmit(
     async () => {
       const cleanedDocument = emptyStringToNull({
         ...document,
-        declarantPointPrelevementId: selectedExploitations[0] || null
+        declarantPointPrelevementIds: selectedExploitations
       })
       const response = await createDocumentAction(declarantId, cleanedDocument, filesList[0])
 
@@ -165,15 +161,15 @@ const DocumentUploadForm = ({preleveur, exploitations = []}) => {
       />
 
       {exploitations.length > 0 && (
-        <DividerSection title='Exploitation associée'>
+        <DividerSection title='Exploitations associées'>
           <GroupedMultiselect
             searchable
-            label='Associer à une exploitation'
-            hint='Un document peut être associé à une exploitation.'
-            placeholder='Sélectionner une exploitation'
+            label='Associer à une ou plusieurs exploitations'
+            hint='Un document peut être partagé par plusieurs exploitations du déclarant.'
+            placeholder='Sélectionner une ou plusieurs exploitations'
             options={exploitationOptions}
             value={selectedExploitations}
-            onChange={handleExploitationsChange}
+            onChange={setSelectedExploitations}
           />
         </DividerSection>
       )}

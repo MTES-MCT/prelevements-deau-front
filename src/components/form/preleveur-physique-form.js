@@ -66,10 +66,10 @@ const PreleveurPhysiqueForm = ({
         <Input
           action={showCopyEmail ? <CopyEmailButton revealOnHover email={preleveur?.email} /> : undefined}
           hintText={emailRequired ? 'Obligatoire pour permettre la connexion ou l’envoi de notification.' : 'Facultative pour un préleveur non déclarant.'}
-          label={`Adresse e-mail${emailRequired ? ' *' : ''}`}
+          label={`Adresse e-mail de connexion${emailRequired ? ' *' : ''}`}
           nativeInputProps={{
             defaultValue: preleveur?.email || '',
-            placeholder: 'Entrez l’adresse e-mail de contact',
+            placeholder: 'Entrez l’adresse e-mail de connexion',
             onChange: e => setPreleveur(prev => ({...prev, email: e.target.value}))
           }}
         />

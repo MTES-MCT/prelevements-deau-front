@@ -17,7 +17,13 @@ export async function createDocumentAction(declarantId, payload, document) {
     const formData = new FormData()
     for (const [key, value] of Object.entries(payload)) {
       if (value !== null && value !== undefined) {
-        formData.append(key, value)
+        if (Array.isArray(value)) {
+          for (const item of value) {
+            formData.append(key, item)
+          }
+        } else {
+          formData.append(key, value)
+        }
       }
     }
 

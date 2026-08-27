@@ -9,6 +9,10 @@ const PRELEVEURS = [
     firstName: 'Marie',
     lastName: 'Lebeau',
     declarant: {
+      contactEmails: [
+        {email: 'marie-secondaire@example.fr', isPrimary: false},
+        {email: 'marie-contact@example.fr', isPrimary: true}
+      ],
       declarantRole: 'PRELEVEUR',
       socialReason: 'Élevage des Pyrénées',
       city: 'Perpignan',
@@ -17,7 +21,7 @@ const PRELEVEURS = [
   },
   {
     id: '2',
-    email: null,
+    email: 'reunion-preleveur-2@import.local',
     declarant: {
       declarantRole: 'PRELEVEUR',
       socialReason: 'ASA du Canal'
@@ -27,6 +31,7 @@ const PRELEVEURS = [
     id: '3',
     email: 'collecteur@example.fr',
     declarant: {
+      contactEmails: [{email: 'collecteur-contact@example.fr', isPrimary: true}],
       declarantRole: 'COLLECTEUR',
       socialReason: 'Collecteur de test'
     }
@@ -70,6 +75,22 @@ test('searchCollecteurPreleveurs recherche aussi un SIRET compact', t => {
   t.deepEqual(result.items, [PRELEVEURS[0]])
 })
 
+test('searchCollecteurPreleveurs recherche les contacts métier sans exposer les logins techniques', t => {
+  const contact = searchCollecteurPreleveurs(PRELEVEURS, {
+    page: 1,
+    pageSize: 10,
+    query: 'marie-secondaire@example.fr'
+  })
+  const technicalLogin = searchCollecteurPreleveurs(PRELEVEURS, {
+    page: 1,
+    pageSize: 10,
+    query: 'import.local'
+  })
+
+  t.deepEqual(contact.items, [PRELEVEURS[0]])
+  t.deepEqual(technicalLogin.items, [])
+})
+
 test('searchCollecteurPreleveurs combine les filtres de rôle et d’email', t => {
   const withoutEmail = searchCollecteurPreleveurs(PRELEVEURS, {
     emailStatus: 'WITHOUT_EMAIL',
@@ -86,6 +107,20 @@ test('searchCollecteurPreleveurs combine les filtres de rôle et d’email', t =
 
   t.deepEqual(withoutEmail.items, [PRELEVEURS[1]])
   t.deepEqual(collecteurs.items, [PRELEVEURS[2]])
+})
+
+test('searchCollecteurPreleveurs utilise un login non technique en repli', t => {
+  const withEmail = searchCollecteurPreleveurs([{
+    id: 'fallback',
+    email: 'fallback@example.fr',
+    declarant: {declarantRole: 'PRELEVEUR', contactEmails: []}
+  }], {
+    emailStatus: 'WITH_EMAIL',
+    query: 'fallback@example.fr'
+  })
+
+  t.is(withEmail.total, 1)
+  t.is(withEmail.counts.withoutEmail, 0)
 })
 
 test('searchCollecteurPreleveurs conserve une page hors plage pour permettre la redirection serveur', t => {
