@@ -28,6 +28,7 @@ const Document = ({document, exploitations = [], handleDelete, handleEdit, ...pr
   )
   const linkedExploitations = exploitations.filter(exploitation => linkedIds.has(exploitation.id))
   const exploitationText = formatExploitations(linkedExploitations)
+  const downloadLabel = `Télécharger ${document.filename || document.title || 'le document'}`
 
   return (
     <Box
@@ -103,13 +104,18 @@ const Document = ({document, exploitations = [], handleDelete, handleEdit, ...pr
           )}
           {document.downloadUrl && (
             <Button
-              iconId='fr-icon-external-link-line'
+              iconId='fr-icon-download-line'
               priority='tertiary no outline'
               size='small'
+              title={downloadLabel}
               linkProps={{
-                href: document.downloadUrl
+                href: document.downloadUrl,
+                rel: 'noopener noreferrer',
+                target: '_blank'
               }}
-            />
+            >
+              Télécharger
+            </Button>
           )}
         </Box>
       </Box>
