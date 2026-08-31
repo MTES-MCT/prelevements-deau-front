@@ -18,6 +18,7 @@ import {AuthMethodsProvider} from '@/contexts/auth-methods-context.js'
 import {defaultColorScheme} from '@/dsfr-bootstrap/default-color-scheme.js'
 import {StartDsfrOnHydration, DsfrProvider} from '@/dsfr-bootstrap/index.js'
 import {getHtmlAttributes, DsfrHead} from '@/dsfr-bootstrap/server-only-index.js'
+import {EMAIL_VERIFICATION_STORAGE_KEY} from '@/lib/email-verification.js'
 import {
   isEnvironmentFlagEnabled,
   resolveMatomoConfigFromEnvironment,
@@ -65,6 +66,30 @@ const PASSWORD_ACTIVATION_FRAGMENT_SCRUB_SCRIPT = `
     );
   })();
 `
+const EMAIL_VERIFICATION_FRAGMENT_SCRUB_SCRIPT = `
+  (function () {
+    if (window.location.pathname !== '/validation-email' || !window.location.hash) {
+      return;
+    }
+
+    var parameters = new URLSearchParams(window.location.hash.slice(1));
+    var value = parameters.get('token');
+
+    try {
+      if (value) {
+        window.sessionStorage.setItem(${JSON.stringify(EMAIL_VERIFICATION_STORAGE_KEY)}, value);
+      }
+    } catch (error) {
+      // A storage refusal invalidates the link locally but must not expose it.
+    }
+
+    window.history.replaceState(
+      window.history.state,
+      '',
+      window.location.pathname + window.location.search
+    );
+  })();
+`
 
 const RootLayout = async ({children}) => {
   const matomoConfig = resolveMatomoConfigFromEnvironment(process.env)
@@ -81,6 +106,9 @@ const RootLayout = async ({children}) => {
       <head>
         <Script id='password-activation-fragment-scrub' strategy='beforeInteractive'>
           {PASSWORD_ACTIVATION_FRAGMENT_SCRUB_SCRIPT}
+        </Script>
+        <Script id='email-verification-fragment-scrub' strategy='beforeInteractive'>
+          {EMAIL_VERIFICATION_FRAGMENT_SCRUB_SCRIPT}
         </Script>
         <StartDsfrOnHydration />
         <DsfrHead Link={Link}

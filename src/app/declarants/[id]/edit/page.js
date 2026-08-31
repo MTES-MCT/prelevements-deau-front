@@ -5,7 +5,6 @@ import PreleveurForm from '@/components/form/preleveur-form.js'
 import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
 import {
   getDeclarantOverviewAction,
-  listDeclarantContactEmailsAction,
   listDeclarantEmailAliasesAction
 } from '@/server/actions/index.js'
 
@@ -31,18 +30,12 @@ const Page = async ({params}) => {
   }
 
   const permissions = new Set(preleveurData.right?.permissions || [])
-  const [contactEmailsResult, emailAliasesResult] = await Promise.all([
-    listDeclarantContactEmailsAction(id),
-    permissions.has('declarant.email-alias.read')
-      ? listDeclarantEmailAliasesAction(id)
-      : Promise.resolve({success: true, data: {emailAliases: []}})
-  ])
+  const emailAliasesResult = permissions.has('declarant.email-alias.read')
+    ? await listDeclarantEmailAliasesAction(id)
+    : {success: true, data: {emailAliases: []}}
 
   const preleveur = {
     ...preleveurData,
-    contactEmails: contactEmailsResult.success
-      ? contactEmailsResult.data?.contactEmails ?? []
-      : preleveurData.contactEmails ?? [],
     emailAliases: emailAliasesResult.success
       ? emailAliasesResult.data?.emailAliases ?? []
       : []

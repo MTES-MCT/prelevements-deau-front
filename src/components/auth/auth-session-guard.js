@@ -8,7 +8,8 @@ import {useSession} from 'next-auth/react'
 const PUBLIC_PATH_PREFIXES = [
   '/activation-mot-de-passe',
   '/auth',
-  '/login'
+  '/login',
+  '/validation-email'
 ]
 
 function isPublicPath(pathname) {

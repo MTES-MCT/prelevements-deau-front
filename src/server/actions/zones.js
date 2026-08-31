@@ -144,6 +144,13 @@ export async function getZonesActions() {
   return getZonesAction()
 }
 
+export async function getAccountZonesAction() {
+  return withErrorHandling(
+    async () => fetchJSON('api/zones'),
+    {forbiddenOnAccessDenied: false}
+  )
+}
+
 export async function getZoneOptionsForPermissionAction(permission) {
   const search = new URLSearchParams({permission}).toString()
   return withErrorHandling(async () => fetchJSON(`api/zones/options?${search}`))

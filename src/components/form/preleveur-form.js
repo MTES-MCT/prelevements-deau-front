@@ -9,7 +9,6 @@ import {Select} from '@codegouvfr/react-dsfr/SelectNext'
 import {Checkbox, FormControlLabel, Typography} from '@mui/material'
 import {pick, trim} from 'lodash-es'
 
-import PreleveurContactEmailsForm from './preleveur-contact-emails-form.js'
 import PreleveurEmailAliasesForm from './preleveur-email-aliases-form.js'
 import PreleveurMoralForm from './preleveur-moral-form.js'
 import PreleveurPhysiqueForm from './preleveur-physique-form.js'
@@ -107,7 +106,6 @@ function normalizeDeclarant(declarant) {
     firstName: firstTruthy(declarant?.firstName, user?.firstName),
     lastName: firstTruthy(declarant?.lastName, user?.lastName),
     email: firstTruthy(declarant?.loginEmail, declarant?.email, user?.email),
-    contactEmails: firstTruthy(declarant?.contactEmails, []),
     emailAliases: firstTruthy(declarant?.emailAliases, user?.emailAliases, []),
     jobTitle: firstTruthy(declarant?.jobTitle),
     socialReason: firstTruthy(declarant?.socialReason, declarant?.declarant?.socialReason),
@@ -150,7 +148,6 @@ const PreleveurForm = ({
     firstName: '',
     lastName: '',
     email: '',
-    contactEmails: [],
     emailAliases: [],
     jobTitle: '',
     socialReason: '',
@@ -453,19 +450,6 @@ const PreleveurForm = ({
               declarantId={normalizedInitialPreleveur.id}
               initialAliases={normalizedInitialPreleveur.emailAliases}
               primaryEmail={preleveur.email}
-            />
-          </FormSection>
-        )}
-
-        {isEditing && (
-          <FormSection
-            title='Adresses e-mail de contact'
-            description='Destinataires métier du déclarant, distincts des adresses autorisées à se connecter.'
-            icon='ri-contacts-book-line'
-          >
-            <PreleveurContactEmailsForm
-              declarantId={normalizedInitialPreleveur.id}
-              initialContactEmails={normalizedInitialPreleveur.contactEmails}
             />
           </FormSection>
         )}
