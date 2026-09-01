@@ -16,6 +16,11 @@ export async function getDashboardMapAction(options) {
     fetchJSON(`api/dashboard/map${buildDashboardMapSearch(options)}`))
 }
 
+export async function getDashboardPointActorsAction(pointId) {
+  return withErrorHandling(async () =>
+    fetchJSON(`api/dashboard/map/points/${encodeURIComponent(pointId)}/actors`))
+}
+
 function buildWaterResourceSearch(options = {}) {
   const parameters = new URLSearchParams()
 

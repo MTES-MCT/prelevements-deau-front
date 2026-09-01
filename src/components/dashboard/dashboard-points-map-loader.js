@@ -7,6 +7,10 @@ import {
 } from 'react'
 
 import DashboardPointsMap from '@/components/dashboard/dashboard-points-map.js'
+import {
+  DEFAULT_DASHBOARD_MAP_CAPABILITIES,
+  normalizeDashboardMapCapabilities
+} from '@/lib/dashboard-map-popups.js'
 import {getDashboardMapAction} from '@/server/actions/dashboard.js'
 
 const EMPTY_ARRAY = []
@@ -28,6 +32,7 @@ const DashboardPointsMapLoader = ({
   const requestIdRef = useRef(0)
   const hasLoadedOnceRef = useRef(false)
   const [points, setPoints] = useState(EMPTY_ARRAY)
+  const [capabilities, setCapabilities] = useState(DEFAULT_DASHBOARD_MAP_CAPABILITIES)
   const [error, setError] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const zoneCodesKey = selectedZoneCodes.join(',')
@@ -37,6 +42,7 @@ const DashboardPointsMapLoader = ({
     requestIdRef.current = requestId
     const zoneCodes = zoneCodesKey ? zoneCodesKey.split(',') : EMPTY_ARRAY
     setPoints(EMPTY_ARRAY)
+    setCapabilities(DEFAULT_DASHBOARD_MAP_CAPABILITIES)
     setIsLoading(true)
     setError(null)
 
@@ -57,8 +63,10 @@ const DashboardPointsMapLoader = ({
 
       if (result.success && Array.isArray(result.data?.points)) {
         setPoints(result.data.points)
+        setCapabilities(normalizeDashboardMapCapabilities(result.data.capabilities))
       } else {
         setPoints(EMPTY_ARRAY)
+        setCapabilities(DEFAULT_DASHBOARD_MAP_CAPABILITIES)
         setError(result.error || 'Impossible de charger les points de la carte.')
       }
 
@@ -91,7 +99,7 @@ const DashboardPointsMapLoader = ({
           Actualisation de la carte…
         </span>
       )}
-      <DashboardPointsMap {...mapProps} points={points} />
+      <DashboardPointsMap {...mapProps} capabilities={capabilities} points={points} />
     </div>
   )
 }

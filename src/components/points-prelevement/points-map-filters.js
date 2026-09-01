@@ -5,7 +5,10 @@ import {
 } from 'react'
 
 import {getPointFlowTypeColors, pointFlowTypeLabels} from '@/lib/point-flow-types.js'
-import {haveSameSelection} from '@/lib/points-prelevement-filters.js'
+import {
+  getManagementZoneOptionGroups,
+  haveSameSelection
+} from '@/lib/points-prelevement-filters.js'
 import {SEARCH_SORT_MODES} from '@/lib/smart-search.js'
 
 const FilterCheckbox = ({checked, color, count, label, showColorMarker = true, onChange}) => (
@@ -81,6 +84,60 @@ const FilterFieldset = ({
   )
 }
 
+const GroupedFilterFieldset = ({
+  className = '',
+  counts,
+  legend,
+  optionGroups,
+  selectedValues,
+  onChange
+}) => {
+  const allValues = optionGroups.flatMap(group => group.options.map(option => option.value))
+
+  if (allValues.length === 0) {
+    return null
+  }
+
+  const hasPartialSelection = !haveSameSelection(selectedValues, allValues)
+
+  return (
+    <fieldset className={`relative border-0 border-t border-gray-200 p-0 pt-2 ${className}`}>
+      <legend className='mb-1 text-xs font-semibold text-gray-900'>{legend}</legend>
+      {hasPartialSelection && (
+        <button
+          className='absolute right-0 top-2 cursor-pointer text-xs text-[#000091] underline decoration-1 underline-offset-2'
+          type='button'
+          onClick={() => onChange(allValues)}
+        >
+          Tout afficher
+        </button>
+      )}
+      <div className='clear-both flex max-h-44 flex-col overflow-y-auto pr-1'>
+        {optionGroups.map(group => (
+          <div key={group.label}>
+            <p className='fr-mb-0 px-1 py-1 text-[0.6875rem] font-semibold text-gray-600'>
+              {group.label}
+            </p>
+            {group.options.map(option => (
+              <FilterCheckbox
+                key={option.value}
+                checked={selectedValues.includes(option.value)}
+                count={counts?.[option.value]}
+                label={option.label}
+                onChange={checked => onChange(toggleSelection(
+                  selectedValues,
+                  option.value,
+                  checked
+                ))}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+    </fieldset>
+  )
+}
+
 const PointsMapFilters = ({
   canSearchDeclarants,
   collecteurStatusOptions,
@@ -109,6 +166,10 @@ const PointsMapFilters = ({
       value,
       label
     })), [])
+  const managementZoneOptionGroups = useMemo(
+    () => getManagementZoneOptionGroups(managementZoneOptions),
+    [managementZoneOptions]
+  )
   const advancedFilterCount = [
     !haveSameSelection(filters.usageKeys, usageOptions.map(option => option.value)),
     !haveSameSelection(filters.flowTypes, flowTypeOptions.map(option => option.value)),
@@ -277,12 +338,11 @@ const PointsMapFilters = ({
             selectedValues={filters.usageKeys}
             onChange={usageKeys => onChange({usageKeys})}
           />
-          <FilterFieldset
-            scrollable
+          <GroupedFilterFieldset
             className='mt-3'
             counts={facetCounts.managementZoneIds}
-            legend='Zones de gestion'
-            options={managementZoneOptions}
+            legend='Zones'
+            optionGroups={managementZoneOptionGroups}
             selectedValues={filters.managementZoneIds}
             onChange={managementZoneIds => onChange({managementZoneIds})}
           />
@@ -305,7 +365,7 @@ const PointsMapFilters = ({
           <FilterFieldset
             className='mt-3'
             counts={facetCounts.connectorStatuses}
-            legend='Connecteurs'
+            legend='Télérelève'
             options={connectorStatusOptions}
             selectedValues={filters.connectorStatuses}
             onChange={connectorStatuses => onChange({connectorStatuses})}

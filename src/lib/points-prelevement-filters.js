@@ -61,8 +61,8 @@ export const COLLECTEUR_STATUS_LABELS = Object.freeze({
 })
 
 export const CONNECTOR_STATUS_LABELS = Object.freeze({
-  WITH_CONNECTOR: 'Avec connecteur',
-  WITHOUT_CONNECTOR: 'Sans connecteur'
+  WITH_CONNECTOR: 'Avec télérelève',
+  WITHOUT_CONNECTOR: 'Sans télérelève'
 })
 
 export const PRELEVEUR_TYPE_LABELS = Object.freeze({
@@ -72,6 +72,12 @@ export const PRELEVEUR_TYPE_LABELS = Object.freeze({
   AUTRE: 'Autre',
   [MISSING_PRELEVEUR_TYPE]: 'Type non renseigné'
 })
+
+const MANAGEMENT_ZONE_GROUPS = Object.freeze([
+  Object.freeze({type: 'REGION', label: 'Régions'}),
+  Object.freeze({type: 'DEPARTEMENT', label: 'Départements'}),
+  Object.freeze({type: 'SAGE', label: 'SAGE'})
+])
 
 const MISSING_USAGE_OPTION = Object.freeze({
   value: MISSING_USAGE_KEY,
@@ -256,13 +262,12 @@ function getManagementZoneOptions(points) {
   for (const point of points) {
     for (const zone of getManagementZones(point)) {
       if (zone?.id) {
-        const zoneLabel = zone.name || zone.code || zone.id
         zonesById.set(zone.id, {
           value: zone.id,
-          label: zone.code && zone.code !== zoneLabel
-            ? `${zoneLabel} (${zone.code})`
-            : zoneLabel,
-          code: zone.code || null
+          label: zone.name?.trim() || 'Zone sans nom',
+          type: MANAGEMENT_ZONE_GROUPS.some(group => group.type === zone.type)
+            ? zone.type
+            : null
         })
       }
     }
@@ -270,6 +275,23 @@ function getManagementZoneOptions(points) {
 
   return [...zonesById.values()].sort((left, right) =>
     left.label.localeCompare(right.label, 'fr-FR', {numeric: true, sensitivity: 'base'}))
+}
+
+export function getManagementZoneOptionGroups(options = []) {
+  const groups = MANAGEMENT_ZONE_GROUPS
+    .map(({type, label}) => ({
+      label,
+      options: options.filter(option => option.type === type)
+    }))
+    .filter(group => group.options.length > 0)
+  const untypedOptions = options
+    .filter(option => !MANAGEMENT_ZONE_GROUPS.some(group => group.type === option.type))
+
+  if (untypedOptions.length > 0) {
+    groups.push({label: 'Autres zones', options: untypedOptions})
+  }
+
+  return groups
 }
 
 export function getPointFilterOptions(points = [], pointFilterIndex) {

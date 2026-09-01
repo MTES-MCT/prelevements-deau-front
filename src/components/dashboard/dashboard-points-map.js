@@ -11,6 +11,7 @@ import {
 import {useRouter} from '@bprogress/next/app'
 import maplibre from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import {createRoot} from 'react-dom/client'
 
 import {
   getVisibleMapFeatures,
@@ -19,9 +20,16 @@ import {
 
 import {cooperativeGesturesMapOptions} from '@/components/map/cooperative-gestures.js'
 import {IGN_RASTER_MAX_ZOOM} from '@/components/map/ign-raster.js'
+import MapPopupCard from '@/components/map/map-popup-card.js'
+import Popup from '@/components/map/popup.js'
 import planIGN from '@/components/map/styles/plan-ign.json'
-import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
-import {getExploitationUsages} from '@/lib/exploitation-usages.js'
+import {
+  canLoadDashboardPointActors,
+  getResolvedCachedValue,
+  indexDashboardMapItems,
+  loadCachedValue,
+  normalizeDashboardPointActors
+} from '@/lib/dashboard-map-popups.js'
 import {getMonitoringStationURL} from '@/lib/monitoring-stations.js'
 import {
   computeBestPopupAnchor,
@@ -32,15 +40,10 @@ import {getPointPrelevementURL} from '@/lib/urls.js'
 import {
   getUsageColor,
   getUsageKey,
-  getUsageLabel,
-  getUsageTextColor,
   isDashboardVisibleUsage
 } from '@/lib/water-uses.js'
-import {getExploitationsByPointIdAction} from '@/server/actions/points-prelevement.js'
-import {
-  getPointPrelevementDisplayName,
-  getPointPrelevementTechnicalReference
-} from '@/utils/point-prelevement.js'
+import {getDashboardPointActorsAction} from '@/server/actions/dashboard.js'
+import {getPointPrelevementDisplayName} from '@/utils/point-prelevement.js'
 
 const MARKERS_SOURCE_ID = 'dashboard-points-markers'
 const MARKERS_LAYER_ID = 'dashboard-points-markers-symbol'
@@ -49,6 +52,7 @@ const PIEZOMETER_LAYER_ID = 'dashboard-piezometers'
 const FLOW_STATION_LAYER_ID = 'dashboard-flow-stations'
 const PIEZOMETER_ICON_ID = 'dashboard-piezometer-marker'
 const FLOW_STATION_ICON_ID = 'dashboard-flow-station-marker'
+const POPUP_ACTORS_HOVER_DELAY = 160
 const DEFAULT_MAP_CENTER = [2.5, 46.5]
 const DEFAULT_MAP_ZOOM = 5
 const SINGLE_POINT_ZOOM = 12
@@ -322,33 +326,6 @@ function filterDashboardPointUsages(point) {
   }
 }
 
-function removePopup(popupRef) {
-  popupRef.current?.remove()
-  popupRef.current = null
-}
-
-function createUsageChip(usage, {isPrimary = false} = {}) {
-  const chip = document.createElement('span')
-  chip.className = 'inline-flex max-w-full items-center rounded px-2 py-1 text-xs font-medium'
-  const usageLabel = usage ? getUsageLabel(usage) : 'Usage non renseigné'
-  chip.textContent = usageLabel
-  chip.title = `${isPrimary ? 'Usage principal' : 'Usage secondaire'} : ${usageLabel}`
-  chip.style.backgroundColor = usage ? getUsageColor(usage) : '#eeeeee'
-  chip.style.color = usage ? getUsageTextColor(usage) : 'var(--text-default-grey)'
-
-  return chip
-}
-
-function appendSmallText(parent, text, className = 'fr-text--xs fr-mb-0 text-gray-600') {
-  const element = document.createElement('p')
-  element.className = className
-  element.textContent = text
-  element.style.overflowWrap = 'anywhere'
-  parent.append(element)
-
-  return element
-}
-
 function isFiniteNumber(value) {
   return value !== null && value !== undefined && Number.isFinite(Number(value))
 }
@@ -366,24 +343,17 @@ function formatDate(value, {includeTime = false} = {}) {
   return (includeTime ? DATE_TIME_FORMATTER : DATE_FORMATTER).format(date)
 }
 
-function appendDefinitionRow(parent, label, value) {
+const DefinitionRow = ({label, value}) => {
   if (value === null || value === undefined || value === '') {
-    return
+    return null
   }
 
-  const row = document.createElement('div')
-  row.className = 'grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-2 border-t border-gray-200 py-1.5 text-xs first:border-t-0'
-
-  const term = document.createElement('dt')
-  term.className = 'text-gray-600'
-  term.textContent = label
-
-  const description = document.createElement('dd')
-  description.className = 'm-0 min-w-0 break-words font-medium text-gray-900'
-  description.textContent = value
-
-  row.append(term, description)
-  parent.append(row)
+  return (
+    <div className='grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-2 border-t border-gray-200 py-1.5 text-xs first:border-t-0'>
+      <dt className='text-gray-600'>{label}</dt>
+      <dd className='m-0 min-w-0 break-words font-medium text-gray-900'>{value}</dd>
+    </div>
+  )
 }
 
 function getGroundwaterMeasurementNature(measurement) {
@@ -408,46 +378,39 @@ function getFlowMeasurementNature(measurement) {
   return 'Temps réel'
 }
 
-function appendLatestMeasurement(parent, station, typeConfig) {
-  const section = document.createElement('div')
-  section.className = 'my-3 border-y border-gray-200 py-3'
-
-  appendSmallText(section, 'Dernière donnée affichée', 'fr-text--xs fr-mb-1v font-semibold text-gray-600')
-
+const LatestMeasurement = ({station, typeConfig}) => {
   const measurement = station.latestMeasurement
   if (!measurement) {
-    appendSmallText(section, 'Aucune donnée disponible sur la période affichée.')
-    parent.append(section)
-    return
+    return (
+      <div className='my-2.5 border-y border-gray-200 py-2.5'>
+        <p className='fr-text--xs fr-mb-1v font-semibold text-gray-600'>Dernière donnée affichée</p>
+        <p className='fr-text--xs fr-mb-0 break-words text-gray-600'>
+          Aucune donnée disponible sur la période affichée.
+        </p>
+      </div>
+    )
   }
 
-  const value = document.createElement('p')
-  value.className = 'fr-text--lg fr-mb-1v font-bold'
-  value.style.color = typeConfig.color
-
+  let value
   if (station.type === 'PIEZOMETER') {
     if (isFiniteNumber(measurement.depth)) {
-      value.textContent = `${formatNumber(measurement.depth)} m de profondeur`
+      value = `${formatNumber(measurement.depth)} m de profondeur`
     } else if (isFiniteNumber(measurement.levelNgf)) {
-      value.textContent = `${formatNumber(measurement.levelNgf)} m NGF`
+      value = `${formatNumber(measurement.levelNgf)} m NGF`
     } else {
-      value.textContent = 'Valeur indisponible'
+      value = 'Valeur indisponible'
     }
   } else {
-    value.textContent = isFiniteNumber(measurement.valueLitersPerSecond)
+    value = isFiniteNumber(measurement.valueLitersPerSecond)
       ? `${formatNumber(measurement.valueLitersPerSecond)} L/s`
       : 'Valeur indisponible'
   }
 
-  section.append(value)
-
-  if (
+  const ngfValue = (
     station.type === 'PIEZOMETER'
     && isFiniteNumber(measurement.depth)
     && isFiniteNumber(measurement.levelNgf)
-  ) {
-    appendSmallText(section, `Cote : ${formatNumber(measurement.levelNgf)} m NGF`)
-  }
+  ) ? `Cote : ${formatNumber(measurement.levelNgf)} m NGF` : null
 
   const measuredAt = formatDate(measurement.at, {
     includeTime: station.type === 'FLOW_STATION' && measurement.granularity === 'REALTIME'
@@ -455,312 +418,120 @@ function appendLatestMeasurement(parent, station, typeConfig) {
   const nature = station.type === 'PIEZOMETER'
     ? getGroundwaterMeasurementNature(measurement)
     : getFlowMeasurementNature(measurement)
-  appendSmallText(section, [measuredAt, nature].filter(Boolean).join(' · '))
-  parent.append(section)
+  const measurementDescription = [measuredAt, nature].filter(Boolean).join(' · ')
+
+  return (
+    <div className='my-2.5 border-y border-gray-200 py-2.5'>
+      <p className='fr-text--xs fr-mb-1v font-semibold text-gray-600'>Dernière donnée affichée</p>
+      <p className='fr-text--lg fr-mb-1v font-bold' style={{color: typeConfig.color}}>
+        {value}
+      </p>
+      {ngfValue && <p className='fr-text--xs fr-mb-0 break-words text-gray-600'>{ngfValue}</p>}
+      <p className='fr-text--xs fr-mb-0 break-words text-gray-600'>{measurementDescription}</p>
+    </div>
+  )
 }
 
-function openMonitoringStationPopup({map, popupRef, station}) {
-  const coordinates = getMonitoringStationCoordinates(station)
+const MonitoringStationPopup = ({dismissable, station, onAction}) => {
   const typeConfig = MONITORING_STATION_TYPES[station.type]
-  if (!coordinates || !typeConfig) {
-    return
+  if (!typeConfig) {
+    return null
   }
 
-  removePopup(popupRef)
-
-  const container = document.createElement('div')
-  container.className = 'min-w-0 p-3'
-  container.style.width = 'min(330px, calc(100vw - 2rem))'
-  container.style.maxWidth = '100%'
-
-  const badge = document.createElement('span')
-  badge.className = 'mb-2 inline-flex px-2 py-1 text-xs font-semibold'
-  badge.style.backgroundColor = typeConfig.background
-  badge.style.color = typeConfig.color
-  badge.textContent = typeConfig.label
-  container.append(badge)
-
-  const title = document.createElement('p')
-  title.className = 'fr-text--md fr-mb-1v break-words font-semibold text-gray-900'
-  title.textContent = station.label
-  container.append(title)
-
-  if (station.providerLabel && station.providerLabel !== station.label) {
-    appendSmallText(container, station.providerLabel)
-  }
-
-  appendLatestMeasurement(container, station, typeConfig)
-
-  const details = document.createElement('dl')
-  details.className = 'fr-mb-0'
   const stationDetails = station.details ?? {}
-
-  if (station.type === 'PIEZOMETER') {
-    appendDefinitionRow(details, 'Commune', stationDetails.commune)
-    appendDefinitionRow(details, 'Département', stationDetails.department)
-    appendDefinitionRow(
-      details,
-      'Profondeur de l’ouvrage',
-      isFiniteNumber(stationDetails.investigationDepthMeters)
-        ? `${formatNumber(stationDetails.investigationDepthMeters)} m`
-        : null
-    )
-    appendDefinitionRow(
-      details,
-      'Altitude de la station',
-      isFiniteNumber(stationDetails.altitudeMeters)
-        ? `${formatNumber(stationDetails.altitudeMeters)} m`
-        : null
-    )
-    appendDefinitionRow(details, 'Code BSS', station.stationCode)
-    appendDefinitionRow(details, 'Identifiant BSS', station.bssId)
-  } else {
-    appendDefinitionRow(details, 'Cours d’eau', stationDetails.watercourse)
-    appendDefinitionRow(details, 'Commune', stationDetails.commune)
-    appendDefinitionRow(details, 'Département', stationDetails.department)
-    appendDefinitionRow(
-      details,
-      'Altitude de référence',
-      isFiniteNumber(stationDetails.altitudeMeters)
-        ? `${formatNumber(stationDetails.altitudeMeters)} m`
-        : null
-    )
-    appendDefinitionRow(details, 'Code station', station.stationCode)
-    appendDefinitionRow(details, 'Code site', station.siteCode)
-    appendDefinitionRow(
-      details,
-      'État de la station',
-      stationDetails.inService === null || stationDetails.inService === undefined
-        ? null
-        : (stationDetails.inService ? 'En service' : 'Hors service')
-    )
-  }
-
   const openedAt = formatDate(stationDetails.openedAt)
-  appendDefinitionRow(
-    details,
-    station.type === 'PIEZOMETER' ? 'Début des mesures' : 'Mise en service',
-    openedAt
-  )
-  appendDefinitionRow(
-    details,
-    station.type === 'PIEZOMETER' ? null : 'Fermeture',
-    station.type === 'PIEZOMETER' ? null : formatDate(stationDetails.closedAt)
-  )
-  appendDefinitionRow(
-    details,
-    station.zones?.length > 1 ? 'Territoires' : 'Territoire',
-    station.zones?.map(zone => zone.name).filter(Boolean).join(', ')
-  )
-  container.append(details)
-
-  appendSmallText(
-    container,
-    `Données : ${typeConfig.source}`,
-    'fr-text--xs fr-mb-0 mt-3 border-t border-gray-200 pt-2 text-gray-500'
-  )
-
-  popupRef.current = new maplibre.Popup({
-    closeButton: false,
-    closeOnClick: false,
-    anchor: computeBestPopupAnchor(map, coordinates),
-    maxWidth: 'min(350px, calc(100vw - 2rem))',
-    offset: 12
-  })
-    .setLngLat(coordinates)
-    .setDOMContent(container)
-    .addTo(map)
-}
-
-function getCollecteurs(exploitation) {
-  return (exploitation.collecteurs ?? [])
-    .map(link => link.collecteur)
-    .filter(Boolean)
-}
-
-function appendExploitationDetails(parent, exploitations, {showCollecteurs = true} = {}) {
-  if (exploitations.length === 0) {
-    appendSmallText(parent, 'Aucune exploitation associée à ce point.')
-    return
-  }
-
-  const list = document.createElement('div')
-  list.className = 'flex max-h-[240px] min-w-0 flex-col gap-2 overflow-y-auto pr-1'
-
-  for (const exploitation of exploitations) {
-    const item = document.createElement('div')
-    item.className = 'min-w-0 border border-gray-200 bg-gray-50 p-2'
-
-    const visibleUsages = getExploitationUsages(exploitation)
-      .filter(usage => isDashboardVisibleUsage(usage))
-
-    if (visibleUsages.length > 0) {
-      const header = document.createElement('div')
-      header.className = 'fr-mb-2v flex flex-wrap gap-1'
-
-      for (const usage of visibleUsages) {
-        header.append(createUsageChip(usage, {isPrimary: usage === exploitation.usage}))
+  const commonRows = [
+    {label: 'Commune', value: stationDetails.commune},
+    {label: 'Département', value: stationDetails.department}
+  ]
+  const typeRows = station.type === 'PIEZOMETER'
+    ? [
+      {
+        label: 'Profondeur de l’ouvrage',
+        value: isFiniteNumber(stationDetails.investigationDepthMeters)
+          ? `${formatNumber(stationDetails.investigationDepthMeters)} m`
+          : null
+      },
+      {
+        label: 'Altitude de la station',
+        value: isFiniteNumber(stationDetails.altitudeMeters)
+          ? `${formatNumber(stationDetails.altitudeMeters)} m`
+          : null
+      },
+      {label: 'Code BSS', value: station.stationCode},
+      {label: 'Identifiant BSS', value: station.bssId}
+    ]
+    : [
+      {label: 'Cours d’eau', value: stationDetails.watercourse},
+      {
+        label: 'Altitude de référence',
+        value: isFiniteNumber(stationDetails.altitudeMeters)
+          ? `${formatNumber(stationDetails.altitudeMeters)} m`
+          : null
+      },
+      {label: 'Code station', value: station.stationCode},
+      {label: 'Code site', value: station.siteCode},
+      {
+        label: 'État de la station',
+        value: stationDetails.inService === null || stationDetails.inService === undefined
+          ? null
+          : (stationDetails.inService ? 'En service' : 'Hors service')
       }
-
-      item.append(header)
+    ]
+  const lifecycleRows = [
+    {
+      label: station.type === 'PIEZOMETER' ? 'Début des mesures' : 'Mise en service',
+      value: openedAt
+    },
+    {
+      label: 'Fermeture',
+      value: station.type === 'PIEZOMETER' ? null : formatDate(stationDetails.closedAt)
+    },
+    {
+      label: station.zones?.length > 1 ? 'Territoires' : 'Territoire',
+      value: station.zones?.map(zone => zone.name).filter(Boolean).join(', ')
     }
+  ]
+  const details = station.type === 'PIEZOMETER'
+    ? [...commonRows, ...typeRows, ...lifecycleRows]
+    : [typeRows[0], ...commonRows, ...typeRows.slice(1), ...lifecycleRows]
 
-    const preleveurLabel = getDeclarantTitleFromDeclarant(exploitation.declarant)
-    appendSmallText(
-      item,
-      `Préleveur : ${preleveurLabel}`,
-      'fr-text--sm fr-mb-1v break-words text-gray-900'
-    )
+  return (
+    <MapPopupCard
+      actionLabel={dismissable && onAction ? 'Voir la fiche de la station' : undefined}
+      dismissable={dismissable}
+      eyebrow={(
+        <span
+          className='fr-mb-1v inline-flex px-2 py-1 text-xs font-semibold'
+          style={{backgroundColor: typeConfig.background, color: typeConfig.color}}
+        >
+          {typeConfig.label}
+        </span>
+      )}
+      subtitle={station.providerLabel && station.providerLabel !== station.label
+        ? station.providerLabel
+        : null}
+      title={station.label}
+      width='20.625rem'
+      onAction={onAction}
+    >
+      <LatestMeasurement station={station} typeConfig={typeConfig} />
 
-    const collecteurs = getCollecteurs(exploitation)
+      <dl className='fr-mb-0'>
+        {details.map(detail => (
+          <DefinitionRow key={detail.label} label={detail.label} value={detail.value} />
+        ))}
+      </dl>
 
-    if (showCollecteurs && collecteurs.length > 0) {
-      const collecteursText = collecteurs
-        .map(collecteur => getDeclarantTitleFromDeclarant(collecteur))
-        .join(', ')
-      const label = collecteurs.length > 1 ? 'Collecteurs' : 'Collecteur'
-
-      appendSmallText(item, `${label} : ${collecteursText}`)
-    }
-
-    list.append(item)
-  }
-
-  parent.append(list)
-}
-
-function appendPointUsagesSection(container, point) {
-  const section = document.createElement('div')
-  section.className = 'fr-mb-3v border-t border-gray-200 pt-3'
-
-  appendSmallText(
-    section,
-    'Usages',
-    'fr-text--xs fr-mb-1v font-semibold text-gray-700'
+      <p className='fr-text--xs fr-mb-0 mt-2.5 border-t border-gray-200 pt-2 text-gray-500'>
+        Données : {typeConfig.source}
+      </p>
+    </MapPopupCard>
   )
-
-  const usages = (point.usages ?? []).filter(usage => isDashboardVisibleUsage(usage))
-
-  if (usages.length === 0) {
-    appendSmallText(section, 'Usage non renseigné.')
-  } else {
-    const list = document.createElement('div')
-    list.className = 'flex flex-wrap gap-1.5'
-
-    for (const usage of usages) {
-      list.append(createUsageChip(usage))
-    }
-
-    section.append(list)
-  }
-
-  container.append(section)
-}
-
-function appendAssociationsSection(
-  container,
-  point,
-  loadExploitations,
-  {showCollecteurs = true} = {}
-) {
-  const section = document.createElement('div')
-  section.className = 'fr-mb-3v border-t border-gray-200 pt-3'
-
-  appendSmallText(
-    section,
-    'Préleveurs',
-    'fr-text--xs fr-mb-1v font-semibold text-gray-700'
-  )
-
-  const body = document.createElement('div')
-  appendSmallText(body, 'Chargement des exploitations associées...')
-  section.append(body)
-  container.append(section)
-
-  async function loadAndRenderExploitations() {
-    try {
-      const exploitations = await loadExploitations(point.id)
-
-      if (!container.isConnected) {
-        return
-      }
-
-      body.replaceChildren()
-      appendExploitationDetails(body, exploitations, {showCollecteurs})
-    } catch (error) {
-      if (!container.isConnected) {
-        return
-      }
-
-      body.replaceChildren()
-      appendSmallText(
-        body,
-        error.message || 'Impossible de charger les exploitations associées.',
-        'fr-text--sm fr-mb-0 text-red-700'
-      )
-    }
-  }
-
-  loadAndRenderExploitations()
-}
-
-function openPointPopup({
-  loadExploitations,
-  map,
-  point,
-  popupRef,
-  preferUsageName,
-  showCollecteurs,
-  showPreleveurs
-}) {
-  const coordinates = getPointCoordinates(point)
-
-  if (!coordinates) {
-    return
-  }
-
-  removePopup(popupRef)
-
-  const container = document.createElement('div')
-  container.className = 'min-w-0 p-2'
-  container.style.width = 'min(320px, calc(100vw - 2rem))'
-  container.style.maxWidth = '100%'
-
-  const title = document.createElement('p')
-  title.className = 'fr-text--md fr-mb-2v break-words font-semibold text-gray-900'
-  title.textContent = getPointPrelevementDisplayName(point, {
-    fallback: 'Point de prélèvement',
-    preferUsageName
-  })
-  container.append(title)
-
-  const technicalReference = getPointPrelevementTechnicalReference(point, {preferUsageName})
-  if (technicalReference) {
-    const reference = document.createElement('p')
-    reference.className = 'fr-text--xs fr-mb-2v break-all text-gray-600'
-    reference.textContent = `Référence : ${technicalReference}`
-    container.append(reference)
-  }
-
-  if (showPreleveurs) {
-    appendAssociationsSection(container, point, loadExploitations, {showCollecteurs})
-  } else {
-    appendPointUsagesSection(container, point)
-  }
-
-  popupRef.current = new maplibre.Popup({
-    closeButton: false,
-    closeOnClick: false,
-    anchor: computeBestPopupAnchor(map, coordinates),
-    maxWidth: 'min(340px, calc(100vw - 2rem))',
-    offset: 10
-  })
-    .setLngLat(coordinates)
-    .setDOMContent(container)
-    .addTo(map)
 }
 
 const DashboardPointsMap = ({
+  capabilities,
   initialLayerVisibility,
   monitoringStations = [],
   points,
@@ -773,11 +544,16 @@ const DashboardPointsMap = ({
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const popupRef = useRef(null)
+  const popupRootRef = useRef(null)
+  const popupActorsTimeoutRef = useRef(null)
+  const activePopupFeatureKeyRef = useRef(null)
+  const popupPersistentRef = useRef(false)
   const pointsRef = useRef(points)
   const monitoringStationsRef = useRef(monitoringStations)
-  const hoveredFeatureKeyRef = useRef(null)
+  const pointsByIdRef = useRef(new Map())
+  const monitoringStationsByIdRef = useRef(new Map())
   const fittedGeometrySignatureRef = useRef(null)
-  const exploitationsCacheRef = useRef(new Map())
+  const pointActorsCacheRef = useRef(new Map())
   const shouldTrackMapMovesRef = useRef(false)
   const isRecenteringRef = useRef(false)
   const [hasMapMoved, setHasMapMoved] = useState(false)
@@ -799,6 +575,14 @@ const DashboardPointsMap = ({
     [monitoringStations]
   )
   const hasMonitoringStationsWithCoordinates = monitoringStationsWithCoordinates.length > 0
+  const pointsById = useMemo(
+    () => indexDashboardMapItems(pointsWithCoordinates),
+    [pointsWithCoordinates]
+  )
+  const monitoringStationsById = useMemo(
+    () => indexDashboardMapItems(monitoringStationsWithCoordinates),
+    [monitoringStationsWithCoordinates]
+  )
   const hasMapFeatures = hasPointsWithCoordinates || hasMonitoringStationsWithCoordinates
   const visibleMapFeatures = useMemo(
     () => getVisibleMapFeatures({
@@ -817,30 +601,54 @@ const DashboardPointsMap = ({
   )
   const piezometerCount = monitoringStationsWithCoordinates.filter(station => station.type === 'PIEZOMETER').length
   const flowStationCount = monitoringStationsWithCoordinates.filter(station => station.type === 'FLOW_STATION').length
+  const popupOptionsRef = useRef(null)
+  popupOptionsRef.current = {
+    preferUsageName,
+    readPointActors: canLoadDashboardPointActors(capabilities, {showPreleveurs}),
+    readPointDetails: capabilities?.readPointDetails === true,
+    showCollecteurs
+  }
 
   useEffect(() => {
     pointsRef.current = pointsWithCoordinates
-  }, [pointsWithCoordinates])
+    pointsByIdRef.current = pointsById
+  }, [pointsById, pointsWithCoordinates])
 
   useEffect(() => {
     monitoringStationsRef.current = monitoringStationsWithCoordinates
-  }, [monitoringStationsWithCoordinates])
+    monitoringStationsByIdRef.current = monitoringStationsById
+  }, [monitoringStationsById, monitoringStationsWithCoordinates])
 
-  const loadExploitations = useCallback(async pointId => {
-    if (exploitationsCacheRef.current.has(pointId)) {
-      return exploitationsCacheRef.current.get(pointId)
+  const removePopup = useCallback(() => {
+    if (popupActorsTimeoutRef.current !== null) {
+      window.clearTimeout(popupActorsTimeoutRef.current)
+      popupActorsTimeoutRef.current = null
     }
 
-    const result = await getExploitationsByPointIdAction(pointId)
+    activePopupFeatureKeyRef.current = null
+    popupPersistentRef.current = false
+    const root = popupRootRef.current
+    popupRootRef.current = null
+    const popup = popupRef.current
+    popupRef.current = null
+    root?.unmount()
+    popup?.remove()
+  }, [])
 
-    if (!result.success) {
-      throw new Error(result.error || 'Impossible de charger les exploitations associées.')
+  const loadPointActors = useCallback(pointId => {
+    if (!popupOptionsRef.current.readPointActors) {
+      return Promise.resolve(null)
     }
 
-    const exploitations = result.data ?? []
-    exploitationsCacheRef.current.set(pointId, exploitations)
+    return loadCachedValue(pointActorsCacheRef.current, pointId, async () => {
+      const result = await getDashboardPointActorsAction(pointId)
 
-    return exploitations
+      if (!result.success) {
+        throw new Error(result.error || 'Impossible de charger les acteurs associés.')
+      }
+
+      return normalizeDashboardPointActors(result.data)
+    })
   }, [])
 
   useEffect(() => {
@@ -944,75 +752,215 @@ const DashboardPointsMap = ({
         shouldTrackMapMovesRef.current = true
       })
 
-      const closeHoveredPopup = () => {
-        hoveredFeatureKeyRef.current = null
-        map.getCanvas().style.cursor = ''
-        removePopup(popupRef)
+      const mountPopup = ({coordinates, featureKey, maxWidth, offset, persistent, render}) => {
+        removePopup()
+        const container = document.createElement('div')
+        const root = createRoot(container)
+        popupRootRef.current = root
+        activePopupFeatureKeyRef.current = featureKey
+        popupPersistentRef.current = persistent
+        render(root)
+
+        const dynamicPopup = new maplibre.Popup({
+          className: 'points-prelevement-map-popup',
+          closeButton: persistent,
+          closeOnClick: persistent,
+          anchor: computeBestPopupAnchor(map, coordinates),
+          maxWidth,
+          offset
+        })
+          .setLngLat(coordinates)
+          .setDOMContent(container)
+          .addTo(map)
+        popupRef.current = dynamicPopup
+
+        dynamicPopup.on('close', () => {
+          if (popupRef.current !== dynamicPopup) {
+            return
+          }
+
+          if (popupActorsTimeoutRef.current !== null) {
+            window.clearTimeout(popupActorsTimeoutRef.current)
+            popupActorsTimeoutRef.current = null
+          }
+
+          activePopupFeatureKeyRef.current = null
+          popupPersistentRef.current = false
+          popupRef.current = null
+          const activeRoot = popupRootRef.current
+          popupRootRef.current = null
+          activeRoot?.unmount()
+        })
+
+        return {popup: dynamicPopup, root}
       }
 
-      const onPointHover = event => {
-        const pointId = event.features?.[0]?.properties?.id
-        const point = pointsRef.current.find(candidate => String(candidate.id) === String(pointId))
-        const featureKey = point ? `point:${point.id}` : null
-
-        map.getCanvas().style.cursor = point ? 'pointer' : ''
-        if (!point || hoveredFeatureKeyRef.current === featureKey) {
+      const openPointPopup = (point, {persistent = false} = {}) => {
+        const coordinates = getPointCoordinates(point)
+        if (!coordinates) {
           return
         }
 
-        hoveredFeatureKeyRef.current = featureKey
-        openPointPopup({
-          loadExploitations,
-          map,
-          point,
-          popupRef,
-          preferUsageName,
-          showCollecteurs,
-          showPreleveurs
+        const featureKey = `point:${point.id}`
+        const options = popupOptionsRef.current
+        const cachedActors = options.readPointActors
+          ? getResolvedCachedValue(pointActorsCacheRef.current, point.id)
+          : null
+        const canLoadActors = options.readPointActors
+        const renderPointPopup = (root, {actors = cachedActors, actorsError = false} = {}) => {
+          const pointWithActors = actors
+            ? {
+              ...point,
+              collecteurs: options.showCollecteurs ? actors.collecteurs : [],
+              preleveurs: actors.preleveurs
+            }
+            : point
+
+          root.render(
+            <Popup
+              actionLabel={persistent && options.readPointDetails ? 'Voir la fiche du point' : undefined}
+              declarantsError={actorsError}
+              declarantsLoading={canLoadActors && !actors && !actorsError}
+              dismissable={persistent}
+              point={pointWithActors}
+              preferUsageName={options.preferUsageName}
+              showDeclarants={canLoadActors}
+              onAction={persistent && options.readPointDetails
+                ? () => router.push(getPointPrelevementURL(point))
+                : undefined}
+            />
+          )
+        }
+
+        const mountedPopup = mountPopup({
+          coordinates,
+          featureKey,
+          maxWidth: 'min(320px, calc(100vw - 1.5rem))',
+          offset: 10,
+          persistent,
+          render: root => renderPointPopup(root)
+        })
+
+        if (canLoadActors && !cachedActors) {
+          popupActorsTimeoutRef.current = window.setTimeout(async () => {
+            popupActorsTimeoutRef.current = null
+
+            try {
+              const actors = await loadPointActors(point.id)
+              if (
+                activePopupFeatureKeyRef.current !== featureKey
+                || popupRef.current !== mountedPopup.popup
+                || popupRootRef.current !== mountedPopup.root
+              ) {
+                return
+              }
+
+              renderPointPopup(mountedPopup.root, {actors})
+            } catch {
+              if (
+                activePopupFeatureKeyRef.current !== featureKey
+                || popupRef.current !== mountedPopup.popup
+                || popupRootRef.current !== mountedPopup.root
+              ) {
+                return
+              }
+
+              renderPointPopup(mountedPopup.root, {actorsError: true})
+            }
+          }, persistent ? 0 : POPUP_ACTORS_HOVER_DELAY)
+        }
+      }
+
+      const openMonitoringStationPopup = (station, {persistent = false} = {}) => {
+        const coordinates = getMonitoringStationCoordinates(station)
+        const stationURL = getMonitoringStationURL(station)
+        if (!coordinates || !MONITORING_STATION_TYPES[station.type]) {
+          return
+        }
+
+        mountPopup({
+          coordinates,
+          featureKey: `station:${station.id}`,
+          maxWidth: 'min(350px, calc(100vw - 1.5rem))',
+          offset: 12,
+          persistent,
+          render: root => root.render(
+            <MonitoringStationPopup
+              dismissable={persistent}
+              station={station}
+              onAction={persistent && stationURL
+                ? () => window.open(stationURL, '_blank', 'noopener,noreferrer')
+                : undefined}
+            />
+          )
         })
       }
 
-      const onMonitoringStationHover = event => {
-        const stationId = event.features?.[0]?.properties?.id
-        const station = monitoringStationsRef.current.find(candidate =>
-          String(candidate.id) === String(stationId))
-        const featureKey = station ? `station:${station.id}` : null
+      const closeHoveredPopup = () => {
+        map.getCanvas().style.cursor = ''
+        if (!popupPersistentRef.current) {
+          removePopup()
+        }
+      }
 
-        map.getCanvas().style.cursor = station ? 'pointer' : ''
-        if (!station || hoveredFeatureKeyRef.current === featureKey) {
+      const onPointMove = event => {
+        const pointId = event.features?.[0]?.properties?.id
+        const point = pointsByIdRef.current.get(String(pointId))
+        const featureKey = point ? `point:${point.id}` : null
+
+        map.getCanvas().style.cursor = point ? 'pointer' : ''
+        if (
+          !point
+          || popupPersistentRef.current
+          || activePopupFeatureKeyRef.current === featureKey
+        ) {
           return
         }
 
-        hoveredFeatureKeyRef.current = featureKey
-        openMonitoringStationPopup({map, popupRef, station})
+        openPointPopup(point)
+      }
+
+      const onMonitoringStationMove = event => {
+        const stationId = event.features?.[0]?.properties?.id
+        const station = monitoringStationsByIdRef.current.get(String(stationId))
+        const featureKey = station ? `station:${station.id}` : null
+
+        map.getCanvas().style.cursor = station ? 'pointer' : ''
+        if (
+          !station
+          || popupPersistentRef.current
+          || activePopupFeatureKeyRef.current === featureKey
+        ) {
+          return
+        }
+
+        openMonitoringStationPopup(station)
       }
 
       const onPointClick = event => {
         const pointId = event.features?.[0]?.properties?.id
-        const point = pointsRef.current.find(candidate => String(candidate.id) === String(pointId))
+        const point = pointsByIdRef.current.get(String(pointId))
 
         if (point) {
-          router.push(getPointPrelevementURL(point))
+          openPointPopup(point, {persistent: true})
         }
       }
 
       const onMonitoringStationClick = event => {
         const stationId = event.features?.[0]?.properties?.id
-        const station = monitoringStationsRef.current.find(candidate =>
-          String(candidate.id) === String(stationId))
-        const url = getMonitoringStationURL(station)
+        const station = monitoringStationsByIdRef.current.get(String(stationId))
 
-        if (url) {
-          window.open(url, '_blank', 'noopener,noreferrer')
+        if (station) {
+          openMonitoringStationPopup(station, {persistent: true})
         }
       }
 
-      map.on('mousemove', MARKERS_LAYER_ID, onPointHover)
+      map.on('mousemove', MARKERS_LAYER_ID, onPointMove)
       map.on('mouseleave', MARKERS_LAYER_ID, closeHoveredPopup)
       map.on('click', MARKERS_LAYER_ID, onPointClick)
 
       for (const layerId of [PIEZOMETER_LAYER_ID, FLOW_STATION_LAYER_ID]) {
-        map.on('mousemove', layerId, onMonitoringStationHover)
+        map.on('mousemove', layerId, onMonitoringStationMove)
         map.on('mouseleave', layerId, closeHoveredPopup)
         map.on('click', layerId, onMonitoringStationClick)
       }
@@ -1021,12 +969,11 @@ const DashboardPointsMap = ({
     return () => {
       shouldTrackMapMovesRef.current = false
       isRecenteringRef.current = false
-      hoveredFeatureKeyRef.current = null
-      removePopup(popupRef)
+      removePopup()
       map.remove()
       mapRef.current = null
     }
-  }, [hasMapFeatures, loadExploitations, preferUsageName, router, showCollecteurs, showPreleveurs])
+  }, [hasMapFeatures, loadPointActors, preferUsageName, removePopup, router])
 
   useEffect(() => {
     const map = mapRef.current
@@ -1040,8 +987,7 @@ const DashboardPointsMap = ({
     map.getSource(MARKERS_SOURCE_ID)?.setData(data)
     ensureMonitoringMarkerImages(map)
     map.getSource(MONITORING_SOURCE_ID)?.setData(buildMonitoringFeatures(monitoringStationsWithCoordinates))
-    hoveredFeatureKeyRef.current = null
-    removePopup(popupRef)
+    removePopup()
 
     if (fittedGeometrySignatureRef.current === visibleMapGeometrySignature) {
       return
@@ -1073,6 +1019,7 @@ const DashboardPointsMap = ({
     monitoringStationsWithCoordinates,
     pointsWithCoordinates,
     preferUsageName,
+    removePopup,
     visibleMapFeatures,
     visibleMapGeometrySignature
   ])
@@ -1092,9 +1039,18 @@ const DashboardPointsMap = ({
     setVisibility(MARKERS_LAYER_ID, visibleLayers.points)
     setVisibility(PIEZOMETER_LAYER_ID, visibleLayers.piezometers)
     setVisibility(FLOW_STATION_LAYER_ID, visibleLayers.flowStations)
-    hoveredFeatureKeyRef.current = null
-    removePopup(popupRef)
-  }, [visibleLayers])
+    removePopup()
+  }, [removePopup, visibleLayers])
+
+  useEffect(() => {
+    removePopup()
+  }, [
+    capabilities?.readPointActors,
+    capabilities?.readPointDetails,
+    removePopup,
+    showCollecteurs,
+    showPreleveurs
+  ])
 
   const handleRecenter = useCallback(() => {
     const map = mapRef.current

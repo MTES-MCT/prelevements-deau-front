@@ -11,6 +11,7 @@ import {
   filterPoints,
   filterPointsWithScores,
   getDefaultPointFilters,
+  getManagementZoneOptionGroups,
   getPointFacetCounts,
   getPointFilterOptions,
   getPointFiltersFromSearchParams,
@@ -38,7 +39,12 @@ const points = [
     searchAliases: ['Captage du Pont'],
     searchIdentifiers: ['BNPE-001'],
     communeName: 'Saint-Estève',
-    managementZones: [{id: 'zone-1', name: 'Plaine du Roussillon', code: 'MGT-66'}],
+    managementZones: [{
+      id: 'zone-1',
+      name: 'Plaine du Roussillon',
+      code: 'MGT-66',
+      type: 'SAGE'
+    }],
     exploitationStatuses: ['EN_ACTIVITE'],
     preleveurLabels: ['Élevage des Pyrénées'],
     preleveurSirets: ['123 456 789 00012'],
@@ -53,7 +59,12 @@ const points = [
     flowType: 'REJET',
     waterBodyType: 'SUPERFICIELLE',
     usages: [{id: 'usage-4', code: '4', label: 'Industrie'}],
-    managementZones: [{id: 'zone-2', name: 'Littoral', code: null}],
+    managementZones: [{
+      id: 'zone-2',
+      name: 'Littoral',
+      code: null,
+      type: 'REGION'
+    }],
     exploitationStatuses: [],
     preleveurTypes: [],
     collecteurStatus: 'WITHOUT_COLLECTEUR',
@@ -191,8 +202,50 @@ test('les facettes sont construites depuis les champs autorisés du résumé car
     'WITH_COLLECTEUR',
     'WITHOUT_COLLECTEUR'
   ])
+  t.deepEqual(options.connectorStatusOptions, [
+    {value: 'WITH_CONNECTOR', label: 'Avec télérelève'},
+    {value: 'WITHOUT_CONNECTOR', label: 'Sans télérelève'}
+  ])
   t.deepEqual(options.preleveurTypeOptions.map(option => option.value), ['IRRIGANT'])
   t.false(options.exploitationStatusOptions.some(option => option.value === 'UNKNOWN'))
+})
+
+test('les zones sont groupées par type et n’affichent que leur nom métier', t => {
+  const options = getPointFilterOptions(points).managementZoneOptions
+
+  t.deepEqual(options, [
+    {value: 'zone-2', label: 'Littoral', type: 'REGION'},
+    {value: 'zone-1', label: 'Plaine du Roussillon', type: 'SAGE'}
+  ])
+  t.deepEqual(getManagementZoneOptionGroups(options), [
+    {
+      label: 'Régions',
+      options: [{value: 'zone-2', label: 'Littoral', type: 'REGION'}]
+    },
+    {
+      label: 'SAGE',
+      options: [{
+        value: 'zone-1',
+        label: 'Plaine du Roussillon',
+        type: 'SAGE'
+      }]
+    }
+  ])
+})
+
+test('les zones sans type restent sélectionnables sans exposer leur code technique', t => {
+  const options = getPointFilterOptions([{
+    managementZones: [{id: 'zone-legacy', name: 'Zone historique', code: 'TECH-42'}]
+  }]).managementZoneOptions
+
+  t.deepEqual(getManagementZoneOptionGroups(options), [{
+    label: 'Autres zones',
+    options: [{
+      value: 'zone-legacy',
+      label: 'Zone historique',
+      type: null
+    }]
+  }])
 })
 
 test('un accès absent n’est jamais interprété comme une exploitation ou un type manquant', t => {
