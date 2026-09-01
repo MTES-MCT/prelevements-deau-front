@@ -705,7 +705,9 @@ export function clamp(value, min, max) {
 }
 
 /**
- * Computes slider marks for date range with appropriate formatting based on time span
+ * Computes slider marks. Short ranges retain detailed dates; ranges longer
+ * than a year use calendar-aligned years because exact boundaries are already
+ * displayed next to the slider.
  * @param {Array<Date>} dates - Array of dates
  * @param {number} [maxMarks=5] - Maximum number of marks to display
  * @returns {Array<{value: number, label: string}>} Slider marks
@@ -718,36 +720,63 @@ export function computeSliderMarks(dates, maxMarks = 5) {
   const firstDate = dates[0]
   const lastDate = dates.at(-1)
   const spanDays = (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)
-  const crossesYear = firstDate.getFullYear() !== lastDate.getFullYear()
-  const formatOptions = spanDays > 365 || crossesYear
-    ? {day: 'numeric', month: 'short', year: 'numeric'}
-    : {day: 'numeric', month: 'short'}
 
-  if (dates.length <= maxMarks) {
-    return dates.map((date, idx) => ({
-      value: idx,
-      label: date.toLocaleDateString('fr-FR', formatOptions)
-    }))
-  }
+  if (spanDays <= 365) {
+    const crossesYear = firstDate.getFullYear() !== lastDate.getFullYear()
+    const formatOptions = crossesYear
+      ? {day: 'numeric', month: 'short', year: 'numeric'}
+      : {day: 'numeric', month: 'short'}
 
-  const step = Math.floor(dates.length / (maxMarks - 1))
-  const marks = []
+    if (dates.length <= maxMarks) {
+      return dates.map((date, index) => ({
+        value: index,
+        label: date.toLocaleDateString('fr-FR', formatOptions)
+      }))
+    }
 
-  for (let i = 0; i < maxMarks - 1; i++) {
-    const idx = i * step
-    marks.push({
-      value: idx,
-      label: dates[idx].toLocaleDateString('fr-FR', formatOptions)
+    const step = Math.floor(dates.length / (maxMarks - 1))
+    const marks = Array.from({length: maxMarks - 1}, (_, index) => {
+      const dateIndex = index * step
+      return {
+        value: dateIndex,
+        label: dates[dateIndex].toLocaleDateString('fr-FR', formatOptions)
+      }
     })
+
+    marks.push({
+      value: dates.length - 1,
+      label: lastDate.toLocaleDateString('fr-FR', formatOptions)
+    })
+
+    return marks
   }
 
-  // Always include last date
-  marks.push({
-    value: dates.length - 1,
-    label: dates.at(-1).toLocaleDateString('fr-FR', formatOptions)
-  })
+  const yearMarks = dates
+    .map((date, index) => ({date, index}))
+    .filter(({date, index}) => (
+      index > 0
+      && index < dates.length - 1
+      && date.getMonth() === 0
+      && date.getDate() === 1
+    ))
+    .map(({date, index}) => ({
+      value: index,
+      label: String(date.getFullYear())
+    }))
 
-  return marks
+  if (yearMarks.length <= maxMarks) {
+    return yearMarks
+  }
+
+  const lastIndex = yearMarks.length - 1
+  const selectedIndices = new Set([0, lastIndex])
+  for (let index = 1; index < maxMarks - 1; index++) {
+    selectedIndices.add(Math.round((index * lastIndex) / (maxMarks - 1)))
+  }
+
+  return [...selectedIndices]
+    .sort((first, second) => first - second)
+    .map(index => yearMarks[index])
 }
 
 /**

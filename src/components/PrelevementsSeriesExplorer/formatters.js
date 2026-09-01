@@ -3,6 +3,7 @@
  */
 
 import {format} from 'date-fns'
+import {fr} from 'date-fns/locale'
 
 import {MONTH_NAMES} from './constants/colors.js'
 
@@ -124,3 +125,12 @@ export const formatSliderMark = date => format(date, 'dd/MM/yyyy')
  * The accessible value uses the same exact date as the visible handle.
  */
 export const formatSliderValue = formatSliderMark
+
+/**
+ * Human-readable date used in the permanent selected-period summary.
+ */
+export const formatSliderRangeDate = date => format(date, 'd MMM yyyy', {locale: fr})
+
+export const formatSliderRange = (start, end) => (
+  `${formatSliderRangeDate(start)} – ${formatSliderRangeDate(end)}`
+)

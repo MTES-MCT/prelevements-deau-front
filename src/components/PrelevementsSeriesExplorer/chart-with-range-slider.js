@@ -12,7 +12,11 @@ import {Box, Slider, Typography} from '@mui/material'
 import {addDays} from 'date-fns'
 import {fr} from 'date-fns/locale'
 
-import {formatSliderMark, formatSliderValue} from './formatters.js'
+import {
+  formatSliderMark,
+  formatSliderRange,
+  formatSliderValue
+} from './formatters.js'
 
 import TimeSeriesChart from '@/components/ui/TimeSeriesChart/index.js'
 
@@ -33,6 +37,7 @@ const DEFAULT_MIN_CHART_HEIGHT = 360
  * @param {Object} [props.timeSeriesChartProps] - Additional props forwarded to `TimeSeriesChart`
  * @param {string} [props.frequency] - Frequency for linear X-axis timeline (e.g., '1 day', '15 minutes')
  * @param {Object} [props.timelineRange] - Date range for timeline bounds ({ start: Date, end: Date })
+ * @param {boolean} [props.allowQuarterlyTicks=false] - Allow T1/Q1-style labels on medium-long ranges
  */
 const ChartWithRangeSlider = ({
   series,
@@ -47,34 +52,48 @@ const ChartWithRangeSlider = ({
   minChartHeight = DEFAULT_MIN_CHART_HEIGHT,
   timeSeriesChartProps,
   frequency = null,
-  timelineRange = null
+  timelineRange = null,
+  allowQuarterlyTicks = false
 }) => {
   const resolvedChartProps = useMemo(() => {
     if (!timeSeriesChartProps) {
-      return {locale, frequency, timelineRange}
+      return {
+        locale,
+        frequency,
+        timelineRange,
+        allowQuarterlyTicks
+      }
     }
 
-    const {series: _ignoredSeries, locale: overrideLocale, frequency: overrideFrequency, timelineRange: overrideTimelineRange, ...otherProps} = timeSeriesChartProps
+    const {
+      series: _ignoredSeries,
+      locale: overrideLocale,
+      frequency: overrideFrequency,
+      timelineRange: overrideTimelineRange,
+      allowQuarterlyTicks: overrideAllowQuarterlyTicks,
+      ...otherProps
+    } = timeSeriesChartProps
     return {
       locale: overrideLocale ?? locale,
       frequency: overrideFrequency ?? frequency,
       timelineRange: overrideTimelineRange ?? timelineRange,
+      allowQuarterlyTicks: overrideAllowQuarterlyTicks ?? allowQuarterlyTicks,
       ...otherProps
     }
-  }, [locale, timeSeriesChartProps, frequency, timelineRange])
+  }, [allowQuarterlyTicks, locale, timeSeriesChartProps, frequency, timelineRange])
 
   const handleSliderChange = useCallback((event, value, activeThumb) => {
     onRangeChange?.(event, value, activeThumb)
   }, [onRangeChange])
 
-  const resolveDisplayDate = useCallback(idx => {
+  const resolveDisplayDate = useCallback((idx, thumbIndex) => {
     const date = allDates[idx]
     if (!date) {
       return date
     }
 
-    // The last slider index is the exclusive boundary (day+1). Show the real last day instead.
-    if (idx === allDates.length - 1) {
+    // The right thumb always points to an exclusive boundary (day+1).
+    if (thumbIndex === 1) {
       return addDays(date, -1)
     }
 
@@ -82,6 +101,16 @@ const ChartWithRangeSlider = ({
   }, [allDates])
 
   const hasChartData = series.length > 0
+  const selectedRangeLabel = useMemo(() => {
+    const start = resolveDisplayDate(rangeIndices[0], 0)
+    const end = resolveDisplayDate(rangeIndices[1], 1)
+
+    if (!start || !end || end < start) {
+      return null
+    }
+
+    return formatSliderRange(start, end)
+  }, [rangeIndices, resolveDisplayDate])
 
   return (
     <Box className='flex flex-col gap-4'>
@@ -108,12 +137,30 @@ const ChartWithRangeSlider = ({
 
       {showRangeSlider && allDates.length > 1 && (
         <Box sx={{px: 2}}>
-          <Typography variant='caption' className='mb-2 block'>
-            {rangeLabel}
-          </Typography>
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'baseline',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 1,
+            mb: 3
+          }}
+          >
+            <Typography variant='caption'>
+              {rangeLabel}
+            </Typography>
+            {selectedRangeLabel && (
+              <Typography variant='caption' color='text.secondary'>
+                Période affichée :{' '}
+                <Box component='span' sx={{color: 'text.primary', fontWeight: 600}}>
+                  {selectedRangeLabel}
+                </Box>
+              </Typography>
+            )}
+          </Box>
           <Slider
             disableSwap
-            getAriaValueText={idx => formatSliderValue(resolveDisplayDate(idx), frequency, locale)}
+            getAriaValueText={(idx, thumbIndex) => formatSliderValue(resolveDisplayDate(idx, thumbIndex), frequency, locale)}
             marks={sliderMarks}
             max={allDates.length - 1}
             min={0}
@@ -124,8 +171,8 @@ const ChartWithRangeSlider = ({
             }}
             step={1}
             value={rangeIndices}
-            valueLabelDisplay='on'
-            valueLabelFormat={idx => formatSliderMark(resolveDisplayDate(idx), frequency, locale)}
+            valueLabelDisplay='auto'
+            valueLabelFormat={(idx, thumbIndex) => formatSliderMark(resolveDisplayDate(idx, thumbIndex), frequency, locale)}
             onChange={handleSliderChange}
             onChangeCommitted={onRangeChangeCommitted}
           />

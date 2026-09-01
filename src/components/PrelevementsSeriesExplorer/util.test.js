@@ -492,6 +492,40 @@ test('computeSliderMarks includes the year only when it helps disambiguate marks
   t.true(result[1].label.includes('2025'))
 })
 
+test('computeSliderMarks aligne les longues plages sur les premiers janvier', t => {
+  const dates = []
+  let date = new Date(2021, 9, 12)
+  const end = new Date(2026, 6, 8)
+  while (date <= end) {
+    dates.push(date)
+    date = addDays(date, 1)
+  }
+
+  const result = computeSliderMarks(dates)
+
+  t.deepEqual(result.map(mark => mark.label), ['2022', '2023', '2024', '2025', '2026'])
+  t.true(result.every(mark => dates[mark.value].getMonth() === 0))
+  t.true(result.every(mark => dates[mark.value].getDate() === 1))
+})
+
+test('computeSliderMarks décime les années des très longues plages', t => {
+  const dates = []
+  let date = new Date(2000, 5, 15)
+  const end = new Date(2026, 5, 15)
+  while (date <= end) {
+    dates.push(date)
+    date = addDays(date, 1)
+  }
+
+  const result = computeSliderMarks(dates, 5)
+
+  t.is(result.length, 5)
+  t.is(result[0].label, '2001')
+  t.is(result.at(-1).label, '2026')
+  t.true(result.every(mark => dates[mark.value].getMonth() === 0))
+  t.true(result.every(mark => dates[mark.value].getDate() === 1))
+})
+
 // normalizeString tests
 test('normalizeString normalizes accents, case and spacing', t => {
   const input = '  Volume   Prélevé  '
