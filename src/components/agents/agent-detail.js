@@ -8,6 +8,7 @@ import {
 
 import {useRouter} from '@bprogress/next/app'
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
+import Breadcrumb from '@codegouvfr/react-dsfr/Breadcrumb'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {
   Dialog,
@@ -550,13 +551,16 @@ const AgentDetail = ({agent: initialAgent, messageKey, permissionCatalog}) => {
   }
 
   return (
-    <main className='min-h-screen bg-[var(--background-alt-grey)] pb-12'>
+    <main className='min-h-screen bg-[#f7f7fb] pb-12'>
       <div className='fr-container pt-6 md:pt-8'>
-        <nav aria-label='Fil d’Ariane' className='fr-mb-3w text-sm'>
-          <Link className='fr-link' href='/agents'>Agents</Link>
-          <span aria-hidden='true'> / </span>
-          <span>{getAgentName(agent)}</span>
-        </nav>
+        <Breadcrumb
+          currentPageLabel={getAgentName(agent)}
+          homeLinkProps={{href: '/'}}
+          segments={[{
+            label: 'Agents',
+            linkProps: {href: '/agents'}
+          }]}
+        />
 
         {feedback && (
           <div className='fr-mb-3w'>
