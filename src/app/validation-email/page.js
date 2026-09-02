@@ -127,7 +127,7 @@ const ValidationEmailPage = () => {
                 description='Cette adresse peut maintenant être utilisée pour accéder à votre compte.'
               />
               <p className='fr-mt-4w fr-mb-0'>
-                <Link className='fr-btn' href='/mon-compte'>Revenir à mon compte</Link>
+                <Link className='fr-btn' href='/mon-compte/adresses-email'>Voir mes adresses</Link>
               </p>
             </>
           )}
@@ -137,10 +137,10 @@ const ValidationEmailPage = () => {
               <Alert
                 severity='warning'
                 title='Ce lien a expiré'
-                description='Votre adresse n’a pas été modifiée. Depuis Mon compte, renvoyez un nouveau message de validation.'
+                description='Votre adresse n’a pas été modifiée. Depuis la gestion de vos adresses, renvoyez un nouveau message de validation.'
               />
               <p className='fr-mt-4w fr-mb-0'>
-                <Link className='fr-btn fr-btn--secondary' href='/mon-compte'>Gérer mes adresses</Link>
+                <Link className='fr-btn fr-btn--secondary' href='/mon-compte/adresses-email'>Gérer mes adresses</Link>
               </p>
             </>
           )}
@@ -153,7 +153,7 @@ const ValidationEmailPage = () => {
                 description='Elle est déjà utilisée par un autre compte. Aucune modification n’a été effectuée.'
               />
               <p className='fr-mt-4w fr-mb-0'>
-                <Link className='fr-btn fr-btn--secondary' href='/mon-compte'>Choisir une autre adresse</Link>
+                <Link className='fr-btn fr-btn--secondary' href='/mon-compte/adresses-email'>Choisir une autre adresse</Link>
               </p>
             </>
           )}

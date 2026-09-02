@@ -80,7 +80,7 @@ const VerificationCard = ({
         </span>
       </div>
 
-      <p className='fr-text--xs fr-mt-1w fr-mb-0 text-gray-700'>{presentation.description}</p>
+      <p className='fr-text--xs fr-mt-1w fr-mb-0 text-[var(--text-default-grey)]'>{presentation.description}</p>
 
       {(canResend || canCancel) && (
         <div className='mt-3 flex flex-wrap gap-2'>
@@ -515,11 +515,11 @@ const EmailAddressesSection = ({
       <div className='flex flex-col gap-4'>
         <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
           <div className='min-w-0'>
-            <p className='fr-text--xs fr-mb-1v text-gray-600'>Adresse principale</p>
+            <p className='fr-text--xs fr-mb-1v text-[var(--text-mention-grey)]'>Adresse principale</p>
             {primaryEmail ? (
               <strong className='break-all'>{primaryEmail}</strong>
             ) : (
-              <p className='fr-text--sm fr-mb-0 text-gray-600'>Aucune adresse principale.</p>
+              <p className='fr-text--sm fr-mb-0 text-[var(--text-mention-grey)]'>Aucune adresse principale.</p>
             )}
           </div>
 
@@ -605,11 +605,11 @@ const EmailAddressesSection = ({
         )}
       </div>
 
-      <div className='flex flex-col gap-4 border-t border-gray-200 pt-5'>
+      <div className='flex flex-col gap-4 border-t border-[var(--border-default-grey)] pt-5'>
         <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
           <div>
             <h3 className='fr-h6 fr-mb-1v'>Autres adresses</h3>
-            <p className='fr-text--xs fr-mb-0 text-gray-600'>
+            <p className='fr-text--xs fr-mb-0 text-[var(--text-mention-grey)]'>
               Elles permettent aussi de vous connecter.
             </p>
           </div>
@@ -634,21 +634,21 @@ const EmailAddressesSection = ({
         </div>
 
         {aliases.length === 0 ? (
-          <p className='fr-text--sm fr-mb-0 text-gray-600'>
+          <p className='fr-text--sm fr-mb-0 text-[var(--text-mention-grey)]'>
             Aucune autre adresse.
           </p>
         ) : (
-          <ul className='m-0 flex list-none flex-col border-t border-gray-200 p-0'>
+          <ul className='m-0 flex list-none flex-col border-t border-[var(--border-default-grey)] p-0'>
             {aliases.map(alias => {
               const cannotDeleteLastAddress = !primaryEmail && aliases.length === 1
               return (
                 <li
                   key={alias.id ?? alias.email}
-                  className='flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 py-3'
+                  className='flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-default-grey)] py-3'
                 >
                   <span className='min-w-0 break-all'>{alias.email}</span>
                   {cannotDeleteLastAddress ? (
-                    <span className='fr-text--xs text-gray-600'>
+                    <span className='fr-text--xs text-[var(--text-mention-grey)]'>
                       Seule adresse de connexion
                     </span>
                   ) : (

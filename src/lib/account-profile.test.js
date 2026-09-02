@@ -5,6 +5,7 @@ import {
   createProfileForm,
   getEditableProfileFieldNames,
   getPermissionGroups,
+  getProfileDetailGroups,
   getZoneTypeLabel,
   validateProfile
 } from './account-profile.js'
@@ -71,6 +72,109 @@ test('le formulaire et la liste blanche varient selon le compte', t => {
 
   t.deepEqual(instructorFields, ['firstName', 'lastName', 'phoneNumber', 'jobTitle'])
   t.deepEqual(adminForm, {firstName: '', lastName: 'Durand'})
+})
+
+test('la présentation d’une personne morale reprend tous les champs modifiables avec des libellés métier', t => {
+  const user = {
+    declarantType: 'LEGAL_PERSON',
+    socialReason: 'Syndicat des eaux',
+    civility: 'MRS',
+    firstName: 'Lina',
+    lastName: 'Martin',
+    phoneNumber: '0102030405',
+    jobTitle: 'Responsable du service eau',
+    addressLine1: '1 rue de la Source',
+    addressLine2: 'Bâtiment B',
+    poBox: 'BP 12',
+    postalCode: '75001',
+    city: 'Paris'
+  }
+
+  t.deepEqual(getProfileDetailGroups(user, 'DECLARANT'), [
+    {
+      id: 'structure',
+      title: 'Structure',
+      items: [{
+        field: 'socialReason',
+        label: 'Nom de la structure',
+        value: 'Syndicat des eaux'
+      }]
+    },
+    {
+      id: 'main-contact',
+      title: 'Contact principal',
+      items: [
+        {field: 'civility', label: 'Civilité du contact', value: 'Mme'},
+        {field: 'firstName', label: 'Prénom du contact', value: 'Lina'},
+        {field: 'lastName', label: 'Nom du contact', value: 'Martin'}
+      ]
+    },
+    {
+      id: 'professional-details',
+      title: 'Coordonnées professionnelles',
+      items: [
+        {field: 'phoneNumber', label: 'Téléphone', value: '0102030405'},
+        {field: 'jobTitle', label: 'Poste ou service', value: 'Responsable du service eau'}
+      ]
+    },
+    {
+      id: 'postal-address',
+      title: 'Adresse postale',
+      items: [
+        {field: 'addressLine1', label: 'Adresse', value: '1 rue de la Source'},
+        {field: 'addressLine2', label: 'Complément d’adresse', value: 'Bâtiment B'},
+        {field: 'poBox', label: 'Boîte postale', value: 'BP 12'},
+        {field: 'postalCode', label: 'Code postal', value: '75001'},
+        {field: 'city', label: 'Commune', value: 'Paris'}
+      ]
+    }
+  ])
+})
+
+test('la présentation varie selon le rôle et ne montre que les champs modifiables', t => {
+  const scenarios = [
+    {user: {declarantType: 'NATURAL_PERSON'}, role: 'DECLARANT'},
+    {user: {}, role: 'INSTRUCTOR'},
+    {user: {}, role: 'ADMIN'}
+  ]
+
+  for (const {user, role} of scenarios) {
+    const displayedFields = getProfileDetailGroups(user, role)
+      .flatMap(group => group.items.map(item => item.field))
+      .sort()
+    const editableFields = getEditableProfileFieldNames(user, role).sort()
+
+    t.deepEqual(displayedFields, editableFields)
+  }
+
+  t.deepEqual(
+    getProfileDetailGroups({}, 'INSTRUCTOR').map(group => group.title),
+    ['Identité', 'Coordonnées professionnelles']
+  )
+  t.deepEqual(
+    getProfileDetailGroups({}, 'ADMIN').map(group => group.title),
+    ['Identité']
+  )
+})
+
+test('les valeurs absentes et les civilités sont présentées sans code technique', t => {
+  const emptyValues = getProfileDetailGroups({
+    declarantType: 'NATURAL_PERSON',
+    civility: 'UNKNOWN',
+    firstName: '  ',
+    lastName: null
+  }, 'DECLARANT')
+    .flatMap(group => group.items.map(item => item.value))
+
+  t.true(emptyValues.every(value => value === 'Non renseigné'))
+  t.is(
+    getProfileDetailGroups({declarantType: 'NATURAL_PERSON', civility: 'MR'}, 'DECLARANT')[0].items[0].value,
+    'M.'
+  )
+  t.is(
+    getProfileDetailGroups({declarantType: 'NATURAL_PERSON', civility: 'MRS'}, 'DECLARANT')[0].items[0].value,
+    'Mme'
+  )
 })
 
 test('les zones et permissions utilisent les libellés humains du catalogue', t => {

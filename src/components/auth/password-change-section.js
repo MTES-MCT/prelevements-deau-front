@@ -1,6 +1,6 @@
 'use client'
 
-import {useRef, useState} from 'react'
+import {useEffect, useRef, useState} from 'react'
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Button} from '@codegouvfr/react-dsfr/Button'
@@ -11,20 +11,30 @@ import {useAuthMethods} from '@/contexts/auth-methods-context.js'
 import {AUTH_METHODS, validateNewPassword} from '@/lib/auth-methods.js'
 import {changePasswordAction} from '@/server/actions/password-auth.js'
 
-const PasswordChangeSection = ({disabled = false}) => {
+const PasswordChangeSection = ({disabled = false, standalone = false}) => {
   const {login, user} = useAuth()
   const {available, methods} = useAuthMethods()
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
-  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [isFormOpen, setIsFormOpen] = useState(standalone)
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState(null)
   const [fieldError, setFieldError] = useState(null)
   const currentPasswordInputRef = useRef(null)
   const newPasswordInputRef = useRef(null)
   const confirmationInputRef = useRef(null)
+  const messageRef = useRef(null)
   const mutationDisabled = disabled || Boolean(user?.impersonation)
+
+  useEffect(() => {
+    if (!standalone || !message) {
+      return undefined
+    }
+
+    const frame = window.requestAnimationFrame(() => messageRef.current?.focus())
+    return () => window.cancelAnimationFrame(frame)
+  }, [message, standalone])
 
   const focusToggle = () => {
     window.requestAnimationFrame(() => document.querySelector('#account-password-toggle')?.focus())
@@ -51,8 +61,30 @@ const PasswordChangeSection = ({disabled = false}) => {
     setFieldError(previous => previous?.field === field ? null : previous)
   }
 
+  if (standalone && mutationDisabled) {
+    return (
+      <Alert
+        severity='warning'
+        title='Modification impossible avec un autre rôle'
+        description='Vous prenez actuellement la place de ce compte. Reprenez votre rôle initial avant de modifier son mot de passe.'
+      />
+    )
+  }
+
   if (!available || !methods.includes(AUTH_METHODS.PASSWORD)) {
-    return null
+    if (!standalone) {
+      return null
+    }
+
+    return (
+      <Alert
+        severity='info'
+        title={available ? 'Connexion sans mot de passe' : 'Configuration de connexion indisponible'}
+        description={available
+          ? 'Ce compte n’utilise pas de mot de passe. Utilisez votre mode de connexion habituel pour accéder au service.'
+          : 'La modification du mot de passe est temporairement indisponible. Réessayez dans quelques instants.'}
+      />
+    )
   }
 
   const handleSubmit = async event => {
@@ -106,7 +138,9 @@ const PasswordChangeSection = ({disabled = false}) => {
 
       setIsFormOpen(false)
       setMessage({severity: 'success', text: 'Vos autres sessions ont été fermées.'})
-      focusToggle()
+      if (!standalone) {
+        focusToggle()
+      }
     } catch {
       setCurrentPassword('')
       setFieldError({
@@ -124,29 +158,31 @@ const PasswordChangeSection = ({disabled = false}) => {
       aria-label='Mot de passe'
       className={isFormOpen || message ? 'w-full' : ''}
     >
-      <div className='flex justify-end'>
-        <Button
-          id='account-password-toggle'
-          type='button'
-          iconId='fr-icon-lock-line'
-          priority='tertiary no outline'
-          size='small'
-          disabled={mutationDisabled || isLoading}
-          nativeButtonProps={{
-            'aria-controls': isFormOpen ? 'account-password-change-form' : undefined,
-            'aria-expanded': isFormOpen,
-            'aria-label': isFormOpen
-              ? 'Fermer le formulaire de modification du mot de passe'
-              : 'Modifier mon mot de passe'
-          }}
-          onClick={isFormOpen ? closeForm : openForm}
-        >
-          {isFormOpen ? 'Fermer' : 'Modifier mon mot de passe'}
-        </Button>
-      </div>
+      {!standalone && (
+        <div className='flex justify-end'>
+          <Button
+            id='account-password-toggle'
+            type='button'
+            iconId='fr-icon-lock-line'
+            priority='tertiary no outline'
+            size='small'
+            disabled={mutationDisabled || isLoading}
+            nativeButtonProps={{
+              'aria-controls': isFormOpen ? 'account-password-change-form' : undefined,
+              'aria-expanded': isFormOpen,
+              'aria-label': isFormOpen
+                ? 'Fermer le formulaire de modification du mot de passe'
+                : 'Modifier mon mot de passe'
+            }}
+            onClick={isFormOpen ? closeForm : openForm}
+          >
+            {isFormOpen ? 'Fermer' : 'Modifier mon mot de passe'}
+          </Button>
+        </div>
+      )}
 
       {message && (
-        <div className='mt-4'>
+        <div ref={messageRef} className='mt-4' tabIndex={-1}>
           <Alert
             severity={message.severity}
             title={message.severity === 'success' ? 'Mot de passe modifié' : 'Modification impossible'}
@@ -158,7 +194,9 @@ const PasswordChangeSection = ({disabled = false}) => {
       {isFormOpen && (
         <form
           id='account-password-change-form'
-          className='mt-5 max-w-2xl border border-gray-200 bg-white p-4 md:p-5'
+          className={standalone
+            ? 'max-w-2xl'
+            : 'mt-5 max-w-2xl border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-4 md:p-5'}
           onSubmit={handleSubmit}
         >
           <Input
@@ -225,7 +263,7 @@ const PasswordChangeSection = ({disabled = false}) => {
             }}
           />
 
-          <p className='fr-text--xs fr-mb-0 text-gray-600'>
+          <p className='fr-text--xs fr-mb-0 text-[var(--text-mention-grey)]'>
             Vos autres sessions seront fermées.
           </p>
 
@@ -236,14 +274,33 @@ const PasswordChangeSection = ({disabled = false}) => {
             >
               {isLoading ? 'Enregistrement…' : 'Enregistrer'}
             </Button>
-            <Button
-              type='button'
-              priority='tertiary no outline'
-              disabled={mutationDisabled || isLoading}
-              onClick={closeForm}
-            >
-              Annuler
-            </Button>
+            {standalone ? (
+              isLoading ? (
+                <Button
+                  disabled
+                  type='button'
+                  priority='secondary'
+                >
+                  Annuler
+                </Button>
+              ) : (
+                <Button
+                  priority='secondary'
+                  linkProps={{href: '/mon-compte'}}
+                >
+                  Annuler
+                </Button>
+              )
+            ) : (
+              <Button
+                type='button'
+                priority='tertiary no outline'
+                disabled={mutationDisabled || isLoading}
+                onClick={closeForm}
+              >
+                Annuler
+              </Button>
+            )}
           </div>
         </form>
       )}

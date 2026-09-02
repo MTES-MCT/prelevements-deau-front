@@ -1,14 +1,13 @@
-'use client'
-
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
+import Link from 'next/link'
 
-import EmailAddressesSection from '@/components/account/email-addresses-section.js'
-import ProfileForm from '@/components/account/profile-form.js'
-import PasswordChangeSection from '@/components/auth/password-change-section.js'
+import ProfileDetails from '@/components/account/profile-details.js'
+import {getZoneTypeLabel} from '@/lib/account-profile.js'
 import {
-  getPermissionGroups,
-  getZoneTypeLabel
-} from '@/lib/account-profile.js'
+  EMAIL_VERIFICATION_PURPOSES,
+  getVerificationPresentation,
+  shouldDisplayEmailVerification
+} from '@/lib/email-verification.js'
 
 const DATE_FORMATTER = new Intl.DateTimeFormat('fr-FR', {
   dateStyle: 'long',
@@ -49,58 +48,26 @@ function formatZonePeriod(startDate, endDate) {
   return 'Accès permanent'
 }
 
-const AccountSection = ({id, title, children}) => (
+const AccountActionLink = ({children, href}) => (
+  <Link className='fr-btn fr-btn--secondary fr-btn--sm' href={href}>
+    {children}
+  </Link>
+)
+
+const AccountSection = ({action = null, children, id, title}) => (
   <section
     aria-labelledby={id}
-    className='flex min-w-0 flex-col gap-5 border border-gray-200 bg-white p-5 md:p-6'
+    className='flex min-w-0 flex-col gap-5 border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-5 md:p-6'
   >
-    <h2 className='fr-h4 fr-mb-0' id={id}>{title}</h2>
+    <div className='flex flex-wrap items-center justify-between gap-3'>
+      <h2 className='fr-h4 fr-mb-0' id={id}>{title}</h2>
+      {action}
+    </div>
     {children}
   </section>
 )
 
-const ZonePermissionDetails = ({catalog, zone}) => {
-  if (zone.isAdmin) {
-    return (
-      <span className='fr-badge fr-badge--sm fr-badge--success fr-badge--no-icon'>
-        Accès complet
-      </span>
-    )
-  }
-
-  const groups = getPermissionGroups(catalog, zone.permissions)
-  const permissionCount = zone.permissions?.length ?? 0
-
-  return (
-    <details>
-      <summary className='cursor-pointer fr-text--sm fr-text--bold'>
-        Voir les accès disponibles
-      </summary>
-      {groups.length > 0 ? (
-        <div className='mt-3 grid grid-cols-1 gap-3 md:grid-cols-2'>
-          {groups.map(group => (
-            <div key={group.code}>
-              <p className='fr-text--xs fr-text--bold fr-mb-1v'>{group.label}</p>
-              <ul className='fr-text--xs fr-mb-0 pl-5'>
-                {group.permissions.map(permission => (
-                  <li key={permission.code}>{permission.label}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className='fr-text--xs fr-mt-2w fr-mb-0'>
-          {permissionCount > 0
-            ? 'Le détail de ces droits est temporairement indisponible.'
-            : 'Aucun droit particulier n’est attribué.'}
-        </p>
-      )}
-    </details>
-  )
-}
-
-const InterventionZones = ({catalog, error, zones}) => (
+const InterventionZones = ({error, zones}) => (
   <AccountSection
     id='account-zones-title'
     title='Zones d’intervention'
@@ -119,7 +86,7 @@ const InterventionZones = ({catalog, error, zones}) => (
           {zones.map(zone => (
             <article
               key={zone.id}
-              className='flex flex-col gap-3 border border-gray-200 bg-[var(--background-alt-grey)] p-4'
+              className='flex flex-col gap-3 border border-[var(--border-default-grey)] bg-[var(--background-alt-grey)] p-4'
             >
               <div className='flex flex-wrap items-start justify-between gap-2'>
                 <h3 className='fr-h6 fr-mb-0'>{zone.name}</h3>
@@ -128,7 +95,6 @@ const InterventionZones = ({catalog, error, zones}) => (
                 </span>
               </div>
               <p className='fr-text--sm fr-mb-0'>{formatZonePeriod(zone.startDate, zone.endDate)}</p>
-              <ZonePermissionDetails catalog={catalog} zone={zone} />
             </article>
           ))}
         </div>
@@ -137,82 +103,161 @@ const InterventionZones = ({catalog, error, zones}) => (
   </AccountSection>
 )
 
-const AccountPage = ({
-  initialNow,
-  initialUser,
-  isImpersonating = false,
-  role,
-  zonePermissionCatalog = null,
-  zones = [],
-  zonesError = false
-}) => {
-  const lastLogin = formatDate(initialUser.lastLoginAt, DATE_TIME_FORMATTER)
+const EmailDetails = ({initialNow, user}) => {
+  const displayedVerifications = (user.emailVerifications ?? [])
+    .filter(verification => shouldDisplayEmailVerification(verification))
 
   return (
-    <div className='min-h-screen bg-[#f7f7fb] pb-12'>
-      <div className='fr-container pt-8 md:pt-10'>
-        <header className='mx-auto mb-6 max-w-5xl'>
-          <h1 className='fr-h2 fr-mb-2w'>Mon compte</h1>
-          <p className='fr-text--sm fr-mb-0 text-gray-700'>
-            Gérez vos informations et vos accès.
-          </p>
-        </header>
-
-        <div className='mx-auto flex max-w-5xl flex-col gap-6'>
-          <AccountSection
-            id='account-profile-title'
-            title='Informations'
-          >
-            <ProfileForm initialUser={initialUser} role={role} />
-          </AccountSection>
-
-          <div className='min-w-0 border border-gray-200 bg-white p-5 md:p-6'>
-            <EmailAddressesSection
-              initialAliases={initialUser.emailAliases ?? []}
-              initialNow={initialNow}
-              initialVerifications={initialUser.emailVerifications ?? []}
-              primaryEmail={initialUser.email}
-            />
-          </div>
-
-          {role === 'INSTRUCTOR' && (
-            <InterventionZones
-              catalog={zonePermissionCatalog}
-              error={zonesError}
-              zones={zones}
-            />
-          )}
-
-          <section
-            aria-labelledby='account-security-title'
-            className='mt-2 border-t border-gray-300 pt-5'
-          >
-            <div className='flex flex-wrap items-start justify-between gap-4'>
-              <div>
-                <h2 className='fr-h6 fr-mb-1v' id='account-security-title'>Sécurité</h2>
-                <p className='fr-text--xs fr-mb-0 text-gray-600'>
-                  Dernière connexion :{' '}
-                  {lastLogin
-                    ? <time dateTime={initialUser.lastLoginAt}>{lastLogin}</time>
-                    : 'aucune connexion enregistrée'}
-                </p>
-              </div>
-
-              {!isImpersonating && <PasswordChangeSection />}
-            </div>
-          </section>
-
-          <section aria-labelledby='account-personal-data-title'>
-            <h2 className='sr-only' id='account-personal-data-title'>Données personnelles</h2>
-            <p className='fr-text--xs fr-mb-0 text-gray-600'>
-              Vous pouvez demander l’accès, la rectification ou la suppression de vos données à{' '}
-              <a href='mailto:contact@partageonsleau.beta.gouv.fr'>contact@partageonsleau.beta.gouv.fr</a>.
-            </p>
-          </section>
+    <AccountSection
+      action={(
+        <AccountActionLink href='/mon-compte/adresses-email'>
+          Gérer mes adresses e-mail
+        </AccountActionLink>
+      )}
+      id='account-emails-title'
+      title='Adresses e-mail'
+    >
+      <dl className='m-0 grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2'>
+        <div>
+          <dt className='fr-text--xs fr-mb-1v text-[var(--text-mention-grey)]'>Adresse principale</dt>
+          <dd className='fr-text--sm fr-mb-0 break-all'>{user.email || 'Non renseigné'}</dd>
         </div>
-      </div>
-    </div>
+        <div>
+          <dt className='fr-text--xs fr-mb-1v text-[var(--text-mention-grey)]'>Autres adresses de connexion</dt>
+          <dd className='fr-text--sm fr-mb-0'>
+            {(user.emailAliases ?? []).length > 0 ? (
+              <ul className='m-0 flex list-none flex-col gap-1 p-0'>
+                {user.emailAliases.map(alias => (
+                  <li key={alias.id ?? alias.email} className='break-all'>{alias.email}</li>
+                ))}
+              </ul>
+            ) : 'Aucune autre adresse'}
+          </dd>
+        </div>
+      </dl>
+
+      {displayedVerifications.length > 0 && (
+        <div className='border-t border-[var(--border-default-grey)] pt-4'>
+          <h3 className='fr-h6 fr-mb-2w'>Demandes en cours</h3>
+          <ul className='m-0 flex list-none flex-col gap-3 p-0'>
+            {displayedVerifications.map(verification => {
+              const presentation = getVerificationPresentation(verification, initialNow)
+              const purposeLabel = verification.purpose === EMAIL_VERIFICATION_PURPOSES.primary
+                ? 'Nouvelle adresse principale'
+                : 'Nouvelle adresse de connexion'
+
+              return (
+                <li
+                  key={verification.id}
+                  className='flex flex-wrap items-center justify-between gap-3 bg-[var(--background-alt-grey)] p-3'
+                >
+                  <div className='min-w-0'>
+                    <p className='fr-text--xs fr-mb-1v text-[var(--text-mention-grey)]'>{purposeLabel}</p>
+                    <p className='fr-text--sm fr-mb-0 break-all'>{verification.email}</p>
+                  </div>
+                  <span className={`fr-badge fr-badge--sm fr-badge--no-icon ${presentation.badgeClassName}`}>
+                    {presentation.label}
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
+    </AccountSection>
   )
 }
+
+const SecurityDetails = ({canManageSecurity, lastLoginAt}) => {
+  const lastLogin = formatDate(lastLoginAt, DATE_TIME_FORMATTER)
+
+  return (
+    <AccountSection
+      action={canManageSecurity ? (
+        <AccountActionLink href='/mon-compte/securite'>
+          Gérer la sécurité
+        </AccountActionLink>
+      ) : null}
+      id='account-security-title'
+      title='Sécurité'
+    >
+      <dl className='m-0'>
+        <div>
+          <dt className='fr-text--xs fr-mb-1v text-[var(--text-mention-grey)]'>Dernière connexion</dt>
+          <dd className='fr-text--sm fr-mb-0'>
+            {lastLogin
+              ? <time dateTime={lastLoginAt}>{lastLogin}</time>
+              : 'Aucune connexion enregistrée'}
+          </dd>
+        </div>
+      </dl>
+    </AccountSection>
+  )
+}
+
+const AccountPage = ({
+  canManageSecurity = false,
+  initialNow,
+  initialUser,
+  profileUpdated = false,
+  role,
+  zones = [],
+  zonesError = false
+}) => (
+  <div className='min-h-screen bg-[var(--background-alt-grey)] pb-12'>
+    <div className='fr-container pt-8 md:pt-10'>
+      <header className='mx-auto mb-6 max-w-5xl'>
+        <h1 className='fr-h2 fr-mb-2w'>Mon compte</h1>
+        <p className='fr-text--sm fr-mb-0 text-[var(--text-default-grey)]'>
+          Consultez vos informations et gérez votre compte.
+        </p>
+      </header>
+
+      <div className='mx-auto flex max-w-5xl flex-col gap-6'>
+        {profileUpdated && (
+          <Alert
+            severity='success'
+            title='Informations enregistrées'
+            description='Votre profil a bien été mis à jour.'
+          />
+        )}
+
+        <AccountSection
+          action={(
+            <AccountActionLink href='/mon-compte/modifier'>
+              Modifier mes informations
+            </AccountActionLink>
+          )}
+          id='account-profile-title'
+          title='Informations'
+        >
+          <ProfileDetails role={role} user={initialUser} />
+        </AccountSection>
+
+        <EmailDetails initialNow={initialNow} user={initialUser} />
+
+        <SecurityDetails
+          canManageSecurity={canManageSecurity}
+          lastLoginAt={initialUser.lastLoginAt}
+        />
+
+        {role === 'INSTRUCTOR' && (
+          <InterventionZones
+            error={zonesError}
+            zones={zones}
+          />
+        )}
+
+        <section aria-labelledby='account-personal-data-title'>
+          <h2 className='sr-only' id='account-personal-data-title'>Données personnelles</h2>
+          <p className='fr-text--xs fr-mb-0 text-[var(--text-mention-grey)]'>
+            Vous pouvez demander l’accès, la rectification ou la suppression de vos données à{' '}
+            <a href='mailto:contact@partageonsleau.beta.gouv.fr'>contact@partageonsleau.beta.gouv.fr</a>.
+          </p>
+        </section>
+      </div>
+    </div>
+  </div>
+)
 
 export default AccountPage

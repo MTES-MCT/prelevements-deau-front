@@ -36,7 +36,12 @@ function getProfileActionError(result) {
 
 // Les variantes de formulaire sont volontairement regroupées pour partager les mêmes règles et retours accessibles.
 // eslint-disable-next-line complexity
-const ProfileForm = ({initialUser, role, disabled = false}) => {
+const ProfileForm = ({
+  disabled = false,
+  initialUser,
+  role,
+  standalone = false
+}) => {
   const router = useRouter()
   const {refreshUser} = useAuth()
   const [savedUser, setSavedUser] = useState(initialUser)
@@ -114,6 +119,11 @@ const ProfileForm = ({initialUser, role, disabled = false}) => {
         // Le profil est enregistré ; le prochain chargement rafraîchira la session.
       }
 
+      if (standalone) {
+        router.replace('/mon-compte?updated=profile')
+        return
+      }
+
       router.refresh()
     } catch {
       setMessage({
@@ -146,7 +156,7 @@ const ProfileForm = ({initialUser, role, disabled = false}) => {
         />
       )}
 
-      <div className={isLegalPerson ? 'border-t border-gray-200 pt-5' : ''}>
+      <div className={isLegalPerson ? 'border-t border-[var(--border-default-grey)] pt-5' : ''}>
         {isDeclarant && (
           <h3 className='fr-h6 fr-mb-2w'>
             {isLegalPerson ? 'Contact principal' : 'Identité'}
@@ -209,7 +219,7 @@ const ProfileForm = ({initialUser, role, disabled = false}) => {
       </div>
 
       {hasContactDetails && (
-        <div className='border-t border-gray-200 pt-5'>
+        <div className='border-t border-[var(--border-default-grey)] pt-5'>
           <h3 className='fr-h6 fr-mb-2w'>Coordonnées professionnelles</h3>
           <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
             <Input
@@ -248,7 +258,7 @@ const ProfileForm = ({initialUser, role, disabled = false}) => {
       )}
 
       {isDeclarant && (
-        <div className='border-t border-gray-200 pt-5'>
+        <div className='border-t border-[var(--border-default-grey)] pt-5'>
           <h3 className='fr-h6 fr-mb-2w'>Adresse postale</h3>
           <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
             <Input
@@ -337,7 +347,7 @@ const ProfileForm = ({initialUser, role, disabled = false}) => {
         </div>
       )}
 
-      <div className='flex justify-end border-t border-gray-200 pt-5'>
+      <div className='flex flex-wrap justify-end gap-2 border-t border-[var(--border-default-grey)] pt-5'>
         <Button
           type='submit'
           disabled={disabled
@@ -346,6 +356,16 @@ const ProfileForm = ({initialUser, role, disabled = false}) => {
         >
           {isSubmitting ? 'Enregistrement en cours…' : 'Enregistrer mes informations'}
         </Button>
+        {standalone && (
+          <Button
+            type='button'
+            priority='secondary'
+            disabled={isSubmitting}
+            onClick={() => router.push('/mon-compte')}
+          >
+            Annuler
+          </Button>
+        )}
       </div>
     </form>
   )
