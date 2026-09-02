@@ -8,16 +8,18 @@ const AccountRouteLayout = ({
   description = null,
   title
 }) => (
-  <div className='min-h-screen bg-[var(--background-alt-grey)] pb-12'>
+  <div className='min-h-screen bg-[#f7f7fb] pb-12'>
     <div className='fr-container pt-8 md:pt-10'>
       <div className='mx-auto max-w-5xl'>
         {backHref && (
-          <Link
-            className='fr-link fr-icon-arrow-left-line fr-link--icon-left fr-mb-3w'
-            href={backHref}
-          >
-            {backLabel}
-          </Link>
+          <div className='mb-6'>
+            <Link
+              className='fr-link fr-icon-arrow-left-line fr-link--icon-left'
+              href={backHref}
+            >
+              {backLabel}
+            </Link>
+          </div>
         )}
 
         <header className='mb-6'>
