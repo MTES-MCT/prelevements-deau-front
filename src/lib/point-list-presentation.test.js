@@ -5,7 +5,7 @@ import {
   getUsageMarkerBackground
 } from './point-list-presentation.js'
 
-test('prépare les quatre tuiles et trie les préleveurs', t => {
+test('prépare les cinq tuiles et trie les préleveurs', t => {
   const presentation = createPointListPresentation({
     flowType: 'REJET',
     nature: 'COURS_EAU',
@@ -15,6 +15,7 @@ test('prépare les quatre tuiles et trie les préleveurs', t => {
       {code: '5', label: 'Eau potable'},
       {code: '4', label: 'Industrie'}
     ],
+    waterBodyType: 'SOUTERRAIN',
     withdrawalType: 'CONTINENTAL'
   })
 
@@ -31,6 +32,10 @@ test('prépare les quatre tuiles et trie les préleveurs', t => {
     accessibleLabel: 'Origine prélèvement / rejet : Cours d’eau',
     label: 'Cours d’eau'
   })
+  t.deepEqual(presentation.waterBodyType, {
+    accessibleLabel: 'Type de milieu : Eau souterraine',
+    label: 'Eau souterraine'
+  })
 })
 
 test('affiche un usage gris et omet les caractéristiques absentes', t => {
@@ -41,6 +46,7 @@ test('affiche un usage gris et omet les caractéristiques absentes', t => {
   t.is(presentation.usage.markerBackground, '#929292')
   t.is(presentation.withdrawalType, null)
   t.is(presentation.nature, null)
+  t.is(presentation.waterBodyType, null)
   t.deepEqual(presentation.preleveurLabels, [])
 })
 

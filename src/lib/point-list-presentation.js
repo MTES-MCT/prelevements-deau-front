@@ -5,6 +5,7 @@ import {
 import {getPointFlowType, getPointFlowTypeLabel} from '@/lib/point-flow-types.js'
 import {
   MISSING_USAGE_KEY,
+  WATER_BODY_TYPE_LABELS,
   getPointUsageRootKeys
 } from '@/lib/points-prelevement-filters.js'
 import {getUsageColor, getUsageLabel} from '@/lib/water-uses.js'
@@ -44,6 +45,19 @@ const getOptionalTile = (labels, value, accessibleLabel) => value
   }
   : null
 
+const getWaterBodyTypeTile = value => {
+  if (!value) {
+    return null
+  }
+
+  const label = WATER_BODY_TYPE_LABELS[value] ?? value
+
+  return {
+    accessibleLabel: `Type de milieu : ${label}`,
+    label
+  }
+}
+
 export function createPointListPresentation(point) {
   const flowType = getPointFlowType(point)
   const flowTypeLabel = getPointFlowTypeLabel(flowType)
@@ -74,6 +88,7 @@ export function createPointListPresentation(point) {
       label: getUsageSummary(usageLabels),
       markerBackground: getUsageMarkerBackground(usageKeys)
     },
+    waterBodyType: getWaterBodyTypeTile(point?.waterBodyType),
     withdrawalType: getOptionalTile(
       pointWithdrawalTypeLabels,
       point?.withdrawalType,

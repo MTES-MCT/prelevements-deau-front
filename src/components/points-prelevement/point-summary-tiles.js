@@ -19,6 +19,15 @@ const PointSummaryTiles = ({presentation}) => (
       <span className='sr-only'>Type de point : </span>
       {presentation.flowType.label}
     </span>
+    {presentation.waterBodyType && (
+      <span
+        className='inline-flex items-center border border-gray-200 bg-gray-100 px-1.5 py-0.5'
+        title={presentation.waterBodyType.accessibleLabel}
+      >
+        <span className='sr-only'>Type de milieu : </span>
+        {presentation.waterBodyType.label}
+      </span>
+    )}
     {presentation.withdrawalType && (
       <span
         className='inline-flex items-center border border-gray-200 bg-gray-100 px-1.5 py-0.5'
