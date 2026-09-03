@@ -57,12 +57,10 @@ const MagicLinkForm = ({email, setEmail, urlError}) => {
     return (
       <Alert
         severity='success'
-        title='Email envoyé'
+        title='Demande de connexion prise en compte'
         description={(
           <>
-            {'Si ce compte existe et dispose des droits nécessaires, un email de connexion a été envoyé à '}<strong>{email}</strong>.
-            <br /><br />
-            Vérifiez votre boîte de réception et cliquez sur le lien correspondant à votre territoire pour vous connecter.
+            Si <strong>{email}</strong> correspond à un compte autorisé, vous recevrez un email contenant un lien de connexion. Vérifiez votre boîte de réception ainsi que vos courriers indésirables.
           </>
         )}
       />
