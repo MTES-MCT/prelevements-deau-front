@@ -3,13 +3,14 @@ name: Deploy (testing) to Scaleway
 on:
   push:
     branches: ["testing"]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
   group: deploy-testing
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   test_build_deploy:
@@ -22,12 +23,42 @@ jobs:
       SCW_REGISTRY_ENDPOINT: ${{ vars.SCW_REGISTRY_ENDPOINT }}
       SCW_IMAGE_NAME: ${{ vars.SCW_IMAGE_NAME }}
       SCW_SERVERLESS_CONTAINER_ID: ${{ secrets.SCW_SERVERLESS_CONTAINER_ID_TESTING }}
+      SCW_EXPECTED_PROJECT_ID: 8b2f67a8-b474-4596-967f-fe1e0adba1b3
+      SCW_EXPECTED_ORGANIZATION_ID: aae4422f-c198-4638-b9e5-977938791f14
+      SCW_TESTING_NAMESPACE_ID: bfb37e50-4bd4-42dc-94ca-2064f8b46898
+      SCW_TESTING_CONTAINER_ID_FRONT: 275df624-d21d-4a27-9f28-d28b5fb0d63c
       NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
       NEXT_PUBLIC_DEPLOY_ENV: testing
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Validate testing CI configuration
+        env:
+          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+          SCW_CONFIGURED_PROJECT_ID: ${{ secrets.SCW_DEFAULT_PROJECT_ID }}
+          SCW_CONFIGURED_ORGANIZATION_ID: ${{ secrets.SCW_DEFAULT_ORGANIZATION_ID }}
+        run: |
+          set -euo pipefail
+
+          [[ "$GITHUB_REPOSITORY" == "MTES-MCT/prelevements-deau-front" \
+            && "$GITHUB_REF_TYPE" == "branch" && "$GITHUB_REF_NAME" == "testing" ]] || {
+            echo "::error::This workflow can only deploy this repository's testing branch"
+            exit 1
+          }
+          [[ -n "$SCW_ACCESS_KEY" && -n "$SCW_SECRET_KEY" \
+            && -n "$NEXT_PUBLIC_API_URL" \
+            && "$SCW_CONFIGURED_PROJECT_ID" == "$SCW_EXPECTED_PROJECT_ID" \
+            && "$SCW_CONFIGURED_ORGANIZATION_ID" == "$SCW_EXPECTED_ORGANIZATION_ID" \
+            && "$SCW_SERVERLESS_CONTAINER_ID" == "$SCW_TESTING_CONTAINER_ID_FRONT" \
+            && "$SCW_REGION" == "fr-par" \
+            && "$SCW_REGISTRY_ENDPOINT" == "rg.fr-par.scw.cloud/prelevements-deau-front" \
+            && "$SCW_IMAGE_NAME" == "prelevements-deau-front" ]] || {
+            echo "::error::Unexpected or missing testing CI configuration"
+            exit 1
+          }
 
       - name: Use Node.js 24.x
         uses: actions/setup-node@v4
@@ -74,22 +105,64 @@ jobs:
 
       - name: Install Scaleway CLI
         run: |
-          curl -fsSL https://raw.githubusercontent.com/scaleway/scaleway-cli/master/scripts/get.sh | sh
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/scaleway/scaleway-cli/master/scripts/get.sh \
+            | VERSION=2.58.3 sh
           scw version
 
       - name: Deploy to Scaleway Serverless Container (testing)
         env:
           SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
           SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
-          SCW_DEFAULT_PROJECT_ID: ${{ secrets.SCW_DEFAULT_PROJECT_ID }}
-          SCW_DEFAULT_ORGANIZATION_ID: ${{ secrets.SCW_DEFAULT_ORGANIZATION_ID }}
+          SCW_DEFAULT_PROJECT_ID: ${{ env.SCW_EXPECTED_PROJECT_ID }}
+          SCW_DEFAULT_ORGANIZATION_ID: ${{ env.SCW_EXPECTED_ORGANIZATION_ID }}
           SCW_DEFAULT_REGION: ${{ env.SCW_REGION }}
           SCW_SERVERLESS_CONTAINER_ID_TESTING: ${{ secrets.SCW_SERVERLESS_CONTAINER_ID_TESTING }}
           SCW_REGISTRY_ENDPOINT: ${{ env.SCW_REGISTRY_ENDPOINT }}
           SCW_IMAGE_NAME: ${{ env.SCW_IMAGE_NAME }}
         run: |
-          scw container container update "$SCW_SERVERLESS_CONTAINER_ID_TESTING" \
-            image="$SCW_REGISTRY_ENDPOINT/$SCW_IMAGE_NAME:testing-${{ github.sha }}" \
+          set -euo pipefail
+
+          [[ "$SCW_SERVERLESS_CONTAINER_ID_TESTING" == "$SCW_TESTING_CONTAINER_ID_FRONT" ]] || {
+            echo "::error::Refusing a non-testing front container"
+            exit 1
+          }
+          namespace="$(scw container namespace get "$SCW_TESTING_NAMESPACE_ID" \
+            region="$SCW_REGION" -o json 2>/dev/null)" || {
+            echo "::error::Cannot read testing namespace"
+            exit 1
+          }
+          container="$(scw container container get "$SCW_TESTING_CONTAINER_ID_FRONT" \
+            region="$SCW_REGION" -o json 2>/dev/null)" || {
+            echo "::error::Cannot read testing front container"
+            exit 1
+          }
+          [[ "$(jq -er '.project_id' <<< "$namespace")" == "$SCW_EXPECTED_PROJECT_ID" \
+            && "$(jq -er '.name' <<< "$namespace")" == "testing-partageons-leau" \
+            && "$(jq -er '.namespace_id' <<< "$container")" == "$SCW_TESTING_NAMESPACE_ID" \
+            && "$(jq -er '.name' <<< "$container")" == "testing-prelevement-deau-front" ]] || {
+            echo "::error::Unexpected testing resource ownership"
+            exit 1
+          }
+
+          configuration_snapshot() {
+            jq -cS '{environment_variables: (.environment_variables // {}), secret_keys: ((.secret_environment_variables // {}) | keys | sort)}'
+          }
+          namespace_configuration="$(configuration_snapshot <<< "$namespace")"
+          container_configuration="$(configuration_snapshot <<< "$container")"
+          health_base_url="$(jq -er '.public_endpoint' <<< "$container")"
+          [[ "$health_base_url" == https://*.functions.fnc.fr-par.scw.cloud ]] || {
+            echo "::error::Unexpected testing front health endpoint"
+            exit 1
+          }
+          image_ref="$SCW_REGISTRY_ENDPOINT/$SCW_IMAGE_NAME:testing-${{ github.sha }}"
+          [[ "$image_ref" =~ :testing-[0-9a-f]{40}$ ]] || {
+            echo "::error::Refusing a non-testing image tag"
+            exit 1
+          }
+
+          scw container container update "$SCW_TESTING_CONTAINER_ID_FRONT" \
+            image="$image_ref" \
             liveness-probe.http.path=/healthz \
             liveness-probe.interval=10s \
             liveness-probe.timeout=2s \
@@ -97,4 +170,39 @@ jobs:
             startup-probe.http.path=/healthz \
             startup-probe.interval=5s \
             startup-probe.timeout=2s \
-            startup-probe.failure-threshold=30
+            startup-probe.failure-threshold=30 \
+            region="$SCW_REGION" --wait >/dev/null 2>&1 || {
+            echo "::error::Testing front deployment failed; inspect the container in Scaleway"
+            exit 1
+          }
+
+          updated="$(scw container container get "$SCW_TESTING_CONTAINER_ID_FRONT" \
+            region="$SCW_REGION" -o json 2>/dev/null)" || {
+            echo "::error::Cannot verify testing front deployment"
+            exit 1
+          }
+          updated_namespace="$(scw container namespace get "$SCW_TESTING_NAMESPACE_ID" \
+            region="$SCW_REGION" -o json 2>/dev/null)" || {
+            echo "::error::Cannot verify testing namespace configuration"
+            exit 1
+          }
+          [[ "$(jq -er '.status' <<< "$updated")" == "ready" \
+            && "$(jq -er '.image' <<< "$updated")" == "$image_ref" \
+            && "$(jq -er '.namespace_id' <<< "$updated")" == "$SCW_TESTING_NAMESPACE_ID" \
+            && "$(jq -er '.public_endpoint' <<< "$updated")" == "$health_base_url" \
+            && "$(configuration_snapshot <<< "$updated")" == "$container_configuration" \
+            && "$(configuration_snapshot <<< "$updated_namespace")" == "$namespace_configuration" ]] || {
+            echo "::error::Unexpected testing deployment result or environment configuration drift"
+            exit 1
+          }
+          health_status="$(curl --fail --silent --output /dev/null --write-out '%{http_code}' \
+            --connect-timeout 5 --max-time 20 --retry 8 --retry-delay 3 --retry-all-errors \
+            "${health_base_url%/}/healthz")" || {
+            echo "::error::Testing front health check failed"
+            exit 1
+          }
+          [[ "$health_status" == "200" ]] || {
+            echo "::error::Testing front health check did not return HTTP 200"
+            exit 1
+          }
+          echo "Testing front ready; image, health and environment configuration verified"
