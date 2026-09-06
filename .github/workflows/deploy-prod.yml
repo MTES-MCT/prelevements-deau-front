@@ -3,13 +3,14 @@ name: Deploy (prod) to Scaleway
 on:
   push:
     branches: ["prod"]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
   group: deploy-prod
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   test_build_deploy:
@@ -22,12 +23,42 @@ jobs:
       SCW_REGISTRY_ENDPOINT: ${{ vars.SCW_REGISTRY_ENDPOINT }}
       SCW_IMAGE_NAME: ${{ vars.SCW_IMAGE_NAME }}
       SCW_SERVERLESS_CONTAINER_ID: ${{ secrets.SCW_SERVERLESS_CONTAINER_ID_PROD }}
+      SCW_EXPECTED_PROJECT_ID: 8b2f67a8-b474-4596-967f-fe1e0adba1b3
+      SCW_EXPECTED_ORGANIZATION_ID: aae4422f-c198-4638-b9e5-977938791f14
+      SCW_PROD_NAMESPACE_ID: fa4179ac-8658-4440-963b-66d669a452d5
+      SCW_PROD_CONTAINER_ID_FRONT: 9e8f735f-c823-45a0-8e57-33f816c6bf30
       NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
       NEXT_PUBLIC_DEPLOY_ENV: prod
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Validate prod CI configuration
+        env:
+          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+          SCW_CONFIGURED_PROJECT_ID: ${{ secrets.SCW_DEFAULT_PROJECT_ID }}
+          SCW_CONFIGURED_ORGANIZATION_ID: ${{ secrets.SCW_DEFAULT_ORGANIZATION_ID }}
+        run: |
+          set -euo pipefail
+
+          [[ "$GITHUB_REPOSITORY" == "MTES-MCT/prelevements-deau-front" \
+            && "$GITHUB_REF_TYPE" == "branch" && "$GITHUB_REF_NAME" == "prod" ]] || {
+            echo "::error::This workflow can only deploy this repository's prod branch"
+            exit 1
+          }
+          [[ -n "$SCW_ACCESS_KEY" && -n "$SCW_SECRET_KEY" \
+            && -n "$NEXT_PUBLIC_API_URL" \
+            && "$SCW_CONFIGURED_PROJECT_ID" == "$SCW_EXPECTED_PROJECT_ID" \
+            && "$SCW_CONFIGURED_ORGANIZATION_ID" == "$SCW_EXPECTED_ORGANIZATION_ID" \
+            && "$SCW_SERVERLESS_CONTAINER_ID" == "$SCW_PROD_CONTAINER_ID_FRONT" \
+            && "$SCW_REGION" == "fr-par" \
+            && "$SCW_REGISTRY_ENDPOINT" == "rg.fr-par.scw.cloud/prelevements-deau-front" \
+            && "$SCW_IMAGE_NAME" == "prelevements-deau-front" ]] || {
+            echo "::error::Unexpected or missing prod CI configuration"
+            exit 1
+          }
 
       - name: Use Node.js 24.x
         uses: actions/setup-node@v4
@@ -74,27 +105,105 @@ jobs:
 
       - name: Install Scaleway CLI
         run: |
-          curl -fsSL https://raw.githubusercontent.com/scaleway/scaleway-cli/master/scripts/get.sh | VERSION=2.56.0 sh
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/scaleway/scaleway-cli/master/scripts/get.sh \
+            | VERSION=2.58.3 sh
           scw version
 
       - name: Deploy to Scaleway Serverless Container (prod)
         env:
           SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
           SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
-          SCW_DEFAULT_PROJECT_ID: ${{ secrets.SCW_DEFAULT_PROJECT_ID }}
-          SCW_DEFAULT_ORGANIZATION_ID: ${{ secrets.SCW_DEFAULT_ORGANIZATION_ID }}
+          SCW_DEFAULT_PROJECT_ID: ${{ env.SCW_EXPECTED_PROJECT_ID }}
+          SCW_DEFAULT_ORGANIZATION_ID: ${{ env.SCW_EXPECTED_ORGANIZATION_ID }}
           SCW_DEFAULT_REGION: ${{ env.SCW_REGION }}
           SCW_SERVERLESS_CONTAINER_ID_PROD: ${{ secrets.SCW_SERVERLESS_CONTAINER_ID_PROD }}
           SCW_REGISTRY_ENDPOINT: ${{ env.SCW_REGISTRY_ENDPOINT }}
           SCW_IMAGE_NAME: ${{ env.SCW_IMAGE_NAME }}
         run: |
-          scw container container update "$SCW_SERVERLESS_CONTAINER_ID_PROD" \
-            image="$SCW_REGISTRY_ENDPOINT/$SCW_IMAGE_NAME:prod-${{ github.sha }}" \
-            liveness-probe.http.path=/healthz \
-            liveness-probe.interval=10s \
-            liveness-probe.timeout=2s \
-            liveness-probe.failure-threshold=5 \
-            startup-probe.http.path=/healthz \
-            startup-probe.interval=5s \
-            startup-probe.timeout=2s \
-            startup-probe.failure-threshold=30
+          set -euo pipefail
+
+          [[ "$SCW_SERVERLESS_CONTAINER_ID_PROD" == "$SCW_PROD_CONTAINER_ID_FRONT" ]] || {
+            echo "::error::Refusing a non-prod front container"
+            exit 1
+          }
+          namespace="$(scw container namespace get "$SCW_PROD_NAMESPACE_ID" \
+            region="$SCW_REGION" -o json 2>/dev/null)" || {
+            echo "::error::Cannot read prod namespace"
+            exit 1
+          }
+          container="$(scw container container get "$SCW_PROD_CONTAINER_ID_FRONT" \
+            region="$SCW_REGION" -o json 2>/dev/null)" || {
+            echo "::error::Cannot read prod front container"
+            exit 1
+          }
+          [[ "$(jq -er '.id' <<< "$namespace")" == "$SCW_PROD_NAMESPACE_ID" \
+            && "$(jq -er '.project_id' <<< "$namespace")" == "$SCW_EXPECTED_PROJECT_ID" \
+            && "$(jq -er '.organization_id' <<< "$namespace")" == "$SCW_EXPECTED_ORGANIZATION_ID" \
+            && "$(jq -er '.name' <<< "$namespace")" == "prod-partageons-leau" \
+            && "$(jq -er '.id' <<< "$container")" == "$SCW_PROD_CONTAINER_ID_FRONT" \
+            && "$(jq -er '.namespace_id' <<< "$container")" == "$SCW_PROD_NAMESPACE_ID" \
+            && "$(jq -er '.name' <<< "$container")" == "prod-prelevement-deau-front" ]] || {
+            echo "::error::Unexpected prod resource ownership"
+            exit 1
+          }
+          [[ "$(jq -er '.status' <<< "$container")" == "ready" ]] || {
+            echo "::error::Prod front must be ready before a new deployment"
+            exit 1
+          }
+
+          namespace_snapshot() {
+            jq -cS '{environment_variables: (.environment_variables // {}), secret_keys: ((.secret_environment_variables // {}) | keys | sort)}'
+          }
+          container_snapshot() {
+            jq -cS '{environment_variables: (.environment_variables // {}), secret_keys: ((.secret_environment_variables // {}) | keys | sort), command, args, min_scale, max_scale, memory_limit_bytes, mvcpu_limit, port, timeout, privacy, protocol, https_connections_only, sandbox, private_network_id, liveness_probe, startup_probe, scaling_option, health_check}'
+          }
+          namespace_configuration="$(namespace_snapshot <<< "$namespace")"
+          container_configuration="$(container_snapshot <<< "$container")"
+          health_base_url="$(jq -er '.public_endpoint' <<< "$container")"
+          [[ "$health_base_url" == https://*.functions.fnc.fr-par.scw.cloud ]] || {
+            echo "::error::Unexpected prod front health endpoint"
+            exit 1
+          }
+          image_ref="$SCW_REGISTRY_ENDPOINT/$SCW_IMAGE_NAME:prod-${{ github.sha }}"
+          [[ "$image_ref" =~ :prod-[0-9a-f]{40}$ ]] || {
+            echo "::error::Refusing a non-prod image tag"
+            exit 1
+          }
+
+          scw container container update "$SCW_PROD_CONTAINER_ID_FRONT" \
+            image="$image_ref" region="$SCW_REGION" --wait >/dev/null 2>&1 || {
+            echo "::error::Prod front deployment failed; inspect the container in Scaleway"
+            exit 1
+          }
+
+          updated="$(scw container container get "$SCW_PROD_CONTAINER_ID_FRONT" \
+            region="$SCW_REGION" -o json 2>/dev/null)" || {
+            echo "::error::Cannot verify prod front deployment"
+            exit 1
+          }
+          updated_namespace="$(scw container namespace get "$SCW_PROD_NAMESPACE_ID" \
+            region="$SCW_REGION" -o json 2>/dev/null)" || {
+            echo "::error::Cannot verify prod namespace configuration"
+            exit 1
+          }
+          [[ "$(jq -er '.status' <<< "$updated")" == "ready" \
+            && "$(jq -er '.image' <<< "$updated")" == "$image_ref" \
+            && "$(jq -er '.namespace_id' <<< "$updated")" == "$SCW_PROD_NAMESPACE_ID" \
+            && "$(jq -er '.public_endpoint' <<< "$updated")" == "$health_base_url" \
+            && "$(container_snapshot <<< "$updated")" == "$container_configuration" \
+            && "$(namespace_snapshot <<< "$updated_namespace")" == "$namespace_configuration" ]] || {
+            echo "::error::Unexpected prod deployment result or configuration drift"
+            exit 1
+          }
+          health_status="$(curl --fail --silent --output /dev/null --write-out '%{http_code}' \
+            --connect-timeout 5 --max-time 20 --retry 8 --retry-delay 3 --retry-all-errors \
+            "${health_base_url%/}/healthz")" || {
+            echo "::error::Prod front health check failed"
+            exit 1
+          }
+          [[ "$health_status" == "200" ]] || {
+            echo "::error::Prod front health check did not return HTTP 200"
+            exit 1
+          }
+          echo "Prod front ready; image, health, settings and environment configuration verified"
