@@ -49,7 +49,6 @@ jobs:
             exit 1
           }
           [[ -n "$SCW_ACCESS_KEY" && -n "$SCW_SECRET_KEY" \
-            && -n "$NEXT_PUBLIC_API_URL" \
             && "$SCW_CONFIGURED_PROJECT_ID" == "$SCW_EXPECTED_PROJECT_ID" \
             && "$SCW_CONFIGURED_ORGANIZATION_ID" == "$SCW_EXPECTED_ORGANIZATION_ID" \
             && "$SCW_SERVERLESS_CONTAINER_ID" == "$SCW_PROD_CONTAINER_ID_FRONT" \
