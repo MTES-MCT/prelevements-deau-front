@@ -1,10 +1,11 @@
 import {withAuth} from 'next-auth/middleware'
 
-const PUBLIC_PATHS = new Set(['/', '/activation-mot-de-passe', '/login'])
+const PUBLIC_PATHS = new Set(['/', '/activation-mot-de-passe', '/login', '/validation-email'])
 
 function isPublicPath(pathname) {
   return PUBLIC_PATHS.has(pathname)
     || pathname.startsWith('/auth/')
+    || pathname.startsWith('/validation-email/')
 }
 
 export default withAuth({

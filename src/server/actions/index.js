@@ -28,6 +28,8 @@ export {
   deletePreleveurAction,
   getPointsFromPreleveurAction,
   getExploitationFromPreleveurAction,
+  listDeclarantContactEmailsAction,
+  updateDeclarantContactEmailsAction,
   listDeclarantEmailAliasesAction,
   createDeclarantEmailAliasAction,
   deleteDeclarantEmailAliasAction

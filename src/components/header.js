@@ -82,6 +82,15 @@ const NAV_ITEMS = [
   },
   {
     linkProps: {
+      href: '/agents',
+      target: '_self'
+    },
+    text: 'Agents',
+    roles: ['ADMIN'],
+    hideWhenImpersonating: true
+  },
+  {
+    linkProps: {
       href: '/zones',
       target: '_self'
     },
@@ -135,6 +144,10 @@ const HeaderComponent = () => {
 
     const navigation = NAV_ITEMS.filter(item => {
       if (item.roles && !item.roles.includes(user?.role)) {
+        return false
+      }
+
+      if (item.hideWhenImpersonating && user?.impersonation?.active) {
         return false
       }
 

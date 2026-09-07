@@ -44,6 +44,18 @@ function revalidateZonePaths(zoneId) {
   revalidatePath(`/zones/${zoneId}/exploitations`)
 }
 
+function revalidateGlobalAgentPaths(agentId) {
+  revalidatePath('/agents')
+
+  if (!agentId) {
+    return
+  }
+
+  revalidatePath(`/agents/${agentId}`)
+  revalidatePath(`/agents/${agentId}/modifier`)
+  revalidatePath(`/agents/${agentId}/zones/ajouter`)
+}
+
 function revalidatePointPaths(zoneId, pointId) {
   revalidateZonePaths(zoneId)
   revalidatePath('/points-prelevement')
@@ -142,6 +154,13 @@ export async function getZonesAction() {
 
 export async function getZonesActions() {
   return getZonesAction()
+}
+
+export async function getAccountZonesAction() {
+  return withErrorHandling(
+    async () => fetchJSON('api/zones'),
+    {forbiddenOnAccessDenied: false}
+  )
 }
 
 export async function getZoneOptionsForPermissionAction(permission) {
@@ -295,6 +314,7 @@ export async function addZoneInstructorAction(zoneId, payload) {
     })
 
     revalidateZonePaths(zoneId)
+    revalidateGlobalAgentPaths(payload.instructorUserId || result?.id)
 
     return result
   })
@@ -308,6 +328,7 @@ export async function updateZoneInstructorAction(zoneId, instructorUserId, paylo
     })
 
     revalidateZonePaths(zoneId)
+    revalidateGlobalAgentPaths(instructorUserId)
 
     return result
   })
@@ -320,6 +341,7 @@ export async function sendZoneInstructorAccountCreationNotificationAction(zoneId
     })
 
     revalidateZonePaths(zoneId)
+    revalidateGlobalAgentPaths(instructor.id)
 
     return result
   })
@@ -332,6 +354,7 @@ export async function sendZoneInstructorAttachmentNotificationAction(zoneId, ins
     })
 
     revalidateZonePaths(zoneId)
+    revalidateGlobalAgentPaths(instructor.id)
 
     return result
   })
@@ -344,6 +367,7 @@ export async function deleteZoneInstructorAction(zoneId, instructorUserId) {
     })
 
     revalidateZonePaths(zoneId)
+    revalidateGlobalAgentPaths(instructorUserId)
 
     return result
   })

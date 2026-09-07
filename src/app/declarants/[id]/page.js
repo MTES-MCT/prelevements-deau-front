@@ -17,6 +17,7 @@ import EntityHeader from '@/components/ui/EntityHeader/index.js'
 import Icon from '@/components/ui/Icon/index.js'
 import SectionCard from '@/components/ui/SectionCard/index.js'
 import {
+  getDeclarantContactEmails,
   getDeclarantDetailExploitations,
   getDeclarantRole,
   getDeclarantSeriesScope,
@@ -156,6 +157,11 @@ const InfoCard = ({declarant}) => {
     return null
   }
 
+  const contactEmails = getDeclarantContactEmails(declarant)
+  const displayedEmails = contactEmails.length > 0
+    ? contactEmails
+    : [{email: declarant.loginEmail || declarant.email, isPrimary: true}].filter(contact => contact.email)
+
   return (
     <SectionCard>
       <ul className='[&>li]:flex [&>li]:gap-1'>
@@ -165,10 +171,19 @@ const InfoCard = ({declarant}) => {
             {getDeclarantTitleFromDeclarant(declarant)}
           </span>
         </li>
-        <li>
+        <li className='items-start'>
           <Icon iconId='ri-at-line' style={iconColorStyle} />
-          {declarant.email
-            ? <CopyableEmail email={declarant.email} />
+          {displayedEmails.length > 0
+            ? (
+              <span className='flex flex-col gap-1'>
+                {displayedEmails.map(contact => (
+                  <span key={contact.email} className='flex items-center gap-1'>
+                    <CopyableEmail email={contact.email} />
+                    {contact.isPrimary && contactEmails.length > 1 && <small>(principal)</small>}
+                  </span>
+                ))}
+              </span>
+            )
             : <span>Non renseigné</span>}
         </li>
         <li>

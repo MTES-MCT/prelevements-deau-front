@@ -1,226 +1,59 @@
-import {
-  Box,
-  Chip,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Typography
-} from '@mui/material'
-import moment from 'moment'
-import 'moment/locale/fr'
-
-import PasswordChangeSection from '@/components/auth/password-change-section.js'
+import AccountPage from '@/components/account/account-page.js'
+import {AccountUnavailable} from '@/components/account/account-route-layout.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {getCurrentUser} from '@/server/actions/user.js'
-import {getZonesActions} from '@/server/actions/zones.js'
-
-moment.locale('fr')
-
-const formatZonePeriod = (startDate, endDate) => {
-  const start = startDate ? moment(startDate) : null
-  const end = endDate ? moment(endDate) : null
-
-  if (start && end) {
-    return `Du ${start.format('DD MMMM YYYY')} au ${end.format('DD MMMM YYYY')}`
-  }
-
-  if (start && !end) {
-    return `Depuis le ${start.format('DD MMMM YYYY')}`
-  }
-
-  if (!start && end) {
-    return `Jusqu’au ${end.format('DD MMMM YYYY')}`
-  }
-
-  return 'Permanent'
-}
-
-const formatRole = role => {
-  switch (role) {
-    case 'DECLARANT': {
-      return 'Déclarant'
-    }
-
-    case 'INSTRUCTOR': {
-      return 'Agent'
-    }
-
-    default: {
-      return role
-    }
-  }
-}
-
-const formatLastLoginAt = lastLoginAt => {
-  if (!lastLoginAt) {
-    return '-'
-  }
-
-  return moment(lastLoginAt).format('LLL')
-}
-
-const InfoLine = ({label, value}) => (
-  <Box className='flex flex-wrap gap-2 items-center'>
-    <Typography fontWeight='medium' className='fr-text--sm'>{label}</Typography>
-    <Box className='flex gap-1'>
-      <Typography fontWeight='light' className='fr-text--sm'>{value || '-'}</Typography>
-    </Box>
-  </Box>
-)
+import {AUTH_METHODS, hasAuthMethod} from '@/lib/auth-methods.js'
+import {getAccountPageData} from '@/server/account-page-data.js'
+import {getAccountZonesAction} from '@/server/actions/zones.js'
+import {getAuthConfigState} from '@/server/auth-config.js'
 
 export const metadata = {
   title: 'Mon compte'
 }
 
-const MonComptePage = async () => {
-  const userResult = await getCurrentUser()
-  const user = userResult?.data?.user ?? null
-  const role = userResult?.data?.role ?? null
-  const emailAliases = user?.emailAliases ?? []
+export const dynamic = 'force-dynamic'
+
+const MonComptePage = async ({searchParams}) => {
+  const [{updated}, account, authConfigState] = await Promise.all([
+    searchParams ?? {},
+    getAccountPageData(),
+    getAuthConfigState()
+  ])
+
+  if (!account.available) {
+    return (
+      <>
+        <StartDsfrOnHydration />
+        <AccountUnavailable />
+      </>
+    )
+  }
+
+  const {role, user} = account
 
   let zones = []
+  let zonesError = false
 
   if (role === 'INSTRUCTOR') {
-    const zonesResult = await getZonesActions()
-    zones = zonesResult?.data || []
+    const zonesResult = await getAccountZonesAction()
+
+    zonesError = !zonesResult?.success
+    zones = zonesResult?.success ? (zonesResult.data ?? []) : []
   }
 
   return (
     <>
       <StartDsfrOnHydration />
-
-      <div className='fr-container fr-my-6w'>
-        <div className='flex flex-col gap-6'>
-          <div className='flex justify-between md:items-center sm:items-start gap-4 pb-2'>
-            <Typography variant='h3'>
-              Mon compte
-            </Typography>
-          </div>
-
-          {/* Infos + RGPD */}
-          <div className='flex flex-col gap-8'>
-            {/* Informations */}
-            <div className='flex flex-col gap-3'>
-              <Typography gutterBottom variant='h6'>
-                Informations
-              </Typography>
-
-              <div className='flex flex-col gap-2'>
-                <InfoLine label='Prénom' value={user?.firstName} />
-                <InfoLine label='Nom' value={user?.lastName} />
-                <InfoLine label='Email principal' value={user?.email} />
-
-                <div className='flex flex-wrap gap-2 items-center'>
-                  <Typography fontWeight='medium' className='fr-text--sm'>
-                    Emails alternatifs
-                  </Typography>
-
-                  {emailAliases.length === 0 ? (
-                    <Typography fontWeight='light' className='fr-text--sm'>
-                      -
-                    </Typography>
-                  ) : (
-                    <Box className='flex flex-wrap gap-1'>
-                      {emailAliases.map(alias => (
-                        <Chip
-                          key={alias.id ?? alias.email}
-                          label={alias.email}
-                          size='small'
-                        />
-                      ))}
-                    </Box>
-                  )}
-                </div>
-                <InfoLine label='Rôle' value={formatRole(role)} />
-                <InfoLine label='Date dernière connexion' value={formatLastLoginAt(user?.lastLoginAt)} />
-              </div>
-
-              {user?.role && (
-                <div>
-                  <small className='fr-badge fr-badge--info fr-badge--no-icon'>
-                    {user.role}
-                  </small>
-                </div>
-              )}
-            </div>
-
-            <PasswordChangeSection />
-
-            <div className='flex flex-col gap-2'>
-              <Typography gutterBottom variant='h6'>
-                Données personnelles
-              </Typography>
-
-              <Typography variant='body2'>
-                Les informations affichées sont utilisées pour la gestion de votre compte
-                et de vos habilitations.
-              </Typography>
-
-              <Typography variant='body2'>
-                Conformément au RGPD, vous disposez d’un droit d’accès, de rectification
-                et d’effacement de vos données.
-              </Typography>
-
-              <Typography variant='body2'>
-                Pour exercer vos droits : <a href='mailto:contact@partageonsleau.beta.gouv.fr'>contact@partageonsleau.beta.gouv.fr</a>
-              </Typography>
-            </div>
-
-            {role === 'INSTRUCTOR' && (
-              <div className='flex flex-col gap-3'>
-                <div className='flex justify-between md:items-center sm:items-start gap-4 pb-2'>
-                  <Typography variant='h6'>
-                    Mes droits par zone
-                  </Typography>
-                </div>
-
-                {zones.length === 0 ? (
-                  <Typography variant='body2'>
-                    Aucun droit à afficher.
-                  </Typography>
-                ) : (
-                  <TableContainer>
-                    <Table>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>Type</TableCell>
-                          <TableCell>Zone</TableCell>
-                          <TableCell>Période</TableCell>
-                          <TableCell>Droits</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {zones.map(z => (
-                          <TableRow key={z.id}>
-                            <TableCell>{z.type}</TableCell>
-                            <TableCell>
-                              <div className='flex flex-col'>
-                                <span className='fr-text--bold'>{z.name}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              { formatZonePeriod(z.startDate, z.endDate) }
-                            </TableCell>
-                            <TableCell>
-                              <Chip
-                                label={z.isAdmin ? 'Accès complet' : `${z.permissions?.length || 0} droits`}
-                                size='small'
-                              />
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      <AccountPage
+        canManageSecurity={authConfigState.available
+          && hasAuthMethod(authConfigState.config, AUTH_METHODS.PASSWORD)
+          && !account.isImpersonating}
+        initialNow={Date.now()}
+        initialUser={user}
+        profileUpdated={updated === 'profile'}
+        role={role}
+        zones={zones}
+        zonesError={zonesError}
+      />
     </>
   )
 }

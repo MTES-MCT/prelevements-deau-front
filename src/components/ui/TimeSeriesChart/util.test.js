@@ -332,7 +332,7 @@ test('les graduations calendaires se réduisent selon la largeur disponible', t 
   t.is(new Set(ticks.labels.values()).size, ticks.labels.size)
 })
 
-test('les plages longues passent des trimestres aux années', t => {
+test('les graphiques de ressources conservent les graduations trimestrielles par défaut', t => {
   const quarterlyRangeDates = Array.from({length: 25}, (_, index) => new Date(2024, index, 1))
   const quarterlyTicks = buildTimelineTicks({
     xAxisDates: quarterlyRangeDates,
@@ -354,6 +354,104 @@ test('les plages longues passent des trimestres aux années', t => {
 
   t.is(yearlyTicks.granularity, 'year')
   t.deepEqual([...yearlyTicks.labels.values()], yearlyRangeDates.map(date => String(date.getFullYear())))
+})
+
+test('sans vue trimestrielle, une plage de 19 à 60 mois utilise des mois espacés sur ordinateur', t => {
+  const ticks = buildTimelineTicks({
+    xAxisDates: [new Date(2021, 9, 12), new Date(2026, 6, 8)],
+    availableWidth: 1100,
+    locale: 'fr-FR',
+    frequency: '1 week',
+    allowQuarterlyTicks: false
+  })
+  const labels = [...ticks.labels.values()]
+  const coordinates = ticks.values.map(date => projectDateToCalendarCoordinate(date))
+  const monthGaps = coordinates.slice(1).map((coordinate, index) => coordinate - coordinates[index])
+
+  t.is(ticks.granularity, 'month')
+  t.true(monthGaps.every(gap => Math.abs(gap - 6) < 0.000_001))
+  t.false(labels.some(label => /\bT[1-4]\b/u.test(label)))
+
+  for (const year of [2021, 2022, 2023, 2024, 2025, 2026]) {
+    t.true(labels.some(label => label.includes(String(year))))
+  }
+})
+
+test('sans vue trimestrielle, trois années utilisent une cadence trimestrielle régulière nommée par les mois', t => {
+  const ticks = buildTimelineTicks({
+    xAxisDates: [new Date(2023, 0, 31), new Date(2025, 11, 30)],
+    availableWidth: 1600,
+    locale: 'fr-FR',
+    frequency: '1 month',
+    allowQuarterlyTicks: false
+  })
+  const labels = [...ticks.labels.values()]
+
+  t.is(ticks.granularity, 'month')
+  t.deepEqual(
+    ticks.values.map(date => date.getMonth()),
+    [0, 3, 6, 9, 0, 3, 6, 9, 0, 3, 6, 9]
+  )
+  t.deepEqual(
+    labels,
+    [
+      'janv. 2023',
+      'avr.',
+      'juil.',
+      'oct.',
+      'janv. 2024',
+      'avr.',
+      'juil.',
+      'oct.',
+      'janv. 2025',
+      'avr.',
+      'juil.',
+      'oct.'
+    ]
+  )
+})
+
+test('sans vue trimestrielle, la cadence mensuelle reste régulière et lisible sur mobile', t => {
+  const ticks = buildTimelineTicks({
+    xAxisDates: [new Date(2020, 0, 1), new Date(2024, 11, 31)],
+    availableWidth: 240,
+    locale: 'fr-FR',
+    frequency: '1 month',
+    allowQuarterlyTicks: false
+  })
+  const labels = [...ticks.labels.values()]
+  const absoluteMonths = ticks.values.map(date => (date.getFullYear() * 12) + date.getMonth())
+  const monthGaps = absoluteMonths.slice(1).map((month, index) => month - absoluteMonths[index])
+
+  t.is(ticks.granularity, 'month')
+  t.true(ticks.values.every(date => date.getDate() === 1))
+  t.true(monthGaps.every(gap => gap === 24))
+  t.false(labels.some(label => /\bT[1-4]\b/u.test(label)))
+  t.deepEqual(labels, ['janv. 2020', 'janv. 2022', 'janv. 2024'])
+})
+
+test('sans vue trimestrielle, les mois restent utilisés jusqu’à 60 mois puis laissent place aux années', t => {
+  for (const spanMonths of [18, 19, 60]) {
+    const ticks = buildTimelineTicks({
+      xAxisDates: [new Date(2020, 0, 1), new Date(2020, spanMonths, 1)],
+      availableWidth: 1100,
+      locale: 'fr-FR',
+      frequency: '1 month',
+      allowQuarterlyTicks: false
+    })
+
+    t.is(ticks.granularity, 'month')
+  }
+
+  const yearlyTicks = buildTimelineTicks({
+    xAxisDates: [new Date(2020, 0, 1), new Date(2025, 1, 1)],
+    availableWidth: 1100,
+    locale: 'fr-FR',
+    frequency: '1 month',
+    allowQuarterlyTicks: false
+  })
+
+  t.is(yearlyTicks.granularity, 'year')
 })
 
 test('les graduations annuelles restent décimées sur une très longue plage mobile', t => {

@@ -105,7 +105,7 @@ function normalizeDeclarant(declarant) {
     civility: firstTruthy(declarant?.civility),
     firstName: firstTruthy(declarant?.firstName, user?.firstName),
     lastName: firstTruthy(declarant?.lastName, user?.lastName),
-    email: firstTruthy(declarant?.email, user?.email),
+    email: firstTruthy(declarant?.loginEmail, declarant?.email, user?.email),
     emailAliases: firstTruthy(declarant?.emailAliases, user?.emailAliases, []),
     jobTitle: firstTruthy(declarant?.jobTitle),
     socialReason: firstTruthy(declarant?.socialReason, declarant?.declarant?.socialReason),

@@ -544,6 +544,7 @@ const DEFAULT_TRANSLATIONS = {
  * @param {string} [props.tooltipFrequency] - Frequency used to format tooltip dates, when different from the axis frequency
  * @param {Array<{y: number, color?: string}>} [props.referenceLines] - Horizontal reference lines
  * @param {Array<{minimum: number, maximum: number, color: string}>} [props.backgroundBands] - Horizontal background bands on the left axis
+ * @param {boolean} [props.allowQuarterlyTicks=true] - Allow T1/Q1-style labels on medium-long ranges
  *
  * @returns {JSX.Element} Rendered time series chart
  */
@@ -570,6 +571,7 @@ const TimeSeriesChart = ({
   yAxisMax = null,
   referenceLines = [],
   backgroundBands = [],
+  allowQuarterlyTicks = true,
   height = CHART_HEIGHT
 }) => {
   // Validate that frequency is provided (required for date formatting)
@@ -658,8 +660,9 @@ const TimeSeriesChart = ({
     availableWidth: timelineAvailableWidth,
     locale,
     frequency,
-    timelineRange
-  }), [chartModel.pointBySeries, chartModel.xAxisDates, frequency, locale, timelineAvailableWidth, timelineRange])
+    timelineRange,
+    allowQuarterlyTicks
+  }), [allowQuarterlyTicks, chartModel.pointBySeries, chartModel.xAxisDates, frequency, locale, timelineAvailableWidth, timelineRange])
   const xAxisTimeline = useMemo(() => [buildTimelineXAxis({
     xAxisDates: chartModel.xAxisDates,
     timelineTicks,
