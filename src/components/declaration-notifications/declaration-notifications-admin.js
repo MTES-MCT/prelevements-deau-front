@@ -367,8 +367,8 @@ const NotificationRules = () => (
       <li>Les rappels hebdomadaires partent le lundi à 9h pour la semaine précédente ; les relances hebdomadaires partent le lundi à 17h pour cette même semaine.</li>
       <li>Les rappels mensuels partent le 28 à 9h pour le mois en cours ; les relances mensuelles partent le 5 à 9h pour le mois précédent.</li>
       <li>La désactivation d’un type bloque ses envois automatiques, ses envois manuels et ses reprises d’échecs. Elle n’interrompt pas un envoi déjà démarré.</li>
-      <li>Les destinataires sont les préleveurs déclarants et les collecteurs rattachés aux points attendus, avec leurs alias email. Un même email n’est envoyé qu’une seule fois par envoi.</li>
-      <li>Les exploitations hors période d’activité, sans zone exploitable, déjà déclarées pour une relance, sans email ou relevant d’un autre pas de temps sont exclues et listées dans le détail.</li>
+      <li>Les destinataires sont les préleveurs déclarants et les collecteurs rattachés aux points attendus, avec leurs adresses de contact. Un même e-mail n’est envoyé qu’une seule fois par envoi.</li>
+      <li>Les exploitations hors période d’activité, sans zone exploitable, déjà déclarées pour une relance, sans adresse de contact ou relevant d’un autre pas de temps sont exclues et listées dans le détail.</li>
     </ul>
   </section>
 )

@@ -145,6 +145,9 @@ const RegleHeader = ({
 
 const RegleItem = ({canDelete, canUpdate, regle, preleveurId, status, onDelete}) => {
   const itemStyle = statusConfig[status]?.style || {}
+  const documentLabel = regle.document
+    ? `${regle.document.nature} ${regle.document.reference || ''} du ${formatFullDateFr(regle.document.signatureDate)}`
+    : null
 
   return (
     <Accordion
@@ -174,15 +177,17 @@ const RegleItem = ({canDelete, canUpdate, regle, preleveurId, status, onDelete})
           <InfoRow
             label='Document'
             value={
-              regle.document ? (
+              regle.document?.downloadUrl ? (
                 <a
+                  className='fr-link fr-icon-download-line fr-link--icon-right'
                   href={regle.document.downloadUrl}
                   rel='noreferrer'
                   target='_blank'
+                  title={`Télécharger ${documentLabel}`}
                 >
-                  {`${regle.document.nature} ${regle.document.reference || ''} du ${formatFullDateFr(regle.document.signatureDate)}`}
+                  {documentLabel}
                 </a>
-              ) : '-'
+              ) : (documentLabel || '-')
             }
           />
           <InfoRow label='Exploitations' value={regle.exploitations?.length || 0} />

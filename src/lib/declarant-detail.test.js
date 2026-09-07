@@ -1,7 +1,10 @@
 import test from 'ava'
 
 import {
+  getDeclarantContactEmails,
   getDeclarantDetailExploitations,
+  getEffectiveDeclarantContactEmails,
+  getPrimaryDeclarantContactEmail,
   getDeclarantRole,
   getDeclarantSeriesScope,
   getExploitationPointIds,
@@ -108,4 +111,41 @@ test('hasDeclarantContactInfo couvre les coordonnées partielles', t => {
   t.false(hasDeclarantContactInfo({}))
   t.true(hasDeclarantContactInfo({city: 'Saint-Denis'}))
   t.true(hasDeclarantContactInfo({email: 'contact@example.test'}))
+  t.true(hasDeclarantContactInfo({contactEmails: [{email: 'metier@example.test', isPrimary: true}]}))
+})
+
+test('les contacts métier sont distincts de l’email de connexion', t => {
+  const declarant = {
+    loginEmail: 'connexion@example.test',
+    contactEmails: [
+      {email: 'secondaire@example.test', isPrimary: false},
+      {email: 'principal@example.test', isPrimary: true}
+    ]
+  }
+
+  t.deepEqual(getDeclarantContactEmails(declarant), declarant.contactEmails)
+  t.deepEqual(getEffectiveDeclarantContactEmails(declarant), [
+    'principal@example.test',
+    'secondaire@example.test'
+  ])
+  t.is(getPrimaryDeclarantContactEmail(declarant), 'principal@example.test')
+  t.is(getPrimaryDeclarantContactEmail({loginEmail: 'connexion@example.test'}), 'connexion@example.test')
+})
+
+test('les adresses techniques d’import ne sont jamais utilisées comme contact de repli', t => {
+  t.is(getPrimaryDeclarantContactEmail({
+    loginEmail: 'reunion-42@IMPORT.LOCAL',
+    email: 'contact@example.test'
+  }), 'contact@example.test')
+  t.is(getPrimaryDeclarantContactEmail({
+    loginEmail: 'reunion-42@import.local',
+    user: {email: 'reunion-42@import.local'}
+  }), null)
+  t.deepEqual(getEffectiveDeclarantContactEmails({
+    contactEmails: [
+      {email: 'reunion-42@import.local', isPrimary: true},
+      {email: 'metier@example.test', isPrimary: false}
+    ]
+  }), ['metier@example.test'])
+  t.false(hasDeclarantContactInfo({email: 'reunion-42@import.local'}))
 })

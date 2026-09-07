@@ -81,9 +81,45 @@ export function getDeclarantSeriesScope(declarant, declarantId) {
   return declarantId ? {preleveurId: declarantId} : null
 }
 
+export function getDeclarantContactEmails(declarant) {
+  return (declarant?.contactEmails || declarant?.declarant?.contactEmails || [])
+    .map(contact => typeof contact === 'string' ? {email: contact, isPrimary: false} : contact)
+    .filter(contact => contact?.email)
+}
+
+function isSyntheticImportEmail(email) {
+  return typeof email === 'string'
+    && email.trim().toLowerCase().endsWith('@import.local')
+}
+
+export function getEffectiveDeclarantContactEmails(declarant) {
+  const contacts = getDeclarantContactEmails(declarant)
+    .filter(contact => !isSyntheticImportEmail(contact.email))
+  const primary = contacts.find(contact => contact.isPrimary)
+
+  if (contacts.length > 0) {
+    return [...new Set([
+      primary?.email,
+      ...contacts.map(contact => contact.email)
+    ].filter(Boolean))]
+  }
+
+  const fallback = [
+    declarant?.loginEmail,
+    declarant?.email,
+    declarant?.user?.email
+  ].find(email => email && !isSyntheticImportEmail(email))
+
+  return fallback ? [fallback] : []
+}
+
+export function getPrimaryDeclarantContactEmail(declarant) {
+  return getEffectiveDeclarantContactEmails(declarant)[0] ?? null
+}
+
 export function hasDeclarantContactInfo(declarant) {
   return Boolean(
-    declarant?.email
+    getPrimaryDeclarantContactEmail(declarant)
     || declarant?.phoneNumber
     || declarant?.addressLine1
     || declarant?.addressLine2

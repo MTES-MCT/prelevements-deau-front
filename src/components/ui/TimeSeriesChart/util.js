@@ -151,6 +151,8 @@ const toValidTimelineDate = value => {
 }
 
 const MONTHS_PER_YEAR = 12
+const REGULAR_MONTH_TICK_STEPS = [3, 6, 12, 24]
+const REGULAR_MONTH_TICK_MINIMUM_SPACING = 80
 
 /**
  * Project a real date onto a calendar axis where every month occupies one
@@ -261,6 +263,37 @@ const buildCalendarCandidates = (start, end, granularity) => {
   return candidates
 }
 
+const getRegularMonthTickStep = (spanMonths, availableWidth) => {
+  const maximumTickCount = Math.max(
+    4,
+    getMaximumTimelineTickCount(availableWidth, REGULAR_MONTH_TICK_MINIMUM_SPACING)
+  )
+  const minimumStep = Math.ceil(spanMonths / Math.max(1, maximumTickCount - 1))
+
+  return REGULAR_MONTH_TICK_STEPS.find(step => step >= minimumStep)
+    ?? REGULAR_MONTH_TICK_STEPS.at(-1)
+}
+
+/**
+ * Build predictable month ticks instead of selecting arbitrary months after
+ * the fact. Anchoring every tick on the visible start keeps the spacing
+ * strictly regular even when the selected period starts mid-month.
+ */
+const buildRegularMonthCandidates = (start, end, stepMonths) => {
+  const startCoordinate = projectDateToCalendarCoordinate(start)
+  const endCoordinate = projectDateToCalendarCoordinate(end)
+  const candidates = []
+
+  for (let coordinate = startCoordinate; coordinate <= endCoordinate; coordinate += stepMonths) {
+    const candidate = calendarCoordinateToDate(coordinate)
+    if (candidate) {
+      candidates.push(candidate)
+    }
+  }
+
+  return candidates
+}
+
 const decimateCalendarCandidates = (
   candidates,
   maximumTickCount,
@@ -363,7 +396,8 @@ const deduplicateFormattedTicks = (dates, formatter) => {
 /**
  * Build calendar-aware ticks independently from the data aggregation frequency.
  * Short ranges retain date labels, annual ranges use months, then longer ranges
- * progressively use quarters and years.
+ * progressively use quarters and years. Consumers can keep monthly labels on
+ * medium-long ranges when quarter abbreviations are not meaningful to users.
  */
 export const buildTimelineTicks = ({
   xAxisDates,
@@ -371,7 +405,8 @@ export const buildTimelineTicks = ({
   availableWidth,
   locale,
   frequency,
-  timelineRange = null
+  timelineRange = null,
+  allowQuarterlyTicks = true
 }) => {
   if (!Array.isArray(xAxisDates) || xAxisDates.length === 0) {
     return {
@@ -417,6 +452,22 @@ export const buildTimelineTicks = ({
       buildCalendarCandidates(start, end, 'month'),
       maximumTickCount
     )
+    return {
+      values: candidates,
+      labels: buildCalendarLabels(candidates, (date, {showYear}) => {
+        const month = monthFormatter.format(date)
+        return showYear ? `${month} ${date.getFullYear()}` : month
+      }),
+      granularity: 'month',
+      axisMode: 'calendar',
+      domain
+    }
+  }
+
+  if (!allowQuarterlyTicks && spanMonths <= 60) {
+    const monthFormatter = new Intl.DateTimeFormat(locale, {month: 'short'})
+    const stepMonths = getRegularMonthTickStep(spanMonths, availableWidth)
+    const candidates = buildRegularMonthCandidates(start, end, stepMonths)
     return {
       values: candidates,
       labels: buildCalendarLabels(candidates, (date, {showYear}) => {

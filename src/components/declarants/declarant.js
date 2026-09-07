@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
 import CopyableEmail from '@/components/ui/CopyableEmail/index.js'
+import {getPrimaryDeclarantContactEmail} from '@/lib/declarant-detail.js'
 import {getDeclarantUsageSummary} from '@/lib/declarant-usages.js'
 import {
   getDeclarantRoleLabel,
@@ -62,6 +63,7 @@ const DeclarantIdentity = ({declarant}) => {
   const location = getDeclarantLocation(declarant)
   const organizationName = declarant.socialReason
   const displayName = organizationName || getDeclarantTitleFromUser(declarant)
+  const contactEmail = getPrimaryDeclarantContactEmail(declarant)
 
   return (
     <section className='min-w-0'>
@@ -74,11 +76,11 @@ const DeclarantIdentity = ({declarant}) => {
           <div className='break-words text-[0.9rem] font-semibold leading-snug text-gray-900'>
             {displayName}
           </div>
-          {(location || declarant.email) && (
+          {(location || contactEmail) && (
             <div className='mt-1 flex min-w-0 flex-col gap-0.5 text-xs leading-snug text-gray-600'>
               {location && <span className='break-words'>{location}</span>}
-              {declarant.email && (
-                <CopyableEmail email={declarant.email} />
+              {contactEmail && (
+                <CopyableEmail email={contactEmail} />
               )}
             </div>
           )}

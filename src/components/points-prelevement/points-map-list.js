@@ -6,51 +6,14 @@ import {
 
 import {useVirtualizer} from '@tanstack/react-virtual'
 
-import {getPointFlowType, getPointFlowTypeColors, getPointFlowTypeLabel} from '@/lib/point-flow-types.js'
-import {
-  MISSING_USAGE_KEY,
-  WATER_BODY_TYPE_LABELS,
-  getPointUsageRootKeys
-} from '@/lib/points-prelevement-filters.js'
+import PointSummaryTiles from '@/components/points-prelevement/point-summary-tiles.js'
+import {createPointListPresentation} from '@/lib/point-list-presentation.js'
 import {SEARCH_SORT_MODES} from '@/lib/smart-search.js'
 import {keepActiveIndexInRenderedRange} from '@/lib/virtualized-list.js'
-import {getUsageColor, getUsageLabel} from '@/lib/water-uses.js'
-import {
-  getPointPrelevementDisplayName,
-  getPointPrelevementTechnicalReference
-} from '@/utils/point-prelevement.js'
+import {getPointPrelevementDisplayName} from '@/utils/point-prelevement.js'
 
 const collator = new Intl.Collator('fr-FR', {numeric: true, sensitivity: 'base'})
-const MISSING_USAGE_COLOR = '#929292'
-
-const getUsageColorFromKey = usageKey => usageKey === MISSING_USAGE_KEY
-  ? MISSING_USAGE_COLOR
-  : getUsageColor(usageKey)
-
-const getUsageMarkerBackground = usageKeys => {
-  const colors = usageKeys.map(usageKey => getUsageColorFromKey(usageKey))
-  if (colors.length <= 1) {
-    return colors[0] ?? MISSING_USAGE_COLOR
-  }
-
-  const segmentSize = 100 / colors.length
-  const segments = colors.map((color, index) =>
-    `${color} ${index * segmentSize}% ${(index + 1) * segmentSize}%`)
-
-  return `conic-gradient(${segments.join(', ')})`
-}
-
-const getUsageSummary = usageKeys => {
-  const labels = usageKeys.map(usageKey => usageKey === MISSING_USAGE_KEY
-    ? 'Usage non renseigné'
-    : getUsageLabel(usageKey))
-
-  if (labels.length <= 2) {
-    return labels.join(' · ')
-  }
-
-  return `${labels.slice(0, 2).join(' · ')} + ${labels.length - 2}`
-}
+const ESTIMATED_ROW_HEIGHT = 88
 
 const PointListItem = memo(({
   highlighted,
@@ -69,21 +32,11 @@ const PointListItem = memo(({
     fallback: 'Point de prélèvement',
     preferUsageName
   })
-  const technicalReference = getPointPrelevementTechnicalReference(point, {preferUsageName})
-  const alternateName = preferUsageName
-    ? technicalReference
-    : (point.usageName && point.usageName !== displayName ? point.usageName : null)
-  const alternateNameLabel = preferUsageName ? 'Nom technique' : 'Nom d’usage'
-  const flowType = getPointFlowType(point)
-  const flowTypeColors = getPointFlowTypeColors(flowType)
-  const usageKeys = getPointUsageRootKeys(point)
-  const waterBodyTypeLabel = WATER_BODY_TYPE_LABELS[point.waterBodyType]
-    ?? point.waterBodyType
-    ?? 'Milieu non renseigné'
+  const presentation = createPointListPresentation(point)
 
   return (
     <button
-      className={`group block w-full cursor-pointer border-0 border-b border-gray-200 px-4 py-3 text-left text-inherit transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#000091] ${highlighted ? 'bg-[#ececfe] shadow-[inset_0_0_0_2px_#000091]' : 'bg-white hover:bg-[#f6f6fe]'}`}
+      className={`group block w-full cursor-pointer border-0 px-3 py-2 text-left text-inherit transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#000091] ${highlighted ? 'bg-[#ececfe] shadow-[inset_0_0_0_2px_#000091]' : 'bg-white hover:bg-[#f6f6fe]'}`}
       data-highlighted={highlighted || undefined}
       data-point-list-index={listIndex}
       tabIndex={tabIndex}
@@ -114,43 +67,28 @@ const PointListItem = memo(({
       onClick={() => onPointSelect(point)}
     >
       <div className='min-w-0'>
-        <div className='flex items-start justify-between gap-2'>
-          <h3 className={`fr-text--sm fr-mb-0 min-w-0 break-words font-semibold leading-5 ${highlighted ? 'text-[#000091]' : 'text-gray-900 group-hover:text-[#000091]'}`}>
-            {displayName}
-          </h3>
-          <span
-            className='inline-flex shrink-0 border px-1.5 py-0.5 text-[0.625rem] font-semibold leading-[0.875rem]'
-            style={{
-              backgroundColor: flowTypeColors.backgroundColor,
-              borderColor: flowTypeColors.borderColor,
-              color: flowTypeColors.textColor
-            }}
-          >
-            {getPointFlowTypeLabel(flowType)}
-          </span>
+        <h3 className={`fr-text--sm fr-mb-0 min-w-0 break-words font-semibold leading-5 ${highlighted ? 'text-[#000091]' : 'text-gray-900 group-hover:text-[#000091]'}`}>
+          {displayName}
+        </h3>
+
+        <div className='mt-2'>
+          <PointSummaryTiles presentation={presentation} />
         </div>
 
-        {alternateName && (
-          <p className='fr-mb-0 mt-1 break-words text-xs text-gray-600'>
-            {alternateNameLabel} : {alternateName}
-          </p>
+        {presentation.preleveurLabels.length > 0 && (
+          <div className='mt-1.5 space-y-0.5 text-[0.6875rem] leading-4 text-gray-600'>
+            {presentation.preleveurLabels.map(label => (
+              <span
+                key={label}
+                className='block min-w-0 break-words'
+                title={`Préleveur : ${label}`}
+              >
+                <span className='sr-only'>Préleveur : </span>
+                {label}
+              </span>
+            ))}
+          </div>
         )}
-
-        <div className='mt-2 flex flex-wrap items-center gap-1.5 text-[0.6875rem] leading-4 text-gray-600'>
-          <span className='inline-flex bg-gray-100 px-1.5 py-0.5'>
-            {waterBodyTypeLabel}
-          </span>
-          <span className='inline-flex min-w-0 items-center gap-1.5 break-words'>
-            <span
-              aria-hidden='true'
-              className='h-3.5 w-3.5 shrink-0 rounded-full ring-1 ring-gray-300'
-              style={{background: getUsageMarkerBackground(usageKeys)}}
-            />
-            <span>
-              {getUsageSummary(usageKeys)}
-            </span>
-          </span>
-        </div>
       </div>
     </button>
   )
@@ -191,7 +129,7 @@ const PointsMapList = memo(({
   )
   const rowVirtualizer = useVirtualizer({
     count: isLoading ? 0 : sortedPoints.length,
-    estimateSize: () => 96,
+    estimateSize: () => ESTIMATED_ROW_HEIGHT,
     getItemKey: index => sortedPoints[index]?.id ?? index,
     getScrollElement: () => scrollContainerRef.current,
     overscan: 8
@@ -262,7 +200,7 @@ const PointsMapList = memo(({
 
       case 'PageDown': {
         const visibleRows = Math.max(1, Math.floor(
-          (scrollContainerRef.current?.clientHeight ?? 96) / 96
+          (scrollContainerRef.current?.clientHeight ?? ESTIMATED_ROW_HEIGHT) / ESTIMATED_ROW_HEIGHT
         ))
         targetIndex = index + visibleRows
         break
@@ -270,7 +208,7 @@ const PointsMapList = memo(({
 
       case 'PageUp': {
         const visibleRows = Math.max(1, Math.floor(
-          (scrollContainerRef.current?.clientHeight ?? 96) / 96
+          (scrollContainerRef.current?.clientHeight ?? ESTIMATED_ROW_HEIGHT) / ESTIMATED_ROW_HEIGHT
         ))
         targetIndex = index - visibleRows
         break
@@ -352,7 +290,7 @@ const PointsMapList = memo(({
                 <div
                   key={virtualItem.key}
                   ref={rowVirtualizer.measureElement}
-                  className='absolute left-0 top-0 w-full'
+                  className='absolute left-0 top-0 w-full border-b border-solid border-[#cecece]'
                   data-index={virtualItem.index}
                   role='listitem'
                   aria-posinset={virtualItem.index + 1}

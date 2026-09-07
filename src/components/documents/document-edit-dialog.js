@@ -98,16 +98,16 @@ const DocumentEditDialog = ({
 
   useEffect(() => {
     if (isOpen && document) {
-      setSelectedExploitations(document.declarantPointPrelevementId ? [document.declarantPointPrelevementId] : [])
+      const exploitationIds = document.declarantPointPrelevementIds
+        ?? document.exploitations?.map(({id, declarantPointPrelevementId}) => declarantPointPrelevementId ?? id)
+        ?? (document.declarantPointPrelevementId ? [document.declarantPointPrelevementId] : [])
+
+      setSelectedExploitations(exploitationIds.filter(Boolean))
       setPayload({})
       setError(null)
       setValidationErrors([])
     }
   }, [isOpen, document])
-
-  const handleExploitationsChange = exploitationIds => {
-    setSelectedExploitations(exploitationIds.slice(-1))
-  }
 
   const handleSave = async () => {
     setError(null)
@@ -116,7 +116,7 @@ const DocumentEditDialog = ({
     try {
       const cleanedPayload = emptyStringToNull({
         ...payload,
-        declarantPointPrelevementId: selectedExploitations[0] || null
+        declarantPointPrelevementIds: selectedExploitations
       })
 
       const response = await updateDocumentAction(document.id, cleanedPayload, declarantId)
@@ -169,12 +169,12 @@ const DocumentEditDialog = ({
           <div className='mt-4'>
             <GroupedMultiselect
               searchable
-              hint='Un document peut être associé à une exploitation.'
-              label='Exploitation associée'
+              hint='Un document peut être partagé par plusieurs exploitations du déclarant.'
+              label='Exploitations associées'
               options={exploitationOptions}
-              placeholder='Sélectionner une exploitation'
+              placeholder='Sélectionner une ou plusieurs exploitations'
               value={selectedExploitations}
-              onChange={handleExploitationsChange}
+              onChange={setSelectedExploitations}
             />
           </div>
         )}

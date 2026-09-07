@@ -1,5 +1,7 @@
 'use server'
 
+import {revalidatePath} from 'next/cache'
+
 import {
   fetchJSON,
   withErrorHandling
@@ -37,4 +39,87 @@ export async function getCurrentUser() {
  */
 export async function getCurrentSessionInfo() {
   return getCachedCurrentSessionInfo()
+}
+
+export async function updateCurrentUserProfileAction(payload) {
+  return withErrorHandling(async () => {
+    const profile = await fetchJSON('api/users/me/profile', {
+      method: 'PATCH',
+      body: payload
+    })
+
+    revalidatePath('/mon-compte')
+    return profile
+  }, {forbiddenOnAccessDenied: false})
+}
+
+export async function requestPrimaryEmailChangeAction(email) {
+  return withErrorHandling(async () => {
+    const verification = await fetchJSON('api/users/me/email-change', {
+      method: 'POST',
+      body: {email}
+    })
+
+    revalidatePath('/mon-compte')
+    return verification
+  }, {forbiddenOnAccessDenied: false})
+}
+
+export async function createCurrentUserEmailAliasAction(email) {
+  return withErrorHandling(async () => {
+    const verification = await fetchJSON('api/users/me/email-aliases', {
+      method: 'POST',
+      body: {email}
+    })
+
+    revalidatePath('/mon-compte')
+    return verification
+  }, {forbiddenOnAccessDenied: false})
+}
+
+export async function resendEmailVerificationAction(verificationId) {
+  return withErrorHandling(async () => {
+    const verification = await fetchJSON(
+      `api/users/me/email-verifications/${encodeURIComponent(verificationId)}/resend`,
+      {method: 'POST'}
+    )
+
+    revalidatePath('/mon-compte')
+    return verification
+  }, {forbiddenOnAccessDenied: false})
+}
+
+export async function cancelEmailVerificationAction(verificationId) {
+  return withErrorHandling(async () => {
+    const verification = await fetchJSON(
+      `api/users/me/email-verifications/${encodeURIComponent(verificationId)}`,
+      {method: 'DELETE'}
+    )
+
+    revalidatePath('/mon-compte')
+    return verification
+  }, {forbiddenOnAccessDenied: false})
+}
+
+export async function deleteCurrentUserEmailAliasAction(aliasId) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(
+      `api/users/me/email-aliases/${encodeURIComponent(aliasId)}`,
+      {method: 'DELETE'}
+    )
+
+    revalidatePath('/mon-compte')
+    return result
+  }, {forbiddenOnAccessDenied: false})
+}
+
+export async function confirmEmailVerificationAction(token) {
+  return withErrorHandling(async () => fetchJSON('auth/email-verifications/confirm', {
+    method: 'POST',
+    body: {token},
+    requireAuth: false
+  }), {
+    forbiddenOnAccessDenied: false,
+    redirectOnUnauthorized: false
+  })
 }

@@ -83,6 +83,13 @@ function formatEmailAliases(entity) {
   return formatList(getEmailAliases(entity), alias => alias.email || alias)
 }
 
+function formatContactEmails(entity) {
+  return formatList(
+    entity?.contactEmails || entity?.declarant?.contactEmails,
+    contact => contact.email || contact
+  )
+}
+
 function formatAddress(entity) {
   const cityLine = [
     entity?.postalCode,
@@ -187,8 +194,9 @@ export function getZoneDeclarantExportColumns({collecteursOnly = false} = {}) {
     {label: 'SIRET', value: declarant => declarant.siret},
     {label: 'Prénom', value: declarant => declarant.firstName || declarant.user?.firstName},
     {label: 'Nom', value: declarant => declarant.lastName || declarant.user?.lastName},
-    {label: 'Email principal', value: declarant => declarant.email || declarant.user?.email},
-    {label: 'Alias e-mail', value: declarant => formatEmailAliases(declarant)},
+    {label: 'E-mail de connexion', value: declarant => declarant.loginEmail || declarant.email || declarant.user?.email},
+    {label: 'E-mails de contact', value: declarant => formatContactEmails(declarant)},
+    {label: 'Alias e-mail de connexion', value: declarant => formatEmailAliases(declarant)},
     {label: 'Téléphone', value: declarant => declarant.phoneNumber},
     {label: 'Adresse', value: declarant => formatAddress(declarant)},
     {label: 'Commune', value: declarant => declarant.city},
@@ -227,11 +235,13 @@ export const ZONE_EXPLOITATIONS_EXPORT_COLUMNS = [
   {label: 'ID point', value: exploitation => exploitation.pointPrelevement?.id || exploitation.pointPrelevementId},
   {label: 'Commune du point', value: exploitation => exploitation.pointPrelevement?.communeName},
   {label: 'Préleveur', value: exploitation => getDeclarantTitleFromDeclarant(exploitation.declarant)},
-  {label: 'Email préleveur', value: exploitation => exploitation.declarant?.email || exploitation.declarant?.user?.email},
-  {label: 'Alias e-mail préleveur', value: exploitation => formatEmailAliases(exploitation.declarant)},
+  {label: 'E-mail de connexion préleveur', value: exploitation => exploitation.declarant?.loginEmail || exploitation.declarant?.email || exploitation.declarant?.user?.email},
+  {label: 'E-mails de contact préleveur', value: exploitation => formatContactEmails(exploitation.declarant)},
+  {label: 'Alias e-mail de connexion préleveur', value: exploitation => formatEmailAliases(exploitation.declarant)},
   {label: 'Collecteurs', value: exploitation => formatList(getCollecteurs(exploitation), getDeclarantTitleFromDeclarant)},
-  {label: 'Emails collecteurs', value: exploitation => formatList(getCollecteurs(exploitation), collecteur => collecteur.email || collecteur.user?.email)},
-  {label: 'Alias e-mail collecteurs', value: exploitation => formatList(getCollecteurs(exploitation), formatEmailAliases)},
+  {label: 'E-mails de connexion collecteurs', value: exploitation => formatList(getCollecteurs(exploitation), collecteur => collecteur.loginEmail || collecteur.email || collecteur.user?.email)},
+  {label: 'E-mails de contact collecteurs', value: exploitation => formatList(getCollecteurs(exploitation), formatContactEmails)},
+  {label: 'Alias e-mail de connexion collecteurs', value: exploitation => formatList(getCollecteurs(exploitation), formatEmailAliases)},
   {label: 'Usage', value: exploitation => getUsageLabel(exploitation.usage)},
   {label: 'Usages secondaires', value: exploitation => formatUsages(getExploitationSecondaryUsages(exploitation))},
   {label: 'Dernière déclaration', value: exploitation => formatDate(exploitation.lastDeclarationAt)},
