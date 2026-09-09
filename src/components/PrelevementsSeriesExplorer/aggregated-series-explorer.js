@@ -584,6 +584,11 @@ const AggregatedSeriesExplorer = ({
     [currentParameters, seriesMap]
   )
 
+  const hasEstimatedCampaignVolumes = useMemo(
+    () => currentParameters.some(parameter => seriesMap.get(parameter)?.metadata?.campaignVolumesEstimated === true),
+    [currentParameters, seriesMap]
+  )
+
   const loadedValues = useMemo(() => {
     if (currentParameters.length === 0) {
       return {}
@@ -927,6 +932,7 @@ const AggregatedSeriesExplorer = ({
         />
       </Box>
 
+      {hasEstimatedCampaignVolumes && <Alert severity='info' description='Les volumes de campagne sont ventilés à titre estimatif pour cet affichage ; les volumes exacts restent ceux des périodes de campagne.' />}
       {renderChartSection()}
     </Box>
   )

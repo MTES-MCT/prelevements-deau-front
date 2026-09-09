@@ -1,12 +1,16 @@
+import {Suspense} from 'react'
+
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import moment from 'moment'
 
+import CampaignRequestsSection from '@/components/campaigns/campaign-requests-section.js'
 import MyDeclarationsList from '@/components/declarations/my-declarations-list.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {
   getMyDeclarationFeedAction
 } from '@/server/actions/declarations.js'
+
 import 'moment/locale/fr'
 
 moment.locale('fr')
@@ -88,9 +92,13 @@ const Dossiers = async () => {
           </h1>
 
           <p className='fr-text--sm fr-mb-0 text-gray-700'>
-            Retrouvez toutes les déclarations de prélèvements d’eau visibles depuis votre compte.
+            Retrouvez vos demandes de relevés et de besoins en eau, ainsi que vos déclarations.
           </p>
         </div>
+
+        <Suspense fallback={null}>
+          <CampaignRequestsSection />
+        </Suspense>
 
         {canCreateAnyDeclaration && (
           <section className='mb-5 border border-gray-200 bg-white px-4 py-4 md:px-5'>
