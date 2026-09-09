@@ -1,17 +1,11 @@
 import {withAuth} from 'next-auth/middleware'
 
-const PUBLIC_PATHS = new Set(['/', '/activation-mot-de-passe', '/login', '/validation-email'])
-
-function isPublicPath(pathname) {
-  return PUBLIC_PATHS.has(pathname)
-    || pathname.startsWith('/auth/')
-    || pathname.startsWith('/validation-email/')
-}
+import {isMiddlewarePublicPath} from './lib/public-paths.js'
 
 export default withAuth({
   callbacks: {
     authorized({req, token}) {
-      if (isPublicPath(req.nextUrl.pathname)) {
+      if (isMiddlewarePublicPath(req.nextUrl.pathname)) {
         return true
       }
 

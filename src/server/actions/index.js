@@ -66,10 +66,6 @@ export {
 } from './series.js'
 
 export {
-  getStatsAction
-} from './stats.js'
-
-export {
   getDashboardTerritoryAction
 } from './dashboard.js'
 
