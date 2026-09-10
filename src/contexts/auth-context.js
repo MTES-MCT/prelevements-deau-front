@@ -9,6 +9,7 @@ import {
 
 import {useSession, signIn, signOut} from 'next-auth/react'
 
+import {clearCampaignRecoveries} from '@/lib/campaign-response-recovery.js'
 import {
   logoutAction,
   startImpersonationAction,
@@ -89,6 +90,12 @@ export const AuthProvider = ({children}) => {
   }, [])
 
   const logout = useCallback(async () => {
+    try {
+      clearCampaignRecoveries(window.sessionStorage)
+    } catch {
+      clearCampaignRecoveries()
+    }
+
     if (session?.user?.token) {
       try {
         await logoutAction()

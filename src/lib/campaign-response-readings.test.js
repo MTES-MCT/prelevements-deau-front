@@ -14,6 +14,66 @@ const entries = (options = {}) => campaignTargetIndexEntries({
   target, indexDates, readings: new Map(), events: [replacement], ...options
 })
 
+test('plusieurs affectations disjointes du même compteur restent saisissables sans doublonner les relevés', t => {
+  const scopedTarget = {
+    id: 'point', meters: [
+      {
+        compteurId: 'old', associationId: 'winter', startDate: '2026-01-01', endDate: '2026-03-01'
+      },
+      {
+        compteurId: 'old', associationId: 'summer', startDate: '2026-07-01', endDate: '2027-01-01'
+      }
+    ]
+  }
+  const result = entries({target: scopedTarget, events: [], indexDates: ['2026-02-01', '2026-05-01', '2026-08-01']})
+  t.deepEqual(result.map(entry => [entry.date, entry.meter?.associationId, entry.unavailable]), [
+    ['2026-02-01', 'winter', undefined], ['2026-05-01', undefined, true], ['2026-08-01', 'summer', undefined]
+  ])
+  t.is(new Set(result.map(entry => entry.entryKey)).size, result.length)
+})
+
+test('une borne commune de deux affectations inclusives n’affiche qu’un index du même compteur', t => {
+  const scopedTarget = {
+    id: 'point', meters: [
+      {compteurId: 'old', startDate: '2026-01-01', endDate: '2026-06-01'},
+      {compteurId: 'old', startDate: '2026-06-01', endDate: '2027-01-01'}
+    ]
+  }
+  const result = entries({target: scopedTarget, events: []})
+  t.is(result.length, 3)
+  t.true(result.every(entry => entry.meter.compteurId === 'old'))
+})
+
+test('un remplacement sur la première affectation ne supprime pas une réaffectation ultérieure du compteur', t => {
+  const scopedTarget = {
+    id: 'point', meters: [
+      {compteurId: 'old', startDate: '2026-01-01', endDate: '2026-03-31'},
+      {compteurId: 'old', startDate: '2026-08-01', endDate: '2027-01-01'},
+      {compteurId: 'new', startDate: '2026-03-01', endDate: '2026-07-31'}
+    ]
+  }
+  const result = entries({target: scopedTarget, events: [{...replacement, at: '2026-03-01'}], indexDates: ['2026-02-01', '2026-04-01', '2026-09-01']})
+  t.deepEqual(result.map(entry => entry.meter.compteurId), ['old', 'new', 'old'])
+})
+
+test('le remplacement coupe chaque affectation ancienne sans effacer les valeurs conservées', t => {
+  const reading = {
+    targetId: 'point', compteurId: 'old', readingDate: '2027-01-01', value: '900'
+  }
+  const readings = new Map([[readingKey(reading), reading]])
+  const scopedTarget = {
+    id: 'point', meters: [
+      {compteurId: 'old', startDate: '2026-01-01', endDate: '2026-03-01'},
+      {compteurId: 'old', startDate: '2026-05-01', endDate: '2027-01-01'},
+      {compteurId: 'new'}
+    ]
+  }
+  const result = entries({target: scopedTarget, readings})
+  t.deepEqual(result.map(entry => entry.meter.compteurId), ['old', 'old', 'new', 'new'])
+  t.is(readings.get(readingKey(reading)).value, '900')
+  t.true(entries({target: scopedTarget, readings, events: []}).some(entry => entry.value === reading))
+})
+
 test('un remplacement coupe les affectations : ancien avant, nouveau après et les deux à la transition', t => {
   t.deepEqual(entries().map(entry => [entry.date, entry.meter.compteurId]), [
     ['2026-01-01', 'old'], ['2026-06-01', 'old'], ['2026-06-01', 'new'], ['2027-01-01', 'new']

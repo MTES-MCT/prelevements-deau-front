@@ -13,6 +13,7 @@ import * as draftQueue from '../../lib/campaign-draft.js'
 import * as meterEventValidation from '../../lib/campaign-meter-event-validation.js'
 import * as responseMapHelpers from '../../lib/campaign-response-map.js'
 import * as responseReadingHelpers from '../../lib/campaign-response-readings.js'
+import * as responseRecoveryHelpers from '../../lib/campaign-response-recovery.js'
 import * as campaignHelpers from '../../lib/collection-campaigns.js'
 import * as waterHelpers from '../../lib/water-uses.js'
 
@@ -28,6 +29,14 @@ const deferred = () => {
   })
 
   return {promise, resolve}
+}
+
+const settle = async () => {
+  for (let index = 0; index < 25; index++) {
+    // Exercise the real serial queue and effect promises without a wall-clock wait.
+    // eslint-disable-next-line no-await-in-loop
+    await Promise.resolve()
+  }
 }
 
 const nestedHooks = {
@@ -81,7 +90,8 @@ const successfulSave = payload => ({
 
 // Real response component + real serial draft queue; only hooks, timers and
 // server actions are controlled. The rendering tree keeps every permission gate.
-const interaction = ({initialContext = baseContext(), responseKind = 'INDEX', saveResult, submitResult, confirmNavigation = false} = {}) => {
+let actorNumber = 0
+const interaction = ({initialContext = baseContext(), responseKind = 'INDEX', saveResult, submitResult, contextResult, userId = `actor-${++actorNumber}`, auth, sessionStorage, confirmNavigation = false} = {}) => {
   const state = []
   const timers = new Map()
   const loaded = new Map()
@@ -91,6 +101,7 @@ const interaction = ({initialContext = baseContext(), responseKind = 'INDEX', sa
   const documentListeners = new Map()
   const navigation = {href: '', reloadCount: 0}
   const browser = {
+    sessionStorage,
     addEventListener: (type, listener) => windowListeners.set(type, listener),
     removeEventListener: type => windowListeners.delete(type),
     location: {
@@ -164,6 +175,10 @@ const interaction = ({initialContext = baseContext(), responseKind = 'INDEX', sa
     }
   }
   const actions = {
+    async getCampaignContextAction(id, preleveurUserId) {
+      calls.push({action: 'context', id, preleveurUserId})
+      return contextResult || {success: true, data: {...initialContext, responses: {...initialContext.responses, [responseKind]: currentResponse}}}
+    },
     async saveCampaignResponseAction(id, kind, payload) {
       calls.push({
         action: 'save', id, kind, payload: structuredClone(payload)
@@ -207,6 +222,8 @@ const interaction = ({initialContext = baseContext(), responseKind = 'INDEX', sa
     const compiledModule = {exports: {}}
     const imports = {
       react,
+      '@/contexts/auth-context.js': {useAuth: () => auth || ({user: {id: userId}, isLoading: false})},
+      '@/lib/campaign-response-recovery.js': responseRecoveryHelpers,
       '@/lib/campaign-calendar.js': campaignCalendar,
       '@/lib/campaign-draft.js': draftQueue,
       '@/lib/campaign-meter-event-validation.js': meterEventValidation,
@@ -263,6 +280,17 @@ const interaction = ({initialContext = baseContext(), responseKind = 'INDEX', sa
     calls,
     confirmations,
     navigation,
+    unmount() {
+      for (const item of state) {
+        item?.cleanup?.()
+      }
+    },
+    editor(value, targetId = 'point-a') {
+      nodes(this.render()).find(node => node.props?.onEditorChange).props.onEditorChange(targetId, value)
+    },
+    recoveredEditors() {
+      return nodes(this.render()).find(node => node.props?.recoveredEditors).props.recoveredEditors
+    },
     render() {
       cursor = 0
       return renderResponse({initialContext, kind: responseKind})
@@ -325,6 +353,252 @@ const interaction = ({initialContext = baseContext(), responseKind = 'INDEX', sa
     }
   }
 }
+
+for (const kind of ['INDEX', 'NEEDS']) {
+  test(`Soumettre ${kind} réessaie une autosauvegarde corrigée sans exiger Enregistrer le brouillon`, async t => {
+    const flow = interaction({initialContext: responseContext(kind), responseKind: kind})
+    flow.change(responseDraft(flow, kind, '-1'))
+    await flow.runAutosave()
+    t.is(flow.calls.length, 0)
+    flow.change(responseDraft(flow, kind, '42'))
+    await button(flow.render(), 'Soumettre').props.onClick()
+    t.deepEqual(flow.calls.map(call => call.action), ['save', 'submit'])
+    t.is(flow.calls[1].payload.expectedVersion, 5)
+  })
+}
+
+test('Soumettre réessaie aussi une erreur réseau de sauvegarde, sans modifier la clé de transmission', async t => {
+  let attempts = 0
+  const flow = interaction({saveResult: (id, kind, payload) => ++attempts === 1 ? {success: false, code: 503, error: 'Indisponible'} : successfulSave(payload)})
+  flow.change({...flow.draft(), readings: [reading('42')]})
+  await flow.runAutosave()
+  await button(flow.render(), 'Soumettre').props.onClick()
+  t.deepEqual(flow.calls.map(call => call.action), ['save', 'save', 'submit'])
+})
+
+test('un retour SPA enregistre immédiatement la saisie avant le délai de debounce', async t => {
+  const flow = interaction()
+  flow.change({...flow.draft(), readings: [reading('42')]})
+  flow.unmount()
+  await settle()
+  t.deepEqual(flow.calls.map(call => call.action), ['save'])
+  t.is(flow.calls[0].payload.data.readings[0].value, '42')
+  await flow.runAutosave()
+  t.is(flow.calls.length, 1)
+})
+
+for (const kind of ['INDEX', 'NEEDS']) {
+  test(`le retour sur ${kind} reprend la saisie après un échec de sauvegarde à la sortie`, async t => {
+    const userId = `return-${kind}`
+    const initialContext = responseContext(kind)
+    const first = interaction({
+      userId, initialContext, responseKind: kind, saveResult: {success: false, code: 503, error: 'Indisponible'}
+    })
+    first.change(responseDraft(first, kind, '42'))
+    first.unmount()
+    await settle()
+    const returned = interaction({userId, initialContext, responseKind: kind})
+    returned.render()
+    await settle()
+    t.deepEqual(returned.draft(), first.draft())
+    t.true(returned.html().includes('Votre saisie non enregistrée a été reprise.'))
+    await button(returned.render(), 'Soumettre').props.onClick()
+    t.deepEqual(returned.calls.map(call => call.action), ['context', 'save', 'submit'])
+    t.is(returned.calls[1].payload.expectedVersion, 4)
+  })
+}
+
+test('la reprise attend la sauvegarde en vol et relit la version canonique sans écriture en double', async t => {
+  const pending = deferred()
+  const userId = 'return-in-flight'
+  const first = interaction({userId, saveResult: () => pending.promise})
+  first.change({...first.draft(), readings: [reading('42')]})
+  const running = first.runAutosave()
+  first.unmount()
+  await settle()
+  const fresh = baseContext()
+  fresh.responses.INDEX = {...fresh.responses.INDEX, version: 5, draft: {readings: [reading('42')], meterEvents: []}}
+  const returned = interaction({userId, contextResult: {success: true, data: fresh}})
+  returned.render()
+  t.true(button(returned.render(), 'Soumettre').props.disabled)
+  t.is(returned.calls.length, 0)
+  pending.resolve(successfulSave(first.calls[0].payload))
+  await running
+  await settle()
+  t.is(returned.draft().readings[0].value, '42')
+  t.is(returned.context().responses.INDEX.version, 5)
+  t.deepEqual(first.calls.map(call => call.action), ['save'])
+  t.deepEqual(returned.calls.map(call => call.action), ['context'])
+  returned.change({...returned.draft(), comment: 'Après le retour'})
+  await returned.runAutosave()
+  t.is(returned.calls.at(-1).payload.expectedVersion, 5)
+})
+
+test('la reprise attend aussi une soumission en vol avant de relire sa version finale', async t => {
+  const pending = deferred()
+  const userId = 'return-submission-in-flight'
+  const first = interaction({userId, submitResult: () => pending.promise})
+  const transmitting = button(first.render(), 'Soumettre').props.onClick()
+  await settle()
+  first.unmount()
+  const fresh = baseContext()
+  fresh.responses.INDEX = {...fresh.responses.INDEX, version: 5, status: 'SUBMITTED'}
+  const returned = interaction({userId, contextResult: {success: true, data: fresh}})
+  returned.render()
+  await settle()
+  t.is(returned.calls.length, 0)
+  t.true(button(returned.render(), 'Soumettre').props.disabled)
+  pending.resolve({success: true, data: {response: fresh.responses.INDEX, calculation: {totals: []}}})
+  await transmitting
+  await settle()
+  t.is(returned.context().responses.INDEX.version, 5)
+  t.is(returned.context().responses.INDEX.status, 'SUBMITTED')
+  t.deepEqual(first.calls.map(call => call.action), ['submit'])
+  t.deepEqual(returned.calls.map(call => call.action), ['context'])
+})
+
+test('un formulaire compteur inachevé est repris sans le convertir en événement sauvegardé', async t => {
+  const userId = 'return-editor'
+  const first = interaction({userId})
+  const editor = {event: {type: 'RESET', at: '2026-03-01', previousIndex: '500'}, editing: null, lastAttempt: null}
+  first.editor(editor)
+  first.unmount()
+  await settle()
+  t.is(first.calls.length, 0)
+  const returned = interaction({userId})
+  returned.render()
+  await settle()
+  t.deepEqual(returned.recoveredEditors()['point-a'], editor)
+  t.deepEqual(returned.draft().meterEvents, [])
+  t.deepEqual(returned.calls.map(call => call.action), ['context'])
+})
+
+test('les relevés hors période sont signalés uniquement sur leur point et restent dans le brouillon', async t => {
+  const initialContext = baseContext()
+  const retained = {...reading('900'), code: 'READING_OUTSIDE_METER_PERIOD'}
+  initialContext.responses.INDEX.draft.readings = [reading('900')]
+  initialContext.calculation.ignoredReadings = [retained, {...retained, targetId: 'foreign', value: '123456789'}]
+  const flow = interaction({initialContext})
+  const html = flow.html()
+  t.true(html.includes('1 relevé hors période du compteur'))
+  t.true(html.includes('ne sont ni utilisées dans les volumes ni transmises'))
+  t.false(html.includes('123456789'))
+  flow.change({...flow.draft(), comment: 'Conserver les valeurs'})
+  await flow.runAutosave()
+  t.is(flow.calls[0].payload.data.readings[0].value, '900')
+})
+
+test('une version concurrente garde la saisie locale visible mais interdit son rejeu', async t => {
+  const userId = 'return-conflict'
+  const first = interaction({userId, saveResult: {success: false, code: 409, error: 'Conflit'}})
+  first.change({...first.draft(), readings: [reading('42')]})
+  first.unmount()
+  await settle()
+  const fresh = baseContext()
+  fresh.responses.INDEX.version = 6
+  const returned = interaction({userId, contextResult: {success: true, data: fresh}})
+  returned.render()
+  await settle()
+  t.is(returned.draft().readings[0].value, '42')
+  t.true(button(returned.render(), 'Soumettre').props.disabled)
+  await button(returned.render(), 'Soumettre').props.onClick()
+  returned.change({...returned.draft(), readings: [reading('99')]})
+  t.deepEqual(returned.calls.map(call => call.action), ['context'])
+  t.is(returned.draft().readings[0].value, '42')
+  t.true(returned.beforeUnload().prevented)
+})
+
+test('un éditeur compteur en conflit reste consultable sans action ni identifiant technique', async t => {
+  const userId = 'return-editor-conflict'
+  const first = interaction({userId})
+  first.editor({
+    event: {
+      type: 'REPLACEMENT', at: '2026-03-01', previousCompteurId: 'private-id', previousIndex: '125', nextIndex: '0', serialNumber: 'Nouveau-42', reason: 'Cadran cassé'
+    }, editing: null, lastAttempt: null
+  })
+  first.unmount()
+  const fresh = baseContext()
+  fresh.responses.INDEX.version = 5
+  const returned = interaction({userId, contextResult: {success: true, data: fresh}})
+  returned.render()
+  await settle()
+  const html = returned.html()
+  t.true(html.includes('Changement de compteur retrouvé'))
+  t.true(html.includes('125 m³ / 0 m³'))
+  t.true(html.includes('Nouveau-42'))
+  t.true(html.includes('Cadran cassé'))
+  t.false(html.includes('private-id'))
+  t.deepEqual(returned.recoveredEditors(), {})
+  t.true(button(returned.render(), 'Soumettre').props.disabled)
+  t.deepEqual(returned.calls.map(call => call.action), ['context'])
+})
+
+test('des droits retirés et un autre utilisateur ne récupèrent pas le brouillon privé précédent', async t => {
+  const userId = 'return-rights'
+  const first = interaction({userId, saveResult: {success: false, code: 503, error: 'Indisponible'}})
+  first.change({...first.draft(), readings: [reading('42')]})
+  first.unmount()
+  await settle()
+  const otherUser = interaction({userId: 'different-user'})
+  t.deepEqual(otherUser.draft().readings, [])
+  t.is(otherUser.calls.length, 0)
+  const returned = interaction({userId, contextResult: {success: true, data: baseContext({canEdit: false, canSubmit: false, editableTargetIds: []})}})
+  returned.render()
+  await settle()
+  t.deepEqual(returned.draft().readings, [])
+  t.falsy(button(returned.render(), 'Soumettre'))
+  t.deepEqual(returned.calls.map(call => call.action), ['context'])
+})
+
+test('une erreur de contexte pendant la reprise ne déverrouille jamais le formulaire périmé', async t => {
+  const userId = 'return-unavailable'
+  const first = interaction({userId, saveResult: {success: false, code: 503, error: 'Indisponible'}})
+  first.change({...first.draft(), readings: [reading('42')]})
+  first.unmount()
+  await settle()
+  const returned = interaction({userId, contextResult: {success: false, code: 403, error: 'Accès refusé'}})
+  returned.render()
+  await settle()
+  t.true(button(returned.render(), 'Soumettre').props.disabled)
+  returned.change({...returned.draft(), readings: [reading('99')]})
+  t.deepEqual(returned.calls.map(call => call.action), ['context'])
+  t.true(returned.html().includes('La reprise de votre saisie est momentanément indisponible.'))
+})
+
+test('la session en chargement puis un changement d’utilisateur bloquent les callbacks de saisie', async t => {
+  const auth = {user: {id: 'initial-user'}, isLoading: true}
+  const flow = interaction({auth})
+  t.true(button(flow.render(), 'Enregistrer le brouillon').props.disabled)
+  flow.change({...flow.draft(), readings: [reading('42')]})
+  t.deepEqual(flow.draft().readings, [])
+  auth.isLoading = false
+  flow.change({...flow.draft(), readings: [reading('42')]})
+  t.is(flow.draft().readings[0].value, '42')
+  await flow.runAutosave()
+  auth.user = {id: 'different-user'}
+  flow.change({...flow.draft(), readings: [reading('99')]})
+  t.is(flow.draft().readings[0].value, '42')
+  t.true(button(flow.render(), 'Soumettre').props.disabled)
+  t.deepEqual(flow.calls.map(call => call.action), ['save'])
+})
+
+test.serial('la fin tardive d’une sauvegarde après déconnexion ne recrée pas de journal', async t => {
+  const pending = deferred()
+  const userId = 'logout-in-flight'
+  const first = interaction({userId, saveResult: () => pending.promise})
+  first.change({...first.draft(), readings: [reading('42')]})
+  const running = first.runAutosave()
+  await settle()
+  responseRecoveryHelpers.clearCampaignRecoveries()
+  pending.resolve(successfulSave(first.calls[0].payload))
+  await running
+  first.unmount()
+  await settle()
+  const key = responseRecoveryHelpers.campaignRecoveryKey({
+    userId, campaignId: 'campaign', preleveurUserId: 'represented-user', kind: 'INDEX'
+  })
+  t.is(responseRecoveryHelpers.readCampaignRecovery(key), null)
+})
 
 test('la soumission directe sauvegarde d’abord le dernier brouillon avec la version et le préleveur représenté', async t => {
   const flow = interaction()

@@ -15,6 +15,7 @@ import * as meterEventValidation from '../../lib/campaign-meter-event-validation
 import * as pointSelectionHelpers from '../../lib/campaign-point-selection.js'
 import * as responseMapHelpers from '../../lib/campaign-response-map.js'
 import * as responseReadingHelpers from '../../lib/campaign-response-readings.js'
+import * as responseRecoveryHelpers from '../../lib/campaign-response-recovery.js'
 import * as campaignTimeline from '../../lib/campaign-timeline.js'
 import * as campaignHelpers from '../../lib/collection-campaigns.js'
 import * as waterHelpers from '../../lib/water-uses.js'
@@ -31,6 +32,14 @@ const loadComponent = (name, overrides = {}) => {
   const {code} = transformSync(readFileSync(filename, 'utf8'), {filename: filename.pathname, jsc: {parser: {syntax: 'ecmascript', jsx: true}, transform: {react: {runtime: 'automatic'}}, target: 'es2022'}, module: {type: 'commonjs'}})
   const compiledModule = {exports: {}}
   const componentRequire = specifier => {
+    if (specifier === '@/contexts/auth-context.js') {
+      return {useAuth: () => ({user: {id: 'fixture-viewer'}, isLoading: false})}
+    }
+
+    if (specifier === '@/lib/campaign-response-recovery.js') {
+      return responseRecoveryHelpers
+    }
+
     if (Object.hasOwn(overrides, specifier)) {
       return overrides[specifier]
     }
@@ -658,6 +667,73 @@ test('les deux dates minimales restent visibles et ne peuvent pas être retirée
   t.true(html.includes('Ajouter un relevé'))
 })
 
+test('les champs de relevé restent des dates natives bornées sans répéter leur valeur dans une aide', t => {
+  const {CalendarStep: renderCalendar} = loadComponent('campaign-config-form')
+  const form = {
+    ...configurationHelpers.initialCampaignConfiguration(undefined, {}, 2026), indexDates: ['2026-03-01', '2026-03-15', '2026-03-31']
+  }
+  const changes = []
+  const tree = renderCalendar({form, update: change => changes.push(change)})
+  const fields = wizardNodes(tree).filter(node => node.props?.label?.startsWith('Relevé '))
+  t.is(fields.length, 3)
+  for (const [index, field] of fields.entries()) {
+    const {type, value, min, max, hint, required} = field.props
+    t.is(type, 'date')
+    t.is(value, form.indexDates[index])
+    t.is(min, [undefined, '2026-03-02', '2026-03-16'][index])
+    t.is(max, ['2026-03-14', '2026-03-30', undefined][index])
+    t.falsy(hint)
+    t.true(required)
+    const html = renderToStaticMarkup(field)
+    t.true(html.includes('type="date"'))
+    t.true(html.includes(`value="${value}"`))
+    t.notRegex(html, /fr-hint-text|mars 2026/)
+    if (min) {
+      t.true(html.includes(`min="${min}"`))
+    }
+
+    if (max) {
+      t.true(html.includes(`max="${max}"`))
+    }
+  }
+
+  fields[1].props.onChange('2026-03-20')
+  t.deepEqual([...changes[0].indexDates], ['2026-03-01', '2026-03-20', '2026-03-31'])
+})
+
+test('les périodes gardent leurs bornes natives et leur fin exclusive sans date longue au-dessus des champs', t => {
+  const {CalendarStep: renderCalendar} = loadComponent('campaign-config-form')
+  const period = {
+    kind: 'NEEDS', position: 0, label: 'Besoins de février', startDate: '2028-02-01', endDate: '2028-03-01'
+  }
+  const form = {...configurationHelpers.initialCampaignConfiguration(undefined, {}, 2026), periods: [period]}
+  const changes = []
+  const tree = renderCalendar({form, update: change => changes.push(change)})
+  const editor = wizardNodes(tree).find(node => node.props?.period === period)
+  const fields = wizardNodes(editor.type(editor.props)).filter(node => node.props?.type === 'date')
+  t.is(fields.length, 2)
+  const [start, end] = fields
+  t.is(start.props.value, '2028-02-01')
+  t.is(start.props.max, '2028-02-29')
+  t.is(end.props.value, '2028-02-29')
+  t.is(end.props.min, '2028-02-01')
+  for (const field of fields) {
+    t.falsy(field.props.hint)
+    t.true(field.props.required)
+    const html = renderToStaticMarkup(field)
+    t.true(html.includes('type="date"'))
+    t.true(html.includes(`value="${field.props.value}"`))
+    t.notRegex(html, /fr-hint-text|février 2028|mars 2028/)
+  }
+
+  start.props.onChange('2028-02-10')
+  t.is(changes[0].periods[0].startDate, '2028-02-10')
+  end.props.onChange('2028-02-29')
+  t.is(changes[1].periods[0].endDate, '2028-03-01')
+  end.props.onChange('')
+  t.is(changes[2].periods[0].endDate, '')
+})
+
 test('l’édition conserve la position des champs de dates, même si elles sont temporairement inversées', t => {
   const {CalendarStep} = loadComponent('campaign-config-form')
   const form = configurationHelpers.initialCampaignConfiguration(undefined, {}, 2026)
@@ -731,6 +807,37 @@ test('les réglages de réponse n’ajoutent pas d’aperçu et retirer la limit
   t.false(html.includes('aria-label="Dates des relevés"'))
   t.false(html.includes('aria-label="Saisie des réponses"'))
   t.false(html.includes('Créer le brouillon'))
+})
+
+test('les aides des dates de réponse restent métier sans répéter les dates sélectionnées', t => {
+  const {ResponseSettings: renderSettings} = loadComponent('campaign-config-form')
+  const form = {
+    ...configurationHelpers.initialCampaignConfiguration(undefined, {}, 2026), opensAt: '2026-05-01T00:00', closesAt: '2026-11-30T23:59'
+  }
+  const changes = []
+  const fields = wizardNodes(renderSettings({form, update: change => changes.push(change)})).filter(node => node.props?.type === 'date')
+  t.is(fields.length, 2)
+  const [opening, deadline] = fields
+  t.is(opening.props.value, '2026-05-01')
+  t.is(opening.props.max, '2026-11-30')
+  t.is(deadline.props.value, '2026-11-30')
+  t.is(deadline.props.min, '2026-10-31')
+  for (const field of fields) {
+    t.is(typeof field.props.hint, 'string')
+    t.true(field.props.hint.length > 0)
+    t.notRegex(field.props.hint, /1 mai 2026|30 novembre 2026|2026-05-01|2026-11-30/)
+    const html = renderToStaticMarkup(field)
+    t.true(html.includes('type="date"'))
+    t.true(html.includes(`value="${field.props.value}"`))
+  }
+
+  opening.props.onChange('2026-06-01')
+  deadline.props.onChange('2026-12-10')
+  t.deepEqual(changes, [{opensAt: '2026-06-01T00:00'}, {closesAt: '2026-12-10T23:59'}])
+  const emptyFields = wizardNodes(renderSettings({form: {...form, opensAt: '', closesAt: ''}, update() {}})).filter(node => node.props?.type === 'date')
+  t.true(emptyFields.every(field => field.props.value === '' && field.props.type === 'date'))
+  t.is(emptyFields[0].props.max, undefined)
+  t.is(emptyFields[1].props.min, '2026-10-31')
 })
 
 test('la frise distingue l’ouverture prévue des dates effectives sans inventer d’envoi', t => {

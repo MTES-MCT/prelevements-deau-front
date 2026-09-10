@@ -108,6 +108,19 @@ test('les effectifs absents ne deviennent pas des zéros et les champs manquants
   t.false(partialIdentity.includes('0 préleveur'))
 })
 
+test('la liste utilise les effectifs autorisés du contrat allégé sans charger les cibles', t => {
+  const markup = card(fixture({targets: undefined}), {counts: {pointCount: 12, preleveurCount: 5}})
+  t.true(markup.includes('12 points'))
+  t.true(markup.includes('5 préleveurs'))
+  const empty = card(fixture(), {counts: {pointCount: 0, preleveurCount: 0}})
+  t.true(empty.includes('0 point'))
+  t.false(empty.includes('3 points'))
+  const invalid = card(fixture(), {counts: {pointCount: -1, preleveurCount: 'secret'}})
+  t.true(invalid.includes('Points non renseignés'))
+  t.false(invalid.includes('secret'))
+  t.false(invalid.includes('3 points'))
+})
+
 test('les calendriers affichent chaque date de relevé et chaque période de besoins avec leur fin effective', t => {
   const markup = card()
   for (const text of ['Relevés de compteurs', '31 octobre 2025', '1 juin 2026', '31 octobre 2026', 'Besoins en eau', 'Du 1 juin 2027 au 31 octobre 2027']) {

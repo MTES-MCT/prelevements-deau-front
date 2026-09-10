@@ -6,12 +6,13 @@ import {
 
 import Link from 'next/link'
 
-import {IndexRows, NeedsRows} from '@/components/campaigns/campaign-response-entries.js'
+import {IndexRows, NeedsRows, RecoveredMeterEditors} from '@/components/campaigns/campaign-response-entries.js'
 import CampaignResponseHeader from '@/components/campaigns/campaign-response-header.js'
 import CampaignResponseWorkspace from '@/components/campaigns/campaign-response-workspace.js'
 import {
   CampaignField, CampaignNotice, CampaignShell
 } from '@/components/campaigns/campaign-ui.js'
+import useCampaignResponseRecovery from '@/components/campaigns/use-campaign-response-recovery.js'
 import {createCampaignDraftQueue} from '@/lib/campaign-draft.js'
 import {
   campaignDate,
@@ -47,15 +48,36 @@ const CampaignResponseForm = ({initialContext, kind}) => {
   const pendingMeterEventTargets = useRef(new Set())
   const manualSave = useRef({pending: false, version: 0})
   const submissionPending = useRef(false)
+  const submissionFinished = useRef(null)
   const savedDraftResult = useRef(null)
   const editingState = useRef(null)
+  const latestContext = useRef(context)
+  latestContext.current = context
+  const recovery = useCampaignResponseRecovery({
+    context, kind, queue,
+    onRestore({context: fresh, recovery: saved, conflict}) {
+      latestContext.current = fresh
+      setContext(fresh)
+      setCalculation(fresh.calculation)
+      const value = saved?.draft || campaignInitialDraft(fresh, kind)
+      setDraft(value)
+      queue.current.setRevision(fresh.responses?.[kind]?.version || 0)
+      if (conflict) {
+        setSaveState({status: 'conflict', dirty: true})
+      } else if (saved?.dirty) {
+        queue.current.change(value)
+      }
+    }
+  })
+  const recoveryRef = useRef(recovery)
+  recoveryRef.current = recovery
   const response = context.responses?.[kind]
   const permissions = getCampaignCapabilities(context, kind)
   const otherKind = kind === 'INDEX' ? 'NEEDS' : 'INDEX'
   const otherResponseHref = response?.status === 'SUBMITTED' && context.campaign.periods.some(period => period.kind === otherKind) && getCampaignCapabilities(context, otherKind).canRead
     ? campaignResponseHref(context.campaign.id, otherKind, context.preleveurUserId)
     : null
-  const disabled = !permissions.canEdit || busy || saveState.status === 'conflict'
+  const disabled = !permissions.canEdit || !recovery.ready || busy || saveState.status === 'conflict'
   editingState.current = {disabled: disabled || campaignEditableTargets(context, kind).length === 0, kind}
   const localErrors = campaignDraftErrors(draft, kind)
   const meterIssues = [...(saveState.dirty ? [] : calculation?.issues || []), ...validationIssues]
@@ -86,10 +108,12 @@ const CampaignResponseForm = ({initialContext, kind}) => {
         throw new Error(errors[0])
       }
 
-      const saved = unwrapCampaignResult(await saveCampaignResponseAction(context.campaign.id, kind, {preleveurUserId: context.preleveurUserId, expectedVersion, data: campaignDraftForSave(context, kind, data)}))
+      const currentContext = latestContext.current
+      const saved = unwrapCampaignResult(await saveCampaignResponseAction(currentContext.campaign.id, kind, {preleveurUserId: currentContext.preleveurUserId, expectedVersion, data: campaignDraftForSave(currentContext, kind, data)}))
       return {...saved, revision: saved.response.version}
     },
     onState(state) {
+      recoveryRef.current.recordSave(state)
       if (state.result) {
         savedDraftResult.current = state.result
       }
@@ -118,7 +142,7 @@ const CampaignResponseForm = ({initialContext, kind}) => {
   useEffect(() => {
     mounted.current = true
     const beforeUnload = event => {
-      if (queue.current.getState().dirty || pendingMeterEvent.current) {
+      if (queue.current.getState().dirty || pendingMeterEvent.current || recoveryRef.current.hasChanges()) {
         event.preventDefault()
         event.returnValue = ''
       }
@@ -127,7 +151,7 @@ const CampaignResponseForm = ({initialContext, kind}) => {
     window.addEventListener('beforeunload', beforeUnload)
     const beforeNavigate = event => {
       const link = event.target.closest?.('a[href]')
-      if (link && !link.hasAttribute('download') && link.target !== '_blank' && (queue.current.getState().dirty || pendingMeterEvent.current) && !confirmCampaignAction('Quitter abandonnera les modifications non enregistrées. Continuer ?')) {
+      if (link && !link.hasAttribute('download') && link.target !== '_blank' && (queue.current.getState().dirty || pendingMeterEvent.current || recoveryRef.current.hasChanges()) && !confirmCampaignAction('Des modifications ne sont pas encore enregistrées. Quitter cette page ?')) {
         event.preventDefault()
         event.stopPropagation()
       }
@@ -139,6 +163,7 @@ const CampaignResponseForm = ({initialContext, kind}) => {
       window.removeEventListener('beforeunload', beforeUnload)
       document.removeEventListener('click', beforeNavigate, true)
       clearTimeout(timer.current)
+      recoveryRef.current.depart(submissionFinished.current)
     }
   }, [])
 
@@ -148,6 +173,7 @@ const CampaignResponseForm = ({initialContext, kind}) => {
     }
 
     setDraft(value)
+    recovery.recordDraft(value)
     manualSave.current.version++
     setDraftSaveFeedback(null)
     setError(null)
@@ -188,10 +214,11 @@ const CampaignResponseForm = ({initialContext, kind}) => {
   }
 
   const reload = async () => {
-    if ((queue.current.getState().dirty || pendingMeterEvent.current) && !confirmCampaignAction('Recharger abandonnera les modifications locales non enregistrées. Continuer ?')) {
+    if ((queue.current.getState().dirty || pendingMeterEvent.current || recovery.hasChanges()) && !confirmCampaignAction('Recharger abandonnera les modifications locales non enregistrées. Continuer ?')) {
       return
     }
 
+    recovery.clear({discard: true})
     window.location.reload()
   }
 
@@ -213,6 +240,7 @@ const CampaignResponseForm = ({initialContext, kind}) => {
     clearTimeout(timer.current)
     try {
       if ((!response?.id || response.status === 'SUBMITTED') && !queue.current.getState().dirty) {
+        recovery.recordDraft(draft)
         queue.current.change(draft)
       }
 
@@ -250,6 +278,10 @@ const CampaignResponseForm = ({initialContext, kind}) => {
     }
 
     submissionPending.current = true
+    let finishSubmission
+    submissionFinished.current = new Promise(resolve => {
+      finishSubmission = resolve
+    })
     manualSave.current.version++
     setDraftSaveFeedback(null)
     editingState.current.disabled = true
@@ -259,13 +291,15 @@ const CampaignResponseForm = ({initialContext, kind}) => {
     try {
       // An untouched prefill must also be persisted before transmission.
       if (!response?.id || response.status === 'SUBMITTED') {
+        recovery.recordDraft(draft)
         queue.current.change(draft)
       }
 
-      const expectedVersion = await queue.current.flush()
+      const expectedVersion = await queue.current.retry()
       idempotencyKey.current ||= crypto.randomUUID()
       const submitted = unwrapCampaignResult(await submitCampaignResponseAction(context.campaign.id, kind, {preleveurUserId: context.preleveurUserId, expectedVersion, idempotencyKey: idempotencyKey.current}))
       queue.current.setRevision(submitted.response.version)
+      recovery.clear({response: submitted.response})
       setContext(previous => ({...previous, ...(submitted.targets ? {targets: submitted.targets} : {}), responses: {...previous.responses, [kind]: submitted.response}}))
       setDraft(structuredClone(submitted.response.draft))
       setCalculation(submitted.calculation)
@@ -278,6 +312,8 @@ const CampaignResponseForm = ({initialContext, kind}) => {
 
       setError(error_.code === 409 ? 'Cette réponse a été modifiée entre-temps. Rechargez la page pour la vérifier avant de transmettre.' : error_.message)
     } finally {
+      finishSubmission()
+      submissionFinished.current = null
       submissionPending.current = false
       setBusy(false)
     }
@@ -286,12 +322,14 @@ const CampaignResponseForm = ({initialContext, kind}) => {
   return (
     <CampaignShell header={<CampaignResponseHeader campaign={context.campaign} kind={kind} />} backHref='/mes-declarations#demandes' backLabel='Mes déclarations'>
       {(context.availablePreleveurs || []).length > 1 && <CampaignField label='Répondre pour' value={context.preleveurUserId} disabled={busy} options={context.availablePreleveurs.map(preleveur => ({value: preleveur.userId, label: preleveur.label}))} onChange={preleveurUserId => {
-        if ((!queue.current.getState().dirty && !pendingMeterEvent.current) || confirmCampaignAction('Changer de préleveur abandonnera la saisie non enregistrée. Continuer ?')) {
+        if ((!queue.current.getState().dirty && !pendingMeterEvent.current) || confirmCampaignAction('Des modifications ne sont pas encore enregistrées. Changer de préleveur ?')) {
           window.location.href = `?${new URLSearchParams({preleveurUserId})}`
         }
       }} />}
       <CampaignNotice error>{error}</CampaignNotice>
       <CampaignNotice>{message}</CampaignNotice>
+      <CampaignNotice>{recovery.notice}</CampaignNotice>
+      <RecoveredMeterEditors context={context} editors={recovery.conflictEditors} />
       {otherResponseHref && <p className='fr-mb-3w'><Link className='fr-link fr-icon-arrow-right-line fr-link--icon-right' href={otherResponseHref}>{otherKind === 'NEEDS' ? 'Passer aux besoins en eau' : 'Passer aux relevés de compteurs'}</Link></p>}
       {response?.status === 'SUBMITTED' && permissions.canEdit && <CampaignNotice>Vous pouvez encore corriger votre réponse jusqu’à la date limite. Pensez à la transmettre à nouveau après modification.</CampaignNotice>}
       {!permissions.canEdit && <CampaignNotice>{response?.status === 'SUBMITTED' ? 'Votre réponse a été transmise.' : 'Vous pouvez consulter cette réponse, mais pas la modifier.'}</CampaignNotice>}
@@ -304,7 +342,7 @@ const CampaignResponseForm = ({initialContext, kind}) => {
       <CampaignResponseWorkspace targets={context.targets}>{({pointProps}) => (
         <>
           {kind === 'INDEX'
-            ? <IndexRows context={context} draft={draft} disabled={disabled} pointProps={pointProps} issues={meterIssues} onChange={change} onSaveMeterEvent={saveMeterEvent} onPendingMeterEventChange={onPendingMeterEventChange} />
+            ? <IndexRows context={context} draft={draft} disabled={disabled} pointProps={pointProps} issues={meterIssues} ignoredReadings={saveState.dirty ? [] : calculation?.ignoredReadings} recoveredEditors={recovery.editors} onEditorChange={recovery.onEditorChange} onChange={change} onSaveMeterEvent={saveMeterEvent} onPendingMeterEventChange={onPendingMeterEventChange} />
             : <NeedsRows context={context} draft={draft} disabled={disabled} pointProps={pointProps} onChange={change} />}
           <div className='fr-mt-2w'>
             <CampaignField multiline rows={2} label='Commentaire facultatif' disabled={disabled || campaignEditableTargets(context, kind).length < context.targets.length} value={draft.comment || ''} onChange={comment => change({...draft, comment})} />
@@ -312,7 +350,7 @@ const CampaignResponseForm = ({initialContext, kind}) => {
           {(permissions.canEdit || permissions.canSubmit) && <section aria-label='Enregistrement et transmission' className='mb-5 border-t border-gray-200 pt-3'>
             {hasPendingMeterEvent && <p role='status' className='fr-info-text fr-mb-2w'>{PENDING_METER_EVENT_MESSAGE}</p>}
             <div className='flex flex-col gap-2 sm:flex-row sm:items-center'>
-              {permissions.canEdit && <button type='button' className='fr-btn fr-btn--secondary' disabled={busy || savingDraft || hasPendingMeterEvent || saveState.status === 'conflict' || localErrors.length > 0} onClick={save}>{savingDraft ? 'Enregistrement…' : 'Enregistrer le brouillon'}</button>}
+              {permissions.canEdit && <button type='button' className='fr-btn fr-btn--secondary' disabled={disabled || savingDraft || hasPendingMeterEvent || localErrors.length > 0} onClick={save}>{savingDraft ? 'Enregistrement…' : 'Enregistrer le brouillon'}</button>}
               {permissions.canSubmit && <button type='button' className='fr-btn' disabled={disabled || savingDraft || hasPendingMeterEvent || localErrors.length > 0} onClick={transmit}>{busy ? 'Soumission…' : 'Soumettre'}</button>}
             </div>
             {permissions.canSubmit && <p className='fr-text--xs fr-mt-1w fr-mb-0 text-[var(--text-mention-grey)]'>Vous pourrez modifier votre réponse tant que la saisie est ouverte.</p>}

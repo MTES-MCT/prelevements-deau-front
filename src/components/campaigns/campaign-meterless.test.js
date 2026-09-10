@@ -13,6 +13,7 @@ import * as draftQueue from '../../lib/campaign-draft.js'
 import * as meterEventValidation from '../../lib/campaign-meter-event-validation.js'
 import * as responseMapHelpers from '../../lib/campaign-response-map.js'
 import * as responseReadingHelpers from '../../lib/campaign-response-readings.js'
+import * as responseRecoveryHelpers from '../../lib/campaign-response-recovery.js'
 import * as campaignHelpers from '../../lib/collection-campaigns.js'
 import * as waterHelpers from '../../lib/water-uses.js'
 
@@ -27,6 +28,14 @@ const loadComponent = name => {
   const {code} = transformSync(readFileSync(filename, 'utf8'), {filename: filename.pathname, jsc: {parser: {syntax: 'ecmascript', jsx: true}, transform: {react: {runtime: 'automatic'}}, target: 'es2022'}, module: {type: 'commonjs'}})
   const compiledModule = {exports: {}}
   const componentRequire = specifier => {
+    if (specifier === '@/contexts/auth-context.js') {
+      return {useAuth: () => ({user: {id: 'fixture-viewer'}, isLoading: false})}
+    }
+
+    if (specifier === '@/lib/campaign-response-recovery.js') {
+      return responseRecoveryHelpers
+    }
+
     if (specifier.endsWith('.module.css')) {
       return {}
     }

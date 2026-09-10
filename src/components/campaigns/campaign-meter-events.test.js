@@ -49,17 +49,19 @@ const savedEvent = (extra = {}) => ({
 
 // Real component and native fields; hook storage and effect execution are
 // controlled to check callbacks without sending data to a server.
-const interaction = ({initialContext = context(), initialDraft = {readings: [], meterEvents: []}, disabled = false, targetId = 'point-a', compteurId, confirmReassignment = true, saveResult} = {}) => {
+const interaction = ({initialContext = context(), initialDraft = {readings: [], meterEvents: []}, disabled = false, targetId = 'point-a', compteurId, confirmReassignment = true, saveResult, recoveredEditor} = {}) => {
   const state = []
   const loaded = new Map()
   const calls = []
   const saves = []
   const pendingSignals = []
   const confirmations = []
+  const recoveries = []
   let cursor = 0
   let identifier = 0
   const props = {
-    context: initialContext, target: initialContext.targets.find(target => target.id === targetId), compteurId, draft: structuredClone(initialDraft), disabled,
+    context: initialContext, target: initialContext.targets.find(target => target.id === targetId), compteurId, draft: structuredClone(initialDraft), disabled, recoveredEditor,
+    onRecoveryChange: value => recoveries.push(structuredClone(value)),
     onPendingChange: pending => pendingSignals.push(pending),
     onChange(draft) {
       calls.push(structuredClone(draft))
@@ -168,6 +170,7 @@ const interaction = ({initialContext = context(), initialDraft = {readings: [], 
     saves,
     pendingSignals,
     confirmations,
+    recoveries,
     props,
     unmount() {
       for (const entry of state) {
@@ -252,6 +255,33 @@ const fill = (flow, {previousIndex = '125,5', nextIndex = '0', reason = 'Ancien 
   flow.change(/Premier index/, nextIndex)
   flow.change(/Précisions|Raison|Motif/, reason)
 }
+
+test('le changement inachevé retrouve ses champs après navigation sans sauvegarde implicite', t => {
+  const first = interaction()
+  begin(first, 'RESET')
+  fill(first)
+  first.tree()
+  const editor = first.recoveries.at(-1)
+  first.unmount()
+  const returned = interaction({recoveredEditor: editor})
+  returned.tree()
+  t.is(returned.field('Date du changement').props.value, '2026-03-12')
+  t.is(returned.field(/Dernier index/).props.value, '125.5')
+  t.is(returned.field(/Premier index/).props.value, '0')
+  t.deepEqual(returned.saves, [])
+  t.true(returned.pendingSignals.includes(true))
+  returned.click('Annuler')
+  t.is(returned.recoveries.at(-1), null)
+})
+
+test('un éditeur récupéré n’est pas réouvert si les droits du point sont retirés', t => {
+  const first = interaction()
+  begin(first, 'RESET')
+  const returned = interaction({initialContext: context({canEdit: false, editableTargetIds: []}), recoveredEditor: first.recoveries.at(-1)})
+  t.falsy(returned.button('Annuler'))
+  t.deepEqual(returned.saves, [])
+  t.deepEqual(returned.recoveries, [])
+})
 
 const addLabel = 'Enregistrer le changement'
 const removeFirst = flow => flow.click('Supprimer')

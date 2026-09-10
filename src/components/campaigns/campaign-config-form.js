@@ -31,15 +31,13 @@ const STEP_DESCRIPTIONS = [
   'Sélectionnez les points de prélèvement concernés, puis enregistrez votre brouillon.'
 ]
 
-const dateHint = value => isCampaignDay(value?.slice(0, 10)) ? campaignDate(value.slice(0, 10)) : undefined
-
 const PeriodFields = ({period, onChange, onRemove, canRemove}) => (
   <fieldset className='mb-4 rounded-md border border-[var(--border-default-grey)] p-4'>
     <legend className='px-2 font-bold'>{period.label || 'Nouvelle période'}</legend>
     <div className='grid gap-3 md:grid-cols-3'>
       <CampaignField required label='Nom de la période' value={period.label} onChange={label => onChange({label})} />
-      <CampaignField required label='Du' type='date' hint={dateHint(period.startDate)} max={campaignInclusiveEnd(period.endDate) || undefined} value={period.startDate?.slice(0, 10)} onChange={startDate => onChange({startDate})} />
-      <CampaignField required label='Au (inclus)' type='date' hint={dateHint(campaignInclusiveEnd(period.endDate))} min={period.startDate || undefined} value={campaignInclusiveEnd(period.endDate)} onChange={endDate => onChange({endDate: campaignExclusiveEnd(endDate)})} />
+      <CampaignField required label='Du' type='date' max={campaignInclusiveEnd(period.endDate) || undefined} value={period.startDate?.slice(0, 10)} onChange={startDate => onChange({startDate})} />
+      <CampaignField required label='Au (inclus)' type='date' min={period.startDate || undefined} value={campaignInclusiveEnd(period.endDate)} onChange={endDate => onChange({endDate: campaignExclusiveEnd(endDate)})} />
     </div>
     <button type='button' className='fr-btn fr-btn--tertiary-no-outline fr-btn--sm' disabled={!canRemove} onClick={onRemove}>Retirer cette période</button>
   </fieldset>
@@ -68,7 +66,7 @@ export const CalendarStep = ({form, update}) => (
           // Slots stay in place while a date is edited.
           // eslint-disable-next-line react/no-array-index-key
           <div key={'date-' + index}>
-            <CampaignField required label={'Relevé ' + (index + 1)} type='date' hint={dateHint(date)} min={shiftCampaignDay(form.indexDates[index - 1], 1) || undefined} max={shiftCampaignDay(form.indexDates[index + 1], -1) || undefined} value={date} onChange={value => update(replaceCampaignReadingDate(form, index, value))} />
+            <CampaignField required label={'Relevé ' + (index + 1)} type='date' min={shiftCampaignDay(form.indexDates[index - 1], 1) || undefined} max={shiftCampaignDay(form.indexDates[index + 1], -1) || undefined} value={date} onChange={value => update(replaceCampaignReadingDate(form, index, value))} />
             <button type='button' className='fr-btn fr-btn--tertiary-no-outline fr-btn--sm fr-mb-2w' aria-label={'Retirer le relevé ' + (index + 1)} disabled={form.indexDates.length <= 2} onClick={() => update(removeCampaignReadingDate(form, index))}>Retirer</button>
           </div>
         ))}
@@ -99,8 +97,8 @@ export const ResponseSettings = ({form, update}) => {
   return (
     <CampaignCard headingLevel='h3' title='Quand et comment demander les réponses ?'>
       <div className='grid gap-3 md:grid-cols-2'>
-        <CampaignField label='Début de saisie au plus tôt (facultatif)' hint={schedule.opening ? `Pas d’invitation avant le ${campaignDate(schedule.opening)}. L’ouverture reste à votre initiative.` : 'Sans date, vous pourrez ouvrir la saisie dès que votre campagne sera prête.'} type='date' max={schedule.deadline || undefined} value={form.opensAt.slice(0, 10)} onChange={date => update({opensAt: date ? date + 'T00:00' : ''})} />
-        <CampaignField label='Date limite de réponse (facultatif)' hint={schedule.deadline ? `Les réponses seront acceptées jusqu’au ${campaignDate(schedule.deadline)}.` : 'Cette date doit permettre de saisir le dernier relevé demandé. Sans date, vous clôturerez la saisie vous-même.'} type='date' min={deadlineMinimum} value={form.closesAt.slice(0, 10)} onChange={date => update({closesAt: date ? date + 'T23:59' : '', ...(date ? {} : {reminderDays: []})})} />
+        <CampaignField label='Début de saisie au plus tôt (facultatif)' hint={schedule.opening ? 'L’ouverture reste à votre initiative, à partir de cette date.' : 'Sans date, vous pourrez ouvrir la saisie dès que votre campagne sera prête.'} type='date' max={schedule.deadline || undefined} value={form.opensAt.slice(0, 10)} onChange={date => update({opensAt: date ? date + 'T00:00' : ''})} />
+        <CampaignField label='Date limite de réponse (facultatif)' hint={schedule.deadline ? 'Les réponses restent modifiables jusqu’à cette date.' : 'Cette date doit permettre de saisir le dernier relevé demandé. Sans date, vous clôturerez la saisie vous-même.'} type='date' min={deadlineMinimum} value={form.closesAt.slice(0, 10)} onChange={date => update({closesAt: date ? date + 'T23:59' : '', ...(date ? {} : {reminderDays: []})})} />
       </div>
       <fieldset className='min-w-0 mb-5'>
         <legend className='fr-h6 fr-mb-1w'>Relances automatiques</legend>

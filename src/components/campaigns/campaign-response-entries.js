@@ -139,12 +139,34 @@ const EventReadingEntry = ({date, meter, eventReadings, awaitingMeter}) => (
   </div>
 )
 
-const PointMeterEvents = ({target, onPendingMeterEventChange, ...props}) => {
+const PointMeterEvents = ({target, onPendingMeterEventChange, onEditorChange, ...props}) => {
   const onPendingChange = useCallback(pending => onPendingMeterEventChange?.(target.id, pending), [onPendingMeterEventChange, target.id])
-  return <CampaignMeterEvents {...props} target={target} onPendingChange={onPendingChange} />
+  const onRecoveryChange = useCallback(value => onEditorChange?.(target.id, value), [onEditorChange, target.id])
+  return <CampaignMeterEvents {...props} target={target} onPendingChange={onPendingChange} onRecoveryChange={onRecoveryChange} />
 }
 
-export const IndexRows = ({context, draft, disabled, issues, onChange, pointProps, onPendingMeterEventChange, onSaveMeterEvent}) => {
+export const RecoveredMeterEditors = ({context, editors}) => Object.entries(editors).map(([targetId, {event}]) => {
+  const target = context.targets.find(target => target.id === targetId)
+  if (!target) {
+    return null
+  }
+
+  const index = value => value === null ? 'Index inconnu' : (value === '' || value === undefined ? 'Non renseigné' : `${value} m³`)
+  return (
+    <details key={targetId} className='mb-3 border border-gray-200 p-3 text-sm'>
+      <summary>Changement de compteur retrouvé · {target.pointPrelevement?.name || 'Point de prélèvement'}</summary>
+      <p className='mb-2 mt-2 text-xs text-gray-600'>Saisie locale en lecture seule, non réappliquée à la réponse modifiée.</p>
+      <dl className='!m-0 grid gap-1 text-xs'>
+        <div><dt>Changement</dt><dd className='!ml-0'>{event.type === 'RESET' ? 'Remise à zéro' : 'Remplacement'}{event.at ? ` · ${campaignDate(event.at)}` : ''}</dd></div>
+        <div><dt>Index avant / après</dt><dd className='!ml-0'>{index(event.previousIndex)} / {index(event.nextIndex)}</dd></div>
+        {(event.serialNumber || event.identifier) && <div><dt>Nouveau compteur</dt><dd className='!ml-0'>{[event.serialNumber, event.identifier].filter(Boolean).join(' · ')}</dd></div>}
+        {event.reason && <div><dt>Précisions</dt><dd className='!ml-0 whitespace-pre-wrap'>{event.reason}</dd></div>}
+      </dl>
+    </details>
+  )
+})
+
+export const IndexRows = ({context, draft, disabled, issues, ignoredReadings = [], recoveredEditors = {}, onEditorChange, onChange, pointProps, onPendingMeterEventChange, onSaveMeterEvent}) => {
   const editable = new Set(campaignEditableTargets(context, 'INDEX'))
   const readings = new Map((draft.readings || []).map(reading => [readingKey(reading), reading]))
   const eventsByTarget = campaignTargetMeterEvents(draft.meterEvents)
@@ -168,6 +190,7 @@ export const IndexRows = ({context, draft, disabled, issues, onChange, pointProp
         })
         const expected = entries.filter(entry => !entry.unavailable)
         const filled = expected.filter(entry => campaignIndexEntryFilled(entry)).length
+        const ignored = ignoredReadings.filter(reading => reading.targetId === target.id)
         return (
           <div key={target.id} {...pointProps?.(target.id)} className={rowClassName(expected.length > 0 && filled === expected.length)}>
             <PointSummary target={target} />
@@ -188,7 +211,12 @@ export const IndexRows = ({context, draft, disabled, issues, onChange, pointProp
             </div>
             <PointUsage target={target} />
             <div className='min-w-0 md:col-span-3'>
-              <PointMeterEvents context={context} target={target} draft={draft} disabled={targetDisabled} issues={issues} onChange={onChange} onSaveMeterEvent={onSaveMeterEvent} onPendingMeterEventChange={onPendingMeterEventChange} />
+              {ignored.length > 0 && <details className='mb-3 text-xs text-gray-600'>
+                <summary>{ignored.length} relevé{ignored.length > 1 ? 's' : ''} hors période du compteur</summary>
+                <p className='mb-1 mt-2'>Ces valeurs restent dans le brouillon, mais ne sont ni utilisées dans les volumes ni transmises. Elles réapparaîtront si vous corrigez ou supprimez le changement concerné.</p>
+                <ul>{ignored.map(reading => <li key={readingKey(reading)}>{campaignDate(reading.readingDate)} : {reading.value ?? 'Index inconnu'}{reading.value === null ? '' : ' m³'}</li>)}</ul>
+              </details>}
+              <PointMeterEvents context={context} target={target} draft={draft} disabled={targetDisabled} issues={issues} recoveredEditor={recoveredEditors[target.id]} onEditorChange={onEditorChange} onChange={onChange} onSaveMeterEvent={onSaveMeterEvent} onPendingMeterEventChange={onPendingMeterEventChange} />
             </div>
           </div>
         )

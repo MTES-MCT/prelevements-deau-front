@@ -87,6 +87,11 @@ const ListCalendar = ({campaign}) => {
 }
 
 function campaignListCounts(item) {
+  if (item.counts) {
+    const count = value => Number.isInteger(value) && value >= 0 ? value : null
+    return {pointCount: count(item.counts.pointCount), preleveurCount: count(item.counts.preleveurCount)}
+  }
+
   const campaign = item.campaign ?? item
   // Both arrays come from the API's authorised scope. Prefer the explicit one,
   // including when it is empty; never infer the full campaign's population.

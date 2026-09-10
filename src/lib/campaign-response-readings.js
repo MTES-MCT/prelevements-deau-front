@@ -39,17 +39,18 @@ export function campaignTargetIndexEntries({target, indexDates, readings, events
     meters.unshift({compteurId: null, endDate: target.meterlessEndDate ?? null})
   }
 
-  const bounds = new Map(meters.map(meter => [meter.compteurId, {start: day(meter.startDate), end: day(meter.endDate)}]))
+  const bounds = meters.map(meter => ({
+    meter, start: day(meter.startDate), end: day(meter.endDate), serviceStart: day(meter.startDate), serviceEnd: day(meter.endDate)
+  }))
+  const coversEvent = (binding, event) => (!binding.serviceStart || binding.serviceStart <= event.at) && (!binding.serviceEnd || binding.serviceEnd >= event.at)
   const eventReadings = new Map()
   for (const event of replacements) {
-    const previous = bounds.get(event.previousCompteurId)
-    const next = bounds.get(event.nextCompteurId)
-    if (previous) {
+    for (const previous of bounds.filter(binding => binding.meter.compteurId === event.previousCompteurId && coversEvent(binding, event))) {
       previous.end = previous.end && previous.end < event.at ? previous.end : event.at
       eventReadings.set(boundaryKey(event.previousCompteurId, event.at), [eventReading(event, 'previous')])
     }
 
-    if (next) {
+    for (const next of bounds.filter(binding => binding.meter.compteurId === event.nextCompteurId && coversEvent(binding, event))) {
       next.start = next.start && next.start > event.at ? next.start : event.at
       eventReadings.set(boundaryKey(event.nextCompteurId, event.at), [eventReading(event, 'next')])
     }
@@ -65,10 +66,10 @@ export function campaignTargetIndexEntries({target, indexDates, readings, events
   const awaitingMeters = replacements.filter(event => event.nextMeter && !event.nextCompteurId)
   return indexDates.flatMap(readingDate => {
     const date = day(readingDate)
-    const active = meters.filter(meter => {
-      const {start, end} = bounds.get(meter.compteurId)
-      return (!start || start <= date) && (!end || end >= date)
-    })
+    // Several disjoint assignments may reference the same physical meter. Keep
+    // every interval, but render its reading only once at a shared boundary.
+    const active = [...new Map(bounds.filter(({start, end}) => (!start || start <= date) && (!end || end >= date))
+      .map(({meter}) => [meter.compteurId, meter])).values()]
     const entries = active.map(meter => {
       const identity = {targetId: target.id, compteurId: meter.compteurId, readingDate: date}
       return {

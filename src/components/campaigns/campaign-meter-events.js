@@ -149,7 +149,7 @@ const SavedEvent = ({event, target, canEdit, disabled, deleting, messages, remov
   )
 }
 
-const CampaignMeterEvents = ({context, target: point, compteurId, draft, disabled, issues = [], onChange, onPendingChange, onSaveMeterEvent}) => {
+const CampaignMeterEvents = ({context, target: point, compteurId, draft, disabled, issues = [], recoveredEditor, onRecoveryChange, onChange, onPendingChange, onSaveMeterEvent}) => {
   const [open, setOpen] = useState(false)
   const [event, setEvent] = useState({...emptyEvent})
   const [editing, setEditing] = useState(null)
@@ -172,6 +172,7 @@ const CampaignMeterEvents = ({context, target: point, compteurId, draft, disable
   const editingPosition = useRef(0)
   const deletionPosition = useRef(0)
   const draftRef = useRef(draft)
+  const recoveryApplied = useRef(false)
   draftRef.current = draft
   const editableIds = new Set(campaignEditableTargets(context, 'INDEX'))
   const target = context.targets.find(target => target.id === point?.id)
@@ -205,6 +206,25 @@ const CampaignMeterEvents = ({context, target: point, compteurId, draft, disable
     event: formEvent(event), context, target, draft: {...draft, meterEvents: otherEvents}, originalEvent: editing
   }) : {fieldErrors: {}}
   const displayErrors = {...errors, ...Object.fromEntries(Object.entries(editorValidation.fieldErrors).filter(([field]) => editing || attempted || touched[field] || (field === 'at' && event.at)))}
+  useEffect(() => {
+    if (recoveredEditor && canEdit && !recoveryApplied.current) {
+      recoveryApplied.current = true
+      setEvent(recoveredEditor.event)
+      setEditing(recoveredEditor.editing)
+      lastAttempt.current = recoveredEditor.lastAttempt
+      editingPosition.current = recoveredEditor.editingPosition || 0
+      setOpen(true)
+    }
+  }, [recoveredEditor, canEdit])
+  useEffect(() => {
+    // Keep unfinished editor fields separately: they must not become a saved
+    // event merely because the user traverses the browser history.
+    if (open && canEdit) {
+      onRecoveryChange?.({
+        event, editing, lastAttempt: lastAttempt.current, editingPosition: editingPosition.current
+      })
+    }
+  }, [open, canEdit, event, editing, saving, onRecoveryChange])
   useEffect(() => {
     onPendingChange?.(open && canEdit)
     return () => onPendingChange?.(false)
@@ -249,6 +269,7 @@ const CampaignMeterEvents = ({context, target: point, compteurId, draft, disable
   }
 
   const closeEditor = () => {
+    onRecoveryChange?.(null)
     setEvent({...emptyEvent})
     setEditing(null)
     setErrors({})
