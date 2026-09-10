@@ -33,7 +33,7 @@ export const CampaignDetailPage = async ({id, kind, preleveurUserId}) => {
     error = error_.message
   }
 
-  return <><StartDsfrOnHydration />{error ? <CampaignShell title={CAMPAIGN_KIND_LABELS[kind] || 'Campagne'} backHref={kind ? '/mes-declarations#demandes' : '/campagnes'} backLabel={kind ? 'Mes déclarations' : 'Retour'}><CampaignNotice error>{error}</CampaignNotice></CampaignShell> : (kind ? <CampaignResponseForm key={`${id}-${context.preleveurUserId}-${kind}`} initialContext={context} kind={kind} /> : <CampaignManagement initialContext={context} />)}</>
+  return <><StartDsfrOnHydration />{error ? <CampaignShell title={CAMPAIGN_KIND_LABELS[kind] || 'Campagne'} backHref={kind ? '/mes-declarations#demandes' : '/campagnes'} backLabel={kind ? 'Mes déclarations' : 'Retour'}><CampaignNotice error>{error}</CampaignNotice></CampaignShell> : (kind ? <CampaignResponseForm key={`${id}-${context.preleveurUserId}-${kind}`} initialContext={context} kind={kind} /> : <CampaignManagement initialContext={context} now={new Date().toISOString()} />)}</>
 }
 
 export const CampaignCreatePage = async () => {

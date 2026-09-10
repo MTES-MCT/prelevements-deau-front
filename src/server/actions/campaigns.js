@@ -10,8 +10,8 @@ export async function listCampaignsAction() {
   return result(() => fetchJSON('api/campaigns'))
 }
 
-export async function listCampaignRequestsAction({limit = 20, cursor} = {}) {
-  const query = new URLSearchParams({limit: String(limit), ...(cursor ? {cursor} : {})})
+export async function listCampaignRequestsAction({limit = 20, cursor, actionableOnly = false} = {}) {
+  const query = new URLSearchParams({limit: String(limit), ...(cursor ? {cursor} : {}), ...(actionableOnly ? {actionableOnly: 'true'} : {})})
   return result(() => fetchJSON(`api/campaigns/requests?${query}`))
 }
 
@@ -57,14 +57,6 @@ export async function submitCampaignResponseAction(id, kind, body) {
   return result(() => fetchJSON(`${campaignPath(id)}/responses/${kind}/submit`, {method: 'POST', body}))
 }
 
-export async function reopenCampaignResponseAction(id, kind, body) {
-  if (!['INDEX', 'NEEDS'].includes(kind)) {
-    return {success: false, error: 'Type de réponse invalide.'}
-  }
-
-  return result(() => fetchJSON(`${campaignPath(id)}/responses/${kind}/reopen`, {method: 'POST', body}))
-}
-
 export async function saveCampaignMeterAction(id, targetId, associationId, body) {
   const path = `${campaignPath(id)}/targets/${segment(targetId)}/meters${associationId ? `/${segment(associationId)}` : ''}`
   return result(() => fetchJSON(path, {method: associationId ? 'PATCH' : 'POST', body}))
@@ -72,6 +64,22 @@ export async function saveCampaignMeterAction(id, targetId, associationId, body)
 
 export async function getCampaignFollowupAction(id) {
   return result(() => fetchJSON(`${campaignPath(id)}/responses`))
+}
+
+export async function getCampaignResponseSummaryAction(id) {
+  return result(() => fetchJSON(`${campaignPath(id)}/responses/summary`))
+}
+
+export async function getCampaignResponseOverviewAction(id, {limit = 20, cursor, q, status = 'all'} = {}) {
+  const query = new URLSearchParams({
+    limit: String(limit), status, ...(cursor ? {cursor} : {}), ...(q ? {q} : {})
+  })
+  return result(() => fetchJSON(`${campaignPath(id)}/responses/overview?${query}`))
+}
+
+export async function getCampaignResponseResultsAction(id, preleveurUserId) {
+  const query = new URLSearchParams({preleveurUserId})
+  return result(() => fetchJSON(`${campaignPath(id)}/responses/results?${query}`))
 }
 
 export async function getCampaignHistoryAction(id, kind, preleveurUserId, cursor) {

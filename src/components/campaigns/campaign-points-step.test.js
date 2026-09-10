@@ -14,8 +14,9 @@ import * as waterHelpers from '../../lib/water-uses.js'
 
 const require = createRequire(import.meta.url)
 const loaded = new Map()
-const loadComponent = name => {
-  if (loaded.has(name)) {
+const loadComponent = (name, overrides = {}) => {
+  const useCache = Object.keys(overrides).length === 0
+  if (useCache && loaded.has(name)) {
     return loaded.get(name)
   }
 
@@ -23,6 +24,10 @@ const loadComponent = name => {
   const {code} = transformSync(readFileSync(filename, 'utf8'), {filename: filename.pathname, jsc: {parser: {syntax: 'ecmascript', jsx: true}, transform: {react: {runtime: 'automatic'}}, target: 'es2022'}, module: {type: 'commonjs'}})
   const compiledModule = {exports: {}}
   const componentRequire = specifier => {
+    if (Object.hasOwn(overrides, specifier)) {
+      return overrides[specifier]
+    }
+
     if (specifier === '@/lib/collection-campaigns.js') {
       return campaignHelpers
     }
@@ -36,7 +41,7 @@ const loadComponent = name => {
     }
 
     if (specifier.startsWith('@/components/campaigns/')) {
-      return loadComponent(specifier.split('/').at(-1).replace('.js', ''))
+      return loadComponent(specifier.split('/').at(-1).replace('.js', ''), overrides)
     }
 
     if (specifier === '@/server/actions/campaigns.js') {
@@ -55,7 +60,10 @@ const loadComponent = name => {
   }
 
   runInNewContext('(function(require, module, exports) {' + code + '\n})', {})(componentRequire, compiledModule, compiledModule.exports)
-  loaded.set(name, compiledModule.exports)
+  if (useCache) {
+    loaded.set(name, compiledModule.exports)
+  }
+
   return compiledModule.exports
 }
 
@@ -243,4 +251,207 @@ test('la pagination ne prétend pas limiter la sélection à la page affichée',
   t.true(html.includes('Afficher plus de résultats'))
   t.true(html.includes('inclut aussi les pages suivantes'))
   t.false(html.includes('Les 500 premiers résultats'))
+})
+
+// Run the real handlers with controlled hooks and deferred server actions.
+// Existing SSR tests keep real React hooks; this harness never opens a network connection.
+const pointInteraction = (initial = props()) => {
+  const state = []
+  const effects = []
+  const pendingEffects = []
+  const requests = []
+  const busyEvents = []
+  const changes = []
+  const loadedTargets = []
+  let cursor = 0
+  let effectCursor = 0
+  let dirty = false
+  let currentProps = {
+    ...initial,
+    onBusyChange: value => busyEvents.push(value),
+    update: change => changes.push({change, busy: busyEvents.at(-1)}),
+    onTargetsLoaded: rows => loadedTargets.push(rows)
+  }
+  const renderPoints = loadComponent('campaign-points-step', {
+    react: {
+      ...React,
+      useState(initialValue) {
+        const index = cursor++
+        if (!(index in state)) {
+          state[index] = typeof initialValue === 'function' ? initialValue() : initialValue
+        }
+
+        return [state[index], value => {
+          const next = typeof value === 'function' ? value(state[index]) : value
+          dirty ||= !Object.is(next, state[index])
+          state[index] = next
+        }]
+      },
+      useRef(initialValue) {
+        const index = cursor++
+        state[index] ||= {current: initialValue}
+        return state[index]
+      },
+      useEffect(effect, dependencies) {
+        const index = effectCursor++
+        if (!effects[index] || dependencies.some((value, position) => !Object.is(value, effects[index].dependencies[position]))) {
+          const previous = effects[index]
+          const entry = {dependencies}
+          effects[index] = entry
+          pendingEffects.push(() => {
+            previous?.cleanup?.()
+            entry.cleanup = effect()
+          })
+        }
+      }
+    },
+    '@/server/actions/campaigns.js': {
+      getCampaignOptionsAction: params => new Promise((resolve, reject) => {
+        requests.push({params, resolve: data => resolve({success: true, data}), reject})
+      })
+    }
+  }).default
+  const flow = {
+    requests, busyEvents, changes, loadedTargets,
+    render() {
+      let tree
+      let count = 0
+      do {
+        if (++count > 10) {
+          throw new Error('Le composant ne stabilise pas son état.')
+        }
+
+        dirty = false
+        cursor = 0
+        effectCursor = 0
+        tree = renderPoints(currentProps)
+        for (const effect of pendingEffects.splice(0)) {
+          effect()
+        }
+      } while (dirty)
+
+      return tree
+    },
+    setProps(changes) {
+      currentProps = {...currentProps, ...changes}
+      return this.render()
+    },
+    button(label) {
+      return descendants(this.render()).find(element => element?.type === 'button' && element.props.children === label)
+    },
+    unmount() {
+      for (const effect of effects) {
+        effect.cleanup?.()
+      }
+    }
+  }
+  flow.render()
+  return flow
+}
+
+const paginatedProps = () => {
+  const initial = props()
+  initial.options.pagination = {total: 2, hasMore: true, nextCursor: 'page-two'}
+  return initial
+}
+
+test('le signal occupé suit le chargement des options puis est libéré au démontage', t => {
+  const flow = pointInteraction({...props(), loadingOptions: true})
+  t.true(flow.busyEvents.at(-1))
+  flow.setProps({loadingOptions: false})
+  t.false(flow.busyEvents.at(-1))
+  flow.setProps({loadingOptions: true})
+  t.true(flow.busyEvents.at(-1))
+  flow.unmount()
+  t.false(flow.busyEvents.at(-1))
+  t.is(flow.requests.length, 0)
+})
+
+test('tout sélectionner garde le parent occupé jusqu’à la dernière page et transmet la sélection avant de le libérer', async t => {
+  const flow = pointInteraction(paginatedProps())
+  const operation = flow.button('Tout sélectionner').props.onClick()
+  t.true(flow.button('Tout sélectionner').props.disabled)
+  t.true(flow.busyEvents.at(-1))
+  t.is(flow.changes.length, 0)
+  flow.requests[0].resolve({exploitations: [visible], pagination: {total: 2, hasMore: true, nextCursor: 'page-two'}})
+  await new Promise(resolve => {
+    setImmediate(resolve)
+  })
+  flow.render()
+  t.is(flow.requests.length, 2)
+  t.is(flow.requests[1].params.cursor, 'page-two')
+  t.true(flow.busyEvents.at(-1))
+  t.is(flow.changes.length, 0)
+  flow.requests[1].resolve({exploitations: [outside], pagination: {total: 2, hasMore: false}})
+  await operation
+  t.deepEqual(flow.changes, [{change: {targets: [{exploitationId: 'a', eligibilityConfirmed: true}, {exploitationId: 'outside', eligibilityConfirmed: true}]}, busy: true}])
+  t.deepEqual(flow.loadedTargets, [[visible, outside]])
+  t.false(flow.button('Tout sélectionner').props.disabled)
+  t.false(flow.busyEvents.at(-1))
+  flow.unmount()
+})
+
+test('afficher plus de résultats signale son chargement sans modifier la sélection', async t => {
+  const flow = pointInteraction(paginatedProps())
+  const operation = flow.button('Afficher plus de résultats').props.onClick()
+  t.true(flow.button('Afficher plus de résultats').props.disabled)
+  t.true(flow.busyEvents.at(-1))
+  t.is(flow.requests[0].params.cursor, 'page-two')
+  flow.requests[0].resolve({exploitations: [outside], pagination: {total: 2, hasMore: false}})
+  await operation
+  const tree = flow.render()
+  t.false(flow.busyEvents.at(-1))
+  t.deepEqual(flow.loadedTargets, [[outside]])
+  t.deepEqual(flow.changes, [])
+  t.is(descendants(tree).filter(element => element?.props?.detail).length, 2)
+  t.falsy(flow.button('Afficher plus de résultats'))
+  flow.unmount()
+})
+
+for (const label of ['Tout sélectionner', 'Afficher plus de résultats']) {
+  test(`un échec de « ${label} » libère le parent sans changer les points`, async t => {
+    const flow = pointInteraction(paginatedProps())
+    const operation = flow.button(label).props.onClick()
+    flow.render()
+    t.true(flow.busyEvents.at(-1))
+    flow.requests[0].reject(new Error('Recherche indisponible'))
+    await operation
+    const tree = flow.render()
+    t.false(flow.busyEvents.at(-1))
+    t.false(flow.button(label).props.disabled)
+    t.deepEqual(flow.changes, [])
+    t.deepEqual(flow.loadedTargets, [])
+    t.true(descendants(tree).some(element => element?.props?.error && element.props.children === 'Recherche indisponible'))
+    flow.unmount()
+  })
+
+  test(`démonter pendant « ${label} » libère le parent et ignore la réponse tardive`, async t => {
+    const flow = pointInteraction(paginatedProps())
+    const operation = flow.button(label).props.onClick()
+    flow.render()
+    t.true(flow.busyEvents.at(-1))
+    flow.unmount()
+    t.false(flow.busyEvents.at(-1))
+    const busyEvents = [...flow.busyEvents]
+    flow.requests[0].resolve({exploitations: [visible], pagination: {total: 2, hasMore: true, nextCursor: 'page-two'}})
+    await operation
+    t.deepEqual(flow.busyEvents, busyEvents)
+    t.deepEqual(flow.changes, [])
+    t.deepEqual(flow.loadedTargets, [])
+    t.is(flow.requests.length, 1)
+  })
+}
+
+test('la fin d’une sélection ne libère pas le parent si la recherche des options continue', async t => {
+  const flow = pointInteraction()
+  const operation = flow.button('Tout sélectionner').props.onClick()
+  flow.render()
+  flow.setProps({loadingOptions: true})
+  flow.requests[0].resolve({exploitations: [visible], pagination: {total: 1, hasMore: false}})
+  await operation
+  flow.render()
+  t.true(flow.busyEvents.at(-1))
+  flow.setProps({loadingOptions: false})
+  t.false(flow.busyEvents.at(-1))
+  flow.unmount()
 })

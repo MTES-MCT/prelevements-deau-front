@@ -1,5 +1,8 @@
+import {Suspense} from 'react'
+
 import {forbidden} from 'next/navigation'
 
+import DashboardCampaignRequests from '@/components/dashboard/dashboard-campaign-requests.js'
 import DashboardPage from '@/components/dashboard/dashboard-page.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getDashboardTerritoryAction} from '@/server/actions/dashboard.js'
@@ -86,6 +89,7 @@ const Page = async ({searchParams}) => {
       <StartDsfrOnHydration />
 
       <DashboardPage
+        campaignRequests={isDeclarant ? <Suspense fallback={null}><DashboardCampaignRequests user={user} /></Suspense> : null}
         declarationCreation={declarationCreation}
         initialDashboard={dashboardResult.success ? dashboardResult.data : null}
         initialError={dashboardResult.success ? null : dashboardResult.error}

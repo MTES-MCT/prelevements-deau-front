@@ -43,7 +43,7 @@ const RequestCard = ({item, showPreleveur, now}) => (
     <div className='px-3 py-3 md:px-4'>
       <h3 className='!mb-1 text-base font-semibold'>{item.campaign.name}</h3>
       <p className='!mb-0 text-sm text-gray-600'>
-        {item.campaign.owner?.label ? `Demandé par ${item.campaign.owner.label}` : 'Demande de votre organisme'}
+        {item.campaign.owner?.label ? `Demandé par ${item.campaign.owner.label}` : 'Demande de votre collecteur'}
         {showPreleveur && item.preleveur.label ? ` · ${item.preleveur.label}` : ''}
         {' · ' + item.pointCount + ' point' + (item.pointCount > 1 ? 's' : '')}
       </p>

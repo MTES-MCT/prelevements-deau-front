@@ -30,10 +30,10 @@ test('les horaires de campagne sont indépendants du fuseau du serveur et de l�
 })
 
 test('la date limite affiche le dernier jour inclus, sans confusion avec le minuit du lendemain', t => {
-  t.is(campaignDeadlineLabel('2026-11-30T23:00:00Z'), '30/11/2026 inclus')
-  t.is(campaignDeadlineLabel('2026-09-30T22:00:00Z'), '30/09/2026 inclus')
-  t.is(campaignDeadlineLabel('2026-09-30T20:00:00Z', 'Indian/Reunion'), '30/09/2026 inclus')
-  t.is(campaignDeadlineLabel('2026-09-30T15:00:00Z'), '30/09/2026 17:00')
+  t.is(campaignDeadlineLabel('2026-11-30T23:00:00Z'), '30 novembre 2026')
+  t.is(campaignDeadlineLabel('2026-09-30T22:00:00Z'), '30 septembre 2026')
+  t.is(campaignDeadlineLabel('2026-09-30T20:00:00Z', 'Indian/Reunion'), '30 septembre 2026')
+  t.is(campaignDeadlineLabel('2026-09-30T15:00:00Z'), '30 septembre 2026 à 17:00')
   t.is(campaignDeadlineLabel(null), 'Aucune date limite définie')
 })
 
@@ -107,6 +107,46 @@ test('les compteurs restent distincts pour un même point et une date', t => {
 test('une absence de relevé reste distincte de zéro et un événement invalide est détecté', t => {
   t.deepEqual(campaignDraftErrors({readings: [{value: null, missingReason: 'Accès impossible'}, {value: '0'}]}, 'INDEX'), [])
   t.true(campaignDraftErrors({meterEvents: [{previousIndex: '-1', nextIndex: '0', reason: ''}]}, 'INDEX').length > 0)
+})
+
+test('un besoin peut être enregistré avec un volume seul, sans débit ni zéro ajouté', t => {
+  const context = {editableTargetIds: ['a'], targets: [{id: 'a'}]}
+  const draft = {comment: '', needs: [{targetId: 'a', periodId: 'period', requestedVolume: '1234.0001'}]}
+  t.deepEqual(campaignDraftErrors(draft, 'NEEDS'), [])
+  t.deepEqual(campaignDraftForSave(context, 'NEEDS', draft), draft)
+  t.false(Object.hasOwn(campaignDraftForSave(context, 'NEEDS', draft).needs[0], 'requestedFlow'))
+  t.deepEqual(campaignDraftErrors({needs: [{requestedVolume: '0'}, {requestedVolume: ''}, {requestedVolume: null}]}, 'NEEDS'), [])
+  for (const requestedVolume of ['-1', '1e3', '1.00001']) {
+    t.deepEqual(campaignDraftErrors({needs: [{requestedVolume}]}, 'NEEDS'), ['Les volumes demandés doivent être positifs ou nuls.'])
+  }
+})
+
+test('les anciens débits restent intacts et seuls les besoins autorisés sont enregistrés', t => {
+  const context = {
+    editableTargetIds: ['a'], targets: [{id: 'a'}, {id: 'b'}], responses: {
+      NEEDS: {
+        id: 'response', draft: {
+          comment: '', needs: [
+            {
+              targetId: 'a', periodId: 'period', requestedFlow: '12.5', requestedVolume: '400'
+            },
+            {
+              targetId: 'b', periodId: 'period', requestedFlow: '9', requestedVolume: '90'
+            }
+          ]
+        }
+      }
+    }
+  }
+  const draft = campaignInitialDraft(context, 'NEEDS')
+  draft.needs[0].requestedVolume = '450'
+  t.deepEqual(campaignDraftForSave(context, 'NEEDS', draft), {
+    needs: [{
+      targetId: 'a', periodId: 'period', requestedFlow: '12.5', requestedVolume: '450'
+    }]
+  })
+  t.is(context.responses.NEEDS.draft.needs[0].requestedVolume, '400')
+  t.is(context.responses.NEEDS.draft.needs[0].requestedFlow, '12.5')
 })
 
 test('les enveloppes API imbriquées et les conflits sont conservés', t => {

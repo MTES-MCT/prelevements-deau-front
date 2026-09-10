@@ -84,7 +84,7 @@ const TargetOption = ({detail, targets, knownTargets, disabled, onToggle}) => {
   )
 }
 
-const CampaignPointsStep = ({form, options, knownTargets, query, setQuery, usageId = '', setUsageId, loadingOptions, update, onTargetsLoaded = () => {}}) => {
+const CampaignPointsStep = ({form, options, knownTargets, query, setQuery, usageId = '', setUsageId, loadingOptions, update, onTargetsLoaded = () => {}, onBusyChange}) => {
   const params = {
     zoneId: form.zoneId, ownerCollecteurUserId: form.ownerCollecteurUserId, q: query, usageId
   }
@@ -106,6 +106,11 @@ const CampaignPointsStep = ({form, options, knownTargets, query, setQuery, usage
   const visibleIds = new Set(rows.map(row => campaignExploitationId(row)))
   const outsideResults = form.targets.filter(item => !visibleIds.has(item.exploitationId))
   const disabled = loadingOptions || Boolean(busy)
+
+  useEffect(() => {
+    onBusyChange?.(disabled)
+    return () => onBusyChange?.(false)
+  }, [disabled, onBusyChange])
 
   useEffect(() => {
     mounted.current = true

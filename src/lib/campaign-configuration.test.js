@@ -1,13 +1,17 @@
 import test from 'ava'
 
 import {
-  addCampaignReadingDate, campaignConfigurationErrors, campaignConfigurationPayload, campaignIndexPeriods, defaultCampaignCalendar,
+  addCampaignReadingDate, CAMPAIGN_CONFIG_STEPS, campaignConfigurationErrors, campaignConfigurationPayload, campaignIndexPeriods, defaultCampaignCalendar,
   initialCampaignConfiguration, newCampaignPeriod, removeCampaignReadingDate, replaceCampaignReadingDate
 } from './campaign-configuration.js'
 import {campaignInclusiveEnd} from './collection-campaigns.js'
 
 const options = {zones: [{id: 'zone', name: 'Territoire'}], collecteurs: [{userId: 'owner', label: 'OUGC'}]}
 const initial = () => initialCampaignConfiguration(undefined, options, 2026)
+
+test('la configuration suit trois étapes et se termine par les points concernés', t => {
+  t.deepEqual(CAMPAIGN_CONFIG_STEPS, ['Organisation', 'Calendrier', 'Points concernés'])
+})
 
 test('les périodes de prélèvement suivent exactement les relevés, les besoins restent indépendants', t => {
   const {indexDates, periods} = defaultCampaignCalendar(2026)
@@ -34,7 +38,7 @@ test('un seul organisme et territoire : préremplissage ; plusieurs choix : déc
   const multiple = initialCampaignConfiguration(undefined, {...options, zones: [{id: 'z1'}, {id: 'z2'}]}, 2026)
   t.is(multiple.zoneId, '')
   t.is(multiple.ownerCollecteurUserId, '')
-  t.deepEqual(campaignConfigurationErrors(multiple, 0), ['Choisissez le territoire concerné.', 'Choisissez l’organisme responsable.'])
+  t.deepEqual(campaignConfigurationErrors(multiple, 0), ['Choisissez le territoire concerné.', 'Choisissez le collecteur responsable.'])
 })
 
 test('création du brouillon sans points autorisée et aucun droit ajouté implicitement', t => {
@@ -43,7 +47,7 @@ test('création du brouillon sans points autorisée et aucun droit ajouté impli
   const payload = campaignConfigurationPayload(form)
   t.deepEqual(payload.targets, [])
   t.deepEqual(payload.managers, [])
-  t.deepEqual(payload.reminderDays, [14, 3])
+  t.deepEqual(payload.reminderDays, [])
   t.is(payload.timezone, 'Europe/Paris')
   t.is(payload.opensAt, null)
   t.is(payload.closesAt, null)
@@ -140,7 +144,63 @@ test('la validation de chaque étape ne bloque pas sur les champs des étapes su
   const form = {...initial(), name: '', periods: []}
   t.deepEqual(campaignConfigurationErrors(form, 0), ['Donnez un nom à la campagne.'])
   t.deepEqual(campaignConfigurationErrors(form, 2), [])
-  t.deepEqual(campaignConfigurationErrors({...initial(), opensAt: '2026-11-01T00:00', closesAt: '2026-10-01T23:59'}, 3), ['La date limite de réponse doit être postérieure au début de la saisie.'])
+  t.deepEqual(campaignConfigurationErrors({...initial(), opensAt: '2026-11-01T00:00', closesAt: '2026-10-01T23:59'}, 1), [
+    'La date limite de réponse doit être postérieure au début de la saisie.',
+    'La date limite de réponse ne peut pas précéder le dernier relevé demandé.'
+  ])
+})
+
+test('le calendrier regroupe aussi les erreurs d’ouverture, de clôture et de relance', t => {
+  const cases = [
+    [{opensAt: 'invalide'}, 'Renseignez des dates d’ouverture et de clôture valides.'],
+    [{closesAt: 'invalide'}, 'Renseignez des dates d’ouverture et de clôture valides.'],
+    [{reminderDays: [14]}, 'Indiquez une date limite de réponse pour programmer les relances.'],
+    [{opensAt: '2026-11-15T00:00', closesAt: '2026-11-30T23:59', reminderDays: [30]}, 'Une relance est prévue avant le début de la saisie. Décalez l’ouverture ou choisissez une relance plus proche de la date limite.']
+  ]
+  for (const [changes, message] of cases) {
+    const form = {...initial(), ...changes}
+    t.deepEqual(campaignConfigurationErrors(form, 1), [message])
+    t.deepEqual(campaignConfigurationErrors(form), [message])
+    t.deepEqual(campaignConfigurationErrors(form, 0), [])
+    t.deepEqual(campaignConfigurationErrors(form, 2), [])
+  }
+})
+
+test('la validation finale conserve toutes les erreurs des trois étapes sans doublon', t => {
+  const form = {
+    ...initial(), name: '', periods: [], reminderDays: [14]
+  }
+  const errors = CAMPAIGN_CONFIG_STEPS.flatMap((_label, step) => campaignConfigurationErrors(form, step))
+  t.deepEqual(campaignConfigurationErrors(form), errors)
+  t.deepEqual(errors, [
+    'Donnez un nom à la campagne.',
+    'Ajoutez au moins une période de besoins.',
+    'Indiquez une date limite de réponse pour programmer les relances.'
+  ])
+})
+
+test('les trois étapes préservent le payload, les dates et le contrôle de version sans mutation', t => {
+  const form = {
+    ...initial(), name: '  Campagne personnalisée  ', year: '2026',
+    opensAt: '2026-11-01T00:00', closesAt: '2026-11-30T23:59', reminderDays: [14, 3, 0],
+    openingMessage: 'Merci de transmettre les deux réponses.\nVotre collecteur reste disponible.',
+    managers: [{userId: 'manager', role: 'READER'}],
+    targets: [{exploitationId: 'selected', eligibilityConfirmed: false}]
+  }
+  const campaign = {id: 'campaign', status: 'DRAFT', version: 7}
+  const snapshot = structuredClone({form, campaign})
+  for (const step of CAMPAIGN_CONFIG_STEPS.keys()) {
+    t.deepEqual(campaignConfigurationErrors(form, step), [])
+  }
+
+  const payload = campaignConfigurationPayload(form, campaign)
+  t.deepEqual(payload, {
+    ...snapshot.form, name: 'Campagne personnalisée', year: 2026,
+    opensAt: '2026-10-31T23:00:00.000Z', closesAt: '2026-11-30T23:00:00.000Z',
+    targets: [{exploitationId: 'selected', eligibilityConfirmed: true}], expectedVersion: 7
+  })
+  t.deepEqual(campaignConfigurationPayload(form, {...campaign, version: 8}), {...payload, expectedVersion: 8})
+  t.deepEqual({form, campaign}, snapshot)
 })
 
 test('seules les périodes de besoins sont ajoutées et paramétrées explicitement', t => {

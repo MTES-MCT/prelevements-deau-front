@@ -9,6 +9,8 @@ import {transformSync} from 'next/dist/build/swc/index.js'
 import {renderToStaticMarkup} from 'react-dom/server'
 
 import * as navigation from '../../lib/admin-navigation.js'
+import * as campaignCalendar from '../../lib/campaign-calendar.js'
+import * as campaignTimeline from '../../lib/campaign-timeline.js'
 import * as campaignHelpers from '../../lib/collection-campaigns.js'
 
 const require = createRequire(import.meta.url)
@@ -50,6 +52,14 @@ function harness({role = 'ADMIN', authenticated = true, impersonating = false, r
 
       if (specifier === '@/lib/collection-campaigns.js') {
         return campaignHelpers
+      }
+
+      if (specifier === '@/lib/campaign-calendar.js') {
+        return campaignCalendar
+      }
+
+      if (specifier === '@/lib/campaign-timeline.js') {
+        return campaignTimeline
       }
 
       if (specifier === '@/server/actions/user.js') {

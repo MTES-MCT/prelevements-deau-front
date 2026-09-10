@@ -1,8 +1,9 @@
+import {campaignScheduleErrors, isCampaignDay} from './campaign-calendar.js'
 import {
   campaignExclusiveEnd, campaignInclusiveEnd, campaignInstant, campaignWallTime
 } from './collection-campaigns.js'
 
-export const CAMPAIGN_CONFIG_STEPS = ['Organisation', 'Calendrier', 'Points concernés', 'Vérifier']
+export const CAMPAIGN_CONFIG_STEPS = ['Organisation', 'Calendrier', 'Points concernés']
 
 function deadlineWallTime(value, timezone) {
   const wallTime = campaignWallTime(value, timezone)
@@ -10,8 +11,7 @@ function deadlineWallTime(value, timezone) {
   return wallTime.endsWith('T00:00') ? `${campaignInclusiveEnd(wallTime)}T23:59` : wallTime
 }
 
-const isDay = value => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
-  && Number.isFinite(Date.parse(`${value}T00:00:00Z`)) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value
+const isDay = isCampaignDay
 
 export function campaignIndexPeriods(indexDates) {
   if (indexDates.length < 2 || indexDates.some((date, index) => !isDay(date) || (index > 0 && date <= indexDates[index - 1]))) {
@@ -75,7 +75,7 @@ export function initialCampaignConfiguration(context, options = {}, year = new D
     timezone,
     opensAt: campaignWallTime(campaign?.opensAt, timezone),
     closesAt: deadlineWallTime(campaign?.closesAt, timezone),
-    reminderDays: campaign?.reminderDays || [14, 3],
+    reminderDays: campaign?.reminderDays || [],
     openingMessage: campaign?.openingMessage || ''
   }
 }
@@ -95,7 +95,7 @@ function organizationErrors(form) {
   }
 
   if (!form.ownerCollecteurUserId) {
-    errors.push('Choisissez l’organisme responsable.')
+    errors.push('Choisissez le collecteur responsable.')
   }
 
   return errors
@@ -134,11 +134,7 @@ export function campaignConfigurationErrors(form, step) {
       errors.push('Le calendrier est trop long. Retirez une date de relevé ou une période de besoins.')
     }
 
-    errors.push(...needsErrors(form))
-  }
-
-  if ((step === 3 || step === undefined) && form.opensAt && form.closesAt && form.opensAt >= form.closesAt) {
-    errors.push('La date limite de réponse doit être postérieure au début de la saisie.')
+    errors.push(...needsErrors(form), ...campaignScheduleErrors(form))
   }
 
   return [...new Set(errors)]

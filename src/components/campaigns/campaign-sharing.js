@@ -45,9 +45,8 @@ export const CampaignSharing = ({campaign, managerOptions = [], canManageSharing
   }
 
   return (
-    <CampaignCard title='Partage de la campagne'>
-      <p>Donnez accès au suivi à un autre organisme. Cela ne l’autorise pas à saisir les réponses des préleveurs.</p>
-      <p className='fr-text--sm'><strong>{campaign.owner?.label || campaign.ownerContact?.label || 'Organisme responsable'}</strong> organise cette collecte et conserve son accès.</p>
+    <CampaignCard title='Partage de la campagne' description='Donnez accès au suivi à un autre organisme. Cela ne l’autorise pas à saisir les réponses des préleveurs.'>
+      <p className='fr-text--sm fr-mb-2w text-[var(--text-mention-grey)]'><strong>{campaign.owner?.label || campaign.ownerContact?.label || 'Organisme responsable'}</strong> organise cette collecte et conserve son accès.</p>
       <CampaignNotice error>{error}</CampaignNotice>
       {canManageSharing ? (
         <form onSubmit={submit}>
@@ -59,7 +58,7 @@ export const CampaignSharing = ({campaign, managerOptions = [], canManageSharing
                 <button type='button' className='fr-btn fr-btn--tertiary-no-outline fr-btn--sm fr-mb-2w' aria-label={`Retirer l’accès de ${labelOf(manager)}`} onClick={() => update(managers.filter(item => item.userId !== manager.userId))}>Retirer l’accès</button>
               </div>
             ))}
-            {managers.length === 0 && <p>Aucun autre organisme n’a accès à cette campagne.</p>}
+            {managers.length === 0 && <p className='fr-text--sm'>Aucun autre organisme n’a accès à cette campagne.</p>}
             {available.length > 0 ? <div className='grid items-end gap-x-3 md:grid-cols-[1fr_auto]'>
               <CampaignField label='Ajouter un organisme' value={selectedUserId} options={[{value: '', label: 'Choisir un organisme'}, ...available.map(person => ({value: person.userId, label: person.label}))]} onChange={setSelectedUserId} />
               <button type='button' className='fr-btn fr-btn--secondary fr-btn--sm fr-mb-2w' disabled={!selectedUserId} onClick={() => {
@@ -72,7 +71,7 @@ export const CampaignSharing = ({campaign, managerOptions = [], canManageSharing
             <button type='submit' className='fr-btn' disabled={!dirty || busy}>{busy ? 'Enregistrement…' : 'Enregistrer les accès'}</button>
           </fieldset>
         </form>
-      ) : (managers.length > 0 ? <dl className='space-y-2'>{managers.map(manager => <div key={manager.userId}><dt className='font-bold'>{labelOf(manager)}</dt><dd>{ROLE_LABELS[manager.role] || 'Consulter'}</dd></div>)}</dl> : <p>Aucun autre organisme n’a accès à cette campagne.</p>)}
+      ) : (managers.length > 0 ? <dl className='space-y-2 text-sm'>{managers.map(manager => <div key={manager.userId}><dt className='font-bold'>{labelOf(manager)}</dt><dd>{ROLE_LABELS[manager.role] || 'Consulter'}</dd></div>)}</dl> : <p className='fr-text--sm fr-mb-0'>Aucun autre organisme n’a accès à cette campagne.</p>)}
     </CampaignCard>
   )
 }

@@ -6,22 +6,27 @@ import Link from 'next/link'
 import {useRouter} from 'next/navigation'
 
 import CampaignConfigForm from '@/components/campaigns/campaign-config-form.js'
+import CampaignExports from '@/components/campaigns/campaign-exports.js'
+import CampaignProgress from '@/components/campaigns/campaign-progress.js'
+import CampaignResults from '@/components/campaigns/campaign-results.js'
 import CampaignSharing from '@/components/campaigns/campaign-sharing.js'
+import {CampaignGlobalTimeline} from '@/components/campaigns/campaign-timeline.js'
 import {
   CampaignCard, CampaignField, CampaignNotice, CampaignShell
 } from '@/components/campaigns/campaign-ui.js'
+import {getCampaignPosition} from '@/lib/campaign-timeline.js'
 import {
-  campaignArray, campaignDate, campaignDeadlineLabel, campaignInclusiveEnd, campaignMeterName, campaignPointName, CAMPAIGN_STATUS_LABELS, confirmCampaignAction, unwrapCampaignResult
+  campaignArray, campaignDate, campaignInclusiveEnd, campaignMeterName, campaignPointName, confirmCampaignAction, unwrapCampaignResult
 } from '@/lib/collection-campaigns.js'
 import {
-  createCampaignExportAction, getCampaignAction, getCampaignExportAction, getCampaignFollowupAction, listCampaignExportsAction, listCampaignNotificationsAction, remindCampaignAction, saveCampaignMeterAction, setCampaignOpenAction
+  getCampaignAction, getCampaignResponseSummaryAction, listCampaignNotificationsAction, remindCampaignAction, saveCampaignMeterAction, setCampaignOpenAction
 } from '@/server/actions/campaigns.js'
 
 const DELIVERY_STATUS_LABELS = {
   PENDING: 'En attente', PROCESSING: 'En cours', RUNNING: 'En cours', READY: 'Prêt', SUCCEEDED: 'Terminé', COMPLETED: 'Terminé', SENDING: 'Envoi en cours', SENT: 'Envoyé', FAILED: 'Échec', SKIPPED: 'Non envoyé', CANCELLED: 'Annulé'
 }
 const NOTIFICATION_KIND_LABELS = {
-  OPENING: 'Invitation à répondre', REMINDER: 'Rappel', SUBMISSION: 'Confirmation de transmission', REOPENING: 'Réouverture de la saisie', RECEIPT: 'Récépissé'
+  OPENING: 'Email d’ouverture', REMINDER: 'Rappel', RECEIPT: 'Confirmation de réception'
 }
 
 // These checks only explain visible configuration issues. The server remains
@@ -94,65 +99,37 @@ const MeterAssociation = ({campaignId, expectedVersion, target, meter, onSaved, 
   )
 }
 
-const Followup = ({campaignId, timezone, targets, responses}) => {
-  const preleveurs = [...new Set(targets.map(target => target.preleveurUserId))]
-  return (
-    <CampaignCard title='Suivi des réponses'>
-      <p>Retrouvez les index et les besoins de chaque préleveur.</p>
-      {preleveurs.map(preleveurUserId => {
-        const ownTargets = targets.filter(target => target.preleveurUserId === preleveurUserId)
-        const ownResponses = responses.filter(response => response.preleveurUserId === preleveurUserId)
-        const person = ownTargets[0]?.preleveur || ownTargets[0]?.declarant
-        const label = person?.label || person?.socialReason || person?.user?.email || ownTargets.map(target => campaignPointName(target)).join(', ')
-        return (
-          <div key={preleveurUserId} className='mb-3 border border-gray-200 p-3'>
-            <h3 className='text-base font-bold'>{label}</h3>
-            <p className='text-sm'>{ownTargets.map(target => campaignPointName(target)).join(' · ')}</p>
-            <div className='grid gap-3 md:grid-cols-2'>{['INDEX', 'NEEDS'].map(kind => {
-              const response = ownResponses.find(item => item.kind === kind)
-              return (
-                <div key={kind}>
-                  <p>{kind === 'INDEX' ? 'Index' : 'Besoins'} : {response ? CAMPAIGN_STATUS_LABELS[response.status] || response.status : 'Non commencé'}{response?.latestSubmission?.submittedAt ? ` — ${campaignDate(response.latestSubmission.submittedAt, true, timezone)}` : ''}</p>
-                  <Link className='fr-link' href={`/${kind === 'INDEX' ? 'mes-index' : 'mes-besoins'}/${campaignId}?${new URLSearchParams({preleveurUserId})}`}>Voir {kind === 'INDEX' ? 'les index' : 'les besoins'}</Link>
-                </div>
-              )
-            })}</div>
-          </div>
-        )
-      })}
-      {preleveurs.length === 0 && <p>Aucun point à afficher.</p>}
-    </CampaignCard>
-  )
-}
-
-const CampaignDelivery = ({campaignId, timezone, permissions}) => {
-  const [exports, setExports] = useState([])
+export const CampaignReminders = ({campaignId, timezone, permissions, disabled = false, summary, remindersAvailable = true, nextReminderDate, onReminded}) => {
   const [notifications, setNotifications] = useState([])
   const [busy, setBusy] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [message, setMessage] = useState('')
   const [refresh, setRefresh] = useState(0)
-  const [downloadUrls, setDownloadUrls] = useState({})
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const allReceived = Boolean(summary && summary.receivedCount >= summary.expectedCount)
+  const canRemind = permissions.canRemind && remindersAvailable && !allReceived
   useEffect(() => {
+    if (!historyOpen || !permissions.canRemind) {
+      return
+    }
+
     let active = true
     const load = async () => {
+      setLoading(true)
+      setError(null)
       try {
-        if (permissions.canExport) {
-          const items = campaignArray(unwrapCampaignResult(await listCampaignExportsAction(campaignId)))
-          if (active) {
-            setExports(items)
-          }
-        }
-
-        if (permissions.canManage || permissions.canRemind) {
-          const items = campaignArray(unwrapCampaignResult(await listCampaignNotificationsAction(campaignId)))
-          if (active) {
-            setNotifications(items)
-          }
+        const items = campaignArray(unwrapCampaignResult(await listCampaignNotificationsAction(campaignId)))
+        if (active) {
+          setNotifications(items)
         }
       } catch (error_) {
         if (active) {
           setError(error_.message)
+        }
+      } finally {
+        if (active) {
+          setLoading(false)
         }
       }
     }
@@ -161,23 +138,20 @@ const CampaignDelivery = ({campaignId, timezone, permissions}) => {
     return () => {
       active = false
     }
-  }, [campaignId, permissions.canExport, permissions.canManage, permissions.canRemind, refresh])
-
-  useEffect(() => {
-    if (!exports.some(item => ['PENDING', 'PROCESSING', 'RUNNING'].includes(item.status))) {
+  }, [campaignId, permissions.canRemind, historyOpen, refresh])
+  const remind = async () => {
+    if (!canRemind || busy || disabled || !confirmCampaignAction('Envoyer un rappel aux préleveurs qui n’ont pas encore transmis leur réponse ?')) {
       return
     }
 
-    const timeout = setTimeout(() => setRefresh(previous => previous + 1), 5000)
-    return () => clearTimeout(timeout)
-  }, [exports])
-
-  const run = async operation => {
     setBusy(true)
     setError(null)
+    setMessage('')
     try {
-      await operation()
+      const result = unwrapCampaignResult(await remindCampaignAction(campaignId))
+      setMessage(result.queuedCount > 0 ? `${result.queuedCount} rappel${result.queuedCount > 1 ? 's' : ''} en cours d’envoi.` : 'Aucun nouveau rappel à envoyer : les réponses ont été reçues ou un rappel est déjà prévu aujourd’hui.')
       setRefresh(previous => previous + 1)
+      onReminded?.()
     } catch (error_) {
       setError(error_.message)
     } finally {
@@ -185,62 +159,32 @@ const CampaignDelivery = ({campaignId, timezone, permissions}) => {
     }
   }
 
+  if (!permissions.canRemind) {
+    return null
+  }
+
   return (
-    <CampaignCard title='Exports et relances'>
-      <p>Téléchargez les réponses transmises ou rappelez aux préleveurs qu’une réponse est attendue.</p>
+    <section aria-label='Relances' className='mb-5 border-b border-[var(--border-default-grey)] pb-5'>
+      <h3 className='fr-h6 fr-mb-1w'>Relances</h3>
       <CampaignNotice error>{error}</CampaignNotice>
       <CampaignNotice>{message}</CampaignNotice>
-      <div className='mb-3 flex flex-wrap gap-3'>
-        {permissions.canExport && (
-          <button type='button' className='fr-btn fr-btn--secondary' disabled={busy} onClick={() => run(async () => {
-            unwrapCampaignResult(await createCampaignExportAction(campaignId))
-            setMessage('L’export est en préparation. Il contient les réponses transmises, sans les brouillons.')
-          })}
-          >Préparer un export Excel</button>
-        )}
-        {permissions.canRemind && (
-          <button type='button' className='fr-btn fr-btn--secondary' disabled={busy} onClick={() => {
-            if (confirmCampaignAction('Envoyer un rappel aux préleveurs qui n’ont pas encore transmis leur réponse ?')) {
-              run(async () => {
-                const result = unwrapCampaignResult(await remindCampaignAction(campaignId))
-                setMessage(`${result.queuedCount} rappel(s) en cours d’envoi.`)
-              })
-            }
-          }}
-          >Relancer les réponses attendues</button>
-        )}
-        <button type='button' className='fr-btn fr-btn--tertiary' disabled={busy} onClick={() => setRefresh(previous => previous + 1)}>Actualiser</button>
+      <div className='flex flex-col items-start justify-between gap-3 md:flex-row md:items-center'>
+        <div className='min-w-0'>
+          <p className='fr-mb-0 text-sm text-[var(--text-mention-grey)]'>{allReceived ? 'Toutes les réponses attendues ont été reçues.' : (remindersAvailable ? 'Le rappel concerne uniquement les préleveurs qui ont encore une réponse à transmettre.' : 'La saisie n’est pas ouverte aux réponses. Les relances sont désactivées.')}</p>
+          {canRemind && nextReminderDate && <p className='fr-mb-0 mt-1 text-xs text-[var(--text-mention-grey)]'>Prochaine relance automatique : {campaignDate(nextReminderDate)}, si une réponse manque.</p>}
+        </div>
+        {canRemind && <button type='button' className='fr-btn fr-btn--sm shrink-0' disabled={busy || disabled} onClick={remind}>{busy ? 'Envoi en cours…' : 'Relancer les réponses attendues'}</button>}
       </div>
-      {permissions.canExport && <>
-        <h3 className='fr-h6'>Exports</h3>
-        {exports.map(item => (
-          <div key={item.id} className='mb-2 border border-gray-200 p-3'>
-            <p>{campaignDate(item.createdAt, true, timezone)} — {DELIVERY_STATUS_LABELS[item.status] || item.status}</p>
-            {['READY', 'SUCCEEDED', 'COMPLETED'].includes(item.status) && (
-              <button type='button' className='fr-btn fr-btn--secondary fr-btn--sm' disabled={busy} onClick={() => run(async () => {
-                const detail = unwrapCampaignResult(await getCampaignExportAction(campaignId, item.id))
-                const url = new URL(detail.downloadUrl)
-                if (!['https:', 'http:'].includes(url.protocol)) {
-                  throw new Error('Lien de téléchargement invalide.')
-                }
-
-                setDownloadUrls(previous => ({...previous, [item.id]: url.href}))
-              })}
-              >Obtenir le lien de téléchargement</button>
-            )}
-            {downloadUrls[item.id] && <a className='fr-link fr-ml-2w' href={downloadUrls[item.id]} target='_blank' rel='noopener noreferrer'>Télécharger Excel (lien temporaire)</a>}
-            {item.status === 'FAILED' && <p role='alert'>L’export a échoué. Vous pouvez en demander un nouveau.</p>}
-          </div>
-        ))}
-        {exports.length === 0 && <p>Aucun export demandé.</p>}
-      </>}
-      {(permissions.canManage || permissions.canRemind) && <details className='mt-4 border-t border-gray-200 pt-3'>
-        <summary className='cursor-pointer font-bold'>Historique des courriels ({notifications.length})</summary>
-        <p className='fr-hint-text'>Une réponse transmise reste valide même si son courriel est encore en attente ou en échec.</p>
-        {notifications.map(item => <p key={item.id} className='text-sm'>{campaignDate(item.sentAt || item.createdAt, true, timezone)} — {NOTIFICATION_KIND_LABELS[item.kind] || item.kind} : {DELIVERY_STATUS_LABELS[item.status] || item.status}</p>)}
-        {notifications.length === 0 && <p>Aucun courriel.</p>}
-      </details>}
-    </CampaignCard>
+      <details className='mt-3' onToggle={event => setHistoryOpen(event.currentTarget.open)}>
+        <summary className='cursor-pointer text-xs text-[var(--text-mention-grey)]'>Historique des courriels</summary>
+        {historyOpen && <div className='pt-3'>
+          <p className='fr-hint-text'>Une réponse reçue reste valide même si son courriel est en attente ou en échec.</p>
+          {loading ? <p role='status' className='fr-text--sm'>Chargement des courriels…</p> : notifications.map(item => <p key={item.id} className='fr-mb-1w text-sm'>{campaignDate(item.sentAt || item.createdAt, true, timezone)} · {NOTIFICATION_KIND_LABELS[item.kind] || 'Courriel'} : {DELIVERY_STATUS_LABELS[item.status] || 'État inconnu'}</p>)}
+          {!loading && !error && notifications.length === 0 && <p className='fr-text--sm'>Aucun courriel.</p>}
+          <button type='button' className='fr-btn fr-btn--tertiary-no-outline fr-btn--sm' disabled={busy || disabled || loading} onClick={() => setRefresh(previous => previous + 1)}>Actualiser l’historique</button>
+        </div>}
+      </details>
+    </section>
   )
 }
 
@@ -252,20 +196,19 @@ const CampaignPreparationPoint = ({campaign, target, issues, initiallyOpen, onSa
     campaignId: campaign.id, expectedVersion: campaign.version, target, firstReadingDate, onSaved
   }
   return (
-    <details className='mb-3 border border-gray-200 p-3' open={initiallyOpen}>
-      <summary className='cursor-pointer'>
-        <span className='font-bold'>{campaignPointName(target)}</span>
-        {target.preleveur?.label && <span> — {target.preleveur.label}</span>}
-        <span className={`ml-2 text-sm ${issues.length > 0 ? 'text-amber-800' : 'text-green-800'}`}>{issues.length > 0 ? 'À vérifier' : 'Prêt'}</span>
+    <details className='border-b border-[var(--border-default-grey)] py-4 last:border-b-0' open={initiallyOpen}>
+      <summary className='cursor-pointer leading-relaxed'>
+        <span className='font-bold'>{target.pointPrelevement?.id ? <Link className='fr-link font-bold' href={`/points-prelevement/${encodeURIComponent(target.pointPrelevement.id)}`}>{campaignPointName(target)}</Link> : campaignPointName(target)}</span>
+        <span className={`fr-badge fr-badge--sm fr-ml-2w ${issues.length > 0 ? 'fr-badge--warning' : 'fr-badge--success'} fr-badge--no-icon`}>{issues.length > 0 ? 'À vérifier' : 'Prêt'}</span>
+        {target.preleveur?.label && <span className='block text-sm text-[var(--text-mention-grey)]'>{target.preleveur.label}</span>}
       </summary>
       <div className='pt-3'>
         <p className='fr-text--sm'>{target.usage?.name || target.pointPrelevement?.usageName || 'Usage non renseigné'}</p>
         {issues.length > 0 && <ul className='mb-3 list-disc pl-5'>{issues.map(issue => <li key={issue.code} className='mb-2'>{issue.message}</li>)}</ul>}
-        {target.pointPrelevement?.id && <Link className='fr-link' href={`/points-prelevement/${target.pointPrelevement.id}`} target='_blank' rel='noopener noreferrer'>Consulter la fiche du point (nouvel onglet)</Link>}
         {meters.map(meter => (
           <div key={meter.associationId || meter.id} className='mt-3 rounded bg-gray-50 p-3'>
             <p className='fr-mb-1w font-bold'>Compteur {campaignMeterName(meter)}</p>
-            <p className='fr-mb-1w text-sm'>{meter.startDate ? `En service depuis le ${campaignDate(meter.startDate)}` : 'Date de mise en service non renseignée'}{meter.endDate ? ` — retiré le ${campaignDate(meter.endDate)}` : ' — toujours en service'}</p>
+            <p className='fr-mb-1w text-sm'>{meter.startDate ? `En service depuis le ${campaignDate(meter.startDate)}` : 'Date de mise en service non renseignée'}{meter.endDate ? `, retiré le ${campaignDate(meter.endDate)}` : ', toujours en service'}</p>
             <details>
               <summary className='cursor-pointer text-sm underline'>Corriger les dates de ce compteur</summary>
               <MeterAssociation key={`${meter.associationId || meter.id}-${campaign.version}`} {...meterFormProps} meter={meter} />
@@ -281,87 +224,111 @@ const CampaignPreparationPoint = ({campaign, target, issues, initiallyOpen, onSa
   )
 }
 
-export const CampaignPointsSummary = ({campaign, targets, showOwnResponses, canAddMeter = false, onMeterSaved}) => (
+export const CampaignPointsSummary = ({targets}) => (
   <CampaignCard title='Points de prélèvement'>
     {targets.map(target => (
-      <div key={target.id} className='mb-3 border-t border-gray-200 pt-3'>
-        <p className='fr-mb-1w'>{campaignPointName(target)}{target.meters?.length > 0 && ` — ${target.meters.map(meter => campaignMeterName(meter)).join(', ')}`}</p>
+      <div key={target.id} className='border-b border-[var(--border-default-grey)] py-4 first:pt-0 last:border-b-0'>
+        <p className='fr-mb-1w font-bold'>{target.pointPrelevement?.id ? <Link className='fr-link font-bold' href={`/points-prelevement/${encodeURIComponent(target.pointPrelevement.id)}`}>{campaignPointName(target)}</Link> : campaignPointName(target)}</p>
         <p className='fr-text--sm fr-mb-1w'>{[target.preleveur?.label, target.usage?.name || target.pointPrelevement?.usageName || 'Usage non renseigné'].filter(Boolean).join(' · ')}</p>
-        {target.pointPrelevement?.id && <Link className='fr-link' href={`/points-prelevement/${target.pointPrelevement.id}`}>Voir le point</Link>}
-        {canAddMeter && campaign.status === 'OPEN' && target.meters?.length > 0 && <details>
-          <summary className='cursor-pointer text-sm underline'>Un compteur a été remplacé sur ce point ?</summary>
-          <p className='mt-3 text-sm'>Ajoutez le nouveau compteur avec sa date réelle de mise en service. La personne autorisée à compléter les index devra ensuite renseigner le remplacement dans sa réponse, avec les index de l’ancien et du nouveau compteur. Les compteurs déjà enregistrés ne sont pas modifiés.</p>
-          <MeterAssociation key={campaign.version} duringCollection campaignId={campaign.id} expectedVersion={campaign.version} target={target} firstReadingDate={[...(campaign.indexDates || [])].sort()[0]} lastReadingDate={[...(campaign.indexDates || [])].sort().at(-1)} onSaved={onMeterSaved} />
-        </details>}
+        {target.meters?.length > 0 && <p className='fr-text--sm fr-mb-1w text-[var(--text-mention-grey)]'>Compteur{target.meters.length > 1 ? 's' : ''} : {target.meters.map(meter => campaignMeterName(meter)).join(', ')}</p>}
       </div>
     ))}
-    {showOwnResponses && <div className='flex flex-wrap gap-3'>
-      <Link className='fr-btn fr-btn--secondary' href={`/mes-index/${campaign.id}`}>Consulter mes index</Link>
-      <Link className='fr-btn fr-btn--secondary' href={`/mes-besoins/${campaign.id}`}>Consulter mes besoins</Link>
-    </div>}
   </CampaignCard>
 )
 
-const periodDescription = period => {
-  const betweenReadings = period.kind === 'INDEX' && period.startReadingDate && period.endReadingDate
-    && period.startDate?.slice(0, 10) === period.startReadingDate.slice(0, 10)
-    && period.endDate?.slice(0, 10) === period.endReadingDate.slice(0, 10)
-  return betweenReadings
-    ? `Entre les relevés du ${campaignDate(period.startReadingDate)} et du ${campaignDate(period.endReadingDate)}`
-    : `du ${campaignDate(period.startDate)} au ${campaignDate(campaignInclusiveEnd(period.endDate))} inclus`
+const periodDescription = period => `du ${campaignDate(period.startDate)} au ${campaignDate(campaignInclusiveEnd(period.endDate))}`
+
+const hasDistinctPeriodBounds = period => period.kind === 'INDEX' && (!period.startReadingDate || !period.endReadingDate
+  || period.startDate?.slice(0, 10) !== period.startReadingDate.slice(0, 10)
+  || period.endDate?.slice(0, 10) !== period.endReadingDate.slice(0, 10))
+
+export const campaignOpeningIssue = (campaign, now = new Date()) => {
+  const timestamp = new Date(now).getTime()
+  if (campaign.closesAt && timestamp >= Date.parse(campaign.closesAt)) {
+    return 'Date limite dépassée : modifiez le brouillon avant d’ouvrir la saisie.'
+  }
+
+  if (campaign.opensAt && timestamp < Date.parse(campaign.opensAt)) {
+    return `Ouverture possible à partir du ${campaignDate(campaign.opensAt, true, campaign.timezone)}.`
+  }
+
+  return ''
 }
 
-export const CampaignOverview = ({campaign, targets}) => {
+export const CampaignOverview = ({campaign, targets, now, progress}) => {
   const preleveurCount = new Set(targets.map(target => target.preleveurUserId).filter(Boolean)).size
   const usages = [...new Set(targets.map(target => target.usage?.name || target.pointPrelevement?.usageName).filter(Boolean))]
-  const status = campaign.status === 'OPEN' ? 'Saisie ouverte' : (campaign.status === 'CLOSED' ? 'Saisie terminée' : 'Brouillon')
+  const position = getCampaignPosition(campaign, now)
   return (
-    <CampaignCard title='Vue d’ensemble' aside={<span className='fr-badge'>{status}</span>}>
-      <dl className='grid gap-x-6 gap-y-2 md:grid-cols-[12rem_1fr]'>
-        <dt className='font-bold'>Territoire</dt><dd>{campaign.zone?.name || 'Non renseigné'}</dd>
-        <dt className='font-bold'>Organisme responsable</dt><dd>{campaign.owner?.label || campaign.ownerContact?.label || 'Non renseigné'}</dd>
-        <dt className='font-bold'>Points concernés</dt><dd>{targets.length} point{targets.length > 1 ? 's' : ''} · {preleveurCount} préleveur{preleveurCount > 1 ? 's' : ''}</dd>
-        {usages.length > 0 && <><dt className='font-bold'>Usages</dt><dd>{usages.join(' · ')}</dd></>}
-        <dt className='font-bold'>Dates des relevés</dt><dd>{(campaign.indexDates || []).map(date => campaignDate(date)).join(' · ')}</dd>
-        {campaign.opensAt && <><dt className='font-bold'>Début de saisie au plus tôt</dt><dd>{campaignDate(campaign.opensAt, false, campaign.timezone)}</dd></>}
-        <dt className='font-bold'>Date limite de réponse</dt><dd>{campaignDeadlineLabel(campaign.closesAt, campaign.timezone)}</dd>
+    <CampaignCard title='Vue d’ensemble' aside={<span className={`fr-badge fr-badge--no-icon ${position.tone === 'success' ? 'fr-badge--success' : (position.tone === 'warning' ? 'fr-badge--warning' : '')}`}>{position.label}</span>}>
+      <dl className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
+        <div><dt className='text-sm text-[var(--text-mention-grey)]'>Territoire</dt><dd className='mt-1 font-medium'>{campaign.zone?.name || 'Non renseigné'}</dd></div>
+        <div><dt className='text-sm text-[var(--text-mention-grey)]'>Collecteur</dt><dd className='mt-1 font-medium'>{campaign.owner?.label || campaign.ownerContact?.label || 'Non renseigné'}</dd></div>
+        <div><dt className='text-sm text-[var(--text-mention-grey)]'>Points et préleveurs</dt><dd className='mt-1 font-medium'>{targets.length} point{targets.length > 1 ? 's' : ''} · {preleveurCount} préleveur{preleveurCount > 1 ? 's' : ''}</dd></div>
+        <div><dt className='text-sm text-[var(--text-mention-grey)]'>Usages</dt><dd className='mt-1 font-medium'>{usages.join(' · ') || 'Non renseignés'}</dd></div>
       </dl>
-      {(campaign.periods || []).length > 0 && <details className='fr-mt-2w'>
-        <summary className='cursor-pointer text-[#000091]'>Voir les périodes de prélèvements et de besoins</summary>
-        {['INDEX', 'NEEDS'].map(kind => (
-          <div key={kind} className='fr-mt-2w'>
-            <h3 className='fr-h6 fr-mb-1w'>{kind === 'INDEX' ? 'Volumes prélevés' : 'Besoins en eau'}</h3>
-            <ul>{campaign.periods.filter(period => period.kind === kind).map(period => <li key={period.id || `${kind}-${period.position}`}>{period.label} : {periodDescription(period)}</li>)}</ul>
-          </div>
-        ))}
-      </details>}
-      {campaign.openingMessage && <details className='fr-mt-2w'><summary className='cursor-pointer text-[#000091]'>Consigne aux préleveurs</summary><p className='fr-mt-1w whitespace-pre-wrap'>{campaign.openingMessage}</p></details>}
+      {progress}
     </CampaignCard>
   )
 }
 
-const CampaignManagement = ({initialContext}) => {
+export const CampaignCalendar = ({campaign, now}) => (
+  <CampaignCard title='Calendrier de la campagne'>
+    <CampaignGlobalTimeline {...campaign} embedded showPosition now={now} />
+  </CampaignCard>
+)
+
+export const CampaignConfigurationDetails = ({campaign}) => {
+  const distinctPeriods = (campaign.periods || []).filter(period => hasDistinctPeriodBounds(period))
+  if (!campaign.openingMessage && distinctPeriods.length === 0) {
+    return null
+  }
+
+  return (
+    <CampaignCard title='Informations de la campagne'>
+      {campaign.openingMessage && <div><h3 className='fr-h6 fr-mb-1w'>Message aux préleveurs</h3><p className='fr-mb-0 whitespace-pre-wrap text-sm'>{campaign.openingMessage}</p></div>}
+      {distinctPeriods.length > 0 && <div className={campaign.openingMessage ? 'mt-4' : undefined}>
+        <h3 className='fr-h6 fr-mb-1w'>Périodes couvertes par les volumes prélevés</h3>
+        <ul className='mb-0 space-y-2 text-sm'>{distinctPeriods.map(period => <li key={period.id || `INDEX-${period.position}`}><span className='font-medium'>{period.label}</span> : {periodDescription(period)}</li>)}</ul>
+      </div>}
+    </CampaignCard>
+  )
+}
+
+const CampaignManagement = ({initialContext, now}) => {
   const router = useRouter()
   const [context, setContext] = useState(initialContext)
-  const [followup, setFollowup] = useState(null)
+  const [summary, setSummary] = useState(null)
+  const [summaryLoading, setSummaryLoading] = useState(true)
+  const [summaryError, setSummaryError] = useState(null)
+  const [summaryRefresh, setSummaryRefresh] = useState(0)
+  const [currentTime, setCurrentTime] = useState(now || null)
   const [error, setError] = useState(null)
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
   const [editingConfiguration, setEditingConfiguration] = useState(false)
-  const [view, setView] = useState(initialContext.campaign.status !== 'DRAFT' && initialContext.permissions.canFollowup ? 'responses' : 'points')
+  const [view, setView] = useState('followup')
   const [sharingDirty, setSharingDirty] = useState(false)
   const {campaign, permissions, targets = []} = context
   const isDraft = campaign.status === 'DRAFT'
-  const targetChecks = targets.map(target => ({target, issues: campaignPreparationIssues(campaign, target)}))
+  const targetChecks = isDraft ? targets.map(target => ({target, issues: campaignPreparationIssues(campaign, target)})) : []
   const incompleteTargets = targetChecks.filter(({issues}) => issues.length > 0)
-  const readyToOpen = targets.length > 0 && incompleteTargets.length === 0
+  const openingIssues = [
+    campaignOpeningIssue(campaign, currentTime || now || new Date()),
+    targets.length === 0 ? 'Aucun point sélectionné. Utilisez « Modifier le brouillon » pour ajouter les points concernés.' : '',
+    incompleteTargets.length > 0 ? `${incompleteTargets.length} point${incompleteTargets.length > 1 ? 's sont' : ' est'} à vérifier dans l’onglet « Suivi et résultats » avant l’ouverture.` : ''
+  ].filter(Boolean)
+  const readyToOpen = openingIssues.length === 0
   const canViewSharing = permissions.canManage || permissions.canManageSharing || Array.isArray(campaign.managers)
+  const canViewExports = !isDraft && permissions.canExport
+  const canViewConfiguration = canViewSharing || Boolean(campaign.openingMessage) || (campaign.periods || []).some(period => hasDistinctPeriodBounds(period))
+  const position = getCampaignPosition(campaign, currentTime)
   const chooseView = next => {
     if (next === view) {
       return
     }
 
-    if (view === 'sharing' && sharingDirty && !confirmCampaignAction('Quitter le partage sans enregistrer les modifications d’accès ?')) {
+    if (view === 'configuration' && sharingDirty && !confirmCampaignAction('Quitter la configuration sans enregistrer les modifications de partage ?')) {
       return
     }
 
@@ -369,7 +336,12 @@ const CampaignManagement = ({initialContext}) => {
     setView(next)
   }
 
-  const refresh = async () => setContext(unwrapCampaignResult(await getCampaignAction(campaign.id)))
+  const refresh = async () => {
+    const saved = unwrapCampaignResult(await getCampaignAction(campaign.id))
+    setContext(saved)
+    return saved
+  }
+
   const refreshMeters = async () => {
     await refresh()
     setMessage('Le compteur est enregistré.')
@@ -384,7 +356,7 @@ const CampaignManagement = ({initialContext}) => {
     try {
       await refresh()
       setSharingDirty(false)
-      setView('points')
+      setView('followup')
       setError(null)
       setMessage('Les informations enregistrées ont été actualisées.')
     } catch (error_) {
@@ -395,20 +367,46 @@ const CampaignManagement = ({initialContext}) => {
   }
 
   useEffect(() => {
+    const tick = () => setCurrentTime(new Date().toISOString())
+    if (!now) {
+      tick()
+    }
+
+    const interval = setInterval(tick, 60_000)
+    const refreshOnFocus = () => {
+      tick()
+      setSummaryRefresh(previous => previous + 1)
+    }
+
+    window.addEventListener('focus', refreshOnFocus)
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('focus', refreshOnFocus)
+    }
+  }, [now])
+
+  useEffect(() => {
     if (!permissions.canFollowup || isDraft) {
       return
     }
 
     let active = true
     const load = async () => {
+      setSummaryLoading(true)
+      setSummaryError(null)
       try {
-        const result = await getCampaignFollowupAction(campaign.id)
+        const result = await getCampaignResponseSummaryAction(campaign.id)
         if (active) {
-          setFollowup(unwrapCampaignResult(result))
+          setSummary(unwrapCampaignResult(result))
         }
       } catch (error_) {
         if (active) {
-          setError(error_.message)
+          setSummaryError(error_.message)
+          setSummary(null)
+        }
+      } finally {
+        if (active) {
+          setSummaryLoading(false)
         }
       }
     }
@@ -417,9 +415,9 @@ const CampaignManagement = ({initialContext}) => {
     return () => {
       active = false
     }
-  }, [campaign.id, campaign.version, permissions.canFollowup, isDraft])
+  }, [campaign.id, campaign.version, permissions.canFollowup, isDraft, summaryRefresh])
   const changeStatus = async open => {
-    if (!permissions.canManage || !confirmCampaignAction(open ? 'Ouvrir la saisie et envoyer les invitations aux préleveurs ? Les points et les dates ne pourront plus être modifiés.' : 'Clôturer la saisie ? Les préleveurs ne pourront plus modifier leurs réponses.')) {
+    if (!permissions.canManage || (open && !readyToOpen) || !confirmCampaignAction(open ? 'Ouvrir la saisie et envoyer les invitations aux préleveurs ? Les points et les dates ne pourront plus être modifiés.' : 'Clôturer la saisie ? Les préleveurs ne pourront plus modifier leurs réponses.')) {
       return
     }
 
@@ -428,17 +426,16 @@ const CampaignManagement = ({initialContext}) => {
     try {
       unwrapCampaignResult(await setCampaignOpenAction(campaign.id, open, campaign.version))
       await refresh()
-      if (open && permissions.canFollowup) {
-        setView('responses')
-      }
-
-      setMessage(open ? 'La collecte est ouverte. Les invitations sont en cours de préparation. Retrouvez maintenant les réponses des préleveurs ci-dessous.' : 'La saisie est clôturée. Les réponses et les exports restent consultables.')
+      setView(open ? 'followup' : 'configuration')
+      setMessage(open ? 'La collecte est ouverte. Les invitations sont en cours de préparation. Retrouvez les réponses dans « Suivi et résultats ».' : 'La saisie est clôturée. Les réponses et les exports restent consultables.')
     } catch (error_) {
       setError(error_.message)
     } finally {
       setBusy(false)
     }
   }
+
+  const reminders = !isDraft && permissions.canRemind && <CampaignReminders campaignId={campaign.id} timezone={campaign.timezone} permissions={permissions} disabled={busy || sharingDirty} summary={summary} remindersAvailable={position.canRemind} nextReminderDate={position.nextReminderDate} onReminded={() => setSummaryRefresh(previous => previous + 1)} />
 
   return (
     <CampaignShell title={campaign.name}>
@@ -447,23 +444,8 @@ const CampaignManagement = ({initialContext}) => {
       {error && (
         <button type='button' className='fr-btn fr-btn--tertiary fr-mb-2w' disabled={busy || editingConfiguration} onClick={reload}>Actualiser les informations enregistrées</button>
       )}
-      <CampaignOverview campaign={campaign} targets={targets} />
-      {permissions.canManage && !editingConfiguration && <div className='fr-mb-3w'>
-        <div className='flex flex-wrap gap-3'>
-          {isDraft && <>
-            <button type='button' className='fr-btn fr-btn--secondary' disabled={busy} onClick={() => {
-              if (!sharingDirty || confirmCampaignAction('Quitter le partage sans enregistrer les modifications d’accès ?')) {
-                setSharingDirty(false)
-                setEditingConfiguration(true)
-              }
-            }}
-            >Modifier le brouillon</button>
-            <button className='fr-btn' type='button' disabled={busy || !readyToOpen || sharingDirty} aria-describedby='campaign-opening-help' onClick={() => changeStatus(true)}>{busy ? 'Ouverture…' : 'Ouvrir la saisie'}</button>
-          </>}
-          {campaign.status === 'OPEN' && <button className='fr-btn fr-btn--secondary' type='button' disabled={busy || sharingDirty} onClick={() => changeStatus(false)}>Clôturer la saisie</button>}
-        </div>
-        {isDraft && <p id='campaign-opening-help' className='fr-text--sm fr-mt-1w fr-mb-0'>{readyToOpen ? 'L’ouverture envoie les invitations et fige les dates et les points de cette collecte.' : 'Vérifiez les points ci-dessous avant d’ouvrir la saisie.'}</p>}
-      </div>}
+      <CampaignOverview campaign={campaign} targets={targets} now={currentTime} progress={permissions.canFollowup && !isDraft && <CampaignProgress summary={summary} loading={summaryLoading} error={summaryError} onRetry={() => setSummaryRefresh(previous => previous + 1)} />} />
+      {!(editingConfiguration && permissions.canManage && isDraft) && <CampaignCalendar campaign={campaign} now={currentTime} />}
       {editingConfiguration && permissions.canManage && isDraft ? (
         <CampaignCard title='Modifier le brouillon'>
           <button type='button' className='fr-btn fr-btn--tertiary fr-mb-2w' onClick={() => {
@@ -475,37 +457,63 @@ const CampaignManagement = ({initialContext}) => {
           <CampaignConfigForm key={campaign.version} context={context} onSaved={async () => {
             await refresh()
             setEditingConfiguration(false)
-            setView('points')
+            setView('configuration')
             setMessage('Le brouillon est enregistré.')
           }} />
         </CampaignCard>
       ) : <>
-        <nav className='mb-4 flex flex-wrap gap-2' aria-label='Rubriques de la collecte'>
-          {!isDraft && permissions.canFollowup && <button type='button' className={`fr-btn ${view === 'responses' ? '' : 'fr-btn--secondary'}`} aria-pressed={view === 'responses'} onClick={() => chooseView('responses')}>Suivi des réponses</button>}
-          <button type='button' className={`fr-btn ${view === 'points' ? '' : 'fr-btn--secondary'}`} aria-pressed={view === 'points'} onClick={() => chooseView('points')}>Points de prélèvement</button>
-          {!isDraft && (permissions.canExport || permissions.canManage || permissions.canRemind) && <button type='button' className={`fr-btn ${view === 'delivery' ? '' : 'fr-btn--secondary'}`} aria-pressed={view === 'delivery'} onClick={() => chooseView('delivery')}>Exports et relances</button>}
-          {canViewSharing && <button type='button' className={`fr-btn ${view === 'sharing' ? '' : 'fr-btn--secondary'}`} aria-pressed={view === 'sharing'} onClick={() => chooseView('sharing')}>Partage</button>}
+        <nav className='mb-4 flex flex-wrap gap-x-1 border-b border-[var(--border-default-grey)]' aria-label='Rubriques de la collecte'>
+          {[
+            {id: 'followup', label: 'Suivi et résultats'},
+            ...(canViewExports ? [{id: 'exports', label: 'Exports'}] : []),
+            ...(canViewConfiguration ? [{id: 'configuration', label: 'Configuration'}] : [])
+          ].map(item => <button key={item.id} type='button' className={`border-x-0 border-b-2 border-t-0 border-solid px-4 py-3 text-sm ${view === item.id ? 'border-[var(--border-active-blue-france)] font-bold text-[var(--text-action-high-blue-france)]' : 'border-transparent text-[var(--text-mention-grey)]'}`} aria-pressed={view === item.id} aria-controls='campaign-section' onClick={() => chooseView(item.id)}>{item.label}</button>)}
         </nav>
-        {view === 'points' && isDraft && permissions.canManage && <CampaignCard title='Points de prélèvement' aside={<button type='button' className='fr-btn fr-btn--tertiary fr-btn--sm' disabled={busy} onClick={reload}>Actualiser les points</button>}>
-          {targets.length === 0 ? <CampaignNotice>Aucun point sélectionné. Utilisez « Modifier le brouillon » pour ajouter les points concernés.</CampaignNotice> : incompleteTargets.length > 0 && <CampaignNotice>{incompleteTargets.length} point{incompleteTargets.length > 1 ? 's sont' : ' est'} à vérifier avant l’ouverture.</CampaignNotice>}
-          {targetChecks.map(({target, issues}) => <CampaignPreparationPoint key={target.id} campaign={campaign} target={target} issues={issues} initiallyOpen={incompleteTargets[0]?.target.id === target.id} onSaved={refreshMeters} />)}
-        </CampaignCard>}
-        {view === 'responses' && permissions.canFollowup && (followup ? <Followup campaignId={campaign.id} timezone={campaign.timezone} targets={followup.targets || targets} responses={followup.responses || []} /> : <p role='status'>Chargement des réponses…</p>)}
-        {view === 'points' && (!isDraft || !permissions.canManage) && <CampaignPointsSummary campaign={campaign} targets={targets} showOwnResponses={!permissions.canFollowup && !isDraft} canAddMeter={permissions.canManage} onMeterSaved={refreshMeters} />}
-        {view === 'delivery' && !isDraft && (permissions.canExport || permissions.canManage || permissions.canRemind) && <CampaignDelivery campaignId={campaign.id} timezone={campaign.timezone} permissions={permissions} />}
-        {view === 'sharing' && canViewSharing && <CampaignSharing key={campaign.version} campaign={campaign} managerOptions={context.managerOptions} canManageSharing={permissions.canManageSharing === true} onDirtyChange={setSharingDirty} onSaved={async saved => {
-          if (saved.accessRevoked) {
-            router.replace('/campagnes')
-            return
-          }
+        <div id='campaign-section'>
+          {view === 'exports' && canViewExports && <CampaignExports campaignId={campaign.id} timezone={campaign.timezone} permissions={permissions} disabled={busy || sharingDirty} />}
+          {view === 'followup' && isDraft && permissions.canManage && <CampaignCard title='Préparer les points'>
+            <p className='fr-text--sm text-[var(--text-mention-grey)]'>Vérifiez les points et leurs compteurs avant l’ouverture. Pour ajouter ou retirer un point, utilisez « Modifier le brouillon » dans l’onglet « Configuration ».</p>
+            {targets.length === 0 ? <CampaignNotice>Aucun point sélectionné. Utilisez « Modifier le brouillon » pour ajouter les points concernés.</CampaignNotice> : incompleteTargets.length > 0 && <CampaignNotice>{incompleteTargets.length} point{incompleteTargets.length > 1 ? 's sont' : ' est'} à vérifier avant l’ouverture.</CampaignNotice>}
+            {targetChecks.map(({target, issues}) => <CampaignPreparationPoint key={target.id} campaign={campaign} target={target} issues={issues} initiallyOpen={incompleteTargets[0]?.target.id === target.id} onSaved={refreshMeters} />)}
+          </CampaignCard>}
+          {view === 'followup' && !isDraft && permissions.canFollowup && <CampaignResults campaign={campaign} refreshKey={`${campaign.version}-${summaryRefresh}`} actions={reminders} />}
+          {view === 'followup' && !permissions.canFollowup && reminders}
+          {view === 'followup' && (isDraft ? !permissions.canManage : !permissions.canFollowup) && <CampaignPointsSummary targets={targets} />}
+          {view === 'configuration' && canViewSharing && <CampaignSharing key={campaign.version} campaign={campaign} managerOptions={context.managerOptions} canManageSharing={permissions.canManageSharing === true} onDirtyChange={setSharingDirty} onSaved={async saved => {
+            if (saved.accessRevoked) {
+              router.replace('/campagnes')
+              return
+            }
 
-          setContext(saved)
-          if (!saved.permissions.canManage && !saved.permissions.canManageSharing && !Array.isArray(saved.campaign.managers)) {
-            setView(saved.permissions.canFollowup ? 'responses' : 'points')
-          }
+            setContext(saved)
+            if (!saved.permissions.canManage && !saved.permissions.canManageSharing && !Array.isArray(saved.campaign.managers)) {
+              setView('followup')
+            }
 
-          setMessage('Les accès sont enregistrés.')
-        }} />}
+            setMessage('Les accès sont enregistrés.')
+          }} />}
+          {view === 'configuration' && <CampaignConfigurationDetails campaign={campaign} />}
+          {view === 'configuration' && permissions.canManage && <CampaignCard title={isDraft ? 'Préparer l’ouverture' : 'Terminer la campagne'}>
+            {isDraft && <>
+              <p id='campaign-opening-help' className='fr-text--sm fr-mb-2w'>{readyToOpen ? 'L’ouverture envoie les invitations et fige les dates et les points de cette collecte.' : openingIssues.join(' ')}</p>
+              <div className='flex flex-wrap items-center gap-3'>
+                <button className='fr-btn' type='button' disabled={busy || !readyToOpen || sharingDirty} aria-describedby='campaign-opening-help' onClick={() => changeStatus(true)}>{busy ? 'Ouverture…' : 'Ouvrir la saisie'}</button>
+                <button type='button' className='fr-btn fr-btn--secondary' disabled={busy} onClick={() => {
+                  if (!sharingDirty || confirmCampaignAction('Modifier le brouillon sans enregistrer les modifications de partage ?')) {
+                    setSharingDirty(false)
+                    setEditingConfiguration(true)
+                  }
+                }}
+                >Modifier le brouillon</button>
+              </div>
+            </>}
+            {campaign.status === 'CLOSED' && <p className='fr-text--sm fr-mb-0 text-[var(--text-mention-grey)]'>La saisie est clôturée. Les réponses ne sont plus modifiables ; le suivi et les exports restent consultables selon vos droits.</p>}
+            {campaign.status === 'OPEN' && <section aria-label='Clôture de la saisie'>
+              <p id='campaign-closing-help' className='fr-text--sm fr-mb-2w'>Clôturer la saisie empêchera les préleveurs de modifier leurs réponses. Le suivi et les exports resteront accessibles.</p>
+              <button className='fr-btn fr-btn--tertiary fr-btn--sm' type='button' disabled={busy || sharingDirty} aria-describedby='campaign-closing-help' onClick={() => changeStatus(false)}>Clôturer la saisie</button>
+            </section>}
+          </CampaignCard>}
+        </div>
       </>}
     </CampaignShell>
   )

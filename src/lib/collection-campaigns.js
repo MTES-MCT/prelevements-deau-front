@@ -54,7 +54,7 @@ export function campaignDate(value, withTime = false, timeZone = 'Europe/Paris')
     return 'Date invalide'
   }
 
-  return new Intl.DateTimeFormat('fr-FR', {dateStyle: 'short', ...(withTime ? {timeStyle: 'short'} : {}), timeZone: withTime ? timeZone : 'UTC'}).format(date)
+  return new Intl.DateTimeFormat('fr-FR', {dateStyle: 'long', ...(withTime ? {timeStyle: 'short'} : {}), timeZone: withTime ? timeZone : 'UTC'}).format(date)
 }
 
 export function decimalInput(value) {
@@ -103,7 +103,7 @@ export function campaignDeadlineLabel(value, timeZone = 'Europe/Paris') {
 
   const wallTime = campaignWallTime(value, timeZone)
   return wallTime.endsWith('T00:00')
-    ? `${campaignDate(campaignInclusiveEnd(wallTime))} inclus`
+    ? campaignDate(campaignInclusiveEnd(wallTime))
     : campaignDate(value, true, timeZone)
 }
 
@@ -140,32 +140,12 @@ export function readingKey(reading) {
   return `${reading.targetId}:${reading.compteurId ?? null}:${reading.readingDate.slice(0, 10)}`
 }
 
-export function campaignPointReadings(draft, targetId) {
-  return (draft.readings || []).filter(reading => reading.targetId === targetId && reading.compteurId === null && reading.value !== null && reading.value !== '')
-}
-
-export function campaignPointMeterConfirmed(draft, targetId) {
-  const readings = campaignPointReadings(draft, targetId)
-  return readings.length > 0 && readings.every(reading => reading.meterConfirmed === true)
-}
-
-export function campaignConfirmPointMeter(draft, targetId, confirmed) {
-  return {
-    ...draft, readings: (draft.readings || []).map(reading => reading.targetId === targetId && reading.compteurId === null
-      ? {...reading, meterConfirmed: confirmed}
-      : reading)
-  }
-}
-
 export function campaignUpdateReading(draft, reading) {
-  const updated = {...draft, readings: replaceCampaignRow(draft.readings || [], reading, readingKey)}
-  // A new value or historical source must not inherit an earlier declaration of continuity.
-  return reading.compteurId === null ? campaignConfirmPointMeter(updated, reading.targetId, false) : updated
+  return {...draft, readings: replaceCampaignRow(draft.readings || [], reading, readingKey)}
 }
 
 export function campaignCalculationIssue(issue) {
   const messages = {
-    METER_CONTINUITY_CONFIRMATION_REQUIRED: 'Confirmez que les relevés concernent le même compteur.',
     MISSING_READING: 'Renseignez cet index ou indiquez pourquoi il est indisponible.',
     MISSING_REASON_REQUIRED: 'Indiquez pourquoi ce relevé est indisponible.',
     NEGATIVE_DELTA_REQUIRES_EVENT: 'L’index a diminué. Vérifiez la saisie ou signalez un changement de compteur.',
@@ -262,8 +242,8 @@ export function campaignDraftErrors(draft, kind) {
       if (entry.value !== null && entry.value !== '' && !isNonNegativeDecimal(entry.value)) {
         errors.push('Saisissez un index positif ou nul, par exemple 1 234,5.')
       }
-    } else if ([entry.requestedFlow, entry.requestedVolume].some(value => value !== '' && value !== null && !isNonNegativeDecimal(value))) {
-      errors.push('Les débits et volumes demandés doivent être positifs ou nuls.')
+    } else if (entry.requestedVolume !== undefined && entry.requestedVolume !== '' && entry.requestedVolume !== null && !isNonNegativeDecimal(entry.requestedVolume)) {
+      errors.push('Les volumes demandés doivent être positifs ou nuls.')
     }
   }
 

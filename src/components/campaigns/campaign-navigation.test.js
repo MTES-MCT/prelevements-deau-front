@@ -8,6 +8,8 @@ import test from 'ava'
 import {transformSync} from 'next/dist/build/swc/index.js'
 import {renderToStaticMarkup} from 'react-dom/server'
 
+import * as campaignCalendar from '../../lib/campaign-calendar.js'
+import * as campaignTimeline from '../../lib/campaign-timeline.js'
 import * as campaignHelpers from '../../lib/collection-campaigns.js'
 
 const require = createRequire(import.meta.url)
@@ -21,11 +23,19 @@ const loadComponent = (name, {user, actions = {}, pathname = '/tableau-de-bord'}
       return campaignHelpers
     }
 
+    if (specifier === '@/lib/campaign-calendar.js') {
+      return campaignCalendar
+    }
+
+    if (specifier === '@/lib/campaign-timeline.js') {
+      return campaignTimeline
+    }
+
     if (specifier === '@/contexts/auth-context.js') {
       return {useAuth: () => ({user, isLoading: false})}
     }
 
-    if (specifier === '@/components/campaigns/campaign-ui.js' || specifier === '@/components/campaigns/campaign-list.js') {
+    if (['@/components/campaigns/campaign-ui.js', '@/components/campaigns/campaign-list.js', '@/components/campaigns/campaign-progress.js'].includes(specifier)) {
       return loadComponent(specifier.slice('@/components/'.length, -3), {user, actions, pathname})
     }
 
@@ -117,10 +127,10 @@ test('la liste intégrée dans l’administration ne duplique ni le titre princi
   t.true(html.includes('href="/campagnes/nouvelle"'))
 })
 
-test('la liste vide explique la préparation et distingue création du brouillon et ouverture', t => {
+test('la liste vide explique la préparation et l’ouverture sans ajouter de phrase technique sous la création', t => {
   const html = renderList({data: {items: [], permissions: {canCreate: true}}})
   t.true(html.includes('Créer une campagne de collecte'))
-  t.true(html.includes('La création enregistre un brouillon, sans envoyer d’invitation.'))
+  t.false(html.includes('La création enregistre un brouillon'))
   t.true(html.includes('saisir leurs relevés et leurs besoins.'))
   t.false(html.includes('vérifié les points et leurs compteurs'))
   t.true(html.includes('Ouvrez la saisie.'))
@@ -148,7 +158,7 @@ test('le lien de consultation ne se confond pas avec l’ouverture de la saisie'
   })
   t.true(html.includes('Préparer la campagne'))
   t.true(html.includes('Consulter le suivi'))
-  t.true(html.includes('Saisie ouverte'))
+  t.true(html.includes('Campagne ouverte'))
   t.false(html.includes('Ouvrir la campagne'))
 })
 

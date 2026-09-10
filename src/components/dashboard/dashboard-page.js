@@ -746,6 +746,7 @@ const DashboardVolumeCharts = ({
 )
 
 const DashboardPage = ({
+  campaignRequests = null,
   declarationCreation = null,
   initialDashboard,
   initialError,
@@ -1038,6 +1039,8 @@ const DashboardPage = ({
             />
           )}
         </div>
+
+        {isDeclarant && campaignRequests}
 
         <DashboardError error={error} />
 
