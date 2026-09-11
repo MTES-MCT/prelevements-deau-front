@@ -804,16 +804,14 @@ test('getRangeBasedDateFormatter - respects locale parameter', t => {
 })
 
 test('getRangeBasedDateFormatter - single date uses frequency-based formatter', t => {
-  const dates = [new Date('2024-03-15T14:30:00Z')]
+  // The chart formats times in the browser's local timezone.
+  const date = new Date(2024, 2, 15, 14, 30)
+  const dates = [date]
   const formatter = getRangeBasedDateFormatter('fr-FR', dates, '1 hour')
-  const date = new Date('2024-03-15T14:30:00Z')
   const formatted = formatter.format(date)
 
   // Should use HH:mm format for '1 hour' frequency (no day/month)
-  // Note: UTC 14:30 becomes 15:30 in CET (UTC+1 during winter)
-  t.true(formatted.includes('15')) // Hour (local time)
-  t.true(formatted.includes('30')) // Minutes
-  t.false(formatted.includes('03')) // Should NOT include month
+  t.is(formatted, '14:30')
 })
 
 test('getRangeBasedDateFormatter - range at 6 months boundary uses day/month formatter', t => {
