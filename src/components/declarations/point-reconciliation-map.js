@@ -8,10 +8,11 @@ import {
   useState
 } from 'react'
 
-import maplibre from 'maplibre-gl'
+import * as maplibre from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 import {cooperativeGesturesMapOptions} from '@/components/map/cooperative-gestures.js'
+import {createMap} from '@/components/map/create-map.js'
 import {IGN_RASTER_MAX_ZOOM} from '@/components/map/ign-raster.js'
 import planIGN from '@/components/map/styles/plan-ign.json'
 import {
@@ -315,7 +316,7 @@ function appendPill(parent, value) {
   }
 
   appendTextElement(parent, {
-    className: 'rounded-sm bg-[#f6f6f6] px-2 py-1 text-[11px] font-medium text-gray-700',
+    className: 'rounded-xs bg-[#f6f6f6] px-2 py-1 text-[11px] font-medium text-gray-700',
     text: value,
     tagName: 'span'
   })
@@ -362,7 +363,7 @@ function appendAliasList(parent, aliases = []) {
 
   for (const alias of cleanAliases.slice(0, 5)) {
     appendTextElement(list, {
-      className: 'rounded-sm bg-gray-100 px-1.5 py-0.5 text-[11px] text-gray-700',
+      className: 'rounded-xs bg-gray-100 px-1.5 py-0.5 text-[11px] text-gray-700',
       text: alias,
       tagName: 'span'
     })
@@ -370,7 +371,7 @@ function appendAliasList(parent, aliases = []) {
 
   if (cleanAliases.length > 5) {
     appendTextElement(list, {
-      className: 'rounded-sm bg-gray-100 px-1.5 py-0.5 text-[11px] text-gray-700',
+      className: 'rounded-xs bg-gray-100 px-1.5 py-0.5 text-[11px] text-gray-700',
       text: `+${cleanAliases.length - 5}`,
       tagName: 'span'
     })
@@ -397,7 +398,7 @@ function createPopupNode({
 
   const status = document.createElement('div')
   status.className = [
-    'mb-2 inline-flex items-center rounded-sm px-2 py-0.5 text-[11px] font-bold uppercase',
+    'mb-2 inline-flex items-center rounded-xs px-2 py-0.5 text-[11px] font-bold uppercase',
     statusData.className
   ].join(' ')
   status.textContent = statusData.label
@@ -611,7 +612,7 @@ const PointReconciliationMap = ({
 
     const initialPoints = pointsWithCoordinatesRef.current
     const firstCoordinates = getPointCoordinates(initialPoints[0])
-    const map = new maplibre.Map({
+    const map = createMap(maplibre, {
       container: containerRef.current,
       style: planIGN,
       center: firstCoordinates,
@@ -620,6 +621,9 @@ const PointReconciliationMap = ({
       maxZoom: IGN_RASTER_MAX_ZOOM,
       ...cooperativeGesturesMapOptions
     })
+    if (!map) {
+      return
+    }
 
     mapRef.current = map
     map.addControl(new maplibre.NavigationControl({showCompass: false}), 'bottom-right')
@@ -847,7 +851,7 @@ const PointReconciliationMap = ({
       {hasMapMoved && (
         <button
           type='button'
-          className='fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-focus-3-line absolute right-2 top-2 z-20 bg-white shadow-sm'
+          className='fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-focus-3-line absolute right-2 top-2 z-20 bg-white shadow-xs'
           aria-label='Recentrer la carte sur tous les points'
           onClick={fitVisiblePoints}
         >

@@ -48,7 +48,8 @@ const ServiceAccountCredentials = ({serviceAccount}) => {
 
   async function handleCreateCredential(event) {
     event.preventDefault()
-    const formData = new FormData(event.currentTarget)
+    const form = event.currentTarget
+    const formData = new FormData(form)
     const expiresAt = formData.get('expiresAt')
 
     const data = await runAction(async () => createServiceAccountCredentialAction(account.id, {
@@ -61,12 +62,12 @@ const ServiceAccountCredentials = ({serviceAccount}) => {
         keyId: data.keyId,
         clientSecret: data.clientSecret
       })
-      event.currentTarget.reset()
+      form.reset()
     }
   }
 
   async function handleRevokeCredential(credential) {
-    // eslint-disable-next-line no-alert
+
     const confirmed = window.confirm(
       `Révoquer l’identifiant technique « ${credential.keyId} » ?\n\nLes tokens actifs issus de cet identifiant seront révoqués.`
     )
@@ -78,7 +79,7 @@ const ServiceAccountCredentials = ({serviceAccount}) => {
     await runAction(async () => revokeServiceAccountCredentialAction(account.id, credential.id), 'Identifiant technique révoqué.')
   }
 
-  /* eslint-disable react/jsx-no-bind */
+
   return (
     <div className='fr-grid-row fr-grid-row--gutters'>
       <div className='fr-col-12 fr-col-lg-4'>
@@ -190,7 +191,7 @@ const ServiceAccountCredentials = ({serviceAccount}) => {
       </div>
     </div>
   )
-  /* eslint-enable react/jsx-no-bind */
+
 }
 
 export default ServiceAccountCredentials

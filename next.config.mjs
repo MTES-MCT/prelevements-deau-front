@@ -8,13 +8,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  // Transpile next-auth to fix ESM/CJS compatibility with Next.js 15
+  // Keep the Node-only workbook generator out of client bundles.
+  serverExternalPackages: ['xlsx-populate'],
   experimental: {
     serverActions: {
       bodySizeLimit: '50mb'
     },
     authInterrupts: true,
-    middlewareClientMaxBodySize: '50mb'
+    proxyClientMaxBodySize: '50mb'
   },
   transpilePackages: ['next-auth'],
   async redirects() {

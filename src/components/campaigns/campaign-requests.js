@@ -28,7 +28,7 @@ const RequestResponse = ({item, kind, now}) => {
         <h4 className='!mb-0 text-sm font-medium'>{kinds[kind]}</h4>
         {response?.latestSubmissionAt && <p className='!mb-0 text-xs text-gray-600'>Dernière transmission le {campaignDate(response.latestSubmissionAt)}</p>}
       </div>
-      <span className={'rounded px-2 py-1 text-xs font-medium ' + tones[state.tone]}>{state.label}</span>
+      <span className={'rounded-sm px-2 py-1 text-xs font-medium ' + tones[state.tone]}>{state.label}</span>
       <Link
         className={'fr-btn fr-btn--sm ' + (state.actionable ? 'fr-btn--secondary' : 'fr-btn--tertiary-no-outline')}
         href={campaignResponseHref(item.campaign.id, kind, item.preleveur.userId)}
@@ -39,7 +39,7 @@ const RequestResponse = ({item, kind, now}) => {
 }
 
 const RequestCard = ({item, showPreleveur, now}) => (
-  <article className='overflow-hidden rounded border border-gray-200 bg-white'>
+  <article className='overflow-hidden rounded-sm border border-gray-200 bg-white'>
     <div className='px-3 py-3 md:px-4'>
       <h3 className='!mb-1 text-base font-semibold'>{item.campaign.name}</h3>
       <p className='!mb-0 text-sm text-gray-600'>
@@ -83,14 +83,14 @@ const CampaignRequests = ({initialData, initialError, showPreleveur = false, now
     <section id='demandes' aria-labelledby='campaign-requests-title' className='mb-6 scroll-mt-4'>
       <div className='mb-3 flex flex-wrap items-center gap-2'>
         <h2 id='campaign-requests-title' className='fr-h5 !mb-0'>Demandes reçues</h2>
-        {active.length > 0 && <span className='rounded bg-[#eeeeff] px-2 py-1 text-xs font-medium text-[#000091]'>À compléter</span>}
+        {active.length > 0 && <span className='rounded-sm bg-[#eeeeff] px-2 py-1 text-xs font-medium text-[#000091]'>À compléter</span>}
       </div>
-      {error && <div role='alert' className='mb-3 rounded border border-gray-200 bg-white p-3 text-sm'>
+      {error && <div role='alert' className='mb-3 rounded-sm border border-gray-200 bg-white p-3 text-sm'>
         <p className='!mb-2'>Les demandes n’ont pas pu être chargées. Vos déclarations restent disponibles ci-dessous.</p>
         <button type='button' className='fr-btn fr-btn--tertiary fr-btn--sm' disabled={loading} onClick={loadMore}>Réessayer</button>
       </div>}
       <div className='space-y-3'>{active.map(item => <RequestCard key={campaignRequestKey(item)} item={item} showPreleveur={showPreleveur} now={now} />)}</div>
-      {other.length > 0 && <details className='mt-3 rounded border border-gray-200 bg-gray-50 p-3'>
+      {other.length > 0 && <details className='mt-3 rounded-sm border border-gray-200 bg-gray-50 p-3'>
         <summary className='cursor-pointer text-sm font-medium'>Demandes transmises ou à consulter ({other.length})</summary>
         <div className='mt-3 space-y-3'>{other.map(item => <RequestCard key={campaignRequestKey(item)} item={item} showPreleveur={showPreleveur} now={now} />)}</div>
       </details>}

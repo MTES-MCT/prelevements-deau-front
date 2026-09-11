@@ -2,9 +2,9 @@
  * Shared helpers to transform loaded series values into calendar/timeline data.
  */
 
-import {clampAggregationDateToRange, parseAggregationDate} from './aggregation-date.js'
-
 import {coerceNumericValue} from '@/utils/number.js'
+
+import {clampAggregationDateToRange, parseAggregationDate} from './aggregation-date.js'
 
 // Normalize remarks (string or array) into a single comment string suitable for chart metadata.
 const normalizeMetaComment = entry => {

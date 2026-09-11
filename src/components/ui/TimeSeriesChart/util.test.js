@@ -1,5 +1,9 @@
 import test from 'ava'
 
+import {prepareCumulativeSeriesData} from '@/components/PrelevementsSeriesExplorer/use-chart-series.js'
+import {buildDailyAndTimelineData} from '@/components/PrelevementsSeriesExplorer/utils/aggregation.js'
+import {processTimeSeriesData} from '@/components/PrelevementsSeriesExplorer/utils/gap-detection.js'
+
 import {
   AXIS_LEFT_ID,
   AXIS_RIGHT_ID,
@@ -34,10 +38,6 @@ import {
   resampleSeriesData,
   detectNativeFrequency
 } from './util.js'
-
-import {prepareCumulativeSeriesData} from '@/components/PrelevementsSeriesExplorer/use-chart-series.js'
-import {buildDailyAndTimelineData} from '@/components/PrelevementsSeriesExplorer/utils/aggregation.js'
-import {processTimeSeriesData} from '@/components/PrelevementsSeriesExplorer/utils/gap-detection.js'
 
 const baseTheme = {
   palette: {
@@ -369,7 +369,7 @@ test('sans vue trimestrielle, une plage de 19 Ã  60 mois utilise des mois espacÃ
   const monthGaps = coordinates.slice(1).map((coordinate, index) => coordinate - coordinates[index])
 
   t.is(ticks.granularity, 'month')
-  t.true(monthGaps.every(gap => Math.abs(gap - 6) < 0.000_001))
+  t.true(monthGaps.every(gap => Math.abs(gap - 6) < 0.000001))
   t.false(labels.some(label => /\bT[1-4]\b/u.test(label)))
 
   for (const year of [2021, 2022, 2023, 2024, 2025, 2026]) {
@@ -1301,7 +1301,7 @@ test('getNumberFormatter returns Intl.NumberFormat', t => {
 
 test('getNumberFormatter formats numbers with max 2 decimal places', t => {
   const formatter = getNumberFormatter('en-US')
-  t.is(formatter.format(1.234_56), '1.23')
+  t.is(formatter.format(1.23456), '1.23')
   t.is(formatter.format(10), '10')
 })
 

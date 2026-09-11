@@ -53,11 +53,15 @@ function renderPointForm(point, setPoint = () => {}) {
       }
 
       if (specifier === '@/components/form/optional-point-fields-form.js') {
-        return () => React.createElement('div', null, 'Champs optionnels')
+        return function OptionalPointFields() {
+          return React.createElement('div', null, 'Champs optionnels')
+        }
       }
 
       if (specifier === '@/components/ui/AccordionCentered/index.js' || specifier === '@/components/ui/deferred-render.js') {
-        return ({children}) => React.createElement('div', null, children)
+        return function Container({children}) {
+          return React.createElement('div', null, children)
+        }
       }
 
       if (specifier === '@/lib/point-characteristics.js') {

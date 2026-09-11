@@ -7,10 +7,10 @@ import {
 } from 'date-fns'
 import moment from 'moment'
 
-import {CALENDAR_STATUS_COLORS} from '../constants/colors.js'
-
 import {parseQuarterDate} from '@/lib/format-date.js'
 import {parseLocalDateTime} from '@/utils/time.js'
+
+import {CALENDAR_STATUS_COLORS} from '../constants/colors.js'
 
 /**
  * Color priority map for calendar aggregation

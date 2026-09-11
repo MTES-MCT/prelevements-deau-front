@@ -31,9 +31,11 @@ const territorySelect = ({value = '', options = territories, onChange = () => {}
       return props => {
         autocomplete = props
         return props.renderInput({
-          InputProps: {ref: {current: null}},
-          inputProps: {
-            id: props.id, role: 'combobox', 'aria-expanded': false, 'aria-autocomplete': 'list', value: props.value ? props.getOptionLabel(props.value) : '', readOnly: true
+          slotProps: {
+            input: {ref: {current: null}},
+            htmlInput: {
+              id: props.id, role: 'combobox', 'aria-expanded': false, 'aria-autocomplete': 'list', value: props.value ? props.getOptionLabel(props.value) : '', readOnly: true
+            }
           }
         })
       }
@@ -119,14 +121,16 @@ test('le rendu conserve les références, événements et attributs clavier four
   const inputRef = {current: null}
   const adornment = React.createElement('button', {type: 'button'}, 'Ouvrir')
   const tree = autocomplete.renderInput({
-    InputProps: {ref, endAdornment: adornment},
-    inputProps: {
-      id: autocomplete.id, ref: inputRef, role: 'combobox', 'aria-controls': 'territories-list', 'aria-expanded': true, 'aria-activedescendant': 'territory-department', onChange, onBlur, onKeyDown
+    slotProps: {
+      input: {ref, endAdornment: adornment},
+      htmlInput: {
+        id: autocomplete.id, ref: inputRef, role: 'combobox', 'aria-controls': 'territories-list', 'aria-expanded': true, 'aria-activedescendant': 'territory-department', onChange, onBlur, onKeyDown
+      }
     }
   })
   const input = React.Children.toArray(tree.props.children).find(element => element.type === 'input')
-  t.is(tree.ref, ref)
-  t.is(input.ref, inputRef)
+  t.is(tree.props.ref, ref)
+  t.is(input.props.ref, inputRef)
   t.is(input.props.role, 'combobox')
   t.is(input.props.onChange, onChange)
   t.is(input.props.onBlur, onBlur)

@@ -12,13 +12,13 @@ import {Box, Slider, Typography} from '@mui/material'
 import {addDays} from 'date-fns'
 import {fr} from 'date-fns/locale'
 
+import TimeSeriesChart from '@/components/ui/TimeSeriesChart/index.js'
+
 import {
   formatSliderMark,
   formatSliderRange,
   formatSliderValue
 } from './formatters.js'
-
-import TimeSeriesChart from '@/components/ui/TimeSeriesChart/index.js'
 
 const DEFAULT_MIN_CHART_HEIGHT = 360
 

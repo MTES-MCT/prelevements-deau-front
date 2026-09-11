@@ -76,7 +76,7 @@ const CampaignResponseWorkspace = ({targets, children}) => {
         <button type='button' className='fr-btn fr-btn--tertiary fr-btn--sm mb-3 xl:hidden' aria-expanded={showMap} aria-controls={`${id}-map`} onClick={() => setShowMap(value => !value)}>{showMap ? 'Masquer la carte' : 'Afficher la carte des points'}</button>
         {children({pointProps})}
       </div>
-      <aside id={`${id}-map`} aria-label='Carte des points de cette demande' className={`${showMap ? '' : 'hidden '}order-first min-w-0 rounded border border-gray-200 bg-white xl:sticky xl:top-3 xl:order-none xl:block`}>
+      <aside id={`${id}-map`} aria-label='Carte des points de cette demande' className={`${showMap ? '' : 'hidden '}order-first min-w-0 rounded-sm border border-gray-200 bg-white xl:sticky xl:top-3 xl:order-none xl:block`}>
         <div className='border-b border-gray-200 px-3 py-2'>
           <h2 className='fr-mb-0 text-sm font-semibold'>Vos points concernés</h2>
           <p className='fr-mb-0 mt-1 text-xs text-gray-600'>Cliquez sur un point pour retrouver sa saisie.</p>

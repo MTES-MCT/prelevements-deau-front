@@ -185,7 +185,7 @@ test('les besoins séparent la période et le volume demandé dans deux colonnes
   t.true(content(tree).includes('Du 1 juin 2026 au 31 août 2026'))
   t.is(nodes(tree).find(node => node.type === 'input').props.value, '250')
   t.true(content(nodes(tree).find(node => node.type === 'label')).includes('Besoin en eau (m³) · Été 2026 · Forage'))
-  t.notRegex(content(tree), /\d+\/\d+ volumes renseignés/)
+  t.notRegex(content(tree), /\d{1,16}\/\d{1,16} volumes renseignés/)
   t.true(nodes(tree).some(node => classes(node).includes('border-l-green-600')))
 })
 
@@ -226,7 +226,7 @@ test('la couleur de remplissage des besoins reste calculée sans afficher de com
   t.false(nodes(inspect(partial, {context: scopedContext}, 'NEEDS')).some(node => classes(node).includes('border-l-green-600')))
   const tree = inspect(complete, {context: scopedContext}, 'NEEDS')
   t.true(nodes(tree).some(node => classes(node).includes('border-l-green-600')))
-  t.notRegex(content(tree), /\d+\/\d+ volumes renseignés/)
+  t.notRegex(content(tree), /\d{1,16}\/\d{1,16} volumes renseignés/)
   t.deepEqual(nodes(tree).filter(node => node.type === 'input').map(node => node.props.value), ['0', '250'])
 })
 

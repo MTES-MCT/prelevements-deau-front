@@ -85,20 +85,20 @@ export function buildSeriesElementStyles({composedSeries, dynamicThresholdSeries
   const styles = {}
 
   for (const threshold of dynamicThresholdSeries) {
-    styles[`& .MuiLineElement-series-${threshold.id}`] = {strokeDasharray: '4 4'}
+    styles[`& .MuiLineChart-line[data-series="${threshold.id}"]`] = {strokeDasharray: '4 4'}
   }
 
   for (const item of composedSeries) {
     if (item.curve === 'stepAfter') {
-      styles[`& .MuiLineElement-series-${item.id}`] = {
-        ...styles[`& .MuiLineElement-series-${item.id}`],
+      styles[`& .MuiLineChart-line[data-series="${item.id}"]`] = {
+        ...styles[`& .MuiLineChart-line[data-series="${item.id}"]`],
         strokeLinecap: 'round',
         strokeWidth: 3
       }
     }
 
     if (item.area) {
-      styles[`& .MuiAreaElement-series-${item.id}`] = {fillOpacity: 0.18}
+      styles[`& .MuiLineChart-area[data-series="${item.id}"]`] = {fillOpacity: 0.18}
     }
   }
 

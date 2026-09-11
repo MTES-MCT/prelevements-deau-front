@@ -15,7 +15,7 @@ import {getPointPrelevementDisplayName} from '@/utils/point-prelevement.js'
 const collator = new Intl.Collator('fr-FR', {numeric: true, sensitivity: 'base'})
 const ESTIMATED_ROW_HEIGHT = 88
 
-const PointListItem = memo(({
+const PointListItem = memo(function PointListItem({
   highlighted,
   listIndex,
   point,
@@ -25,7 +25,7 @@ const PointListItem = memo(({
   onPointFocus,
   onPointHover,
   onPointSelect
-}) => {
+}) {
   const focusedRef = useRef(false)
   const hoveredRef = useRef(false)
   const displayName = getPointPrelevementDisplayName(point, {
@@ -94,7 +94,7 @@ const PointListItem = memo(({
   )
 })
 
-const PointsMapList = memo(({
+const PointsMapList = memo(function PointsMapList({
   highlightedPointId,
   isLoading,
   onClose,
@@ -106,7 +106,7 @@ const PointsMapList = memo(({
   sortMode,
   onPointHover,
   onPointSelect
-}) => {
+}) {
   const scrollContainerRef = useRef(null)
   const pendingFocusIndexRef = useRef(null)
   const [activeIndex, setActiveIndex] = useState(0)
@@ -156,7 +156,7 @@ const PointsMapList = memo(({
     }
 
     const target = scrollContainerRef.current
-      ?.querySelector(`[data-point-list-index="${targetIndex}"]`)
+      ?.querySelector(`[data-point-list-index="${CSS.escape(String(targetIndex))}"]`)
     if (target) {
       pendingFocusIndexRef.current = null
       target.focus()

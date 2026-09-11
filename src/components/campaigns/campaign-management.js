@@ -206,7 +206,7 @@ const CampaignPreparationPoint = ({campaign, target, issues, initiallyOpen, onSa
         <p className='fr-text--sm'>{target.usage?.name || target.pointPrelevement?.usageName || 'Usage non renseigné'}</p>
         {issues.length > 0 && <ul className='mb-3 list-disc pl-5'>{issues.map(issue => <li key={issue.code} className='mb-2'>{issue.message}</li>)}</ul>}
         {meters.map(meter => (
-          <div key={meter.associationId || meter.id} className='mt-3 rounded bg-gray-50 p-3'>
+          <div key={meter.associationId || meter.id} className='mt-3 rounded-sm bg-gray-50 p-3'>
             <p className='fr-mb-1w font-bold'>Compteur {campaignMeterName(meter)}</p>
             <p className='fr-mb-1w text-sm'>{meter.startDate ? `En service depuis le ${campaignDate(meter.startDate)}` : 'Date de mise en service non renseignée'}{meter.endDate ? `, retiré le ${campaignDate(meter.endDate)}` : ', toujours en service'}</p>
             <details>

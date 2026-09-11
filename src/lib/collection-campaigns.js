@@ -14,13 +14,13 @@ export function campaignResponseHref(campaignId, kind, preleveurUserId) {
 
 export function confirmCampaignAction(message) {
   // Native confirmation also blocks browser/SPA navigation before losing unsaved edits.
-  // eslint-disable-next-line no-alert
+
   return window.confirm(message)
 }
 
 export function campaignPointChangeMailto({campaign, target, message}) {
   const email = campaign?.ownerContact?.email
-  if (typeof email !== 'string' || !/^[^\s<>?,;]+@[^\s<>?,;]+\.[^\s<>?,;]+$/.test(email) || !message?.trim()) {
+  if (typeof email !== 'string' || !/^[^\s@<>?,;]+@[^\s@<>?,;]+\.[^\s@.<>?,;]+$/.test(email) || !message?.trim()) {
     return null
   }
 
@@ -58,7 +58,7 @@ export function campaignDate(value, withTime = false, timeZone = 'Europe/Paris')
 }
 
 export function decimalInput(value) {
-  return String(value ?? '').replaceAll(/[\s\u00A0\u202F]/g, '').replace(',', '.')
+  return String(value ?? '').replaceAll(/\s/g, '').replace(',', '.')
 }
 
 export function isNonNegativeDecimal(value) {

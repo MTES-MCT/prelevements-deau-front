@@ -57,7 +57,7 @@ for (const [kind, title] of [['INDEX', 'Relevés de compteurs'], ['NEEDS', 'Beso
     t.notRegex(html, /border-l|rounded|shadow|bg-blue|text-blue/)
     t.true(html.includes('gap-y-1 text-xs text-gray-600'))
     t.notRegex(html, /<(?:button|input|select|textarea|a)\b|onClick|Enregistrement automatique/)
-    t.notRegex(html, /\d+ points? concernés?/)
+    t.notRegex(html, /\d{1,16} points? concernés?/)
     t.deepEqual(campaign, before)
   })
 }

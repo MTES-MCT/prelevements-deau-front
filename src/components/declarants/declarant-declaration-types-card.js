@@ -183,7 +183,7 @@ const DeclarantDeclarationTypesCard = ({declarantId, initialPayload}) => {
   }
 
   const removeLink = async link => {
-    // eslint-disable-next-line no-alert
+
     if (!window.confirm(`Retirer l’autorisation « ${getTypeLabel(link.declarationType)} » de ce déclarant ?`)) {
       return
     }

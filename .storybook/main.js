@@ -1,19 +1,28 @@
+import {fileURLToPath} from 'node:url'
+
 const config = {
-  "stories": [
-    "../src/**/*.stories.@(js|jsx|mjs|ts|tsx)"
+  viteFinal: async config => ({
+    ...config,
+    resolve: {
+      ...config.resolve,
+      alias: {...config.resolve?.alias, '@': fileURLToPath(new URL('../src', import.meta.url))}
+    }
+  }),
+  stories: [
+    '../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'
   ],
-  "addons": [
-    "@storybook/addon-docs"
+  addons: [
+    '@storybook/addon-docs'
   ],
-  "framework": {
-    "name": "@storybook/nextjs",
-    "options": {}
+  framework: {
+    name: '@storybook/nextjs-vite',
+    options: {}
   },
-  "staticDirs": [
-    "../public"
+  staticDirs: [
+    '../public'
   ],
-  "docs": {
-    "autodocs": "tag"
+  docs: {
+    autodocs: 'tag'
   }
 }
 

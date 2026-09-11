@@ -1,7 +1,8 @@
-import styles from './campaign-timeline.module.css'
 
 import {buildCampaignTimeline, getCampaignPosition} from '@/lib/campaign-timeline.js'
 import {campaignDate} from '@/lib/collection-campaigns.js'
+
+import styles from './campaign-timeline.module.css'
 
 const CalendarDate = ({date}) => <time dateTime={date}>{campaignDate(date)}</time>
 

@@ -100,8 +100,8 @@ function validateDates(event, {target, campaign, others, originalEvent}, errors)
     return
   }
 
-  const dates = [...(campaign.indexDates || []), ...(campaign.periods || []).filter(period => period.kind === 'INDEX')
-    .flatMap(period => [period.startReadingDate, period.endReadingDate])].map(value => day(value)).filter(value => isCampaignDay(value)).sort()
+  const dates = [...(campaign.indexDates || []), ...(campaign.periods || [])
+    .flatMap(period => period.kind === 'INDEX' ? [period.startReadingDate, period.endReadingDate] : [])].map(value => day(value)).filter(value => isCampaignDay(value)).sort()
   if ((dates[0] && event.at < dates[0]) || (dates.at(-1) && event.at > dates.at(-1))) {
     errors.at = `Le changement doit avoir eu lieu entre le ${campaignDate(dates[0])} et le ${campaignDate(dates.at(-1))}.`
   }

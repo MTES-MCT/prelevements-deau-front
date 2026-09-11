@@ -1,4 +1,4 @@
-/* eslint-disable react/function-component-definition */
+
 import {Badge} from '@codegouvfr/react-dsfr/Badge'
 
 const labels = {

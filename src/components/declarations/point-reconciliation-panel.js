@@ -162,7 +162,7 @@ function getChunkItemClassName({isSelected, matched}) {
   const baseClassName = 'relative w-full border p-3 text-left transition-colors'
 
   if (isSelected) {
-    return 'relative w-full border-2 border-[#000091] bg-[#f5f5fe] p-[11px] text-left shadow-sm transition-colors'
+    return 'relative w-full border-2 border-[#000091] bg-[#f5f5fe] p-[11px] text-left shadow-xs transition-colors'
   }
 
   if (matched) {
@@ -350,7 +350,7 @@ const ChunkListItem = ({
   return (
     <div
       ref={itemRef}
-      className={`${getChunkItemClassName({isSelected, matched})} cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#000091]`}
+      className={`${getChunkItemClassName({isSelected, matched})} cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#000091]`}
       data-chunk-list-item='true'
       role='button'
       tabIndex={0}
@@ -473,7 +473,7 @@ const MapPointsLegend = ({
           checkboxClassName='accent-[#000091]'
           inputId={unmatchedInputId}
           label='Points disponibles à associer'
-          markerClassName='h-4 w-4 rounded-full border-2 border-white shadow-sm ring-2 ring-[#000091]/20'
+          markerClassName='h-4 w-4 rounded-full border-2 border-white shadow-xs ring-2 ring-[#000091]/20'
           markerStyle={{backgroundColor: AVAILABLE_POINT_COLOR}}
           onChange={onToggleUnmatchedPoints}
         />
@@ -485,7 +485,7 @@ const MapPointsLegend = ({
         checkboxClassName='accent-[#18753c]'
         inputId={matchedInputId}
         label={matchedLabel}
-        markerClassName='h-4 w-4 rounded-full border-2 border-white shadow-sm ring-2 ring-[#18753c]/25'
+        markerClassName='h-4 w-4 rounded-full border-2 border-white shadow-xs ring-2 ring-[#18753c]/25'
         markerStyle={{backgroundColor: MATCHED_POINT_COLOR}}
         onChange={onToggleMatchedPoints}
       />

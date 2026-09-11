@@ -11,6 +11,7 @@ import {renderToStaticMarkup} from 'react-dom/server'
 import * as calendarHelpers from '../../lib/campaign-calendar.js'
 import * as campaignHelpers from '../../lib/collection-campaigns.js'
 import * as waterHelpers from '../../lib/water-uses.js'
+import * as numberHelpers from '../../utils/number.js'
 
 const require = createRequire(import.meta.url)
 const nodes = tree => Array.isArray(tree) ? tree.flatMap(node => nodes(node)) : (tree && typeof tree === 'object' ? [tree, ...nodes(tree.props?.children)] : [])
@@ -28,6 +29,7 @@ const load = (name, overrides = {}) => {
   const {code} = transformSync(readFileSync(filename, 'utf8'), {filename: filename.pathname, jsc: {parser: {syntax: 'ecmascript', jsx: true}, transform: {react: {runtime: 'automatic'}}, target: 'es2022'}, module: {type: 'commonjs'}})
   const compiledModule = {exports: {}}
   const imports = {
+    '@/utils/number.js': numberHelpers,
     '@/lib/campaign-calendar.js': calendarHelpers,
     '@/lib/collection-campaigns.js': campaignHelpers,
     '@/lib/water-uses.js': waterHelpers,

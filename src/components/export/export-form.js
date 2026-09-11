@@ -636,7 +636,7 @@ const ExportForm = ({
   }
 
   const handleDelete = async item => {
-    // eslint-disable-next-line no-alert
+
     const confirmed = window.confirm(
       `Supprimer l’export « ${item.fileName || 'Export de données'} » ?\n\nLe fichier ne sera plus disponible au téléchargement.`
     )

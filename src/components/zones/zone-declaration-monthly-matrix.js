@@ -204,7 +204,7 @@ const MatrixCell = ({row, cell}) => {
       }}
     >
       <span
-        className='inline-flex items-center justify-center text-[10px] font-bold rounded-sm'
+        className='inline-flex items-center justify-center text-[10px] font-bold rounded-xs'
         style={{
           width: 16,
           height: 16,
@@ -335,7 +335,7 @@ const ZoneDeclarationMonthlyMatrix = ({canExport = false, payload}) => {
 
       {flattenedRows.length > 0 && (
         <Box
-          className='border rounded overflow-auto'
+          className='border rounded-sm overflow-auto'
           sx={{
             maxHeight: '72vh',
             borderColor: 'var(--border-default-grey)'

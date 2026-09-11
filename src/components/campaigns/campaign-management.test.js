@@ -65,7 +65,9 @@ const loadComponent = (name, overrides = {}, globals = {}) => {
     }
 
     if (specifier === 'next/link') {
-      return ({children, ...props}) => React.createElement('a', props, children)
+      return function Link({children, ...props}) {
+        return React.createElement('a', props, children)
+      }
     }
 
     if (specifier === 'next/navigation') {
@@ -292,7 +294,7 @@ test('les besoins conservent leur date de fin incluse même si leurs dates corre
       }]
     }, targets: [target]
   }))
-  const text = html.replaceAll(/<[^>]+>/g, ' ').replaceAll(/\s+/g, ' ')
+  const text = html.replaceAll(/<[^<>]+>/g, ' ').replaceAll(/\s+/g, ' ')
   t.true(text.includes(`${campaignHelpers.campaignDate('2025-11-01')} au ${campaignHelpers.campaignDate('2026-05-31')}`))
   t.false(text.includes(' inclus'))
   t.false(html.includes('Entre les relevés'))
@@ -779,7 +781,7 @@ test('la progression reste accessible dans chaque onglet sans recharger les rés
     button(flow.render(), label).props.onClick()
     flow.render()
     // Les onglets sont parcourus successivement sur la même fiche montée.
-    // eslint-disable-next-line no-await-in-loop
+
     await flow.flushEffects()
     t.is((flow.html().match(/role="img"/g) || []).length, 2)
     t.true(flow.html().includes('Besoins en eau'))

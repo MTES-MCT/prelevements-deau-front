@@ -30,7 +30,7 @@ const Dossiers = async () => {
   const entries = response?.data ?? []
   const meta = response?.meta ?? {}
   const allowedDeclarationTypes = meta.allowedDeclarationTypes ?? []
-  const canCreateDeclaration = meta.canCreateDeclaration ?? allowedDeclarationTypes.length > 0
+  const canCreateDeclaration = meta.canCreateDeclaration ?? (allowedDeclarationTypes.length > 0)
   const canCreateQuickDeclaration = meta.canCreateQuickDeclaration ?? false
   const canCreateAnyDeclaration = canCreateDeclaration || canCreateQuickDeclaration
   let declarationsContent

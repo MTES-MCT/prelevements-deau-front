@@ -59,7 +59,7 @@ const fixture = extra => ({
 })
 const card = (campaign = fixture(), extra = {}) => renderToStaticMarkup(React.createElement(components.CampaignManagementListCard, {item: {campaign, ...extra}, now}))
 const list = props => renderToStaticMarkup(React.createElement(components.default, props))
-const visibleText = markup => markup.replaceAll(/<[^>]*>/g, '')
+const visibleText = markup => markup.replaceAll(/<[^<>]*>/g, '')
 const progress = {
   expectedCount: 10, receivedCount: 7, correctionCount: 2, scopeComplete: true,
   byKind: {

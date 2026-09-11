@@ -7,6 +7,14 @@ import {
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Box, Typography} from '@mui/material'
 
+import DistributedVolumeRuleInfo from '@/components/PrelevementsSeriesExplorer/distributed-volume-rule-info.js'
+import {buildDailyAndTimelineData} from '@/components/PrelevementsSeriesExplorer/utils/aggregation.js'
+import CalendarGrid from '@/components/ui/CalendarGrid/index.js'
+import PeriodSelectorHeader from '@/components/ui/PeriodSelectorHeader/index.js'
+import {formatFrequencyLabel} from '@/utils/frequency.js'
+import {normalizeString} from '@/utils/string.js'
+import {parseLocalDateTime} from '@/utils/time.js'
+
 import ChartWithRangeSlider from './chart-with-range-slider.js'
 import {
   FALLBACK_PARAMETER_COLOR,
@@ -41,14 +49,6 @@ import {
   chooseDisplayResolution,
   resolutionToFrequency
 } from './utils/time-bucketing.js'
-
-import DistributedVolumeRuleInfo from '@/components/PrelevementsSeriesExplorer/distributed-volume-rule-info.js'
-import {buildDailyAndTimelineData} from '@/components/PrelevementsSeriesExplorer/utils/aggregation.js'
-import CalendarGrid from '@/components/ui/CalendarGrid/index.js'
-import PeriodSelectorHeader from '@/components/ui/PeriodSelectorHeader/index.js'
-import {formatFrequencyLabel} from '@/utils/frequency.js'
-import {normalizeString} from '@/utils/string.js'
-import {parseLocalDateTime} from '@/utils/time.js'
 
 const DEFAULT_PARAMETER = 'volume'
 

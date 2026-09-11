@@ -19,6 +19,7 @@ import * as responseRecoveryHelpers from '../../lib/campaign-response-recovery.j
 import * as campaignTimeline from '../../lib/campaign-timeline.js'
 import * as campaignHelpers from '../../lib/collection-campaigns.js'
 import * as waterHelpers from '../../lib/water-uses.js'
+import * as numberHelpers from '../../utils/number.js'
 
 const require = createRequire(import.meta.url)
 const loaded = new Map()
@@ -32,6 +33,10 @@ const loadComponent = (name, overrides = {}) => {
   const {code} = transformSync(readFileSync(filename, 'utf8'), {filename: filename.pathname, jsc: {parser: {syntax: 'ecmascript', jsx: true}, transform: {react: {runtime: 'automatic'}}, target: 'es2022'}, module: {type: 'commonjs'}})
   const compiledModule = {exports: {}}
   const componentRequire = specifier => {
+    if (specifier === '@/utils/number.js') {
+      return numberHelpers
+    }
+
     if (specifier === '@/contexts/auth-context.js') {
       return {useAuth: () => ({user: {id: 'fixture-viewer'}, isLoading: false})}
     }
@@ -105,7 +110,9 @@ const loadComponent = (name, overrides = {}) => {
     }
 
     if (specifier === 'next/link') {
-      return ({children, ...props}) => React.createElement('a', props, children)
+      return function Link({children, ...props}) {
+        return React.createElement('a', props, children)
+      }
     }
 
     return require(specifier)
@@ -258,7 +265,7 @@ test('les relevés et les besoins reprennent les champs compacts, sans formulair
 
     t.true(html.includes('Commentaire facultatif'))
     t.false(html.includes('Enregistrement automatique.'))
-    t.notRegex(html, /Recopiez les index affichés|Indiquez le volume d’eau prévu|Voir les volumes calculés|\d+\/\d+ (?:réponses|volumes) renseignés?/)
+    t.notRegex(html, /Recopiez les index affichés|Indiquez le volume d’eau prévu|Voir les volumes calculés|\d{1,16}\/\d{1,16} (?:réponses|volumes) renseignés?/)
     t.false(html.includes('Je confirme les informations'))
   }
 })
@@ -275,7 +282,7 @@ for (const kind of ['INDEX', 'NEEDS']) {
     t.notRegex(footer, /<button[^>]*disabled=""/)
     t.notRegex(html, /type="checkbox"|Je confirme les informations|Tant que vous ne la transmettez pas/)
     t.is((html.match(/Vous pourrez modifier votre réponse tant que la saisie est ouverte\./g) || []).length, 1)
-    t.regex(footer, /<\/button>.*<p class="[^"]*fr-text--xs[^"]*text-\[var\(--text-mention-grey\)][^"]*">Vous pourrez modifier votre réponse tant que la saisie est ouverte\.<\/p>/s)
+    t.regex(footer, /<\/button>.*<p class="[^"]*fr-text--xs[^"]*text-\[var\(--text-mention-grey\)\][^"]*">Vous pourrez modifier votre réponse tant que la saisie est ouverte\.<\/p>/s)
     t.deepEqual(initialContext, before)
   })
 
@@ -306,7 +313,7 @@ test('la complétude compte une indisponibilité expliquée sans prétendre qu�
   const html = renderToStaticMarkup(React.createElement(renderIndexRows, {
     context: initialContext, draft, disabled: false, onChange() {}
   }))
-  t.notRegex(html, /\d+\/\d+ (?:réponses|relevés) renseignés?/)
+  t.notRegex(html, /\d{1,16}\/\d{1,16} (?:réponses|relevés) renseignés?/)
   t.false(html.includes('border-l-green-600'))
   t.false(html.includes('transmise'))
   t.true(html.includes('Compteur inaccessible'))
@@ -319,7 +326,7 @@ test('la complétude compte une indisponibilité expliquée sans prétendre qu�
     context: initialContext, draft: completed, disabled: false, onChange() {}
   }))
   t.true(completeHtml.includes('border-l-green-600'))
-  t.notRegex(completeHtml, /\d+\/\d+ (?:réponses|relevés) renseignés?/)
+  t.notRegex(completeHtml, /\d{1,16}\/\d{1,16} (?:réponses|relevés) renseignés?/)
 })
 
 test('les motifs du tableau utilisent des libellés courts et compacts sans changer la saisie', t => {
@@ -442,7 +449,7 @@ test('la réponse rappelle l’organisme demandeur et la campagne sans ajouter d
   t.true(html.includes('Collecte de bassin'))
   t.false(html.includes('Collecte de bassin (2026)'))
   t.regex(html, /<p[^>]*>Collecteur : <strong[^>]*>Organisme de gestion des eaux<\/strong><\/p>/)
-  t.notRegex(html, /\d+ points? concernés?/)
+  t.notRegex(html, /\d{1,16} points? concernés?/)
   t.true(html.includes('Relevés du 1 novembre 2025 au 1 novembre 2026'))
   t.is((html.match(/<h1\b/g) || []).length, 1)
   t.false(html.includes('Demandé par'))
@@ -468,7 +475,7 @@ for (const [kind, title] of [['INDEX', 'Relevés de compteurs'], ['NEEDS', 'Beso
     t.is((html.match(/Collecte de bassin/g) || []).length, 1)
     t.false(html.includes('Collecte de bassin (2026)'))
     t.true(html.includes('Collecteur de secours'))
-    t.notRegex(html, /\d+ points? concernés?/)
+    t.notRegex(html, /\d{1,16} points? concernés?/)
     t.true(header.includes(kind === 'INDEX' ? 'Relevés du 1 novembre 2025 au 1 novembre 2026' : 'Besoins du 1 novembre 2026 au 31 mai 2027'))
     t.true(html.includes('Date limite de réponse'))
     t.true(html.includes('31 octobre 2026'))

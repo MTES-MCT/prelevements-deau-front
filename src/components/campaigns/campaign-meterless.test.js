@@ -81,7 +81,9 @@ const loadComponent = name => {
     }
 
     if (specifier === 'next/link') {
-      return ({children, ...props}) => React.createElement('a', props, children)
+      return function Link({children, ...props}) {
+        return React.createElement('a', props, children)
+      }
     }
 
     return require(specifier)

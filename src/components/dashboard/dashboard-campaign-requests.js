@@ -22,7 +22,7 @@ export const CampaignRequestsSummary = ({data, user, now = Date.now()}) => {
       <div className='mb-3 flex flex-wrap items-center justify-between gap-2'>
         <div className='flex items-center gap-2'>
           <h2 id='dashboard-campaign-requests-title' className='!mb-0 text-lg font-semibold text-[#000091]'>Demandes à compléter</h2>
-          <span className='rounded bg-[#e3e3fd] px-2 py-0.5 text-xs font-semibold text-[#000091]' aria-label={`${total} demande${total > 1 ? 's' : ''} à compléter`}>{total}</span>
+          <span className='rounded-sm bg-[#e3e3fd] px-2 py-0.5 text-xs font-semibold text-[#000091]' aria-label={`${total} demande${total > 1 ? 's' : ''} à compléter`}>{total}</span>
         </div>
         <Link className='fr-link fr-link--sm' href='/mes-declarations#demandes'>Voir mes demandes</Link>
       </div>
@@ -31,7 +31,7 @@ export const CampaignRequestsSummary = ({data, user, now = Date.now()}) => {
           const actionableKinds = Object.keys(kinds).filter(kind => campaignRequestResponseState(item.campaign, item.responses?.[kind], now).actionable)
           const showPreleveur = item.preleveur.userId !== user.id || user.declarantRole === 'COLLECTEUR'
           return (
-            <article key={campaignRequestKey(item)} className='flex min-w-0 flex-col rounded border border-[#ddddf1] bg-white p-3 md:p-4'>
+            <article key={campaignRequestKey(item)} className='flex min-w-0 flex-col rounded-sm border border-[#ddddf1] bg-white p-3 md:p-4'>
               <h3 className='!mb-1 text-base font-semibold'>{item.campaign.name}</h3>
               {showPreleveur && item.preleveur.label && <p className='!mb-1 text-sm font-medium'>{item.preleveur.label}</p>}
               <p className='!mb-0 text-xs text-[var(--text-mention-grey)]'>

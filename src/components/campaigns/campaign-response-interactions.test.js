@@ -34,7 +34,7 @@ const deferred = () => {
 const settle = async () => {
   for (let index = 0; index < 25; index++) {
     // Exercise the real serial queue and effect promises without a wall-clock wait.
-    // eslint-disable-next-line no-await-in-loop
+
     await Promise.resolve()
   }
 }

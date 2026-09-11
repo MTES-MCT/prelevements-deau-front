@@ -98,7 +98,12 @@ export function getPublicStatsUrl(apiUrl, month) {
     throw new Error('PUBLIC_STATS_API_NOT_CONFIGURED')
   }
 
-  const url = new URL(`${apiUrl.replace(/\/+$/, '')}/api/stats/public`)
+  let end = apiUrl.length
+  while (end > 0 && apiUrl[end - 1] === '/') {
+    end -= 1
+  }
+
+  const url = new URL(`${apiUrl.slice(0, end)}/api/stats/public`)
   if (month !== undefined && month !== null && month !== '') {
     if (!isStatsMonth(month)) {
       throw new Error('INVALID_STATS_MONTH')

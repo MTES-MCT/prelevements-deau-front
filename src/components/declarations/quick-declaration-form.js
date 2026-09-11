@@ -40,7 +40,7 @@ import {
   previewQuickDeclarationConflictsAction
 } from '@/server/actions/declarations.js'
 import {editPointUsageNameAction} from '@/server/actions/points-prelevement.js'
-import {formatNumber} from '@/utils/number.js'
+import {formatNumber, groupIntegerDigits} from '@/utils/number.js'
 
 const QuickDeclarationMap = dynamic(
   () => import('./quick-declaration-map.js'),
@@ -210,7 +210,7 @@ function formatNumberInput(value) {
 
   const normalizedValue = String(value)
   const [integerPart = '0', fractionPart = ''] = normalizedValue.split('.')
-  const groupedInteger = (integerPart || '0').replaceAll(/\B(?=(\d{3})+(?!\d))/g, ' ')
+  const groupedInteger = groupIntegerDigits(integerPart || '0')
 
   if (!normalizedValue.includes('.')) {
     return groupedInteger
@@ -442,7 +442,7 @@ function buildUsageOptionsForPoint(point, globalUsageOptions) {
 }
 
 function getUsageCodeSortParts(option) {
-  const match = /^(\d+)(.*)$/u.exec(option.code ?? '')
+  const match = /^(\d+)(\D.*)?$/u.exec(option.code ?? '')
 
   return {
     number: match ? Number(match[1]) : Number.MAX_SAFE_INTEGER,
@@ -769,7 +769,7 @@ function getEntryRowClassName({hasHistory, hasValue, isHighlighted}) {
     'grid cursor-pointer grid-cols-1 gap-2 border-b border-r border-l-4 px-2 py-1.5 transition md:items-start',
     'border-b-gray-200 border-r-gray-200',
     ENTRY_GRID_COLUMNS_CLASS_NAME,
-    hasValue && 'border-l-green-600 bg-green-50 shadow-sm',
+    hasValue && 'border-l-green-600 bg-green-50 shadow-xs',
     !hasValue && isHighlighted && 'border-l-blue-500 bg-blue-50',
     !hasValue && !isHighlighted && hasHistory && 'border-l-gray-400 bg-gray-50 hover:bg-gray-100',
     !hasValue && !isHighlighted && !hasHistory && 'border-l-transparent bg-white hover:bg-gray-50'
@@ -811,7 +811,7 @@ const QuickDeclarationToolbar = ({
 
   return (
     <div className='flex flex-col gap-3'>
-      <div className='border border-gray-200 bg-white p-3 shadow-sm md:p-4'>
+      <div className='border border-gray-200 bg-white p-3 shadow-xs md:p-4'>
         <SegmentedControl
           className='quick-declaration-measurement-segmented fr-mb-2w'
           legend='Je souhaite déclarer'
@@ -1056,7 +1056,7 @@ const UsageCombobox = ({
     }
 
     listboxRef.current
-      ?.querySelector(`[data-option-index="${activeIndex}"]`)
+      ?.querySelector(`[data-option-index="${CSS.escape(String(activeIndex))}"]`)
       ?.scrollIntoView({block: 'nearest'})
   }, [activeIndex, open])
 
@@ -1120,7 +1120,7 @@ const UsageCombobox = ({
             >
               <span
                 className={classNames(
-                  'mt-[0.2rem] shrink-0 rounded-sm ring-1 ring-inset ring-black/15',
+                  'mt-[0.2rem] shrink-0 rounded-xs ring-1 ring-inset ring-black/15',
                   usage.parentUsage ? 'h-2 w-2' : 'h-2.5 w-2.5'
                 )}
                 style={{backgroundColor: getUsageOptionColor(usage)}}
@@ -1146,7 +1146,7 @@ const UsageCombobox = ({
       <div className='relative'>
         {selectedUsage && (
           <span
-            className='pointer-events-none absolute left-2 top-1/2 z-10 h-2.5 w-2.5 -translate-y-1/2 rounded-sm ring-1 ring-inset ring-black/15'
+            className='pointer-events-none absolute left-2 top-1/2 z-10 h-2.5 w-2.5 -translate-y-1/2 rounded-xs ring-1 ring-inset ring-black/15'
             style={{backgroundColor: getUsageOptionColor(selectedUsage)}}
             aria-hidden='true'
           />
@@ -1874,7 +1874,7 @@ const QuickDeclarationMapPanel = ({
   const pointsContactMailto = buildPointsContactMailto(declarantName)
 
   return (
-    <aside className='sticky top-0 z-20 order-2 self-start bg-white pb-2 shadow-sm xl:order-none xl:col-start-2 xl:row-start-1 xl:top-3 xl:pb-0 xl:shadow-none'>
+    <aside className='sticky top-0 z-20 order-2 self-start bg-white pb-2 shadow-xs xl:order-none xl:col-start-2 xl:row-start-1 xl:top-3 xl:pb-0 xl:shadow-none'>
       <div className='fr-mb-1v text-center'>
         <a
           className='fr-link text-xs'
@@ -2170,12 +2170,12 @@ const QuickDeclarationForm = ({
 
   const hasUnsavedQuickDeclarationData = useMemo(() => (
     hasAnyValue
-      || isUsageNameSaving
-      || comment.trim() !== ''
-      || measurementType !== QUICK_DECLARATION_MEASUREMENT_TYPES.INDEX
-      || readingDate !== maxReadingDate
-      || periodStartDate !== ''
-      || periodEndDate !== ''
+    || isUsageNameSaving
+    || comment.trim() !== ''
+    || measurementType !== QUICK_DECLARATION_MEASUREMENT_TYPES.INDEX
+    || readingDate !== maxReadingDate
+    || periodStartDate !== ''
+    || periodEndDate !== ''
   ), [comment, hasAnyValue, isUsageNameSaving, maxReadingDate, measurementType, periodEndDate, periodStartDate, readingDate])
 
   useEffect(() => {

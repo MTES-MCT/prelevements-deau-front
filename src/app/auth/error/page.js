@@ -9,7 +9,7 @@ import {useSearchParams} from 'next/navigation'
 import Pictogram from '@/components/ui/Pictogram/index.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 
-/* eslint-disable camelcase */
+
 const ERROR_MESSAGES = {
   // Backend auth errors
   expired: 'Le lien de connexion a expiré. Veuillez demander un nouveau lien.',
@@ -24,7 +24,7 @@ const ERROR_MESSAGES = {
   session_expired: 'Votre session a expiré. Veuillez vous reconnecter.',
   default: 'Une erreur est survenue lors de la connexion.'
 }
-/* eslint-enable camelcase */
+
 
 const AuthErrorPage = () => {
   const searchParams = useSearchParams()

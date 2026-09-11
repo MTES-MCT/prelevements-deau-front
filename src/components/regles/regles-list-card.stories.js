@@ -1,4 +1,4 @@
-/* eslint-disable camelcase */
+
 import ReglesListCard from './regles-list-card.js'
 
 // Helper to generate dates relative to today

@@ -64,7 +64,7 @@ export const CalendarStep = ({form, update}) => (
       <div className='grid gap-3 md:grid-cols-3'>
         {form.indexDates.map((date, index) => (
           // Slots stay in place while a date is edited.
-          // eslint-disable-next-line react/no-array-index-key
+
           <div key={'date-' + index}>
             <CampaignField required label={'Relevé ' + (index + 1)} type='date' min={shiftCampaignDay(form.indexDates[index - 1], 1) || undefined} max={shiftCampaignDay(form.indexDates[index + 1], -1) || undefined} value={date} onChange={value => update(replaceCampaignReadingDate(form, index, value))} />
             <button type='button' className='fr-btn fr-btn--tertiary-no-outline fr-btn--sm fr-mb-2w' aria-label={'Retirer le relevé ' + (index + 1)} disabled={form.indexDates.length <= 2} onClick={() => update(removeCampaignReadingDate(form, index))}>Retirer</button>
@@ -109,7 +109,7 @@ export const ResponseSettings = ({form, update}) => {
             const reminderDate = shiftCampaignDay(schedule.deadline, -days)
             const beforeOpening = reminderDate && schedule.opening && reminderDate < schedule.opening
             return (
-              <label key={days} className='flex items-start gap-2 rounded border border-[var(--border-default-grey)] p-3 text-sm'>
+              <label key={days} className='flex items-start gap-2 rounded-sm border border-[var(--border-default-grey)] p-3 text-sm'>
                 <input type='checkbox' className='mt-1' disabled={!form.closesAt || (beforeOpening && !form.reminderDays.includes(days))} checked={form.reminderDays.includes(days)} onChange={event => update({reminderDays: event.target.checked ? [...form.reminderDays, days] : form.reminderDays.filter(value => value !== days)})} />
                 <span><span className='block font-bold'>{days === 0 ? 'Le jour de la date limite' : `${days} jour${days > 1 ? 's' : ''} avant`}</span><span className='block text-[var(--text-mention-grey)]'>{reminderDate ? campaignDate(reminderDate) : 'Date à définir'}{beforeOpening && ' (avant l’ouverture)'}</span></span>
               </label>

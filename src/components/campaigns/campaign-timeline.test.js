@@ -13,7 +13,7 @@ import * as campaignHelpers from '../../lib/collection-campaigns.js'
 
 const require = createRequire(import.meta.url)
 const stylesheet = readFileSync(new URL('campaign-timeline.module.css', import.meta.url), 'utf8')
-const styles = Object.fromEntries([...stylesheet.matchAll(/\.([A-Za-z]\w*)/g)].map(([, name]) => [name, name]))
+const styles = Object.fromEntries([...stylesheet.matchAll(/\.([A-Z]\w*)/gi)].map(([, name]) => [name, name]))
 const filename = new URL('campaign-timeline.js', import.meta.url)
 const {code} = transformSync(readFileSync(filename, 'utf8'), {filename: filename.pathname, jsc: {parser: {syntax: 'ecmascript', jsx: true}, transform: {react: {runtime: 'automatic'}}, target: 'es2022'}, module: {type: 'commonjs'}})
 const compiledModule = {exports: {}}
@@ -34,7 +34,7 @@ runInNewContext('(function(require, module, exports) {' + code + '\n})', {})(spe
 }, compiledModule, compiledModule.exports)
 
 const render = props => renderToStaticMarkup(React.createElement(compiledModule.exports.CampaignGlobalTimeline, props))
-const detailsText = html => html.replaceAll(/<[^>]+>/g, ' ').replaceAll(/\s+/g, ' ')
+const detailsText = html => html.replaceAll(/<[^<>]+>/g, ' ').replaceAll(/\s+/g, ' ')
 const fullYear = {indexDates: ['2026-01-01', '2026-12-31']}
 const need = (startDate, endDate, id = 'need') => ({
   id, kind: 'NEEDS', label: `Besoins ${id}`, startDate, endDate
@@ -177,7 +177,7 @@ test('sur mobile, la lecture devient verticale sans cacher aucune date ni scroll
   const html = render({...fullYear, ...responseDates, periods: [need('2026-03-01', '2026-11-01')]})
   t.notRegex(stylesheet, /min-width:\s*\d+(?:rem|px)/)
   const mobile = stylesheet.slice(stylesheet.indexOf('@media'))
-  t.regex(mobile, /\.readingDates\s*{[^}]*flex-direction:\s*column/)
+  t.regex(mobile, /\.readingDates\s*\{[^}]*flex-direction:\s*column/)
   t.regex(mobile, /\.responseRange[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/)
   t.notRegex(mobile, /display:\s*none|visibility:\s*hidden/)
   t.true(detailsText(html).includes('23 septembre 2026'))
@@ -207,7 +207,7 @@ test('intégré à la fiche, le calendrier évite un second cadre et titre sans 
   t.false(html.includes('>Calendrier<'))
   t.true(detailsText(html).includes('1 janvier 2026'))
   t.is((html.match(/class="lane"/g) || []).length, 3)
-  t.regex(stylesheet, /\.embedded\s*{[^}]*border:\s*0/)
+  t.regex(stylesheet, /\.embedded\s*\{[^}]*border:\s*0/)
 })
 
 test('les intitulés et dates ne sont pas répétés dans un second récapitulatif', t => {
@@ -322,9 +322,9 @@ test('une fenêtre sans ouverture ou sans échéance reste explicite sans barre 
 })
 
 test('les cartes de besoins sont neutres avec un seul accent pour les périodes effectivement en cours', t => {
-  t.regex(stylesheet, /\.detailPeriod\s*{[^}]*background: var\(--background-default-grey/)
-  t.regex(stylesheet, /\.detailPeriod\[data-current="true"]\s*{[^}]*border-color: var\(--campaign-accent\)/)
-  t.notRegex(stylesheet.match(/\.detailPeriod\s*{[^}]*}/)[0], /green|success/)
+  t.regex(stylesheet, /\.detailPeriod\s*\{[^}]*background: var\(--background-default-grey/)
+  t.regex(stylesheet, /\.detailPeriod\[data-current="true"\]\s*\{[^}]*border-color: var\(--campaign-accent\)/)
+  t.notRegex(stylesheet.match(/\.detailPeriod\s*\{[^}]*\}/)[0], /green|success/)
 })
 
 test('la fenêtre et les cartes restent compactes sur mobile sans dates masquées', t => {
@@ -332,7 +332,7 @@ test('la fenêtre et les cartes restent compactes sur mobile sans dates masquée
     ...responseDates, showPosition: true, status: 'OPEN', now: '2026-09-10T10:00:00Z', ...fullYear, periods: [need('2026-09-01', '2026-10-01')]
   })
   const mobile = stylesheet.slice(stylesheet.indexOf('@media'))
-  t.regex(mobile, /\.detailReadings\s*{[^}]*flex-direction: column/)
+  t.regex(mobile, /\.detailReadings\s*\{[^}]*flex-direction: column/)
   t.regex(mobile, /\.detailReadings > li \+ li::before[^}]+content: "↓"/)
   t.notRegex(mobile, /display:\s*none|visibility:\s*hidden/)
   for (const date of ['1 janvier 2026', '31 décembre 2026', '1 septembre 2026', '30 septembre 2026']) {

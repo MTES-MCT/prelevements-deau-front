@@ -11,6 +11,7 @@ import {
 } from '@/lib/collection-campaigns.js'
 import {getUsageColor, getUsageTextColor} from '@/lib/water-uses.js'
 import {getCampaignResponseOverviewAction, getCampaignResponseResultsAction} from '@/server/actions/campaigns.js'
+import {groupIntegerDigits} from '@/utils/number.js'
 
 const kindsFor = campaign => Object.keys(CAMPAIGN_KIND_LABELS).filter(kind => campaign.periods?.some(period => period.kind === kind))
 const plural = count => count > 1 ? 's' : ''
@@ -21,7 +22,7 @@ export const campaignResultVolume = value => {
   }
 
   const [integer, decimals] = String(value).split('.')
-  return `${integer.replaceAll(/\B(?=(\d{3})+(?!\d))/g, '\u202F')}${decimals ? `,${decimals}` : ''} m³`
+  return `${groupIntegerDigits(integer, '\u202F')}${decimals ? `,${decimals}` : ''} m³`
 }
 
 export const CampaignResponseStatus = ({response, timezone}) => {
@@ -89,10 +90,10 @@ export const CampaignResultsDetail = ({campaign, data}) => {
   return (
     <div className='border-t border-[var(--border-default-grey)] bg-[var(--background-alt-grey)] px-3 py-4 md:px-4'>
       {(data.targets || []).map(target => (
-        <section key={target.id} className='mb-4 rounded border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-3 last:mb-0 md:p-4'>
+        <section key={target.id} className='mb-4 rounded-sm border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-3 last:mb-0 md:p-4'>
           <div className='mb-4 flex flex-wrap items-center justify-between gap-2'>
             <h4 className='fr-mb-0 min-w-0 break-words text-base font-bold'>{target.pointPrelevement?.id ? <Link className='fr-link' href={`/points-prelevement/${encodeURIComponent(target.pointPrelevement.id)}`}>{campaignPointName(target)}</Link> : campaignPointName(target)}</h4>
-            <span className='inline-flex max-w-full rounded px-2 py-1 text-xs leading-tight' style={{backgroundColor: getUsageColor(target.usage), color: getUsageTextColor(target.usage)}}>{target.usage?.name || target.usage?.label || 'Usage non renseigné'}</span>
+            <span className='inline-flex max-w-full rounded-sm px-2 py-1 text-xs leading-tight' style={{backgroundColor: getUsageColor(target.usage), color: getUsageTextColor(target.usage)}}>{target.usage?.name || target.usage?.label || 'Usage non renseigné'}</span>
           </div>
           <div className='grid gap-5 md:grid-cols-2'>{kinds.map(kind => <PeriodResults key={kind} campaign={campaign} target={target} kind={kind} response={data.responses?.[kind]} />)}</div>
           <PointReadings target={target} submission={data.responses?.INDEX?.latestSubmission} />
@@ -136,7 +137,7 @@ export const CampaignPreleveurResults = ({campaign, item}) => {
   }, [open, data, campaign.id, item.preleveur.userId, retry])
 
   return (
-    <article className='overflow-hidden rounded border border-[var(--border-default-grey)]'>
+    <article className='overflow-hidden rounded-sm border border-[var(--border-default-grey)]'>
       <h3 className='fr-mb-0 text-sm'>
         <button type='button' aria-expanded={open} aria-controls={detailId} className='relative grid w-full grid-cols-1 items-center gap-3 bg-[var(--background-default-grey)] p-3 pr-10 text-left hover:bg-[var(--background-alt-grey)] md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)] md:p-4 md:pr-10' onClick={() => setOpen(previous => !previous)}>
           <span className='min-w-0'><span className='block break-words text-sm font-bold'>{item.preleveur.label}</span><span className='mt-1 block text-xs font-normal text-[var(--text-mention-grey)]'>{item.pointCount} point{plural(item.pointCount)}</span></span>

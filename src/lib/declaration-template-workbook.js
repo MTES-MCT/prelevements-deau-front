@@ -23,7 +23,7 @@ function findHeaderColumnNumber(sheet, headerName) {
 }
 
 function getWaterUseCodeSortParts(code) {
-  const match = /^(\d+)(.*)$/v.exec(code)
+  const match = /^(\d+)(\D.*)?$/v.exec(code)
 
   return {
     number: match ? Number(match[1]) : Number.MAX_SAFE_INTEGER,

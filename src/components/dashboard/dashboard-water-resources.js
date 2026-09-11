@@ -11,6 +11,13 @@ import {
 import {SegmentedControl} from '@codegouvfr/react-dsfr/SegmentedControl'
 import MuiTooltip from '@mui/material/Tooltip'
 
+import TimeSeriesChart from '@/components/ui/TimeSeriesChart/index.js'
+import {getMonitoringStationMapSummary} from '@/lib/monitoring-stations.js'
+import {
+  getDashboardPiezometryAction,
+  getDashboardRiverFlowsAction
+} from '@/server/actions/dashboard.js'
+
 import {
   buildResourceHash,
   DEFAULT_FLOW_PERIOD,
@@ -32,13 +39,6 @@ import {
   getIsolatedStationId,
   toggleStationIsolation
 } from './station-visibility.js'
-
-import TimeSeriesChart from '@/components/ui/TimeSeriesChart/index.js'
-import {getMonitoringStationMapSummary} from '@/lib/monitoring-stations.js'
-import {
-  getDashboardPiezometryAction,
-  getDashboardRiverFlowsAction
-} from '@/server/actions/dashboard.js'
 
 const EMPTY_ARRAY = []
 const STATION_COLORS = [
@@ -400,7 +400,7 @@ const StationLegend = ({availableIds, colors, onChange, stations, unavailableLab
 
 const IpsScaleLegend = () => (
   <div className='mt-3' aria-label='Échelle de l’indicateur piézométrique standardisé'>
-    <div className='grid h-2 grid-cols-7 overflow-hidden rounded-sm border border-gray-300'>
+    <div className='grid h-2 grid-cols-7 overflow-hidden rounded-xs border border-gray-300'>
       {PIEZOMETRY_IPS_BANDS.map(band => (
         <span key={band.minimum} style={{backgroundColor: band.color}} />
       ))}

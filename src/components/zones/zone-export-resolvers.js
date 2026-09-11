@@ -50,10 +50,10 @@ async function fetchAllZoneRows(fetcher, zoneId, meta, extraOptions = {}) {
   const baseOptions = getOptionsFromMeta(meta, extraOptions)
   const rows = []
   let page = 1
-  let pages = 1
+  let pages
 
   do {
-    // eslint-disable-next-line no-await-in-loop
+
     const response = await fetcher(zoneId, {
       ...baseOptions,
       page,

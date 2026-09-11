@@ -4,14 +4,16 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prepare-maplibre": "node scripts/prepare-maplibre.mjs",
     "update-icons": "rm -rf .next && react-dsfr update-icons",
-    "dev": "react-dsfr update-icons && next dev",
-    "build": "react-dsfr update-icons && next build",
+    "dev": "npm run prepare-maplibre && react-dsfr update-icons && next dev --webpack",
+    "build": "npm run prepare-maplibre && react-dsfr update-icons && next build --webpack",
     "start": "next start",
-    "lint": "xo",
+    "lint": "eslint .",
     "test": "ava",
-    "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "test:browser": "playwright test",
+    "storybook": "npm run prepare-maplibre && storybook dev -p 6006",
+    "build-storybook": "npm run prepare-maplibre && storybook build"
   },
   "dependencies": {
     "@bprogress/next": "^3.2.12",
@@ -19,165 +21,65 @@
     "@emotion/react": "^11.14.0",
     "@emotion/server": "^11.11.0",
     "@emotion/styled": "^11.14.1",
-    "@tanstack/react-virtual": "^3.14.6",
+    "@tanstack/react-virtual": "^3.14.11",
     "crisp-sdk-web": "^1.2.0",
     "date-fns": "^4.4.0",
-    "file-type": "^21.1.0",
-    "lodash-es": "^4.17.21",
-    "maplibre-gl": "^5.24.0",
+    "file-type": "^22.0.2",
+    "lodash-es": "^4.18.1",
+    "maplibre-gl": "^6.9.0",
     "moment": "^2.30.1",
-    "next": "^15.5.20",
-    "next-auth": "^4.24.13",
-    "proj4": "^2.20.9",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "next": "^16.3.4",
+    "next-auth": "^4.24.15",
+    "proj4": "^2.22.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "write-excel-file": "^4.1.1",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "xlsx-populate": "^1.21.0"
   },
   "devDependencies": {
-    "@codegouvfr/react-dsfr": "^1.32.4",
-    "@mui/icons-material": "^6.5.0",
-    "@mui/material": "^6.5.0",
-    "@mui/material-nextjs": "^6.5.0",
-    "@mui/system": "^6.5.0",
-    "@mui/x-charts": "^7.29.1",
-    "@mui/x-data-grid": "^7.29.13",
-    "@storybook/addon-docs": "^9.1.16",
-    "@storybook/nextjs": "^9.1.16",
-    "ava": "^6.4.1",
-    "eslint-config-xo-nextjs": "^6.3.0",
-    "postcss": "^8.5.16",
-    "sass": "^1.101.0",
-    "sass-loader": "^16.0.8",
-    "storybook": "^9.1.16",
-    "tailwindcss": "^3.4.18",
-    "xo": "^0.59.3"
-  },
-  "xo": {
-    "extends": "xo-nextjs",
-    "envs": [
-      "browser",
-      "node",
-      "es2021"
-    ],
-    "parserOptions": {
-      "ecmaFeatures": {
-        "jsx": true
-      }
-    },
-    "globals": [
-      "React"
-    ],
-    "semicolon": false,
-    "space": 2,
-    "rules": {
-      "react/prop-types": "off",
-      "unicorn/prevent-abbreviations": "off",
-      "unicorn/prefer-export-from": "off",
-      "unicorn/import-style": "off",
-      "unicorn/prefer-ternary": "off",
-      "unicorn/prefer-module": "off",
-      "unicorn/prefer-node-protocol": "off",
-      "n/prefer-global/process": "off",
-      "n/prefer-global/buffer": "off",
-      "import/no-unassigned-import": "off",
-      "comma-dangle": [
-        "error",
-        "never"
-      ],
-      "import/order": [
-        "error",
-        {
-          "groups": [
-            "builtin",
-            "external",
-            "internal",
-            "parent",
-            "sibling",
-            "index"
-          ],
-          "pathGroups": [
-            {
-              "pattern": "react",
-              "group": "builtin",
-              "position": "before"
-            },
-            {
-              "pattern": "routes/**",
-              "group": "internal",
-              "position": "before"
-            },
-            {
-              "pattern": "services/**",
-              "group": "internal",
-              "position": "before"
-            },
-            {
-              "pattern": "helpers/**",
-              "group": "internal",
-              "position": "before"
-            },
-            {
-              "pattern": "util/**",
-              "group": "internal",
-              "position": "before"
-            },
-            {
-              "pattern": "contexts/**",
-              "group": "internal",
-              "position": "before"
-            },
-            {
-              "pattern": "hoc/**",
-              "group": "internal",
-              "position": "before"
-            },
-            {
-              "pattern": "hooks/**",
-              "group": "internal",
-              "position": "before"
-            },
-            {
-              "pattern": "components/**",
-              "group": "internal",
-              "position": "before"
-            },
-            {
-              "pattern": "containers/**",
-              "group": "internal",
-              "position": "before"
-            },
-            {
-              "pattern": "assets/**",
-              "group": "internal",
-              "position": "before"
-            },
-            {
-              "pattern": "styles/**",
-              "group": "internal",
-              "position": "before"
-            }
-          ],
-          "pathGroupsExcludedImportTypes": [
-            "react"
-          ],
-          "newlines-between": "always",
-          "alphabetize": {
-            "order": "asc",
-            "caseInsensitive": true
-          }
-        }
-      ]
-    }
+    "@codegouvfr/react-dsfr": "^1.35.0",
+    "@eslint/js": "^10.0.1",
+    "@next/eslint-plugin-next": "^16.3.4",
+    "@mui/icons-material": "^9.4.0",
+    "@mui/material": "^9.4.0",
+    "@mui/material-nextjs": "^9.4.0",
+    "@mui/system": "^9.4.0",
+    "@mui/x-charts": "^9.13.0",
+    "@playwright/test": "^1.63.0",
+    "@storybook/addon-docs": "^10.6.0",
+    "@storybook/nextjs-vite": "^10.6.0",
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "@tailwindcss/postcss": "^4.3.3",
+    "ava": "^8.0.1",
+    "eslint": "^10.10.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-x": "^5.19.0",
+    "eslint-plugin-react-dom": "^5.19.0",
+    "eslint-plugin-react-jsx": "^5.19.0",
+    "postcss": "^8.5.28",
+    "sass": "^1.104.0",
+    "storybook": "^10.6.0",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.3.0",
+    "globals": "^17.12.0"
   },
   "engines": {
-    "node": ">= 24 < 25"
+    "node": ">= 24.21 < 25",
+    "npm": ">= 11.19.1 < 12"
   },
   "overrides": {
     "postcss": "$postcss",
-    "uuid": "11.1.1"
+    "next-auth": {
+      "uuid": "11.1.1"
+    }
   },
-  "packageManager": "npm@11.18.0",
+  "packageManager": "npm@11.19.1",
+  "allowScripts": {
+    "@parcel/watcher@2.6.0": false,
+    "esbuild@0.28.2": true,
+    "fsevents@2.3.3": false
+  },
   "author": "Théophile Merlière <theophile.merliere@gmail.com>",
   "license": "MIT"
 }

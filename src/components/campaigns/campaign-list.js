@@ -69,7 +69,7 @@ const CalendarMark = ({period = false}) => (
 const ListCalendar = ({campaign}) => {
   const calendar = campaignListCalendar(campaign)
   return (
-    <dl className='mb-4 grid gap-3 rounded bg-[var(--background-alt-grey)] p-3 sm:grid-cols-2'>
+    <dl className='mb-4 grid gap-3 rounded-sm bg-[var(--background-alt-grey)] p-3 sm:grid-cols-2'>
       <ListFact label='Relevés de compteurs'>
         {calendar.readingDates.length > 0 && <ul aria-label='Dates de relevé' className='fr-mb-0 flex list-none flex-wrap gap-x-5 gap-y-1 p-0'>
           {calendar.readingDates.map(date => <li key={date} className='flex items-start gap-1.5 p-0'><CalendarMark /><time dateTime={date}>{campaignDate(date)}</time></li>)}

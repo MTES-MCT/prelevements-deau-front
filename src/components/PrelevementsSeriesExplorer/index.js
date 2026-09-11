@@ -55,6 +55,9 @@ import {useMemo, useState, useCallback} from 'react'
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Box} from '@mui/material'
 
+import CalendarGrid from '@/components/ui/CalendarGrid/index.js'
+import PeriodSelectorHeader from '@/components/ui/PeriodSelectorHeader/index.js'
+
 import ChartWithRangeSlider from './chart-with-range-slider.js'
 import {DEFAULT_TRANSLATIONS} from './constants/parameters.js'
 import {formatPeriodLabel, getViewTypeLabel} from './formatters.js'
@@ -74,9 +77,6 @@ import {
   extractDefaultPeriodsFromSeries,
   periodsToDateRange
 } from './utils/index.js'
-
-import CalendarGrid from '@/components/ui/CalendarGrid/index.js'
-import PeriodSelectorHeader from '@/components/ui/PeriodSelectorHeader/index.js'
 
 /**
  * Hook to compute or use provided selectable periods

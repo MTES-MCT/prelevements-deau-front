@@ -35,7 +35,7 @@ function getProfileActionError(result) {
 }
 
 // Les variantes de formulaire sont volontairement regroupées pour partager les mêmes règles et retours accessibles.
-// eslint-disable-next-line complexity
+
 const ProfileForm = ({
   disabled = false,
   initialUser,

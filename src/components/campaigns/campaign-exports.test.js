@@ -54,7 +54,7 @@ test('les exports utilisent les mêmes cartes et titres que le suivi et la confi
   t.true(markup.includes('Paramètres de l’export'))
   t.true(markup.includes('Historique des exports'))
   t.true(markup.includes('Créer l’export'))
-  t.is((markup.match(/<section class="mb-5 rounded-lg border border-\[var\(--border-default-grey\)] bg-\[var\(--background-default-grey\)] p-5 md:p-6">/g) || []).length, 2)
+  t.is((markup.match(/<section class="mb-5 rounded-lg border border-\[var\(--border-default-grey\)\] bg-\[var\(--background-default-grey\)\] p-5 md:p-6">/g) || []).length, 2)
   t.is((markup.match(/<h2 class="fr-h5 fr-mb-0">/g) || []).length, 2)
   t.false(markup.includes('fr-h4'))
   t.true(markup.includes('Chargement de l’historique des exports'))
@@ -351,7 +351,7 @@ test('un double clic de téléchargement ne déclenche pas deux requêtes', asyn
   t.is(flow.downloads.length, 1)
 })
 
-// eslint-disable-next-line no-script-url
+
 for (const url of ['javascript:alert(1)', 'data:text/plain,secret', 'file:///tmp/export.xlsx', 'https://user:password@example.invalid/export.xlsx']) {
   test(`le téléchargement refuse le lien dangereux ${url.split(':')[0]}`, async t => {
     const flow = interaction({initialItems: [item()], actions: {getCampaignExportAction: () => success({downloadUrl: url})}})
@@ -365,16 +365,16 @@ for (const url of ['javascript:alert(1)', 'data:text/plain,secret', 'file:///tmp
 test('les contrôles disabled et permissions sont revérifiés dans les callbacks', async t => {
   for (const change of [{disabled: true}, {permissions: {canExport: false}}]) {
     const flow = interaction({initialItems: [item()]})
-    // eslint-disable-next-line no-await-in-loop
+
     await flow.mount()
     const tree = flow.render()
     const submit = nodes(tree).find(node => node.type === 'form').props.onSubmit
     const download = nodes(tree).find(node => node.props?.item)?.props.onDownload
     Object.assign(flow.props, change)
     flow.render()
-    // eslint-disable-next-line no-await-in-loop
+
     await submit({preventDefault() {}})
-    // eslint-disable-next-line no-await-in-loop
+
     await download(item())
     t.is(flow.calls.length, 1)
     t.is(flow.downloads.length, 0)
@@ -414,9 +414,9 @@ test('une erreur de téléchargement n’interrompt pas le suivi d’un autre fi
 test('un lien absent ou mal formé produit un message français et aucun téléchargement', async t => {
   for (const url of [undefined, 'not a URL']) {
     const flow = interaction({initialItems: [item()], actions: {getCampaignExportAction: () => success({downloadUrl: url})}})
-    // eslint-disable-next-line no-await-in-loop
+
     await flow.mount()
-    // eslint-disable-next-line no-await-in-loop
+
     await flow.download()
     t.true(flow.html().includes('Lien de téléchargement invalide'))
     t.is(flow.downloads.length, 0)

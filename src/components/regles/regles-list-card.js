@@ -273,7 +273,7 @@ const ReglesListCard = ({canCreate = false, canDelete = false, canUpdate = false
       title='Règles'
     >
       {!hasExploitations && (
-        <Box className='mb-3 p-3 rounded' style={{backgroundColor: fr.colors.decisions.background.alt.blueEcume.default}}>
+        <Box className='mb-3 p-3 rounded-sm' style={{backgroundColor: fr.colors.decisions.background.alt.blueEcume.default}}>
           <Typography className='fr-text--sm'>
             <span className='fr-icon-info-line mr-2' aria-hidden='true' />{' '}
             Vous devez créer une exploitation avant de pouvoir ajouter des règles.

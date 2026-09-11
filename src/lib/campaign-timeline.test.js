@@ -3,7 +3,7 @@ import test from 'ava'
 import {buildCampaignTimeline, getCampaignPosition} from './campaign-timeline.js'
 
 const daysBetween = (start, end) => (Date.parse(end) - Date.parse(start)) / 86_400_000
-const near = (t, actual, expected) => t.true(Math.abs(actual - expected) < 0.000_001, `${actual} doit être égal à ${expected}`)
+const near = (t, actual, expected) => t.true(Math.abs(actual - expected) < 0.000001, `${actual} doit être égal à ${expected}`)
 const need = (startDate, endDate, extra = {}) => ({
   kind: 'NEEDS', label: 'Besoins en eau', startDate, endDate, ...extra
 })

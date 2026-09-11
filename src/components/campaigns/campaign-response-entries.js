@@ -34,7 +34,7 @@ const PointSummary = ({target}) => {
 const PointUsage = ({target}) => (
   <div className='min-w-0 md:self-center'>
     <span className='sr-only'>Usage : </span>
-    <span className='inline-flex max-w-full rounded px-2 py-1 text-xs font-medium leading-tight' style={{backgroundColor: getUsageColor(target.usage), color: getUsageTextColor(target.usage)}}>{target.usage?.name || target.usage?.label || 'Usage non renseigné'}</span>
+    <span className='inline-flex max-w-full rounded-sm px-2 py-1 text-xs font-medium leading-tight' style={{backgroundColor: getUsageColor(target.usage), color: getUsageTextColor(target.usage)}}>{target.usage?.name || target.usage?.label || 'Usage non renseigné'}</span>
   </div>
 )
 
@@ -73,7 +73,7 @@ export const HistoricalReading = ({candidates, meter, value, disabled, onChange}
 
   const selected = candidates.find(item => item.sourceChunkValueId === candidateId)
   return (
-    <details className='mt-2 rounded border border-gray-200 bg-white p-2 text-xs'>
+    <details className='mt-2 rounded-sm border border-gray-200 bg-white p-2 text-xs'>
       <summary className='cursor-pointer'>Relevés existants à cette date ({candidates.length}){value.sourceChunkValueId ? ' · relevé repris' : ''}</summary>
       <div className='mt-2'>
         <CampaignField compact label='Choisir un relevé' disabled={disabled} value={candidateId} options={[{value: '', label: 'Choisir un relevé'}, ...candidates.map(candidate => ({value: candidate.sourceChunkValueId, label: `${candidate.value} m³ · ${candidate.sourceType === 'CAMPAIGN' ? 'Campagne précédente' : 'Déclaration'}${candidate.declarationCode ? ` ${candidate.declarationCode}` : ''}`}))]} onChange={setCandidateId} />
@@ -126,7 +126,7 @@ const EventReadingEntry = ({date, meter, eventReadings, awaitingMeter}) => (
       <div className='min-w-0'>
         <time dateTime={date} className='font-medium'>{campaignDate(date)}</time>
         <span className='mt-1 block break-words text-gray-600'>{campaignMeterName(meter)}</span>
-        {eventReadings && <span className='mt-2 inline-block rounded bg-[#e6f4ea] px-2 py-1 font-medium text-[#18753c]'>Renseigné dans le changement</span>}
+        {eventReadings && <span className='mt-2 inline-block rounded-sm bg-[#e6f4ea] px-2 py-1 font-medium text-[#18753c]'>Renseigné dans le changement</span>}
       </div>
       {eventReadings ? <dl className='!m-0 grid min-w-0 gap-2 text-right'>{eventReadings.map(reading => (
         <div key={reading.side} className='min-w-0 break-words'>

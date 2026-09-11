@@ -12,6 +12,11 @@ import {Alert} from '@codegouvfr/react-dsfr/Alert'
 
 // ===================== Imported utilities ===================== //
 import {
+  CALENDAR_STATUS_COLORS,
+  getCalendarStatusClassName
+} from '@/lib/calendar-colors.js'
+
+import {
   monthFormatter,
   monthShortFormatter,
   capitalize,
@@ -19,15 +24,10 @@ import {
   buildValueMap
 } from './util.js'
 
-import {
-  CALENDAR_STATUS_COLORS,
-  getCalendarStatusClassName
-} from '@/lib/calendar-colors.js'
-
 // ===================== Generic cell ===================== //
 const BaseCell = ({label, ariaLabel, interactive, color, size, onActivate, tooltipComponent: TooltipComponent}) => {
   let style = {width: size, height: size}
-  let classes = 'rounded flex items-center justify-center text-xs sm:text-sm font-medium text-center transition-colors duration-150 ease-in-out relative overflow-hidden select-none'
+  let classes = 'rounded-sm flex items-center justify-center text-xs sm:text-sm font-medium text-center transition-colors duration-150 ease-in-out relative overflow-hidden select-none'
 
   if (color) {
     style = {...style, backgroundColor: color}
@@ -38,7 +38,7 @@ const BaseCell = ({label, ariaLabel, interactive, color, size, onActivate, toolt
   }
 
   if (interactive) {
-    classes += ' cursor-pointer group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1'
+    classes += ' cursor-pointer group focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:ring-offset-1'
   }
 
   // Hover darkening effect (interactive only)

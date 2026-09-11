@@ -438,7 +438,7 @@ function formatValueDate({chunk, displayAsIndex, displayAsVolume, isQuickDeclara
 }
 
 const OverwrittenBadge = () => (
-  <span className='inline-flex rounded-sm border border-red-200 bg-red-50 px-1.5 py-0.5 text-[0.7rem] font-semibold uppercase leading-none text-red-700'>
+  <span className='inline-flex rounded-xs border border-red-200 bg-red-50 px-1.5 py-0.5 text-[0.7rem] font-semibold uppercase leading-none text-red-700'>
     Écrasée
   </span>
 )

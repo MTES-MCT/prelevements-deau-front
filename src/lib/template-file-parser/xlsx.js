@@ -1,4 +1,3 @@
-/* eslint-disable import/order */
 
 import {trim} from 'lodash-es'
 import XLSX from 'xlsx'
@@ -42,9 +41,14 @@ const CHAR_TO_TRIM = ' -\'"'
 // Helpers for tolerant French/ISO date & time parsing
 // ---------------------------------------------------------------------------
 function sanitizeRaw(str) {
-  return String(str)
-    .trim() // Espaces extrêmes
-    .replace(/['’]+$/, '') // Apostrophes finales
+  let sanitized = String(str).trim()
+  let end = sanitized.length
+  while (end > 0 && (sanitized[end - 1] === '\'' || sanitized[end - 1] === '’')) {
+    end -= 1
+  }
+
+  sanitized = sanitized.slice(0, end)
+  return sanitized
     .replaceAll(/\s{2,}/g, ' ') // Multiples espaces
     .replaceAll('\u00A0', ' ') // Espaces insécables
     .toLowerCase()
@@ -136,7 +140,7 @@ export function readAsNumber(sheet, rowIndex, colIndex) {
   if (cell.t === 's') {
     const raw = trim(String(cell.v), CHAR_TO_TRIM)
     const value = raw
-      .replaceAll(/[\s\u00A0\u202F]+/g, '')
+      .replaceAll(/\s+/g, '')
       .replaceAll(',', '.')
 
     const number = Number(value)

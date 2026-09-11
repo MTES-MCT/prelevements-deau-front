@@ -893,7 +893,7 @@ export const computeThresholdCrossings = (filteredPoints, thresholdEvaluator) =>
     const nextThreshold = thresholdEvaluator(next.x)
 
     if (currentThreshold === null || currentThreshold === undefined
-        || nextThreshold === null || nextThreshold === undefined) {
+      || nextThreshold === null || nextThreshold === undefined) {
       continue
     }
 
@@ -980,7 +980,7 @@ export const resampleSeriesData = (pointMap, targetXValues, nativeFrequency, tar
 
       if (nextPoint) {
         // Check if target is between this point and next
-        /* eslint-disable max-depth */
+
         if (targetX >= point.x && targetX < nextPoint.x) {
           // Check if there's a gap between this point and next
           const delta = nextPoint.x - point.x
@@ -988,7 +988,7 @@ export const resampleSeriesData = (pointMap, targetXValues, nativeFrequency, tar
             // No gap - this point owns the target timestamp
             ownerPoint = point
           }
-          /* eslint-enable max-depth */
+
 
           break
         }
@@ -1203,7 +1203,7 @@ export const buildDynamicThresholdSeries = (alignedData, theme) => {
         originalId: data.id,
         originalLabel: data.label,
         color: theme.palette.mode === 'dark' ? theme.palette.warning.light : theme.palette.warning.main,
-        data: data.thresholds.map(value => (value === null || value === undefined ? null : value)),
+        data: data.thresholds.map(value => value ?? null),
         label: undefined,
         xAxisId: X_AXIS_ID,
         yAxisId: data.axisId,
@@ -1431,7 +1431,7 @@ export const buildStubSeries = (processedSeries, xValuesLength) => processedSeri
  * @param {string|null} label - Optional axis label
  * @returns {object} Y-axis configuration
  */
-// eslint-disable-next-line max-params
+
 const buildSingleYAxis = (axisId, stats, locale, precision, label = null, options = {}) => {
   const hasData = stats.min !== Number.POSITIVE_INFINITY
   const numberFormatter = getNumberFormatterWithPrecision(locale, precision)
@@ -1771,7 +1771,7 @@ const processSeriesWithDecimation = (series, options) => {
     })
 
     if (enableDecimation
-        && (processed.didDecimate || processed.sortedPoints.length > maxPointsBeforeDecimation)) {
+      && (processed.didDecimate || processed.sortedPoints.length > maxPointsBeforeDecimation)) {
       didDecimate = true
     }
 
@@ -1825,7 +1825,7 @@ const extractAxisMetadata = processedSeries => {
   for (const processed of processedSeries) {
     const {axisId, label, precision} = processed
     // Extract unit from label (format: "Parameter (unit)")
-    const unitMatch = label?.match(/\(([^)]+)\)$/)
+    const unitMatch = label?.match(/\(([^()]+)\)$/)
     if (unitMatch && !axisLabels[axisId]) {
       axisLabels[axisId] = unitMatch[1]
     }

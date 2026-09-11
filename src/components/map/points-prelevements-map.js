@@ -3,10 +3,11 @@ import {useEffect, useRef, useState} from 'react'
 import {fr} from '@codegouvfr/react-dsfr'
 import {useIsDark} from '@codegouvfr/react-dsfr/useIsDark'
 import {Box} from '@mui/system'
-import maplibre from 'maplibre-gl'
+import * as maplibre from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 import {cooperativeGesturesMapOptions} from '@/components/map/cooperative-gestures.js'
+import {createMap} from '@/components/map/create-map.js'
 import {getMapMaxZoomForStyle} from '@/components/map/ign-raster.js'
 import {getInitialMapStyle, loadMapStyle} from '@/components/map/map-style-loader.js'
 import {createPointPrelevementFeatures} from '@/lib/points-prelevement.js'
@@ -68,7 +69,7 @@ const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector'
       lats.reduce((sum, v) => sum + v, 0) / lats.length
     ]
 
-    const map = new maplibre.Map({
+    const map = createMap(maplibre, {
       container: mapContainerRef.current,
       style: loadedMapStyle.definition,
       center,
@@ -77,6 +78,10 @@ const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector'
       maxZoom: getMapMaxZoomForStyle(style),
       ...cooperativeGesturesMapOptions
     })
+    if (!map) {
+      return
+    }
+
     mapRef.current = map
 
     map.on('load', () => {
@@ -156,6 +161,7 @@ const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector'
 
     return () => {
       map.remove()
+      mapRef.current = null
     }
   }, [handleClick, isDark, loadedMapStyle, pointsPrelevement, pointsStatus, style])
 

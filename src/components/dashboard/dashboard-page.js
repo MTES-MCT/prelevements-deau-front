@@ -327,7 +327,7 @@ const DECLARATION_CREATION_INTRO = 'Saisissez vos index, volumes prélevés ou v
 
 const DeclarationCreationCard = ({className = 'mt-6', declarationCreation}) => {
   const allowedDeclarationTypes = declarationCreation?.allowedDeclarationTypes ?? EMPTY_ARRAY
-  const canCreateDeclaration = declarationCreation?.canCreateDeclaration ?? allowedDeclarationTypes.length > 0
+  const canCreateDeclaration = declarationCreation?.canCreateDeclaration ?? (allowedDeclarationTypes.length > 0)
   const canCreateQuickDeclaration = declarationCreation?.canCreateQuickDeclaration ?? false
   const canCreateAnyDeclaration = canCreateDeclaration || canCreateQuickDeclaration
 

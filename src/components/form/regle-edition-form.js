@@ -115,7 +115,7 @@ const RegleEditionForm = ({canDelete = false, preleveur, regle, exploitations, d
         validationErrors={validationErrors}
       />
 
-      {canDelete && <div className='border border-red-500 rounded-sm p-5 mt-6'>
+      {canDelete && <div className='border border-red-500 rounded-xs p-5 mt-6'>
         <div className='text-red-500'>
           <InfoOutlined className='mr-3' />
           Action sensible : Supprimer la règle

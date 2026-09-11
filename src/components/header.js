@@ -274,8 +274,8 @@ const HeaderComponent = () => {
       serviceTitle='Partageons l’eau'
       homeLinkProps={{
         href: '/',
-        // eslint-disable-next-line quotes
-        title: "Accueil - Partageons l’Eau"
+
+        title: 'Accueil - Partageons l’Eau'
       }}
       quickAccessItems={quickAccessItems}
       navigation={navigation}

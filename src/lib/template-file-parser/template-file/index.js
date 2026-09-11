@@ -1,8 +1,8 @@
-/* eslint-disable complexity, import/order, max-params, no-unused-vars, object-curly-newline, unicorn/no-object-as-default-parameter */
-
 import {pick} from 'lodash-es'
 
-import {readSheet, readAsString, readAsDateString, readAsNumber} from '../xlsx.js'
+import {
+  readSheet, readAsString, readAsDateString, readAsNumber
+} from '../xlsx.js'
 import {validateNumericValue} from '../validate.js'
 import {dedupe} from '../dedupe.js'
 import * as XLSX from 'xlsx'
@@ -273,17 +273,17 @@ function validateAndExtractMetadata(metadataSheet) {
   }
 
   // Mapper les colonnes
-  const columnMap = mapMetadataColumns(metadataSheet, headerRow, range, errors)
+  const columnMap = mapMetadataColumns(metadataSheet, headerRow, range)
   if (Object.keys(columnMap).length === 0) {
     return {data, errors}
   }
 
   // Extraire les points de prélèvement
-  const pointsData = extractPointsPrelevement(metadataSheet, headerRow, range, columnMap, errors)
+  const pointsData = extractPointsPrelevement(metadataSheet, headerRow, range, columnMap)
   data.pointsPrelevement = pointsData.points
 
   // Extraire les préleveurs (généralement un seul, identifié par SIRET)
-  const preleveursData = extractPreleveurs(metadataSheet, headerRow, range, columnMap, errors)
+  const preleveursData = extractPreleveurs(metadataSheet, headerRow, range, columnMap)
   data.preleveurs = preleveursData.preleveurs
 
   return {data, errors}
@@ -324,7 +324,7 @@ function findMetadataHeaderRow(sheet, range, errors) {
   return -1
 }
 
-function mapMetadataColumns(sheet, headerRow, range, errors) {
+function mapMetadataColumns(sheet, headerRow, range) {
   const columnMap = {}
 
   for (let c = 0; c <= range.e.c; c++) {
@@ -359,7 +359,7 @@ function mapMetadataColumns(sheet, headerRow, range, errors) {
   return columnMap
 }
 
-function extractPointsPrelevement(sheet, headerRow, range, columnMap, errors) {
+function extractPointsPrelevement(sheet, headerRow, range, columnMap) {
   const points = []
   const seenPointIds = new Set()
   const siretCol = PRELEVEUR_COLUMNS.find(col => col.key === 'siret')
@@ -435,7 +435,7 @@ function extractPointsPrelevement(sheet, headerRow, range, columnMap, errors) {
   return {points}
 }
 
-function extractPreleveurs(sheet, headerRow, range, columnMap, errors) {
+function extractPreleveurs(sheet, headerRow, range, columnMap) {
   const preleveursMap = new Map()
   const siretCol = PRELEVEUR_COLUMNS.find(col => col.key === 'siret')
 

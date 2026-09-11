@@ -53,7 +53,9 @@ const loadComponent = (name, overrides = {}) => {
     }
 
     if (specifier === 'next/link') {
-      return ({children, ...props}) => React.createElement('a', props, children)
+      return function Link({children, ...props}) {
+        return React.createElement('a', props, children)
+      }
     }
 
     return require(specifier)
@@ -208,7 +210,7 @@ test('un doublon est bloqué avec une explication reliée à sa case et un ancie
   initial.form.targets = [{exploitationId: 'other', eligibilityConfirmed: true}]
   initial.knownTargets.set('other', {...visible, id: 'other'})
   const html = render(initial)
-  const checkbox = html.match(/<input\b[^>]*type="checkbox"[^>]*>/)?.[0] || ''
+  const checkbox = html.match(/<input\b[^>]+type="checkbox"[^>]*>/)?.[0] || ''
   const hintId = /aria-describedby="([^"]+)"/.exec(checkbox)?.[1]
   t.regex(checkbox, /disabled=""/)
   t.truthy(hintId)
@@ -216,7 +218,7 @@ test('un doublon est bloqué avec une explication reliée à sa case et un ancie
   t.true(html.includes('Ce point est déjà sélectionné avec une autre exploitation.'))
   initial.form.targets = [{exploitationId: 'a', eligibilityConfirmed: false}]
   initial.options.exploitations = [{...visible, pointPrelevement: {...visible.pointPrelevement, collectionMode: 'EXTERNAL'}}]
-  const externalCheckbox = render(initial).match(/<input\b[^>]*type="checkbox"[^>]*>/)?.[0] || ''
+  const externalCheckbox = render(initial).match(/<input\b[^>]+type="checkbox"[^>]*>/)?.[0] || ''
   t.regex(externalCheckbox, /checked=""/)
   t.notRegex(externalCheckbox, /disabled=""/)
 })

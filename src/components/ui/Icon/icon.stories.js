@@ -3,6 +3,7 @@ import OilBarrelOutlinedIcon from '@mui/icons-material/OilBarrelOutlined'
 
 import Icon from './index.js'
 
+
 const storyMeta = {
   title: 'Components/Icon',
   component: Icon,

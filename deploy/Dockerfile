@@ -1,13 +1,17 @@
-FROM node:24-bookworm-slim AS deps
+FROM node:24.21.0-alpine3.24@sha256:be80f76cf40ec8e42b9bec49f60a55e0660f30af58d3e5a25530785b30ea67e2 AS base
+RUN apk upgrade --no-cache
+WORKDIR /app
+COPY package.json ./
+RUN npm install --global "$(node -p 'require("./package.json").packageManager')" --ignore-scripts --no-audit --no-fund
+
+FROM base AS deps
 WORKDIR /app
 
-ARG NPM_CONFIG_ALLOW_REMOTE
-
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json .npmrc ./
 
 RUN npm ci
 
-FROM node:24-bookworm-slim AS build
+FROM base AS build
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
@@ -35,9 +39,9 @@ ENV NEXT_PUBLIC_DEPLOY_ENV=$NEXT_PUBLIC_DEPLOY_ENV
 ENV NEXT_PUBLIC_BUILD_SHA=$NEXT_PUBLIC_BUILD_SHA
 ENV NEXT_PUBLIC_CRISP_DISABLED=$NEXT_PUBLIC_CRISP_DISABLED
 
-RUN npm run build
+RUN NEXT_TELEMETRY_DISABLED=1 npm run build
 
-FROM node:24-bookworm-slim AS runner
+FROM base AS runner
 WORKDIR /app
 
 ARG API_URL

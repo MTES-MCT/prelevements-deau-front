@@ -30,7 +30,9 @@ const load = ({fetchRequests = async () => ({success: true, data: {items: []}})}
     }
 
     if (specifier === 'next/link') {
-      return ({children, ...props}) => React.createElement('a', props, children)
+      return function Link({children, ...props}) {
+        return React.createElement('a', props, children)
+      }
     }
 
     return require(specifier)
@@ -96,7 +98,7 @@ test('un volet réouvert reste visible sans remettre en avant le volet fermé', 
 test('les agents, administrateurs et anonymes ne déclenchent aucun appel', async t => {
   const section = load({fetchRequests: async () => t.fail('Appel inattendu')}).default
   for (const role of ['ADMIN', 'INSTRUCTOR', null]) {
-    // eslint-disable-next-line no-await-in-loop
+
     t.is(await section({user: {role}}), null)
     t.is(render({items: [item]}, {user: {role}}), '')
   }

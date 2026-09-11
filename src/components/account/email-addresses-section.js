@@ -160,14 +160,14 @@ const EmailAddressesSection = ({
   const primaryVerification = useMemo(
     () => verifications.find(item => (
       item.purpose === EMAIL_VERIFICATION_PURPOSES.primary
-        && shouldDisplayEmailVerification(item)
+      && shouldDisplayEmailVerification(item)
     )),
     [verifications]
   )
   const aliasVerification = useMemo(
     () => verifications.find(item => (
       item.purpose === EMAIL_VERIFICATION_PURPOSES.alias
-        && shouldDisplayEmailVerification(item)
+      && shouldDisplayEmailVerification(item)
     )),
     [verifications]
   )
@@ -416,7 +416,7 @@ const EmailAddressesSection = ({
       return
     }
 
-    // eslint-disable-next-line no-alert
+
     const confirmed = globalThis.confirm(
       `Supprimer l’adresse « ${alias.email} » ?\n\nElle ne permettra plus de se connecter à ce compte.`
     )

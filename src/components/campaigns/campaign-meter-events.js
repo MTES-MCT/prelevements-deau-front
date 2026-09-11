@@ -4,14 +4,14 @@ import {
   useEffect, useId, useRef, useState
 } from 'react'
 
-import styles from './campaign-meter-events.module.css'
-
 import {CampaignField} from '@/components/campaigns/campaign-ui.js'
 import {campaignMeterEventIssues, validateCampaignMeterEvent} from '@/lib/campaign-meter-event-validation.js'
 import {campaignHasUnreferencedMeter} from '@/lib/campaign-response-readings.js'
 import {
   campaignDate, campaignEditableTargets, campaignMeterName, campaignPointName, decimalInput
 } from '@/lib/collection-campaigns.js'
+
+import styles from './campaign-meter-events.module.css'
 
 const emptyEvent = {
   type: '', targetId: '', at: '', previousCompteurId: '', nextCompteurId: '', previousIndex: '', nextIndex: '', reason: '', serialNumber: '', identifier: ''

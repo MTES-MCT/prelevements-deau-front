@@ -11,8 +11,6 @@ import {
 import Link from 'next/link'
 import {useRouter} from 'next/navigation'
 
-import styles from './public-stats.module.css'
-
 import {
   formatStatsCount,
   formatStatsDate,
@@ -23,6 +21,8 @@ import {
   getStatsProfiles,
   isStatsCount
 } from '@/lib/public-stats.js'
+
+import styles from './public-stats.module.css'
 
 const PROFILE_COLORS = {
   AGRICULTURE: 'var(--stats-agriculture)',

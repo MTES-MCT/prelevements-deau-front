@@ -6,10 +6,11 @@ import Input from '@codegouvfr/react-dsfr/Input'
 import {SegmentedControl} from '@codegouvfr/react-dsfr/SegmentedControl'
 import Select from '@codegouvfr/react-dsfr/SelectNext'
 import {Box} from '@mui/system'
-import maplibre from 'maplibre-gl'
+import * as maplibre from 'maplibre-gl'
 
 import 'maplibre-gl/dist/maplibre-gl.css'
 import {cooperativeGesturesMapOptions} from '@/components/map/cooperative-gestures.js'
+import {createMap} from '@/components/map/create-map.js'
 import {getMapMaxZoomForStyle} from '@/components/map/ign-raster.js'
 import photo from '@/components/map/styles/photo.json'
 import planIGN from '@/components/map/styles/plan-ign.json'
@@ -25,7 +26,7 @@ const stylesMap = {
   orthophoto: photo
 }
 
-const DEFAULT_CENTER = [2.213_749, 46.227_638]
+const DEFAULT_CENTER = [2.213749, 46.227638]
 const DEFAULT_ZOOM = 5
 const GPS_COORDINATE_SYSTEM = 'gps'
 const LAMBERT93_COORDINATE_SYSTEM = 'lambert93'
@@ -329,7 +330,7 @@ const MiniMapForm = ({geom, setGeom, boundaryFeature = null}) => {
 
     const boundaryBounds = boundaryFeature?.geometry ? getGeometryBounds(boundaryFeature.geometry) : null
 
-    const map = new maplibre.Map({
+    const map = createMap(maplibre, {
       container: mapContainerRef.current,
       style: stylesMap[style],
       center: geom ? geom.coordinates : boundaryBounds?.getCenter()?.toArray?.() || DEFAULT_CENTER,
@@ -338,6 +339,9 @@ const MiniMapForm = ({geom, setGeom, boundaryFeature = null}) => {
       maxZoom: getMapMaxZoomForStyle(style),
       ...cooperativeGesturesMapOptions
     })
+    if (!map) {
+      return
+    }
 
     const canvas = map.getCanvasContainer()
 
@@ -388,6 +392,7 @@ const MiniMapForm = ({geom, setGeom, boundaryFeature = null}) => {
 
     return () => {
       map.remove()
+      mapRef.current = null
     }
   }, [])
 

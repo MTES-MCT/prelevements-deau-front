@@ -38,7 +38,9 @@ const load = (name, {role = 'DECLARANT', fetchRequests = async () => ({success: 
     }
 
     if (specifier === 'next/link') {
-      return ({children, ...props}) => React.createElement('a', props, children)
+      return function Link({children, ...props}) {
+        return React.createElement('a', props, children)
+      }
     }
 
     return require(specifier)
@@ -102,7 +104,7 @@ test('les pages suivantes restent accessibles et une erreur propose un nouvel es
 test('la section serveur ne charge aucune demande pour les autres rôles', async t => {
   for (const role of ['ADMIN', 'INSTRUCTOR', null]) {
     const section = load('campaign-requests-section', {role, fetchRequests: async () => t.fail('Appel inattendu')}).default
-    // eslint-disable-next-line no-await-in-loop
+
     t.is(await section(), null)
   }
 })

@@ -115,7 +115,7 @@ export async function loadCampaignPointResults({fetchPage, params, isCurrent = (
   let total
   while (isCurrent()) {
     // Each opaque cursor is supplied by the preceding page, so requests are sequential.
-    // eslint-disable-next-line no-await-in-loop
+
     const page = await fetchPage({...params, limit: 500, ...(cursor ? {cursor} : {})})
     if (!isCurrent()) {
       return null

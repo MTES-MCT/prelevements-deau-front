@@ -17,7 +17,7 @@ const pointColumns = 'grid grid-cols-[1rem_minmax(0,1fr)] gap-x-3 md:grid-cols-[
 
 const UsageBadge = ({detail}) => (
   <span
-    className='inline-flex max-w-full rounded px-2 py-0.5 text-xs font-medium leading-4'
+    className='inline-flex max-w-full rounded-sm px-2 py-0.5 text-xs font-medium leading-4'
     style={{backgroundColor: getUsageColor(detail?.usage), color: getUsageTextColor(detail?.usage)}}
   >
     {campaignPointUsageLabel(detail)}
@@ -34,7 +34,7 @@ export const CampaignPointFilters = ({query, setQuery, usageId, setUsageId, usag
   }
 
   return (
-    <div className='mb-3 grid items-end gap-3 rounded border border-gray-200 bg-gray-50 p-3 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_auto]'>
+    <div className='mb-3 grid items-end gap-3 rounded-sm border border-gray-200 bg-gray-50 p-3 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_auto]'>
       <div className='min-w-0'>
         <label className='mb-1 block text-xs font-medium text-gray-700' htmlFor={searchId}>Rechercher un point ou un préleveur</label>
         <div className='relative'>
@@ -198,14 +198,14 @@ const CampaignPointsStep = ({form, options, knownTargets, query, setQuery, usage
 
   const selectedCount = campaignSelectedPointCount(form.targets, details)
   return (
-    <section className='mb-4 rounded border border-gray-200 bg-white p-3 md:p-4'>
+    <section className='mb-4 rounded-sm border border-gray-200 bg-white p-3 md:p-4'>
       <div className='mb-3 flex flex-wrap items-center justify-between gap-2'>
         <h2 className='fr-h6 !mb-0'>Points concernés</h2>
-        <span className='rounded bg-[#eeeeff] px-2 py-1 text-sm font-medium text-[#000091]' role='status'>{selectedCount + ' point' + (selectedCount > 1 ? 's sélectionnés' : ' sélectionné')}</span>
+        <span className='rounded-sm bg-[#eeeeff] px-2 py-1 text-sm font-medium text-[#000091]' role='status'>{selectedCount + ' point' + (selectedCount > 1 ? 's sélectionnés' : ' sélectionné')}</span>
       </div>
       <CampaignPointFilters query={query} setQuery={setQuery} usageId={usageId} setUsageId={setUsageId} usages={options.usages || []} />
       <CampaignNotice error>{error}</CampaignNotice>
-      {message && <p role='status' className='!mb-2 rounded bg-gray-50 px-3 py-2 text-sm leading-5'>{message}</p>}
+      {message && <p role='status' className='!mb-2 rounded-sm bg-gray-50 px-3 py-2 text-sm leading-5'>{message}</p>}
       {loadingOptions && <p className='!mb-0 py-3 text-sm' role='status'>Recherche des points…</p>}
       {!loadingOptions && <>
         <div className='mb-2 flex flex-wrap items-center gap-x-3 gap-y-1'>
@@ -215,7 +215,7 @@ const CampaignPointsStep = ({form, options, knownTargets, query, setQuery, usage
         </div>
         {busy && <p className='!mb-2 text-sm' role='status'>{busy === 'page' ? 'Chargement des points…' : 'Mise à jour de la sélection…'}</p>}
         {rows.length === 0 && <CampaignNotice>Aucun point trouvé. Essayez une autre recherche ou un autre usage.</CampaignNotice>}
-        {rows.length > 0 && <div className='overflow-hidden rounded border border-gray-200'>
+        {rows.length > 0 && <div className='overflow-hidden rounded-sm border border-gray-200'>
           <div className={pointColumns + ' hidden border-b border-gray-200 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-600 md:grid'} aria-hidden='true'>
             <span /><span>Point de prélèvement</span><span>Préleveur</span><span>Usage</span>
           </div>
@@ -226,7 +226,7 @@ const CampaignPointsStep = ({form, options, knownTargets, query, setQuery, usage
         {pagination.hasMore && <button type='button' className='fr-btn fr-btn--secondary fr-btn--sm fr-mt-1w' disabled={disabled} onClick={loadMore}>Afficher plus de résultats</button>}
         {pagination.hasMore && <p className='fr-hint-text fr-mt-1w'>« Sélectionner tous les résultats » inclut aussi les pages suivantes, sauf les points à choisir individuellement.</p>}
       </>}
-      {outsideResults.length > 0 && <details className='mt-3 rounded border border-gray-200 bg-gray-50 px-3 py-2'>
+      {outsideResults.length > 0 && <details className='mt-3 rounded-sm border border-gray-200 bg-gray-50 px-3 py-2'>
         <summary className='cursor-pointer text-sm font-medium'>Sélection conservée hors des résultats affichés ({outsideResults.length})</summary>
         <ul className='!mb-0 mt-2 list-none p-0'>
           {outsideResults.map(item => {

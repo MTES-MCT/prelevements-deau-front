@@ -19,7 +19,7 @@ const DayCell = ({day, firstDayCurrentMonth, dataMap, renderTooltipContent, onDa
   const dayData = isCurrentMonthDay ? dataMap.get(dayKey) : undefined
 
   let cellStyle = {}
-  let cellClasses = 'aspect-square rounded flex items-center justify-center text-xs transition-colors duration-150 ease-in-out'
+  let cellClasses = 'aspect-square rounded-sm flex items-center justify-center text-xs transition-colors duration-150 ease-in-out'
 
   if (dayData) {
     if (dayData.colorA && dayData.colorB) {
@@ -106,7 +106,7 @@ const MonthPrelevementCalendar = ({
       style={{
         backgroundColor: dsfr.colors.decisions.background.default
       }}
-      className='p-3 rounded-lg shadow border w-full'
+      className='p-3 rounded-lg shadow-sm border w-full'
     >
       <h2 className='text-center'>
         {monthNameLocalized.charAt(0).toUpperCase() + monthNameLocalized.slice(1)}

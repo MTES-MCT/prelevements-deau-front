@@ -9,6 +9,9 @@
 
 import {useMemo} from 'react'
 
+import {addCalendarIncrement, isCalendarBasedUnit, parseFrequency} from '@/utils/frequency-parsing.js'
+import {getSmallestFrequency} from '@/utils/frequency.js'
+
 import {FALLBACK_PARAMETER_COLOR} from './constants/colors.js'
 import {getAggregationDateInterval} from './utils/aggregation-date.js'
 import {processTimeSeriesData} from './utils/gap-detection.js'
@@ -17,9 +20,6 @@ import {
   resolutionFromFrequency,
   resolutionToFrequency
 } from './utils/time-bucketing.js'
-
-import {addCalendarIncrement, isCalendarBasedUnit, parseFrequency} from '@/utils/frequency-parsing.js'
-import {getSmallestFrequency} from '@/utils/frequency.js'
 
 const FIXED_FREQUENCY_DURATION = Object.freeze({
   second: 1000,

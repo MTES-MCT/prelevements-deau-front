@@ -34,7 +34,9 @@ const downloadUrl = value => {
     if (['https:', 'http:'].includes(url.protocol) && !url.username && !url.password) {
       return url.href
     }
-  } catch {}
+  } catch {
+    // Treat malformed URLs exactly like unsupported protocols below.
+  }
 
   throw new Error('Lien de téléchargement invalide.')
 }
@@ -42,7 +44,7 @@ const downloadUrl = value => {
 export const CampaignExportHistoryItem = ({item, timezone, downloading, disabled, onDownload}) => {
   const status = exportStatus(item.status)
   return (
-    <div className='rounded border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-3 md:p-4'>
+    <div className='rounded-sm border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-3 md:p-4'>
       <div className='flex flex-col gap-3 md:flex-row md:items-start md:justify-between'>
         <div className='flex min-w-0 flex-col gap-2'>
           <div className='flex flex-wrap items-center gap-2'>

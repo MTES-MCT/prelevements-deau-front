@@ -78,16 +78,16 @@ const CampaignTerritorySelect = ({territories, value, onChange}) => {
           </li>
         )}
         renderInput={params => (
-          <div ref={params.InputProps.ref} className='relative'>
+          <div ref={params.slotProps.input.ref} className='relative'>
             <input
-              {...params.inputProps}
+              {...params.slotProps.htmlInput}
               required
               aria-describedby={[`${id}-hint`, selected && `${id}-type`].filter(Boolean).join(' ')}
               className='fr-input pr-20'
               style={presentation ? {color: presentation.color, backgroundColor: presentation.backgroundColor} : undefined}
               placeholder='Rechercher un bassin, un département ou une région'
             />
-            {params.InputProps.endAdornment}
+            {params.slotProps.input.endAdornment}
           </div>
         )}
         onChange={(_event, territory) => onChange(territory?.id || '')}

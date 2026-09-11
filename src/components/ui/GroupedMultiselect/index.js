@@ -8,6 +8,8 @@ import {Box, List, ListItem} from '@mui/material'
 import {xor} from 'lodash-es'
 
 import './index.css'
+import {matchesSearchTerms} from '@/lib/search-options.js'
+
 import {
   normalizeOptions,
   renderSelectedText,
@@ -17,8 +19,6 @@ import {
   getOptionLabel,
   getOptionTitle
 } from './utils.js'
-
-import {matchesSearchTerms} from '@/lib/search-options.js'
 
 const focusWithoutScroll = element => {
   try {

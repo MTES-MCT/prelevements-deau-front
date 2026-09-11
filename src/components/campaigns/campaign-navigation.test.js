@@ -48,7 +48,9 @@ const loadComponent = (name, {user, actions = {}, pathname = '/tableau-de-bord'}
     }
 
     if (specifier === 'next/link') {
-      return ({children, ...props}) => React.createElement('a', props, children)
+      return function Link({children, ...props}) {
+        return React.createElement('a', props, children)
+      }
     }
 
     if (specifier === 'next/dynamic') {

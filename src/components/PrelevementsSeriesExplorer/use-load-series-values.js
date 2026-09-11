@@ -144,7 +144,7 @@ export function useLoadSeriesValues({seriesList, selectedPeriods, selectedParams
             continue
           }
 
-          // eslint-disable-next-line no-await-in-loop
+
           const response = await getSeriesValues(seriesId, {
             startDate: dateRange.start,
             endDate: dateRange.end

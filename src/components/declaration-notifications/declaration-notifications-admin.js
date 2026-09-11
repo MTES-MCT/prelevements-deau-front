@@ -6,8 +6,6 @@ import ToggleSwitch from '@codegouvfr/react-dsfr/ToggleSwitch'
 import {Alert, Box, CircularProgress} from '@mui/material'
 import {useRouter} from 'next/navigation'
 
-import DeclarationNotificationEmailPreviewDialog from './declaration-notification-email-preview-dialog.js'
-
 import {
   getDeclarationNotificationRunAction,
   previewDeclarationNotificationEmailAction,
@@ -16,6 +14,8 @@ import {
   sendDeclarationNotificationNowAction,
   updateDeclarationNotificationSettingAction
 } from '@/server/actions/declaration-notifications.js'
+
+import DeclarationNotificationEmailPreviewDialog from './declaration-notification-email-preview-dialog.js'
 
 const TYPE_LABELS = {
   reminder: 'Rappel',

@@ -29,7 +29,9 @@ const loadComponent = (name, actions = {}) => {
     }
 
     if (specifier === '@/components/campaigns/campaign-response-form.js') {
-      return ({initialContext, kind}) => React.createElement('div', {'data-kind': kind, 'data-preleveur': initialContext.preleveurUserId})
+      return function CampaignResponseForm({initialContext, kind}) {
+        return React.createElement('div', {'data-kind': kind, 'data-preleveur': initialContext.preleveurUserId})
+      }
     }
 
     if (specifier.startsWith('@/components/campaigns/')) {
@@ -41,7 +43,9 @@ const loadComponent = (name, actions = {}) => {
     }
 
     if (specifier === 'next/link') {
-      return ({children, ...props}) => React.createElement('a', props, children)
+      return function Link({children, ...props}) {
+        return React.createElement('a', props, children)
+      }
     }
 
     return require(specifier)

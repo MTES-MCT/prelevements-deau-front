@@ -1,12 +1,12 @@
 import test from 'ava'
 
+import {buildSeriesModel} from '@/components/ui/TimeSeriesChart/util.js'
+
 import {
   expandCumulativeBucketsForDisplay,
   prepareCumulativeSeriesData,
   shouldRenderCumulativeSeriesAsSteppedLine
 } from './use-chart-series.js'
-
-import {buildSeriesModel} from '@/components/ui/TimeSeriesChart/util.js'
 
 const addDays = (date, days) => new Date(
   date.getFullYear(),

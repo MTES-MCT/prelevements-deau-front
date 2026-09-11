@@ -21,10 +21,10 @@ const SearchAutocomplete = props => {
       id={id}
       renderInput={params => (
         // Fix overlay position
-        <div ref={params.InputProps.ref} style={{position: 'relative', width: 'calc(100% + 35px)', left: '-20px'}}>
+        <div ref={params.slotProps.input.ref} style={{position: 'relative', width: 'calc(100% + 35px)', left: '-20px'}}>
           <input
-            {...params.inputProps}
-            className={cx(params.inputProps.className, className)}
+            {...params.slotProps.htmlInput}
+            className={cx(params.slotProps.htmlInput.className, className)}
             placeholder={placeholder}
             type={type}
             style={{margin: '-8px 0', padding: '8px 15px'}}

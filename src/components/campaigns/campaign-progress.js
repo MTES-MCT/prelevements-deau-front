@@ -64,7 +64,7 @@ const CampaignProgress = ({summary, loading = false, error, onRetry, compact = f
     <section aria-labelledby={labelId} className={compact ? 'mb-4' : 'mt-4 border-t border-[var(--border-default-grey)] pt-4'}>
       <h3 id={labelId} className={compact ? 'fr-mb-1w text-sm font-bold' : 'sr-only'}>{compact ? 'Avancement des réponses' : 'Progression des réponses'}</h3>
       <div className={compact ? 'grid gap-3 sm:grid-cols-2' : 'space-y-4'}>{(compact ? ['INDEX', 'NEEDS'] : ['NEEDS', 'INDEX']).map(kind => <ResponseKindProgress key={kind} kind={kind} summary={summary.byKind?.[kind]} />)}</div>
-      <ul aria-label='Légende des réponses' className='fr-mb-0 mt-3 flex list-none flex-wrap gap-x-5 gap-y-2 p-0 text-xs text-[var(--text-mention-grey)]'>{SEGMENTS.map(segment => <li key={segment.key} className='flex items-center gap-2'><span className={`h-2.5 w-2.5 shrink-0 rounded-sm ${segment.color}`} aria-hidden='true' />{segment.label}</li>)}</ul>
+      <ul aria-label='Légende des réponses' className='fr-mb-0 mt-3 flex list-none flex-wrap gap-x-5 gap-y-2 p-0 text-xs text-[var(--text-mention-grey)]'>{SEGMENTS.map(segment => <li key={segment.key} className='flex items-center gap-2'><span className={`h-2.5 w-2.5 shrink-0 rounded-xs ${segment.color}`} aria-hidden='true' />{segment.label}</li>)}</ul>
       {summary.scopeComplete === false && <p className='fr-mb-0 mt-1 text-xs text-[var(--text-mention-grey)]'>Progression sur les points que vous êtes autorisé à suivre.</p>}
     </section>
   )

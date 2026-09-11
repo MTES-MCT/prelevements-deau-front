@@ -1,5 +1,5 @@
 import {MuiDsfrThemeProvider} from '@codegouvfr/react-dsfr/mui'
-import {AppRouterCacheProvider} from '@mui/material-nextjs/v15-appRouter'
+import {AppRouterCacheProvider} from '@mui/material-nextjs/v16-appRouter'
 import Link from 'next/link'
 import Script from 'next/script'
 

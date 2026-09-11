@@ -35,7 +35,9 @@ function harness({role = 'ADMIN', authenticated = true, impersonating = false, r
       }
 
       if (specifier === 'next/link') {
-        return ({children, ...props}) => React.createElement('a', props, children)
+        return function Link({children, ...props}) {
+          return React.createElement('a', props, children)
+        }
       }
 
       if (specifier === '@/contexts/auth-methods-context.js') {
@@ -118,7 +120,7 @@ test('la page admin réutilise les campagnes sous une seule navigation et un seu
 test('un utilisateur non admin ne peut pas charger la page ou déclencher la lecture des campagnes', async t => {
   for (const options of [{role: 'INSTRUCTOR'}, {role: 'DECLARANT'}, {authenticated: false}]) {
     const flow = harness(options)
-    // eslint-disable-next-line no-await-in-loop
+
     const error = await t.throwsAsync(() => flow.page())
     t.is(error, flow.denied)
     t.is(flow.calls.length, 0)
@@ -150,7 +152,7 @@ test('le retour à la liste mène les administrateurs à leur configuration', as
 test('les URL partagées des autres rôles continuent vers la liste métier sans restriction admin', async t => {
   for (const role of ['DECLARANT', 'INSTRUCTOR']) {
     const flow = harness({role})
-    // eslint-disable-next-line no-await-in-loop
+
     const html = renderToStaticMarkup(await flow.directPage())
     t.true(html.includes('Liste des campagnes partagées'))
   }

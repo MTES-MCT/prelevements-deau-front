@@ -5,14 +5,13 @@ import {
 } from 'react'
 
 import {Box} from '@mui/material'
-import maplibre from 'maplibre-gl'
-import 'maplibre-gl/dist/maplibre-gl.css'
+import * as maplibre from 'maplibre-gl'
 import {createRoot} from 'react-dom/client'
 
-import {getInitialMapStyle, loadMapStyle} from './map-style-loader.js'
-import Popup from './popup.js'
+import 'maplibre-gl/dist/maplibre-gl.css'
 
 import {cooperativeGesturesLocale} from '@/components/map/cooperative-gestures.js'
+import {createMap} from '@/components/map/create-map.js'
 import {getMapMaxZoomForStyle} from '@/components/map/ign-raster.js'
 import {
   computeBestPopupAnchor,
@@ -22,6 +21,9 @@ import {
   getPointMarkerIconId,
   getPointMarkerUsages
 } from '@/lib/points-prelevement.js'
+
+import {getInitialMapStyle, loadMapStyle} from './map-style-loader.js'
+import Popup from './popup.js'
 
 const SOURCE_ID = 'points-prelevement'
 const HIGHLIGHT_LAYER_ID = 'highlighted-point-prelevement'
@@ -374,7 +376,11 @@ const MapView = ({
       }
     }
 
-    const map = new maplibre.Map(mapConfig)
+    const map = createMap(maplibre, mapConfig)
+    if (!map) {
+      return
+    }
+
     mapRef.current = map
 
     // Apply bounds after map creation if needed
@@ -829,7 +835,7 @@ const MapView = ({
       {recenterControl && canRecenter && hasMapMoved && (
         <button
           aria-label={recenterControlLabel ?? 'Afficher tous les points sur la carte'}
-          className={`fr-btn fr-btn--secondary fr-btn--sm fr-icon-fullscreen-line absolute z-10 bg-white shadow-sm ${recenterControlLabel ? 'fr-btn--icon-left' : ''} ${recenterControlClassName}`}
+          className={`fr-btn fr-btn--secondary fr-btn--sm fr-icon-fullscreen-line absolute z-10 bg-white shadow-xs ${recenterControlLabel ? 'fr-btn--icon-left' : ''} ${recenterControlClassName}`}
           title={recenterControlLabel ?? 'Afficher tous les points'}
           type='button'
           onClick={handleRecenter}

@@ -10,7 +10,7 @@ import {
   FormControl,
   FormControlLabel,
   FormLabel,
-  Grid2 as Grid,
+  Grid,
   Radio,
   RadioGroup,
   TextField,

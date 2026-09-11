@@ -1,6 +1,14 @@
 import test from 'ava'
 
-import {coerceNumericValue, formatNumber} from '../number.js'
+import {coerceNumericValue, formatNumber, groupIntegerDigits} from '../number.js'
+
+test('groupIntegerDigits conserve tous les chiffres et les séparateurs sans conversion numérique', t => {
+  t.is(groupIntegerDigits('0'), '0')
+  t.is(groupIntegerDigits('123'), '123')
+  t.is(groupIntegerDigits('1234567'), '1 234 567')
+  t.is(groupIntegerDigits('12345678901234567890', '\u202F'), '12\u202F345\u202F678\u202F901\u202F234\u202F567\u202F890')
+  t.is(groupIntegerDigits('9'.repeat(100_000)).replaceAll(' ', ''), '9'.repeat(100_000))
+})
 
 test('formatNumber formate les nombres en français sans décimales par défaut', t => {
   t.is(formatNumber(12_345.67), '12 346')

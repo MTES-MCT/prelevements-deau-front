@@ -512,7 +512,7 @@ function getSummarySections({
   const periodLabel = (isManual
     ? getManualQuickDeclarationPeriodLabel(source)
     : getSourceExactPeriodLabel(source) ?? getSourcePeriodLabel(source))
-    ?? 'Période non renseignée'
+  ?? 'Période non renseignée'
   const displayedPeriodLabel = isWaitingForFileProcessing ? 'Analyse du fichier en cours' : periodLabel
 
   return [

@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+/.artifacts/
+/public/maplibre/
 
 # next.js
 /.next/
