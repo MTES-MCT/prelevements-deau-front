@@ -5,6 +5,7 @@ import Script from 'next/script'
 
 import AuthSessionGuard from '@/components/auth/auth-session-guard.js'
 import ImpersonationBanner from '@/components/auth/impersonation-banner.js'
+import UserActivityTracker from '@/components/auth/user-activity-tracker.js'
 import CrispChat from '@/components/crisp-chat.js'
 import EnvironmentBanner from '@/components/environment-banner.js'
 import Footer from '@/components/footer.js'
@@ -144,6 +145,7 @@ const RootLayout = async ({children}) => {
                   <DsfrProvider>
                     <MuiDsfrThemeProvider>
                       <AuthSessionGuard />
+                      <UserActivityTracker />
                       <ImpersonationBanner />
                       <Header />
                       <MatomoTracker enabled={matomoConfig.enabled} />

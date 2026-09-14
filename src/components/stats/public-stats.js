@@ -73,14 +73,14 @@ const MonthSelector = ({month, availableMonths}) => {
     event.preventDefault()
     const selectedMonth = new FormData(event.currentTarget).get('month')
     startTransition(() => {
-      router.push(`/stats?${new URLSearchParams({month: selectedMonth})}`)
+      router.push(`/stats?${new URLSearchParams({month: selectedMonth})}`, {scroll: false})
     })
   }, [router])
 
   return (
     <form className={styles.period} action='/stats' method='get' aria-busy={pending} onSubmit={handleSubmit}>
       <div className={styles.periodField}>
-        <label className='fr-label' htmlFor='stats-month'>Mois observé</label>
+        <label className='fr-label' htmlFor='stats-month'>Mois</label>
         <select
           key={month}
           className='fr-select'
@@ -172,10 +172,6 @@ const Deployment = ({totals}) => (
         <span className={styles.metricLabel}>préleveurs recensés</span>
       </div>
     </div>
-    <p className={styles.note}>
-      Les SAGE et les départements sont deux lectures du même périmètre : leurs nombres ne
-      s’additionnent pas. Les points et les préleveurs sont comptés une seule fois dans les totaux.
-    </p>
   </section>
 )
 
@@ -217,7 +213,6 @@ const ProfileBreakdown = ({profiles}) => {
 }
 
 const Territory = ({territory}) => {
-  const hasDenominator = isStatsCount(territory.preleveursCount) && territory.preleveursCount > 0
   return (
     <article className={styles.territory}>
       <div className={styles.territoryHeading}>
@@ -226,14 +221,12 @@ const Territory = ({territory}) => {
           <p className={styles.territoryPoints}>{formatStatsCount(territory.pointsCount)} points de prélèvement</p>
         </div>
         <div className={styles.territoryNumbers}>
-          <span>{formatStatsCount(territory.reportingPreleveursCount)} sur {formatStatsCount(territory.preleveursCount)} préleveurs</span>
-          <strong className={isStatsCount(territory.reportingRate) ? '' : styles.unavailable}>
-            {formatStatsPercentage(territory.reportingRate)}
+          <strong className={isStatsCount(territory.reportingPreleveursCount) ? '' : styles.unavailable}>
+            {formatStatsCount(territory.reportingPreleveursCount)}
           </strong>
+          <span>{territory.reportingPreleveursCount === 1 ? 'déclaration mensuelle' : 'déclarations mensuelles'}</span>
         </div>
       </div>
-      <ProgressBar value={territory.reportingRate} />
-      {!hasDenominator && <p className={styles.note}>Taux non calculable en l’absence de préleveurs recensés.</p>}
       <details className={styles.profileDetails}>
         <summary>Répartition des préleveurs par profil</summary>
         <ProfileBreakdown profiles={territory.profiles} />
@@ -242,7 +235,7 @@ const Territory = ({territory}) => {
   )
 }
 
-const Territories = ({territories, month}) => {
+const Territories = ({territories, month, availableMonths, error}) => {
   const initialGeography = territories?.SAGE?.length === 0 && territories?.DEPARTEMENT?.length > 0
     ? 'DEPARTEMENT'
     : 'SAGE'
@@ -285,12 +278,11 @@ const Territories = ({territories, month}) => {
 
   return (
     <section className={styles.section} aria-labelledby='stats-reporting'>
-      <h2 id='stats-reporting'>Préleveurs remontant leur donnée</h2>
-      <p>
-        Part des préleveurs pour lesquels une donnée de prélèvement est disponible sur au moins
-        un point pendant le mois observé, rapportée aux préleveurs recensés sur le territoire.
-      </p>
-      {month && <p className={styles.periodCaption}>{formatStatsMonth(month)}</p>}
+      <div className={styles.sectionHeading}>
+        <h2 id='stats-reporting'>Nombre de déclarations mensuelles par territoire</h2>
+        {month && <MonthSelector month={month} availableMonths={availableMonths} />}
+      </div>
+      {error && <StatsError error={error} territorial />}
       <div className={styles.tabs} role='tablist' aria-label='Découpage territorial'>
         {GEOGRAPHIES.map((item, index) => (
           <button
@@ -327,21 +319,11 @@ const Territories = ({territories, month}) => {
             : <p className={styles.empty}>Les données par territoire sont temporairement indisponibles.</p>)}
         </div>
       ))}
-      <p className={styles.note}>
-        Un préleveur peut être présent sur plusieurs territoires. Les résultats territoriaux ne
-        s’additionnent donc pas pour obtenir le total du service.
-      </p>
-      <p className={styles.note}>
-        Le mois observé est celui des mesures, pas de leur transmission. Les taux utilisent le
-        référentiel actuel des préleveurs, y compris pour les mois passés. Les données reçues en
-        attente de validation sont incluses ; les données rejetées ou dont le traitement a échoué
-        sont exclues.
-      </p>
     </section>
   )
 }
 
-const Channels = ({channels}) => {
+const Channels = ({channels, month}) => {
   const available = Array.isArray(channels) && channels.length > 0
   const visibleChannels = available
     ? channels.filter(channel => ['DIRECT', 'THIRD_PARTY'].includes(channel.key) || channel.count > 0)
@@ -352,7 +334,7 @@ const Channels = ({channels}) => {
   return (
     <section className={styles.section} aria-labelledby='stats-channels'>
       <h2 id='stats-channels'>Comment la donnée arrive</h2>
-      <p>Répartition des préleveurs remontant leur donnée pendant le mois observé, selon leur canal principal.</p>
+      {month && <p className={styles.periodCaption}>{formatStatsMonth(month)}</p>}
       {available ? (
         <div className={styles.channels}>
           {visibleChannels.map(channel => (
@@ -368,31 +350,23 @@ const Channels = ({channels}) => {
           ))}
         </div>
       ) : <p className={styles.empty}>La répartition par canal est temporairement indisponible.</p>}
-      {total === 0 && <p className={styles.note}>Aucune remontée de données enregistrée pour le mois observé.</p>}
-      <p className={styles.note}>
-        Chaque préleveur est compté une seule fois, dans le canal couvrant le plus de points
-        distincts pendant le mois observé. La fréquence des transmissions n’influence pas ce
-        classement. Les égalités et les canaux non renseignés sont présentés séparément.
-      </p>
+      {total === 0 && <p className={styles.note}>Aucune remontée de données pour ce mois.</p>}
     </section>
   )
 }
 
-const Connections = ({connections}) => {
-  const months = getStatsConnections(connections?.months)
+const ActiveUsers = ({activeUsers}) => {
+  const months = getStatsConnections(activeUsers?.months)
   const maximum = Math.max(1, ...months.filter(month => month.available).map(month => month.total))
   const hasPartialMonth = months.some(month => month.status === 'partial')
   const accessibleDescription = months.map(month => `${formatStatsMonth(month.month)} : ${month.available
-    ? `${formatStatsCount(month.administration)} comptes administration, ${formatStatsCount(month.declarants)} comptes déclarants, total ${formatStatsCount(month.total)}${month.status === 'partial' ? ', données partielles' : ''}`
+    ? `${formatStatsCount(month.administration)} utilisateurs administration, ${formatStatsCount(month.declarants)} utilisateurs déclarants, total ${formatStatsCount(month.total)}${month.status === 'partial' ? ', historique incomplet' : ''}`
     : 'données indisponibles'}`).join('. ')
 
   return (
-    <section className={styles.section} aria-labelledby='stats-connections'>
-      <h2 id='stats-connections'>Comptes s’étant connectés dans le mois</h2>
-      <p>
-        Nombre de comptes distincts ayant réussi une connexion au cours du mois. Les visites
-        effectuées avec une session déjà ouverte ne sont pas comptabilisées.
-      </p>
+    <section className={styles.section} aria-labelledby='stats-active-users'>
+      <h2 id='stats-active-users'>Nombre d’utilisateurs actifs / mois</h2>
+      <p>Nombre d’utilisateurs uniques utilisant le service chaque mois.</p>
       {months.length > 0 ? (
         <>
           <div className={styles.chartScroll}>
@@ -434,31 +408,10 @@ const Connections = ({connections}) => {
             <span><i className={`${styles.swatch} ${styles.administrationSegment}`} aria-hidden='true' />Administration</span>
             <span><i className={`${styles.swatch} ${styles.declarantsSegment}`} aria-hidden='true' />Déclarants — préleveurs et collecteurs</span>
           </div>
-          <details className={styles.connectionDetails}>
-            <summary>Voir les chiffres détaillés</summary>
-            <div className={styles.tableScroll}>
-              <table className={styles.connectionTable}>
-                <caption>Comptes distincts connectés par mois et par public</caption>
-                <thead><tr><th scope='col'>Mois</th><th scope='col'>Administration</th><th scope='col'>Déclarants</th><th scope='col'>Total</th><th scope='col'>Disponibilité</th></tr></thead>
-                <tbody>
-                  {months.map(month => (
-                    <tr key={month.month}>
-                      <th scope='row'>{formatStatsMonth(month.month)}</th>
-                      <td>{formatStatsCount(month.administration)}</td>
-                      <td>{formatStatsCount(month.declarants)}</td>
-                      <td>{formatStatsCount(month.total)}</td>
-                      <td>{month.available ? (month.status === 'partial' ? 'Partielle' : 'Complète') : 'Indisponible'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </details>
         </>
-      ) : <p className={styles.empty}>Les statistiques de connexion sont temporairement indisponibles.</p>}
-      {connections?.availableSince && <p className={styles.note}>Historique disponible depuis le {formatStatsDate(connections.availableSince)}.</p>}
-      {hasPartialMonth && <p className={styles.note}>* Les données disponibles ne couvrent qu’une partie du mois.</p>}
-      <p className={styles.note}>Les visiteurs anonymes et les comptes de service ne sont pas comptabilisés.</p>
+      ) : <p className={styles.empty}>Les statistiques d’activité sont temporairement indisponibles.</p>}
+      {activeUsers?.availableSince && <p className={styles.note}>Historique disponible depuis le {formatStatsDate(activeUsers.availableSince)}.</p>}
+      {hasPartialMonth && <p className={styles.note}>* Historique incomplet.</p>}
     </section>
   )
 }
@@ -485,7 +438,19 @@ const Impact = () => (
   </section>
 )
 
-const PublicStats = ({data, error}) => (
+const StatsError = ({error, territorial = false}) => (
+  <div className={styles.error} role='status'>
+    <p><strong>{error === 'invalid-month'
+      ? 'Ce mois n’est pas disponible'
+      : (territorial ? 'Les données par territoire sont temporairement indisponibles' : 'Les statistiques sont temporairement indisponibles')}</strong></p>
+    <p>{error === 'invalid-month'
+      ? 'Seuls les mois terminés et disponibles peuvent être consultés.'
+      : 'Les chiffres n’ont pas pu être chargés. Vous pouvez réessayer dans quelques instants.'}</p>
+    <Link className='fr-link' href='/stats'>Consulter le dernier mois disponible</Link>
+  </div>
+)
+
+const PublicStats = ({data, error, territoryData = data, territoryError}) => (
   <article className={styles.page}>
     <header className={styles.pageHeader}>
       <div>
@@ -496,22 +461,18 @@ const PublicStats = ({data, error}) => (
             : 'Données temporairement indisponibles'}
         </p>
       </div>
-      {data && <MonthSelector month={data.month} availableMonths={data.availableMonths} />}
     </header>
-    {error && (
-      <div className={styles.error} role='status'>
-        <h2>{error === 'invalid-month' ? 'Ce mois n’est pas disponible' : 'Les statistiques sont temporairement indisponibles'}</h2>
-        <p>{error === 'invalid-month'
-          ? 'Seuls les mois terminés et disponibles peuvent être consultés.'
-          : 'Les chiffres n’ont pas pu être chargés. Vous pouvez réessayer dans quelques instants.'}</p>
-        <Link className='fr-link' href='/stats'>Consulter le dernier mois disponible</Link>
-      </div>
-    )}
+    {error && <StatsError error={error} />}
     <Introduction />
     <Deployment totals={data?.totals} />
-    <Territories territories={data?.territories} month={data?.month} />
-    <Channels channels={data?.channels} />
-    <Connections connections={data?.connections} />
+    <Territories
+      territories={territoryData?.territories}
+      month={territoryData?.month ?? data?.month}
+      availableMonths={data?.availableMonths ?? territoryData?.availableMonths}
+      error={territoryError}
+    />
+    <Channels channels={data?.channels} month={data?.month} />
+    <ActiveUsers activeUsers={data?.activeUsers} />
     <Impact />
   </article>
 )

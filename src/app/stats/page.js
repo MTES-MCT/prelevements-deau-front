@@ -1,5 +1,5 @@
 import PublicStats from '@/components/stats/public-stats.js'
-import {getPublicStats} from '@/server/public-stats.js'
+import {getPublicStatsPage} from '@/server/public-stats.js'
 
 export const metadata = {
   title: 'Statistiques',
@@ -10,9 +10,9 @@ export const dynamic = 'force-dynamic'
 
 const StatsPage = async ({searchParams}) => {
   const parameters = await searchParams
-  const {data, error} = await getPublicStats(parameters?.month)
+  const stats = await getPublicStatsPage(parameters?.month)
 
-  return <PublicStats data={data} error={error} />
+  return <PublicStats {...stats} />
 }
 
 export default StatsPage
