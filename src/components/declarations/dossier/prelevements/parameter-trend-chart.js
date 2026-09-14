@@ -159,6 +159,7 @@ const ParameterTrendChart = ({data, connectNulls}) => {
       id: u,
       label: u,
       position: i === 0 ? 'left' : 'right',
+      width: 'auto',
       min: 0,
       valueFormatter: v => formatNumber(v, v < 1 ? {maximumFractionDigits: 2, minimumFractionDigits: 2} : {})
     })),
@@ -277,6 +278,7 @@ const ParameterTrendChart = ({data, connectNulls}) => {
         series={series}
         xAxis={[{
           scaleType: 'time',
+          height: 'auto',
           data: slicedXData,
           tickMinStep: resolution === '15min' ? 3600 * 1000 : 3600 * 1000 * 24,
           valueFormatter(date, context) {

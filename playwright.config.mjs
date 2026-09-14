@@ -1,6 +1,15 @@
 import {defineConfig, devices} from '@playwright/test'
 
 const frontUrl = 'http://127.0.0.1:3417'
+const browserTests = [
+  'security-modernisation.spec.js',
+  'selected-volume-totals.spec.js',
+  'public-stats.spec.js',
+  'chart-axes.spec.js',
+  'declaration-charts.spec.js',
+  'declaration-file-selection.spec.js',
+  'admin-chart-labels.spec.js'
+]
 export default defineConfig({
   testDir: './tests/browser',
   outputDir: '.artifacts/browser-results',
@@ -18,9 +27,9 @@ export default defineConfig({
     screenshot: 'only-on-failure'
   },
   projects: [
-    {name: 'chromium', testMatch: ['security-modernisation.spec.js', 'selected-volume-totals.spec.js', 'public-stats.spec.js'], use: {...devices['Desktop Chrome']}},
-    {name: 'webkit', testMatch: ['security-modernisation.spec.js', 'selected-volume-totals.spec.js', 'public-stats.spec.js'], use: {...devices['Desktop Safari']}},
-    {name: 'mobile', testMatch: ['security-modernisation.spec.js', 'selected-volume-totals.spec.js', 'public-stats.spec.js'], use: {...devices['iPhone 13']}},
+    {name: 'chromium', testMatch: browserTests, use: {...devices['Desktop Chrome']}},
+    {name: 'webkit', testMatch: browserTests, use: {...devices['Desktop Safari']}},
+    {name: 'mobile', testMatch: browserTests, use: {...devices['iPhone 13']}},
     {
       name: 'large-spreadsheet',
       testMatch: 'spreadsheet-load.spec.js',

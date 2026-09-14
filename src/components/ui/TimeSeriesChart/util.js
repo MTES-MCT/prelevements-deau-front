@@ -537,6 +537,7 @@ export const buildTimelineXAxis = ({xAxisDates, timelineTicks, fallbackFormatter
 
   return {
     id: X_AXIS_ID,
+    height: 'auto',
     scaleType: axisMode === 'calendar' ? 'linear' : 'time',
     data,
     domainLimit: 'strict',
@@ -1442,7 +1443,7 @@ const buildSingleYAxis = (axisId, stats, locale, precision, label = null, option
   if (!hasData) {
     return {
       id: axisId,
-      position: axisId === AXIS_LEFT_ID ? 'left' : 'right',
+      position: 'none',
       scaleType: 'linear',
       label,
       valueFormatter(value) {
@@ -1481,6 +1482,7 @@ const buildSingleYAxis = (axisId, stats, locale, precision, label = null, option
   return {
     id: axisId,
     position: axisId === AXIS_LEFT_ID ? 'left' : 'right',
+    width: 'auto',
     scaleType: 'linear',
     label,
     valueFormatter(value) {

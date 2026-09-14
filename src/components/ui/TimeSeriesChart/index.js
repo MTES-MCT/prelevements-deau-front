@@ -56,9 +56,18 @@ import {
 
 const CHART_HEIGHT = 360
 const CHART_MARGIN = {
-  top: 48, right: 80, bottom: 36, left: 80
+  top: 48, right: 36, bottom: 12, left: 36
 }
-const Y_AXIS_LABEL_OFFSET = 68
+
+// Axis sizes are measured by MUI. Use the remaining plot width, not the full
+// container, to select date ticks (including after resizing or toggling a series).
+const ChartWidthObserver = ({onWidthChange}) => {
+  const {width} = useDrawingArea()
+  useEffect(() => {
+    onWidthChange(width)
+  }, [onWidthChange, width])
+  return null
+}
 
 const TimeSeriesTooltip = props => {
   const axes = useAxesTooltip({directions: ['x']})
@@ -607,6 +616,7 @@ const TimeSeriesChart = ({
   const visibility = visibilityModel ?? internalVisibility
   const containerRef = useRef(null)
   const [containerWidth, setContainerWidth] = useState(null)
+  const [timelineAvailableWidth, setTimelineAvailableWidth] = useState(0)
 
   useEffect(() => {
     if (visibilityModel === undefined) {
@@ -671,10 +681,6 @@ const TimeSeriesChart = ({
   const xAxisDateFormatter = useMemo(
     () => axisFormatterFactory(locale, chartModel.xAxisDates, frequency),
     [chartModel.xAxisDates, locale, frequency]
-  )
-  const timelineAvailableWidth = Math.max(
-    0,
-    (containerWidth ?? 0) - CHART_MARGIN.left - CHART_MARGIN.right
   )
   const timelineTicks = useMemo(() => buildTimelineTicks({
     xAxisDates: chartModel.xAxisDates,
@@ -805,14 +811,12 @@ const TimeSeriesChart = ({
     () => yAxis.find(item => item.position === 'right' && item.hasData) ?? null,
     [yAxis]
   )
-  const leftAxisConfig = leftAxis && {
-    axisId: leftAxis.id,
-    ...(leftAxis.label && {slotProps: {axisLabel: {x: -Y_AXIS_LABEL_OFFSET}}})
-  }
-  const rightAxisConfig = rightAxis && {
-    axisId: rightAxis.id,
-    ...(rightAxis.label && {slotProps: {axisLabel: {x: Y_AXIS_LABEL_OFFSET}}})
-  }
+  // An empty side still needs room for the first/last centered date label.
+  const chartMargin = useMemo(() => ({
+    ...CHART_MARGIN,
+    ...(leftAxis && {left: 12}),
+    ...(rightAxis && {right: 12})
+  }), [leftAxis, rightAxis])
 
   const getPointMeta = useCallback((seriesId, index) => chartModel.metaBySeries.get(seriesId)?.[index] ?? null, [chartModel.metaBySeries])
 
@@ -853,15 +857,16 @@ const TimeSeriesChart = ({
               series={composedSeries}
               xAxis={xAxisTimeline}
               yAxis={yAxis}
-              margin={CHART_MARGIN}
+              margin={chartMargin}
             >
+              <ChartWidthObserver onWidthChange={setTimelineAvailableWidth} />
               <div style={{position: 'relative', height}}>
                 <ChartsSurface sx={seriesElementStyles}>
                   <ChartBackgroundBands bands={backgroundBands} />
                   <ChartsGrid horizontal vertical />
                   <ChartsXAxis axisId={X_AXIS_ID} />
-                  {leftAxisConfig && <ChartsYAxis {...leftAxisConfig} />}
-                  {rightAxisConfig && <ChartsYAxis {...rightAxisConfig} />}
+                  {leftAxis && <ChartsYAxis axisId={leftAxis.id} />}
+                  {rightAxis && <ChartsYAxis axisId={rightAxis.id} />}
                   <ChartsAxisHighlight x='line' y='line' />
                   <AreaPlot />
                   <LinePlot />

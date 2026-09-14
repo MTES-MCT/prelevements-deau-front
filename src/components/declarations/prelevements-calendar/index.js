@@ -251,9 +251,10 @@ const PrelevementsCalendar = ({data}) => {
                     }]}
                     xAxis={[{
                       scaleType: 'time',
+                      height: 'auto',
                       data: fifteenValues.map(slot => parseISO(`${selectedDay.date}T${slot.heure}`)),
                       valueFormatter(value) {
-                        const dateObj = value
+                        const dateObj = new Date(value)
                         const hours = dateObj.getHours()
                         const minutes = dateObj.getMinutes()
                         if (hours === 0 && minutes === 0) {
@@ -263,6 +264,7 @@ const PrelevementsCalendar = ({data}) => {
                         return format(dateObj, 'HH:mm', {locale})
                       }
                     }]}
+                    yAxis={[{width: 'auto'}]}
                   />
                 </Box>
               ) : null}

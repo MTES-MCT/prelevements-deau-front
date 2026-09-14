@@ -502,6 +502,7 @@ test('l’axe X utilise les dates comme valeurs d’une échelle temporelle cont
   })
 
   t.is(axis.scaleType, 'time')
+  t.is(axis.height, 'auto')
   t.is(axis.data, xAxisDates)
   t.deepEqual(axis.tickInterval, timelineTicks.values)
   t.deepEqual(axis.min, xAxisDates[0])
@@ -536,6 +537,7 @@ test('l’axe calendaire donne exactement la même largeur à chaque mois', t =>
   t.is(timelineTicks.granularity, 'month')
   t.is(timelineTicks.values.length, 12)
   t.is(axis.scaleType, 'linear')
+  t.is(axis.height, 'auto')
   t.true(axis.data.every(value => typeof value === 'number'))
   t.deepEqual(monthWidths, Array.from({length: 11}, () => 1))
 })
@@ -621,6 +623,8 @@ test('buildYAxisConfigurations peut cadrer une série sans imposer zéro', t => 
   t.is(axes[0].max, 235)
   t.true(axes[0].reverse)
   t.is(axes[0].label, 'Profondeur (m)')
+  t.is(axes[0].width, 'auto')
+  t.is(axes[1].position, 'none')
   t.false(axes[1].reverse)
 })
 
@@ -1621,6 +1625,8 @@ test('buildSeriesModel creates correct Y-axis configuration', t => {
   t.truthy(rightAxis)
   t.is(leftAxis.position, 'left')
   t.is(rightAxis.position, 'right')
+  t.is(leftAxis.width, 'auto')
+  t.is(rightAxis.width, 'auto')
 })
 
 // Resampling tests
