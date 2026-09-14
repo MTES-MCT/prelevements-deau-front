@@ -453,14 +453,7 @@ const StatsError = ({error, territorial = false}) => (
 const PublicStats = ({data, error, territoryData = data, territoryError}) => (
   <article className={styles.page}>
     <header className={styles.pageHeader}>
-      <div>
-        <h1>Statistiques</h1>
-        <p className={styles.updated}>
-          {data?.generatedAt
-            ? <>Mise à jour le <time dateTime={data.generatedAt}>{formatStatsDate(data.generatedAt)}</time></>
-            : 'Données temporairement indisponibles'}
-        </p>
-      </div>
+      <h1>Statistiques</h1>
     </header>
     {error && <StatsError error={error} />}
     <Introduction />

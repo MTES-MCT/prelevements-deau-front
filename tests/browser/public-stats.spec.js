@@ -48,6 +48,7 @@ test('le mois ne change que les déclarations territoriales, pas les canaux ni l
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
   await page.goto('/stats')
+  await expect(page.getByText(/Mise à jour le/)).toHaveCount(0)
   const territories = page.getByRole('region', {name: territoriesName})
   const activity = page.getByRole('region', {name: activityName})
   const channels = page.getByRole('region', {name: 'Comment la donnée arrive'})

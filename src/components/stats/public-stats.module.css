@@ -45,12 +45,6 @@
   border-bottom: 1px solid var(--border-default-grey);
 }
 
-.page .updated {
-  margin: 0;
-  color: var(--text-mention-grey);
-  font-size: 0.875rem;
-}
-
 .period {
   display: flex;
   align-items: flex-end;
