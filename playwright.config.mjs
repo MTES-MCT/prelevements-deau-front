@@ -18,9 +18,9 @@ export default defineConfig({
     screenshot: 'only-on-failure'
   },
   projects: [
-    {name: 'chromium', testMatch: 'security-modernisation.spec.js', use: {...devices['Desktop Chrome']}},
-    {name: 'webkit', testMatch: 'security-modernisation.spec.js', use: {...devices['Desktop Safari']}},
-    {name: 'mobile', testMatch: 'security-modernisation.spec.js', use: {...devices['iPhone 13']}},
+    {name: 'chromium', testMatch: ['security-modernisation.spec.js', 'selected-volume-totals.spec.js'], use: {...devices['Desktop Chrome']}},
+    {name: 'webkit', testMatch: ['security-modernisation.spec.js', 'selected-volume-totals.spec.js'], use: {...devices['Desktop Safari']}},
+    {name: 'mobile', testMatch: ['security-modernisation.spec.js', 'selected-volume-totals.spec.js'], use: {...devices['iPhone 13']}},
     {
       name: 'large-spreadsheet',
       testMatch: 'spreadsheet-load.spec.js',

@@ -14,6 +14,8 @@ import {fr} from 'date-fns/locale'
 
 import TimeSeriesChart from '@/components/ui/TimeSeriesChart/index.js'
 
+import SelectedVolumeTotalsSummary from './selected-volume-totals-summary.js'
+
 import {
   formatSliderMark,
   formatSliderRange,
@@ -38,6 +40,7 @@ const DEFAULT_MIN_CHART_HEIGHT = 360
  * @param {string} [props.frequency] - Frequency for linear X-axis timeline (e.g., '1 day', '15 minutes')
  * @param {Object} [props.timelineRange] - Date range for timeline bounds ({ start: Date, end: Date })
  * @param {boolean} [props.allowQuarterlyTicks=false] - Allow T1/Q1-style labels on medium-long ranges
+ * @param {Array<Object>} [props.volumeTotals] - Selected-period volume totals and their loading states
  */
 const ChartWithRangeSlider = ({
   series,
@@ -53,7 +56,8 @@ const ChartWithRangeSlider = ({
   timeSeriesChartProps,
   frequency = null,
   timelineRange = null,
-  allowQuarterlyTicks = false
+  allowQuarterlyTicks = false,
+  volumeTotals = []
 }) => {
   const resolvedChartProps = useMemo(() => {
     if (!timeSeriesChartProps) {
@@ -101,6 +105,9 @@ const ChartWithRangeSlider = ({
   }, [allDates])
 
   const hasChartData = series.length > 0
+  const displayedVolumeTotals = hasChartData
+    ? volumeTotals
+    : volumeTotals.filter(total => total.status !== 'error')
   const selectedRangeLabel = useMemo(() => {
     const start = resolveDisplayDate(rangeIndices[0], 0)
     const end = resolveDisplayDate(rangeIndices[1], 1)
@@ -149,14 +156,17 @@ const ChartWithRangeSlider = ({
             <Typography variant='caption'>
               {rangeLabel}
             </Typography>
-            {selectedRangeLabel && (
-              <Typography variant='caption' color='text.secondary'>
-                Période affichée :{' '}
-                <Box component='span' sx={{color: 'text.primary', fontWeight: 600}}>
-                  {selectedRangeLabel}
-                </Box>
-              </Typography>
-            )}
+            <Box sx={{display: 'flex', flexDirection: 'column', gap: 0.5}}>
+              {selectedRangeLabel && (
+                <Typography variant='caption' color='text.secondary'>
+                  Période affichée :{' '}
+                  <Box component='span' sx={{color: 'text.primary', fontWeight: 600}}>
+                    {selectedRangeLabel}
+                  </Box>
+                </Typography>
+              )}
+              <SelectedVolumeTotalsSummary totals={displayedVolumeTotals} locale={locale} />
+            </Box>
           </Box>
           <Slider
             disableSwap
@@ -178,6 +188,7 @@ const ChartWithRangeSlider = ({
           />
         </Box>
       )}
+      {!showRangeSlider && <SelectedVolumeTotalsSummary totals={displayedVolumeTotals} locale={locale} />}
     </Box>
   )
 }

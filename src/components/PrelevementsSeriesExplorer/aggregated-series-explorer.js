@@ -29,6 +29,7 @@ import LoadingState from './loading-state.js'
 import ParameterOperatorsSelector from './parameter-operators-selector.js'
 import ParameterSelector from './parameter-selector.js'
 import {useChartSeries} from './use-chart-series.js'
+import {useSelectedVolumeTotals} from './use-selected-volume-totals.js'
 import {useTimeline} from './use-timeline.js'
 import {
   aggregationDateOverlapsRange
@@ -152,6 +153,8 @@ const buildNormalizedOption = ({
   label,
   unit,
   valueType,
+  metricTypeCode,
+  flowType,
   color,
   disabled = false,
   disabledReason,
@@ -167,6 +170,8 @@ const buildNormalizedOption = ({
     label: resolvedLabel,
     unit: normalizedUnit,
     valueType: normalizedValueType,
+    metricTypeCode,
+    flowType,
     color,
     disabled: Boolean(disabled),
     disabledReason,
@@ -213,6 +218,8 @@ const normalizeParameterOptions = options => {
           label: option.label ?? option.parameter ?? value,
           unit: option.unit ?? metadata?.unit,
           valueType: option.valueType ?? metadata?.valueType ?? metadata?.type,
+          metricTypeCode: option.metricTypeCode,
+          flowType: option.flowType,
           color: option.color,
           disabled: option.disabled,
           disabledReason: option.disabledReason,
@@ -300,7 +307,8 @@ const AggregatedSeriesExplorer = ({
   error = null,
   chartWidthPx = 1200,
   seriesOptions = null,
-  dateRangeOverride = null
+  dateRangeOverride = null,
+  getVolumeValuesForRange
 }) => {
   const t = {...DEFAULT_TRANSLATIONS, ...customTranslations}
 
@@ -620,6 +628,7 @@ const AggregatedSeriesExplorer = ({
   const {
     allDates,
     rangeIndices,
+    visibleSelectedRange,
     committedSelectedRange,
     visibleSamples,
     sliderMarks,
@@ -627,6 +636,18 @@ const AggregatedSeriesExplorer = ({
     handleRangeChangeCommitted,
     handleCalendarDayClick
   } = useTimeline(timelineSamples, showRangeSlider, dateRange)
+
+  const volumeTotals = useSelectedVolumeTotals({
+    parameters: parameterOptionsNormalized,
+    selectedParameters: currentParameters,
+    seriesMap,
+    fullRange: dateRange,
+    selectedRange: visibleSelectedRange,
+    committedRange: committedSelectedRange,
+    isLoading,
+    error,
+    getVolumeValuesForRange
+  })
 
   // Calculate display resolution based on visible range
   const displayResolution = useMemo(() => {
@@ -829,6 +850,7 @@ const AggregatedSeriesExplorer = ({
             sliderMarks={sliderMarks}
             timeSeriesChartProps={timeSeriesChartProps}
             timelineRange={committedSelectedRange}
+            volumeTotals={volumeTotals}
             onRangeChange={handleRangeChange}
             onRangeChangeCommitted={handleRangeChangeCommitted}
           />

@@ -156,9 +156,11 @@ const SeriesExplorer = ({
   const [parameterTemporalOperators, setParameterTemporalOperators] = useState({})
   const [targetDisplayFrequency, setTargetDisplayFrequency] = useState(initialDisplayFrequency)
   const [aggregatedSeriesMap, setAggregatedSeriesMap] = useState(new Map())
+  const [loadedScopeKey, setLoadedScopeKey] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [loadError, setLoadError] = useState(null)
   const previousExplorerStateKeyRef = useRef(explorerStateKey)
+  const scopeKey = JSON.stringify([collecteurId, pointIds, preleveurId, dateRange.start, dateRange.end])
 
   useEffect(() => {
     if (previousExplorerStateKeyRef.current === explorerStateKey) {
@@ -263,7 +265,7 @@ const SeriesExplorer = ({
     [buildTemporalOperatorsForParameters, selectedParameters]
   )
 
-  const fetchAggregatedSeries = useCallback(async (parameterId, temporalOperator, frequency) => {
+  const fetchAggregatedSeries = useCallback(async (parameterId, temporalOperator, frequency, range = dateRange) => {
     const parameterDefinition = parameterDefinitionMap.get(parameterId)
     const params = {
       aggregationFrequency: frequency,
@@ -287,19 +289,38 @@ const SeriesExplorer = ({
       params.preleveurId = preleveurId
     }
 
-    if (dateRange.start) {
-      params.startDate = dateRange.start
+    if (range.start) {
+      params.startDate = range.start
     }
 
-    if (dateRange.end) {
-      params.endDate = dateRange.end
+    if (range.end) {
+      params.endDate = range.end
     }
 
     // Server actions cannot receive AbortSignal (not serializable)
     // Cancellation is handled client-side via isActive flag
     const result = await getAggregatedSeriesAction(params)
-    return result.success ? result.data : null
+    if (!result.success) {
+      throw new Error(result.error || 'Impossible de charger les séries agrégées')
+    }
+
+    return result.data
   }, [collecteurId, pointIds, preleveurId, dateRange, parameterDefinitionMap])
+
+  const getVolumeValuesForRange = useCallback(async (parameterId, {startDate, endDate}) => {
+    // Reuse exactly the chart's scope and permissions. The API clips the source
+    // periods before summing, including when the slider cuts a week or month.
+    const response = await fetchAggregatedSeries(parameterId, 'sum', '1 year', {
+      start: startDate,
+      end: endDate
+    })
+
+    if (!Array.isArray(response?.values)) {
+      throw new Error('Impossible de calculer le total sur cette période')
+    }
+
+    return response.values
+  }, [fetchAggregatedSeries])
 
   useEffect(() => {
     // Clear the map only when no parameters are selected
@@ -377,6 +398,7 @@ const SeriesExplorer = ({
 
         if (isActive) {
           setAggregatedSeriesMap(new Map(results))
+          setLoadedScopeKey(scopeKey)
         }
       } catch (error) {
         if (error?.name === 'AbortError') {
@@ -399,7 +421,7 @@ const SeriesExplorer = ({
       isActive = false
       abortController.abort()
     }
-  }, [selectedParameters, resolvedTemporalOperatorsByParameter, targetDisplayFrequency, fetchAggregatedSeries, parameterDefinitionMap])
+  }, [selectedParameters, resolvedTemporalOperatorsByParameter, targetDisplayFrequency, fetchAggregatedSeries, parameterDefinitionMap, scopeKey])
 
   const handleFiltersChange = useCallback(({parameters, parameterTemporalOperators: nextParameterTemporalOperators}) => {
     let nextParameters = selectedParameters
@@ -472,8 +494,9 @@ const SeriesExplorer = ({
           selectablePeriods={selectablePeriods}
           defaultPeriods={defaultPeriods}
           dateRangeOverride={dateRange}
+          getVolumeValuesForRange={getVolumeValuesForRange}
           error={loadError}
-          isLoading={isLoading}
+          isLoading={isLoading || (!loadError && loadedScopeKey !== scopeKey)}
           seriesOptions={seriesOptions}
           onFiltersChange={handleFiltersChange}
           onDisplayResolutionChange={handleDisplayResolutionChange}
