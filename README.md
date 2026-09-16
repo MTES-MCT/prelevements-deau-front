@@ -4,17 +4,24 @@ Cette application est le front-end du projet de gestion des prélèvements d'eau
 
 ## Prérequis
 
-- **Node.js** 24.x
-- **npm**
+- **Node.js** : version définie dans [`.nvmrc`](.nvmrc).
+- **npm** : version définie par `packageManager` dans [`package.json`](package.json).
 
 ## Installation
 
 1. Clonez ce dépôt.
 2. Installez les dépendances :
+
    ```bash
-   npm install
+   nvm use
+   npm ci
    ```
+
 3. Créez un fichier `.env` à la racine en vous basant sur `.env.sample` puis renseignez les variables ci-dessous.
+
+Utilisez la version npm attendue, sans `--force` ni `--legacy-peer-deps`.
+Les scripts d'installation autorisés sont déclarés dans `allowScripts` et doivent
+être réexaminés lors des mises à jour.
 
 ## Variables d'environnement
 
@@ -72,7 +79,7 @@ NEXTAUTH_SECRET=votre_secret_genere_avec_openssl
 - `npm run build` : génère la version de production.
 - `npm start` : démarre l'application Next.js construite via `npm run build`.
 - `npm run update-icons` : force la mise à jour des icônes DSFR.
-- `npm run lint` : vérifie la qualité du code avec XO.
+- `npm run lint` : vérifie la qualité du code avec ESLint.
 
 ## Démarrer en développement
 
@@ -88,3 +95,36 @@ Pour générer un build de production :
 npm run build
 npm start
 ```
+
+## Vérifications et maintenance
+
+```bash
+npm audit --include=dev --audit-level=low
+npm audit --omit=dev --audit-level=low
+npm run lint
+npm test
+npm run build
+npm run build-storybook
+npx --no-install playwright install --with-deps chromium webkit
+npm run test:browser
+```
+
+Les tests navigateur utilisent une API fictive et un front isolé, jamais les
+variables d'environnement ni les données réelles. Les rapports sont dans
+`.artifacts/`. La validation CI et le déploiement sont décrits dans le
+[guide commun des pipelines](https://github.com/MTES-MCT/prelevements-deau-api/blob/testing/docs/pipelines.md).
+
+Points à préserver lors des mises à jour :
+
+- MapLibre nécessite WebGL 2. `prepare-maplibre`, exécuté avant dev, build et
+  Storybook, copie le worker ESM et son module partagé depuis le paquet installé,
+  sans réécrire ses fichiers ni utiliser de CDN.
+- Les exports tabulaires utilisent `write-excel-file` dans le navigateur.
+  Seul le modèle Excel enrichi utilise l'entrée Node de `xlsx-populate` côté
+  serveur, pour préserver les listes déroulantes sans importer son ancien bundle
+  navigateur. SheetJS provient de l'archive officielle déclarée dans `package.json`.
+- L'override `uuid` est limité à NextAuth ; le réexaminer lors de sa mise à jour.
+- Les règles ESLint actuelles ne détectent pas les propriétés JSX dupliquées.
+
+Le [contrat de recherche de la carte](docs/point-map-search-contract.md) précise
+les champs exposés et leur filtrage selon les droits.
