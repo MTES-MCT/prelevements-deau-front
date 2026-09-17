@@ -9,6 +9,7 @@ import {createPublicStatsFixture} from '../../src/test/public-stats-fixture.js'
 
 // Synthetic backend: deliberately no database, outbound HTTP, mail or jobs.
 const zoneId = '11111111-1111-4111-8111-111111111111'
+const meterId = '22222222-2222-4222-8222-222222222222'
 const api = createServer((request, response) => {
   const {pathname} = new URL(request.url, 'http://127.0.0.1:3431')
   const send = (status, value) => {
@@ -37,13 +38,15 @@ const api = createServer((request, response) => {
     return send(200, createPublicStatsFixture(month))
   }
 
-  if (request.headers.authorization !== 'Bearer browser-test-api-token') {
+  const meterRole = request.headers.authorization === 'Bearer browser-test-meter-admin' ? 'ADMIN'
+    : request.headers.authorization === 'Bearer browser-test-meter-declarant' ? 'DECLARANT' : null
+  if (request.headers.authorization !== 'Bearer browser-test-api-token' && !meterRole) {
     return send(401, {message: 'Unauthorized'})
   }
 
   if (pathname === '/info' || pathname === '/api/info') {
     return send(200, {
-      role: 'INSTRUCTOR', permissions: ['zone.export'], user: {id: zoneId, email: 'test@example.test'},
+      role: meterRole || 'INSTRUCTOR', permissions: ['zone.export'], user: {id: zoneId, email: 'test@example.test'},
       expiresAt: new Date(Date.now() + 3_600_000).toISOString()
     })
   }
@@ -68,6 +71,49 @@ const api = createServer((request, response) => {
 
   if (pathname === '/api/referentiels/usages-eau') {
     return send(200, {items: []})
+  }
+
+  if (meterRole && pathname === `/api/exploitations/${zoneId}`) {
+    return send(200, {
+      id: zoneId, status: 'EN_ACTIVITE', startDate: '2026-01-01', endDate: null, connectors: [], collecteurs: [],
+      declarant: {id: zoneId, socialReason: 'Préleveur synthétique'},
+      pointPrelevement: {id: meterId, name: 'Point synthétique'},
+      right: {canEdit: false, permissions: []}
+    })
+  }
+
+  if (meterRole && pathname === `/api/exploitations/${zoneId}/meter-allocations`) {
+    return send(200, {meterAllocations: [{
+      id: 'allocation-synthetic', compteur: {id: meterId, serialNumber: 'SYNTHETIC-001'},
+      percentage: '70', startDate: '2026-01-01', endDate: null, status: 'ACTIVE', provider: 'sample-provider',
+      sync: {available: true, state: 'SUCCESS', lastSuccessAt: '2026-09-17T10:00:00Z', lastReadingAt: '2026-09-16T08:11:43Z'},
+      capabilities: {canReadGlobalReadings: meterRole === 'ADMIN'}
+    }]})
+  }
+
+  if (meterRole && pathname === `/api/exploitations/${zoneId}/meters/${meterId}/readings`) {
+    if (meterRole !== 'ADMIN') {
+      return send(403, {message: 'Droits insuffisants'})
+    }
+
+    const cursor = new URL(request.url, 'http://127.0.0.1:3431').searchParams.get('cursor')
+    return send(200, {
+      items: cursor ? [{id: 'reading-2', observedAt: '2026-09-15T08:11:43Z', index: '12000', quality: 'Y', origin: 'Auto', admissible: false}]
+        : [{id: 'reading-1', observedAt: '2026-09-16T08:11:43Z', index: '12300', quality: 'C', origin: 'Manuel', admissible: true}],
+      nextCursor: cursor ? null : 'synthetic-page-2'
+    })
+  }
+
+  if (meterRole && (pathname.endsWith('/documents') || pathname.endsWith('/regles'))) {
+    return send(200, [])
+  }
+
+  if (meterRole && pathname.startsWith('/api/audit-history/')) {
+    return send(200, {data: [], meta: {total: 0}})
+  }
+
+  if (meterRole && pathname === '/api/aggregated-series/options') {
+    return send(200, {parameters: []})
   }
 
   return send(404, {message: 'No synthetic fixture for this route'})

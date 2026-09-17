@@ -1,6 +1,13 @@
 import test from 'ava'
 
-import {buildDailyAndTimelineData} from '../aggregation.js'
+import {buildDailyAndTimelineData, hasEstimatedExactVolumes} from '../aggregation.js'
+
+test('la ventilation estimative ne concerne que les séries sélectionnées et explicitement signalées', t => {
+  const series = new Map([['volume', {metadata: {exactVolumesEstimated: true}}], ['index', {metadata: {}}]])
+  t.true(hasEstimatedExactVolumes(series, ['volume']))
+  t.false(hasEstimatedExactVolumes(series, ['index']))
+  t.false(hasEstimatedExactVolumes(series, ['missing']))
+})
 
 test('buildDailyAndTimelineData returns empty arrays for missing inputs', t => {
   const result = buildDailyAndTimelineData({loadedValues: {}, selectedParams: []})

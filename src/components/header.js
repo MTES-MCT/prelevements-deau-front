@@ -135,10 +135,6 @@ const HeaderComponent = () => {
     }
 
     const isActive = href => {
-      if (href === '/mes-declarations' && ['/mes-index/', '/mes-besoins/'].some(prefix => pathname.startsWith(prefix))) {
-        return true
-      }
-
       if (href === '/') {
         return pathname === '/'
       }

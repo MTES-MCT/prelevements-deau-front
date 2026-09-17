@@ -6,6 +6,10 @@ import {coerceNumericValue} from '@/utils/number.js'
 
 import {clampAggregationDateToRange, parseAggregationDate} from './aggregation-date.js'
 
+export function hasEstimatedExactVolumes(seriesMap, selectedParameters) {
+  return selectedParameters.some(parameter => seriesMap.get(parameter)?.metadata?.exactVolumesEstimated === true)
+}
+
 // Normalize remarks (string or array) into a single comment string suitable for chart metadata.
 const normalizeMetaComment = entry => {
   if (!entry) {

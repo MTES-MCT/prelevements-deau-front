@@ -29,14 +29,6 @@ export const ADMIN_NAVIGATION_ITEMS = Object.freeze([
     iconClassName: 'ri-file-settings-line'
   },
   {
-    key: 'campaigns',
-    label: 'Campagnes',
-    description: 'Préparer et suivre les collectes de relevés et de besoins en eau.',
-    href: '/administration/campagnes',
-    iconClassName: 'fr-icon-calendar-line',
-    roles: ['ADMIN']
-  },
-  {
     key: 'service-accounts',
     label: 'Comptes de service',
     description: 'Administrer les accès techniques et leurs identifiants.',

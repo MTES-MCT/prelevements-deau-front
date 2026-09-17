@@ -17,7 +17,6 @@ test('isAdminNavigationPath reconnaît uniquement les vues administratives', t =
   t.true(isAdminNavigationPath('/administration/acces-mot-de-passe'))
   t.true(isAdminNavigationPath('/comptes-service/123/identifiants'))
   t.true(isAdminNavigationPath('/declarations/a-rejouer'))
-  t.true(isAdminNavigationPath('/administration/campagnes'))
   t.false(isAdminNavigationPath('/campagnes'))
   t.false(isAdminNavigationPath('/campagnes/123'))
   t.false(isAdminNavigationPath('/declarations/123'))
@@ -28,14 +27,12 @@ test('getActiveAdminNavigationItem retrouve la section active', t => {
   t.is(getActiveAdminNavigationItem('/notifications-declarations')?.key, 'notifications')
   t.is(getActiveAdminNavigationItem('/administration/journal-audit')?.key, 'audit-log')
   t.is(getActiveAdminNavigationItem('/types-declaration/nouveau')?.key, 'declaration-types')
-  t.is(getActiveAdminNavigationItem('/administration/campagnes')?.key, 'campaigns')
+  t.not(getActiveAdminNavigationItem('/administration/campagnes')?.key, 'campaigns')
   t.is(getActiveAdminNavigationItem('/declarations')?.key, undefined)
 })
 
-test('l’entrée Campagnes apparaît dans la configuration uniquement pour un administrateur', t => {
-  const item = getVisibleAdminNavigationItems({role: 'ADMIN'}).find(item => item.key === 'campaigns')
-  t.is(item?.href, '/administration/campagnes')
-  for (const role of ['INSTRUCTOR', 'DECLARANT', undefined]) {
+test('les campagnes retirées ne sont plus proposées dans la navigation', t => {
+  for (const role of ['ADMIN', 'INSTRUCTOR', 'DECLARANT', undefined]) {
     t.false(getVisibleAdminNavigationItems({role}).some(item => item.key === 'campaigns'))
   }
 })

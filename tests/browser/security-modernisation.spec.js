@@ -55,7 +55,7 @@ test('connexion DSFR : onglets, saisie et retour sans envoi réel de mail', asyn
 })
 
 test('proxy Next : pages privées et sessions expirées refusées', async ({page, context}) => {
-  for (const path of ['/tableau-de-bord', '/administration/campagnes', '/mon-compte']) {
+  for (const path of ['/tableau-de-bord', '/administration/journal-audit', '/mon-compte']) {
 
     await page.goto(path)
 

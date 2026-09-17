@@ -18,22 +18,9 @@ function compile(filename, componentRequire) {
   return compiledModule.exports
 }
 
-function harness({feed = successfulFeed, pending = false} = {}) {
+function harness({feed = successfulFeed} = {}) {
   const calls = []
-  const neverResolved = new Promise(() => {})
   const componentRequire = specifier => {
-    if (specifier === '@/components/campaigns/campaign-requests-section.js') {
-      return {
-        __esModule: true, default() {
-          if (pending) {
-            throw neverResolved
-          }
-
-          return React.createElement('section', {id: 'demandes'}, 'Vos demandes')
-        }
-      }
-    }
-
     if (specifier === '@/components/declarations/my-declarations-list.js') {
       return {__esModule: true, default: () => React.createElement('div', null, 'Liste des déclarations existantes')}
     }
@@ -65,17 +52,18 @@ function harness({feed = successfulFeed, pending = false} = {}) {
   return {calls, page: compile(new URL('page.js', import.meta.url), componentRequire).default}
 }
 
-test('Mes déclarations place une seule section demandes avant la création et le fil existants', async t => {
+test('Mes déclarations conserve la création et le fil, sans demandes de campagne', async t => {
   const flow = harness()
   const html = renderToStaticMarkup(await flow.page())
-  t.is((html.match(/id="demandes"/g) || []).length, 1)
-  t.true(html.indexOf('id="demandes"') < html.indexOf('Nouvelle déclaration'))
+  t.false(html.includes('id="demandes"'))
+  t.true(html.includes('Nouvelle déclaration'))
+  t.true(html.includes('Saisissez vos index, volumes prélevés ou volumes rejetés'))
   t.true(html.includes('Liste des déclarations existantes'))
   t.deepEqual(structuredClone(flow.calls), [{limit: 20}])
 })
 
-test('une demande encore en chargement ne masque ni ne bloque les déclarations existantes', async t => {
-  const flow = harness({pending: true})
+test('les déclarations existantes ne nécessitent aucun chargement de campagnes', async t => {
+  const flow = harness()
   const html = renderToStaticMarkup(await flow.page())
   t.true(html.includes('Liste des déclarations existantes'))
   t.true(html.includes('Nouvelle déclaration'))
@@ -83,30 +71,12 @@ test('une demande encore en chargement ne masque ni ne bloque les déclarations 
   t.false(html.includes('Chargement des demandes'))
 })
 
-test('les demandes restent une section indépendante si le chargement du fil échoue', async t => {
+test('un échec de chargement du fil propose de réessayer', async t => {
   const flow = harness({feed: {success: false}})
   const html = renderToStaticMarkup(await flow.page())
-  t.true(html.includes('Vos demandes'))
+  t.false(html.includes('Vos demandes'))
   t.true(html.includes('Déclarations indisponibles'))
   t.true(html.includes('Réessayer'))
-})
-
-test('les anciennes pages de liste redirigent vers la même section sans nouvelle requête', t => {
-  for (const path of ['mes-index', 'mes-besoins']) {
-    const redirectTarget = []
-    const page = compile(new URL(`../${path}/page.js`, import.meta.url), specifier => {
-      if (specifier === 'next/navigation') {
-        return {redirect: location => redirectTarget.push(location)}
-      }
-
-      throw new Error(`Import inattendu : ${specifier}`)
-    }).default
-    page()
-    t.deepEqual(redirectTarget, ['/mes-declarations#demandes'])
-    const detail = readFileSync(new URL(`../${path}/[id]/page.js`, import.meta.url), 'utf8')
-    t.true(detail.includes('CampaignDetailPage'))
-    t.false(detail.includes('redirect('))
-  }
 })
 
 test('le tableau de bord ne charge pas les demandes', t => {

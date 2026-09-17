@@ -1,10 +1,7 @@
-import {Suspense} from 'react'
-
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import moment from 'moment'
 
-import CampaignRequestsSection from '@/components/campaigns/campaign-requests-section.js'
 import MyDeclarationsList from '@/components/declarations/my-declarations-list.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {
@@ -92,13 +89,9 @@ const Dossiers = async () => {
           </h1>
 
           <p className='fr-text--sm fr-mb-0 text-gray-700'>
-            Retrouvez vos demandes de relevés et de besoins en eau, ainsi que vos déclarations.
+            Retrouvez vos déclarations et leur suivi.
           </p>
         </div>
-
-        <Suspense fallback={null}>
-          <CampaignRequestsSection />
-        </Suspense>
 
         {canCreateAnyDeclaration && (
           <section className='mb-5 border border-gray-200 bg-white px-4 py-4 md:px-5'>

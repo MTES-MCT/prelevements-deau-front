@@ -8,7 +8,7 @@ import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Box, Typography} from '@mui/material'
 
 import DistributedVolumeRuleInfo from '@/components/PrelevementsSeriesExplorer/distributed-volume-rule-info.js'
-import {buildDailyAndTimelineData} from '@/components/PrelevementsSeriesExplorer/utils/aggregation.js'
+import {buildDailyAndTimelineData, hasEstimatedExactVolumes} from '@/components/PrelevementsSeriesExplorer/utils/aggregation.js'
 import CalendarGrid from '@/components/ui/CalendarGrid/index.js'
 import PeriodSelectorHeader from '@/components/ui/PeriodSelectorHeader/index.js'
 import {formatFrequencyLabel} from '@/utils/frequency.js'
@@ -592,9 +592,9 @@ const AggregatedSeriesExplorer = ({
     [currentParameters, seriesMap]
   )
 
-  const hasEstimatedCampaignVolumes = useMemo(
-    () => currentParameters.some(parameter => seriesMap.get(parameter)?.metadata?.campaignVolumesEstimated === true),
-    [currentParameters, seriesMap]
+  const estimatedExactVolumes = useMemo(
+    () => hasEstimatedExactVolumes(seriesMap, currentParameters),
+    [seriesMap, currentParameters]
   )
 
   const loadedValues = useMemo(() => {
@@ -954,7 +954,7 @@ const AggregatedSeriesExplorer = ({
         />
       </Box>
 
-      {hasEstimatedCampaignVolumes && <Alert severity='info' description='Les volumes de campagne sont ventilés à titre estimatif pour cet affichage ; les volumes exacts restent ceux des périodes de campagne.' />}
+      {estimatedExactVolumes && <Alert severity='info' description='Pour cet affichage, certains volumes sont répartis entre les périodes à titre estimatif. Les données source conservent leurs périodes exactes.' />}
       {renderChartSection()}
     </Box>
   )
