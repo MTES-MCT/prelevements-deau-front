@@ -75,7 +75,9 @@ const api = createServer((request, response) => {
 
   if (meterRole && pathname === `/api/exploitations/${zoneId}`) {
     return send(200, {
-      id: zoneId, status: 'EN_ACTIVITE', startDate: '2026-01-01', endDate: null, connectors: [], collecteurs: [],
+      id: zoneId, status: 'EN_ACTIVITE', startDate: '2026-01-01', endDate: null,
+      connectors: [{id: 'legacy-synthetic', connectorType: 'orange_live_objects', connectorParameters: {sourcePointId: 'LEGACY-002'}, rate: 25}],
+      mostRecentAvailableDate: '2026-09-15', collecteurs: [],
       declarant: {id: zoneId, socialReason: 'Préleveur synthétique'},
       pointPrelevement: {id: meterId, name: 'Point synthétique'},
       right: {canEdit: false, permissions: []}

@@ -1,24 +1,23 @@
-const syncLabels = {
-  DISABLED: 'Synchronisation en pause',
-  PENDING: 'Première synchronisation en attente',
-  SUCCESS: 'Synchronisation active',
-  ERROR: 'Dernière synchronisation en échec'
-}
-
-export function getMeterSynchronizationLabel(allocation) {
+export function getMeterSynchronizationStatus(allocation) {
   if (allocation.sync?.available === false) {
-    return 'Compteur référencé — sans synchronisation automatique'
+    return {status: 'Non connecté', note: 'Sans synchronisation automatique.'}
   }
 
   if (allocation.status === 'INCOMPLETE') {
-    return 'Affectation à valider — aucun volume attribué'
+    return {status: 'À valider', severity: 'warning', note: 'Rattachement à valider — aucun volume attribué.'}
   }
 
-  if (allocation.status === 'DISABLED') {
-    return 'Affectation inactive'
+  if (allocation.status === 'DISABLED' || allocation.sync?.state === 'DISABLED') {
+    return {status: 'En pause', severity: 'info'}
   }
 
-  return syncLabels[allocation.sync?.state] ?? 'Synchronisation en attente'
+  if (allocation.sync?.state === 'ERROR') {
+    return {status: 'Dernière synchronisation en échec', severity: 'error'}
+  }
+
+  return allocation.sync?.state === 'SUCCESS'
+    ? {status: 'Synchronisation active', severity: 'success'}
+    : {status: 'En attente', severity: 'info'}
 }
 
 export function formatMeterPercentage(value) {

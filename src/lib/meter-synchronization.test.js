@@ -2,7 +2,7 @@ import test from 'ava'
 
 import {
   canReadGlobalMeterReadings, formatMeterDate, formatMeterIndex, formatMeterPercentage,
-  getMeterQualityLabel, getMeterSynchronizationLabel, mergeMeterReadings
+  getMeterQualityLabel, getMeterSynchronizationStatus, mergeMeterReadings
 } from './meter-synchronization.js'
 import {serializeExploitationConnectors} from './exploitation-connectors.js'
 
@@ -16,9 +16,13 @@ test('une part absente ou incohérente ne devient jamais 100 %', t => {
 })
 
 test('les statuts distinguent affectation incomplète et synchronisation réussie', t => {
-  t.regex(getMeterSynchronizationLabel({status: 'INCOMPLETE', sync: {state: 'SUCCESS'}}), /aucun volume attribué/)
-  t.is(getMeterSynchronizationLabel({status: 'ACTIVE', sync: {state: 'ERROR'}}), 'Dernière synchronisation en échec')
-  t.is(getMeterSynchronizationLabel({status: 'ACTIVE', sync: {state: 'PENDING'}}), 'Première synchronisation en attente')
+  t.regex(getMeterSynchronizationStatus({status: 'INCOMPLETE', sync: {state: 'SUCCESS'}}).note, /aucun volume attribué/)
+  t.deepEqual(getMeterSynchronizationStatus({status: 'ACTIVE', sync: {state: 'ERROR'}}), {status: 'Dernière synchronisation en échec', severity: 'error'})
+  t.deepEqual(getMeterSynchronizationStatus({status: 'ACTIVE', sync: {state: 'PENDING'}}), {status: 'En attente', severity: 'info'})
+  t.deepEqual(getMeterSynchronizationStatus({status: 'ACTIVE', sync: {state: 'SUCCESS'}}), {status: 'Synchronisation active', severity: 'success'})
+  t.deepEqual(getMeterSynchronizationStatus({status: 'DISABLED', sync: {state: 'SUCCESS'}}), {status: 'En pause', severity: 'info'})
+  t.deepEqual(getMeterSynchronizationStatus({status: 'ACTIVE', sync: {state: 'DISABLED'}}), {status: 'En pause', severity: 'info'})
+  t.deepEqual(getMeterSynchronizationStatus({status: 'INCOMPLETE', sync: {available: false}}), {status: 'Non connecté', note: 'Sans synchronisation automatique.'})
   t.is(getMeterQualityLabel('Y'), 'Y')
   t.is(getMeterQualityLabel('Vérifié manuellement'), 'Vérifié manuellement')
   t.is(getMeterQualityLabel(null), 'Qualité non renseignée')
