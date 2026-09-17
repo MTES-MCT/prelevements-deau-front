@@ -212,6 +212,9 @@ test('la répartition complète modifie les bénéficiaires à une date précise
   await page.goto(`${frontUrl}/exploitations/${exploitationId}/edit`)
   await expect(page.getByRole('heading', {name: 'Compteur SYNTHETIC-001'})).toBeVisible()
   await expect(page.getByRole('button', {name: 'Voir les relevés du compteur'})).toHaveCount(0)
+  // Loading usages above the button changes the scroll position. WebKit can
+  // cancel a pointer click if that transition occurs between mouse down/up.
+  await expect(page.getByRole('combobox', {name: 'Usage principal *', exact: true})).toBeEnabled()
   await page.getByRole('button', {name: 'Modifier la répartition du compteur'}).click()
   const dialog = page.getByRole('dialog', {name: /Répartition du compteur/})
   await expect(dialog.getByText(/Synchronisation en pause/)).toBeVisible()
@@ -250,6 +253,7 @@ test('la répartition complète modifie les bénéficiaires à une date précise
 test('une répartition devenue obsolète impose un rechargement et préserve le brouillon jusqu’au choix explicite', async ({page, context}) => {
   await authenticate(context, 'ADMIN', {allocation: true, conflict: true, unresolved: true})
   await page.goto(`${frontUrl}/exploitations/${exploitationId}/edit`)
+  await expect(page.getByRole('combobox', {name: 'Usage principal *', exact: true})).toBeEnabled()
   await page.getByRole('button', {name: 'Modifier la répartition du compteur'}).click()
   const dialog = page.getByRole('dialog')
   await expect(dialog.getByRole('combobox', {name: 'Bénéficiaire 2'})).toHaveValue('Exploitation à renseigner')
