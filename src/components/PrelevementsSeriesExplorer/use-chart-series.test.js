@@ -1,10 +1,13 @@
 import test from 'ava'
+import {createElement} from 'react'
+import {renderToStaticMarkup} from 'react-dom/server'
 
 import {buildSeriesModel} from '@/components/ui/TimeSeriesChart/util.js'
 
 import {
   expandCumulativeBucketsForDisplay,
   prepareCumulativeSeriesData,
+  useChartSeries,
   shouldRenderCumulativeSeriesAsSteppedLine
 } from './use-chart-series.js'
 
@@ -58,6 +61,28 @@ test('instantaneous index series keep their regular line', t => {
   const index = {unit: 'm³', valueType: 'instantaneous'}
 
   t.false(shouldRenderCumulativeSeriesAsSteppedLine(index))
+})
+
+test('les courbes compteur distinctes conservent les observations exactes et les ruptures sans interpolation', t => {
+  const times = ['2026-09-16T08:11:43Z', '2026-09-16T09:12:44Z', '2026-09-16T10:13:45Z']
+  const samples = times.map((date, index) => ({
+    timestamp: new Date(date), date: '2026-09-16', time: date.slice(11, 19),
+    values: [index === 1 ? null : 100 + index, index === 0 ? 200 : null],
+    metas: [{readingId: `a-${index}`}, index === 0 ? {readingId: 'b-0'} : null]
+  }))
+  const parameterMap = new Map(['a', 'b'].map(id => [id, {parameterId: id, parameterLabel: `Compteur ${id}`, readingSeries: true, frequency: 'instantaneous', valueType: 'instantaneous', unit: 'm³', precision: 4}]))
+  let result
+  function Probe() {
+    result = useChartSeries({showChart: true, timelineSamples: samples, visibleSamples: samples, selectedParams: ['a', 'b'], parameterMap})
+    return null
+  }
+
+  renderToStaticMarkup(createElement(Probe))
+  t.deepEqual(result.series.map(series => series.id), ['a', 'b'])
+  t.deepEqual(result.series[0].data.map(point => [point.x.toISOString(), point.y]), times.map((date, index) => [new Date(date).toISOString(), index === 1 ? null : 100 + index]))
+  t.is(result.series[1].data.length, 1)
+  const model = buildSeriesModel({series: result.series, locale: 'fr-FR', theme, exposeAllMarks: true, timelineFrequency: 'instantaneous'})
+  t.is(model.segmentSeries.filter(segment => segment.originalId === 'a').length, 2)
 })
 
 test('12 isolated daily volumes become 12 one-day plateaus without visible marks', t => {

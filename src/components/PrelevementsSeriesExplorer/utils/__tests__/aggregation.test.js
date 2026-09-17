@@ -2,6 +2,26 @@ import test from 'ava'
 
 import {buildDailyAndTimelineData, hasEstimatedExactVolumes} from '../aggregation.js'
 
+test('les index physiques gardent les secondes, les deux instants DST et les ruptures qualité, sans moyenne ni mélange', t => {
+  const readings = [
+    {readingId: 'a', observedAt: '2026-10-25T00:11:43Z', time: '02:11:43', value: '100.1234', index: '100.1234', admissible: true, quality: 'C', origin: 'Auto'},
+    {readingId: 'b', observedAt: '2026-10-25T01:11:43Z', time: '02:11:43', value: null, index: '101', admissible: false, quality: 'Y'},
+    {readingId: 'c', observedAt: '2026-10-25T02:11:43Z', time: '03:11:43', value: '102', index: '102', admissible: true}
+  ]
+  const {dailyValues, timelineSamples} = buildDailyAndTimelineData({
+    loadedValues: {
+      meterA: [{date: '2026-10-25', values: readings}],
+      meterB: [{date: '2026-10-25', values: [{...readings[0], readingId: 'other', value: '200'}]}]
+    },
+    selectedParams: ['meterA', 'meterB']
+  })
+  t.is(dailyValues.length, 0)
+  t.deepEqual(timelineSamples.map(sample => sample.timestamp.toISOString()), readings.map(reading => new Date(reading.observedAt).toISOString()))
+  t.deepEqual(timelineSamples.map(sample => sample.values), [[100.1234, 200], [null, null], [102, null]])
+  t.regex(timelineSamples[0].metas[0].detail, /02:11:43.*100\.1234/)
+  t.regex(timelineSamples[1].metas[0].comment, /exclu.*Y/)
+})
+
 test('la ventilation estimative ne concerne que les séries sélectionnées et explicitement signalées', t => {
   const series = new Map([['volume', {metadata: {exactVolumesEstimated: true}}], ['index', {metadata: {}}]])
   t.true(hasEstimatedExactVolumes(series, ['volume']))

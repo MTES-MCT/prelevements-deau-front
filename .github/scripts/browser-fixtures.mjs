@@ -10,6 +10,9 @@ import {createPublicStatsFixture} from '../../src/test/public-stats-fixture.js'
 // Synthetic backend: deliberately no database, outbound HTTP, mail or jobs.
 const zoneId = '11111111-1111-4111-8111-111111111111'
 const meterId = '22222222-2222-4222-8222-222222222222'
+const secondMeterId = '33333333-3333-4333-8333-333333333333'
+const meterRequests = new Map()
+const refreshedMeters = new Set()
 const api = createServer((request, response) => {
   const {pathname} = new URL(request.url, 'http://127.0.0.1:3431')
   const send = (status, value) => {
@@ -38,8 +41,8 @@ const api = createServer((request, response) => {
     return send(200, createPublicStatsFixture(month))
   }
 
-  const meterRole = request.headers.authorization === 'Bearer browser-test-meter-admin' ? 'ADMIN'
-    : request.headers.authorization === 'Bearer browser-test-meter-declarant' ? 'DECLARANT' : null
+  const meterRole = /^Bearer browser-test-meter-admin(?:-|$)/.test(request.headers.authorization) ? 'ADMIN'
+    : /^Bearer browser-test-meter-declarant(?:-|$)/.test(request.headers.authorization) ? 'DECLARANT' : null
   if (request.headers.authorization !== 'Bearer browser-test-api-token' && !meterRole) {
     return send(401, {message: 'Unauthorized'})
   }
@@ -84,6 +87,18 @@ const api = createServer((request, response) => {
     })
   }
 
+  if (meterRole && pathname === `/api/points-prelevement/${meterId}`) {
+    return send(200, {id: meterId, name: 'Point synthétique', flowType: 'PRELEVEMENT', right: {permissions: []}})
+  }
+
+  if (meterRole && pathname === `/api/points-prelevement/${meterId}/exploitations`) {
+    return send(200, [])
+  }
+
+  if (meterRole && pathname === '/api/__meter-series-requests') {
+    return send(200, meterRequests.get(request.headers.authorization) ?? [])
+  }
+
   if (meterRole && pathname === `/api/exploitations/${zoneId}/meter-allocations`) {
     return send(200, {meterAllocations: [{
       id: 'allocation-synthetic', compteur: {id: meterId, serialNumber: 'SYNTHETIC-001'},
@@ -96,6 +111,11 @@ const api = createServer((request, response) => {
   if (meterRole && pathname === `/api/exploitations/${zoneId}/meters/${meterId}/readings`) {
     if (meterRole !== 'ADMIN') {
       return send(403, {message: 'Droits insuffisants'})
+    }
+
+    if (request.headers.authorization.includes('-refresh-') && !refreshedMeters.has(request.headers.authorization)) {
+      refreshedMeters.add(request.headers.authorization)
+      return send(200, {items: [], nextCursor: null})
     }
 
     const cursor = new URL(request.url, 'http://127.0.0.1:3431').searchParams.get('cursor')
@@ -115,7 +135,39 @@ const api = createServer((request, response) => {
   }
 
   if (meterRole && pathname === '/api/aggregated-series/options') {
-    return send(200, {parameters: []})
+    const includeMeters = new URL(request.url, 'http://127.0.0.1:3431').searchParams.get('includeMeterReadings') === 'true'
+    return send(200, {parameters: [
+      {id: 'volume:PRELEVEMENT', name: 'volume', metricTypeCode: 'volume', label: 'Volume prélevé', unit: 'm³', flowType: 'PRELEVEMENT', valueType: 'cumulative', minDate: '2026-09-14', maxDate: '2026-09-16', temporalOperators: ['sum'], defaultTemporalOperator: 'sum', availableFrequencies: ['1 day']},
+      {id: 'index:PRELEVEMENT', name: 'index', metricTypeCode: 'index', label: 'Index historique', unit: 'm³', flowType: 'PRELEVEMENT', valueType: 'instantaneous', minDate: '2026-09-14', maxDate: '2026-09-16', temporalOperators: ['max'], defaultTemporalOperator: 'max', availableFrequencies: ['1 day']},
+      ...(meterRole === 'ADMIN' && includeMeters ? [meterId, secondMeterId].map((id, index) => ({id: `index:meter:${id}`, meterId: id, readingSeries: true, name: 'index', metricTypeCode: 'index', label: `Index — compteur SYNTHETIC-00${index + 1}`, unit: 'm³', valueType: 'instantaneous', precision: 4, minDate: '2026-09-16', maxDate: '2026-09-16', temporalOperators: ['raw'], defaultTemporalOperator: 'raw', availableFrequencies: ['instantaneous']})) : [])
+    ].filter(parameter => !request.headers.authorization.includes('-meters-only-') || parameter.readingSeries)})
+  }
+
+  if (meterRole && pathname === '/api/aggregated-series') {
+    const params = new URL(request.url, 'http://127.0.0.1:3431').searchParams
+    const requestedMeter = params.get('meterId')
+    if (requestedMeter) {
+      if (meterRole !== 'ADMIN') return send(403, {message: 'Droits insuffisants'})
+      if (![meterId, secondMeterId].includes(requestedMeter) || params.get('temporalOperator') !== 'raw' || params.get('aggregationFrequency') !== 'instantaneous') return send(400, {message: 'Contrat compteur invalide'})
+      const requests = meterRequests.get(request.headers.authorization) ?? []
+      requests.push(Object.fromEntries(params))
+      meterRequests.set(request.headers.authorization, requests)
+      const cursor = params.get('cursor')
+      const offset = requestedMeter === secondMeterId ? 10_000 : 0
+      const reading = (id, observedAt, index, admissible = true) => {
+        admissible &&= !request.headers.authorization.includes('-excluded-')
+        return {readingId: id, observedAt, time: new Intl.DateTimeFormat('en-GB', {timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit', second: '2-digit'}).format(new Date(observedAt)), value: admissible ? String(index + offset) : null, index: String(index + offset), admissible, quality: admissible ? 'C' : 'Y', origin: 'Auto'}
+      }
+      return send(200, {
+        metadata: {readingSeries: true, meterId: requestedMeter, valueType: 'instantaneous', frequency: 'instantaneous', unit: 'm³', precision: 4},
+        values: [{date: '2026-09-16', values: cursor
+          ? [reading('exact-3', '2026-09-16T12:13:45Z', 12302.4321), reading('exact-4', '2026-09-16T13:14:46Z', 12303.4321)]
+          : [reading('exact-1', '2026-09-15T22:02:43Z', 12300.1234), reading('excluded', '2026-09-16T09:12:44Z', 12301, false)]}],
+        nextCursor: cursor ? null : '44444444-4444-4444-8444-444444444444'
+      })
+    }
+
+    return send(200, {metadata: {unit: 'm³', frequency: '1 day', valueType: params.get('metricTypeCode') === 'volume' ? 'cumulative' : 'instantaneous'}, values: ['2026-09-14', '2026-09-15', '2026-09-16'].map((date, index) => ({date, value: params.get('metricTypeCode') === 'volume' ? 100 : 500 + index}))})
   }
 
   return send(404, {message: 'No synthetic fixture for this route'})

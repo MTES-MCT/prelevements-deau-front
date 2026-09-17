@@ -258,6 +258,8 @@ export async function getAggregatedSeriesOptionsAction(
       params.set('sourceId', sourceId)
     }
 
+    // Negotiate the new read-only series without changing older API clients.
+    params.set('includeMeterReadings', 'true')
     const query = params.toString() ? `?${params.toString()}` : ''
     return fetchJSON(`api/aggregated-series/options${query}`)
   }, {forbiddenOnAccessDenied})

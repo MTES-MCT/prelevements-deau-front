@@ -8,6 +8,7 @@ import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Box, Typography} from '@mui/material'
 
 import {resolveSelectedParametersDateRange} from '@/components/points-prelevement/series-date-range.js'
+import {getMeterSeriesQuery, loadMeterSeriesPages} from '@/components/points-prelevement/meter-series.js'
 import {
   resolveInitialDisplayFrequency,
   resolveSeriesDisplayFrequency
@@ -54,6 +55,7 @@ const SeriesExplorer = ({
         label: param.label ?? param.name,
         color: getParameterFlowColor(metricTypeCode, param.flowType),
         metricTypeCode,
+        readingSeries: param.readingSeries === true,
         flowType: param.flowType ?? null,
         unit: param.unit ?? metadata?.unit ?? '',
         valueType: param.valueType ?? metadata?.valueType ?? metadata?.type ?? null
@@ -235,6 +237,10 @@ const SeriesExplorer = ({
 
     for (const param of selectedParameters) {
       const definition = parameterDefinitionMap.get(param) ?? getParameterMetadata(param)
+      if (definition?.readingSeries) {
+        optionsMap[param] = []
+        continue
+      }
       const temporalOperators = definition?.temporalOperators ?? []
       optionsMap[param] = temporalOperators.map(temporalOperator => ({
         value: temporalOperator,
@@ -299,12 +305,17 @@ const SeriesExplorer = ({
 
     // Server actions cannot receive AbortSignal (not serializable)
     // Cancellation is handled client-side via isActive flag
-    const result = await getAggregatedSeriesAction(params)
-    if (!result.success) {
-      throw new Error(result.error || 'Impossible de charger les séries agrégées')
+    Object.assign(params, getMeterSeriesQuery(parameterDefinition))
+    const fetchPage = async pagination => {
+      const result = await getAggregatedSeriesAction({...params, ...pagination})
+      if (!result.success) {
+        throw new Error(result.error || 'Impossible de charger les séries agrégées')
+      }
+
+      return result.data
     }
 
-    return result.data
+    return parameterDefinition?.readingSeries ? loadMeterSeriesPages(fetchPage) : fetchPage({})
   }, [collecteurId, pointIds, preleveurId, dateRange, parameterDefinitionMap])
 
   const getVolumeValuesForRange = useCallback(async (parameterId, {startDate, endDate}) => {
@@ -502,6 +513,17 @@ const SeriesExplorer = ({
           onDisplayResolutionChange={handleDisplayResolutionChange}
         />
       )}
+      {selectedParameters.some(parameter => parameterDefinitionMap.get(parameter)?.readingSeries) && (
+        <Typography variant='body2' color='text.secondary'>
+          Index du compteur, non répartis entre les exploitations.
+        </Typography>
+      )}
+      {selectedParameters.map(parameter => {
+        const count = aggregatedSeriesMap.get(parameter)?.metadata?.excludedReadingsCount
+        return count > 0 && <Typography key={parameter} variant='body2' color='text.secondary'>
+          {parameterDefinitionMap.get(parameter)?.label} : {count} relevé{count > 1 ? 's' : ''} exclu{count > 1 ? 's' : ''} du graphique. Les index reçus restent consultables dans le tableau du compteur sur la fiche exploitation.
+        </Typography>
+      })}
     </Box>
   ) : (
     <Box className='flex flex-col gap-4'>

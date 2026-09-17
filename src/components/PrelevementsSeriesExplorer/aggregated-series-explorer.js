@@ -9,6 +9,7 @@ import {Box, Typography} from '@mui/material'
 
 import DistributedVolumeRuleInfo from '@/components/PrelevementsSeriesExplorer/distributed-volume-rule-info.js'
 import {buildDailyAndTimelineData, hasEstimatedExactVolumes} from '@/components/PrelevementsSeriesExplorer/utils/aggregation.js'
+import {includeExactReadingBounds} from '@/components/PrelevementsSeriesExplorer/utils/exact-reading-range.js'
 import CalendarGrid from '@/components/ui/CalendarGrid/index.js'
 import PeriodSelectorHeader from '@/components/ui/PeriodSelectorHeader/index.js'
 import {formatFrequencyLabel} from '@/utils/frequency.js'
@@ -128,7 +129,7 @@ const FrequencyBadges = ({badges, showDistributedVolumeRule = false}) => {
                 color: 'text.secondary'
               }}
             >
-              {formatFrequencyLabel(frequency) ?? frequency}
+              {frequency === 'instantaneous' ? 'Relevés exacts' : formatFrequencyLabel(frequency) ?? frequency}
             </Typography>
           </Box>
         ))}
@@ -574,7 +575,8 @@ const AggregatedSeriesExplorer = ({
           ?? resolvedOptionValueType
           ?? resolvedMetadataValueType
           ?? null,
-        precision: metadata?.precision ?? 0
+        readingSeries: meta.readingSeries === true,
+        precision: meta.precision ?? metadata?.precision ?? 0
       })
     }
 
@@ -849,7 +851,7 @@ const AggregatedSeriesExplorer = ({
             showRangeSlider={showRangeSlider}
             sliderMarks={sliderMarks}
             timeSeriesChartProps={timeSeriesChartProps}
-            timelineRange={committedSelectedRange}
+            timelineRange={includeExactReadingBounds(committedSelectedRange, visibleSamples)}
             volumeTotals={volumeTotals}
             onRangeChange={handleRangeChange}
             onRangeChangeCommitted={handleRangeChangeCommitted}

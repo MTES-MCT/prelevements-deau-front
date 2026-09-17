@@ -66,20 +66,20 @@ const getOrCreateDailyEntry = (context, date) => {
 }
 
 // Lazily build a timestamped sample (potentially sub-daily) and store it in the context.
-const getOrCreateTimelineEntry = (context, {date, time = null}) => {
+const getOrCreateTimelineEntry = (context, {date, time = null, observedAt = null}) => {
   const {timelineMap, parametersCount, dateRange} = context
-  const key = `${date}::${time ?? ''}`
+  const key = observedAt ? `instant::${observedAt}` : `${date}::${time ?? ''}`
   const existingSample = timelineMap.get(key)
   if (existingSample) {
     return existingSample
   }
 
   const parsedTimestamp = parseAggregationDate(date, time ?? null)
-  const timestamp = time
+  const timestamp = observedAt ? new Date(observedAt) : time
     ? parsedTimestamp
     : clampAggregationDateToRange(date, dateRange)
 
-  if (!timestamp) {
+  if (!timestamp || Number.isNaN(timestamp.getTime())) {
     return null
   }
 
@@ -87,6 +87,7 @@ const getOrCreateTimelineEntry = (context, {date, time = null}) => {
     date,
     time,
     timestamp,
+    ...(observedAt ? {observedAt} : {}),
     values: Array.from({length: parametersCount}, () => null),
     metas: Array.from({length: parametersCount}, () => null)
   }
@@ -141,6 +142,20 @@ const assignSubDailyValues = ({context, date, subValues, paramIndex}) => {
   let count = 0
 
   for (const entry of subValues) {
+    if (entry.observedAt && entry.readingId) {
+      const sample = getOrCreateTimelineEntry(context, {date, time: entry.time, observedAt: entry.observedAt})
+      if (sample) {
+        sample.values[paramIndex] = entry.admissible === true ? coerceNumericValue(entry.value) : null
+        sample.metas[paramIndex] = {
+          readingId: entry.readingId,
+          detail: `Relevé du ${new Intl.DateTimeFormat('fr-FR', {timeZone: 'Europe/Paris', dateStyle: 'short', timeStyle: 'medium'}).format(sample.timestamp)}${entry.index === null || entry.index === undefined ? '' : ` — Index : ${entry.index} m³`}`,
+          comment: [entry.admissible ? null : 'Relevé exclu', entry.quality && `Qualité : ${entry.quality}`, entry.origin && `Origine : ${entry.origin}`].filter(Boolean).join(' • ')
+        }
+      }
+
+      continue
+    }
+
     const numericValue = coerceNumericValue(entry?.value)
     if (numericValue === null) {
       continue
