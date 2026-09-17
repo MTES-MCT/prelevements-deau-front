@@ -9,6 +9,7 @@ import {Box, Typography} from '@mui/material'
 
 import {resolveSelectedParametersDateRange} from '@/components/points-prelevement/series-date-range.js'
 import {getMeterSeriesQuery, loadMeterSeriesPages} from '@/components/points-prelevement/meter-series.js'
+import {buildSeriesPresentations} from '@/components/points-prelevement/series-presentation.js'
 import {
   resolveInitialDisplayFrequency,
   resolveSeriesDisplayFrequency
@@ -47,13 +48,13 @@ const SeriesExplorer = ({
 
   // Construit les options de paramètres depuis la réponse API
   const parameterOptions = useMemo(
-    () => (seriesOptions?.parameters ?? []).map(param => {
+    () => buildSeriesPresentations(seriesOptions?.parameters).map(param => {
       const metadata = getParameterMetadata(param.name)
       const metricTypeCode = param.metricTypeCode ?? param.code ?? param.name
       return {
         value: param.id ?? metricTypeCode,
         label: param.label ?? param.name,
-        color: getParameterFlowColor(metricTypeCode, param.flowType),
+        color: param.color ?? getParameterFlowColor(metricTypeCode, param.flowType),
         metricTypeCode,
         readingSeries: param.readingSeries === true,
         flowType: param.flowType ?? null,
@@ -521,7 +522,7 @@ const SeriesExplorer = ({
       {selectedParameters.map(parameter => {
         const count = aggregatedSeriesMap.get(parameter)?.metadata?.excludedReadingsCount
         return count > 0 && <Typography key={parameter} variant='body2' color='text.secondary'>
-          {parameterDefinitionMap.get(parameter)?.label} : {count} relevé{count > 1 ? 's' : ''} exclu{count > 1 ? 's' : ''} du graphique. Les index reçus restent consultables dans le tableau du compteur sur la fiche exploitation.
+          {parameterOptions.find(option => option.value === parameter)?.label} : {count} relevé{count > 1 ? 's' : ''} exclu{count > 1 ? 's' : ''} du graphique. Les index reçus restent consultables dans le tableau du compteur sur la fiche exploitation.
         </Typography>
       })}
     </Box>

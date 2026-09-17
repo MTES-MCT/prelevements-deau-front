@@ -78,6 +78,19 @@ export function isTelemetrySource(source, declaration = source?.declaration) {
   return source?.type === 'API' || declaration?.dataSourceType === 'API'
 }
 
+export function isMeterTelemetrySource(source) {
+  return source?.type === 'API' && source?.metadata?.calculationStrategy === 'METER'
+}
+
+export function getDeclarationAdminCapabilities(source, role) {
+  const canManage = role === 'ADMIN' && Boolean(source?.declaration?.id)
+    && source?.readOnly !== true && !isMeterTelemetrySource(source)
+  return {
+    canDelete: canManage && source?.canDelete !== false,
+    canReplay: canManage && source?.canReplay !== false && (source.declaration.files?.length ?? 0) > 0
+  }
+}
+
 export function isPointReconciliationRelevant(declaration, source = declaration?.source) {
   return source?.type === 'DECLARATION' && declaration?.dataSourceType === 'SPREADSHEET'
 }

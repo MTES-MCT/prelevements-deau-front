@@ -10,6 +10,7 @@ import {
   getSourceReadingDateLabel,
   isDeclarationTreatmentPending,
   isManualQuickDeclarationSource,
+  isMeterTelemetrySource,
   isTelemetrySource,
   sourceStateLabels
 } from '@/lib/declaration.js'
@@ -310,20 +311,24 @@ function getManualQuickDeclarationPeriodLabel(source) {
 
 function getTelemetryReadingsLabel(source) {
   const chunks = source?.chunks ?? []
+  const singular = isMeterTelemetrySource(source) ? 'volume calculé' : 'relevé'
+  const plural = isMeterTelemetrySource(source) ? 'volumes calculés' : 'relevés'
   const countedChunks = chunks.filter(chunk => Number.isFinite(Number(chunk?._count?.chunkValues)))
 
   if (countedChunks.length > 0) {
     const count = countedChunks.reduce((sum, chunk) => sum + Number(chunk._count.chunkValues), 0)
-    return formatCount(count, 'relevé')
+    return formatCount(count, singular, plural)
   }
 
   const visibleValuesCount = chunks.reduce((sum, chunk) => sum + (chunk.chunkValues?.length ?? 0), 0)
 
   if (visibleValuesCount > 0) {
-    return formatCount(visibleValuesCount, 'relevé')
+    return formatCount(visibleValuesCount, singular, plural)
   }
 
-  return formatCount(source?._count?.chunks ?? chunks.length, 'mesure télérelevée')
+  return isMeterTelemetrySource(source)
+    ? 'Volumes calculés automatiquement'
+    : formatCount(source?._count?.chunks ?? chunks.length, 'mesure télérelevée')
 }
 
 function getTelemetryPreleveurNames(source, declaration) {

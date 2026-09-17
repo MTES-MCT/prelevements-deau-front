@@ -138,9 +138,10 @@ const FrequencyBadges = ({badges, showDistributedVolumeRule = false}) => {
   )
 }
 
-const ParameterOptionContent = ({label, unitLabel}) => (
+const ParameterOptionContent = ({label, unitLabel, color}) => (
   <div className='selector-option-content'>
-    <div className='selector-option-header'>
+    <div className='selector-option-header' style={color ? {justifyContent: 'flex-start'} : undefined}>
+      {color && <span aria-hidden='true' className='inline-block h-2.5 w-2.5 shrink-0 rounded-full' style={{backgroundColor: color}} />}
       <span className='selector-option-label'>{label}</span>
     </div>
     {unitLabel && (
@@ -181,6 +182,7 @@ const buildNormalizedOption = ({
       <ParameterOptionContent
         label={resolvedLabel}
         unitLabel={normalizedUnit}
+        color={color}
       />
     )
   }
@@ -411,7 +413,9 @@ const AggregatedSeriesExplorer = ({
     const groupedByValueType = new Map()
 
     for (const option of optionsWithDisabled) {
-      const valueTypeLabel = formatValueTypeLabel(option.valueType) ?? 'Non spécifié'
+      const valueTypeLabel = option.metricTypeCode === 'index'
+        ? 'Index'
+        : formatValueTypeLabel(option.valueType) ?? 'Non spécifié'
       if (!groupedByValueType.has(valueTypeLabel)) {
         groupedByValueType.set(valueTypeLabel, [])
       }

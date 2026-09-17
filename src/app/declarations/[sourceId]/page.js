@@ -8,6 +8,7 @@ import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
 import {
   buildDeclarationViewFromSource,
+  getDeclarationAdminCapabilities,
   getDeclarationDisplayStatus,
   getSourcePeriodLabel,
   getPointsPrelevementIdsFromSource,
@@ -57,9 +58,7 @@ const SourcePage = async ({params}) => {
     declaration,
     source
   })
-  const canAdminManageDeclaration = currentRole === 'ADMIN' && Boolean(source.declaration?.id)
-  const canReplayDeclaration = canAdminManageDeclaration
-    && (source.declaration?.files?.length ?? 0) > 0
+  const {canDelete, canReplay} = getDeclarationAdminCapabilities(source, currentRole)
 
   const availablePointsResult = shouldLoadAvailablePoints
     ? await getAvailablePointsPrelevementsForDeclarationAction(declaration.id)
@@ -82,10 +81,11 @@ const SourcePage = async ({params}) => {
         periodLabel={periodLabel}
         declarantName={declaration.declarant ? getDeclarantTitleFromDeclarant(declaration.declarant) : null}
         actions={
-          canAdminManageDeclaration
+          canDelete || canReplay
             ? (
               <DeclarationAdminActions
-                canReplay={canReplayDeclaration}
+                canDelete={canDelete}
+                canReplay={canReplay}
                 declarationCode={declaration.code}
                 declarationId={declaration.id}
                 sourceId={source.id}

@@ -1,12 +1,13 @@
 'use client'
 
 import {
-  useCallback, useEffect, useMemo, useState
+  useCallback, useEffect, useMemo, useState, useSyncExternalStore
 } from 'react'
 
 import Alert from '@codegouvfr/react-dsfr/Alert'
 import {Badge} from '@codegouvfr/react-dsfr/Badge'
 import Button from '@codegouvfr/react-dsfr/Button'
+import Checkbox from '@codegouvfr/react-dsfr/Checkbox'
 import Input from '@codegouvfr/react-dsfr/Input'
 
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
@@ -23,6 +24,9 @@ import {
 } from '@/server/actions/exports.js'
 
 const REFRESH_INTERVAL_MS = 4000
+const subscribeToHydration = () => () => {}
+const getClientSnapshot = () => true
+const getServerSnapshot = () => false
 
 const zoneTypePresentations = {
   REGION: {
@@ -273,6 +277,7 @@ function buildExportFilterSummary(item, optionLabelMaps) {
   const sandreZoneLabels = getSandreZoneFilterLabels(item.filters, optionLabelMaps.sandreZone)
 
   return [
+    ...(item.filters?.includeMeterReadings === true ? [{label: 'Index des compteurs', value: 'Inclus'}] : []),
     {
       label: 'Usages',
       value: usageIds.length > 0
@@ -496,11 +501,13 @@ const ExportForm = ({
   options = {},
   initialExports = []
 }) => {
+  const hydrated = useSyncExternalStore(subscribeToHydration, getClientSnapshot, getServerSnapshot)
   const [exports, setExports] = useState(initialExports)
   const [selectedUsageIds, setSelectedUsageIds] = useState([])
   const [selectedZoneIds, setSelectedZoneIds] = useState([])
   const [selectedSandreZoneIds, setSelectedSandreZoneIds] = useState([])
   const [selectedWaterBodyTypes, setSelectedWaterBodyTypes] = useState([])
+  const [includeMeterReadings, setIncludeMeterReadings] = useState(true)
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [error, setError] = useState(null)
@@ -591,7 +598,8 @@ const ExportForm = ({
         usageIds: selectedUsageIds,
         zoneIds: selectedZoneIds,
         sandreZoneIds: selectedSandreZoneIds,
-        waterBodyTypes: selectedWaterBodyTypes
+        waterBodyTypes: selectedWaterBodyTypes,
+        ...(options.canExportMeterReadings === true ? {includeMeterReadings} : {})
       })
 
       if (result.success) {
@@ -668,116 +676,131 @@ const ExportForm = ({
     <div className='flex flex-col gap-8'>
       <section className='border border-gray-200 bg-white p-4 md:p-5'>
         <form className='flex flex-col gap-4' onSubmit={handleSubmit}>
-          {error && (
-            <Alert
-              small
-              severity='error'
-              description={error}
-            />
-          )}
+          <fieldset disabled={!hydrated} className='m-0 flex min-w-0 flex-col gap-4 border-0 p-0'>
+            {error && (
+              <Alert
+                small
+                severity='error'
+                description={error}
+              />
+            )}
 
-          <div>
-            <h2 className='fr-h5 fr-mb-1w'>
-              Paramètres de l’export
-            </h2>
-            <p className='fr-text--sm fr-mb-0 text-gray-700'>
-              Le volume est toujours indiqué. L’index l’est aussi lorsqu’il a été déclaré : certaines déclarations portent uniquement sur le volume, la colonne index est alors vide. La génération du fichier peut prendre quelques minutes selon la période et le nombre de points concernés. Une fois prêt, il est disponible dans l’historique en bas de cette page.
-            </p>
-          </div>
-
-          <div className='flex flex-col gap-2'>
-            <p className='fr-text--sm fr-mb-0 font-medium text-gray-700'>
-              Périodes prédéfinies
-            </p>
-
-            <div className='flex flex-wrap gap-2'>
-              {periodPresets.map(preset => (
-                <button
-                  key={preset.label}
-                  type='button'
-                  className='fr-tag'
-                  onClick={() => applyPeriodPreset(preset)}
-                >
-                  {preset.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
-            <Input
-              label='Date de début *'
-              nativeInputProps={{
-                max: todayDate,
-                type: 'date',
-                value: startDate,
-                required: true,
-                onChange: event => setStartDate(event.target.value)
-              }}
-            />
-
-            <Input
-              label='Date de fin *'
-              nativeInputProps={{
-                max: todayDate,
-                type: 'date',
-                value: endDate,
-                required: true,
-                onChange: event => setEndDate(event.target.value)
-              }}
-            />
-          </div>
-
-          <div className='flex flex-col gap-4 border-t border-gray-200 pt-4'>
             <div>
               <h2 className='fr-h5 fr-mb-1w'>
-                Paramètres optionnels
+                Paramètres de l’export
               </h2>
               <p className='fr-text--sm fr-mb-0 text-gray-700'>
-                Par défaut, le fichier d’export contiendra toutes les options possibles ci-dessous.
+                L’onglet Données contient les volumes et les index déclarés lorsqu’ils sont disponibles. La génération du fichier peut prendre quelques minutes selon la période et le nombre de points concernés. Une fois prêt, il est disponible dans l’historique en bas de cette page.
               </p>
             </div>
 
-            <GroupedMultiselect
-              label='Usages'
-              placeholder='Tous les usages'
-              options={usageOptions}
-              value={selectedUsageIds}
-              onChange={setSelectedUsageIds}
-            />
+            {options.canExportMeterReadings === true && (
+              <Checkbox
+                options={[{
+                  label: 'Inclure les index des compteurs',
+                  hintText: 'Onglet séparé : index du compteur, non répartis entre les exploitations.',
+                  nativeInputProps: {
+                    checked: includeMeterReadings,
+                    onChange: event => setIncludeMeterReadings(event.target.checked)
+                  }
+                }]}
+              />
+            )}
 
-            <GroupedMultiselect
-              label='Zones'
-              placeholder='Toutes les zones accessibles'
-              options={zoneOptions}
-              value={selectedZoneIds}
-              onChange={setSelectedZoneIds}
-            />
+            <div className='flex flex-col gap-2'>
+              <p className='fr-text--sm fr-mb-0 font-medium text-gray-700'>
+                Périodes prédéfinies
+              </p>
 
-            <GroupedMultiselect
-              searchable
-              label='Zones hydrologiques SANDRE'
-              hint='Les points situés dans au moins une des zones sélectionnées seront inclus.'
-              placeholder='Toutes les zones hydrologiques SANDRE'
-              options={sandreZoneOptions}
-              value={selectedSandreZoneIds}
-              onChange={setSelectedSandreZoneIds}
-            />
+              <div className='flex flex-wrap gap-2'>
+                {periodPresets.map(preset => (
+                  <button
+                    key={preset.label}
+                    type='button'
+                    className='fr-tag'
+                    onClick={() => applyPeriodPreset(preset)}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-            <GroupedMultiselect
-              label='Type de milieu du point'
-              placeholder='Tous les types de milieu'
-              options={waterBodyTypeOptions}
-              value={selectedWaterBodyTypes}
-              onChange={setSelectedWaterBodyTypes}
-            />
-          </div>
+            <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+              <Input
+                label='Date de début *'
+                nativeInputProps={{
+                  max: todayDate,
+                  type: 'date',
+                  value: startDate,
+                  required: true,
+                  onChange: event => setStartDate(event.target.value)
+                }}
+              />
 
-          <div>
-            <Button type='submit' disabled={submitting}>
-              {submitting ? 'Demande en cours...' : 'Créer l’export'}
-            </Button>
-          </div>
+              <Input
+                label='Date de fin *'
+                nativeInputProps={{
+                  max: todayDate,
+                  type: 'date',
+                  value: endDate,
+                  required: true,
+                  onChange: event => setEndDate(event.target.value)
+                }}
+              />
+            </div>
+
+            <div className='flex flex-col gap-4 border-t border-gray-200 pt-4'>
+              <div>
+                <h2 className='fr-h5 fr-mb-1w'>
+                  Paramètres optionnels
+                </h2>
+                <p className='fr-text--sm fr-mb-0 text-gray-700'>
+                  Par défaut, le fichier d’export contiendra toutes les options possibles ci-dessous.
+                </p>
+              </div>
+
+              <GroupedMultiselect
+                label='Usages'
+                placeholder='Tous les usages'
+                options={usageOptions}
+                value={selectedUsageIds}
+                onChange={setSelectedUsageIds}
+              />
+
+              <GroupedMultiselect
+                label='Zones'
+                placeholder='Toutes les zones accessibles'
+                options={zoneOptions}
+                value={selectedZoneIds}
+                onChange={setSelectedZoneIds}
+              />
+
+              <GroupedMultiselect
+                searchable
+                label='Zones hydrologiques SANDRE'
+                hint='Les points situés dans au moins une des zones sélectionnées seront inclus.'
+                placeholder='Toutes les zones hydrologiques SANDRE'
+                options={sandreZoneOptions}
+                value={selectedSandreZoneIds}
+                onChange={setSelectedSandreZoneIds}
+              />
+
+              <GroupedMultiselect
+                label='Type de milieu du point'
+                placeholder='Tous les types de milieu'
+                options={waterBodyTypeOptions}
+                value={selectedWaterBodyTypes}
+                onChange={setSelectedWaterBodyTypes}
+              />
+            </div>
+
+            <div>
+              <Button type='submit' disabled={submitting}>
+                {submitting ? 'Demande en cours...' : 'Créer l’export'}
+              </Button>
+            </div>
+          </fieldset>
         </form>
       </section>
 

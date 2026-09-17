@@ -16,6 +16,7 @@ test('une part absente ou incohérente ne devient jamais 100 %', t => {
 })
 
 test('les statuts distinguent affectation incomplète et synchronisation réussie', t => {
+  t.deepEqual(getMeterSynchronizationStatus({status: 'ENDED', sync: {state: 'SUCCESS'}}), {status: 'Affectation terminée', severity: 'info'})
   t.regex(getMeterSynchronizationStatus({status: 'INCOMPLETE', sync: {state: 'SUCCESS'}}).note, /aucun volume attribué/)
   t.deepEqual(getMeterSynchronizationStatus({status: 'ACTIVE', sync: {state: 'ERROR'}}), {status: 'Dernière synchronisation en échec', severity: 'error'})
   t.deepEqual(getMeterSynchronizationStatus({status: 'ACTIVE', sync: {state: 'PENDING'}}), {status: 'En attente', severity: 'info'})

@@ -13,7 +13,13 @@ const meterId = '22222222-2222-4222-8222-222222222222'
 const secondMeterId = '33333333-3333-4333-8333-333333333333'
 const meterRequests = new Map()
 const refreshedMeters = new Set()
-const api = createServer((request, response) => {
+const syntheticExports = new Map()
+const sourceId = '55555555-5555-4555-8555-555555555555'
+const streamId = '66666666-6666-4666-8666-666666666666'
+const targetId = '77777777-7777-4777-8777-777777777777'
+const allocationUpdates = new Map()
+const allocationConflicts = new Set()
+const api = createServer(async (request, response) => {
   const {pathname} = new URL(request.url, 'http://127.0.0.1:3431')
   const send = (status, value) => {
     response.writeHead(status, {'Content-Type': 'application/json'})
@@ -42,14 +48,15 @@ const api = createServer((request, response) => {
   }
 
   const meterRole = /^Bearer browser-test-meter-admin(?:-|$)/.test(request.headers.authorization) ? 'ADMIN'
-    : /^Bearer browser-test-meter-declarant(?:-|$)/.test(request.headers.authorization) ? 'DECLARANT' : null
+    : /^Bearer browser-test-meter-instructor(?:-|$)/.test(request.headers.authorization) ? 'INSTRUCTOR'
+      : /^Bearer browser-test-meter-declarant(?:-|$)/.test(request.headers.authorization) ? 'DECLARANT' : null
   if (request.headers.authorization !== 'Bearer browser-test-api-token' && !meterRole) {
     return send(401, {message: 'Unauthorized'})
   }
 
   if (pathname === '/info' || pathname === '/api/info') {
     return send(200, {
-      role: meterRole || 'INSTRUCTOR', permissions: ['zone.export'], user: {id: zoneId, email: 'test@example.test'},
+      role: meterRole || 'INSTRUCTOR', permissions: ['zone.export', ...(['ADMIN', 'INSTRUCTOR'].includes(meterRole) ? ['export.volumes'] : [])], user: {id: zoneId, email: 'test@example.test'},
       expiresAt: new Date(Date.now() + 3_600_000).toISOString()
     })
   }
@@ -73,7 +80,51 @@ const api = createServer((request, response) => {
   }
 
   if (pathname === '/api/referentiels/usages-eau') {
-    return send(200, {items: []})
+    return send(200, {items: [{id: '88888888-8888-4888-8888-888888888888', kind: 'USAGE', code: 'A', label: 'Irrigation', children: []}]})
+  }
+
+  if (meterRole && pathname === '/api/exports/options') {
+    return send(200, {canExportMeterReadings: meterRole === 'ADMIN', usages: [], zones: [], sandreZones: [], waterBodyTypes: []})
+  }
+
+  if (meterRole && pathname === '/api/exports') {
+    const items = syntheticExports.get(request.headers.authorization) ?? []
+    if (request.method === 'POST') {
+      const parts = []
+      for await (const part of request) parts.push(part)
+      const filters = JSON.parse(Buffer.concat(parts).toString())
+      if (filters.includeMeterReadings && meterRole !== 'ADMIN') return send(403, {message: 'Droits insuffisants'})
+      const item = {id: `synthetic-export-${items.length}`, status: 'COMPLETED', rowCount: 2, fileName: 'export-synthetique.xlsx', createdAt: new Date().toISOString(), filters}
+      syntheticExports.set(request.headers.authorization, [item, ...items])
+      return send(201, item)
+    }
+
+    return send(200, {items})
+  }
+
+  if (meterRole && (pathname === '/api/declarations/me/feed' || pathname === `/api/declarations/telemetry-sources/${sourceId}` || pathname === `/api/sources/${sourceId}`)) {
+    const source = {
+      id: sourceId, type: 'API', status: 'COMPLETED', globalInstructionStatus: 'VALIDATED', createdAt: '2026-09-17T12:00:00Z',
+      readOnly: true, canEdit: false, canDelete: false, canInstruct: false, canReconcile: false,
+      metadata: {calculationStrategy: 'METER', totalWaterVolumeWithdrawn: 70},
+      declarant: {id: zoneId, socialReason: 'Préleveur synthétique'},
+      chunks: [{
+        id: 'synthetic-meter-volume', calculationStrategy: 'METER', canEdit: false, canDelete: false, canReconcile: false,
+        pointPrelevementId: meterId, pointPrelevement: {id: meterId, name: 'Point synthétique', flowType: 'PRELEVEMENT'},
+        parameter: 'volume', metricType: {code: 'volume', name: 'Volume'}, unit: 'm³', frequency: '1 day',
+        minDate: '2026-09-16', maxDate: '2026-09-16', valuesCount: 1, _count: {chunkValues: 1},
+        chunkValues: [{id: 'synthetic-volume-value', value: 70, metricTypeCode: 'volume', unit: 'm³', valueKind: 'COMPUTED', periodStart: '2026-09-16T08:00:00Z', periodEnd: '2026-09-16T10:00:00Z'}]
+      }]
+    }
+    if (pathname === '/api/declarations/me/feed') {
+      return send(200, {
+        success: true,
+        data: [{id: `telemetry-${sourceId}`, kind: 'TELEMETRY', createdAt: source.createdAt, source, declaration: {id: sourceId, dataSourceType: 'API', title: 'Données télérelevées', createdAt: source.createdAt}, url: `/mes-declarations/sources/${sourceId}`}],
+        meta: {total: 1, countsByKind: {TELEMETRY: 1}, canCreateDeclaration: false, canCreateQuickDeclaration: false}, pagination: {hasNext: false}
+      })
+    }
+
+    return send(200, {success: true, data: source})
   }
 
   if (meterRole && pathname === `/api/exploitations/${zoneId}`) {
@@ -83,7 +134,7 @@ const api = createServer((request, response) => {
       mostRecentAvailableDate: '2026-09-15', collecteurs: [],
       declarant: {id: zoneId, socialReason: 'Préleveur synthétique'},
       pointPrelevement: {id: meterId, name: 'Point synthétique'},
-      right: {canEdit: false, permissions: []}
+      right: {canEdit: request.headers.authorization.includes('-allocation-'), permissions: []}
     })
   }
 
@@ -103,9 +154,46 @@ const api = createServer((request, response) => {
     return send(200, {meterAllocations: [{
       id: 'allocation-synthetic', compteur: {id: meterId, serialNumber: 'SYNTHETIC-001'},
       percentage: '70', startDate: '2026-01-01', endDate: null, status: 'ACTIVE', provider: 'sample-provider',
-      sync: {available: true, state: 'SUCCESS', lastSuccessAt: '2026-09-17T10:00:00Z', lastReadingAt: '2026-09-16T08:11:43Z'},
-      capabilities: {canReadGlobalReadings: meterRole === 'ADMIN'}
+      sync: {streamId, available: true, state: request.headers.authorization.includes('-allocation-') ? 'DISABLED' : 'SUCCESS', lastSuccessAt: '2026-09-17T10:00:00Z', lastReadingAt: '2026-09-16T08:11:43Z'},
+      capabilities: {canReadGlobalReadings: meterRole === 'ADMIN', canEditAllocations: meterRole === 'ADMIN'}
     }]})
+  }
+
+  if (meterRole && pathname === '/api/__allocation-updates') {
+    return send(200, allocationUpdates.get(request.headers.authorization) ?? [])
+  }
+
+  if (meterRole && pathname === '/api/meters/allocation-targets') {
+    if (meterRole !== 'ADMIN') return send(403, {message: 'Droits insuffisants'})
+    return send(200, {items: [{id: targetId, label: 'Nouvelle exploitation — Point voisin'}]})
+  }
+
+  if (meterRole && pathname === `/api/exploitations/${zoneId}/meters/${meterId}/allocation-settings`) {
+    if (meterRole !== 'ADMIN') return send(403, {message: 'Droits insuffisants'})
+    const unresolved = request.headers.authorization.includes('-unresolved-')
+    const hadConflict = allocationConflicts.has(request.headers.authorization)
+    const settings = {
+      meter: {id: meterId, serialNumber: 'SYNTHETIC-001'}, stream: {id: streamId, provider: 'sample-provider', enabled: false},
+      expectedVersion: hadConflict ? 'new-version' : 'original-version', minEffectiveDate: hadConflict ? '2026-09-19' : '2026-09-18',
+      allocations: [
+        {key: 'part-local', exploitationId: zoneId, exploitationLabel: 'Exploitation actuelle — Point synthétique', percentage: '70', additive: false, inScope: true, unresolved: false},
+        {key: 'part-external', exploitationId: null, exploitationLabel: null, percentage: '30', additive: false, inScope: unresolved, unresolved}
+      ]
+    }
+    if (request.method === 'PUT') {
+      const parts = []
+      for await (const part of request) parts.push(part)
+      const body = JSON.parse(Buffer.concat(parts).toString())
+      allocationUpdates.set(request.headers.authorization, [...(allocationUpdates.get(request.headers.authorization) ?? []), body])
+      if (request.headers.authorization.includes('-conflict-') && !hadConflict) {
+        allocationConflicts.add(request.headers.authorization)
+        return send(409, {message: 'Version modifiée'})
+      }
+
+      return send(200, {...settings, expectedVersion: 'saved-version', allocations: body.allocations, recalculation: {published: 2, conflicts: 0, issues: []}})
+    }
+
+    return send(200, settings)
   }
 
   if (meterRole && pathname === `/api/exploitations/${zoneId}/meters/${meterId}/readings`) {
@@ -139,7 +227,7 @@ const api = createServer((request, response) => {
     return send(200, {parameters: [
       {id: 'volume:PRELEVEMENT', name: 'volume', metricTypeCode: 'volume', label: 'Volume prélevé', unit: 'm³', flowType: 'PRELEVEMENT', valueType: 'cumulative', minDate: '2026-09-14', maxDate: '2026-09-16', temporalOperators: ['sum'], defaultTemporalOperator: 'sum', availableFrequencies: ['1 day']},
       {id: 'index:PRELEVEMENT', name: 'index', metricTypeCode: 'index', label: 'Index historique', unit: 'm³', flowType: 'PRELEVEMENT', valueType: 'instantaneous', minDate: '2026-09-14', maxDate: '2026-09-16', temporalOperators: ['max'], defaultTemporalOperator: 'max', availableFrequencies: ['1 day']},
-      ...(meterRole === 'ADMIN' && includeMeters ? [meterId, secondMeterId].map((id, index) => ({id: `index:meter:${id}`, meterId: id, readingSeries: true, name: 'index', metricTypeCode: 'index', label: `Index — compteur SYNTHETIC-00${index + 1}`, unit: 'm³', valueType: 'instantaneous', precision: 4, minDate: '2026-09-16', maxDate: '2026-09-16', temporalOperators: ['raw'], defaultTemporalOperator: 'raw', availableFrequencies: ['instantaneous']})) : [])
+      ...(meterRole === 'ADMIN' && includeMeters ? [meterId, secondMeterId].map((id, index) => ({id: `index:meter:${id}`, meterId: id, meter: {id, serialNumber: `SYNTHETIC-00${index + 1}`, identifier: null}, readingSeries: true, name: 'index', metricTypeCode: 'index', label: `Index — compteur SYNTHETIC-00${index + 1}`, unit: 'm³', valueType: 'instantaneous', precision: 4, minDate: '2026-09-16', maxDate: '2026-09-16', temporalOperators: ['raw'], defaultTemporalOperator: 'raw', availableFrequencies: ['instantaneous']})) : [])
     ].filter(parameter => !request.headers.authorization.includes('-meters-only-') || parameter.readingSeries)})
   }
 

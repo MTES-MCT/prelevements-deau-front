@@ -2,6 +2,8 @@ import test from 'ava'
 
 import {
   buildDeclarationViewFromSource,
+  getDeclarationAdminCapabilities,
+  isMeterTelemetrySource,
   formatFullAddress,
   getDeclarationEntryKind,
   getDeclarationDisplayStatus,
@@ -17,6 +19,17 @@ import {
   isTelemetrySource,
   shouldLoadAvailablePointsForDeclaration
 } from './declaration.js'
+
+test('les télérelèves compteur restent en lecture seule même pour un administrateur', t => {
+  const declaration = {id: 'declaration', files: [{id: 'file'}]}
+  const source = {type: 'API', metadata: {calculationStrategy: 'METER'}, declaration}
+  t.true(isMeterTelemetrySource(source))
+  t.deepEqual(getDeclarationAdminCapabilities(source, 'ADMIN'), {canDelete: false, canReplay: false})
+  t.deepEqual(getDeclarationAdminCapabilities({declaration, readOnly: true}, 'ADMIN'), {canDelete: false, canReplay: false})
+  t.deepEqual(getDeclarationAdminCapabilities({declaration}, 'ADMIN'), {canDelete: true, canReplay: true})
+  t.deepEqual(getDeclarationAdminCapabilities({declaration, canDelete: false, canReplay: false}, 'ADMIN'), {canDelete: false, canReplay: false})
+  t.deepEqual(getDeclarationAdminCapabilities({declaration}, 'DECLARANT'), {canDelete: false, canReplay: false})
+})
 
 test('isTelemetrySource détecte les sources API et les déclarations API', t => {
   t.true(isTelemetrySource({type: 'API'}))

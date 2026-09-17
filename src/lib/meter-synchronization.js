@@ -1,4 +1,8 @@
 export function getMeterSynchronizationStatus(allocation) {
+  if (allocation.status === 'ENDED') {
+    return {status: 'Affectation terminée', severity: 'info'}
+  }
+
   if (allocation.sync?.available === false) {
     return {status: 'Non connecté', note: 'Sans synchronisation automatique.'}
   }

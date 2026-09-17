@@ -8,6 +8,7 @@ import {
   getDeclarationPointTechnicalReference
 } from '@/lib/declaration-point-name.js'
 import {getDeclarationTypeLabel} from '@/lib/declaration-types.js'
+import {isMeterTelemetrySource} from '@/lib/declaration.js'
 import {getPointFlowTypeLabel, POINT_FLOW_TYPES} from '@/lib/point-flow-types.js'
 import {getPointPrelevementURL} from '@/lib/urls.js'
 import {
@@ -610,6 +611,11 @@ const SourceDataDetails = ({declaration, preferUsageName = false, source}) => {
         <h2 className='fr-h5 fr-mb-0'>
           {isTelemetry ? 'Données télérelevées' : 'Données déclarées'}
         </h2>
+        {isMeterTelemetrySource(source) && (
+          <p className='fr-text--sm fr-mb-0 text-gray-600'>
+            Ces volumes sont calculés à partir des index des compteurs et mis à jour automatiquement. Ils ne sont pas modifiables ici.
+          </p>
+        )}
       </div>
 
       <div className='divide-y divide-gray-200 border border-gray-300 bg-white'>
