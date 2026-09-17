@@ -25,7 +25,8 @@ export function isMeterPeriodSource(source, chunk) {
 export function getMeterPeriod(source, chunk) {
   if (!isMeterPeriodSource(source, chunk)) return null
   if (chunk) return readPeriod(chunk.metadata) ?? mergePeriods((chunk.chunkValues ?? []).map(readPeriod))
-  return readPeriod(source?.metadata) ?? mergePeriods((source?.chunks ?? []).map(item => getMeterPeriod(source, item)))
+  return readPeriod(source?.metadata) ?? mergePeriods((source?.chunks ?? [])
+    .filter(item => item.instructionStatus !== 'REJECTED').map(item => getMeterPeriod(source, item)))
 }
 
 export function formatMeterCoveredPeriod(period) {

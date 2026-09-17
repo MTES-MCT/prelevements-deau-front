@@ -40,3 +40,14 @@ test('une date sans offset ou une période nulle ne devient pas un instant compt
   t.is(getMeterPeriod(source('2026-01-01', '2026-01-02')), null)
   t.is(getMeterPeriod(source('2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')), null)
 })
+
+test('le repli sur les chunks ne réintroduit pas une période rejetée dans la source', t => {
+  const rejected = {calculationStrategy: 'METER', instructionStatus: 'REJECTED',
+    metadata: {periodStart: '2025-12-31T23:00:00Z', periodEnd: '2026-01-01T23:00:00Z'}}
+  const active = {...rejected, instructionStatus: 'AUTOMATICALLY_VALIDATED',
+    metadata: {periodStart: '2026-01-01T23:00:00Z', periodEnd: '2026-01-02T23:00:00Z'}}
+  const item = {...source(), chunks: [rejected, active]}
+  t.is(getSourcePeriodLabel(item), '02/01/2026')
+  t.is(getSourcePeriodLabel({...item, chunks: [rejected]}), null)
+  t.is(formatMeterCoveredPeriod(getMeterPeriod(item, rejected)), '01/01/2026')
+})
