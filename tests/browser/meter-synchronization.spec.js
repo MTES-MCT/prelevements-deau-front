@@ -47,15 +47,33 @@ test('le préleveur voit sa part sans index global ni navigation de campagne', a
 
 test('l’administrateur consulte les relevés exacts au clavier puis la page suivante', async ({page, context}, testInfo) => {
   await authenticate(context, 'ADMIN')
-  await page.goto(`${frontUrl}/exploitations/${exploitationId}`)
+  // Reproduce slow hydration deterministically, without sleeps or retries.
+  const scripts = Promise.withResolvers()
+  await page.route('**/_next/static/**/*.js', async route => {
+    await scripts.promise
+    await route.continue()
+  })
+  await page.goto(`${frontUrl}/exploitations/${exploitationId}`, {waitUntil: 'commit'})
   const open = page.getByRole('button', {name: 'Voir les relevés du compteur'})
+  try {
+    await expect(open).toBeDisabled()
+  } finally {
+    scripts.resolve()
+  }
+
+  await expect(open).toBeEnabled()
   await open.focus()
+  await expect(open).toBeFocused()
   await open.press('Enter')
+  await expect(page.getByRole('button', {name: 'Masquer les relevés du compteur'})).toHaveAttribute('aria-expanded', 'true')
   const table = page.getByRole('table', {name: 'Relevés physiques du compteur'})
   await expect(table).toBeVisible()
   await expect(table).toContainText('10:11:43')
   await expect(table.getByRole('cell', {name: 'C', exact: true})).toHaveCount(1)
-  await page.getByRole('button', {name: 'Charger les relevés suivants'}).click()
+  const next = page.getByRole('button', {name: 'Charger les relevés suivants'})
+  await next.focus()
+  await expect(next).toBeFocused()
+  await next.press('Enter')
   await expect(table.getByRole('row')).toHaveCount(3)
   await expect(table.getByRole('cell', {name: 'Y', exact: true})).toHaveCount(1)
   await expect(table).toContainText('Exclu')
