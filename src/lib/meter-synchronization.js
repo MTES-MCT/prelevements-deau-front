@@ -50,8 +50,11 @@ export function getMeterQualityLabel(quality) {
 }
 
 export function formatMeterIndex(value) {
-  return value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value))
-    ? Number(value).toLocaleString('fr-FR', {maximumFractionDigits: 4}) : 'Non renseigné'
+  const match = /^(\d{1,16})(?:\.(\d{1,4}))?$/.exec(String(value ?? ''))
+  if (!match) return 'Non renseigné'
+  const integer = BigInt(match[1]).toLocaleString('fr-FR')
+  const fraction = match[2]?.replace(/0+$/, '')
+  return fraction ? `${integer},${fraction}` : integer
 }
 
 export function canReadGlobalMeterReadings(allocation, isAdmin) {

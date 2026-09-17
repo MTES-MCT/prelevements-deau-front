@@ -1,5 +1,5 @@
 import test from 'ava'
-import {getMeterSeriesQuery, loadMeterSeriesPages} from './meter-series.js'
+import {getMeterSeriesQuery, loadMeterSeriesPages, METER_SERIES_LIMIT, validateMeterSeriesRange} from './meter-series.js'
 
 const metadata = {readingSeries: true, frequency: 'instantaneous'}
 
@@ -34,5 +34,13 @@ test('une erreur de page ou une boucle ne produit jamais une courbe partielle', 
 
 test('la limite de 20 000 refuse explicitement la troncature', async t => {
   let page = 0
-  await t.throwsAsync(() => loadMeterSeriesPages(async () => ({metadata, values: [{date: '2026-09-16', values: Array.from({length: 5000}, () => ({}))}], nextCursor: String(++page)})), {message: /20 000/})
+  await t.throwsAsync(() => loadMeterSeriesPages(async () => ({metadata, values: [{date: '2026-09-16', values: Array.from({length: 5000}, () => ({}))}], nextCursor: String(++page)})), {message: /20 000/, code: METER_SERIES_LIMIT})
+})
+
+test('la réduction manuelle reste dans les bornes disponibles et accepte une seule journée', t => {
+  const bounds = {start: '2026-01-01', end: '2026-09-17'}
+  t.deepEqual(validateMeterSeriesRange({start: '2026-09-16', end: '2026-09-16'}, bounds), {start: '2026-09-16', end: '2026-09-16'})
+  for (const range of [{start: '2025-12-31', end: '2026-01-02'}, {start: '2026-09-17', end: '2026-09-18'}, {start: '2026-02-30', end: '2026-03-01'}, {start: '2026-09-17', end: '2026-09-16'}]) {
+    t.throws(() => validateMeterSeriesRange(range, bounds), {message: /période/})
+  }
 })

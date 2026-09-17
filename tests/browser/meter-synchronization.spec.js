@@ -13,8 +13,8 @@ test.beforeEach(async ({page}) => {
     ? route.continue() : route.abort())
 })
 
-async function authenticate(context, role, {refresh = false, excluded = false, metersOnly = false, allocation = false, conflict = false, unresolved = false} = {}) {
-  const apiToken = `browser-test-meter-${role.toLowerCase()}-${refresh ? 'refresh-' : ''}${excluded ? 'excluded-' : ''}${metersOnly ? 'meters-only-' : ''}${allocation ? 'allocation-' : ''}${conflict ? 'conflict-' : ''}${unresolved ? 'unresolved-' : ''}${randomUUID()}`
+async function authenticate(context, role, {refresh = false, excluded = false, metersOnly = false, allocation = false, conflict = false, unresolved = false, exactPeriod = false, retryFirst = false, retryPage = false, overLimit = false} = {}) {
+  const apiToken = `browser-test-meter-${role.toLowerCase()}-${refresh ? 'refresh-' : ''}${excluded ? 'excluded-' : ''}${metersOnly ? 'meters-only-' : ''}${allocation ? 'allocation-' : ''}${conflict ? 'conflict-' : ''}${unresolved ? 'unresolved-' : ''}${exactPeriod ? 'exact-period-' : ''}${retryFirst ? 'retry-first-' : ''}${retryPage ? 'retry-page-' : ''}${overLimit ? 'over-limit-' : ''}${randomUUID()}`
   const token = await encode({
     secret: 'browser-tests-only-never-a-real-secret',
     token: {
@@ -34,6 +34,27 @@ async function authenticate(context, role, {refresh = false, excluded = false, m
 
 test.describe('bornes calendaires des compteurs hors fuseau Paris', () => {
   test.use({timezoneId: 'UTC'})
+  for (const role of ['ADMIN', 'DECLARANT']) {
+    test(`les volumes du premier janvier gardent leur période exacte et leur fin exclusive ${role}`, async ({page, context}, testInfo) => {
+      await authenticate(context, role, {exactPeriod: true})
+      if (role === 'DECLARANT') {
+        await page.goto(`${frontUrl}/mes-declarations`)
+        await expect(page.getByText('01/01/2026', {exact: true})).toBeVisible()
+        await expect(page.getByText(/31\/12\/2025/)).toHaveCount(0)
+        await page.locator(`a[href="/mes-declarations/sources/${sourceId}"]`).click()
+      } else {
+        await page.goto(`${frontUrl}/declarations/${sourceId}`)
+      }
+      await expect(page).toHaveTitle(/01\/01\/2026/)
+      await expect(page.getByText('01/01/2026', {exact: true})).toBeVisible()
+      await expect(page.getByText('Du 01/01/2026 00:00:00 au 02/01/2026 00:00:00', {exact: true}).first()).toBeVisible()
+      await page.getByText('Voir les volumes', {exact: true}).click()
+      await expect(page.getByRole('table')).toContainText('Du 01/01/2026 00:00:00 au 02/01/2026 00:00:00')
+      await expect(page.getByText(/31\/12\/2025/)).toHaveCount(0)
+      await page.screenshot({path: testInfo.outputPath(`periode-paris-${role.toLowerCase()}.png`), fullPage: true})
+    })
+  }
+
   test('sans anciennes séries les index sont visibles par défaut, même après minuit Paris dans un navigateur UTC', async ({page, context}, testInfo) => {
     await authenticate(context, 'ADMIN', {metersOnly: true})
     await page.goto(`${frontUrl}/points-prelevement/${meterId}`)
@@ -110,6 +131,57 @@ test('la réouverture recharge un tableau initialement vide après synchronisati
   await page.getByRole('button', {name: 'Masquer les relevés du compteur'}).click()
   await page.getByRole('button', {name: 'Voir les relevés du compteur'}).click()
   await expect(page.getByRole('table', {name: 'Relevés du compteur', exact: true})).toContainText('10:11:43')
+})
+
+for (const retryFirst of [true, false]) {
+  test(`réessayer reprend exactement la page échouée ${retryFirst ? 'initiale après réouverture' : 'suivante'}`, async ({page, context}) => {
+    const apiToken = await authenticate(context, 'ADMIN', {retryFirst, retryPage: !retryFirst})
+    await page.goto(`${frontUrl}/exploitations/${exploitationId}`)
+    await page.getByRole('button', {name: 'Voir les relevés du compteur'}).click()
+    const table = page.getByRole('table', {name: 'Relevés du compteur', exact: true})
+    await expect(table).toContainText('12 300')
+    if (retryFirst) {
+      await page.getByRole('button', {name: 'Masquer les relevés du compteur'}).click()
+      await page.getByRole('button', {name: 'Voir les relevés du compteur'}).click()
+    } else {
+      await page.getByRole('button', {name: 'Charger les relevés suivants'}).click()
+    }
+    await expect(page.getByText('Impossible de charger les relevés.', {exact: true})).toBeVisible()
+    await page.getByRole('button', {name: 'Réessayer', exact: true}).click()
+    await expect(page.getByText('Impossible de charger les relevés.', {exact: true})).toHaveCount(0)
+    if (retryFirst) {
+      await expect(table).toContainText('9 999 999 999 999 999,1234')
+      await expect(table.getByRole('row')).toHaveCount(2)
+    } else {
+      await expect(table.getByRole('row')).toHaveCount(3)
+      await expect(table).toContainText('Exclu')
+    }
+    const requests = await context.request.get('http://127.0.0.1:3431/api/__meter-reading-requests', {headers: {authorization: `Bearer ${apiToken}`}})
+    expect(await requests.json()).toEqual(retryFirst ? [null, null, null] : [null, 'synthetic-page-2', 'synthetic-page-2'])
+  })
+}
+
+test('la limite de relevés permet de réduire la période puis affiche la courbe complète', async ({page, context}, testInfo) => {
+  const apiToken = await authenticate(context, 'ADMIN', {metersOnly: true, overLimit: true})
+  await page.goto(`${frontUrl}/points-prelevement/${meterId}`)
+  await revealChart(page)
+  await expect(page.getByText('Plus de 20 000 relevés : réduisez la période pour afficher tous les index.', {exact: true})).toBeVisible()
+  await expect(page.getByRole('figure', {name: 'Graphique séries temporelles'})).toHaveCount(0)
+  const range = page.getByRole('form', {name: 'Période des index du compteur'})
+  await expect(range).toBeVisible()
+  await range.scrollIntoViewIfNeeded()
+  await page.screenshot({path: testInfo.outputPath('periode-index-limite.png'), animations: 'disabled', fullPage: true})
+  await range.getByLabel('Début de la période des index').fill('2026-09-16')
+  await range.getByLabel('Fin de la période des index').fill('2026-09-16')
+  await range.getByRole('button', {name: 'Afficher cette période'}).click()
+  const figure = page.getByRole('figure', {name: 'Graphique séries temporelles'})
+  await expect(figure).toBeVisible()
+  await expect(figure.locator('g[role="presentation"] > rect[width="12"]')).toHaveCount(3)
+  const result = await context.request.get('http://127.0.0.1:3431/api/__meter-series-requests', {headers: {authorization: `Bearer ${apiToken}`}})
+  expect((await result.json()).at(-1)).toMatchObject({startDate: '2026-09-16', endDate: '2026-09-16'})
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
+  await range.scrollIntoViewIfNeeded()
+  await page.screenshot({path: testInfo.outputPath('periode-index-reduite.png'), animations: 'disabled'})
 })
 
 for (const path of [`/exploitations/${exploitationId}`, `/points-prelevement/${meterId}`]) {

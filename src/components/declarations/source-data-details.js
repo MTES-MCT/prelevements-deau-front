@@ -9,6 +9,7 @@ import {
 } from '@/lib/declaration-point-name.js'
 import {getDeclarationTypeLabel} from '@/lib/declaration-types.js'
 import {isMeterTelemetrySource} from '@/lib/declaration.js'
+import {formatMeterExactPeriod, getMeterPeriod, getMeterValuePeriod, isMeterPeriodSource} from '@/lib/meter-period.js'
 import {getPointFlowTypeLabel, POINT_FLOW_TYPES} from '@/lib/point-flow-types.js'
 import {getPointPrelevementURL} from '@/lib/urls.js'
 import {
@@ -366,6 +367,7 @@ function getChunkDateLabel({displayAsIndex, displayAsVolume, isQuickDeclaration}
 }
 
 function getChunkDateValue({chunk, displayAsIndex, displayAsVolume, isQuickDeclaration, shouldShowIndexTime, source}) {
+  if (isMeterPeriodSource(source, chunk)) return formatMeterExactPeriod(getMeterPeriod(source, chunk))
   if (displayAsIndex) {
     return formatReadingDate(getReadingDate(chunk, source), shouldShowIndexTime)
   }
@@ -427,6 +429,7 @@ function getChunkDisplayContext(chunk, source) {
 }
 
 function formatValueDate({chunk, displayAsIndex, displayAsVolume, isQuickDeclaration, shouldShowIndexTime, source, value}) {
+  if (isMeterPeriodSource(source, chunk)) return formatMeterExactPeriod(getMeterValuePeriod(value))
   if (displayAsIndex) {
     return formatReadingDate(value.periodEnd ?? value.periodStart, shouldShowIndexTime)
   }

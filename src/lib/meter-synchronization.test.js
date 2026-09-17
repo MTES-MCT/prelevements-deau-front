@@ -52,6 +52,14 @@ test('un index absent ne s’affiche pas comme un zéro réel', t => {
   t.is(formatMeterIndex('0'), '0')
 })
 
+test('les grands index décimaux conservent leurs quatre décimales sans passage par Number', t => {
+  t.is(formatMeterIndex('1234567890123456.1234'), '1 234 567 890 123 456,1234')
+  t.is(formatMeterIndex('9999999999999999.9999'), '9 999 999 999 999 999,9999')
+  t.is(formatMeterIndex('0.0001'), '0,0001')
+  t.is(formatMeterIndex('12300.1200'), '12 300,12')
+  t.is(formatMeterIndex('1.12345'), 'Non renseigné')
+})
+
 test('le formulaire préserve les ids et paramètres des connecteurs existants', t => {
   t.deepEqual(serializeExploitationConnectors([{
     id: 'connector-stable', connectorType: 'orange_live_objects', rate: '70',

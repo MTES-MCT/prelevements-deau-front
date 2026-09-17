@@ -1,5 +1,6 @@
 import moment from 'moment'
 import 'moment/locale/fr.js'
+import {formatMeterCoveredPeriod, getMeterPeriod, isMeterPeriodSource} from './meter-period.js'
 
 moment.locale('fr')
 
@@ -160,6 +161,7 @@ export function isDeclarationTreatmentPending(declaration, source = declaration?
 }
 
 export function getSourcePeriod(source) {
+  if (isMeterPeriodSource(source)) return getMeterPeriod(source) ?? {start: null, end: null}
   const chunks = source?.chunks ?? []
 
   const dates = chunks.flatMap(c => [c?.minDate, c?.maxDate].filter(Boolean))
@@ -209,6 +211,7 @@ export function getSourceReadingDateLabel(source) {
 }
 
 export function getSourcePeriodLabel(source) {
+  if (isMeterPeriodSource(source)) return formatMeterCoveredPeriod(getMeterPeriod(source))
   const readingDateLabel = getSourceReadingDateLabel(source)
   if (readingDateLabel) {
     return `Relevé du ${readingDateLabel}`

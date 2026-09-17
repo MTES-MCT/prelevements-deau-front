@@ -244,6 +244,7 @@ function getVolumeLabel(source) {
 }
 
 function getSourceExactPeriodLabel(source) {
+  if (isMeterTelemetrySource(source)) return getSourcePeriodLabel(source)
   const dates = (source?.chunks ?? [])
     .flatMap(chunk => [chunk.minDate, chunk.maxDate])
     .filter(Boolean)

@@ -13,6 +13,7 @@ const meterId = '22222222-2222-4222-8222-222222222222'
 const secondMeterId = '33333333-3333-4333-8333-333333333333'
 const meterRequests = new Map()
 const refreshedMeters = new Set()
+const readingRequests = new Map()
 const syntheticExports = new Map()
 const sourceId = '55555555-5555-4555-8555-555555555555'
 const streamId = '66666666-6666-4666-8666-666666666666'
@@ -103,17 +104,21 @@ const api = createServer(async (request, response) => {
   }
 
   if (meterRole && (pathname === '/api/declarations/me/feed' || pathname === `/api/declarations/telemetry-sources/${sourceId}` || pathname === `/api/sources/${sourceId}`)) {
+    const period = request.headers.authorization.includes('-exact-period-')
+      ? {periodStart: '2025-12-31T23:00:00.000Z', periodEnd: '2026-01-01T23:00:00.000Z'}
+      : {periodStart: '2026-09-16T08:00:00.000Z', periodEnd: '2026-09-16T10:00:00.000Z'}
     const source = {
       id: sourceId, type: 'API', status: 'COMPLETED', globalInstructionStatus: 'VALIDATED', createdAt: '2026-09-17T12:00:00Z',
       readOnly: true, canEdit: false, canDelete: false, canInstruct: false, canReconcile: false,
-      metadata: {calculationStrategy: 'METER', totalWaterVolumeWithdrawn: 70},
+      metadata: {calculationStrategy: 'METER', totalWaterVolumeWithdrawn: 70, ...period},
       declarant: {id: zoneId, socialReason: 'Préleveur synthétique'},
       chunks: [{
         id: 'synthetic-meter-volume', calculationStrategy: 'METER', canEdit: false, canDelete: false, canReconcile: false,
+        metadata: {...period},
         pointPrelevementId: meterId, pointPrelevement: {id: meterId, name: 'Point synthétique', flowType: 'PRELEVEMENT'},
         parameter: 'volume', metricType: {code: 'volume', name: 'Volume'}, unit: 'm³', frequency: '1 day',
-        minDate: '2026-09-16', maxDate: '2026-09-16', valuesCount: 1, _count: {chunkValues: 1},
-        chunkValues: [{id: 'synthetic-volume-value', value: 70, metricTypeCode: 'volume', unit: 'm³', valueKind: 'COMPUTED', periodStart: '2026-09-16T08:00:00Z', periodEnd: '2026-09-16T10:00:00Z'}]
+        minDate: period.periodStart.slice(0, 10), maxDate: period.periodEnd.slice(0, 10), valuesCount: 1, _count: {chunkValues: 1},
+        chunkValues: [{id: 'synthetic-volume-value', value: 70, metricTypeCode: 'volume', unit: 'm³', valueKind: 'COMPUTED', ...period}]
       }]
     }
     if (pathname === '/api/declarations/me/feed') {
@@ -148,6 +153,10 @@ const api = createServer(async (request, response) => {
 
   if (meterRole && pathname === '/api/__meter-series-requests') {
     return send(200, meterRequests.get(request.headers.authorization) ?? [])
+  }
+
+  if (meterRole && pathname === '/api/__meter-reading-requests') {
+    return send(200, readingRequests.get(request.headers.authorization) ?? [])
   }
 
   if (meterRole && pathname === `/api/exploitations/${zoneId}/meter-allocations`) {
@@ -207,9 +216,16 @@ const api = createServer(async (request, response) => {
     }
 
     const cursor = new URL(request.url, 'http://127.0.0.1:3431').searchParams.get('cursor')
+    const requests = readingRequests.get(request.headers.authorization) ?? []
+    requests.push(cursor)
+    readingRequests.set(request.headers.authorization, requests)
+    const retryRefresh = request.headers.authorization.includes('-retry-first-')
+    const retryPage = request.headers.authorization.includes('-retry-page-')
+    if ((retryRefresh || retryPage) && requests.length === 2) return send(503, {message: 'Erreur synthétique temporaire'})
+    const currentIndex = retryRefresh && requests.length > 2 ? '9999999999999999.1234' : '12300'
     return send(200, {
       items: cursor ? [{id: 'reading-2', observedAt: '2026-09-15T08:11:43Z', index: '12000', quality: 'Y', origin: 'Auto', admissible: false}]
-        : [{id: 'reading-1', observedAt: '2026-09-16T08:11:43Z', index: '12300', quality: 'C', origin: 'Manuel', admissible: true}],
+        : [{id: 'reading-1', observedAt: '2026-09-16T08:11:43Z', index: currentIndex, quality: 'C', origin: 'Manuel', admissible: true}],
       nextCursor: cursor ? null : 'synthetic-page-2'
     })
   }
@@ -224,10 +240,11 @@ const api = createServer(async (request, response) => {
 
   if (meterRole && pathname === '/api/aggregated-series/options') {
     const includeMeters = new URL(request.url, 'http://127.0.0.1:3431').searchParams.get('includeMeterReadings') === 'true'
+    const meterMinDate = request.headers.authorization.includes('-over-limit-') ? '2026-09-01' : '2026-09-16'
     return send(200, {parameters: [
       {id: 'volume:PRELEVEMENT', name: 'volume', metricTypeCode: 'volume', label: 'Volume prélevé', unit: 'm³', flowType: 'PRELEVEMENT', valueType: 'cumulative', minDate: '2026-09-14', maxDate: '2026-09-16', temporalOperators: ['sum'], defaultTemporalOperator: 'sum', availableFrequencies: ['1 day']},
       {id: 'index:PRELEVEMENT', name: 'index', metricTypeCode: 'index', label: 'Index historique', unit: 'm³', flowType: 'PRELEVEMENT', valueType: 'instantaneous', minDate: '2026-09-14', maxDate: '2026-09-16', temporalOperators: ['max'], defaultTemporalOperator: 'max', availableFrequencies: ['1 day']},
-      ...(meterRole === 'ADMIN' && includeMeters ? [meterId, secondMeterId].map((id, index) => ({id: `index:meter:${id}`, meterId: id, meter: {id, serialNumber: `SYNTHETIC-00${index + 1}`, identifier: null}, readingSeries: true, name: 'index', metricTypeCode: 'index', label: `Index — compteur SYNTHETIC-00${index + 1}`, unit: 'm³', valueType: 'instantaneous', precision: 4, minDate: '2026-09-16', maxDate: '2026-09-16', temporalOperators: ['raw'], defaultTemporalOperator: 'raw', availableFrequencies: ['instantaneous']})) : [])
+      ...(meterRole === 'ADMIN' && includeMeters ? [meterId, secondMeterId].map((id, index) => ({id: `index:meter:${id}`, meterId: id, meter: {id, serialNumber: `SYNTHETIC-00${index + 1}`, identifier: null}, readingSeries: true, name: 'index', metricTypeCode: 'index', label: `Index — compteur SYNTHETIC-00${index + 1}`, unit: 'm³', valueType: 'instantaneous', precision: 4, minDate: meterMinDate, maxDate: '2026-09-16', temporalOperators: ['raw'], defaultTemporalOperator: 'raw', availableFrequencies: ['instantaneous']})) : [])
     ].filter(parameter => !request.headers.authorization.includes('-meters-only-') || parameter.readingSeries)})
   }
 
@@ -241,6 +258,14 @@ const api = createServer(async (request, response) => {
       requests.push(Object.fromEntries(params))
       meterRequests.set(request.headers.authorization, requests)
       const cursor = params.get('cursor')
+      if (request.headers.authorization.includes('-over-limit-') && params.get('startDate') !== '2026-09-16') {
+        const page = cursor ? Number(cursor.slice(-1)) : 0
+        return send(200, {
+          metadata: {readingSeries: true, meterId: requestedMeter, frequency: 'instantaneous', unit: 'm³'},
+          values: [{date: '2026-09-01', values: Array.from({length: 5000}, (_, index) => ({readingId: `synthetic-${page}-${index}`, observedAt: new Date(Date.UTC(2026, 8, 1, 0, 0, page * 5000 + index)).toISOString(), value: String(index), index: String(index), admissible: true}))}],
+          nextCursor: page < 4 ? `44444444-4444-4444-8444-44444444444${page + 1}` : null
+        })
+      }
       const offset = requestedMeter === secondMeterId ? 10_000 : 0
       const reading = (id, observedAt, index, admissible = true) => {
         admissible &&= !request.headers.authorization.includes('-excluded-')

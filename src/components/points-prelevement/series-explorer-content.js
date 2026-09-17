@@ -8,7 +8,8 @@ import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Box, Typography} from '@mui/material'
 
 import {resolveSelectedParametersDateRange} from '@/components/points-prelevement/series-date-range.js'
-import {getMeterSeriesQuery, loadMeterSeriesPages} from '@/components/points-prelevement/meter-series.js'
+import {getMeterSeriesQuery, loadMeterSeriesPages, METER_SERIES_LIMIT} from '@/components/points-prelevement/meter-series.js'
+import MeterSeriesRangeForm from '@/components/points-prelevement/meter-series-range-form.js'
 import {buildSeriesPresentations} from '@/components/points-prelevement/series-presentation.js'
 import {
   resolveInitialDisplayFrequency,
@@ -130,7 +131,9 @@ const SeriesExplorer = ({
   }, [parameterOptions])
 
   const [selectedParameters, setSelectedParameters] = useState(derivedDefaultParameters)
-  const dateRange = useMemo(
+  const [limitedScope, setLimitedScope] = useState(null)
+  const [requestedMeterRange, setRequestedMeterRange] = useState(null)
+  const fullDateRange = useMemo(
     () => resolveSelectedParametersDateRange({
       endDate,
       parameters: seriesOptions?.parameters,
@@ -139,6 +142,8 @@ const SeriesExplorer = ({
     }),
     [endDate, selectedParameters, seriesOptions?.parameters, startDate]
   )
+  const selectionScope = JSON.stringify([collecteurId, pointIds, preleveurId, selectedParameters, fullDateRange.start, fullDateRange.end])
+  const dateRange = requestedMeterRange?.scope === selectionScope ? requestedMeterRange.range : fullDateRange
   const selectablePeriods = useMemo(
     () => calculateSelectablePeriodsFromDateRange(dateRange.start, dateRange.end),
     [dateRange.end, dateRange.start]
@@ -418,6 +423,7 @@ const SeriesExplorer = ({
         }
 
         if (isActive) {
+          if (error?.code === METER_SERIES_LIMIT) setLimitedScope(selectionScope)
           setLoadError(error instanceof Error ? error.message : 'Impossible de charger les séries agrégées')
         }
       } finally {
@@ -433,7 +439,7 @@ const SeriesExplorer = ({
       isActive = false
       abortController.abort()
     }
-  }, [selectedParameters, resolvedTemporalOperatorsByParameter, targetDisplayFrequency, fetchAggregatedSeries, parameterDefinitionMap, scopeKey])
+  }, [selectedParameters, resolvedTemporalOperatorsByParameter, targetDisplayFrequency, fetchAggregatedSeries, parameterDefinitionMap, scopeKey, selectionScope])
 
   const handleFiltersChange = useCallback(({parameters, parameterTemporalOperators: nextParameterTemporalOperators}) => {
     let nextParameters = selectedParameters
@@ -489,6 +495,13 @@ const SeriesExplorer = ({
           </Typography>
         )}
       </Box>
+
+      {limitedScope === selectionScope && <MeterSeriesRangeForm
+        key={selectionScope}
+        bounds={fullDateRange}
+        value={dateRange}
+        onApply={range => setRequestedMeterRange({scope: selectionScope, range})}
+      />}
 
       {selectedParameters.length > 0 && (
         <AggregatedSeriesExplorer
