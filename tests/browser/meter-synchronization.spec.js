@@ -229,10 +229,16 @@ for (const role of ['ADMIN', 'INSTRUCTOR']) {
   test(`export habituel avec index des compteurs selon capacité ${role}`, async ({page, context}, testInfo) => {
     const apiToken = await authenticate(context, role)
     await page.goto(`${frontUrl}/exports`)
-    const checkbox = page.getByRole('checkbox', {name: 'Inclure les index des compteurs'})
+    const checkboxLabel = 'Inclure les index des compteurs (nouvel onglet)'
+    const checkbox = page.getByRole('checkbox', {name: checkboxLabel, exact: true})
+    await expect(page.getByText('Onglet séparé : index du compteur, non répartis entre les exploitations.', {exact: true})).toHaveCount(0)
     if (role === 'ADMIN') {
       await expect(checkbox).toBeChecked()
-      await expect(page.getByText('Onglet séparé : index du compteur, non répartis entre les exploitations.', {exact: true})).toBeVisible()
+      const optionalSettings = page.getByRole('heading', {name: 'Paramètres optionnels', exact: true}).locator('..').locator('..')
+      await expect(optionalSettings.getByRole('checkbox', {name: checkboxLabel, exact: true})).toBeChecked()
+      const waterBodyType = optionalSettings.getByRole('button', {name: 'Type de milieu du point', exact: true})
+      await expect(waterBodyType).toBeVisible()
+      expect(await waterBodyType.evaluate((filter, input) => Boolean(filter.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING), await checkbox.elementHandle())).toBe(true)
     } else {
       await expect(checkbox).toHaveCount(0)
     }

@@ -694,19 +694,6 @@ const ExportForm = ({
               </p>
             </div>
 
-            {options.canExportMeterReadings === true && (
-              <Checkbox
-                options={[{
-                  label: 'Inclure les index des compteurs',
-                  hintText: 'Onglet séparé : index du compteur, non répartis entre les exploitations.',
-                  nativeInputProps: {
-                    checked: includeMeterReadings,
-                    onChange: event => setIncludeMeterReadings(event.target.checked)
-                  }
-                }]}
-              />
-            )}
-
             <div className='flex flex-col gap-2'>
               <p className='fr-text--sm fr-mb-0 font-medium text-gray-700'>
                 Périodes prédéfinies
@@ -793,6 +780,18 @@ const ExportForm = ({
                 value={selectedWaterBodyTypes}
                 onChange={setSelectedWaterBodyTypes}
               />
+
+              {options.canExportMeterReadings === true && (
+                <Checkbox
+                  options={[{
+                    label: 'Inclure les index des compteurs (nouvel onglet)',
+                    nativeInputProps: {
+                      checked: includeMeterReadings,
+                      onChange: event => setIncludeMeterReadings(event.target.checked)
+                    }
+                  }]}
+                />
+              )}
             </div>
 
             <div>
