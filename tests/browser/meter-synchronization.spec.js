@@ -330,6 +330,9 @@ test('la répartition complète modifie les bénéficiaires à une date précise
 
 test('une répartition devenue obsolète impose un rechargement et préserve le brouillon jusqu’au choix explicite', async ({page, context}) => {
   await authenticate(context, 'ADMIN', {allocation: true, conflict: true, unresolved: true})
+  // The fixture moves the minimum effective date from 18 to 19 September.
+  // Keep today earlier so the default is independent of the day CI runs.
+  await page.clock.setFixedTime(new Date('2026-09-17T10:00:00Z'))
   await page.goto(`${frontUrl}/exploitations/${exploitationId}/edit`)
   await expect(page.getByRole('combobox', {name: 'Usage principal *', exact: true})).toBeEnabled()
   await page.getByRole('button', {name: 'Modifier la répartition du compteur'}).click()
