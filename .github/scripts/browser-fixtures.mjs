@@ -6,6 +6,7 @@ import {createServer as createSecureServer} from 'node:https'
 import {tmpdir} from 'node:os'
 import {resolve, sep, extname, join} from 'node:path'
 import {createPublicStatsFixture} from '../../src/test/public-stats-fixture.js'
+import {getDashboardFixtureRole, handleDashboardFixtureRequest} from './dashboard-fixtures.mjs'
 
 // Synthetic backend: deliberately no database, outbound HTTP, mail or jobs.
 const zoneId = '11111111-1111-4111-8111-111111111111'
@@ -51,9 +52,12 @@ const api = createServer(async (request, response) => {
   const meterRole = /^Bearer browser-test-meter-admin(?:-|$)/.test(request.headers.authorization) ? 'ADMIN'
     : /^Bearer browser-test-meter-instructor(?:-|$)/.test(request.headers.authorization) ? 'INSTRUCTOR'
       : /^Bearer browser-test-meter-declarant(?:-|$)/.test(request.headers.authorization) ? 'DECLARANT' : null
-  if (request.headers.authorization !== 'Bearer browser-test-api-token' && !meterRole) {
+  const dashboardRole = getDashboardFixtureRole(request.headers.authorization)
+  if (request.headers.authorization !== 'Bearer browser-test-api-token' && !meterRole && !dashboardRole) {
     return send(401, {message: 'Unauthorized'})
   }
+
+  if (await handleDashboardFixtureRequest(request, send)) return
 
   if (pathname === '/info' || pathname === '/api/info') {
     return send(200, {

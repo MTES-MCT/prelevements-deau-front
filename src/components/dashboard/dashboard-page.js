@@ -503,6 +503,11 @@ const DashboardZoneFilter = ({
 }) => (
   <div className='w-full md:w-[380px]'>
     <GroupedMultiselect
+      searchable
+      confirmSelection
+      showSelectionActions
+      minSelected={1}
+      minSelectionMessage='Sélectionnez au moins une zone.'
       hideLabel={hideLabel}
       disabled={disabled}
       label={label}
@@ -974,12 +979,12 @@ const DashboardPage = ({
   const handleZoneChange = useCallback(async nextValue => {
     const nextZoneCodes = normalizeZoneCodes(nextValue)
 
-    if (nextZoneCodes.length === 0) {
+    if (nextZoneCodes.length === 0 || areSameValues(nextZoneCodes, normalizeZoneCodes(selectedZoneCodes))) {
       return
     }
 
     await reloadDashboard({zoneCodes: nextZoneCodes})
-  }, [normalizeZoneCodes, reloadDashboard])
+  }, [normalizeZoneCodes, reloadDashboard, selectedZoneCodes])
 
   const handlePeriodTypeChange = useCallback(async nextPeriodType => {
     if (nextPeriodType === selectedPeriodType) {

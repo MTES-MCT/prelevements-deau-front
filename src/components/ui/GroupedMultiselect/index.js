@@ -9,6 +9,7 @@ import {xor} from 'lodash-es'
 
 import './index.css'
 import {matchesSearchTerms} from '@/lib/search-options.js'
+import {areSameSelections, updateVisibleSelection} from './selection.js'
 
 import {
   normalizeOptions,
@@ -38,6 +39,10 @@ const GroupedMultiselect = ({
   onChange,
   disabled,
   searchable = false,
+  confirmSelection = false,
+  showSelectionActions = false,
+  minSelected = 0,
+  minSelectionMessage,
   hideLabel = false,
   state = 'default',
   stateRelatedMessage = null
@@ -46,6 +51,7 @@ const GroupedMultiselect = ({
   const selectId = id ?? `grouped-multiselect-${generatedId}`
   const listboxId = `${selectId}-listbox`
   const stateDescriptionId = `${selectId}-desc`
+  const selectionDescriptionId = `${selectId}-selection-desc`
   const searchLabel = label
     ? `Rechercher dans ${label.toLocaleLowerCase('fr-FR')}`
     : 'Rechercher dans les options'
@@ -54,6 +60,7 @@ const GroupedMultiselect = ({
   const [hiddenCount, setHiddenCount] = useState(0)
   const [focusedIndex, setFocusedIndex] = useState(-1)
   const [search, setSearch] = useState('')
+  const [draftValue, setDraftValue] = useState(value)
 
   const ref = useRef(null)
   const selectRef = useRef(null)
@@ -63,6 +70,30 @@ const GroupedMultiselect = ({
   const restoreFocusOnCloseRef = useRef(false)
 
   const normalizedOptions = useMemo(() => normalizeOptions(options), [options])
+  const currentValue = confirmSelection && open ? draftValue : value
+  const selectedValues = useMemo(() => new Set(currentValue), [currentValue])
+  const selectionTooSmall = selectedValues.size < minSelected
+  const selectionChanged = !areSameSelections(currentValue, value)
+
+  const closeSelect = useCallback((restoreFocus = false) => {
+    restoreFocusOnCloseRef.current = restoreFocus
+    setOpen(false)
+    setFocusedIndex(-1)
+  }, [])
+
+  const openSelect = useCallback(() => {
+    if (disabled) {
+      return
+    }
+
+    setDraftValue([...value])
+    if (confirmSelection) {
+      setSearch('')
+    }
+
+    setOpen(true)
+    setFocusedIndex(searchable ? -1 : 0)
+  }, [disabled, value, confirmSelection, searchable])
 
   const valueLabelMap = useMemo(() => {
     const map = new Map()
@@ -113,15 +144,19 @@ const GroupedMultiselect = ({
   useEffect(() => {
     const handleClickOutside = e => {
       if (ref.current && !ref.current.contains(e.target)) {
-        restoreFocusOnCloseRef.current = false
-        setOpen(false)
-        setFocusedIndex(-1)
+        closeSelect()
       }
     }
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  }, [closeSelect])
+
+  useEffect(() => {
+    if (disabled && open) {
+      closeSelect()
+    }
+  }, [disabled, open, closeSelect])
 
   useEffect(() => {
     if (!selectRef.current) {
@@ -176,14 +211,17 @@ const GroupedMultiselect = ({
   }, [selectedDisplayValues])
 
   const toggleOption = useCallback(option => {
-    if (getOptionDisabled(option)) {
+    if (disabled || getOptionDisabled(option)) {
       return
     }
 
     const optionValue = getOptionValue(option)
-    const newValue = xor(value, [optionValue])
-    onChange?.(newValue)
-  }, [value, onChange])
+    if (confirmSelection) {
+      setDraftValue(current => xor(current, [optionValue]))
+    } else {
+      onChange?.(xor(value, [optionValue]))
+    }
+  }, [disabled, confirmSelection, value, onChange])
 
   const flatOptions = useMemo(() =>
     filteredOptions.flatMap(group =>
@@ -193,11 +231,50 @@ const GroupedMultiselect = ({
       }))
     ), [filteredOptions])
 
+  const groupOffsets = useMemo(() => {
+    let offset = 0
+    return filteredOptions.map(group => {
+      const start = offset
+      offset += group.options.length
+      return start
+    })
+  }, [filteredOptions])
+
+  const enabledVisibleValues = useMemo(() => [...new Set(flatOptions
+    .filter(({option}) => !getOptionDisabled(option))
+    .map(({option}) => getOptionValue(option)))], [flatOptions])
+  const allVisibleSelected = enabledVisibleValues.every(optionValue => selectedValues.has(optionValue))
+  const anyVisibleSelected = enabledVisibleValues.some(optionValue => selectedValues.has(optionValue))
+  const filteredSelection = searchable && search.trim().length > 0
+
+  const selectVisible = selected => {
+    if (disabled) {
+      return
+    }
+
+    if (confirmSelection) {
+      setDraftValue(current => updateVisibleSelection(current, enabledVisibleValues, selected))
+    } else {
+      const nextValue = updateVisibleSelection(value, enabledVisibleValues, selected)
+      if (!areSameSelections(nextValue, value)) {
+        onChange?.(nextValue)
+      }
+    }
+  }
+
+  const applySelection = () => {
+    if (disabled || selectionTooSmall || !selectionChanged) {
+      return
+    }
+
+    closeSelect(true)
+    onChange?.([...currentValue])
+  }
+
   const handleKeyDown = useCallback(e => {
     if (!open) {
-      if (e.key === 'Enter' || e.key === ' ') {
-        setOpen(true)
-        setFocusedIndex(searchable ? -1 : 0)
+      if (['Enter', ' ', 'ArrowDown', 'ArrowUp'].includes(e.key)) {
+        openSelect()
         e.preventDefault()
       }
 
@@ -217,8 +294,21 @@ const GroupedMultiselect = ({
         break
       }
 
+      case 'Home':
+      case 'End': {
+        setFocusedIndex(e.key === 'Home' ? 0 : flatOptions.length - 1)
+        e.preventDefault()
+        break
+      }
+
       case 'Enter':
       case ' ': {
+        if (e.currentTarget === selectRef.current) {
+          closeSelect(true)
+          e.preventDefault()
+          break
+        }
+
         if (focusedIndex >= 0 && flatOptions[focusedIndex]) {
           toggleOption(flatOptions[focusedIndex].option)
         }
@@ -228,10 +318,9 @@ const GroupedMultiselect = ({
       }
 
       case 'Escape': {
-        restoreFocusOnCloseRef.current = true
-        setOpen(false)
-        setFocusedIndex(-1)
+        closeSelect(true)
         e.preventDefault()
+        e.stopPropagation()
         break
       }
 
@@ -239,7 +328,7 @@ const GroupedMultiselect = ({
         break
       }
     }
-  }, [open, toggleOption, flatOptions, focusedIndex, searchable])
+  }, [open, openSelect, closeSelect, toggleOption, flatOptions, focusedIndex, searchable])
 
   useEffect(() => {
     if (!open && !wasOpenRef.current) {
@@ -278,10 +367,10 @@ const GroupedMultiselect = ({
         state === 'default' ? '' : `fr-select-group--${state}`
       ].filter(Boolean).join(' ')}
       onBlur={event => {
-        if (open && !event.currentTarget.contains(event.relatedTarget)) {
-          restoreFocusOnCloseRef.current = false
-          setOpen(false)
-          setFocusedIndex(-1)
+        // Bulk actions can disable the focused button and blur it without
+        // moving focus outside. Actual outside clicks are handled separately.
+        if (open && event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) {
+          closeSelect()
         }
       }}
     >
@@ -303,15 +392,7 @@ const GroupedMultiselect = ({
         aria-expanded={open}
         role='button'
         tabIndex={disabled ? -1 : 0}
-        onClick={disabled ? undefined : () => setOpen(previousOpen => {
-          restoreFocusOnCloseRef.current = previousOpen
-
-          if (!previousOpen) {
-            setFocusedIndex(searchable ? -1 : 0)
-          }
-
-          return !previousOpen
-        })}
+        onClick={disabled ? undefined : () => open ? closeSelect(true) : openSelect()}
         onKeyDown={disabled ? undefined : handleKeyDown}
       >
         <Box sx={{overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
@@ -320,8 +401,8 @@ const GroupedMultiselect = ({
       </Box>
 
       {open && (
-        <List
-          id={listboxId}
+        <Box
+          className='grouped-multiselect-popup'
           sx={{
             position: 'absolute',
             backgroundColor: fr.colors.decisions.background.default.grey.default,
@@ -331,20 +412,24 @@ const GroupedMultiselect = ({
             border: `1px solid ${fr.colors.decisions.background.contrast.grey.default}`,
             zIndex: 10,
             padding: 0,
-            maxHeight: 300,
-            overflowY: 'auto'
+            maxHeight: 'min(440px, 65vh)',
+            display: 'flex',
+            flexDirection: 'column'
           }}
-          role='listbox'
-          aria-label={label || placeholder || 'Sélection multiple'}
-          aria-multiselectable='true'
-          tabIndex={-1}
+          onKeyDown={event => {
+            if (event.key === 'Escape') {
+              closeSelect(true)
+              event.preventDefault()
+              event.stopPropagation()
+            }
+          }}
         >
           {searchable && (
             <Box sx={{padding: 1}}>
               <Input
-                ref={searchInputRef}
                 label=''
                 nativeInputProps={{
+                  ref: searchInputRef,
                   'aria-controls': listboxId,
                   'aria-label': searchLabel,
                   value: search,
@@ -354,17 +439,19 @@ const GroupedMultiselect = ({
                   },
                   placeholder: 'Rechercher...',
                   onKeyDown(e) {
-                    if (e.key === 'ArrowDown') {
+                    if (e.key === 'Enter') {
+                      // Searching must never submit a surrounding form.
+                      e.preventDefault()
+                    } else if (e.key === 'ArrowDown') {
                       if (flatOptions.length > 0) {
                         setFocusedIndex(0)
                       }
 
                       e.preventDefault()
                     } else if (e.key === 'Escape') {
-                      restoreFocusOnCloseRef.current = true
-                      setOpen(false)
-                      setFocusedIndex(-1)
+                      closeSelect(true)
                       e.preventDefault()
+                      e.stopPropagation()
                     }
                   }
                 }}
@@ -372,69 +459,123 @@ const GroupedMultiselect = ({
             </Box>
           )}
 
-          {totalOptionsCount === 0 && (
-            <ListItem
-              sx={{
-                color: fr.colors.decisions.text.mention.grey.default
-              }}
-              tabIndex={-1}
-            >
-              Aucune option
-            </ListItem>
+          {showSelectionActions && (
+            <div className='grouped-multiselect-actions'>
+              <button
+                type='button'
+                className='fr-btn fr-btn--tertiary-no-outline fr-btn--sm'
+                disabled={disabled || enabledVisibleValues.length === 0 || allVisibleSelected}
+                onClick={() => selectVisible(true)}
+              >
+                {filteredSelection ? 'Sélectionner les résultats' : 'Tout sélectionner'}
+              </button>
+              <button
+                type='button'
+                className='fr-btn fr-btn--tertiary-no-outline fr-btn--sm'
+                disabled={disabled || !anyVisibleSelected}
+                onClick={() => selectVisible(false)}
+              >
+                {filteredSelection ? 'Désélectionner les résultats' : 'Tout désélectionner'}
+              </button>
+            </div>
           )}
 
-          {filteredOptions.map((group, groupIdx) => (
-            <Box key={group.label || `group-${groupIdx}`}>
-              {group?.label && (
-                <ListItem
-                  sx={{
-                    background: fr.colors.decisions.artwork.major.blueFrance.default,
-                    fontWeight: 500,
-                    color: fr.colors.decisions.background.default.grey.default
-                  }}
-                  tabIndex={-1}
-                >
-                  {group.label}
-                </ListItem>
-              )}
+          <List
+            component='div'
+            id={listboxId}
+            role='listbox'
+            aria-label={label || placeholder || 'Sélection multiple'}
+            aria-multiselectable='true'
+            tabIndex={-1}
+            sx={{padding: 0, minHeight: 0, overflowY: 'auto', maxHeight: 300}}
+          >
 
-              {group.options.map((option, optIdx) => {
-                const flatIdx = filteredOptions
-                  .slice(0, groupIdx)
-                  .reduce((acc, g) => acc + g.options.length, 0) + optIdx
+            {totalOptionsCount === 0 && (
+              <ListItem
+                sx={{
+                  color: fr.colors.decisions.text.mention.grey.default
+                }}
+                tabIndex={-1}
+              >
+                Aucune option
+              </ListItem>
+            )}
 
-                const optionValue = getOptionValue(option)
-                const isSelected = value.includes(optionValue)
-                const isDisabled = getOptionDisabled(option)
-                const tooltip = getOptionTitle(option)
-
-                return (
+            {filteredOptions.map((group, groupIdx) => (
+              <Box key={group.label || `group-${groupIdx}`} role={group.label ? 'group' : undefined} aria-label={group.label || undefined}>
+                {group?.label && (
                   <ListItem
-                    key={optionValue}
-                    ref={el => {
-                      optionRefs.current[flatIdx] = el
+                    sx={{
+                      background: fr.colors.decisions.artwork.major.blueFrance.default,
+                      fontWeight: 500,
+                      color: fr.colors.decisions.background.default.grey.default
                     }}
-                    aria-disabled={isDisabled}
-                    aria-selected={isSelected}
-                    className={`list-item selector-option${isSelected ? ' selected' : ''}${focusedIndex === flatIdx ? ' focused' : ''}${isDisabled ? ' disabled' : ''} p-2 radius-4`}
-                    role='option'
-                    tabIndex={focusedIndex === flatIdx ? 0 : -1}
-                    title={tooltip}
-                    onClick={isDisabled ? undefined : () => toggleOption(option)}
-                    onKeyDown={handleKeyDown}
+                    tabIndex={-1}
                   >
-                    {isSelected && (
-                      <span aria-hidden className='selector-option-check mr-1'>
-                        ✓
-                      </span>
-                    )}
-                    {getOptionContent(option)}
+                    {group.label}
                   </ListItem>
-                )
-              })}
-            </Box>
-          ))}
-        </List>
+                )}
+
+                {group.options.map((option, optIdx) => {
+                  const flatIdx = groupOffsets[groupIdx] + optIdx
+
+                  const optionValue = getOptionValue(option)
+                  const isSelected = selectedValues.has(optionValue)
+                  const isDisabled = getOptionDisabled(option)
+                  const tooltip = getOptionTitle(option)
+
+                  return (
+                    <ListItem
+                      key={optionValue}
+                      ref={el => {
+                        optionRefs.current[flatIdx] = el
+                      }}
+                      aria-disabled={isDisabled}
+                      aria-selected={isSelected}
+                      className={`list-item selector-option${isSelected ? ' selected' : ''}${focusedIndex === flatIdx ? ' focused' : ''}${isDisabled ? ' disabled' : ''} p-2 radius-4`}
+                      role='option'
+                      tabIndex={focusedIndex === flatIdx ? 0 : -1}
+                      title={tooltip}
+                      onFocus={() => setFocusedIndex(flatIdx)}
+                      onClick={isDisabled ? undefined : () => toggleOption(option)}
+                      onKeyDown={handleKeyDown}
+                    >
+                      {isSelected && (
+                        <span aria-hidden className='selector-option-check mr-1'>
+                          ✓
+                        </span>
+                      )}
+                      {getOptionContent(option)}
+                    </ListItem>
+                  )
+                })}
+              </Box>
+            ))}
+          </List>
+          {confirmSelection && (
+            <div className='grouped-multiselect-footer'>
+              <p id={selectionDescriptionId} className='fr-text--xs fr-mb-0' role='status'>
+                {selectionTooSmall
+                  ? minSelectionMessage || (minSelected === 1 ? 'Sélectionnez au moins une option.' : `Sélectionnez au moins ${minSelected} options.`)
+                  : `${selectedValues.size} sélectionné${selectedValues.size > 1 ? 's' : ''}`}
+              </p>
+              <div className='grouped-multiselect-footer-buttons'>
+                <button type='button' className='fr-btn fr-btn--secondary fr-btn--sm' onClick={() => closeSelect(true)}>
+                  Annuler
+                </button>
+                <button
+                  type='button'
+                  className='fr-btn fr-btn--sm'
+                  disabled={disabled || selectionTooSmall || !selectionChanged}
+                  aria-describedby={selectionDescriptionId}
+                  onClick={applySelection}
+                >
+                  Appliquer
+                </button>
+              </div>
+            </div>
+          )}
+        </Box>
       )}
 
       {state !== 'default' && stateRelatedMessage && (

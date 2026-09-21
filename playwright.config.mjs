@@ -6,6 +6,8 @@ const browserTests = [
   'security-modernisation.spec.js',
   'selected-volume-totals.spec.js',
   'public-stats.spec.js',
+  'dashboard-zone-selection.spec.js',
+  'grouped-multiselect.spec.js',
   'chart-axes.spec.js',
   'declaration-charts.spec.js',
   'declaration-file-selection.spec.js',

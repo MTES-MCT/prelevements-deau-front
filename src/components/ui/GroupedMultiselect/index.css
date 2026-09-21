@@ -83,3 +83,33 @@
 .fr-bg-disabled-grey {
   color: var(--text-disabled-grey);
 }
+
+.grouped-multiselect-popup {
+  box-shadow: 0 4px 12px rgb(0 0 0 / 12%);
+}
+
+.grouped-multiselect-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0 0.5rem 0.5rem;
+  border-bottom: 1px solid var(--border-default-grey);
+}
+
+.grouped-multiselect-actions .fr-btn {
+  font-size: 0.75rem;
+}
+
+.grouped-multiselect-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-top: 1px solid var(--border-default-grey);
+}
+
+.grouped-multiselect-footer-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
