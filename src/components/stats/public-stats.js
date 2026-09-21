@@ -18,8 +18,10 @@ import {
   formatStatsPercentage,
   getSelectableStatsMonths,
   getStatsConnections,
-  getStatsProfiles,
-  isStatsCount
+  getStatsPublicVisitors,
+  getStatsReportingProfiles,
+  isStatsCount,
+  isStatsMonth
 } from '@/lib/public-stats.js'
 
 import styles from './public-stats.module.css'
@@ -36,8 +38,8 @@ const GEOGRAPHIES = [
   {key: 'DEPARTEMENT', label: 'Départements'}
 ]
 const CHANNEL_LABELS = {
-  DIRECT: 'Directement dans Partageons l’eau',
-  THIRD_PARTY: 'Via un outil tiers',
+  DIRECT: 'ont déclaré directement sur Partageons l’eau',
+  THIRD_PARTY: 'ont déclaré via un outil tiers, collecté par Partageons l’eau',
   MIXED: 'Plusieurs canaux à égalité',
   UNKNOWN: 'Canal non renseigné'
 }
@@ -175,62 +177,60 @@ const Deployment = ({totals}) => (
   </section>
 )
 
-const ProfileBreakdown = ({profiles}) => {
-  const breakdown = getStatsProfiles(profiles)
-
-  if (!breakdown.available) {
-    return <p className={styles.note}>La répartition par profil est indisponible.</p>
-  }
-
-  if (breakdown.total === 0) {
-    return <p className={styles.note}>Aucun préleveur recensé.</p>
-  }
-
-  let cursor = 0
-  const slices = breakdown.profiles.map(profile => {
-    const start = cursor
-    cursor += profile.percentage
-    return `${PROFILE_COLORS[profile.key] ?? PROFILE_COLORS.UNKNOWN} ${start}% ${cursor}%`
-  })
-
-  return (
-    <div className={styles.breakdown}>
-      <div className={styles.donut} style={{background: `conic-gradient(${slices.join(', ')})`}} aria-hidden='true'>
-        <span>{formatStatsCount(breakdown.total)}</span>
-      </div>
-      <ul className={styles.profileLegend}>
-        {breakdown.profiles.map(profile => (
-          <li key={profile.key}>
-            <span className={styles.swatch} style={{background: PROFILE_COLORS[profile.key] ?? PROFILE_COLORS.UNKNOWN}} aria-hidden='true' />
-            <span>{profile.label}</span>
-            <strong>{formatStatsCount(profile.count)}</strong>
-            <span className={styles.profilePercentage}>{formatStatsPercentage(profile.percentage)}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
-
 const Territory = ({territory}) => {
+  const breakdown = getStatsReportingProfiles(territory)
+  const rateAvailable = isStatsCount(territory.reportingRate) && territory.reportingRate <= 100
+  const description = breakdown.available
+    ? [...breakdown.profiles.map(profile => `${profile.label} : ${formatStatsCount(profile.reportingCount)} préleveurs ayant déclaré`),
+      `${formatStatsCount(breakdown.missingCount)} sans déclaration`].join('. ')
+    : `${formatStatsPercentage(territory.reportingRate)} des préleveurs ont déclaré`
+
   return (
     <article className={styles.territory}>
       <div className={styles.territoryHeading}>
         <div>
           <h3>{territory.name}</h3>
           <p className={styles.territoryPoints}>{formatStatsCount(territory.pointsCount)} points de prélèvement</p>
+          {isStatsMonth(territory.deploymentMonth) && (
+            <p className={styles.territoryPoints}>Déployé en {formatStatsMonth(territory.deploymentMonth)}</p>
+          )}
         </div>
         <div className={styles.territoryNumbers}>
-          <strong className={isStatsCount(territory.reportingPreleveursCount) ? '' : styles.unavailable}>
-            {formatStatsCount(territory.reportingPreleveursCount)}
+          <span>{formatStatsCount(territory.reportingPreleveursCount)} sur {formatStatsCount(territory.preleveursCount)} préleveurs</span>
+          <strong className={rateAvailable ? '' : styles.unavailable}>
+            {formatStatsPercentage(territory.reportingRate)}
           </strong>
-          <span>{territory.reportingPreleveursCount === 1 ? 'déclaration mensuelle' : 'déclarations mensuelles'}</span>
         </div>
       </div>
-      <details className={styles.profileDetails}>
-        <summary>Répartition des préleveurs par profil</summary>
-        <ProfileBreakdown profiles={territory.profiles} />
-      </details>
+      {territory.preleveursCount === 0 ? <p className={styles.note}>Aucun préleveur recensé.</p> : (breakdown.available || rateAvailable) ? (
+        <div className={styles.reportingBar} role='img' aria-label={description}>
+          {breakdown.available ? breakdown.profiles.map(profile => (
+            <span
+              key={profile.key}
+              style={{width: `${profile.percentage}%`, background: PROFILE_COLORS[profile.key] ?? PROFILE_COLORS.UNKNOWN}}
+            />
+          )) : rateAvailable && <span style={{width: `${territory.reportingRate}%`, background: 'var(--text-default-grey)'}} />}
+        </div>
+      ) : <p className={styles.note}>La répartition des déclarations est indisponible.</p>}
+      {breakdown.available && territory.preleveursCount > 0 && (
+        <details className={styles.profileDetails}>
+          <summary>Préleveurs ayant déclaré par profil</summary>
+          <ul className={styles.profileLegend}>
+            {breakdown.profiles.map(profile => (
+              <li key={profile.key}>
+                <span className={styles.swatch} style={{background: PROFILE_COLORS[profile.key] ?? PROFILE_COLORS.UNKNOWN}} aria-hidden='true' />
+                <span>{profile.label}</span>
+                <strong>{formatStatsCount(profile.reportingCount)}</strong>
+              </li>
+            ))}
+            <li>
+              <span className={`${styles.swatch} ${styles.nonReporting}`} aria-hidden='true' />
+              <span>Sans déclaration</span>
+              <strong>{formatStatsCount(breakdown.missingCount)}</strong>
+            </li>
+          </ul>
+        </details>
+      )}
     </article>
   )
 }
@@ -282,7 +282,7 @@ const Territories = ({territories, month, availableMonths, error}) => {
         <h2 id='stats-reporting'>Nombre de déclarations mensuelles par territoire</h2>
         {month && <MonthSelector month={month} availableMonths={availableMonths} />}
       </div>
-      {error && <StatsError error={error} territorial />}
+      {error && <StatsError error={error} period />}
       <div className={styles.tabs} role='tablist' aria-label='Découpage territorial'>
         {GEOGRAPHIES.map((item, index) => (
           <button
@@ -323,7 +323,7 @@ const Territories = ({territories, month, availableMonths, error}) => {
   )
 }
 
-const Channels = ({channels, month}) => {
+const Channels = ({channels}) => {
   const available = Array.isArray(channels) && channels.length > 0
   const visibleChannels = available
     ? channels.filter(channel => ['DIRECT', 'THIRD_PARTY'].includes(channel.key) || channel.count > 0)
@@ -334,14 +334,15 @@ const Channels = ({channels, month}) => {
   return (
     <section className={styles.section} aria-labelledby='stats-channels'>
       <h2 id='stats-channels'>Comment la donnée arrive</h2>
-      {month && <p className={styles.periodCaption}>{formatStatsMonth(month)}</p>}
       {available ? (
         <div className={styles.channels}>
           {visibleChannels.map(channel => (
             <div key={channel.key} className={styles.channel}>
-              <Count value={channel.count} className={styles.channelValue} />
+              <span className={`${styles.channelValue} ${isStatsCount(channel.percentage) && channel.percentage <= 100 ? '' : styles.unavailable}`}>
+                {formatStatsPercentage(channel.percentage)}
+              </span>
               <h3>{CHANNEL_LABELS[channel.key] ?? channel.label}</h3>
-              <p>{formatStatsPercentage(channel.percentage)}</p>
+              <p>{formatStatsCount(channel.count)} {channel.count === 1 ? 'préleveur' : 'préleveurs'}</p>
               <ProgressBar
                 value={channel.percentage}
                 color={channel.key === 'DIRECT' ? 'var(--text-default-grey)' : 'var(--text-mention-grey)'}
@@ -416,6 +417,38 @@ const ActiveUsers = ({activeUsers}) => {
   )
 }
 
+const PublicVisitors = ({publicVisitors}) => {
+  const months = getStatsPublicVisitors(publicVisitors?.months)
+  const maximum = Math.max(1, ...months.filter(month => month.available).map(month => month.uniqueVisitors))
+  const accessibleDescription = months.map(month => `${formatStatsMonth(month.month)} : ${month.available
+    ? `${formatStatsCount(month.uniqueVisitors)} visiteurs uniques`
+    : 'données indisponibles'}`).join('. ')
+
+  return (
+    <section className={styles.section} aria-labelledby='stats-public-visitors'>
+      <h2 id='stats-public-visitors'>Visiteurs uniques du site vitrine / mois</h2>
+      <p>Audience du site <a className='fr-link' href='https://partageonsleau.beta.gouv.fr/'>partageonsleau.beta.gouv.fr</a>.</p>
+      {months.length > 0 ? (
+        <div className={styles.chartScroll}>
+          <div className={styles.connectionsChart} role='img' aria-label={accessibleDescription}>
+            {months.map(month => (
+              <div key={month.month} className={styles.chartColumn} aria-hidden='true'>
+                <div className={styles.chartPlot}>
+                  <span className={styles.barValue}>{month.available ? formatStatsCount(month.uniqueVisitors) : '—'}</span>
+                  {month.available ? (
+                    <div className={`${styles.stack} ${styles.visitorsBar}`} style={{height: `${month.uniqueVisitors / maximum * 180}px`}} />
+                  ) : <div className={styles.missingBar}>Non disponible</div>}
+                </div>
+                <span className={styles.chartMonth}>{formatStatsMonth(month.month, {short: true})}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : <p className={styles.empty}>Les statistiques du site vitrine sont temporairement indisponibles.</p>}
+    </section>
+  )
+}
+
 const Impact = () => (
   <section className={styles.section} aria-labelledby='stats-impact'>
     <h2 id='stats-impact'>Utilité, impact sur la politique publique et efficience</h2>
@@ -438,11 +471,11 @@ const Impact = () => (
   </section>
 )
 
-const StatsError = ({error, territorial = false}) => (
+const StatsError = ({error, period = false}) => (
   <div className={styles.error} role='status'>
     <p><strong>{error === 'invalid-month'
       ? 'Ce mois n’est pas disponible'
-      : (territorial ? 'Les données par territoire sont temporairement indisponibles' : 'Les statistiques sont temporairement indisponibles')}</strong></p>
+      : (period ? 'Les données de ce mois sont temporairement indisponibles' : 'Les statistiques sont temporairement indisponibles')}</strong></p>
     <p>{error === 'invalid-month'
       ? 'Seuls les mois terminés et disponibles peuvent être consultés.'
       : 'Les chiffres n’ont pas pu être chargés. Vous pouvez réessayer dans quelques instants.'}</p>
@@ -450,7 +483,7 @@ const StatsError = ({error, territorial = false}) => (
   </div>
 )
 
-const PublicStats = ({data, error, territoryData = data, territoryError}) => (
+const PublicStats = ({data, error, periodData = data, periodError, periodMonth}) => (
   <article className={styles.page}>
     <header className={styles.pageHeader}>
       <h1>Statistiques</h1>
@@ -459,13 +492,14 @@ const PublicStats = ({data, error, territoryData = data, territoryError}) => (
     <Introduction />
     <Deployment totals={data?.totals} />
     <Territories
-      territories={territoryData?.territories}
-      month={territoryData?.month ?? data?.month}
-      availableMonths={data?.availableMonths ?? territoryData?.availableMonths}
-      error={territoryError}
+      territories={periodData?.territories}
+      month={periodMonth ?? periodData?.month ?? data?.month}
+      availableMonths={data?.availableMonths ?? periodData?.availableMonths}
+      error={periodError}
     />
-    <Channels channels={data?.channels} month={data?.month} />
+    <Channels channels={periodData?.channels} />
     <ActiveUsers activeUsers={data?.activeUsers} />
+    <PublicVisitors publicVisitors={data?.publicVisitors} />
     <Impact />
   </article>
 )

@@ -9,6 +9,8 @@ import {
   getSelectableStatsMonths,
   getStatsConnections,
   getStatsProfiles,
+  getStatsPublicVisitors,
+  getStatsReportingProfiles,
   isStatsMonth
 } from './public-stats.js'
 
@@ -72,6 +74,68 @@ test('une répartition absente reste distincte d’un territoire sans préleveur
   t.deepEqual(getStatsProfiles(undefined), {available: false, total: null, profiles: []})
   t.deepEqual(getStatsProfiles([{key: 'OTHER', count: null}]), {available: false, total: null, profiles: []})
   t.deepEqual(getStatsProfiles([]), {available: true, total: 0, profiles: []})
+})
+
+test('les segments des profils représentent uniquement les préleveurs ayant déclaré', t => {
+  const territory = {
+    preleveursCount: 10,
+    reportingPreleveursCount: 4,
+    profiles: [
+      {key: 'AGRICULTURE', count: 5, reportingCount: 2},
+      {key: 'OTHER', count: 2, reportingCount: 1},
+      {key: 'UNKNOWN', count: 2, reportingCount: 1},
+      {key: 'INDUSTRY', count: 1, reportingCount: 0}
+    ]
+  }
+  const result = getStatsReportingProfiles(territory)
+  t.true(result.available)
+  t.is(result.missingCount, 6)
+  t.deepEqual(result.profiles.map(profile => [profile.key, profile.percentage]), [
+    ['AGRICULTURE', 20], ['OTHER', 10], ['UNKNOWN', 10]
+  ])
+  t.is(result.profiles.reduce((sum, profile) => sum + profile.reportingCount, 0), 4)
+  t.is(territory.profiles.length, 4)
+})
+
+test('une ancienne API ou des profils incohérents ne produisent pas une répartition trompeuse', t => {
+  for (const profiles of [
+    [{key: 'AGRICULTURE', count: 10}],
+    [{key: 'AGRICULTURE', count: 10, reportingCount: 11}],
+    [{key: 'AGRICULTURE', count: 10, reportingCount: 3}],
+    [{key: 'AGRICULTURE', count: 9, reportingCount: 4}],
+    undefined
+  ]) {
+    t.false(getStatsReportingProfiles({preleveursCount: 10, reportingPreleveursCount: 4, profiles}).available)
+  }
+  t.deepEqual(getStatsReportingProfiles({preleveursCount: 0, reportingPreleveursCount: 0, profiles: []}), {
+    available: true, profiles: [], missingCount: 0
+  })
+})
+
+test('les visiteurs uniques distinguent les vrais zéros des mois indisponibles', t => {
+  t.deepEqual(getStatsPublicVisitors(undefined), [])
+  t.deepEqual(getStatsPublicVisitors({}), [])
+  const result = getStatsPublicVisitors([
+    {month: '2026-06', uniqueVisitors: 0, status: 'complete'},
+    {month: '2026-07', uniqueVisitors: 0, status: 'unavailable'},
+    {month: '2026-08', uniqueVisitors: null, status: 'complete'},
+    {month: '2026-09', uniqueVisitors: 1.5, status: 'complete'},
+    {month: 'invalid', uniqueVisitors: 12, status: 'complete'},
+    null
+  ])
+  t.deepEqual(result.map(month => [month.available, month.uniqueVisitors]), [
+    [true, 0], [false, null], [false, null], [false, null]
+  ])
+})
+
+test('les visiteurs gardent les six derniers mois sans additionner les uniques', t => {
+  const months = Array.from({length: 8}, (_, index) => ({
+    month: `2026-0${8 - index}`, uniqueVisitors: 10 + index, status: 'complete'
+  }))
+  t.deepEqual(getStatsPublicVisitors(months).map(item => [item.month, item.uniqueVisitors]), [
+    ['2026-03', 15], ['2026-04', 14], ['2026-05', 13], ['2026-06', 12], ['2026-07', 11], ['2026-08', 10]
+  ])
+  t.is(months[0].month, '2026-08')
 })
 
 test('les mois sans historique ne sont jamais affichés comme des zéros mesurés', t => {

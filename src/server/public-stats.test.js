@@ -9,6 +9,7 @@ const snapshot = {
     pointsCount: 0, preleveursCount: 0, sageCount: 0, departmentCount: 0
   },
   territories: {SAGE: [], DEPARTEMENT: []},
+  availableMonths: ['2026-07', '2026-08'],
   channels: []
 }
 
@@ -29,15 +30,17 @@ function pageOptions(responses = {}) {
   }
 }
 
-test('le mois sélectionné ne remplace pas les chiffres globaux, canaux et activité', async t => {
+test('le mois sélectionné partage les territoires et canaux sans remplacer les chiffres globaux et l’activité', async t => {
   const latest = {...snapshot, channels: [{count: 5}], activeUsers: {months: [{month: '2026-08', total: 10}]}}
-  const selected = {...snapshot, month: '2026-07', territories: {SAGE: [{reportingPreleveursCount: 3}], DEPARTEMENT: []}}
+  const selected = {...snapshot, month: '2026-07', channels: [{count: 2}], territories: {SAGE: [{reportingPreleveursCount: 3}], DEPARTEMENT: []}}
   const {options, requests} = pageOptions({latest, '2026-07': selected})
   const result = await getPublicStatsPage('2026-07', options)
   t.deepEqual(result.data, latest)
-  t.deepEqual(result.territoryData, selected)
+  t.deepEqual(result.periodData, selected)
+  t.deepEqual(result.periodData.channels, [{count: 2}])
+  t.is(result.periodMonth, '2026-07')
   t.is(result.error, null)
-  t.is(result.territoryError, null)
+  t.is(result.periodError, null)
   t.deepEqual(requests, ['latest', '2026-07'])
 })
 
@@ -45,33 +48,34 @@ test('le dernier mois ne charge qu’un seul instantané public', async t => {
   for (const month of [undefined, null, '', '2026-08']) {
     const {options, requests} = pageOptions()
     const result = await getPublicStatsPage(month, options)
-    t.is(result.data, result.territoryData)
+    t.is(result.data, result.periodData)
     t.deepEqual(requests, ['latest'])
   }
 })
 
-test('une erreur de sélection ou de données territoriales préserve les autres sections', async t => {
+test('une erreur de mois masque territoires et canaux sans reprendre les chiffres du dernier mois', async t => {
   for (const [month, status, error] of [['2026-09', 400, 'invalid-month'], ['2026-07', 503, 'unavailable']]) {
     const {options} = pageOptions({[month]: new Response('{}', {status})})
     const result = await getPublicStatsPage(month, options)
     t.deepEqual(result.data, snapshot)
-    t.is(result.territoryData, null)
+    t.is(result.periodData, null)
     t.is(result.error, null)
-    t.is(result.territoryError, error)
+    t.is(result.periodError, error)
+    t.is(result.periodMonth, month === '2026-07' ? month : '2026-08')
   }
   const {options, requests} = pageOptions()
   const result = await getPublicStatsPage(['2026-07'], options)
-  t.is(result.territoryError, 'invalid-month')
+  t.is(result.periodError, 'invalid-month')
   t.deepEqual(requests, ['latest'])
 })
 
-test('le mois territorial reste consultable si le dernier instantané est indisponible', async t => {
+test('le mois sélectionné reste consultable si le dernier instantané est indisponible', async t => {
   const {options} = pageOptions({latest: new Response('{}', {status: 503})})
   const result = await getPublicStatsPage('2026-07', options)
   t.is(result.data, null)
   t.is(result.error, 'unavailable')
-  t.is(result.territoryData.month, '2026-07')
-  t.is(result.territoryError, null)
+  t.is(result.periodData.month, '2026-07')
+  t.is(result.periodError, null)
 })
 
 test('charge les agrégats publics sans authentification avec un cache serveur court', async t => {

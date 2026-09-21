@@ -2,8 +2,8 @@ import {getPublicStatsUrl} from '../lib/public-stats.js'
 
 const MAX_SNAPSHOT_AGE_MS = 65 * 60 * 1000
 
-// The URL month belongs only to the territory section. Keep the rest of the page
-// on the latest completed month and reuse the snapshot when both periods match.
+// The URL month is shared by territories and collection channels. Keep totals
+// and the activity/visitor series on the latest snapshot.
 export async function getPublicStatsPage(month, options) {
   const latest = await getPublicStats(undefined, options)
   const selected = month === undefined || month === null || month === '' || month === latest.data?.month
@@ -12,8 +12,10 @@ export async function getPublicStatsPage(month, options) {
 
   return {
     ...latest,
-    territoryData: selected.data,
-    territoryError: selected === latest ? null : selected.error
+    periodData: selected.data,
+    periodError: selected === latest ? null : selected.error,
+    periodMonth: selected.data?.month
+      ?? (latest.data?.availableMonths?.includes(month) ? month : latest.data?.month)
   }
 }
 

@@ -7,9 +7,10 @@ export function createPublicStatsFixture(month = '2026-08') {
     preleveursCount: 10,
     reportingPreleveursCount: month === '2026-07' ? 3 : 7,
     reportingRate: month === '2026-07' ? 30 : 70,
+    deploymentMonth: null,
     profiles: [
-      {key: 'AGRICULTURE', label: 'Agriculture', count: 8},
-      {key: 'INDUSTRY', label: 'Industrie', count: 2}
+      {key: 'AGRICULTURE', label: 'Agriculture', count: 8, reportingCount: month === '2026-07' ? 2 : 5},
+      {key: 'INDUSTRY', label: 'Industrie', count: 2, reportingCount: month === '2026-07' ? 1 : 2}
     ]
   }
 
@@ -20,12 +21,24 @@ export function createPublicStatsFixture(month = '2026-08') {
     totals: {pointsCount: 12, preleveursCount: 10, sageCount: 1, departmentCount: 1},
     territories: {
       SAGE: [territory],
-      DEPARTEMENT: [{...territory, id: 'dep-test', name: 'Département de démonstration'}]
+      DEPARTEMENT: [{...territory, id: 'dep-test', name: 'Département de démonstration', deploymentMonth: '2026-03'}]
     },
     channels: [
-      {key: 'DIRECT', count: month === '2026-07' ? 1 : 5, percentage: 71.43},
-      {key: 'THIRD_PARTY', count: 2, percentage: 28.57}
+      {key: 'DIRECT', count: month === '2026-07' ? 1 : 5, percentage: month === '2026-07' ? 33.33 : 71.43},
+      {key: 'THIRD_PARTY', count: 2, percentage: month === '2026-07' ? 66.67 : 28.57}
     ],
+    publicVisitors: {
+      website: 'https://partageonsleau.beta.gouv.fr/',
+      fetchedAt: new Date().toISOString(),
+      months: [
+        {month: '2026-03', uniqueVisitors: null, status: 'unavailable'},
+        {month: '2026-04', uniqueVisitors: 0, status: 'complete'},
+        {month: '2026-05', uniqueVisitors: 25, status: 'complete'},
+        {month: '2026-06', uniqueVisitors: 31, status: 'complete'},
+        {month: '2026-07', uniqueVisitors: 48, status: 'complete'},
+        {month: '2026-08', uniqueVisitors: 52, status: 'complete'}
+      ]
+    },
     activeUsers: {
       availableSince: '2026-04-12T10:00:00Z',
       collectionStartedAt: '2026-06-15T10:00:00Z',

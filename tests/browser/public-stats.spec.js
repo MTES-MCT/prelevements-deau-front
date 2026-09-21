@@ -5,6 +5,7 @@ test.use({reducedMotion: 'reduce', ignoreHTTPSErrors: true})
 
 const territoriesName = 'Nombre de déclarations mensuelles par territoire'
 const activityName = 'Nombre d’utilisateurs actifs / mois'
+const visitorsName = 'Visiteurs uniques du site vitrine / mois'
 
 async function useExistingSession(context, {secure = false} = {}) {
   const id = '11111111-1111-4111-8111-111111111111'
@@ -44,7 +45,7 @@ test.beforeEach(async ({page}) => {
   })
 })
 
-test('le mois ne change que les déclarations territoriales, pas les canaux ni le graphique', async ({page}, testInfo) => {
+test('le mois change ensemble les déclarations territoriales et les canaux, pas les graphiques d’activité et d’audience', async ({page}, testInfo) => {
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
   await page.goto('/stats')
@@ -52,18 +53,31 @@ test('le mois ne change que les déclarations territoriales, pas les canaux ni l
   const territories = page.getByRole('region', {name: territoriesName})
   const activity = page.getByRole('region', {name: activityName})
   const channels = page.getByRole('region', {name: 'Comment la donnée arrive'})
+  const visitors = page.getByRole('region', {name: visitorsName})
   await expect(page.getByRole('combobox')).toHaveCount(1)
   await expect(territories.getByRole('combobox', {name: 'Mois', exact: true})).toHaveValue('2026-08')
-  await expect(territories.getByRole('article')).toContainText(/7\s*déclarations mensuelles/)
+  await expect(territories.getByRole('article')).toContainText('7 sur 10 préleveurs')
+  await expect(territories.getByRole('article')).toContainText('70 %')
+  await expect(territories.getByRole('img')).toHaveAttribute('aria-label', /Agriculture : 5 préleveurs ayant déclaré.*Industrie : 2 préleveurs ayant déclaré.*3 sans déclaration/)
+  await expect(territories).not.toContainText('Déployé en')
   const graphBefore = await activity.getByRole('img').getAttribute('aria-label')
-  const channelsBefore = await channels.innerText()
+  const visitorsBefore = await visitors.getByRole('img').getAttribute('aria-label')
+  await expect(channels).toContainText('71,4 %')
+  await expect(channels).toContainText('5 préleveurs')
   await territories.getByRole('combobox').selectOption('2026-07')
   await territories.getByRole('button', {name: 'Afficher', exact: true}).click()
   await expect(page).toHaveURL(/\/stats\?month=2026-07$/)
-  await expect(territories.getByRole('article')).toContainText(/3\s*déclarations mensuelles/)
+  await expect(territories.getByRole('article')).toContainText('3 sur 10 préleveurs')
+  await expect(territories.getByRole('article')).toContainText('30 %')
   await expect(activity.getByRole('img')).toHaveAttribute('aria-label', graphBefore)
-  await expect(channels).toHaveText(channelsBefore, {useInnerText: true})
-  await expect(territories).not.toContainText('30 %')
+  await expect(visitors.getByRole('img')).toHaveAttribute('aria-label', visitorsBefore)
+  await expect(channels).toContainText('33,3 %')
+  await expect(channels).toContainText('1 préleveur')
+  await expect(channels).not.toContainText('71,4 %')
+  await expect(channels).not.toContainText('août 2026')
+  await expect(channels).not.toContainText('juillet 2026')
+  await expect(channels).toContainText('ont déclaré directement sur Partageons l’eau')
+  await expect(channels).toContainText('ont déclaré via un outil tiers, collecté par Partageons l’eau')
   await expect(page.getByText('Voir les chiffres détaillés')).toHaveCount(0)
   await expect(page.getByText('Mois observé', {exact: true})).toHaveCount(0)
   await expect(activity).toContainText('Nombre d’utilisateurs uniques utilisant le service chaque mois.')
@@ -72,6 +86,7 @@ test('le mois ne change que les déclarations territoriales, pas les canaux ni l
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
   await territories.screenshot({path: testInfo.outputPath('declarations-territoriales.png')})
   await activity.screenshot({path: testInfo.outputPath('utilisateurs-actifs.png')})
+  await visitors.screenshot({path: testInfo.outputPath('visiteurs-site-vitrine.png')})
   expect(errors).toEqual([])
 })
 
@@ -83,7 +98,8 @@ test('les onglets restent accessibles au clavier et les profils consultables', a
   await expect(territories.getByRole('tab', {name: 'Départements'})).toBeFocused()
   await expect(territories.getByRole('tab', {name: 'Départements'})).toHaveAttribute('aria-selected', 'true')
   await expect(territories.getByRole('heading', {name: 'Département de démonstration'})).toBeVisible()
-  await territories.getByText('Répartition des préleveurs par profil', {exact: true}).click()
+  await expect(territories).toContainText('Déployé en mars 2026')
+  await territories.getByText('Préleveurs ayant déclaré par profil', {exact: true}).click()
   await expect(territories.getByText('Agriculture', {exact: true})).toBeVisible()
 })
 
@@ -94,6 +110,30 @@ test('un mois refusé ne masque pas les indicateurs globaux ni l’activité', a
   await expect(territories.getByRole('article')).toHaveCount(0)
   await expect(page.getByRole('region', {name: activityName}).getByRole('img')).toBeVisible()
   await expect(page.getByRole('region', {name: 'Où en est le déploiement'})).toContainText('12')
+  const channels = page.getByRole('region', {name: 'Comment la donnée arrive'})
+  await expect(channels).toContainText('La répartition par canal est temporairement indisponible.')
+  await expect(channels).not.toContainText('71,4 %')
+  await expect(page.getByRole('region', {name: visitorsName}).getByRole('img')).toBeVisible()
+})
+
+test('les visiteurs du site vitrine ont une série séparée avec les zéros réels et les absences', async ({page}) => {
+  await page.goto('/stats')
+  const visitors = page.getByRole('region', {name: visitorsName})
+  await expect(visitors.getByRole('img')).toHaveAttribute('aria-label', /mars 2026 : données indisponibles\. avril 2026 : 0 visiteurs uniques.*août 2026 : 52 visiteurs uniques/)
+  await expect(visitors.getByRole('link', {name: 'partageonsleau.beta.gouv.fr'})).toHaveAttribute('href', 'https://partageonsleau.beta.gouv.fr/')
+})
+
+test('la présentation reste lisible sur un écran étroit', async ({page}, testInfo) => {
+  await page.setViewportSize({width: 390, height: 844})
+  await page.goto('/stats')
+  const territories = page.getByRole('region', {name: territoriesName})
+  await expect(territories.getByRole('article')).toContainText('70 %')
+  await territories.getByRole('combobox').selectOption('2026-07')
+  await territories.getByRole('button', {name: 'Afficher', exact: true}).click()
+  await expect(territories.getByRole('article')).toContainText('30 %')
+  await expect(page.getByRole('region', {name: 'Comment la donnée arrive'})).toContainText('33,3 %')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
+  await territories.screenshot({path: testInfo.outputPath('declarations-territoriales-mobile.png')})
 })
 
 test('le vrai POST Next vide enregistre une activité, sans exposer de choix d’identité', async ({page, context}) => {

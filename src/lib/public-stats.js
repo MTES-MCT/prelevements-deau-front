@@ -73,6 +73,46 @@ export function getStatsProfiles(profiles) {
   }
 }
 
+export function getStatsReportingProfiles(territory) {
+  const {profiles, preleveursCount, reportingPreleveursCount} = territory
+  const unavailable = {available: false, profiles: [], missingCount: null}
+  if (!isStatsCount(preleveursCount) || !isStatsCount(reportingPreleveursCount)
+    || reportingPreleveursCount > preleveursCount || !Array.isArray(profiles)
+    || profiles.some(profile => !isStatsCount(profile.count)
+      || !isStatsCount(profile.reportingCount) || profile.reportingCount > profile.count)) {
+    return unavailable
+  }
+
+  // Never turn the distribution of registered profiles into a distribution of
+  // reporting profiles, including while the API and front deploy separately.
+  if (profiles.reduce((sum, profile) => sum + profile.count, 0) !== preleveursCount
+    || profiles.reduce((sum, profile) => sum + profile.reportingCount, 0) !== reportingPreleveursCount) {
+    return unavailable
+  }
+
+  return {
+    available: true,
+    profiles: profiles.filter(profile => profile.reportingCount > 0).map(profile => ({
+      ...profile,
+      percentage: preleveursCount > 0 ? profile.reportingCount / preleveursCount * 100 : 0
+    })),
+    missingCount: preleveursCount - reportingPreleveursCount
+  }
+}
+
+export function getStatsPublicVisitors(months) {
+  return (Array.isArray(months) ? months : [])
+    .filter(item => item && isStatsMonth(item.month))
+    .sort((left, right) => left.month.localeCompare(right.month))
+    .slice(-6)
+    .map(item => {
+      const available = item.status === 'complete'
+        && Number.isInteger(item.uniqueVisitors) && item.uniqueVisitors >= 0
+
+      return {...item, available, uniqueVisitors: available ? item.uniqueVisitors : null}
+    })
+}
+
 export function getStatsConnections(months) {
   return (months ?? []).filter(item => isStatsMonth(item.month))
     .sort((left, right) => left.month.localeCompare(right.month))
