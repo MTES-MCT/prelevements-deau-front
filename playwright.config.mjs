@@ -11,6 +11,7 @@ const browserTests = [
   'chart-axes.spec.js',
   'declaration-charts.spec.js',
   'declaration-file-selection.spec.js',
+  'point-water-body.spec.js',
   'admin-chart-labels.spec.js'
 ]
 export default defineConfig({

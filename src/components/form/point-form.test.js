@@ -15,10 +15,12 @@ const require = createRequire(import.meta.url)
 
 function renderPointForm(point, setPoint = () => {}) {
   const controls = new Map()
-  const input = ({label, nativeInputProps, nativeTextAreaProps, textArea, required}) => {
+  const input = ({label, nativeInputProps, nativeTextAreaProps, textArea, required, state, stateRelatedMessage}) => {
     const props = textArea ? nativeTextAreaProps : nativeInputProps
     controls.set(label, props)
-    return React.createElement('label', null, label, React.createElement(textArea ? 'textarea' : 'input', {...props, required}))
+    return React.createElement('label', null, label,
+      React.createElement(textArea ? 'textarea' : 'input', {...props, required}),
+      state === 'error' ? React.createElement('span', null, stateRelatedMessage) : null)
   }
 
   const select = ({label, hint, hintText, nativeSelectProps, options}) => {
@@ -150,4 +152,92 @@ test('les caractéristiques conditionnelles du plan d’eau restent éditables',
   controls.get('Plan d’eau connecté au cours d’eau').onChange({target: {value: 'true'}})
   t.true(point.isWaterBodyConnectedToStream)
   t.is(point.collectionMode, 'EXTERNAL')
+})
+
+test('les deux caractéristiques du plan d’eau précèdent les connexions, sans être affichées pour les autres origines', t => {
+  const point = {...pointFixture(), nature: 'PLAN_EAU', reservoirNominalVolume: 1234.5, waterBodyIdentifier: '00123'}
+  const {html, controls} = renderPointForm(point)
+  const volume = controls.get('Volume nominal de la retenue (m³)')
+  const identifier = controls.get('Identifiant du plan d’eau')
+  t.is(volume.type, 'number')
+  t.is(volume.step, 'any')
+  t.is(volume.value, 1234.5)
+  t.is(identifier.type, 'text')
+  t.is(identifier.maxLength, 100)
+  t.is(identifier.value, '00123')
+  t.true(html.indexOf('Volume nominal de la retenue') < html.indexOf('Identifiant du plan d’eau'))
+  t.true(html.indexOf('Identifiant du plan d’eau') < html.indexOf('Plan d’eau connecté au cours d’eau'))
+  t.true(html.includes('grid-cols-1 gap-4 md:grid-cols-2'))
+  for (const nature of [undefined, null, 'NAPPE', 'COURS_EAU', 'SOURCE']) {
+    const {controls: otherControls} = renderPointForm({...point, nature})
+    t.false(otherControls.has('Volume nominal de la retenue (m³)'))
+    t.false(otherControls.has('Identifiant du plan d’eau'))
+  }
+})
+
+test('le volume contrôlé accepte les décimales et envoie null, pas zéro, après effacement', t => {
+  const existingPoint = {...pointFixture(), nature: 'PLAN_EAU', reservoirNominalVolume: 1234.5}
+  let payload = {}
+  const setPayload = update => { payload = update(payload) }
+  const render = () => renderPointForm({...existingPoint, ...payload}, setPayload)
+  render().controls.get('Volume nominal de la retenue (m³)').onChange({target: {value: '0.125'}})
+  t.deepEqual(payload, {reservoirNominalVolume: 0.125})
+  t.is(render().controls.get('Volume nominal de la retenue (m³)').value, 0.125)
+  render().controls.get('Volume nominal de la retenue (m³)').onChange({target: {value: ''}})
+  t.deepEqual(payload, {reservoirNominalVolume: null})
+  t.is(render().controls.get('Volume nominal de la retenue (m³)').value, '')
+  for (const value of ['0', '-2']) {
+    render().controls.get('Volume nominal de la retenue (m³)').onChange({target: {value}})
+    t.is(payload.reservoirNominalVolume, Number(value))
+    t.true(render().html.includes('Saisissez un volume strictement supérieur à 0.'))
+  }
+})
+
+test('l’identifiant préserve son texte et les zéros initiaux, avec trim au blur sans enrichir un payload intact', t => {
+  const existingPoint = {...pointFixture(), nature: 'PLAN_EAU', waterBodyIdentifier: '00123'}
+  let payload = {}
+  const setPayload = update => { payload = update(payload) }
+  const render = () => renderPointForm({...existingPoint, ...payload}, setPayload)
+  const label = 'Identifiant du plan d’eau'
+  render().controls.get(label).onBlur({target: {value: '00123'}})
+  t.deepEqual(payload, {})
+  render().controls.get(label).onChange({target: {value: '  00123 A  '}})
+  t.deepEqual(payload, {waterBodyIdentifier: '  00123 A  '})
+  render().controls.get(label).onBlur({target: {value: '  00123 A  '}})
+  t.deepEqual(payload, {waterBodyIdentifier: '00123 A'})
+  render().controls.get(label).onChange({target: {value: '   '}})
+  render().controls.get(label).onBlur({target: {value: '   '}})
+  t.deepEqual(payload, {waterBodyIdentifier: null})
+  t.is(render().controls.get(label).value, '')
+})
+
+test('quitter PLAN_EAU efface les quatre caractéristiques sans restaurer ensuite les anciennes valeurs', t => {
+  const existingPoint = {
+    ...pointFixture(), nature: 'PLAN_EAU', reservoirNominalVolume: 25.5, waterBodyIdentifier: 'RET-001',
+    isWaterBodyConnectedToStream: true, isWaterBodyConnectedToGroundwater: false
+  }
+  for (const nature of ['NAPPE', '']) {
+    let payload = {}
+    const setPayload = update => { payload = update(payload) }
+    renderPointForm(existingPoint, setPayload).controls.get('Origine prélèvement / rejet').onChange({target: {value: nature}})
+    t.deepEqual(payload, {
+      nature: nature || null, reservoirNominalVolume: null, waterBodyIdentifier: null,
+      isWaterBodyConnectedToStream: null, isWaterBodyConnectedToGroundwater: null
+    })
+    renderPointForm({...existingPoint, ...payload}, setPayload).controls.get('Origine prélèvement / rejet').onChange({target: {value: 'PLAN_EAU'}})
+    const {controls} = renderPointForm({...existingPoint, ...payload}, setPayload)
+    t.is(controls.get('Volume nominal de la retenue (m³)').value, '')
+    t.is(controls.get('Identifiant du plan d’eau').value, '')
+    t.is(payload.isWaterBodyConnectedToStream, null)
+    t.is(payload.isWaterBodyConnectedToGroundwater, null)
+  }
+})
+
+test('modifier un autre champ ne normalise pas les caractéristiques non touchées du plan d’eau', t => {
+  let payload = {}
+  const {controls} = renderPointForm({...pointFixture(), nature: 'PLAN_EAU', reservoirNominalVolume: 42.75, waterBodyIdentifier: 'RET-0001'}, update => {
+    payload = update(payload)
+  })
+  controls.get('Nom du point *').onChange({target: {value: 'Nom corrigé'}})
+  t.deepEqual(payload, {name: 'Nom corrigé'})
 })

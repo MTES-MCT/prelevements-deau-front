@@ -86,6 +86,7 @@ const FIELD_LABELS = {
   quickDeclarationEnabled: 'Déclaration rapide',
   reason: 'Motif',
   reference: 'Référence',
+  reservoirNominalVolume: 'Volume nominal de la retenue (m³)',
   siret: 'SIRET',
   socialReason: 'Raison sociale',
   secondaryUsageIds: 'Usages secondaires (historique)',
@@ -101,6 +102,7 @@ const FIELD_LABELS = {
   value: 'Valeur',
   version: 'Version',
   waterAgencyInternalIdentifier: 'Identifiant Agence de l’eau',
+  waterBodyIdentifier: 'Identifiant du plan d’eau',
   waterBodyType: 'Type de milieu',
   withdrawalType: 'Type de prélèvement / rejet',
   zones: 'Zones'

@@ -29,6 +29,7 @@ const waterBodyTypeLabels = {
 }
 
 const formatLabel = (labels, value) => labels[value] ?? value
+const volumeFormatter = new Intl.NumberFormat('fr-FR', {maximumFractionDigits: 20})
 
 const formatNullableBoolean = value => {
   if (value === true) {
@@ -213,6 +214,17 @@ const PointIdentification = ({
         />
         {pointPrelevement.nature === 'PLAN_EAU' && (
           <>
+            <LabelValue
+              label='Volume nominal de la retenue'
+              value={Number.isFinite(pointPrelevement.reservoirNominalVolume) && pointPrelevement.reservoirNominalVolume > 0
+                ? `${volumeFormatter.format(pointPrelevement.reservoirNominalVolume)} m³`
+                : null}
+            />
+            <LabelValue label='Identifiant du plan d’eau'>
+              {pointPrelevement.waterBodyIdentifier && (
+                <span className='min-w-0 max-w-full break-words'>{pointPrelevement.waterBodyIdentifier}</span>
+              )}
+            </LabelValue>
             <LabelValue
               label='Plan d’eau connecté au cours d’eau'
               value={formatNullableBoolean(pointPrelevement.isWaterBodyConnectedToStream)}
