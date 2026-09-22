@@ -14,6 +14,7 @@ import {createPortal} from 'react-dom'
 import DateRangePicker from '@/components/ui/date-range-picker.js'
 import {useAuth} from '@/contexts/auth-context.js'
 import {getDeclarantTitleFromUser} from '@/lib/declarants.js'
+import {getCountingCodeLabel, getExploitationEntryId, withCountingCode} from '@/lib/exploitation-identity.js'
 import {
   getPointFlowType,
   getPointFlowTypeColors,
@@ -24,6 +25,7 @@ import {
   getPointDisplayName,
   getPointTechnicalName,
   getPointUsageNameDraft,
+  getQuickDeclarationPointId,
   MAX_POINT_USAGE_NAME_LENGTH,
   normalizePointUsageName,
   replacePointUsageName
@@ -96,7 +98,7 @@ function getPreleveurId(preleveur) {
 }
 
 function getPointId(point) {
-  return point.pointPrelevementId || point.id
+  return getExploitationEntryId(point)
 }
 
 function getDeclarantContactName(declarant) {
@@ -625,11 +627,12 @@ function getQuickDeclarationSubmitSignature({
     declarantUserId: declarantUserId ?? null,
     entries: [...entries]
       .map(entry => ({
+        exploitationId: entry.exploitationId,
         pointPrelevementId: entry.pointPrelevementId,
         usageId: entry.usageId,
         value: entry.value ?? entry.index ?? null
       }))
-      .sort((a, b) => a.pointPrelevementId.localeCompare(b.pointPrelevementId)),
+      .sort((a, b) => (a.exploitationId || a.pointPrelevementId).localeCompare(b.exploitationId || b.pointPrelevementId)),
     measurementType,
     periodEndDate,
     periodStartDate,
@@ -679,12 +682,12 @@ function groupOverwriteConflictsByPoint(conflicts = []) {
   const groupsByPoint = new Map()
 
   for (const conflict of conflicts) {
-    const pointKey = conflict.pointPrelevementId || conflict.pointPrelevementName || conflict.chunkValueId
+    const pointKey = conflict.exploitationId || conflict.pointPrelevementId || conflict.pointPrelevementName || conflict.chunkValueId
 
     if (!groupsByPoint.has(pointKey)) {
       groupsByPoint.set(pointKey, {
         key: pointKey,
-        pointName: conflict.pointPrelevementName || 'Point de prélèvement',
+        pointName: withCountingCode(conflict.pointPrelevementName || 'Point de prélèvement', conflict),
         conflicts: []
       })
     }
@@ -699,7 +702,7 @@ function getOverwriteWarningTitle(conflicts = []) {
   if (conflicts.length === 1) {
     const [conflict] = conflicts
     const period = getPeriodLabel(conflict)
-    const pointName = conflict.pointPrelevementName || 'ce point'
+    const pointName = withCountingCode(conflict.pointPrelevementName || 'ce point', conflict)
     const metricLabel = getConflictMetricLabel(conflict)
 
     if (period) {
@@ -1315,7 +1318,7 @@ const QuickDeclarationEntryRow = ({
     onUsageNameSavingChange(pointId, true)
 
     try {
-      const result = await editPointUsageNameAction(pointId, normalizedUsageNameDraft || null)
+      const result = await editPointUsageNameAction(getQuickDeclarationPointId(point), normalizedUsageNameDraft || null)
 
       if (!result?.success) {
         setUsageNameFeedback({
@@ -1326,7 +1329,7 @@ const QuickDeclarationEntryRow = ({
       }
 
       const savedUsageName = normalizePointUsageName(result.data?.usageName)
-      onUsageNameSaved(pointId, savedUsageName)
+      onUsageNameSaved(getQuickDeclarationPointId(point), savedUsageName)
       setUsageNameDraft(savedUsageName)
       setIsUsageNameEditing(false)
       setUsageNameFeedback({
@@ -1491,6 +1494,7 @@ const QuickDeclarationEntryRow = ({
             )}
           </div>
         )}
+        {point.countingCode && <p className='fr-text--xs fr-mb-0 mt-1'>{getCountingCodeLabel(point)}</p>}
         {lastReadingLabel && (
           <p className='fr-hint-text fr-mb-0 mt-1 text-[0.72rem] leading-tight'>
             Dernier index : {lastReadingLabel}
@@ -1515,6 +1519,7 @@ const QuickDeclarationEntryRow = ({
               }
             }}
             id={valueInputId}
+            aria-label={`${valueLabel} — ${withCountingCode(pointName, point)}`}
             className={classNames(
               'fr-input quick-declaration-control text-right text-xs font-semibold tabular-nums',
               hasValue && 'bg-white'
@@ -1872,6 +1877,13 @@ const QuickDeclarationMapPanel = ({
   }
 
   const pointsContactMailto = buildPointsContactMailto(declarantName)
+  const getPhysicalPointId = entryId => getQuickDeclarationPointId(entryPoints.find(point => getPointId(point) === entryId))
+  const mapPoints = [...new Map(entryPoints.map(point => [getQuickDeclarationPointId(point), point])).values()]
+  const mapDisplayNames = Object.fromEntries(entryPoints.map(point => [getQuickDeclarationPointId(point), pointDisplayNames[getPointId(point)]]))
+  const getEntryIdForPoint = pointId => {
+    const current = entryPoints.find(point => getPointId(point) === activePointId && getQuickDeclarationPointId(point) === pointId)
+    return getPointId(current || entryPoints.find(point => getQuickDeclarationPointId(point) === pointId))
+  }
 
   return (
     <aside className='sticky top-0 z-20 order-2 self-start bg-white pb-2 shadow-xs xl:order-none xl:col-start-2 xl:row-start-1 xl:top-3 xl:pb-0 xl:shadow-none'>
@@ -1887,15 +1899,15 @@ const QuickDeclarationMapPanel = ({
       </div>
       <div className='h-[220px] sm:h-[260px] md:h-[300px] xl:h-[calc(100vh-4rem)]'>
         <QuickDeclarationMap
-          points={entryPoints}
-          activePointId={activePointId}
-          hoveredPointId={hoveredPointId}
-          pointDisplayNames={pointDisplayNames}
-          selectedPointIds={selectedPointIds}
-          declaredPointIds={declaredPointIds}
+          points={mapPoints}
+          activePointId={getPhysicalPointId(activePointId)}
+          hoveredPointId={getPhysicalPointId(hoveredPointId)}
+          pointDisplayNames={mapDisplayNames}
+          selectedPointIds={[...new Set(selectedPointIds.map(getPhysicalPointId).filter(Boolean))]}
+          declaredPointIds={[...new Set(declaredPointIds.map(getPhysicalPointId).filter(Boolean))]}
           focusRequestId={focusRequestId}
-          onHoverPoint={setHoveredPointId}
-          onFocusPoint={focusPoint}
+          onHoverPoint={pointId => setHoveredPointId(pointId ? getEntryIdForPoint(pointId) : null)}
+          onFocusPoint={pointId => focusPoint(getEntryIdForPoint(pointId))}
         />
       </div>
     </aside>
@@ -2058,8 +2070,16 @@ const QuickDeclarationForm = ({
         points: replacePointUsageName(previous.points, pointId, normalizedUsageName)
       }
       : previous)
-    updateRow(pointId, {usageName: normalizedUsageName})
-  }, [updateRow])
+    setRows(previous => {
+      const next = {...previous}
+      for (const point of points.filter(point => getQuickDeclarationPointId(point) === pointId)) {
+        const entryId = getPointId(point)
+        next[entryId] = {...getRowState(previous, entryId), usageName: normalizedUsageName}
+      }
+
+      return next
+    })
+  }, [points])
 
   const handleUsageNameSavingChange = useCallback((pointId, isSaving) => {
     setUsageNameSavingPointIds(previous => isSaving
@@ -2122,7 +2142,7 @@ const QuickDeclarationForm = ({
     for (const point of entryPoints) {
       const pointId = getPointId(point)
       const row = getRowState(rows, pointId)
-      const pointName = getPointDisplayName(point, getPointUsageNameDraft(point, row))
+      const pointName = withCountingCode(getPointDisplayName(point, getPointUsageNameDraft(point, row)), point)
       const hasValue = row.value !== ''
       const hasCompleteValue = isCompleteNumberInput(row.value)
       const hasUsage = Boolean(row.usageId)
@@ -2140,7 +2160,8 @@ const QuickDeclarationForm = ({
 
         if (hasUsage && hasCompleteValue && Number.isFinite(numericValue) && numericValue >= 0) {
           nextEntries.push({
-            pointPrelevementId: pointId,
+            pointPrelevementId: getQuickDeclarationPointId(point),
+            ...(point.exploitationId ? {exploitationId: point.exploitationId} : {}),
             ...(isIndexMeasurement ? {index: numericValue} : {value: numericValue}),
             usageId: row.usageId
           })

@@ -4,6 +4,7 @@ import path from 'node:path'
 import {fileURLToPath} from 'node:url'
 
 import test from 'ava'
+import * as XLSX from 'xlsx'
 
 import {
   extractTemplateFile,
@@ -15,6 +16,25 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const testFilesPath = path.join(__dirname, 'test-files')
+
+test('deux codes comptage du même point restent deux séries et les anciens fichiers restent valides', async t => {
+  for (const withCode of [true, false]) {
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ['id_point_de_prelevement_ou_rejet'], ['POINT-SYNTHETIQUE']
+    ]), 'point_de_prelevement')
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ['id_point_de_prelevement', 'date_debut', 'date_fin', 'volume_m3', ...(withCode ? ['Code comptage'] : [])],
+      ['POINT-SYNTHETIQUE', '2026-01-01', '2026-01-31', 60, ...(withCode ? ['001'] : [])],
+      ['POINT-SYNTHETIQUE', '2026-01-01', '2026-01-31', 40, ...(withCode ? ['002'] : [])]
+    ]), 'declaration_de_volume')
+    const result = await extractTemplateFile(XLSX.write(workbook, {type: 'buffer', bookType: 'xlsx'}))
+    t.deepEqual(result.errors.filter(error => error.severity === 'error'), [])
+    t.is(result.data.series.length, withCode ? 2 : 1)
+    t.deepEqual(result.data.series.map(series => series.data[0].value), withCode ? [60, 40] : [100])
+    t.deepEqual(result.data.series.map(series => series.countingCode), withCode ? ['001', '002'] : [undefined])
+  }
+})
 
 test('template periods use an exclusive end and infer their frequency', t => {
   t.is(getExclusiveTemplatePeriodEnd('2026-07-31'), '2026-08-01')

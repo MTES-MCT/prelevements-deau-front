@@ -7,6 +7,7 @@ import {Alert, Box} from '@mui/material'
 import {usePathname, useRouter, useSearchParams} from 'next/navigation'
 
 import {matchesSearchTerms} from '@/lib/search-options.js'
+import {getCountingCodeLabel, withCountingCode} from '@/lib/exploitation-identity.js'
 import {formatUsages} from '@/lib/water-uses.js'
 
 const CELL_LABELS = {
@@ -67,6 +68,7 @@ function buildSearchText(row) {
     row.declarantLabel,
     row.declarantEmail,
     row.pointName,
+    row.countingCode,
     row.exploitationStatus,
     ...(row.collecteurs ?? []).flatMap(collecteur => [collecteur.label, collecteur.email]),
     row.usage ? formatUsages([row.usage]) : null,
@@ -75,7 +77,7 @@ function buildSearchText(row) {
 }
 
 function getCellTitle(row, cell) {
-  const base = `${row.declarantLabel} / ${row.pointName} / ${cell.periodLabel || cell.period || cell.month}`
+  const base = `${row.declarantLabel} / ${withCountingCode(row.pointName, row)} / ${cell.periodLabel || cell.period || cell.month}`
 
   if (cell.status === 'DECLARED') {
     const codes = cell.declarations.map(declaration => declaration.code).filter(Boolean).join(', ')
@@ -195,7 +197,7 @@ const MatrixCell = ({row, cell}) => {
     <td
       className='p-0 text-center align-middle'
       title={getCellTitle(row, cell)}
-      aria-label={`${label} pour ${row.pointName} sur ${cell.periodLabel || cell.period || cell.month}`}
+      aria-label={`${label} pour ${withCountingCode(row.pointName, row)} sur ${cell.periodLabel || cell.period || cell.month}`}
       style={{
         minWidth: 22,
         width: 22,
@@ -396,6 +398,7 @@ const ZoneDeclarationMonthlyMatrix = ({canExport = false, payload}) => {
                     }}
                   >
                     <div className='font-medium'>{row.pointName}</div>
+                    {row.countingCode && <div className='fr-text--xs fr-mb-0'>{getCountingCodeLabel(row)}</div>}
                     {row.collecteurs?.length > 0 && (
                       <div className='fr-text--xs fr-mb-0' title={row.collecteurs.map(collecteur => `${collecteur.label} — ${formatDateTime(collecteur.lastLoginAt)}`).join('\n')}>
                         Collecteur : {row.collecteurs.map(c => c.socialReason).join(', ')}

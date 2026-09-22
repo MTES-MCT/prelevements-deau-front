@@ -608,6 +608,8 @@ function mapColumns(sheet, headerRow, range, errors) {
       columnMap.volumePreleve = c
     } else if (columnMap.volumeRejete === undefined && matchesVolumeRejeteColumn(normalized)) {
       columnMap.volumeRejete = c
+    } else if (columnMap.countingCode === undefined && normalized === 'code_comptage') {
+      columnMap.countingCode = c
     }
   }
 
@@ -693,6 +695,7 @@ function parseDataRows(sheet, headerRow, range, columnMap, rows, errors, options
     const pointId = readAsString(sheet, r, columnMap.pointId)
     const dateDebut = readAsDateString(sheet, r, columnMap.dateDebut)
     const dateFin = readAsDateString(sheet, r, columnMap.dateFin)
+    const countingCode = columnMap.countingCode === undefined ? null : String(readAsString(sheet, r, columnMap.countingCode) ?? '').trim() || null
 
     const volume = columnMap.volume === undefined
       ? null
@@ -834,6 +837,7 @@ function parseDataRows(sheet, headerRow, range, columnMap, rows, errors, options
     for (const singlePointId of pointIds) {
       rows.push({
         pointId: singlePointId,
+        countingCode,
         dateDebut,
         dateFin,
         volume: volumePerPoint,
@@ -938,7 +942,7 @@ function consolidateData(rawData) {
   const rowsByPointAndParameter = new Map()
   for (const row of volumeRows) {
     const frequency = inferTemplateFrequency(row.dateDebut, row.dateFin)
-    const key = `${row.pointId}__${row.parameter}__${frequency}__${row.flowType ?? ''}`
+    const key = JSON.stringify([row.pointId, row.parameter, frequency, row.flowType ?? '', row.countingCode ?? null])
     if (!rowsByPointAndParameter.has(key)) {
       rowsByPointAndParameter.set(key, [])
     }
@@ -992,6 +996,7 @@ function consolidateData(rawData) {
 
     series.push({
       pointPrelevement: pointId,
+      ...(rows[0].countingCode ? {countingCode: rows[0].countingCode} : {}),
       ...(flowType ? {flowType} : {}),
       parameter,
       unit: 'm³',

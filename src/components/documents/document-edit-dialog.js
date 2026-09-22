@@ -29,7 +29,7 @@ function getExploitationLabel(exploitation) {
   const pointName = exploitation.pointPrelevement?.name || 'Point inconnu'
   const usageText = formatExploitationUsages(exploitation)
 
-  return `${pointName} - ${usageText}`
+  return `${pointName}${exploitation.countingCode ? ` — Code comptage : ${exploitation.countingCode}` : ''} - ${usageText}`
 }
 
 function getExploitationTooltip(exploitation) {

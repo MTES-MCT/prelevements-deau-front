@@ -2,6 +2,7 @@ const POINT_SHEET_NAME = 'point_de_prelevement'
 const POINT_COLUMN_NAME = 'id_point_de_prelevement_ou_rejet'
 const DECLARATION_SHEET_NAME = 'declaration_de_volume'
 const USAGE_COLUMN_NAME = 'usage'
+const COUNTING_CODE_COLUMN_NAME = 'Code comptage'
 const WATER_USE_SHEET_NAME = 'Usages SANDRE'
 const WATER_USE_DEFINED_NAME = 'USAGES_SANDRE'
 const FIRST_DATA_ROW = 2
@@ -187,6 +188,15 @@ function configureUsageColumn(workbook) {
   })
 }
 
+function configureCountingCodeColumn(workbook) {
+  const sheet = workbook.sheet(DECLARATION_SHEET_NAME)
+  const columnNumber = findHeaderColumnNumber(sheet, COUNTING_CODE_COLUMN_NAME)
+    ?? sheet.usedRange().endCell().columnNumber() + 1
+  sheet.cell(1, columnNumber).value(COUNTING_CODE_COLUMN_NAME).style({bold: true, fill: 'E3E3FD', wrapText: true})
+  sheet.column(columnNumber).width(24)
+  sheet.range(FIRST_DATA_ROW, columnNumber, LAST_DATA_ROW, columnNumber).style('numberFormat', '@')
+}
+
 export function enrichDeclarationTemplateWorkbook(workbook, {
   pointNames = [],
   waterUses = []
@@ -194,6 +204,7 @@ export function enrichDeclarationTemplateWorkbook(workbook, {
   populatePointNames(workbook, pointNames)
   populateWaterUses(workbook, waterUses)
   configureUsageColumn(workbook)
+  configureCountingCodeColumn(workbook)
 
   return workbook
 }
@@ -203,6 +214,7 @@ export const declarationTemplateWorkbookConfig = Object.freeze({
   firstDataRow: FIRST_DATA_ROW,
   lastDataRow: LAST_DATA_ROW,
   usageColumnName: USAGE_COLUMN_NAME,
+  countingCodeColumnName: COUNTING_CODE_COLUMN_NAME,
   waterUseDefinedName: WATER_USE_DEFINED_NAME,
   waterUseSheetName: WATER_USE_SHEET_NAME
 })

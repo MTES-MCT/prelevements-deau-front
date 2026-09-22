@@ -1,3 +1,5 @@
+import {withCountingCode} from '@/lib/exploitation-identity.js'
+
 const METER_COLORS = ['#009099', '#A558A0', '#B34000', '#18753C', '#3558A2', '#A94645', '#716043', '#6956A5']
 const UUID = /[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}/i
 
@@ -30,7 +32,13 @@ export function buildSeriesPresentations(parameters = []) {
 
     const metric = parameter.metricTypeCode ?? parameter.code ?? parameter.name
     if (metric === 'index') {
-      return {...parameter, label: `Index déclarés${parameter.flowType === 'REJET' ? ' — rejets' : ''}`}
+      const baseLabel = `Index déclarés${parameter.flowType === 'REJET' ? ' — rejets' : ''}`
+      return {
+        ...parameter,
+        label: parameter.exploitationId
+          ? parameter.label || baseLabel
+          : withCountingCode(baseLabel, parameter.exploitation || parameter)
+      }
     }
 
     return parameter

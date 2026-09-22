@@ -4,6 +4,7 @@ import {
   MAX_POINT_USAGE_NAME_LENGTH as POINT_USAGE_NAME_MAX_LENGTH,
   normalizePointUsageName as normalizeUsageName
 } from '../utils/point-prelevement.js'
+import {getExploitationEntryId} from './exploitation-identity.js'
 
 export const MAX_POINT_USAGE_NAME_LENGTH = POINT_USAGE_NAME_MAX_LENGTH
 
@@ -45,7 +46,7 @@ export function replacePointUsageName(points = [], pointId, usageName) {
 
 export function buildPointDisplayNames(points = [], rows = {}) {
   return Object.fromEntries(points.flatMap(point => {
-    const pointId = getQuickDeclarationPointId(point)
+    const pointId = getExploitationEntryId(point)
 
     if (!pointId) {
       return []

@@ -3,6 +3,7 @@ import {defineConfig, devices} from '@playwright/test'
 const frontUrl = 'http://127.0.0.1:3417'
 const browserTests = [
   'meter-synchronization.spec.js',
+  'counting-code.spec.js',
   'security-modernisation.spec.js',
   'selected-volume-totals.spec.js',
   'public-stats.spec.js',

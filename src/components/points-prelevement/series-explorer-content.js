@@ -38,6 +38,7 @@ const SeriesExplorer = ({
   endDate = null,
   pointIds = null,
   preleveurId = null,
+  exploitationId = null,
   seriesOptions = null,
   startDate = null,
   subtitle = null,
@@ -142,7 +143,7 @@ const SeriesExplorer = ({
     }),
     [endDate, selectedParameters, seriesOptions?.parameters, startDate]
   )
-  const selectionScope = JSON.stringify([collecteurId, pointIds, preleveurId, selectedParameters, fullDateRange.start, fullDateRange.end])
+  const selectionScope = JSON.stringify([collecteurId, pointIds, preleveurId, exploitationId, selectedParameters, fullDateRange.start, fullDateRange.end])
   const dateRange = requestedMeterRange?.scope === selectionScope ? requestedMeterRange.range : fullDateRange
   const selectablePeriods = useMemo(
     () => calculateSelectablePeriodsFromDateRange(dateRange.start, dateRange.end),
@@ -168,7 +169,7 @@ const SeriesExplorer = ({
   const [isLoading, setIsLoading] = useState(false)
   const [loadError, setLoadError] = useState(null)
   const previousExplorerStateKeyRef = useRef(explorerStateKey)
-  const scopeKey = JSON.stringify([collecteurId, pointIds, preleveurId, dateRange.start, dateRange.end])
+  const scopeKey = JSON.stringify([collecteurId, pointIds, preleveurId, exploitationId, dateRange.start, dateRange.end])
 
   useEffect(() => {
     if (previousExplorerStateKeyRef.current === explorerStateKey) {
@@ -301,6 +302,10 @@ const SeriesExplorer = ({
       params.preleveurId = preleveurId
     }
 
+    if (exploitationId || parameterDefinition?.exploitationId) {
+      params.exploitationId = parameterDefinition?.exploitationId || exploitationId
+    }
+
     if (range.start) {
       params.startDate = range.start
     }
@@ -322,7 +327,7 @@ const SeriesExplorer = ({
     }
 
     return parameterDefinition?.readingSeries ? loadMeterSeriesPages(fetchPage) : fetchPage({})
-  }, [collecteurId, pointIds, preleveurId, dateRange, parameterDefinitionMap])
+  }, [collecteurId, pointIds, preleveurId, exploitationId, dateRange, parameterDefinitionMap])
 
   const getVolumeValuesForRange = useCallback(async (parameterId, {startDate, endDate}) => {
     // Reuse exactly the chart's scope and permissions. The API clips the source

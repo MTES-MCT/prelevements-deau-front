@@ -6,6 +6,7 @@ import ToggleSwitch from '@codegouvfr/react-dsfr/ToggleSwitch'
 import {Alert, Box, CircularProgress} from '@mui/material'
 import {useRouter} from 'next/navigation'
 
+import {withCountingCode} from '@/lib/exploitation-identity.js'
 import {
   getDeclarationNotificationRunAction,
   previewDeclarationNotificationEmailAction,
@@ -231,7 +232,7 @@ const RecipientsTable = ({recipients = [], onPreview, previewingRecipientKey = n
                 <td className='p-2 border-b'>{recipient.name || [recipient.firstName, recipient.lastName].filter(Boolean).join(' ') || recipient.socialReason || 'Non renseigné'}</td>
                 <td className='p-2 border-b'>{recipient.recipientRole === 'COLLECTEUR' ? 'Collecteur' : 'Préleveur déclarant'}</td>
                 <td className='p-2 border-b'>{formatList((recipient.zones || []).map(zone => zone.name))}</td>
-                <td className='p-2 border-b'>{formatList((recipient.points || []).map(point => point.name))}</td>
+                <td className='p-2 border-b'>{formatList((recipient.points || []).map(point => withCountingCode(point.name, point)))}</td>
                 <td className='p-2 border-b'>{recipient.statusLabel || recipient.status || 'Prévu'}</td>
                 <td className='p-2 border-b'>
                   <button
@@ -289,6 +290,7 @@ const ExclusionsTable = ({exclusions = []}) => {
                 exclusion.reason,
                 exclusion.declarantUserId,
                 exclusion.pointPrelevementId,
+                exclusion.exploitationId,
                 exclusion.expectedPeriodType,
                 exclusion.zoneId,
                 exclusion.invalidEmail
@@ -302,7 +304,7 @@ const ExclusionsTable = ({exclusions = []}) => {
                   </td>
                   <td className='p-2 border-b'>{reason.description}</td>
                   <td className='p-2 border-b'>{exclusion.declarantLabel || exclusion.declarantUserId || 'Non renseigné'}</td>
-                  <td className='p-2 border-b'>{exclusion.pointName || exclusion.pointPrelevementId || 'Non renseigné'}</td>
+                  <td className='p-2 border-b'>{withCountingCode(exclusion.pointName || exclusion.pointPrelevementId || 'Non renseigné', exclusion)}</td>
                 </tr>
               )
             })}
@@ -325,11 +327,11 @@ const DetailSummary = ({selected}) => {
       },
       {
         value: payload.summary?.expectedExploitations ?? 0,
-        label: 'points attendus à déclarer'
+        label: 'exploitations attendues à déclarer'
       },
       {
         value: payload.summary?.exclusions ?? 0,
-        label: 'points exclus de cet envoi'
+        label: 'exploitations exclues de cet envoi'
       }
     ]
     : [

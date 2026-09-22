@@ -28,3 +28,13 @@ test('les anciennes réponses restent lisibles sans exposer un UUID comme numér
   t.is(result[1].label, 'Compteur 2 (numéro non renseigné)')
   t.is(result[2].label, 'Index déclarés — rejets')
 })
+
+test('les index par exploitation conservent les libellés et identités distincts fournis par l’API', t => {
+  const parameters = ['001', '002'].map(countingCode => ({
+    id: `index:exploitation:${countingCode}`, exploitationId: `exploitation-${countingCode}`,
+    name: 'index', countingCode, label: `Index déclarés — Point partagé — Comptage ${countingCode}`
+  }))
+  const result = buildSeriesPresentations(parameters)
+  t.deepEqual(result.map(item => item.label), parameters.map(item => item.label))
+  t.deepEqual(result.map(item => item.exploitationId), parameters.map(item => item.exploitationId))
+})

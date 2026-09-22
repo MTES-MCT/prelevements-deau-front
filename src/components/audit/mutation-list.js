@@ -58,6 +58,7 @@ const FIELD_LABELS = {
   enabled: 'Actif',
   endDate: 'Fin',
   exploitationIds: 'Exploitations',
+  countingCode: 'Code comptage',
   filename: 'Nom du fichier',
   firstName: 'Prénom',
   flowType: 'Prélèvement ou rejet',

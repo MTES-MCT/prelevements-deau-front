@@ -6,10 +6,13 @@ import {
   useId,
   useMemo,
   useRef,
-  useState
+  useState,
+  useSyncExternalStore
 } from 'react'
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
+import {Button} from '@codegouvfr/react-dsfr/Button'
+import {Dialog, DialogActions, DialogContent, DialogTitle} from '@mui/material'
 import dynamic from 'next/dynamic'
 
 import DeclarationPointsChangeRequestAction from '@/components/declarations/declaration-points-change-request-action.js'
@@ -19,6 +22,8 @@ import {
   canChangeChunkPointAssociation
 } from '@/lib/chunk-point-associations.js'
 import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
+import {getDeclarationPointDisplayName} from '@/lib/declaration-point-name.js'
+import {getCountingCodeLabel, withCountingCode} from '@/lib/exploitation-identity.js'
 import {
   getDeclarationDisplayStatus,
   getSourcePeriodLabel
@@ -60,6 +65,9 @@ const AVAILABLE_POINT_COLOR = '#000091'
 const MATCHED_POINT_COLOR = '#18753c'
 const POINTS_TO_ASSOCIATE_ANCHOR_ID = 'points-a-associer'
 const ASSOCIATION_INTRO = 'Certains points de votre fichier n\'ont pas pu être reliés automatiquement aux points de prélèvement connus sur votre territoire. Demandez la création du point ou associez-les manuellement pour que les volumes déclarés soient rattachés au bon point.'
+const subscribeToHydration = () => () => {}
+const getClientSnapshot = () => true
+const getServerSnapshot = () => false
 
 function isChunkMatched(chunk) {
   return Boolean(chunk?.pointPrelevementId)
@@ -75,7 +83,15 @@ function normalizeSearchValue(value) {
 }
 
 function getChunkPointName(chunk) {
-  return chunk?.pointPrelevement?.name || chunk?.pointPrelevementName || 'Point du fichier'
+  return getDeclarationPointDisplayName(chunk, null, {fallback: 'Point du fichier'})
+}
+
+function getExploitationChoiceLabel(exploitation = {}) {
+  return [
+    exploitation.declarantLabel,
+    getCountingCodeLabel(exploitation) || 'Sans code comptage',
+    formatDateRange(exploitation.startDate, exploitation.endDate)
+  ].filter(Boolean).join(' — ')
 }
 
 function getChunkSourceFlowType(chunk) {
@@ -99,7 +115,7 @@ function getChunkTitle(chunk, index) {
   const rawName = getRawPointName(chunk)
 
   if (rawName !== 'Nom non identifié') {
-    return rawName
+    return withCountingCode(rawName, chunk?.exploitation || {countingCode: chunk?.metadata?.countingCode || chunk?.countingCode})
   }
 
   return `Ligne ${index + 1}`
@@ -245,7 +261,7 @@ function getNextUnmatchedChunk(chunks, selectedChunkId) {
   return null
 }
 
-function getLocalConflictByPointId(chunks, selectedChunk) {
+function getLocalConflictByPointId(chunks, selectedChunk, availablePoints) {
   if (!selectedChunk) {
     return {}
   }
@@ -256,6 +272,11 @@ function getLocalConflictByPointId(chunks, selectedChunk) {
     if (
       chunk.id === selectedChunk.id
       || !chunk.pointPrelevementId
+      || (chunk.exploitationId && selectedChunk.exploitationId && chunk.exploitationId !== selectedChunk.exploitationId)
+      // At this stage the user has selected a point, not its exploitation yet.
+      // Let the server validate the chosen exploitation instead of blocking
+      // every comptage of the point because a different one has data.
+      || (availablePoints.find(point => point.id === chunk.pointPrelevementId)?.exploitations?.length > 1)
       || !datesOverlap(selectedChunk.minDate, selectedChunk.maxDate, chunk.minDate, chunk.maxDate)
     ) {
       continue
@@ -511,6 +532,7 @@ const PointReconciliationPanel = ({
   source
 }) => {
   const unmatchedOnlyInputId = useId()
+  const hydrated = useSyncExternalStore(subscribeToHydration, getClientSnapshot, getServerSnapshot)
   const selectedChunkItemRef = useRef(null)
   const chunks = useMemo(() => source?.chunks ?? [], [source?.chunks])
   const remainingCount = chunks.filter(chunk => !isChunkMatched(chunk)).length
@@ -535,6 +557,8 @@ const PointReconciliationPanel = ({
   const [submitSuccess, setSubmitSuccess] = useState(null)
   const [completionSuccess, setCompletionSuccess] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [pendingPoint, setPendingPoint] = useState(null)
+  const [selectedExploitationId, setSelectedExploitationId] = useState('')
   const [chunkSearch, setChunkSearch] = useState('')
   const [pointSearch, setPointSearch] = useState('')
   const [showOnlyUnmatched, setShowOnlyUnmatched] = useState(remainingCount > 0)
@@ -647,8 +671,8 @@ const PointReconciliationPanel = ({
     [chunks, selectedChunkId]
   )
   const localConflictByPointId = useMemo(
-    () => getLocalConflictByPointId(chunks, selectedChunk),
-    [chunks, selectedChunk]
+    () => getLocalConflictByPointId(chunks, selectedChunk, availablePoints),
+    [chunks, selectedChunk, availablePoints]
   )
   const chunkItems = useMemo(
     () => chunks.map((chunk, index) => ({chunk, index})),
@@ -772,6 +796,7 @@ const PointReconciliationPanel = ({
   const updateSelectedChunkAssociation = useCallback(({
     globalInstructionStatus,
     point,
+    exploitation,
     pointAssociationOrigin
   }) => {
     if (!selectedChunk) {
@@ -782,9 +807,9 @@ const PointReconciliationPanel = ({
     const nextDeclaration = {
       ...declaration,
       source: {
-        ...declaration.source,
-        globalInstructionStatus: globalInstructionStatus ?? declaration.source?.globalInstructionStatus,
-        chunks: (declaration.source?.chunks ?? []).map(chunk => {
+        ...source,
+        globalInstructionStatus: globalInstructionStatus ?? source?.globalInstructionStatus,
+        chunks: (source?.chunks ?? []).map(chunk => {
           if (chunk.id !== selectedChunk.id) {
             return chunk
           }
@@ -794,6 +819,8 @@ const PointReconciliationPanel = ({
             instructionStatus: nextPointPrelevementId ? 'VALIDATED' : 'PENDING',
             pointPrelevementId: nextPointPrelevementId,
             pointPrelevement: point ?? null,
+            exploitationId: exploitation?.id ?? null,
+            exploitation: exploitation ?? null,
             pointAssociationOrigin: pointAssociationOrigin
               ?? (nextPointPrelevementId ? POINT_ASSOCIATION_ORIGINS.MANUAL : null)
           }
@@ -802,9 +829,9 @@ const PointReconciliationPanel = ({
     }
 
     onDeclarationChange?.(nextDeclaration)
-  }, [declaration, onDeclarationChange, selectedChunk])
+  }, [declaration, onDeclarationChange, selectedChunk, source])
 
-  const handleReconcilePoint = useCallback(async pointPrelevementId => {
+  const handleReconcilePoint = useCallback(async (pointPrelevementId, requestedExploitationId) => {
     if (!canSubmitReconciliation || !selectedChunk) {
       setSubmitError('Sélectionnez une ligne à associer.')
       return
@@ -814,7 +841,16 @@ const PointReconciliationPanel = ({
       return
     }
 
-    if (selectedChunk.pointPrelevementId === pointPrelevementId) {
+    const point = availablePoints.find(candidate => candidate.id === pointPrelevementId) ?? null
+    const exploitations = point?.exploitations ?? []
+    if (exploitations.length > 1 && !requestedExploitationId) {
+      setPendingPoint(point)
+      setSelectedExploitationId('')
+      return
+    }
+
+    const exploitationId = requestedExploitationId || (exploitations.length === 1 ? exploitations[0].id : undefined)
+    if (selectedChunk.pointPrelevementId === pointPrelevementId && (!exploitationId || selectedChunk.exploitationId === exploitationId)) {
       setSubmitError(null)
       setSubmitSuccess('Association déjà enregistrée')
       return
@@ -825,11 +861,12 @@ const PointReconciliationPanel = ({
     setIsSubmitting(true)
 
     try {
-      const point = availablePoints.find(candidate => candidate.id === pointPrelevementId) ?? null
       const result = await reconcileDeclarationChunkAction({
         declarationId: declaration.id,
+        sourceId: source?.id,
         chunkId: selectedChunk.id,
-        pointPrelevementId
+        pointPrelevementId,
+        exploitationId
       })
 
       if (!result?.success) {
@@ -840,8 +877,11 @@ const PointReconciliationPanel = ({
       updateSelectedChunkAssociation({
         globalInstructionStatus: result.data?.data?.globalInstructionStatus,
         point,
+        exploitation: result.data?.data?.exploitation || exploitations.find(exploitation => exploitation.id === (result.data?.data?.exploitationId || exploitationId)),
         pointAssociationOrigin: result.data?.data?.pointAssociationOrigin
       })
+      setPendingPoint(null)
+      setSelectedExploitationId('')
 
       if (showOnlyUnmatched && nextUnmatchedChunk) {
         handleSelectChunk(nextUnmatchedChunk)
@@ -858,6 +898,7 @@ const PointReconciliationPanel = ({
     availablePoints,
     canSubmitReconciliation,
     declaration.id,
+    source?.id,
     handleSelectChunk,
     isSubmitting,
     nextUnmatchedChunk,
@@ -882,8 +923,10 @@ const PointReconciliationPanel = ({
     try {
       const result = await reconcileDeclarationChunkAction({
         declarationId: declaration.id,
+        sourceId: source?.id,
         chunkId: selectedChunk.id,
-        pointPrelevementId: null
+        pointPrelevementId: null,
+        exploitationId: null
       })
 
       if (!result?.success) {
@@ -901,7 +944,7 @@ const PointReconciliationPanel = ({
     } finally {
       setIsSubmitting(false)
     }
-  }, [canEditAssociations, declaration.id, isSubmitting, selectedChunk, updateSelectedChunkAssociation])
+  }, [canEditAssociations, declaration.id, isSubmitting, selectedChunk, source?.id, updateSelectedChunkAssociation])
 
   if (totalCount === 0) {
     return (
@@ -1124,6 +1167,62 @@ const PointReconciliationPanel = ({
               />
             </div>
           )}
+
+          {canSubmitReconciliation && isAssociationMode && (
+            <form className='mb-3 flex flex-col gap-2 sm:flex-row sm:items-end' onSubmit={event => {
+              event.preventDefault()
+              if (activePointId) handleReconcilePoint(activePointId)
+            }}>
+              <div className='fr-select-group fr-mb-0 min-w-0 flex-1'>
+                <label className='fr-label' htmlFor={`${unmatchedOnlyInputId}-point`}>Point à associer</label>
+                <select
+                  id={`${unmatchedOnlyInputId}-point`}
+                  className='fr-select'
+                  value={activePointId ?? ''}
+                  disabled={isSubmitting || !hydrated}
+                  onChange={event => setActivePointId(event.target.value || null)}
+                >
+                  <option value=''>Sélectionner un point</option>
+                  {filteredAvailablePoints.map(point => <option key={point.id} value={point.id}>{point.name}</option>)}
+                </select>
+              </div>
+              <Button type='submit' disabled={!activePointId || isSubmitting}>Associer</Button>
+            </form>
+          )}
+
+          <Dialog open={Boolean(pendingPoint)} onClose={() => !isSubmitting && setPendingPoint(null)} maxWidth='sm' fullWidth>
+            <DialogTitle>Choisir le comptage</DialogTitle>
+            <DialogContent>
+              <p>Plusieurs exploitations concernent « {pendingPoint?.name} ». Choisissez celle de cette déclaration.</p>
+              <div className='fr-select-group'>
+                <label className='fr-label' htmlFor={`${unmatchedOnlyInputId}-exploitation`}>Exploitation</label>
+                <select
+                  id={`${unmatchedOnlyInputId}-exploitation`}
+                  className='fr-select'
+                  value={selectedExploitationId}
+                  disabled={isSubmitting}
+                  onChange={event => setSelectedExploitationId(event.target.value)}
+                >
+                  <option value=''>Sélectionner une exploitation</option>
+                  {(pendingPoint?.exploitations ?? []).map(exploitation => (
+                    <option key={exploitation.id} value={exploitation.id}>
+                      {getExploitationChoiceLabel(exploitation)}
+                    </option>
+                  ))}
+                </select>
+                {pendingPoint && selectedExploitationId && (
+                  <p className='fr-hint-text fr-mt-1w fr-mb-0'>
+                    {getExploitationChoiceLabel(pendingPoint.exploitations.find(exploitation => exploitation.id === selectedExploitationId))}
+                  </p>
+                )}
+              </div>
+              {submitError && <p className='fr-error-text' role='alert'>{submitError}</p>}
+            </DialogContent>
+            <DialogActions>
+              <Button priority='secondary' disabled={isSubmitting} onClick={() => setPendingPoint(null)}>Annuler</Button>
+              <Button disabled={!selectedExploitationId || isSubmitting} onClick={() => handleReconcilePoint(pendingPoint.id, selectedExploitationId)}>Associer</Button>
+            </DialogActions>
+          </Dialog>
 
           <PointReconciliationMap
             activePointId={activePointId}

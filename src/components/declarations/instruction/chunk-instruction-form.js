@@ -21,6 +21,7 @@ import {useRouter} from 'next/navigation'
 
 import {CHUNK_STATUS} from '@/components/declarations/instruction/chunk-instruction-badge.js'
 import {canChangeChunkPointAssociation} from '@/lib/chunk-point-associations.js'
+import {getCountingCodeLabel} from '@/lib/exploitation-identity.js'
 import {filterSearchAutocompleteOptions} from '@/lib/search-options.js'
 import {instructChunkAction} from '@/server/actions/chunks.js'
 
@@ -31,6 +32,7 @@ const ChunkInstructionForm = ({
   availablePoints = [],
   borderColor,
   pointPrelevementId,
+  exploitationId,
   pointAssociationOrigin,
   instructionStatus: initialInstructionStatus = 'PENDING',
   instructionComment: initialInstructionComment = '',
@@ -40,6 +42,7 @@ const ChunkInstructionForm = ({
   const [isSubmitting, startTransition] = useTransition()
 
   const [selectedPointId, setSelectedPointId] = useState(pointPrelevementId ?? '')
+  const [selectedExploitationId, setSelectedExploitationId] = useState(exploitationId ?? '')
   const [instructionStatus, setInstructionStatus] = useState(initialInstructionStatus ?? 'PENDING')
   const [instructionComment, setInstructionComment] = useState(initialInstructionComment ?? '')
   const [submitError, setSubmitError] = useState(null)
@@ -56,7 +59,8 @@ const ChunkInstructionForm = ({
   const pointOptions = useMemo(() => availablePoints.map(point => ({
     id: point.id,
     label: point.name,
-    codeBSS: point.codeBSS
+    codeBSS: point.codeBSS,
+    exploitations: point.exploitations ?? []
   })), [availablePoints])
 
   const selectedPoint = useMemo(() => pointOptions.find(point => point.id === selectedPointId) ?? null, [pointOptions, selectedPointId])
@@ -74,7 +78,9 @@ const ChunkInstructionForm = ({
     startTransition(async () => {
       const result = await instructChunkAction({
         chunkId,
-        pointPrelevementId: selectedPointId || null,
+        ...(selectedPointId !== (pointPrelevementId ?? '') || selectedExploitationId !== (exploitationId ?? '')
+          ? {pointPrelevementId: selectedPointId || null, exploitationId: selectedExploitationId || null}
+          : {}),
         status: instructionStatus,
         comment: instructionComment
       })
@@ -152,9 +158,32 @@ const ChunkInstructionForm = ({
                 />
               )}
               noOptionsText='Aucun point trouvé'
-              onChange={(_, value) => setSelectedPointId(value?.id ?? '')}
+              onChange={(_, value) => {
+                setSelectedPointId(value?.id ?? '')
+                setSelectedExploitationId(value?.exploitations?.length === 1 ? value.exploitations[0].id : '')
+              }}
             />
           </FormControl>
+          {selectedPoint?.exploitations.length > 1 && (
+            <FormControl fullWidth size='small' sx={{mt: 2}}>
+              <FormLabel htmlFor={`instruction-exploitation-${chunkId}`}>Exploitation concernée</FormLabel>
+              <select
+                id={`instruction-exploitation-${chunkId}`}
+                className='fr-select'
+                value={selectedExploitationId}
+                disabled={isSubmitting || !canChangePointAssociation}
+                required={canChangePointAssociation}
+                onChange={event => setSelectedExploitationId(event.target.value)}
+              >
+                <option value=''>Choisir le comptage concerné</option>
+                {selectedPoint.exploitations.map(exploitation => (
+                  <option key={exploitation.id} value={exploitation.id}>
+                    {[exploitation.declarantLabel, getCountingCodeLabel(exploitation) || 'Sans code comptage'].filter(Boolean).join(' — ')}
+                  </option>
+                ))}
+              </select>
+            </FormControl>
+          )}
         </Grid>
 
         <Grid size={{xs: 12, md: 6}}>

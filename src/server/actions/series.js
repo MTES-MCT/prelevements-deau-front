@@ -30,6 +30,7 @@ export async function getSeriesValuesAction(seriesId, {startDate, endDate} = {})
 }
 
 export async function searchSeriesAction({
+  exploitationId,
   preleveurId,
   pointId,
   sourceId,
@@ -39,6 +40,10 @@ export async function searchSeriesAction({
 } = {}) {
   return withErrorHandling(async () => {
     const params = new URLSearchParams()
+
+    if (exploitationId) {
+      params.set('exploitationId', exploitationId)
+    }
 
     if (preleveurId) {
       params.set('preleveurId', preleveurId)
@@ -131,6 +136,7 @@ function normalizeIdentifier(id) {
 export async function buildAggregatedSeriesQuery(params = {}) {
   const {
     collecteurId,
+    exploitationId,
     pointIds,
     preleveurId,
     sourceId,
@@ -147,10 +153,11 @@ export async function buildAggregatedSeriesQuery(params = {}) {
 
   const normalizedPointIds = normalizeIdentifierList(pointIds)
   const normalizedCollecteurId = normalizeIdentifier(collecteurId)
+  const normalizedExploitationId = normalizeIdentifier(exploitationId)
   const normalizedPreleveurId = normalizeIdentifier(preleveurId)
   const normalizedSourceId = normalizeIdentifier(sourceId)
 
-  if (!normalizedPointIds && !normalizedCollecteurId && !normalizedPreleveurId && !normalizedSourceId) {
+  if (!normalizedPointIds && !normalizedCollecteurId && !normalizedPreleveurId && !normalizedSourceId && !normalizedExploitationId) {
     throw new Error('La récupération de séries agrégées nécessite au moins un identifiant de point (pointIds), un identifiant de préleveur (preleveurId), un identifiant de collecteur (collecteurId) ou un identifiant de source (sourceId).')
   }
 
@@ -168,6 +175,10 @@ export async function buildAggregatedSeriesQuery(params = {}) {
 
   if (normalizedCollecteurId) {
     queryParams.set('collecteurId', normalizedCollecteurId)
+  }
+
+  if (normalizedExploitationId) {
+    queryParams.set('exploitationId', normalizedExploitationId)
   }
 
   if (normalizedPreleveurId) {
@@ -235,11 +246,15 @@ export async function getAggregatedSeriesAction(params = {}) {
  * @returns {Promise<Object>} - Result object
  */
 export async function getAggregatedSeriesOptionsAction(
-  {pointIds, preleveurId, collecteurId, sourceId} = {},
+  {pointIds, preleveurId, collecteurId, sourceId, exploitationId} = {},
   {forbiddenOnAccessDenied = true} = {}
 ) {
   return withErrorHandling(async () => {
     const params = new URLSearchParams()
+
+    if (exploitationId) {
+      params.set('exploitationId', exploitationId)
+    }
 
     const normalizedPointIds = normalizeIdentifierList(pointIds)
     if (normalizedPointIds) {
@@ -260,6 +275,7 @@ export async function getAggregatedSeriesOptionsAction(
 
     // Negotiate the new read-only series without changing older API clients.
     params.set('includeMeterReadings', 'true')
+    params.set('includeExploitationIndexes', 'true')
     const query = params.toString() ? `?${params.toString()}` : ''
     return fetchJSON(`api/aggregated-series/options${query}`)
   }, {forbiddenOnAccessDenied})
