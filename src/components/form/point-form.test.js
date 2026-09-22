@@ -91,6 +91,11 @@ const pointFixture = () => ({
   geometryPrecision: 'Coordonnées précises', comment: 'Accès par le chemin', internalComment: 'Vérifier la localisation'
 })
 
+test('le HTML initial garde la saisie désactivée jusqu’à l’hydratation React', t => {
+  const {html} = renderPointForm(pointFixture())
+  t.regex(html, /<fieldset[^>]*disabled=""[^>]*aria-busy="true"/)
+})
+
 test('le formulaire ne présente plus le mode de collecte mais conserve les champs du point', t => {
   const {html, controls} = renderPointForm(pointFixture())
   t.notRegex(html, /Mode de collecte des relevés|Règle existante|Saisie manuelle|Collecte externe/)

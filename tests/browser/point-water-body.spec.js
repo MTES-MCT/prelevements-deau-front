@@ -51,6 +51,28 @@ async function editCreatedPoint(page) {
   await expect(page.getByLabel(volumeLabel, {exact: true})).toBeVisible()
 }
 
+test('la saisie du point attend les gestionnaires React, même quand le JavaScript arrive tard', async ({page, context}) => {
+  await authenticate(context)
+  let releaseScripts
+  const scriptsReady = new Promise(resolve => { releaseScripts = resolve })
+  await page.route(`${frontUrl}/_next/static/**`, async route => {
+    if (route.request().resourceType() === 'script') await scriptsReady
+    await route.fallback()
+  })
+  const name = page.getByLabel('Nom du point *', {exact: true})
+  try {
+    await page.goto(`${frontUrl}/points-prelevement/new`, {waitUntil: 'commit'})
+    await expect(name).toBeVisible()
+    await expect(name).toBeDisabled()
+  } finally {
+    releaseScripts()
+  }
+
+  await expect(name).toBeEnabled()
+  await name.fill('Nom conservé après hydratation')
+  await expect(name).toHaveValue('Nom conservé après hydratation')
+})
+
 test('création, édition et effacement des caractéristiques du plan d’eau sans valeurs résiduelles', async ({page, context}, testInfo) => {
   test.setTimeout(90_000)
   const apiToken = await authenticate(context)

@@ -1,6 +1,6 @@
 'use client'
 
-import {useState} from 'react'
+import {useState, useSyncExternalStore} from 'react'
 
 import Input from '@codegouvfr/react-dsfr/Input'
 import Select from '@codegouvfr/react-dsfr/SelectNext'
@@ -74,6 +74,10 @@ const precisionsGeom = [
   'Repérage carte'
 ]
 
+const subscribeToHydration = () => () => {}
+const getClientSnapshot = () => true
+const getServerSnapshot = () => false
+
 const PointForm = ({
   point,
   setPoint,
@@ -81,9 +85,10 @@ const PointForm = ({
   boundaryFeature = null
 }) => {
   const [isExpanded, setIsExpanded] = useState(false)
+  const hydrated = useSyncExternalStore(subscribeToHydration, getClientSnapshot, getServerSnapshot)
 
   return (
-    <>
+    <fieldset className='m-0 min-w-0 border-0 p-0' disabled={!hydrated} aria-busy={!hydrated}>
       <Input
         required
         label='Nom du point *'
@@ -289,7 +294,7 @@ const PointForm = ({
           setPoint={setPoint}
         />
       </AccordionCentered>
-    </>
+    </fieldset>
   )
 }
 
