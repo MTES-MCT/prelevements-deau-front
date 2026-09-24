@@ -16,7 +16,7 @@ test.beforeEach(async ({page}) => {
 async function authenticate(context, role = 'preleveur') {
   const apiToken = `browser-test-campaign-${role}-${randomUUID()}`
   const token = await encode({secret: 'browser-tests-only-never-a-real-secret', token: {
-    sub: campaignIds.user, token: apiToken, role: role.startsWith('admin') ? 'ADMIN' : 'DECLARANT', permissions: [],
+    sub: campaignIds.user, token: apiToken, role: role.startsWith('admin') ? 'ADMIN' : role === 'instructor' ? 'INSTRUCTOR' : 'DECLARANT', permissions: [],
     declarantRole: role === 'collector' ? 'COLLECTEUR' : 'PRELEVEUR',
     apiExpiresAt: new Date(Date.now() + 3_600_000).toISOString(), infoRefreshedAt: Date.now(),
     userInfo: {id: campaignIds.user, email: 'campaign@example.test', declarantRole: role === 'collector' ? 'COLLECTEUR' : 'PRELEVEUR'}
@@ -173,4 +173,14 @@ test('la déclaration générée distingue ses compteurs et renvoie vers la rép
   await page.getByText('Voir les derniers index connus', {exact: true}).first().click()
   await expect(page.getByRole('columnheader', {name: 'Compteur', exact: true}).first()).toBeVisible()
   await expect(page.getByRole('cell', {name: 'SYNTH-M1', exact: true})).toBeVisible()
+})
+
+test('le reçu conserve la notice pour l’instructeur et oriente l’admin vers la gestion de campagne', async ({page, context}) => {
+  await authenticate(context, 'instructor')
+  await page.goto(`${frontUrl}/declarations/synthetic-source`)
+  await expect(page.getByText('Ces index proviennent d’une campagne.', {exact: true})).toBeVisible()
+  await expect(page.getByRole('link', {name: 'Consulter la réponse et les volumes calculés', exact: true})).toHaveCount(0)
+  await authenticate(context, 'admin')
+  await page.reload()
+  await expect(page.getByRole('link', {name: 'Consulter la réponse et les volumes calculés', exact: true})).toHaveAttribute('href', `/administration/campagnes/${campaignIds.campaign}/reponses/${campaignIds.response}`)
 })

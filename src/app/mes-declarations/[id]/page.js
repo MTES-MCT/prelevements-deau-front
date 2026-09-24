@@ -42,6 +42,7 @@ const Page = async ({params}) => {
     <>
       <StartDsfrOnHydration />
       <MyDeclarationDetail
+        currentRole={userResult?.data?.role ?? null}
         initialDeclaration={declaration}
         availablePoints={availablePoints}
         showDeclarant={showDeclarant}

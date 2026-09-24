@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 
+import {campaignResponseHref} from '@/lib/campaigns.js'
 import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
 import {
   getDeclarationPointDisplayName,
@@ -601,9 +602,10 @@ const ValuesPreview = ({chunk, source}) => {
   )
 }
 
-const SourceDataDetails = ({declaration, preferUsageName = false, source}) => {
+const SourceDataDetails = ({currentRole = null, declaration, preferUsageName = false, source}) => {
   const chunks = source?.chunks ?? []
   const isTelemetry = source?.type === 'API'
+  const campaignHref = campaignResponseHref(source, currentRole)
 
   if (chunks.length === 0) {
     return (
@@ -626,7 +628,8 @@ const SourceDataDetails = ({declaration, preferUsageName = false, source}) => {
         )}
         {source?.metadata?.collectionCampaignId && source?.metadata?.collectionResponseId && (
           <p className='fr-text--sm fr-mb-0'>
-            Ces index proviennent d’une campagne. <Link href={`/campagnes/${source.metadata.collectionCampaignId}/reponses/${source.metadata.collectionResponseId}`}>Consulter la réponse et les volumes calculés</Link>.
+            Ces index proviennent d’une campagne.
+            {campaignHref && <> <Link href={campaignHref}>Consulter la réponse et les volumes calculés</Link>.</>}
           </p>
         )}
       </div>

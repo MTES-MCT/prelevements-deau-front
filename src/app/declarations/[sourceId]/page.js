@@ -97,6 +97,7 @@ const SourcePage = async ({params}) => {
 
       <DeclarationDetails
         isInstructor
+        currentRole={currentRole}
         availablePoints={availablePoints}
         canReconcile={canReconcile}
         declaration={declaration}

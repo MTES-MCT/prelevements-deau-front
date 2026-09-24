@@ -1,7 +1,7 @@
 import test from 'ava'
 
 import {
-  campaignData, campaignDate, campaignExploitationLabel, campaignState, campaignUsageOptions,
+  campaignData, campaignDate, campaignExploitationLabel, campaignResponseHref, campaignState, campaignUsageOptions,
   emptyCampaignMeter, formatCampaignVolume, getCampaignField, initialCampaignAnswer, setCampaignField, validateCampaignAnswer
 } from './campaigns.js'
 
@@ -71,4 +71,13 @@ test('volume zéro publié et volume non publié sont visiblement distincts', t 
   t.is(formatCampaignVolume(0), '0 m³')
   t.is(formatCampaignVolume(null), 'En attente de publication')
   t.is(formatCampaignVolume(undefined), 'En attente de publication')
+})
+
+test('le reçu renvoie à la campagne selon le rôle et ne propose aucun lien aux instructeurs', t => {
+  const source = {metadata: {collectionCampaignId: 'campaign', collectionResponseId: 'response'}}
+  t.is(campaignResponseHref(source, 'ADMIN'), '/administration/campagnes/campaign/reponses/response')
+  t.is(campaignResponseHref(source, 'DECLARANT'), '/campagnes/campaign/reponses/response')
+  t.is(campaignResponseHref(source, 'INSTRUCTOR'), null)
+  t.is(campaignResponseHref(source, null), null)
+  t.is(campaignResponseHref({}, 'ADMIN'), null)
 })

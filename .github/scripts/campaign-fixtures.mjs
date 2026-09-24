@@ -24,7 +24,7 @@ export async function handleCampaignFixtureRequest(request, send, response) {
   const {pathname, searchParams} = new URL(request.url, 'http://127.0.0.1:3431')
   const admin = authorization.includes('-admin-')
   const collector = authorization.includes('-collector-')
-  const role = admin ? 'ADMIN' : 'DECLARANT'
+  const role = admin ? 'ADMIN' : authorization.includes('-instructor-') ? 'INSTRUCTOR' : 'DECLARANT'
   if (!states.has(authorization)) states.set(authorization, {draft: null, submitted: collector || authorization.includes('-review-') ? completeData() : null, revision: 0, requests: [], name: 'Collecte synthétique', status: admin ? 'DRAFT' : 'OPEN'})
   const state = states.get(authorization)
   const respond = (status, data) => { send(status, data); return true }
@@ -36,13 +36,14 @@ export async function handleCampaignFixtureRequest(request, send, response) {
 
   if (pathname === '/info' || pathname === '/api/info') return respond(200, {role, declarantRole: collector ? 'COLLECTEUR' : 'PRELEVEUR', permissions: [], user: {id: campaignIds.user, email: 'campaign@example.test', socialReason: preleveur.socialReason}, expiresAt: new Date(Date.now() + 3_600_000).toISOString()})
   if (pathname === '/api/__campaign-requests') return respond(200, state.requests)
-  if (pathname === `/api/declarations/${campaignIds.declaration}`) {
+  if (pathname === `/api/declarations/${campaignIds.declaration}` || pathname === '/api/sources/synthetic-source') {
     const source = {id: 'synthetic-source', type: 'DECLARATION', status: 'COMPLETED', globalInstructionStatus: 'VALIDATED', metadata: {manualQuickDeclaration: true, measurementType: 'INDEX', collectionCampaignId: campaignIds.campaign, collectionResponseId: campaignIds.response}, chunks: [campaignIds.meter, campaignIds.secondMeter].map((compteurId, index) => ({
       id: `synthetic-chunk-${index}`, pointPrelevement: point, pointPrelevementId: point.id, exploitationId: campaignIds.exploitation, exploitation: {countingCode: '001'}, compteurId, metadata: {serialNumber: `SYNTH-M${index + 1}`, readingDate: '2026-10-31'}, usage: uses[0], flowType: 'PRELEVEMENT', minDate: '2026-10-31', maxDate: '2026-10-31',
       chunkValues: [{id: `synthetic-value-${index}`, value: 30 + index, metricTypeCode: 'index', unit: 'm³', periodStart: '2026-10-31', periodEnd: '2026-10-31', valueKind: 'DECLARED'}],
       latestIndexReadings: [{id: `synthetic-history-${index}`, value: 30 + index, metricTypeCode: 'index', unit: 'm³', periodStart: '2026-10-31', periodEnd: '2026-10-31', compteurId, serialNumber: `SYNTH-M${index + 1}`}]
     }))}
-    return ok({id: campaignIds.declaration, code: 'SYNTH', type: 'quick-declaration', dataSourceType: 'MANUAL', createdAt: '2026-11-01', source, files: [], canReconcile: false})
+    const declaration = {id: campaignIds.declaration, code: 'SYNTH', type: 'quick-declaration', dataSourceType: 'MANUAL', createdAt: '2026-11-01', files: [], canReconcile: false}
+    return ok(pathname.startsWith('/api/sources/') ? {...source, declaration} : {...declaration, source})
   }
   if (pathname === '/api/campaigns/summary') return ok({hasCampaigns: true, items: [campaign()]})
   if (pathname === '/api/campaigns/candidates') {

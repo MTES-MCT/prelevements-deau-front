@@ -34,6 +34,13 @@ export function campaignData(result) {
   return result.data?.data ?? result.data
 }
 
+export function campaignResponseHref(source, currentRole) {
+  const {collectionCampaignId, collectionResponseId} = source?.metadata || {}
+  if (!collectionCampaignId || !collectionResponseId || !['ADMIN', 'DECLARANT'].includes(currentRole)) return null
+  const base = currentRole === 'ADMIN' ? '/administration/campagnes' : '/campagnes'
+  return `${base}/${collectionCampaignId}/reponses/${collectionResponseId}`
+}
+
 export function formatCampaignVolume(value) {
   return value === null || value === undefined ? 'En attente de publication' : `${new Intl.NumberFormat('fr-FR', {maximumFractionDigits: 4}).format(Number(value))} m³`
 }
