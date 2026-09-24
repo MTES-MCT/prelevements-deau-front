@@ -13,6 +13,7 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 
 import {PRELEVEUR_MAP_LAYER_VISIBILITY} from '@/components/dashboard/dashboard-map-layers.js'
+import {CampaignInvitations} from '@/components/campaigns/campaign-common.js'
 import DashboardVolumesChart from '@/components/dashboard/dashboard-volumes-chart.js'
 import DeferredRender from '@/components/ui/deferred-render.js'
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
@@ -752,6 +753,7 @@ const DashboardVolumeCharts = ({
 
 const DashboardPage = ({
   declarationCreation = null,
+  campaignSummary = null,
   initialDashboard,
   initialError,
   user
@@ -1050,6 +1052,7 @@ const DashboardPage = ({
         {isDeclarant ? (
           <>
             <DashboardBlock boxed className='mt-0' title='Mon activité'>
+              {isPreleveurDeclarant && <CampaignInvitations summary={campaignSummary} />}
               <DeclarationCreationCard
                 className='mt-0'
                 declarationCreation={declarationCreation}

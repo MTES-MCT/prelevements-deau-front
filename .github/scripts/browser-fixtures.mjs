@@ -9,6 +9,7 @@ import {createPublicStatsFixture} from '../../src/test/public-stats-fixture.js'
 import {getDashboardFixtureRole, handleDashboardFixtureRequest} from './dashboard-fixtures.mjs'
 import {getPointWaterBodyFixtureRole, handlePointWaterBodyFixtureRequest} from './point-water-body-fixtures.mjs'
 import {isCountingFixture, handleCountingFixtureRequest} from './counting-code-fixtures.mjs'
+import {isCampaignFixture, handleCampaignFixtureRequest} from './campaign-fixtures.mjs'
 
 // Synthetic backend: deliberately no database, outbound HTTP, mail or jobs.
 const zoneId = '11111111-1111-4111-8111-111111111111'
@@ -56,13 +57,16 @@ const api = createServer(async (request, response) => {
       : /^Bearer browser-test-meter-declarant(?:-|$)/.test(request.headers.authorization) ? 'DECLARANT' : null
   const dashboardRole = getDashboardFixtureRole(request.headers.authorization)
   const pointWaterBodyRole = getPointWaterBodyFixtureRole(request.headers.authorization)
-  if (request.headers.authorization !== 'Bearer browser-test-api-token' && !meterRole && !dashboardRole && !pointWaterBodyRole && !isCountingFixture(request.headers.authorization)) {
+  if (request.headers.authorization !== 'Bearer browser-test-api-token' && !meterRole && !dashboardRole && !pointWaterBodyRole && !isCountingFixture(request.headers.authorization) && !isCampaignFixture(request.headers.authorization)) {
     return send(401, {message: 'Unauthorized'})
   }
 
   if (await handleDashboardFixtureRequest(request, send)) return
   if (await handlePointWaterBodyFixtureRequest(request, send)) return
   if (await handleCountingFixtureRequest(request, send)) return
+  if (await handleCampaignFixtureRequest(request, send, response)) return
+
+  if (pathname === '/api/campaigns/summary') return send(200, {success: true, data: {hasCampaigns: false, items: []}})
 
   if (pathname === '/info' || pathname === '/api/info') {
     return send(200, {

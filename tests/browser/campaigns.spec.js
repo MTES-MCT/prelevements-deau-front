@@ -1,0 +1,176 @@
+import {randomUUID} from 'node:crypto'
+
+import {expect, test} from '@playwright/test'
+import {encode} from 'next-auth/jwt'
+
+import {campaignIds} from '../../.github/scripts/campaign-fixtures.mjs'
+
+const frontUrl = 'https://127.0.0.1:3443'
+test.use({ignoreHTTPSErrors: true, reducedMotion: 'reduce'})
+
+test.beforeEach(async ({page}) => {
+  await page.route('**/*', route => [frontUrl, 'http://127.0.0.1:3417'].includes(new URL(route.request().url()).origin) ? route.continue() : route.abort())
+  await page.clock.setFixedTime(new Date('2026-11-01T12:00:00Z'))
+})
+
+async function authenticate(context, role = 'preleveur') {
+  const apiToken = `browser-test-campaign-${role}-${randomUUID()}`
+  const token = await encode({secret: 'browser-tests-only-never-a-real-secret', token: {
+    sub: campaignIds.user, token: apiToken, role: role.startsWith('admin') ? 'ADMIN' : 'DECLARANT', permissions: [],
+    declarantRole: role === 'collector' ? 'COLLECTEUR' : 'PRELEVEUR',
+    apiExpiresAt: new Date(Date.now() + 3_600_000).toISOString(), infoRefreshedAt: Date.now(),
+    userInfo: {id: campaignIds.user, email: 'campaign@example.test', declarantRole: role === 'collector' ? 'COLLECTEUR' : 'PRELEVEUR'}
+  }, maxAge: 3600})
+  await context.addCookies(['next-auth.session-token', '__Secure-next-auth.session-token'].map(name => ({name, value: token, url: frontUrl, httpOnly: true, secure: true, sameSite: 'Lax'})))
+  return async () => (await context.request.get('http://127.0.0.1:3431/api/__campaign-requests', {headers: {authorization: `Bearer ${apiToken}`}})).json()
+}
+
+const responseUrl = `${frontUrl}/campagnes/${campaignIds.campaign}/reponses/${campaignIds.response}`
+
+test('deux compteurs : brouillon incomplet, reprise, envoi et modification sans nouvelle déclaration client', async ({page, context}, testInfo) => {
+  const requests = await authenticate(context)
+  await page.goto(responseUrl)
+  await expect(page.getByRole('heading', {name: /Code comptage : 001/})).toBeVisible()
+  await expect(page.getByRole('heading', {name: 'Compteur SYNTH-M1', exact: true})).toBeVisible()
+  await expect(page.getByRole('heading', {name: 'Compteur SYNTH-M2', exact: true})).toBeVisible()
+  await page.locator('[name="meters.0.offSeason.indexStart"]').fill('123')
+  await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
+  await expect(page.getByText('Brouillon enregistré.', {exact: true})).toBeVisible()
+  await page.reload()
+  await expect(page.locator('[name="meters.0.offSeason.indexStart"]')).toHaveValue('123')
+  await expect(page.locator('[name="meters.1.offSeason.indexStart"]')).toHaveValue('')
+  await page.getByRole('button', {name: 'Envoyer ma réponse', exact: true}).click()
+  await expect(page.getByText('Vérifiez les champs signalés avant d’envoyer votre réponse.', {exact: true})).toBeVisible()
+  expect((await requests()).length).toBe(1)
+  for (const input of await page.locator('form input[type="number"]').all()) await input.fill('0')
+  for (const input of await page.locator('form input[type="text"]').all()) await input.fill('aucune')
+  for (const select of await page.locator('form select').all()) await select.selectOption(campaignIds.usage)
+  await page.getByRole('button', {name: 'Envoyer ma réponse', exact: true}).click()
+  await expect(page.getByText('Votre réponse a bien été envoyée.', {exact: true})).toBeVisible()
+  await expect(page.getByRole('heading', {name: /volumes en attente de vérification/i})).toBeVisible()
+  const writes = await requests()
+  expect(writes).toHaveLength(2)
+  expect(writes[1].body.revision).toBe(1)
+  expect(writes[1].body.data.meters.map(meter => meter.compteurId)).toEqual([campaignIds.meter, campaignIds.secondMeter])
+  expect(writes[1].path.endsWith('/submit')).toBe(true)
+  await page.getByRole('button', {name: 'Modifier ma réponse', exact: true}).click()
+  await page.locator('[name="needs.season.volume"]').fill('20')
+  await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
+  await expect(page.getByText(/Le collecteur voit votre dernière réponse envoyée/)).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
+  await page.screenshot({path: testInfo.outputPath('formulaire-campagne.png'), fullPage: true})
+})
+
+test('numéro absent et conflit : la saisie est conservée, aucune valeur inventée', async ({page, context}) => {
+  const requests = await authenticate(context, 'missing-conflict')
+  await page.goto(responseUrl)
+  await expect(page.getByLabel('Numéro du compteur', {exact: true})).toHaveValue('')
+  await page.getByLabel('Numéro du compteur', {exact: true}).fill('MANUEL-001')
+  await page.locator('[name="meters.0.offSeason.indexStart"]').fill('0')
+  await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
+  await expect(page.getByText(/La réponse a été modifiée/)).toBeVisible()
+  await expect(page.getByLabel('Numéro du compteur', {exact: true})).toHaveValue('MANUEL-001')
+  expect((await requests())[0].body.data.meters[0].compteurId).toBeNull()
+})
+
+test('les erreurs métier de l’API et les champs invalides restent lisibles sans effacer la saisie', async ({page, context}) => {
+  await authenticate(context, 'closed')
+  await page.goto(responseUrl)
+  await page.locator('[name="meters.0.offSeason.indexStart"]').fill('12')
+  await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
+  await expect(page.getByText(/Cette campagne n’est pas ouverte à la saisie/)).toBeVisible()
+  await expect(page.locator('[name="meters.0.offSeason.indexStart"]')).toHaveValue('12')
+  await authenticate(context, 'invalid')
+  page.once('dialog', dialog => dialog.accept())
+  await page.reload()
+  await page.locator('[name="meters.0.offSeason.indexStart"]').fill('15')
+  await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
+  await expect(page.getByText('Le relevé du compteur doit être vérifié.', {exact: true})).toBeVisible()
+  await expect(page.locator('[name="meters.0.offSeason.indexStart"]')).toHaveAttribute('aria-invalid', 'true')
+  await expect(page.locator('[name="meters.0.offSeason.indexStart"]')).toHaveValue('15')
+})
+
+test('collecteur : navigation conditionnelle, résultats envoyés, lecture seule et export complet', async ({page, context, isMobile}) => {
+  const requests = await authenticate(context, 'collector')
+  await page.goto(`${frontUrl}/campagnes/${campaignIds.campaign}`)
+  if (isMobile) await page.getByRole('button', {name: 'Menu', exact: true}).click()
+  await expect(page.getByRole('link', {name: 'Campagnes', exact: true})).toBeVisible()
+  if (isMobile) await page.getByRole('button', {name: 'Fermer', exact: true}).click()
+  await page.getByRole('button', {name: 'Résultats envoyés', exact: true}).click()
+  await expect(page.getByText('120 m³', {exact: true})).toBeVisible()
+  await expect(page.getByRole('heading', {name: 'Volumes prélevés calculés', exact: true})).toBeVisible()
+  await expect(page.getByText('0 m³', {exact: true}).first()).toBeVisible()
+  await expect(page.getByText('En attente de publication', {exact: true})).toBeVisible()
+  const downloaded = page.waitForEvent('download')
+  await page.getByRole('button', {name: 'Exporter tous les résultats (CSV)', exact: true}).click()
+  expect((await downloaded).suggestedFilename()).toBe('resultats-campagne.csv')
+  expect((await requests())[0].path.endsWith('/export')).toBe(true)
+  await page.getByRole('link', {name: 'Consulter', exact: true}).click()
+  await expect(page.locator('[name="needs.season.volume"]')).toHaveValue('120')
+  await expect(page.locator('[name="needs.season.volume"]')).toHaveAttribute('readonly', '')
+  await expect(page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true})).toHaveCount(0)
+  await expect(page.getByRole('button', {name: 'Modifier ma réponse', exact: true})).toHaveCount(0)
+})
+
+test('admin : sélection groupée locale puis création du brouillon', async ({page, context}) => {
+  const requests = await authenticate(context, 'admin')
+  await page.goto(`${frontUrl}/administration/campagnes/nouvelle`)
+  await page.getByLabel('Nom de la campagne', {exact: true}).fill('Collecte de test')
+  await page.getByLabel('Collecteur destinataire', {exact: true}).selectOption(campaignIds.collector)
+  await page.getByRole('button', {name: 'Sélectionner les 1 résultats', exact: true}).click()
+  await expect(page.getByText('1 exploitation sélectionnée', {exact: true})).toBeVisible()
+  await page.getByRole('button', {name: 'Tout désélectionner', exact: true}).click()
+  expect(await requests()).toEqual([])
+  await page.getByRole('checkbox', {name: /Point synthétique/}).check()
+  await page.getByRole('button', {name: 'Créer le brouillon', exact: true}).click()
+  await expect(page).toHaveURL(`${frontUrl}/administration/campagnes/${campaignIds.campaign}`)
+  const writes = await requests()
+  expect(writes).toHaveLength(1)
+  expect(writes[0].body).toMatchObject({opensOn: null, closesOn: null, exploitationIds: [campaignIds.exploitation], collecteurUserId: campaignIds.collector})
+})
+
+test('le serveur bloque l’envoi avant le dernier relevé mais permet le brouillon', async ({page, context}) => {
+  const requests = await authenticate(context, 'before')
+  await page.goto(responseUrl)
+  await expect(page.getByRole('button', {name: 'Envoyer ma réponse', exact: true})).toBeDisabled()
+  await expect(page.getByText(/Le bilan pourra être envoyé à partir du 31 octobre 2026/)).toBeVisible()
+  await page.locator('[name="meters.0.offSeason.indexStart"]').fill('5')
+  await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
+  await expect(page.getByText('Brouillon enregistré.', {exact: true})).toBeVisible()
+  expect((await requests())[0].method).toBe('PUT')
+})
+
+test('admin : la part hors campagne est conservée, validation à 100 % et confirmation explicite', async ({page, context}) => {
+  const requests = await authenticate(context, 'admin-review')
+  await page.goto(`${frontUrl}/administration/campagnes/${campaignIds.campaign}/reponses/${campaignIds.response}`)
+  await page.getByRole('button', {name: 'Vérifier le compteur SYNTH-M1', exact: true}).click()
+  await expect(page.getByText(/Part hors campagne — conservée dans la répartition/)).toBeVisible()
+  const approve = page.getByRole('button', {name: 'Valider et publier les volumes', exact: true})
+  await expect(approve).toBeDisabled()
+  const off = page.getByLabel('Part hors étiage 2025–2026 (%)', {exact: true})
+  const season = page.getByLabel('Part étiage 2026 (%)', {exact: true})
+  await off.nth(0).fill('70')
+  await off.nth(1).fill('20')
+  await season.nth(0).fill('70')
+  await season.nth(1).fill('30')
+  await page.getByRole('checkbox', {name: /Je confirme que ces rattachements/}).check()
+  await expect(approve).toBeDisabled()
+  await off.nth(1).fill('30')
+  await approve.click()
+  await expect(page.getByRole('heading', {name: 'Rattachement et répartition validés. Les volumes sont publiés.', exact: true})).toBeVisible()
+  const writes = await requests()
+  expect(writes).toHaveLength(1)
+  expect(writes[0].body).toMatchObject({expectedHash: '1'.repeat(64), confirmHistorical: true})
+  expect(writes[0].body.allocations.map(row => row.offSeasonPercentage)).toEqual(['70', '30'])
+})
+
+test('la déclaration générée distingue ses compteurs et renvoie vers la réponse de campagne', async ({page, context}) => {
+  await authenticate(context)
+  await page.goto(`${frontUrl}/mes-declarations/${campaignIds.declaration}`)
+  await expect(page.getByText('Compteur : SYNTH-M1', {exact: true})).toBeVisible()
+  await expect(page.getByText('Compteur : SYNTH-M2', {exact: true})).toBeVisible()
+  await expect(page.getByRole('link', {name: 'Consulter la réponse et les volumes calculés', exact: true})).toHaveAttribute('href', `/campagnes/${campaignIds.campaign}/reponses/${campaignIds.response}`)
+  await page.getByText('Voir les derniers index connus', {exact: true}).first().click()
+  await expect(page.getByRole('columnheader', {name: 'Compteur', exact: true}).first()).toBeVisible()
+  await expect(page.getByRole('cell', {name: 'SYNTH-M1', exact: true})).toBeVisible()
+})

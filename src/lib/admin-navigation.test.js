@@ -27,12 +27,13 @@ test('getActiveAdminNavigationItem retrouve la section active', t => {
   t.is(getActiveAdminNavigationItem('/notifications-declarations')?.key, 'notifications')
   t.is(getActiveAdminNavigationItem('/administration/journal-audit')?.key, 'audit-log')
   t.is(getActiveAdminNavigationItem('/types-declaration/nouveau')?.key, 'declaration-types')
-  t.not(getActiveAdminNavigationItem('/administration/campagnes')?.key, 'campaigns')
+  t.is(getActiveAdminNavigationItem('/administration/campagnes')?.key, 'campaigns')
   t.is(getActiveAdminNavigationItem('/declarations')?.key, undefined)
 })
 
-test('les campagnes retirées ne sont plus proposées dans la navigation', t => {
-  for (const role of ['ADMIN', 'INSTRUCTOR', 'DECLARANT', undefined]) {
+test('la gestion des campagnes est réservée à l’administration', t => {
+  t.true(getVisibleAdminNavigationItems({role: 'ADMIN'}).some(item => item.key === 'campaigns'))
+  for (const role of ['INSTRUCTOR', 'DECLARANT', undefined]) {
     t.false(getVisibleAdminNavigationItems({role}).some(item => item.key === 'campaigns'))
   }
 })

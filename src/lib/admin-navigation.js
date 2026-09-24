@@ -44,6 +44,14 @@ export const ADMIN_NAVIGATION_ITEMS = Object.freeze([
     authMethod: 'password'
   },
   {
+    key: 'campaigns',
+    label: 'Campagnes',
+    description: 'Préparer les collectes et suivre les réponses des préleveurs.',
+    href: '/administration/campagnes',
+    iconClassName: 'ri-survey-line',
+    roles: ['ADMIN']
+  },
+  {
     key: 'audit-log',
     label: 'Journal d’audit',
     description: 'Consulter les actions sensibles réalisées sur la plateforme.',

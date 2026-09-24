@@ -468,6 +468,7 @@ const PointTitle = ({chunk, preferUsageName = false, source}) => {
   const pointLinkTarget = getPointPrelevementLinkTarget(chunk)
   const preleveurLabel = getChunkPreleveurLabel(chunk)
   const flowType = getChunkFlowType(chunk)
+  const meterNumber = chunk.compteur?.serialNumber || chunk.serialNumber || chunk.metadata?.serialNumber
 
   return (
     <>
@@ -487,6 +488,7 @@ const PointTitle = ({chunk, preferUsageName = false, source}) => {
           Référence : {technicalReference}
         </p>
       )}
+      {meterNumber && <p className='fr-text--sm fr-mb-0 text-gray-700'>Compteur : {meterNumber}</p>}
       {flowType && (
         <p className='fr-text--xs fr-mb-0 text-gray-600'>
           Type de point : {getPointFlowTypeLabel(flowType)}
@@ -536,6 +538,7 @@ const ValuesPreview = ({chunk, source}) => {
   const displayAsVolume = isVolumeMetricType(metricType)
   const shouldShowIndexTime = displayAsIndex && !isQuickDeclaration
   const summaryLabel = getValuesPreviewSummaryLabel({displayAsIndex, displayAsVolume, isQuickDeclaration})
+  const showMeter = visibleValues.some(value => value.serialNumber || value.compteurId)
 
   if (values.length === 0) {
     return (
@@ -560,6 +563,7 @@ const ValuesPreview = ({chunk, source}) => {
               <th className='px-3 py-2 text-right font-medium'>
                 {getValueColumnLabel({displayAsIndex, displayAsVolume, isQuickDeclaration})}
               </th>
+              {showMeter && <th className='px-3 py-2 font-medium'>Compteur</th>}
             </tr>
           </thead>
           <tbody className='divide-y divide-gray-100'>
@@ -581,6 +585,7 @@ const ValuesPreview = ({chunk, source}) => {
                   <td className='px-3 py-2 text-right'>
                     <DeclaredValueDisplay value={value} align='right' />
                   </td>
+                  {showMeter && <td className='px-3 py-2'>{value.serialNumber || 'Numéro non renseigné'}</td>}
                 </tr>
               )
             })}
@@ -617,6 +622,11 @@ const SourceDataDetails = ({declaration, preferUsageName = false, source}) => {
         {isMeterTelemetrySource(source) && (
           <p className='fr-text--sm fr-mb-0 text-gray-600'>
             Ces volumes sont calculés à partir des index des compteurs et mis à jour automatiquement. Ils ne sont pas modifiables ici.
+          </p>
+        )}
+        {source?.metadata?.collectionCampaignId && source?.metadata?.collectionResponseId && (
+          <p className='fr-text--sm fr-mb-0'>
+            Ces index proviennent d’une campagne. <Link href={`/campagnes/${source.metadata.collectionCampaignId}/reponses/${source.metadata.collectionResponseId}`}>Consulter la réponse et les volumes calculés</Link>.
           </p>
         )}
       </div>

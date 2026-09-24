@@ -1,6 +1,6 @@
 'use client'
 
-import {useCallback, useMemo} from 'react'
+import {useCallback, useEffect, useMemo, useState} from 'react'
 
 import {Header as DSFRHeader} from '@codegouvfr/react-dsfr/Header'
 import {Chip} from '@mui/material'
@@ -8,6 +8,7 @@ import {usePathname} from 'next/navigation'
 
 import HeaderDropdownMenu from '@/components/admin/header-dropdown-menu.js'
 import {useAuth} from '@/contexts/auth-context.js'
+import {getCampaignSummaryAction} from '@/server/actions/campaigns.js'
 
 const ROLE_LABELS = {
   DECLARANT: 'Déclarant',
@@ -124,6 +125,18 @@ function getNavigationText(item, href, role) {
 const HeaderComponent = () => {
   const {user, logout, isLoading: isLoadingUser} = useAuth()
   const pathname = usePathname()
+  const [hasCampaigns, setHasCampaigns] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    setHasCampaigns(false)
+    if (user?.role === 'DECLARANT' && user.declarantRole === 'COLLECTEUR') {
+      getCampaignSummaryAction().then(result => {
+        if (active) setHasCampaigns(result.success && result.data?.data?.hasCampaigns === true)
+      }).catch(() => {})
+    }
+    return () => { active = false }
+  }, [user?.id, user?.role, user?.declarantRole, pathname])
 
   const handleLogout = useCallback(async () => {
     await logout()
@@ -142,7 +155,10 @@ const HeaderComponent = () => {
       return pathname.startsWith(href)
     }
 
-    const navigation = NAV_ITEMS.filter(item => {
+    const items = hasCampaigns ? [...NAV_ITEMS.slice(0, 3), {
+      linkProps: {href: '/campagnes'}, text: 'Campagnes', roles: ['DECLARANT'], declarantRoles: ['COLLECTEUR']
+    }, ...NAV_ITEMS.slice(3)] : NAV_ITEMS
+    const navigation = items.filter(item => {
       if (item.roles && !item.roles.includes(user?.role)) {
         return false
       }
@@ -171,7 +187,7 @@ const HeaderComponent = () => {
         isActive: isActive(href)
       }
     })
-  }, [user, isLoadingUser, pathname])
+  }, [user, isLoadingUser, pathname, hasCampaigns])
 
   const quickAccessItems = useMemo(() => {
     if (isLoadingUser) {
