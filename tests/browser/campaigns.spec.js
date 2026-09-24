@@ -259,6 +259,27 @@ test('admin : la part hors campagne est conservée, validation à 100 % et confi
   expect(writes[0].body.allocations.map(row => row.offSeasonPercentage)).toEqual(['70', '30'])
 })
 
+test('la vérification du compteur attend l’activation de l’interface avant d’accepter un clic', async ({page, context}) => {
+  await authenticate(context, 'admin-review')
+  const scripts = Promise.withResolvers()
+  await page.route(`${frontUrl}/_next/static/**/*.js`, async route => {
+    await scripts.promise
+    await route.continue()
+  })
+  const verify = page.getByRole('button', {name: 'Vérifier le compteur SYNTH-M1', exact: true})
+  try {
+    await page.goto(`${frontUrl}/administration/campagnes/${campaignIds.campaign}/reponses/${campaignIds.response}`, {waitUntil: 'commit'})
+    await expect(verify).toBeVisible()
+    await expect(verify).toBeDisabled()
+  } finally {
+    scripts.resolve()
+  }
+  await expect(verify).toBeEnabled()
+  await verify.click()
+  await expect(page.getByRole('region', {name: 'Vérification du compteur SYNTH-M1', exact: true})).toBeVisible()
+  await expect(page.getByText(/Part hors campagne — conservée dans la répartition/)).toBeVisible()
+})
+
 test('la déclaration générée distingue ses compteurs et renvoie vers la réponse de campagne', async ({page, context}) => {
   await authenticate(context)
   await page.goto(`${frontUrl}/mes-declarations/${campaignIds.declaration}`)

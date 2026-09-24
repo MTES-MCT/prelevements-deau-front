@@ -1,6 +1,6 @@
 'use client'
 
-import {useState} from 'react'
+import {useEffect, useState} from 'react'
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {useRouter} from 'next/navigation'
@@ -17,6 +17,9 @@ export default function CampaignMeterReview({campaignId, compteurId, serialNumbe
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => { setReady(true) }, [])
 
   async function load() {
     setBusy(true)
@@ -46,7 +49,7 @@ export default function CampaignMeterReview({campaignId, compteurId, serialNumbe
   }
   const percentagesValid = ['offSeasonPercentage', 'seasonPercentage'].every(field => allocations.length && allocations.every(item => item[field] !== '' && Number.isFinite(Number(item[field])) && Number(item[field]) >= 0) && Math.abs(allocations.reduce((sum, item) => sum + Number(item[field]), 0) - 100) < 0.00001)
   return <div className='mt-4 border-t pt-3'>
-    {!review && <button className='fr-btn fr-btn--sm fr-btn--secondary' type='button' disabled={busy} onClick={load}>Vérifier le compteur {serialNumber}</button>}
+    {!review && <button className='fr-btn fr-btn--sm fr-btn--secondary' type='button' disabled={busy || !ready} onClick={load}>Vérifier le compteur {serialNumber}</button>}
     {error && <Alert severity='error' title='Vérification non enregistrée' description={error} className='mt-3' />}
     {success && <Alert severity='success' title={success} className='mt-3' />}
     {review && <section className='mt-3 bg-[#f5f5fe] p-3' aria-label={`Vérification du compteur ${serialNumber}`}>
