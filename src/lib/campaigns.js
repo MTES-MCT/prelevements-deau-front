@@ -23,6 +23,33 @@ export function campaignPersonLabel(person) {
     || [person?.firstName, person?.lastName].filter(Boolean).join(' ') || 'Préleveur'
 }
 
+export function isCampaignRequester(permissions = {}) {
+  return permissions.canManage === false && permissions.canReadResults === false
+}
+
+export function campaignParticipation(campaign) {
+  const {total = 0, submitted = 0, drafts = 0} = campaign.progress || {}
+  const complete = total > 0 && submitted >= total
+  const closed = ['CLOSED', 'ARCHIVED'].includes(campaignState(campaign))
+  const canRespond = campaign.permissions?.canRespond ?? campaignState(campaign) === 'OPEN'
+  const singular = total === 1
+  return {
+    complete,
+    label: singular
+      ? complete ? 'Réponse envoyée' : closed ? 'Réponse non envoyée' : drafts ? 'Brouillon enregistré' : 'Réponse à compléter'
+      : `${submitted} réponse${submitted === 1 ? '' : 's'} envoyée${submitted === 1 ? '' : 's'} sur ${total}`,
+    action: complete || !canRespond
+      ? singular ? 'Consulter ma réponse' : 'Consulter mes réponses'
+      : drafts ? singular ? 'Reprendre ma réponse' : 'Reprendre mes réponses'
+        : singular ? 'Compléter ma réponse' : 'Compléter mes réponses'
+  }
+}
+
+export function singleCampaignResponseHref(campaignId, permissions, responses) {
+  if (!isCampaignRequester(permissions) || responses?.total !== 1 || responses.items?.length !== 1) return null
+  return `/campagnes/${campaignId}/reponses/${responses.items[0].id}`
+}
+
 export function campaignExploitationLabel(item) {
   const point = item?.point || item?.pointPrelevement || item?.exploitation?.pointPrelevement
   const code = item?.countingCode || item?.exploitation?.countingCode

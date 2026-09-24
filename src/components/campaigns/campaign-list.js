@@ -6,13 +6,14 @@ import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import Link from 'next/link'
 
 import {CampaignPagination, CampaignProgress, CampaignShell, CampaignStatus} from '@/components/campaigns/campaign-common.js'
-import {campaignData, campaignDate, campaignState} from '@/lib/campaigns.js'
+import {campaignData, campaignDate, campaignParticipation, campaignState, isCampaignRequester} from '@/lib/campaigns.js'
 import {getCampaignsAction} from '@/server/actions/campaigns.js'
 
 export default function CampaignList({initialData, initialError, admin = false}) {
   const [result, setResult] = useState(initialData || {items: [], total: 0, page: 1, pageSize: 25})
   const [error, setError] = useState(initialError)
   const [loading, setLoading] = useState(false)
+  const requester = !admin && result.items?.length > 0 && result.items.every(campaign => isCampaignRequester(campaign.permissions))
   async function changePage(page) {
     setLoading(true)
     setError(null)
@@ -20,7 +21,7 @@ export default function CampaignList({initialData, initialError, admin = false})
   }
   const base = admin ? '/administration/campagnes' : '/campagnes'
   return (
-    <CampaignShell admin={admin} title='Campagnes' description='Collectes d’informations auprès des préleveurs.' actions={admin && <Link className='fr-btn fr-btn--sm' href={`${base}/nouvelle`}>Créer une campagne</Link>}>
+    <CampaignShell admin={admin} title={requester ? 'Mes index et mes besoins' : 'Campagnes'} description={requester ? undefined : 'Collectes d’informations auprès des préleveurs.'} actions={admin ? <Link className='fr-btn fr-btn--sm' href={`${base}/nouvelle`}>Créer une campagne</Link> : requester && <Link className='fr-btn fr-btn--sm fr-btn--tertiary fr-btn--icon-left fr-icon-arrow-left-line' href='/tableau-de-bord'>Mon activité</Link>}>
       {error && <Alert severity='error' title='Les campagnes ne peuvent pas être affichées' description={error} className='mb-4' />}
       {loading ? <p role='status'>Chargement des campagnes…</p> : !error && (
         <>
@@ -30,9 +31,12 @@ export default function CampaignList({initialData, initialError, admin = false})
               <li key={campaign.id} className='border border-gray-200 bg-white p-4'>
                 <div className='flex flex-wrap items-start justify-between gap-3'>
                   <div><h2 className='fr-h5 fr-mb-1w'><Link href={`${base}/${campaign.id}`}>{campaign.name}</Link></h2><CampaignStatus status={campaignState(campaign)} /></div>
-                  <CampaignProgress progress={campaign.progress} />
+                  <CampaignProgress requester={requester} progress={campaign.progress} />
                 </div>
-                <p className='fr-text--sm fr-mt-2w fr-mb-0'>Du {campaignDate(campaign.opensOn)} au {campaignDate(campaign.closesOn)}{campaign.collecteur?.socialReason ? ` · ${campaign.collecteur.socialReason}` : ''}</p>
+                <div className='mt-3 flex flex-wrap items-center justify-between gap-3'>
+                  <p className='fr-text--sm fr-mb-0'>{campaign.opensOn && campaign.closesOn ? `Du ${campaignDate(campaign.opensOn)} au ${campaignDate(campaign.closesOn)}` : 'Dates à renseigner'}{campaign.collecteur?.socialReason ? ` · ${campaign.collecteur.socialReason}` : ''}</p>
+                  {requester && <Link className='fr-btn fr-btn--sm fr-btn--secondary' href={`${base}/${campaign.id}`}>{campaignParticipation(campaign).action}</Link>}
+                </div>
               </li>
             ))}
           </ul>

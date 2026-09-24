@@ -326,7 +326,7 @@ const InlineRefreshStatus = () => (
 
 const DECLARATION_CREATION_INTRO = 'Saisissez vos index, volumes prélevés ou volumes rejetés directement sur la plateforme, ou déposez un fichier.'
 
-const DeclarationCreationCard = ({className = 'mt-6', declarationCreation}) => {
+const DeclarationCreationCard = ({className = 'mt-6', declarationCreation, hasCampaign = false}) => {
   const allowedDeclarationTypes = declarationCreation?.allowedDeclarationTypes ?? EMPTY_ARRAY
   const canCreateDeclaration = declarationCreation?.canCreateDeclaration ?? (allowedDeclarationTypes.length > 0)
   const canCreateQuickDeclaration = declarationCreation?.canCreateQuickDeclaration ?? false
@@ -340,9 +340,9 @@ const DeclarationCreationCard = ({className = 'mt-6', declarationCreation}) => {
     <section className={`border border-gray-200 bg-white p-5 md:p-6 ${className}`}>
       <div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
         <div>
-          <h3 className='fr-h3 fr-mb-1w'>Déclarer mes prélèvements en eau</h3>
+          <h3 className={`${hasCampaign ? 'fr-h5' : 'fr-h3'} fr-mb-1w`}>{hasCampaign ? 'Autres déclarations' : 'Déclarer mes prélèvements en eau'}</h3>
           <p className='fr-text--sm fr-mb-0 max-w-[680px] text-gray-700'>
-            {DECLARATION_CREATION_INTRO}
+            {hasCampaign ? 'Saisissez des index ou des volumes en dehors de cette collecte, ou déposez un fichier.' : DECLARATION_CREATION_INTRO}
           </p>
         </div>
 
@@ -1056,6 +1056,7 @@ const DashboardPage = ({
               <DeclarationCreationCard
                 className='mt-0'
                 declarationCreation={declarationCreation}
+                hasCampaign={isPreleveurDeclarant && Boolean(campaignSummary?.items?.length)}
               />
 
               <PointsMapSection

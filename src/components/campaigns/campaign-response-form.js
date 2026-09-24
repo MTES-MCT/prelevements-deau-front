@@ -8,30 +8,59 @@ import Link from 'next/link'
 
 import {CampaignShell, CampaignStatus, CampaignVolumes} from '@/components/campaigns/campaign-common.js'
 import CampaignMeterReview from '@/components/campaigns/campaign-meter-review.js'
+import UsageCombobox, {compareUsageOptions} from '@/components/form/usage-combobox.js'
+import {campaignSaveError} from '@/lib/campaign-response-errors.js'
 import {
-  campaignDate, campaignExploitationLabel, campaignPersonLabel,
+  campaignDate, campaignExploitationLabel, campaignPersonLabel, campaignState,
   campaignUsageOptions, emptyCampaignMeter, getCampaignField, initialCampaignAnswer,
   setCampaignField, validateCampaignAnswer
 } from '@/lib/campaigns.js'
-import {getUsageColor} from '@/lib/water-uses.js'
+import {countEditableNumberCharacters, formatNumberInput, getFormattedCaretPosition, normalizeNumberInput} from '@/lib/decimal-input.js'
+import {getUsageParent, normalizeUsageOption} from '@/lib/water-uses.js'
 import {getCampaignResponseAction, saveCampaignResponseAction} from '@/server/actions/campaigns.js'
 
 const PointMap = dynamic(() => import('@/components/declarations/quick-declaration-map.js'), {ssr: false, loading: () => <p role='status'>Chargement de la carte…</p>})
+
+function NumericInput({value, onChange, ...props}) {
+  const inputRef = useRef(null)
+  function change(event) {
+    const count = countEditableNumberCharacters(event.target.value, event.target.selectionStart ?? event.target.value.length)
+    const next = normalizeNumberInput(event.target.value)
+    onChange(next)
+    requestAnimationFrame(() => {
+      const input = inputRef.current
+      if (input && document.activeElement === input) {
+        const position = getFormattedCaretPosition(formatNumberInput(next), count)
+        input.setSelectionRange(position, position)
+      }
+    })
+  }
+  return <input {...props} ref={inputRef} className='fr-input quick-declaration-control text-right font-semibold tabular-nums' type='text' inputMode='decimal' value={formatNumberInput(value)} placeholder='0' onChange={change} />
+}
+
+function UsageInput({value, options, update, path, readOnly, ...props}) {
+  const [search, setSearch] = useState(null)
+  const selected = options.find(option => option.value === value)
+  return <UsageCombobox {...props} options={options} selectedValue={value} readOnly={readOnly} required={!readOnly} value={selected?.label || (readOnly ? '' : search || '')} onUsageChange={changes => {
+    setSearch(changes.usageSearch)
+    update(path, changes.usageId)
+  }} />
+}
 
 function ResponseField({path, label, answer, errors, update, readOnly, type = 'number', hint, options, maxLength = 3000}) {
   const id = `campaign-${path.replaceAll('.', '-')}`
   const value = getCampaignField(answer, path)
   const error = errors[path]
+  const inputProps = {id, name: path, readOnly, 'aria-required': !readOnly, 'aria-invalid': Boolean(error), 'aria-describedby': error ? `${id}-error` : undefined}
   return (
     <div className={`fr-input-group fr-mb-0 ${error ? 'fr-input-group--error' : ''}`}>
       <label className='fr-label text-sm' htmlFor={id}>{label}{hint && <span className='fr-hint-text'>{hint}</span>}</label>
       {options ? (
-        <select id={id} name={path} className='fr-select' value={value} disabled={readOnly} aria-required={!readOnly} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} onChange={event => update(path, event.target.value)}>
-          <option value=''>Choisir un sous-usage</option>
-          {options.map(option => <option key={option.id} value={option.id}>{option.parent?.label ? `${option.parent.label} — ` : ''}{option.label}</option>)}
-        </select>
+        <UsageInput id={id} name={path} value={value} options={options} path={path} update={update} readOnly={readOnly} invalid={Boolean(error)} describedBy={inputProps['aria-describedby']} />
+      ) : type === 'number' ? (
+        <NumericInput {...inputProps} value={value} onChange={value => update(path, value)} />
       ) : (
-        <input id={id} name={path} className='fr-input' type={type} min={type === 'number' ? 0 : undefined} step={type === 'number' ? 'any' : undefined} value={value} readOnly={readOnly} maxLength={type === 'text' ? maxLength : undefined} aria-required={!readOnly} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} onChange={event => update(path, event.target.value)} />
+        <input {...inputProps} className='fr-input quick-declaration-control' type='text' value={value} maxLength={maxLength} onChange={event => update(path, event.target.value)} />
       )}
       {error && <p id={`${id}-error`} className='fr-error-text'>{error}</p>}
     </div>
@@ -39,11 +68,14 @@ function ResponseField({path, label, answer, errors, update, readOnly, type = 'n
 }
 
 function PeriodFields({path, title, needs = false, season = false, fieldProps}) {
-  const usage = fieldProps.usageOptions.find(item => item.id === getCampaignField(fieldProps.answer, `${path}.usageId`))
+  const dates = needs
+    ? (season ? 'Du 1er juin au 31 octobre 2027' : 'Du 31 octobre 2026 au 1er juin 2027')
+    : (season ? 'Du 1er juin au 31 octobre 2026' : 'Du 31 octobre 2025 au 1er juin 2026')
   return (
-    <fieldset className='m-0 min-w-0 border-0 p-0'>
-      <legend className='mb-3 text-base font-semibold'>{title}</legend>
-      <div className='grid items-end gap-3 sm:grid-cols-2'>
+    <fieldset className={`m-0 min-w-0 rounded border-t-4 p-3 md:p-4 ${season ? 'border-t-[#c3992a] bg-[#fff9e6]' : 'border-t-[#465f9d] bg-[#eef2fa]'}`}>
+      <legend className={`float-left mb-0 w-full pb-1 text-base font-semibold ${season ? 'text-[#715300]' : 'text-[#3558a2]'}`}>{title}</legend>
+      <p className={`clear-both mb-4 text-xs ${season ? 'text-[#715300]' : 'text-[#3558a2]'}`}>{dates}</p>
+      <div className='grid items-start gap-3 sm:grid-cols-2'>
         {needs ? <>
           <ResponseField {...fieldProps} path={`${path}.flow`} label='Débit demandé (m³/h)' />
           <ResponseField {...fieldProps} path={`${path}.volume`} label='Volume demandé (m³)' />
@@ -53,10 +85,9 @@ function PeriodFields({path, title, needs = false, season = false, fieldProps}) 
         </>}
         <div className='sm:col-span-2'>
           <ResponseField {...fieldProps} path={`${path}.usageId`} label={season ? 'Usage étiage' : 'Usage hors étiage'} options={fieldProps.usageOptions} />
-          {usage && <span aria-hidden='true' className='mt-1 block h-1 w-10 rounded' style={{backgroundColor: getUsageColor(usage)}} />}
         </div>
         <ResponseField {...fieldProps} path={`${path}.surface`} label='Surface irriguée (ha)' />
-        <ResponseField {...fieldProps} path={`${path}.crops`} label='Cultures irriguées' type='text' hint='Assolement, ou « aucune ».' />
+        <ResponseField {...fieldProps} path={`${path}.crops`} label='Cultures irriguées' type='text' />
       </div>
     </fieldset>
   )
@@ -89,8 +120,9 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
   const point = {...rawPoint, coordinates: Array.isArray(rawPoint.coordinates) ? {type: 'Point', coordinates: rawPoint.coordinates} : rawPoint.coordinates}
   const hasCoordinates = point.coordinates?.coordinates?.length === 2 && point.coordinates.coordinates.every(Number.isFinite)
   const preleveur = context.preleveur || response.preleveur || exploitation.declarant || {}
-  const usageOptions = campaignUsageOptions(context.waterUses)
+  const usageOptions = campaignUsageOptions(context.waterUses).map(usage => ({...normalizeUsageOption(usage), parentUsage: getUsageParent(usage)})).sort(compareUsageOptions)
   const base = admin ? '/administration/campagnes' : '/campagnes'
+  const applicant = !admin && !permissions.canManage && !permissions.canReadResults
   const fieldProps = {answer, errors, readOnly: readOnly || saving || !ready, usageOptions, update: (path, value) => {
     setAnswer(previous => setCampaignField(previous, path, value))
     setSuccess(null)
@@ -139,7 +171,7 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
       const result = await saveCampaignResponseAction(campaign.id, response.id, {revision: response.revision, data: answer}, submit)
       if (!result.success) {
         setErrors(result.data?.fields || result.data?.data?.fields || result.validationErrors || {})
-        throw new Error(`${result.error || 'La réponse n’a pas été enregistrée.'}${result.code === 409 ? ' Vos saisies sont conservées ici.' : ''}`)
+        throw new Error(campaignSaveError(result))
       }
       const refreshed = await getCampaignResponseAction(campaign.id, response.id)
       const next = refreshed.success ? refreshed.data?.data : result.data?.data
@@ -151,11 +183,12 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
   }
 
   return (
-    <CampaignShell admin={admin} title={campaignExploitationLabel({point, countingCode: exploitation.countingCode || response.countingCode})} description={campaign.name} actions={<Link className='fr-btn fr-btn--sm fr-btn--tertiary' href={`${base}/${campaign.id}`}>Retour à la campagne</Link>}>
+    <CampaignShell admin={admin} title={campaignExploitationLabel({point, countingCode: exploitation.countingCode || response.countingCode})} description={campaign.name} actions={<Link className='fr-btn fr-btn--sm fr-btn--tertiary' href={applicant ? '/tableau-de-bord' : `${base}/${campaign.id}`}>{applicant ? 'Mon activité' : 'Retour à la campagne'}</Link>}>
       <div className='mb-4 flex flex-wrap items-center gap-3'><CampaignStatus response status={response.status} />
         {response.lastSubmittedAt && <span className='text-sm'>Premier envoi : {campaignDate(response.firstSubmittedAt)} · Dernier envoi : {campaignDate(response.lastSubmittedAt)}</span>}
         {permissions.canEdit && !editing && <button className='fr-btn fr-btn--sm fr-btn--secondary' type='button' onClick={() => setEditing(true)}>Modifier ma réponse</button>}
       </div>
+      {applicant && !permissions.canEdit && ['CLOSED', 'ARCHIVED'].includes(campaignState(campaign)) && <p className='fr-text--sm'>Cette collecte est clôturée. Votre réponse reste consultable.</p>}
       {response.hasDraft && response.lastSubmittedAt && <p className='fr-text--sm'>Ces modifications ne sont pas encore envoyées. Le collecteur voit votre dernière réponse envoyée.</p>}
       <PublicationNotice response={response} />
       {response.lastSubmittedAt && <CampaignVolumes volumes={response.volumes} />}
@@ -170,22 +203,22 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
       </section>
       {error && <Alert className='mb-4' severity='error' title='Vérifiez votre réponse' description={error} />}
       {success && <div className='mb-4' role='status'><Alert severity='success' title={success} small /></div>}
-      {permissions.canEdit && !permissions.canSubmit && <Alert className='mb-4' severity='info' title='Vous pouvez préparer votre réponse en brouillon' description={context.blockers?.join(' ') || 'L’envoi est temporairement indisponible.'} />}
       <form ref={formRef} noValidate onSubmit={event => { event.preventDefault(); persist(true) }} className='grid gap-4'>
         <section className='border bg-white p-4 md:p-5'>
           <h2 className='fr-h4'>Bilan des prélèvements 2025–2026</h2>
           <div className='grid gap-5'>
             {answer.meters.map((meter, index) => (
-              <div key={meter.compteurId || `new-${index}`} className='border border-gray-200 p-3 md:p-4'>
-                <div className='mb-4 flex flex-wrap items-end gap-3'>
-                  {meter.compteurId && context.meters?.some(known => (known.compteurId || known.id) === meter.compteurId && known.serialNumber) ? <h3 className='fr-h6 fr-mb-0'>Compteur {meter.serialNumber}</h3> : <div className='max-w-sm flex-1'><ResponseField {...fieldProps} path={`meters.${index}.serialNumber`} label='Numéro du compteur' type='text' maxLength={100} /></div>}
+              <div key={meter.compteurId || `new-${index}`} className='min-w-0 rounded border border-gray-200'>
+                <div className='flex flex-wrap items-center gap-3 border-b border-gray-200 bg-gray-50 px-3 py-3 md:px-4'>
+                  <span className='fr-icon-dashboard-3-line flex h-9 w-9 shrink-0 items-center justify-center rounded bg-white text-[#000091]' aria-hidden='true' />
+                  {meter.compteurId && context.meters?.some(known => (known.compteurId || known.id) === meter.compteurId && known.serialNumber) ? <h3 className='fr-h6 fr-mb-0 min-w-0 flex-1 break-words'>Compteur <span className='font-mono'>{meter.serialNumber}</span></h3> : <div className='min-w-0 max-w-sm flex-1'><ResponseField {...fieldProps} path={`meters.${index}.serialNumber`} label='Numéro du compteur' type='text' maxLength={100} /></div>}
                   {!readOnly && !meter.compteurId && answer.meters.length > 1 && <button className='fr-btn fr-btn--sm fr-btn--tertiary' type='button' disabled={saving} onClick={() => setAnswer(previous => ({...previous, meters: previous.meters.filter((_, meterIndex) => meterIndex !== index)}))}>Retirer ce compteur</button>}
                 </div>
-                <div className='grid gap-5 lg:grid-cols-2'>
+                <div className='grid gap-3 p-3 md:p-4 lg:grid-cols-2'>
                   <PeriodFields title='Hors étiage 2025–2026' path={`meters.${index}.offSeason`} fieldProps={fieldProps} />
                   <PeriodFields season title='Étiage 2026' path={`meters.${index}.season`} fieldProps={fieldProps} />
                 </div>
-                {admin && response.lastSubmittedAt && meter.compteurId && <CampaignMeterReview campaignId={campaign.id} compteurId={meter.compteurId} serialNumber={meter.serialNumber} onApproved={refreshAfterApproval} />}
+                {admin && response.lastSubmittedAt && meter.compteurId && <div className='px-3 pb-3 md:px-4'><CampaignMeterReview campaignId={campaign.id} compteurId={meter.compteurId} serialNumber={meter.serialNumber} onApproved={refreshAfterApproval} /></div>}
               </div>
             ))}
           </div>
@@ -195,8 +228,8 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
         <section className='border bg-white p-4 md:p-5'>
           <h2 className='fr-h4'>Besoins 2026–2027</h2>
           <div className='grid gap-5 lg:grid-cols-2'>
-            <PeriodFields needs season title='Demande étiage 2027' path='needs.season' fieldProps={fieldProps} />
             <PeriodFields needs title='Demande hors étiage 2026–2027' path='needs.offSeason' fieldProps={fieldProps} />
+            <PeriodFields needs season title='Demande étiage 2027' path='needs.season' fieldProps={fieldProps} />
           </div>
         </section>
         <section className='border bg-white p-4 md:p-5'>
@@ -206,6 +239,7 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
         {!readOnly && <div className='sticky bottom-0 z-10 flex flex-wrap items-center gap-3 border bg-white p-3 shadow-sm'>
           <button className='fr-btn fr-btn--secondary' type='button' disabled={saving || !ready} onClick={() => persist(false)}>Enregistrer le brouillon</button>
           <button className='fr-btn' type='submit' disabled={saving || !ready || permissions.canSubmit === false}>{saving ? 'Enregistrement…' : response.lastSubmittedAt ? 'Envoyer les modifications' : 'Envoyer ma réponse'}</button>
+          {!permissions.canSubmit && context.blockers?.length > 0 && <span className='text-sm text-gray-600'>{context.blockers[0].replace(/\s*Vous pouvez enregistrer un brouillon\.?/g, '')}</span>}
           {dirty && <span className='text-sm text-gray-600'>Modifications non enregistrées</span>}
         </div>}
       </form>

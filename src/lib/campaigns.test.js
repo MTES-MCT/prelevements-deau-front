@@ -1,8 +1,8 @@
 import test from 'ava'
 
 import {
-  campaignData, campaignDate, campaignExploitationLabel, campaignResponseHref, campaignState, campaignUsageOptions,
-  emptyCampaignMeter, formatCampaignVolume, getCampaignField, initialCampaignAnswer, setCampaignField, validateCampaignAnswer
+  campaignData, campaignDate, campaignExploitationLabel, campaignParticipation, campaignResponseHref, campaignState, campaignUsageOptions,
+  emptyCampaignMeter, formatCampaignVolume, getCampaignField, initialCampaignAnswer, isCampaignRequester, setCampaignField, singleCampaignResponseHref, validateCampaignAnswer
 } from './campaigns.js'
 
 test('un code comptage distingue deux exploitations sur le même point', t => {
@@ -80,4 +80,34 @@ test('le reçu renvoie à la campagne selon le rôle et ne propose aucun lien au
   t.is(campaignResponseHref(source, 'INSTRUCTOR'), null)
   t.is(campaignResponseHref(source, null), null)
   t.is(campaignResponseHref({}, 'ADMIN'), null)
+})
+
+test('le demandeur voit une réponse à compléter, un brouillon ou un envoi sans terme exploitation', t => {
+  const campaign = {status: 'OPEN', progress: {total: 1, submitted: 0, drafts: 0}}
+  t.deepEqual(campaignParticipation(campaign), {complete: false, label: 'Réponse à compléter', action: 'Compléter ma réponse'})
+  t.deepEqual(campaignParticipation({...campaign, progress: {...campaign.progress, drafts: 1}}), {complete: false, label: 'Brouillon enregistré', action: 'Reprendre ma réponse'})
+  t.deepEqual(campaignParticipation({...campaign, progress: {...campaign.progress, submitted: 1}}), {complete: true, label: 'Réponse envoyée', action: 'Consulter ma réponse'})
+})
+
+test('plusieurs codes comptage conservent un suivi de toutes les réponses ; une collecte close se consulte', t => {
+  t.deepEqual(campaignParticipation({status: 'OPEN', progress: {total: 3, submitted: 1, drafts: 1}}), {complete: false, label: '1 réponse envoyée sur 3', action: 'Reprendre mes réponses'})
+  t.is(campaignParticipation({status: 'CLOSED', progress: {total: 1, submitted: 0}}).action, 'Consulter ma réponse')
+  t.is(campaignParticipation({status: 'CLOSED', progress: {total: 1, submitted: 0}}).label, 'Réponse non envoyée')
+  t.is(campaignParticipation({status: 'ARCHIVED', progress: {total: 1, submitted: 0, drafts: 1}}).label, 'Réponse non envoyée')
+  t.is(campaignParticipation({status: 'CLOSED', progress: {total: 1, submitted: 1}}).label, 'Réponse envoyée')
+  t.is(campaignParticipation({status: 'OPEN', permissions: {canRespond: false}, progress: {total: 1}}).action, 'Consulter ma réponse')
+})
+
+test('le formulaire unique est direct uniquement pour le demandeur et un résultat complet', t => {
+  const permissions = {canManage: false, canReadResults: false, canRespond: false}
+  const responses = {items: [{id: 'response'}], total: 1}
+  t.true(isCampaignRequester(permissions))
+  t.false(isCampaignRequester({canManage: false, canReadResults: true}))
+  t.false(isCampaignRequester())
+  t.is(singleCampaignResponseHref('campaign', permissions, responses), '/campagnes/campaign/reponses/response')
+  t.is(singleCampaignResponseHref('campaign', {canManage: true, canReadResults: true}, responses), null)
+  t.is(singleCampaignResponseHref('campaign', {canManage: false, canReadResults: true}, responses), null)
+  t.is(singleCampaignResponseHref('campaign', permissions, {...responses, total: 2}), null)
+  t.is(singleCampaignResponseHref('campaign', permissions, {...responses, items: []}), null)
+  t.is(singleCampaignResponseHref('campaign', permissions, undefined), null)
 })
