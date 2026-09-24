@@ -74,9 +74,8 @@ export function formatCampaignVolume(value) {
 
 export function campaignUsageOptions(usages = []) {
   const items = Array.isArray(usages) ? usages : (usages.items || [])
-  return items.flatMap(usage => usage.children?.length
-    ? usage.children.map(child => ({...child, parent: usage}))
-    : (['SUB_USAGE', 'SUBUSAGE'].includes(usage.kind) || /[A-Z]/.test(usage.code || '') ? [usage] : []))
+  const options = items.flatMap(usage => [usage, ...(usage.children || []).map(child => ({...child, parent: usage}))])
+  return [...new Map(options.map(usage => [usage.id, usage])).values()]
 }
 
 export function emptyCampaignPeriod(needs = false) {
@@ -104,16 +103,41 @@ export function initialCampaignAnswer(data, meters = []) {
   }
 }
 
+// Index precision is four decimal places, as in the API. BigInt avoids rounding
+// large meter readings when checking consecutive values.
+function comparableIndex(value) {
+  const text = String(value ?? '').trim().replace(',', '.')
+  if (!/^\d{1,12}(?:\.\d{1,4})?$/.test(text)) return null
+  const [integer, fraction = ''] = text.split('.')
+  return BigInt(integer) * 10000n + BigInt(fraction.padEnd(4, '0'))
+}
+
+export function validateCampaignIndices(data) {
+  const errors = {}
+  for (const [index, meter] of (data.meters || []).entries()) {
+    const start = comparableIndex(meter.offSeason?.indexStart)
+    const middle = comparableIndex(meter.offSeason?.indexEnd)
+    const end = comparableIndex(meter.season?.indexEnd)
+    if (start !== null && middle !== null && middle < start) {
+      errors[`meters.${index}.offSeason.indexEnd`] = 'L’index du 01/06/2026 doit être supérieur ou égal à celui du 31/10/2025.'
+    }
+    if (end !== null && ((middle !== null && end < middle) || (middle === null && start !== null && end < start))) {
+      errors[`meters.${index}.season.indexEnd`] = `L’index du 31/10/2026 doit être supérieur ou égal à celui du ${middle !== null ? '01/06/2026' : '31/10/2025'}.`
+    }
+  }
+  return errors
+}
+
 export function validateCampaignAnswer(data) {
   const errors = {}
   const number = (value, path) => {
-    if (value === '' || value === null || value === undefined || !Number.isFinite(Number(value)) || Number(value) < 0) {
-      errors[path] = 'Saisissez un nombre positif ou zéro.'
+    if (comparableIndex(value) === null) {
+      errors[path] = 'Saisissez un nombre positif ou zéro, avec au plus 12 chiffres avant la virgule et 4 après.'
     }
   }
   const period = (value, path, numericFields) => {
     for (const field of numericFields) number(value?.[field], `${path}.${field}`)
-    if (!value?.usageId) errors[`${path}.usageId`] = 'Choisissez un sous-usage.'
+    if (!value?.usageId) errors[`${path}.usageId`] = 'Choisissez un usage.'
     if (!value?.crops?.trim()) errors[`${path}.crops`] = 'Précisez les cultures, ou indiquez « aucune ».'
   }
   for (const [index, meter] of (data.meters || []).entries()) {
@@ -123,7 +147,7 @@ export function validateCampaignAnswer(data) {
   }
   if (!data.meters?.length) errors.meters = 'Renseignez au moins un compteur.'
   for (const season of ['season', 'offSeason']) period(data.needs?.[season], `needs.${season}`, ['flow', 'volume', 'surface'])
-  return errors
+  return {...errors, ...validateCampaignIndices(data)}
 }
 
 export function setCampaignField(data, path, value) {

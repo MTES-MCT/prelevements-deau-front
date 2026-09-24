@@ -117,6 +117,7 @@ const UsageCombobox = ({
   onUsageChange,
   options,
   readOnly = false,
+  disabled = false,
   required = false,
   invalid = false,
   describedBy: fieldDescriptionId,
@@ -132,6 +133,7 @@ const UsageCombobox = ({
   const containerRef = useRef(null)
   const inputRef = useRef(null)
   const listboxRef = useRef(null)
+  const unavailable = readOnly || disabled
   const normalizedSearch = normalizeSearchText(value)
   const selectedUsage = selectedValue === undefined ? findUsageOptionBySearchValue(options, value) : findUsageOptionById(options, selectedValue)
   const parentDescriptionId = selectedUsage?.parentUsage ? `${id}-parent-usage` : undefined
@@ -144,6 +146,7 @@ const UsageCombobox = ({
 
     return options.filter(option => matchesSearchTerms(getUsageOptionSearchText(option), normalizedSearch))
   }, [isFiltering, normalizedSearch, options])
+  const visibleParentCodes = new Set(visibleOptions.filter(option => !option.parentUsage).map(option => option.code))
 
   const updateDropdownPosition = useCallback(() => {
     const useInlineDropdown = shouldUseInlineUsageDropdown()
@@ -207,23 +210,23 @@ const UsageCombobox = ({
   }, [activeIndex, open])
 
   const openDropdown = useCallback(({filter = false} = {}) => {
-    if (readOnly) return
+    if (unavailable) return
     setIsFiltering(filter)
     updateDropdownPosition()
     setOpen(true)
-  }, [readOnly, updateDropdownPosition])
+  }, [unavailable, updateDropdownPosition])
 
   const selectUsage = useCallback(usage => {
-    if (readOnly) return
+    if (unavailable) return
     onUsageChange({
       usageId: usage.value,
       usageSearch: formatUsageOptionLabel(usage)
     })
     setIsFiltering(false)
     setOpen(false)
-  }, [onUsageChange, readOnly])
+  }, [onUsageChange, unavailable])
 
-  const listbox = !readOnly && open && (isInlineDropdown || dropdownStyle) && (
+  const listbox = !unavailable && open && (isInlineDropdown || dropdownStyle) && (
     <div
       ref={listboxRef}
       id={`${id}-listbox`}
@@ -237,20 +240,24 @@ const UsageCombobox = ({
       {visibleOptions.length > 0 ? visibleOptions.map((usage, index) => {
         const isActive = index === activeIndex
         const isSelected = usage.value === selectedUsage?.value
+        const showParentContext = usage.parentUsage && !visibleParentCodes.has(usage.parentUsage.code)
 
         return (
           <button
             key={usage.value}
             id={`${id}-option-${index}`}
             data-option-index={index}
+            data-usage-level={usage.parentUsage ? 'child' : 'parent'}
             type='button'
             role='option'
+            tabIndex={-1}
+            aria-label={usage.parentUsage ? `${formatUsageOptionLabel(usage)} — ${formatUsageParentLabel(usage.parentUsage)}` : undefined}
             aria-selected={isSelected}
             className={classNames(
               'flex w-full cursor-pointer items-start gap-1.5 border-b border-gray-100 px-2 py-2 text-left text-xs last:border-b-0',
               isActive ? 'bg-blue-50 text-blue-900' : 'bg-white hover:bg-gray-50',
               isSelected && 'font-semibold',
-              !usage.parentUsage && 'font-medium'
+              !usage.parentUsage && 'font-semibold'
             )}
             onMouseEnter={() => setActiveIndex(index)}
             onMouseDown={event => {
@@ -263,7 +270,7 @@ const UsageCombobox = ({
             </span>
             <span className={classNames(
               'flex min-w-0 flex-1 items-start gap-2',
-              usage.parentUsage && 'ml-3'
+              usage.parentUsage && 'ml-4 border-l border-gray-300 pl-3'
             )}
             >
               <span
@@ -275,6 +282,11 @@ const UsageCombobox = ({
                 aria-hidden='true'
               />
               <span className='min-w-0'>
+                {showParentContext && (
+                  <span className='block text-[0.66rem] font-normal text-gray-600'>
+                    {formatUsageParentLabel(usage.parentUsage)}
+                  </span>
+                )}
                 <span className='quick-declaration-usage-option-label block' title={formatUsageOptionLabel(usage)}>
                   {formatUsageOptionLabel(usage)}
                 </span>
@@ -287,7 +299,7 @@ const UsageCombobox = ({
       )}
     </div>
   )
-  const activeDescendant = !readOnly && open && visibleOptions[activeIndex] ? `${id}-option-${activeIndex}` : undefined
+  const activeDescendant = !unavailable && open && visibleOptions[activeIndex] ? `${id}-option-${activeIndex}` : undefined
 
   return (
     <div ref={containerRef} className='quick-declaration-combobox'>
@@ -310,12 +322,13 @@ const UsageCombobox = ({
           type='text'
           role='combobox'
           readOnly={readOnly}
+          disabled={disabled}
           aria-readonly={readOnly}
           aria-required={required}
           aria-invalid={invalid}
           aria-autocomplete='list'
           aria-activedescendant={activeDescendant}
-          aria-expanded={!readOnly && open}
+          aria-expanded={!unavailable && open}
           aria-controls={`${id}-listbox`}
           aria-haspopup='listbox'
           aria-describedby={describedBy}
@@ -323,13 +336,13 @@ const UsageCombobox = ({
           placeholder='Rechercher'
           autoComplete='off'
           onFocus={event => {
-            if (readOnly) return
+            if (unavailable) return
             onFocus?.()
             event.target.select()
             openDropdown({filter: false})
           }}
           onChange={event => {
-            if (readOnly) return
+            if (unavailable) return
             const usageSearch = event.target.value
             const selectedUsage = findUsageOptionBySearchValue(options, usageSearch)
 
@@ -340,7 +353,7 @@ const UsageCombobox = ({
             openDropdown({filter: true})
           }}
           onKeyDown={event => {
-            if (readOnly) return
+            if (unavailable) return
             if (event.key === 'ArrowDown') {
               event.preventDefault()
               openDropdown({filter: open ? isFiltering : false})
@@ -365,7 +378,7 @@ const UsageCombobox = ({
         />
         <button
           type='button'
-          disabled={readOnly}
+          disabled={readOnly || disabled}
           tabIndex={-1}
           className='quick-declaration-combobox-toggle fr-icon-arrow-down-s-line'
           aria-label={open ? 'Fermer la liste des usages' : 'Ouvrir la liste des usages'}

@@ -2,7 +2,7 @@ import test from 'ava'
 
 import {
   campaignData, campaignDate, campaignExploitationLabel, campaignParticipation, campaignResponseHref, campaignState, campaignUsageOptions,
-  emptyCampaignMeter, formatCampaignVolume, getCampaignField, initialCampaignAnswer, isCampaignRequester, setCampaignField, singleCampaignResponseHref, validateCampaignAnswer
+  emptyCampaignMeter, formatCampaignVolume, getCampaignField, initialCampaignAnswer, isCampaignRequester, setCampaignField, singleCampaignResponseHref, validateCampaignAnswer, validateCampaignIndices
 } from './campaigns.js'
 
 test('un code comptage distingue deux exploitations sur le même point', t => {
@@ -46,12 +46,58 @@ test('l’édition d’un compteur ne change ni un autre compteur ni la réponse
   t.is(next.meters[1].compteurId, 'second')
 })
 
-test('les usages proposés sont les sous-usages et gardent leur parent', t => {
+test('les usages et sous-usages sont proposés sans doublons et gardent leur hiérarchie', t => {
   const options = campaignUsageOptions([{id: 'root', code: '2', label: 'Irrigation', children: [{id: 'sub', code: '2A', label: 'Aspersion'}]}, {id: 'root2', code: '4', kind: 'USAGE'}])
-  t.is(options.length, 1)
-  t.is(options[0].id, 'sub')
-  t.is(options[0].parent.id, 'root')
+  t.is(options.length, 3)
+  t.is(options[0].id, 'root')
+  t.is(options[1].id, 'sub')
+  t.is(options[1].parent.id, 'root')
   t.is(campaignUsageOptions([{id: 's', kind: 'SUB_USAGE'}])[0].id, 's')
+  t.is(campaignUsageOptions([...options, options[1]]).length, 3)
+})
+
+test('les trois index doivent croître pour chaque compteur, sans comparaison entre compteurs', t => {
+  const data = initialCampaignAnswer(null, [{id: 'first'}, {id: 'second'}])
+  Object.assign(data.meters[0].offSeason, {indexStart: '20', indexEnd: '10'})
+  data.meters[0].season.indexEnd = '5'
+  Object.assign(data.meters[1].offSeason, {indexStart: '1', indexEnd: '1'})
+  data.meters[1].season.indexEnd = '2'
+  const errors = validateCampaignIndices(data)
+  t.deepEqual(Object.keys(errors), ['meters.0.offSeason.indexEnd', 'meters.0.season.indexEnd'])
+  t.true(errors['meters.0.offSeason.indexEnd'].includes('31/10/2025'))
+  t.true(errors['meters.0.season.indexEnd'].includes('01/06/2026'))
+  t.is(validateCampaignAnswer(data)['meters.0.season.indexEnd'], errors['meters.0.season.indexEnd'])
+})
+
+test('un index égal est valide et les gros index conservent leur précision', t => {
+  const data = initialCampaignAnswer(null)
+  Object.assign(data.meters[0].offSeason, {indexStart: '999999999999.9998', indexEnd: '999999999999.9999'})
+  data.meters[0].season.indexEnd = '999999999999.9998'
+  t.deepEqual(Object.keys(validateCampaignIndices(data)), ['meters.0.season.indexEnd'])
+  data.meters[0].season.indexEnd = '999999999999.9999'
+  t.deepEqual(validateCampaignIndices(data), {})
+})
+
+test('un brouillon incomplet compare seulement les index effectivement renseignés', t => {
+  const data = initialCampaignAnswer(null)
+  data.meters[0].offSeason.indexStart = '12'
+  t.deepEqual(validateCampaignIndices(data), {})
+  data.meters[0].season.indexEnd = '0'
+  t.true(validateCampaignIndices(data)['meters.0.season.indexEnd'].includes('31/10/2025'))
+  data.meters[0].offSeason.indexEnd = '0'
+  t.deepEqual(Object.keys(validateCampaignIndices(data)), ['meters.0.offSeason.indexEnd'])
+})
+
+test('la validation refuse chiffres incomplets, notation exponentielle et précision excessive', t => {
+  const data = initialCampaignAnswer(null)
+  for (const value of [' ', '1e3', '-1', '1234567890123', '1.23456', '12,', '0x20']) {
+    data.needs.season.volume = value
+    t.truthy(validateCampaignAnswer(data)['needs.season.volume'], value)
+  }
+  for (const value of ['0', '123456789012', '1.2345', '1,2345']) {
+    data.needs.season.volume = value
+    t.falsy(validateCampaignAnswer(data)['needs.season.volume'], value)
+  }
 })
 
 test('une campagne fermée explicitement n’est pas affichée ouverte', t => {

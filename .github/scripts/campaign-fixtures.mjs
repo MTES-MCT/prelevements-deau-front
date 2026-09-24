@@ -3,13 +3,15 @@ export const campaignIds = {
   campaign: '91111111-1111-4111-8111-111111111111', response: '92222222-2222-4222-8222-222222222222',
   user: '93333333-3333-4333-8333-333333333333', exploitation: '94444444-4444-4444-8444-444444444444',
   point: '95555555-5555-4555-8555-555555555555', meter: '96666666-6666-4666-8666-666666666666',
-  secondMeter: '97777777-7777-4777-8777-777777777777', usage: '98888888-8888-4888-8888-888888888888', secondUsage: '98888888-8888-4888-8888-888888888889',
+  secondMeter: '97777777-7777-4777-8777-777777777777', usage: '98888888-8888-4888-8888-888888888888', secondUsage: '98888888-8888-4888-8888-888888888889', parentUsage: '98888888-8888-4888-8888-888888888890',
   collector: '99999999-9999-4999-8999-999999999999', declaration: '90000000-0000-4000-8000-000000000001'
 }
 const states = new Map()
+const parentUsage = {id: campaignIds.parentUsage, kind: 'USAGE', code: '2', label: 'Irrigation'}
 const uses = [
-  {id: campaignIds.usage, kind: 'SUB_USAGE', code: '2A', label: 'Aspersion', parent: {id: 'synthetic-irrigation', code: '2', label: 'Irrigation'}},
-  {id: campaignIds.secondUsage, kind: 'SUB_USAGE', code: '2B', label: 'Goutte-à-goutte', parent: {id: 'synthetic-irrigation', code: '2', label: 'Irrigation'}}
+  {id: campaignIds.usage, kind: 'SUB_USAGE', code: '2A', label: 'Aspersion', parent: parentUsage},
+  {id: campaignIds.secondUsage, kind: 'SUB_USAGE', code: '2B', label: 'Goutte-à-goutte', parent: parentUsage},
+  parentUsage
 ]
 const point = {id: campaignIds.point, name: 'Point synthétique', communeName: 'Commune de test'}
 const preleveur = {userId: campaignIds.user, socialReason: 'Ferme synthétique', siret: '00000000000000', email: 'campaign@example.test', phoneNumber: '0000000000'}
@@ -29,15 +31,16 @@ export async function handleCampaignFixtureRequest(request, send, response) {
   const collector = authorization.includes('-collector-')
   const role = admin ? 'ADMIN' : authorization.includes('-instructor-') ? 'INSTRUCTOR' : 'DECLARANT'
   const ended = authorization.includes('-ended-')
-  if (!states.has(authorization)) states.set(authorization, {draft: null, submitted: collector || authorization.includes('-review-') ? completeData() : null, revision: 0, requests: [], name: 'Collecte synthétique', status: ended ? 'CLOSED' : admin ? 'DRAFT' : 'OPEN'})
+  if (!states.has(authorization)) states.set(authorization, {draft: authorization.includes('-complete-') ? completeData() : null, submitted: collector || authorization.includes('-review-') ? completeData() : null, revision: 0, requests: [], name: 'Collecte synthétique', status: ended ? 'CLOSED' : admin ? 'DRAFT' : 'OPEN'})
   const state = states.get(authorization)
   const multiple = authorization.includes('-multiple-')
+  const responsePoint = authorization.includes('-map-') ? {...point, coordinates: [0.25, 44.65]} : point
   const respond = (status, data) => { send(status, data); return true }
   const ok = data => respond(200, {success: true, data})
   const permissions = {canManage: admin, canReadResults: admin || collector, canRespond: !admin && !collector && !ended, canDelete: admin, canOpen: admin}
   const campaign = () => ({id: campaignIds.campaign, name: state.name, status: state.status, opensOn: '2026-09-01', closesOn: '2026-12-31', type: 'DROPT_INDEX_NEEDS_2026_2027', collecteurUserId: campaignIds.collector, collecteur, updatedAt: `2026-09-24T00:00:0${state.revision}Z`, exploitationIds: [campaignIds.exploitation], progress: {total: multiple ? 2 : 1, submitted: state.submitted ? 1 : 0, drafts: state.draft ? 1 : 0, remaining: (multiple ? 2 : 1) - (state.submitted ? 1 : 0)}, permissions})
   const item = () => ({id: campaignIds.response, campaignId: campaignIds.campaign, exploitationId: campaignIds.exploitation, revision: state.revision, preleveurUserId: campaignIds.user, exploitation: {id: campaignIds.exploitation, countingCode: '001'}, preleveur, point, countingCode: '001', status: state.submitted ? 'SUBMITTED' : state.draft ? 'DRAFT' : 'NOT_STARTED', hasDraft: Boolean(state.draft), firstSubmittedAt: state.submitted ? '2026-11-01' : null, lastSubmittedAt: state.submitted ? '2026-11-01' : null, publicationStatus: state.submitted ? 'PENDING_REVIEW' : null, publicationIssues: ['Le partage du compteur doit être vérifié.'], volumes: {offSeason: null, season: null, total: null, partial: true}, submittedData: state.submitted, draftData: collector ? null : state.draft})
-  const context = () => ({campaign: campaign(), response: item(), exploitation: {id: campaignIds.exploitation, countingCode: '001', declarant: preleveur, pointPrelevement: point}, waterUses: uses, permissions: {...permissions, canEdit: !collector && !admin && !ended, canSubmit: !collector && !admin && !ended && !authorization.includes('-before-')}, meters: authorization.includes('-missing-') ? [] : [{compteurId: campaignIds.meter, serialNumber: 'SYNTH-M1'}, {compteurId: campaignIds.secondMeter, serialNumber: 'SYNTH-M2'}], data: collector ? state.submitted : state.draft || state.submitted, blockers: authorization.includes('-before-') ? ['Le bilan pourra être envoyé à partir du 31 octobre 2026. Vous pouvez enregistrer un brouillon.'] : []})
+  const context = () => ({campaign: campaign(), response: item(), point: responsePoint, exploitation: {id: campaignIds.exploitation, countingCode: '001', declarant: preleveur, pointPrelevement: responsePoint}, waterUses: uses, permissions: {...permissions, canEdit: !collector && !admin && !ended, canSubmit: !collector && !admin && !ended && !authorization.includes('-before-')}, meters: authorization.includes('-missing-') ? [] : [{compteurId: campaignIds.meter, serialNumber: 'SYNTH-M1'}, {compteurId: campaignIds.secondMeter, serialNumber: 'SYNTH-M2'}], data: collector ? state.submitted : state.draft || state.submitted, blockers: authorization.includes('-before-') ? ['Le bilan pourra être envoyé à partir du 31 octobre 2026. Vous pouvez enregistrer un brouillon.'] : []})
 
   if (pathname === '/info' || pathname === '/api/info') return respond(200, {role, declarantRole: collector ? 'COLLECTEUR' : 'PRELEVEUR', permissions: [], user: {id: campaignIds.user, email: 'campaign@example.test', socialReason: preleveur.socialReason}, expiresAt: new Date(Date.now() + 3_600_000).toISOString()})
   if (pathname === '/api/__campaign-requests') return respond(200, state.requests)
@@ -97,6 +100,7 @@ export async function handleCampaignFixtureRequest(request, send, response) {
     if (authorization.includes('-conflict-')) return respond(409, {message: 'La réponse a été modifiée.'})
     if (authorization.includes('-closed-')) return respond(409, {code: 409, message: 'Cette campagne n’est pas ouverte à la saisie.'})
     if (authorization.includes('-invalid-')) return respond(400, {code: 400, message: 'Vérifiez les champs de la réponse.', data: {fields: {'meters.0.offSeason.indexStart': 'Le relevé du compteur doit être vérifié.'}}})
+    if (authorization.includes('-before-') && pathname.endsWith('/submit')) return respond(409, {message: 'Le bilan pourra être envoyé à partir du 31 octobre 2026. Vous pouvez enregistrer un brouillon.'})
     if (body.revision !== state.revision) return respond(409, {message: 'Révision périmée.'})
     state.revision++
     if (pathname.endsWith('/submit')) { state.submitted = body.data; state.draft = null } else state.draft = body.data

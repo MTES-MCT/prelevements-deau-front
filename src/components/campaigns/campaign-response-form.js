@@ -1,6 +1,6 @@
 'use client'
 
-import {useEffect, useRef, useState} from 'react'
+import {useEffect, useMemo, useRef, useState} from 'react'
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import dynamic from 'next/dynamic'
@@ -13,7 +13,7 @@ import {campaignSaveError} from '@/lib/campaign-response-errors.js'
 import {
   campaignDate, campaignExploitationLabel, campaignPersonLabel, campaignState,
   campaignUsageOptions, emptyCampaignMeter, getCampaignField, initialCampaignAnswer,
-  setCampaignField, validateCampaignAnswer
+  setCampaignField, validateCampaignAnswer, validateCampaignIndices
 } from '@/lib/campaigns.js'
 import {countEditableNumberCharacters, formatNumberInput, getFormattedCaretPosition, normalizeNumberInput} from '@/lib/decimal-input.js'
 import {getUsageParent, normalizeUsageOption} from '@/lib/water-uses.js'
@@ -47,16 +47,16 @@ function UsageInput({value, options, update, path, readOnly, ...props}) {
   }} />
 }
 
-function ResponseField({path, label, answer, errors, update, readOnly, type = 'number', hint, options, maxLength = 3000}) {
+function ResponseField({path, label, answer, errors, update, validateField, readOnly, disabled, type = 'number', hint, options, maxLength = 3000}) {
   const id = `campaign-${path.replaceAll('.', '-')}`
   const value = getCampaignField(answer, path)
   const error = errors[path]
-  const inputProps = {id, name: path, readOnly, 'aria-required': !readOnly, 'aria-invalid': Boolean(error), 'aria-describedby': error ? `${id}-error` : undefined}
+  const inputProps = {id, name: path, readOnly, disabled, onBlur: () => validateField?.(path), 'aria-required': !readOnly, 'aria-invalid': Boolean(error), 'aria-describedby': error ? `${id}-error` : undefined}
   return (
     <div className={`fr-input-group fr-mb-0 ${error ? 'fr-input-group--error' : ''}`}>
       <label className='fr-label text-sm' htmlFor={id}>{label}{hint && <span className='fr-hint-text'>{hint}</span>}</label>
       {options ? (
-        <UsageInput id={id} name={path} value={value} options={options} path={path} update={update} readOnly={readOnly} invalid={Boolean(error)} describedBy={inputProps['aria-describedby']} />
+        <UsageInput id={id} name={path} value={value} options={options} path={path} update={update} readOnly={readOnly} disabled={disabled} invalid={Boolean(error)} describedBy={inputProps['aria-describedby']} />
       ) : type === 'number' ? (
         <NumericInput {...inputProps} value={value} onChange={value => update(path, value)} />
       ) : (
@@ -103,12 +103,12 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
   const [context, setContext] = useState(initialContext)
   const [answer, setAnswer] = useState(() => initialCampaignAnswer(initialContext.data, initialContext.meters))
   const [savedValue, setSavedValue] = useState(() => JSON.stringify(initialCampaignAnswer(initialContext.data, initialContext.meters)))
-  const [errors, setErrors] = useState({})
+  const [fieldErrors, setErrors] = useState({})
+  const [indexErrors, setIndexErrors] = useState({})
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
   const [saving, setSaving] = useState(false)
   const [editing, setEditing] = useState(!initialContext.response.lastSubmittedAt || initialContext.response.hasDraft)
-  const [showMap, setShowMap] = useState(false)
   const [ready, setReady] = useState(false)
   const formRef = useRef(null)
   const inFlight = useRef(false)
@@ -116,17 +116,28 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
   const readOnly = !permissions.canEdit || !editing
   const dirty = !readOnly && JSON.stringify(answer) !== savedValue
   const exploitation = context.exploitation || response.exploitation || {}
-  const rawPoint = context.context?.point || context.point || response.point || exploitation.pointPrelevement || exploitation.point || {}
-  const point = {...rawPoint, coordinates: Array.isArray(rawPoint.coordinates) ? {type: 'Point', coordinates: rawPoint.coordinates} : rawPoint.coordinates}
+  const rawPoint = context.context?.point || context.point || response.point || exploitation.pointPrelevement || exploitation.point
+  const point = useMemo(() => ({...rawPoint, coordinates: Array.isArray(rawPoint?.coordinates) ? {type: 'Point', coordinates: rawPoint.coordinates} : rawPoint?.coordinates}), [rawPoint])
+  const mapPoints = useMemo(() => [point], [point])
   const hasCoordinates = point.coordinates?.coordinates?.length === 2 && point.coordinates.coordinates.every(Number.isFinite)
   const preleveur = context.preleveur || response.preleveur || exploitation.declarant || {}
   const usageOptions = campaignUsageOptions(context.waterUses).map(usage => ({...normalizeUsageOption(usage), parentUsage: getUsageParent(usage)})).sort(compareUsageOptions)
   const base = admin ? '/administration/campagnes' : '/campagnes'
   const applicant = !admin && !permissions.canManage && !permissions.canReadResults
-  const fieldProps = {answer, errors, readOnly: readOnly || saving || !ready, usageOptions, update: (path, value) => {
-    setAnswer(previous => setCampaignField(previous, path, value))
+  const errors = {...fieldErrors, ...indexErrors}
+  const indexPath = path => /^meters\.\d+\.(?:offSeason|season)\.index(?:Start|End)$/.test(path)
+  const fieldProps = {answer, errors, readOnly, disabled: saving || !ready, usageOptions, validateField: path => {
+    if (indexPath(path)) setIndexErrors(validateCampaignIndices(answer))
+  }, update: (path, value) => {
+    const nextAnswer = setCampaignField(answer, path, value)
+    setAnswer(nextAnswer)
     setSuccess(null)
-    setErrors(previous => { const next = {...previous}; delete next[path]; return next })
+    setErrors(previous => {
+      const next = {...previous}
+      delete next[path]
+      return next
+    })
+    if (indexPath(path) && Object.keys(indexErrors).length) setIndexErrors(validateCampaignIndices(nextAnswer))
   }}
 
   useEffect(() => { setReady(true) }, [])
@@ -154,15 +165,28 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
     if (result.success) acceptContext(result.data.data)
     else setError('La vérification a été enregistrée. Rechargez la page pour actualiser les volumes.')
   }
+  function focusInvalidField() {
+    requestAnimationFrame(() => {
+      const invalid = formRef.current?.querySelector('[aria-invalid="true"]')
+      invalid?.focus({preventScroll: true})
+      invalid?.scrollIntoView({block: 'center', behavior: 'instant'})
+    })
+  }
   async function persist(submit) {
     if (inFlight.current) return
     setError(null)
     setSuccess(null)
-    const nextErrors = submit ? validateCampaignAnswer(answer) : {}
-    setErrors(nextErrors)
-    if (Object.keys(nextErrors).length) {
+    const nextErrors = submit ? validateCampaignAnswer(answer) : validateCampaignIndices(answer)
+    const nextIndexErrors = validateCampaignIndices(answer)
+    setIndexErrors(nextIndexErrors)
+    setErrors(Object.fromEntries(Object.entries(nextErrors).filter(([path]) => !Object.hasOwn(nextIndexErrors, path))))
+    if (submit && Object.keys(nextErrors).length) {
       setError('Vérifiez les champs signalés avant d’envoyer votre réponse.')
-      requestAnimationFrame(() => formRef.current?.querySelector('[aria-invalid="true"]')?.focus())
+      focusInvalidField()
+      return
+    }
+    if (submit && permissions.canSubmit === false) {
+      setError(context.blockers?.join(' ') || 'L’envoi de cette réponse est actuellement indisponible. Vous pouvez enregistrer un brouillon.')
       return
     }
     inFlight.current = true
@@ -171,6 +195,7 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
       const result = await saveCampaignResponseAction(campaign.id, response.id, {revision: response.revision, data: answer}, submit)
       if (!result.success) {
         setErrors(result.data?.fields || result.data?.data?.fields || result.validationErrors || {})
+        focusInvalidField()
         throw new Error(campaignSaveError(result))
       }
       const refreshed = await getCampaignResponseAction(campaign.id, response.id)
@@ -178,7 +203,7 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
       if (next?.response) acceptContext(next)
       else throw new Error('La réponse a été enregistrée, mais son actualisation a échoué. Rechargez la page avant de poursuivre.')
       setEditing(!submit)
-      setSuccess(submit ? 'Votre réponse a bien été envoyée.' : 'Brouillon enregistré.')
+      setSuccess(submit ? 'Votre réponse a bien été envoyée.' : Object.keys(nextErrors).length ? 'Brouillon enregistré. Les index signalés restent à corriger avant l’envoi.' : 'Brouillon enregistré.')
     } catch (error) { setError(error.message) } finally { inFlight.current = false; setSaving(false) }
   }
 
@@ -197,12 +222,11 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
         <div><h2 className='fr-h6 fr-mb-1w'>Préleveur</h2><p className='fr-mb-1v font-semibold'>{campaignPersonLabel(preleveur)}</p><p className='fr-text--sm fr-mb-0'>SIRET : {preleveur.siret || 'Non renseigné'}<br />{preleveur.email || preleveur.user?.email || 'Email non renseigné'}<br />{preleveur.phoneNumber || preleveur.phone || preleveur.telephone || 'Téléphone non renseigné'}</p></div>
         <div><h2 className='fr-h6 fr-mb-1w'>Point de prélèvement</h2><p className='fr-mb-1v'>{point.name}</p><p className='fr-text--sm fr-mb-1w'>{point.commune?.name || point.communeName || point.commune || 'Commune non renseignée'}</p>
           {point.locationDescription && <p className='fr-text--sm fr-mb-1w'>{point.locationDescription}</p>}
-          {hasCoordinates && <button className='fr-btn fr-btn--sm fr-btn--tertiary' type='button' aria-expanded={showMap} onClick={() => setShowMap(previous => !previous)}>{showMap ? 'Masquer la carte' : 'Voir sur la carte'}</button>}
         </div>
-        {showMap && <div className='h-64 md:col-span-2'><PointMap points={[point]} /></div>}
+        {hasCoordinates && <div className='h-64 md:col-span-2' role='region' aria-label='Localisation du point de prélèvement'><PointMap points={mapPoints} /></div>}
       </section>
-      {error && <Alert className='mb-4' severity='error' title='Vérifiez votre réponse' description={error} />}
-      {success && <div className='mb-4' role='status'><Alert severity='success' title={success} small /></div>}
+      {readOnly && error && <Alert className='mb-4' severity='error' title='Vérifiez votre réponse' description={error} />}
+      {readOnly && success && <div className='mb-4' role='status'><Alert severity='success' title={success} small /></div>}
       <form ref={formRef} noValidate onSubmit={event => { event.preventDefault(); persist(true) }} className='grid gap-4'>
         <section className='border bg-white p-4 md:p-5'>
           <h2 className='fr-h4'>Bilan des prélèvements 2025–2026</h2>
@@ -212,7 +236,7 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
                 <div className='flex flex-wrap items-center gap-3 border-b border-gray-200 bg-gray-50 px-3 py-3 md:px-4'>
                   <span className='fr-icon-dashboard-3-line flex h-9 w-9 shrink-0 items-center justify-center rounded bg-white text-[#000091]' aria-hidden='true' />
                   {meter.compteurId && context.meters?.some(known => (known.compteurId || known.id) === meter.compteurId && known.serialNumber) ? <h3 className='fr-h6 fr-mb-0 min-w-0 flex-1 break-words'>Compteur <span className='font-mono'>{meter.serialNumber}</span></h3> : <div className='min-w-0 max-w-sm flex-1'><ResponseField {...fieldProps} path={`meters.${index}.serialNumber`} label='Numéro du compteur' type='text' maxLength={100} /></div>}
-                  {!readOnly && !meter.compteurId && answer.meters.length > 1 && <button className='fr-btn fr-btn--sm fr-btn--tertiary' type='button' disabled={saving} onClick={() => setAnswer(previous => ({...previous, meters: previous.meters.filter((_, meterIndex) => meterIndex !== index)}))}>Retirer ce compteur</button>}
+                  {!readOnly && !meter.compteurId && answer.meters.length > 1 && <button className='fr-btn fr-btn--sm fr-btn--tertiary' type='button' disabled={saving || !ready} onClick={() => { setAnswer(previous => ({...previous, meters: previous.meters.filter((_, meterIndex) => meterIndex !== index)})); setSuccess(null); setErrors({}); setIndexErrors({}) }}>Retirer ce compteur</button>}
                 </div>
                 <div className='grid gap-3 p-3 md:p-4 lg:grid-cols-2'>
                   <PeriodFields title='Hors étiage 2025–2026' path={`meters.${index}.offSeason`} fieldProps={fieldProps} />
@@ -222,7 +246,7 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
               </div>
             ))}
           </div>
-          {!readOnly && <button className='fr-btn fr-btn--secondary fr-btn--sm mt-4' type='button' disabled={saving || answer.meters.length >= 50} onClick={() => setAnswer(previous => ({...previous, meters: [...previous.meters, emptyCampaignMeter()]}))}>Ajouter un compteur</button>}
+          {!readOnly && <button className='fr-btn fr-btn--secondary fr-btn--sm mt-4' type='button' disabled={saving || !ready || answer.meters.length >= 50} onClick={() => { setAnswer(previous => ({...previous, meters: [...previous.meters, emptyCampaignMeter()]})); setSuccess(null) }}>Ajouter un compteur</button>}
           {!readOnly && <p className='fr-hint-text fr-mt-2w fr-mb-0'>Un compteur a été remplacé ? Indiquez-le dans le commentaire ; son historique sera vérifié avant l’envoi.</p>}
         </section>
         <section className='border bg-white p-4 md:p-5'>
@@ -236,11 +260,15 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
           <label className='fr-label' htmlFor='campaign-comment'>Commentaire (facultatif)</label>
           <textarea id='campaign-comment' className='fr-input' rows={3} readOnly={readOnly || saving || !ready} maxLength={20000} value={answer.comment} placeholder='Modifications : raison sociale, SIRET, localisation du point, changement de compteurs…' onChange={event => fieldProps.update('comment', event.target.value)} />
         </section>
-        {!readOnly && <div className='sticky bottom-0 z-10 flex flex-wrap items-center gap-3 border bg-white p-3 shadow-sm'>
+        {!readOnly && <div role='region' aria-label='Enregistrement de la réponse' className='sticky bottom-0 z-10 flex flex-wrap items-center gap-3 border bg-white p-3 shadow-sm'>
           <button className='fr-btn fr-btn--secondary' type='button' disabled={saving || !ready} onClick={() => persist(false)}>Enregistrer le brouillon</button>
-          <button className='fr-btn' type='submit' disabled={saving || !ready || permissions.canSubmit === false}>{saving ? 'Enregistrement…' : response.lastSubmittedAt ? 'Envoyer les modifications' : 'Envoyer ma réponse'}</button>
-          {!permissions.canSubmit && context.blockers?.length > 0 && <span className='text-sm text-gray-600'>{context.blockers[0].replace(/\s*Vous pouvez enregistrer un brouillon\.?/g, '')}</span>}
-          {dirty && <span className='text-sm text-gray-600'>Modifications non enregistrées</span>}
+          <button className='fr-btn' type='submit' disabled={saving || !ready}>{saving ? 'Enregistrement…' : response.lastSubmittedAt ? 'Envoyer les modifications' : 'Envoyer ma réponse'}</button>
+          {success && <p role='status' className='m-0 text-sm font-semibold text-[#18753c]'>{success}</p>}
+          {dirty && !saving && !success && <span className='text-sm text-gray-600'>Modifications non enregistrées</span>}
+          {error && <div className='w-full' role='alert'><p className='fr-error-text m-0'>{error}</p>
+            {Object.keys(errors).length > 0 && <button className='fr-link fr-text--sm mt-1' type='button' onClick={focusInvalidField}>Voir les champs à corriger ({Object.keys(errors).length})</button>}
+          </div>}
+          {!permissions.canSubmit && context.blockers?.length > 0 && !error && <span className='text-sm text-gray-600'>{context.blockers[0].replace(/\s*Vous pouvez enregistrer un brouillon\.?/g, '')}</span>}
         </div>}
       </form>
     </CampaignShell>
