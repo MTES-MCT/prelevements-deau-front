@@ -3,6 +3,8 @@
 import {Box} from '@mui/material'
 import Link from 'next/link'
 
+import {canViewSageSettings} from '@/lib/zone-resource-settings.js'
+
 const ITEMS = [
   {
     key: 'overview',
@@ -53,6 +55,13 @@ const ITEMS = [
     href: zone => `/zones/${zone.id}/parametres-declaration`
   },
   {
+    key: 'sage-settings',
+    label: 'Paramètres du SAGE',
+    permission: 'zone.detail.read',
+    visible: canViewSageSettings,
+    href: zone => `/zones/${zone.id}/parametres-sage`
+  },
+  {
     key: 'agents',
     label: 'Agents',
     permission: 'zone.agent.list',
@@ -69,7 +78,7 @@ const ZoneSubNavigation = ({zone, current}) => (
   >
     <nav aria-label='Navigation de la zone'>
       <ul className='flex gap-1 flex-wrap fr-mb-0 p-0 list-none'>
-        {ITEMS.filter(item => zone.permissions?.includes(item.permission)).map(item => {
+        {ITEMS.filter(item => zone.permissions?.includes(item.permission) && (!item.visible || item.visible(zone))).map(item => {
           const isActive = item.key === current
 
           return (

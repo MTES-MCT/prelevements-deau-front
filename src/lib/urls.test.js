@@ -33,6 +33,15 @@ test('URLs de détail', t => {
   t.is(getPointPrelevementURL({id: 'point-id'}), '/points-prelevement/point-id')
 })
 
+test('URL canonique du point : conserve les filtres répétés, vides et encodés', t => {
+  t.is(getPointPrelevementURL({id: 'canonical-id'}, {searchParams: {
+    zones: ['sage-1', 'sage-2'], period: '2026-09', usage: 'Irrigation & élevage', empty: '', absent: undefined
+  }}), '/points-prelevement/canonical-id?zones=sage-1&zones=sage-2&period=2026-09&usage=Irrigation+%26+%C3%A9levage&empty=')
+  t.is(getPointPrelevementURL({id: 'canonical-id'}, {edit: true}), '/points-prelevement/canonical-id/edit')
+  t.is(getPointPrelevementURL({id: 'canonical-id'}, {edit: true, searchParams: {returnTo: '//external.example'}}),
+    '/points-prelevement/canonical-id/edit?returnTo=%2F%2Fexternal.example')
+})
+
 test('getDeclarantId accepte les formes API courantes', t => {
   t.is(getDeclarantId({userId: 'user-id'}), 'user-id')
   t.is(getDeclarantId({id: 'declarant-id'}), 'declarant-id')

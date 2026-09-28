@@ -3,7 +3,10 @@ export const pointWaterBodyIds = {
   existing: '99999999-9999-4999-8999-999999999991',
   created: '99999999-9999-4999-8999-999999999992',
   empty: '99999999-9999-4999-8999-999999999993',
-  otherOrigin: '99999999-9999-4999-8999-999999999994'
+  otherOrigin: '99999999-9999-4999-8999-999999999994',
+  historicalAlias: '99999999-9999-5999-8999-999999999995',
+  forbiddenAlias: '99999999-9999-5999-8999-999999999996',
+  missingAlias: '99999999-9999-5999-8999-999999999997'
 }
 const sessions = new Map()
 
@@ -18,7 +21,7 @@ function createSession(authorization) {
     waterBodyType: 'SUPERFICIELLE', nature: 'PLAN_EAU',
     coordinates: {type: 'Point', coordinates: [2.2, 46.2]},
     isWaterBodyConnectedToStream: false, isWaterBodyConnectedToGroundwater: null,
-    right: {canEdit, permissions: canEdit ? ['pp.update'] : []}
+    right: {canEdit, permissions: canEdit ? ['pp.update', 'exploitation.list'] : []}
   }
   const existing = {
     ...base, id: pointWaterBodyIds.existing,
@@ -27,6 +30,7 @@ function createSession(authorization) {
   }
   return {
     requests: [],
+    reads: [],
     points: new Map([
       [existing.id, existing],
       [pointWaterBodyIds.empty, {...base, id: pointWaterBodyIds.empty, reservoirNominalVolume: null, waterBodyIdentifier: null}],
@@ -43,6 +47,9 @@ export async function handlePointWaterBodyFixtureRequest(request, send) {
   const state = sessions.get(authorization) ?? createSession(authorization)
   sessions.set(authorization, state)
   const canEdit = authorization.includes('-edit-')
+  if (request.method === 'GET' && pathname.startsWith('/api/points-prelevement/')) {
+    state.reads.push(pathname)
+  }
 
   if (pathname === '/info' || pathname === '/api/info') {
     send(200, {
@@ -52,6 +59,16 @@ export async function handlePointWaterBodyFixtureRequest(request, send) {
     })
   } else if (pathname === '/api/__water-body-requests') {
     send(200, state.requests)
+  } else if (pathname === '/api/__water-body-reads') {
+    send(200, state.reads)
+  } else if (pathname === `/api/points-prelevement/${pointWaterBodyIds.forbiddenAlias}`) {
+    send(403, {message: 'Droits insuffisants'})
+  } else if (pathname === `/api/points-prelevement/${pointWaterBodyIds.missingAlias}`) {
+    send(404, {message: 'Point introuvable'})
+  } else if (pathname === `/api/points-prelevement/${pointWaterBodyIds.historicalAlias}` && request.method === 'GET') {
+    send(200, state.points.get(pointWaterBodyIds.existing))
+  } else if (pathname === `/api/points-prelevement/${pointWaterBodyIds.existing}/exploitations`) {
+    send(200, [])
   } else if (pathname === '/api/points-prelevement' && request.method === 'POST') {
     if (!canEdit) {
       send(403, {message: 'Droits insuffisants'})

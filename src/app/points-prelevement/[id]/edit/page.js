@@ -1,10 +1,11 @@
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Typography} from '@mui/material'
-import {forbidden, notFound} from 'next/navigation'
+import {forbidden, notFound, redirect} from 'next/navigation'
 
 import {buildPageTitle} from '@/app/metadata-utils.js'
 import PointEditionForm from '@/components/form/point-edition-form.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
+import {getPointPrelevementURL} from '@/lib/urls.js'
 import {
   getPointPrelevementAction
 } from '@/server/actions/points-prelevement.js'
@@ -20,7 +21,7 @@ export async function generateMetadata({params}) {
   ], 'Éditer un point de prélèvement')
 }
 
-const Page = async ({params}) => {
+const Page = async ({params, searchParams}) => {
   const {id} = await params
   const result = await getPointPrelevementAction(id)
 
@@ -32,6 +33,10 @@ const Page = async ({params}) => {
 
   if (!pointPrelevement.right?.canEdit) {
     forbidden()
+  }
+
+  if (pointPrelevement.id !== id) {
+    redirect(getPointPrelevementURL(pointPrelevement, {edit: true, searchParams: await searchParams}))
   }
 
   return (
@@ -47,7 +52,7 @@ const Page = async ({params}) => {
           priority='secondary'
           iconId='fr-icon-close-line'
           linkProps={{
-            href: `/points-prelevement/${id}`
+            href: getPointPrelevementURL(pointPrelevement)
           }}
         >
           Annuler

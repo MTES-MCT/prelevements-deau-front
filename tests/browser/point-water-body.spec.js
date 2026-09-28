@@ -41,6 +41,14 @@ async function readWrites(context, apiToken) {
   return response.json()
 }
 
+async function readPointRequests(context, apiToken) {
+  const response = await context.request.get(`${apiUrl}/api/__water-body-reads`, {
+    headers: {authorization: `Bearer ${apiToken}`}
+  })
+  expect(response.ok()).toBe(true)
+  return response.json()
+}
+
 async function saveEdit(page) {
   await page.getByRole('button', {name: /^Valider les modifications sur le point de prélèvement/}).click()
   await expect(page).toHaveURL(`${frontUrl}/points-prelevement/${pointWaterBodyIds.created}`)
@@ -159,5 +167,50 @@ test('consultation seule : volume décimal visible, identifiant long lisible et 
     await expect(page.getByText(/^Volume nominal de la retenue\s*:/)).toHaveCount(0)
     await expect(page.getByText(/^Identifiant du plan d’eau\s*:/)).toHaveCount(0)
   }
+  expect(await readWrites(context, apiToken)).toEqual([])
+})
+
+test('un ancien lien de point fusionné ouvre le point canonique et conserve les filtres', async ({page, context}) => {
+  const apiToken = await authenticate(context)
+  const query = '?zones=sage-1&zones=sage-2&period=2026-09'
+  await page.goto(`${frontUrl}/points-prelevement/${pointWaterBodyIds.historicalAlias}${query}`)
+  await expect(page).toHaveURL(`${frontUrl}/points-prelevement/${pointWaterBodyIds.existing}${query}`)
+  await expect(page.getByText(/^0,5\s*m³$/, {exact: true})).toBeVisible()
+  await expect(page.getByRole('link', {name: 'Modifier le point de prélèvement', exact: true}))
+    .toHaveAttribute('href', `/points-prelevement/${pointWaterBodyIds.existing}/edit`)
+  const reads = await readPointRequests(context, apiToken)
+  expect(reads).toContain(`/api/points-prelevement/${pointWaterBodyIds.existing}/exploitations`)
+  expect(reads).not.toContain(`/api/points-prelevement/${pointWaterBodyIds.historicalAlias}/exploitations`)
+  expect(await readWrites(context, apiToken)).toEqual([])
+})
+
+test('édition par un ancien lien : contrôle des droits puis redirection sans écriture', async ({page, context}) => {
+  const apiToken = await authenticate(context)
+  const query = '?period=2026-09&zones=sage-1&zones=sage-2'
+  await page.goto(`${frontUrl}/points-prelevement/${pointWaterBodyIds.historicalAlias}/edit${query}`)
+  await expect(page).toHaveURL(`${frontUrl}/points-prelevement/${pointWaterBodyIds.existing}/edit${query}`)
+  await expect(page.getByLabel(volumeLabel, {exact: true})).toHaveValue('0.5')
+  await expect(page.getByRole('link', {name: 'Annuler', exact: true}))
+    .toHaveAttribute('href', `/points-prelevement/${pointWaterBodyIds.existing}`)
+  expect(await readWrites(context, apiToken)).toEqual([])
+})
+
+test('un ancien lien ne contourne ni les droits de lecture ni les droits d’édition', async ({page, context}) => {
+  const apiToken = await authenticate(context, {readOnly: true})
+  const editUrl = `${frontUrl}/points-prelevement/${pointWaterBodyIds.historicalAlias}/edit`
+  await page.goto(editUrl)
+  await expect(page.getByRole('heading', {name: 'Accès interdit', exact: true})).toBeVisible()
+  await expect(page).toHaveURL(editUrl)
+  expect(await readPointRequests(context, apiToken)).not.toContain(`/api/points-prelevement/${pointWaterBodyIds.existing}`)
+
+  for (const [id, heading] of [[pointWaterBodyIds.forbiddenAlias, 'Accès interdit'], [pointWaterBodyIds.missingAlias, 'Page non trouvée']]) {
+    for (const suffix of ['', '/edit']) {
+      const unavailableUrl = `${frontUrl}/points-prelevement/${id}${suffix}`
+      await page.goto(unavailableUrl)
+      await expect(page.getByRole('heading', {name: heading, exact: true})).toBeVisible()
+      await expect(page).toHaveURL(unavailableUrl)
+    }
+  }
+  expect(await readPointRequests(context, apiToken)).not.toContain(`/api/points-prelevement/${pointWaterBodyIds.existing}`)
   expect(await readWrites(context, apiToken)).toEqual([])
 })
