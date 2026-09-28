@@ -18,7 +18,7 @@ import {
   formatStatsPercentage,
   getSelectableStatsMonths,
   getStatsConnections,
-  getStatsPublicVisitors,
+  getStatsPublicVisitorsSeries,
   getStatsReportingProfiles,
   isStatsCount,
   isStatsMonth
@@ -418,7 +418,7 @@ const ActiveUsers = ({activeUsers}) => {
 }
 
 const PublicVisitors = ({publicVisitors}) => {
-  const months = getStatsPublicVisitors(publicVisitors?.months)
+  const {months} = getStatsPublicVisitorsSeries(publicVisitors)
   const maximum = Math.max(1, ...months.filter(month => month.available).map(month => month.uniqueVisitors))
   const accessibleDescription = months.map(month => `${formatStatsMonth(month.month)} : ${month.available
     ? `${formatStatsCount(month.uniqueVisitors)} visiteurs uniques`

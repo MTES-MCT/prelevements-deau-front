@@ -86,7 +86,7 @@ test('le mois change ensemble les déclarations territoriales et les canaux, pas
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
   await territories.screenshot({path: testInfo.outputPath('declarations-territoriales.png')})
   await activity.screenshot({path: testInfo.outputPath('utilisateurs-actifs.png')})
-  await visitors.screenshot({path: testInfo.outputPath('visiteurs-site-vitrine.png')})
+  await visitors.screenshot({path: testInfo.outputPath('visiteurs-site-et-application.png')})
   expect(errors).toEqual([])
 })
 
@@ -116,11 +116,13 @@ test('un mois refusé ne masque pas les indicateurs globaux ni l’activité', a
   await expect(page.getByRole('region', {name: visitorsName}).getByRole('img')).toBeVisible()
 })
 
-test('les visiteurs du site vitrine ont une série séparée avec les zéros réels et les absences', async ({page}) => {
+test('l’audience du site et de l’application affiche le résultat combiné, les zéros réels et les absences', async ({page}) => {
   await page.goto('/stats')
   const visitors = page.getByRole('region', {name: visitorsName})
-  await expect(visitors.getByRole('img')).toHaveAttribute('aria-label', /mars 2026 : données indisponibles\. avril 2026 : 0 visiteurs uniques.*août 2026 : 52 visiteurs uniques/)
-  await expect(visitors.getByRole('link', {name: 'partageonsleau.beta.gouv.fr'})).toHaveAttribute('href', 'https://partageonsleau.beta.gouv.fr/')
+  await expect(visitors.getByRole('img')).toHaveAttribute('aria-label', /mars 2026 : données indisponibles\. avril 2026 : 0 visiteurs uniques.*août 2026 : 75 visiteurs uniques/)
+  await expect(visitors.getByRole('img')).not.toHaveAttribute('aria-label', /août 2026 : (52|127) visiteurs uniques/)
+  await expect(visitors.getByRole('link', {name: 'partageonsleau.beta.gouv.fr', exact: true})).toHaveAttribute('href', 'https://partageonsleau.beta.gouv.fr/')
+  await expect(visitors.getByText('Audience du site partageonsleau.beta.gouv.fr.', {exact: true})).toBeVisible()
 })
 
 test('la présentation reste lisible sur un écran étroit', async ({page}, testInfo) => {

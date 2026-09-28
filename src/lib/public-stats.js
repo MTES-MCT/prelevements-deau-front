@@ -113,6 +113,14 @@ export function getStatsPublicVisitors(months) {
     })
 }
 
+export function getStatsPublicVisitorsSeries(publicVisitors) {
+  const isCombined = Boolean(publicVisitors && Object.hasOwn(publicVisitors, 'combined'))
+  // An unavailable combined report must not be replaced with the smaller audience.
+  const report = isCombined ? publicVisitors.combined : publicVisitors
+
+  return {isCombined, months: getStatsPublicVisitors(report?.months)}
+}
+
 export function getStatsConnections(months) {
   return (months ?? []).filter(item => isStatsMonth(item.month))
     .sort((left, right) => left.month.localeCompare(right.month))

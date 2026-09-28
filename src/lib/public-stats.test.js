@@ -10,6 +10,7 @@ import {
   getStatsConnections,
   getStatsProfiles,
   getStatsPublicVisitors,
+  getStatsPublicVisitorsSeries,
   getStatsReportingProfiles,
   isStatsMonth
 } from './public-stats.js'
@@ -136,6 +137,39 @@ test('les visiteurs gardent les six derniers mois sans additionner les uniques',
     ['2026-03', 15], ['2026-04', 14], ['2026-05', 13], ['2026-06', 12], ['2026-07', 11], ['2026-08', 10]
   ])
   t.is(months[0].month, '2026-08')
+})
+
+test('l’audience combinée reprend le résultat Matomo sans additionner les deux périmètres', t => {
+  const result = getStatsPublicVisitorsSeries({
+    months: [{month: '2026-08', uniqueVisitors: 52, status: 'complete'}],
+    combined: {months: [{month: '2026-08', uniqueVisitors: 75, status: 'complete'}]}
+  })
+  t.true(result.isCombined)
+  t.deepEqual(result.months.map(row => row.uniqueVisitors), [75])
+})
+
+test('une ancienne API conserve le périmètre vitrine sans prétendre inclure l’application', t => {
+  const result = getStatsPublicVisitorsSeries({
+    months: [{month: '2026-08', uniqueVisitors: 52, status: 'complete'}]
+  })
+  t.false(result.isCombined)
+  t.deepEqual(result.months.map(row => row.uniqueVisitors), [52])
+  t.deepEqual(getStatsPublicVisitorsSeries(undefined), {isCombined: false, months: []})
+})
+
+test('une audience combinée indisponible ne retombe pas sur la vitrine ni sur zéro', t => {
+  const publicVisitors = {months: [{month: '2026-08', uniqueVisitors: 52, status: 'complete'}]}
+  for (const combined of [null, undefined, {}, {months: []}]) {
+    t.deepEqual(getStatsPublicVisitorsSeries({...publicVisitors, combined}), {isCombined: true, months: []})
+  }
+
+  const result = getStatsPublicVisitorsSeries({...publicVisitors, combined: {months: [
+    {month: '2026-06', uniqueVisitors: 0, status: 'complete'},
+    {month: '2026-07', uniqueVisitors: 0, status: 'unavailable'},
+    {month: '2026-08', uniqueVisitors: null, status: 'unavailable'}
+  ]}})
+  t.true(result.isCombined)
+  t.deepEqual(result.months.map(row => [row.available, row.uniqueVisitors]), [[true, 0], [false, null], [false, null]])
 })
 
 test('les mois sans historique ne sont jamais affichés comme des zéros mesurés', t => {

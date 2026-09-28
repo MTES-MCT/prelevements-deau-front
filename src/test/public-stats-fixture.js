@@ -37,7 +37,19 @@ export function createPublicStatsFixture(month = '2026-08') {
         {month: '2026-06', uniqueVisitors: 31, status: 'complete'},
         {month: '2026-07', uniqueVisitors: 48, status: 'complete'},
         {month: '2026-08', uniqueVisitors: 52, status: 'complete'}
-      ]
+      ],
+      combined: {
+        websites: ['https://partageonsleau.beta.gouv.fr/', 'https://app.partageonsleau.beta.gouv.fr/'],
+        fetchedAt: new Date().toISOString(),
+        months: [
+          {month: '2026-03', uniqueVisitors: null, status: 'unavailable'},
+          {month: '2026-04', uniqueVisitors: 0, status: 'complete'},
+          {month: '2026-05', uniqueVisitors: 38, status: 'complete'},
+          {month: '2026-06', uniqueVisitors: 46, status: 'complete'},
+          {month: '2026-07', uniqueVisitors: 67, status: 'complete'},
+          {month: '2026-08', uniqueVisitors: 75, status: 'complete'}
+        ]
+      }
     },
     activeUsers: {
       availableSince: '2026-04-12T10:00:00Z',
