@@ -5,7 +5,7 @@ test.use({reducedMotion: 'reduce', ignoreHTTPSErrors: true})
 
 const territoriesName = 'Nombre de déclarations mensuelles par territoire'
 const activityName = 'Nombre d’utilisateurs actifs / mois'
-const visitorsName = 'Visiteurs uniques du site vitrine / mois'
+const visitorsName = 'Site vitrine'
 
 async function useExistingSession(context, {secure = false} = {}) {
   const id = '11111111-1111-4111-8111-111111111111'
@@ -61,7 +61,7 @@ test('le mois change ensemble les déclarations territoriales et les canaux, pas
   await expect(territories.getByRole('img')).toHaveAttribute('aria-label', /Agriculture : 5 préleveurs ayant déclaré.*Industrie : 2 préleveurs ayant déclaré.*3 sans déclaration/)
   await expect(territories).not.toContainText('Déployé en')
   const graphBefore = await activity.getByRole('img').getAttribute('aria-label')
-  const visitorsBefore = await visitors.getByRole('img').getAttribute('aria-label')
+  const visitorsBefore = await visitors.getByRole('img', {includeHidden: true}).getAttribute('aria-label')
   await expect(channels).toContainText('71,4 %')
   await expect(channels).toContainText('5 préleveurs')
   await territories.getByRole('combobox').selectOption('2026-07')
@@ -70,7 +70,8 @@ test('le mois change ensemble les déclarations territoriales et les canaux, pas
   await expect(territories.getByRole('article')).toContainText('3 sur 10 préleveurs')
   await expect(territories.getByRole('article')).toContainText('30 %')
   await expect(activity.getByRole('img')).toHaveAttribute('aria-label', graphBefore)
-  await expect(visitors.getByRole('img')).toHaveAttribute('aria-label', visitorsBefore)
+  await expect(visitors.getByRole('img', {includeHidden: true})).toHaveAttribute('aria-label', visitorsBefore)
+  await expect(visitors).toContainText('52 visiteurs uniques en août 2026')
   await expect(channels).toContainText('33,3 %')
   await expect(channels).toContainText('1 préleveur')
   await expect(channels).not.toContainText('71,4 %')
@@ -86,7 +87,7 @@ test('le mois change ensemble les déclarations territoriales et les canaux, pas
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
   await territories.screenshot({path: testInfo.outputPath('declarations-territoriales.png')})
   await activity.screenshot({path: testInfo.outputPath('utilisateurs-actifs.png')})
-  await visitors.screenshot({path: testInfo.outputPath('visiteurs-site-et-application.png')})
+  await visitors.screenshot({path: testInfo.outputPath('visiteurs-site-vitrine.png')})
   expect(errors).toEqual([])
 })
 
@@ -113,16 +114,36 @@ test('un mois refusé ne masque pas les indicateurs globaux ni l’activité', a
   const channels = page.getByRole('region', {name: 'Comment la donnée arrive'})
   await expect(channels).toContainText('La répartition par canal est temporairement indisponible.')
   await expect(channels).not.toContainText('71,4 %')
-  await expect(page.getByRole('region', {name: visitorsName}).getByRole('img')).toBeVisible()
+  const visitors = page.getByRole('region', {name: visitorsName})
+  await expect(visitors).toContainText('52 visiteurs uniques en août 2026')
+  await expect(visitors.getByRole('img', {includeHidden: true})).toBeHidden()
 })
 
-test('l’audience du site et de l’application affiche le résultat combiné, les zéros réels et les absences', async ({page}) => {
+test('le site vitrine termine la page avec son audience seule et un historique replié accessible au clavier', async ({page}, testInfo) => {
   await page.goto('/stats')
   const visitors = page.getByRole('region', {name: visitorsName})
-  await expect(visitors.getByRole('img')).toHaveAttribute('aria-label', /mars 2026 : données indisponibles\. avril 2026 : 0 visiteurs uniques.*août 2026 : 75 visiteurs uniques/)
-  await expect(visitors.getByRole('img')).not.toHaveAttribute('aria-label', /août 2026 : (52|127) visiteurs uniques/)
+  await expect(visitors).toContainText('Site vitrine · 52 visiteurs uniques en août 2026 sur partageonsleau.beta.gouv.fr.')
+  await expect(visitors).toContainText('Ces visiteurs n’ont pas de compte et sont distincts des utilisateurs du service.')
+  await expect(page.getByRole('heading', {name: 'Visiteurs uniques du site vitrine / mois'})).toHaveCount(0)
+  expect(await visitors.evaluate(element => element.previousElementSibling.querySelector('h2').textContent)).toBe('Utilité, impact sur la politique publique et efficience')
+  expect(await visitors.evaluate(element => element.parentElement.lastElementChild === element)).toBe(true)
   await expect(visitors.getByRole('link', {name: 'partageonsleau.beta.gouv.fr', exact: true})).toHaveAttribute('href', 'https://partageonsleau.beta.gouv.fr/')
-  await expect(visitors.getByText('Audience du site partageonsleau.beta.gouv.fr.', {exact: true})).toBeVisible()
+  const details = visitors.locator('details')
+  const summary = details.locator('summary')
+  await expect(summary).toHaveText('Voir l’évolution')
+  await expect(details).not.toHaveAttribute('open')
+  const chart = visitors.getByRole('img', {includeHidden: true})
+  await expect(chart).toBeHidden()
+  await summary.focus()
+  await page.keyboard.press('Enter')
+  await expect(details).toHaveAttribute('open', '')
+  await expect(chart).toBeVisible()
+  await expect(chart).toHaveAttribute('aria-label', /mars 2026 : données indisponibles\. avril 2026 : 0 visiteurs uniques.*août 2026 : 52 visiteurs uniques/)
+  await expect(chart).not.toHaveAttribute('aria-label', /août 2026 : (75|127) visiteurs uniques/)
+  await visitors.screenshot({path: testInfo.outputPath('visiteurs-site-vitrine-historique.png')})
+  await page.keyboard.press('Enter')
+  await expect(details).not.toHaveAttribute('open')
+  await expect(chart).toBeHidden()
 })
 
 test('la présentation reste lisible sur un écran étroit', async ({page}, testInfo) => {
@@ -134,8 +155,14 @@ test('la présentation reste lisible sur un écran étroit', async ({page}, test
   await territories.getByRole('button', {name: 'Afficher', exact: true}).click()
   await expect(territories.getByRole('article')).toContainText('30 %')
   await expect(page.getByRole('region', {name: 'Comment la donnée arrive'})).toContainText('33,3 %')
+  const visitors = page.getByRole('region', {name: visitorsName})
+  await expect(visitors).toContainText('52 visiteurs uniques en août 2026')
+  await expect(visitors.locator('details')).not.toHaveAttribute('open')
+  await visitors.locator('summary').click()
+  await expect(visitors.getByRole('img')).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
   await territories.screenshot({path: testInfo.outputPath('declarations-territoriales-mobile.png')})
+  await visitors.screenshot({path: testInfo.outputPath('visiteurs-site-vitrine-mobile.png')})
 })
 
 test('le vrai POST Next vide enregistre une activité, sans exposer de choix d’identité', async ({page, context}) => {

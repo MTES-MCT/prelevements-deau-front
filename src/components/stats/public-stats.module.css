@@ -401,8 +401,56 @@
   background: var(--background-action-low-blue-france);
 }
 
+.publicVisitors {
+  padding-top: 24px;
+  border-top: 1px solid var(--border-default-grey);
+  font-size: 0.875rem;
+}
+
+.publicVisitors a {
+  font-size: inherit;
+  overflow-wrap: anywhere;
+}
+
+.visitorsDetails summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+}
+
+.visitorsDetails summary::-webkit-details-marker {
+  display: none;
+}
+
+.visitorsDetails[open] summary > span {
+  transform: rotate(180deg);
+}
+
+.visitorsChart {
+  display: grid;
+  gap: 16px;
+  max-width: 600px;
+  margin-top: 20px;
+}
+
+.visitorsRow {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
 .visitorsBar {
-  background: var(--background-action-high-blue-france);
+  height: 8px;
+  border-radius: 2px;
+  background: var(--border-default-grey);
+}
+
+.visitorsValue {
+  min-width: 3ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .missingBar {

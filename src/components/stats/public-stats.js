@@ -18,7 +18,7 @@ import {
   formatStatsPercentage,
   getSelectableStatsMonths,
   getStatsConnections,
-  getStatsPublicVisitorsSeries,
+  getStatsPublicVisitors,
   getStatsReportingProfiles,
   isStatsCount,
   isStatsMonth
@@ -418,33 +418,43 @@ const ActiveUsers = ({activeUsers}) => {
 }
 
 const PublicVisitors = ({publicVisitors}) => {
-  const {months} = getStatsPublicVisitorsSeries(publicVisitors)
+  const months = getStatsPublicVisitors(publicVisitors?.months)
+  const latestMonth = months.at(-1)
   const maximum = Math.max(1, ...months.filter(month => month.available).map(month => month.uniqueVisitors))
   const accessibleDescription = months.map(month => `${formatStatsMonth(month.month)} : ${month.available
     ? `${formatStatsCount(month.uniqueVisitors)} visiteurs uniques`
     : 'données indisponibles'}`).join('. ')
 
   return (
-    <section className={styles.section} aria-labelledby='stats-public-visitors'>
-      <h2 id='stats-public-visitors'>Visiteurs uniques du site vitrine / mois</h2>
-      <p>Audience du site <a className='fr-link' href='https://partageonsleau.beta.gouv.fr/'>partageonsleau.beta.gouv.fr</a>.</p>
+    <section className={`${styles.section} ${styles.publicVisitors}`} aria-labelledby='stats-public-visitors'>
+      <p>
+        <strong id='stats-public-visitors'>Site vitrine</strong> · {latestMonth?.available
+          ? `${formatStatsCount(latestMonth.uniqueVisitors)} visiteurs uniques en ${formatStatsMonth(latestMonth.month)}`
+          : `Données indisponibles${latestMonth ? ` en ${formatStatsMonth(latestMonth.month)}` : ''}`} sur{' '}
+        <a className='fr-link' href='https://partageonsleau.beta.gouv.fr/'>partageonsleau.beta.gouv.fr</a>.
+        {' '}Ces visiteurs n’ont pas de compte et sont distincts des utilisateurs du service.
+      </p>
       {months.length > 0 ? (
-        <div className={styles.chartScroll}>
-          <div className={styles.connectionsChart} role='img' aria-label={accessibleDescription}>
+        <details className={styles.visitorsDetails}>
+          <summary>
+            Voir l’évolution
+            <span className='fr-icon-arrow-down-s-line fr-icon--sm' aria-hidden='true' />
+          </summary>
+          <div className={styles.visitorsChart} role='img' aria-label={accessibleDescription}>
             {months.map(month => (
-              <div key={month.month} className={styles.chartColumn} aria-hidden='true'>
-                <div className={styles.chartPlot}>
-                  <span className={styles.barValue}>{month.available ? formatStatsCount(month.uniqueVisitors) : '—'}</span>
-                  {month.available ? (
-                    <div className={`${styles.stack} ${styles.visitorsBar}`} style={{height: `${month.uniqueVisitors / maximum * 180}px`}} />
-                  ) : <div className={styles.missingBar}>Non disponible</div>}
+              <div key={month.month} className={styles.visitorsRow} aria-hidden='true'>
+                <span>{formatStatsMonth(month.month, {short: true})}</span>
+                <div>
+                  {month.available && (
+                    <div className={styles.visitorsBar} style={{width: `${month.uniqueVisitors / maximum * 100}%`}} />
+                  )}
                 </div>
-                <span className={styles.chartMonth}>{formatStatsMonth(month.month, {short: true})}</span>
+                <span className={styles.visitorsValue}>{month.available ? formatStatsCount(month.uniqueVisitors) : 'Indisponible'}</span>
               </div>
             ))}
           </div>
-        </div>
-      ) : <p className={styles.empty}>Les statistiques du site vitrine sont temporairement indisponibles.</p>}
+        </details>
+      ) : null}
     </section>
   )
 }
@@ -499,8 +509,8 @@ const PublicStats = ({data, error, periodData = data, periodError, periodMonth})
     />
     <Channels channels={periodData?.channels} />
     <ActiveUsers activeUsers={data?.activeUsers} />
-    <PublicVisitors publicVisitors={data?.publicVisitors} />
     <Impact />
+    <PublicVisitors publicVisitors={data?.publicVisitors} />
   </article>
 )
 
