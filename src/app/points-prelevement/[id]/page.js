@@ -1,6 +1,6 @@
 import {Suspense} from 'react'
 
-import {notFound} from 'next/navigation'
+import {notFound, redirect} from 'next/navigation'
 
 import {buildPageTitle} from '@/app/metadata-utils.js'
 import ResourceMutationHistory from '@/components/audit/resource-mutation-history.js'
@@ -10,7 +10,7 @@ import PointLocalisation from '@/components/points-prelevement/point-localisatio
 import SeriesOptionsLoader from '@/components/points-prelevement/series-options-loader.js'
 import ResourceDeleteAction from '@/components/ui/resource-delete-action.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {getNewExploitationURL} from '@/lib/urls.js'
+import {getNewExploitationURL, getPointPrelevementURL} from '@/lib/urls.js'
 import {getResourceAuditHistoryAction} from '@/server/actions/audit-events.js'
 import {getPointPrelevementAction, getExploitationsByPointIdAction} from '@/server/actions/points-prelevement.js'
 import {getCurrentSessionInfo} from '@/server/actions/user.js'
@@ -47,7 +47,7 @@ export async function generateMetadata({params}) {
   ], 'Point de prélèvement')
 }
 
-const Page = async ({params}) => {
+const Page = async ({params, searchParams}) => {
   const {id} = await params
   const [userResult, pointResult] = await Promise.all([
     getCurrentSessionInfo(),
@@ -61,13 +61,17 @@ const Page = async ({params}) => {
   }
 
   const pointPrelevement = pointResult.data
+  if (pointPrelevement.id !== id) {
+    redirect(getPointPrelevementURL(pointPrelevement, {searchParams: await searchParams}))
+  }
+
   const permissions = new Set(pointPrelevement.right?.permissions || [])
   const can = permission => role === 'ADMIN'
     || (role === 'INSTRUCTOR' && permissions.has(permission))
   const isDeclarantViewer = role === 'DECLARANT'
 
   const exploitationsPromise = can('exploitation.list')
-    ? getExploitationsByPointIdAction(id)
+    ? getExploitationsByPointIdAction(pointPrelevement.id)
     : Promise.resolve({data: []})
   const historyPromise = can('pp.update')
     ? getResourceAuditHistoryAction('POINT', pointPrelevement.id)

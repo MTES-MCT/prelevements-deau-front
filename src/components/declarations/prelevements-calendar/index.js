@@ -24,12 +24,12 @@ import {LineChart} from '@mui/x-charts'
 import {parseISO, format} from 'date-fns'
 import {fr as locale} from 'date-fns/locale'
 
-import {buildCalendars} from './util.js'
-
 import CalendarGrid from '@/components/ui/CalendarGrid/index.js'
 import PeriodTooltip from '@/components/ui/PeriodTooltip/index.js'
 import {formatNumber} from '@/utils/number.js'
 import {normalizeString} from '@/utils/string.js'
+
+import {buildCalendars} from './util.js'
 
 // Check if a value is missing (null or undefined)
 const isMissingValue = value => value === null || value === undefined
@@ -122,7 +122,7 @@ const DayHover = ({value, dailyParameters, children}) => {
 
   // Build alerts array for PeriodTooltip
   const alerts = []
-  const hasMissingValues = value.values?.some(isMissingValue)
+  const hasMissingValues = value.values?.some(item => isMissingValue(item))
   const hasNegativeValues = value.values?.some(v => v < 0)
 
   if (hasMissingValues) {
@@ -251,9 +251,10 @@ const PrelevementsCalendar = ({data}) => {
                     }]}
                     xAxis={[{
                       scaleType: 'time',
+                      height: 'auto',
                       data: fifteenValues.map(slot => parseISO(`${selectedDay.date}T${slot.heure}`)),
                       valueFormatter(value) {
-                        const dateObj = value
+                        const dateObj = new Date(value)
                         const hours = dateObj.getHours()
                         const minutes = dateObj.getMinutes()
                         if (hours === 0 && minutes === 0) {
@@ -263,6 +264,7 @@ const PrelevementsCalendar = ({data}) => {
                         return format(dateObj, 'HH:mm', {locale})
                       }
                     }]}
+                    yAxis={[{width: 'auto'}]}
                   />
                 </Box>
               ) : null}

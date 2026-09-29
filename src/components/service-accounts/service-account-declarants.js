@@ -60,7 +60,8 @@ const ServiceAccountDeclarants = ({serviceAccount, declarants = []}) => {
 
   async function handleAddDeclarant(event) {
     event.preventDefault()
-    const formData = new FormData(event.currentTarget)
+    const form = event.currentTarget
+    const formData = new FormData(form)
     const declarantUserId = formData.get('declarantUserId')
 
     if (!declarantUserId) {
@@ -75,7 +76,7 @@ const ServiceAccountDeclarants = ({serviceAccount, declarants = []}) => {
     }), 'Déclarant rattaché au compte de service.')
 
     if (data) {
-      event.currentTarget.reset()
+      form.reset()
     }
   }
 
@@ -91,7 +92,7 @@ const ServiceAccountDeclarants = ({serviceAccount, declarants = []}) => {
 
   async function handleRemoveDeclarantLink(link) {
     const label = link.declarant?.label || link.declarantUserId
-    // eslint-disable-next-line no-alert
+
     const confirmed = window.confirm(
       `Retirer le rattachement avec « ${label} » ?\n\nLes tokens d’impersonation actifs associés seront révoqués.`
     )
@@ -103,7 +104,7 @@ const ServiceAccountDeclarants = ({serviceAccount, declarants = []}) => {
     await runAction(async () => removeServiceAccountDeclarantAction(account.id, link.id), 'Rattachement supprimé et tokens d’impersonation actifs révoqués.')
   }
 
-  /* eslint-disable react/jsx-no-bind */
+
   return (
     <div className='fr-grid-row fr-grid-row--gutters'>
       <div className='fr-col-12 fr-col-lg-4'>
@@ -257,7 +258,7 @@ const ServiceAccountDeclarants = ({serviceAccount, declarants = []}) => {
       </div>
     </div>
   )
-  /* eslint-enable react/jsx-no-bind */
+
 }
 
 export default ServiceAccountDeclarants

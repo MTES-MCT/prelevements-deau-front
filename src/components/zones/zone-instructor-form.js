@@ -168,14 +168,17 @@ const ExistingInstructorSearch = ({
             {...params}
             label='Rechercher un agent'
             placeholder='Nom, email ou fonction'
-            InputProps={{
-              ...params.InputProps,
-              endAdornment: (
-                <>
-                  {isLoading && <CircularProgress color='inherit' size={18} />}
-                  {params.InputProps.endAdornment}
-                </>
-              )
+            slotProps={{
+              ...params.slotProps,
+              input: {
+                ...params.slotProps.input,
+                endAdornment: (
+                  <>
+                    {isLoading && <CircularProgress color='inherit' size={18} />}
+                    {params.slotProps.input.endAdornment}
+                  </>
+                )
+              }
             }}
           />
         )}
@@ -229,9 +232,7 @@ const ZoneAccessFields = ({form, updateField}) => (
         label='Date de début'
         type='date'
         value={form.startDate}
-        InputLabelProps={{
-          shrink: true
-        }}
+        slotProps={{inputLabel: {shrink: true}}}
         onChange={event => updateField('startDate', event.target.value)}
       />
 
@@ -239,9 +240,7 @@ const ZoneAccessFields = ({form, updateField}) => (
         label='Date de fin'
         type='date'
         value={form.endDate}
-        InputLabelProps={{
-          shrink: true
-        }}
+        slotProps={{inputLabel: {shrink: true}}}
         onChange={event => updateField('endDate', event.target.value)}
       />
     </div>
@@ -331,7 +330,7 @@ const PermissionFields = ({
                   return (
                     <FormControlLabel
                       key={item.code}
-                      className='items-start rounded-sm px-1 py-1'
+                      className='items-start rounded-xs px-1 py-1'
                       sx={{margin: 0}}
                       control={(
                         <Checkbox

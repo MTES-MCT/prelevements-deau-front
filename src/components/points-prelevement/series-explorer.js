@@ -4,6 +4,8 @@ import dynamic from 'next/dynamic'
 
 import DeferredRender from '@/components/ui/deferred-render.js'
 
+import useSeriesExplorer from './use-series-explorer.js'
+
 const SeriesLoadingState = () => (
   <div
     className='flex min-h-[240px] items-center justify-center border border-gray-200 bg-white p-6 text-center'
@@ -22,14 +24,19 @@ const DynamicSeriesExplorer = dynamic(
   }
 )
 
-const SeriesExplorer = props => (
-  <DeferredRender
-    minHeight={240}
-    placeholder={<SeriesLoadingState />}
-    rootMargin='400px 0px'
-  >
-    <DynamicSeriesExplorer {...props} />
-  </DeferredRender>
-)
+const SeriesExplorer = props => {
+  // Fetching starts independently of the chart bundle and viewport observer.
+  const state = useSeriesExplorer(props)
+
+  return (
+    <DeferredRender
+      minHeight={240}
+      placeholder={<SeriesLoadingState />}
+      rootMargin='400px 0px'
+    >
+      <DynamicSeriesExplorer {...state} />
+    </DeferredRender>
+  )
+}
 
 export default SeriesExplorer

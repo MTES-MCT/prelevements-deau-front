@@ -69,7 +69,7 @@ const PasswordAccessRow = ({access, currentUserId, onActivationCreated}) => {
     }
 
     if (status === 'ACTIVE') {
-      // eslint-disable-next-line no-alert
+
       const confirmed = window.confirm(
         `Réinitialiser l’accès par mot de passe de ${getUserLabel(user)} ?\n\nSon mot de passe actuel et toutes ses sessions seront invalidés immédiatement.`
       )
@@ -78,7 +78,7 @@ const PasswordAccessRow = ({access, currentUserId, onActivationCreated}) => {
         return
       }
     } else if (status === 'PENDING' || status === 'EXPIRED') {
-      // eslint-disable-next-line no-alert
+
       const confirmed = window.confirm(
         `Remplacer le lien d’activation de ${getUserLabel(user)} ?\n\nLe lien précédent sera invalidé.`
       )
@@ -119,7 +119,7 @@ const PasswordAccessRow = ({access, currentUserId, onActivationCreated}) => {
       return
     }
 
-    // eslint-disable-next-line no-alert
+
     const confirmed = window.confirm(
       `Révoquer l’accès par mot de passe de ${getUserLabel(user)} ?\n\nSes sessions et son lien d’activation seront invalidés.`
     )

@@ -279,7 +279,7 @@ const DateRangePicker = ({
                   key={dateValue}
                   aria-pressed={selected}
                   className={classNames(
-                    'h-7 rounded text-xs transition',
+                    'h-7 rounded-sm text-xs transition',
                     outsideMonth && 'text-[var(--text-mention-grey)]',
                     !dayDisabled && !selected && !inRange && 'hover:bg-[var(--background-alt-blue-france)]',
                     inRange && !selected && 'bg-[var(--background-contrast-blue-ecume)] text-[var(--background-active-blue-france)]',

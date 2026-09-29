@@ -7,9 +7,8 @@ import {Input} from '@codegouvfr/react-dsfr/Input'
 import {Alert, Typography} from '@mui/material'
 
 import {CopyEmailButton} from '@/components/ui/CopyableEmail/index.js'
+import {EMAIL_PATTERN} from '@/lib/email-verification.js'
 import {updateDeclarantContactEmailsAction} from '@/server/actions/declarants.js'
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function normalizeEmail(value) {
   return String(value || '').trim().toLowerCase()
@@ -114,7 +113,7 @@ const PreleveurContactEmailsForm = ({declarantId, initialContactEmails = []}) =>
       ) : (
         <ul className='flex flex-col gap-2'>
           {contacts.map(contact => (
-            <li key={contact.id || contact.email} className='flex flex-wrap items-center gap-2 rounded border border-gray-200 p-2'>
+            <li key={contact.id || contact.email} className='flex flex-wrap items-center gap-2 rounded-sm border border-gray-200 p-2'>
               <label className='flex min-w-0 flex-1 items-center gap-2'>
                 <input
                   checked={Boolean(contact.isPrimary)}

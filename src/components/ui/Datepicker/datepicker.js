@@ -4,11 +4,11 @@ import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Box} from '@mui/system'
 import {map, range} from 'lodash-es'
 
-import MonthView from './month-view.js'
-import YearsView from './years-view.js'
-
 import CompactAlert from '@/components/ui/CompactAlert/index.js'
 import {getMonthPeriodRange} from '@/lib/format-date.js'
+
+import MonthView from './month-view.js'
+import YearsView from './years-view.js'
 
 // Utilitaire pour obtenir les périodes disponibles
 function getAvailablePeriodsForView(viewType, selectablePeriods) {
@@ -111,7 +111,7 @@ const Datepicker = ({
   const availablePeriodsForView = getAvailablePeriodsForView(zoomLevel, selectablePeriods)
 
   return (
-    <Box className='bg-white border rounded-sm shadow-md p-4'>
+    <Box className='bg-white border rounded-xs shadow-md p-4'>
       <Box className='flex flex-col gap-3'>
         {typeof maxSelectablePeriods === 'number' && maxSelectablePeriods > 0 && (
           <CompactAlert
@@ -148,4 +148,3 @@ const Datepicker = ({
 }
 
 export default Datepicker
-

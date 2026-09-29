@@ -1,9 +1,9 @@
 import {fr} from '@codegouvfr/react-dsfr'
 
-import Calendar from './index.js'
-
 import PeriodTooltip from '@/components/ui/PeriodTooltip/index.js'
 import {CALENDAR_STATUS_COLORS} from '@/lib/calendar-colors.js'
+
+import Calendar from './index.js'
 
 const meta = {
   title: 'Components/Calendar',

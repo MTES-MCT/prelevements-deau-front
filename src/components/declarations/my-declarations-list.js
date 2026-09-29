@@ -365,7 +365,7 @@ const MyDeclarationsList = ({
         }
 
         // Les pages sont chargées séquentiellement pour conserver l’ordre du flux.
-        // eslint-disable-next-line no-await-in-loop
+
         const actionResult = await getMyDeclarationFeedAction({
           cursor: requestedCursor,
           includeMeta: false,

@@ -7,6 +7,7 @@ import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {
   getMyDeclarationFeedAction
 } from '@/server/actions/declarations.js'
+
 import 'moment/locale/fr'
 
 moment.locale('fr')
@@ -26,7 +27,7 @@ const Dossiers = async () => {
   const entries = response?.data ?? []
   const meta = response?.meta ?? {}
   const allowedDeclarationTypes = meta.allowedDeclarationTypes ?? []
-  const canCreateDeclaration = meta.canCreateDeclaration ?? allowedDeclarationTypes.length > 0
+  const canCreateDeclaration = meta.canCreateDeclaration ?? (allowedDeclarationTypes.length > 0)
   const canCreateQuickDeclaration = meta.canCreateQuickDeclaration ?? false
   const canCreateAnyDeclaration = canCreateDeclaration || canCreateQuickDeclaration
   let declarationsContent
@@ -88,7 +89,7 @@ const Dossiers = async () => {
           </h1>
 
           <p className='fr-text--sm fr-mb-0 text-gray-700'>
-            Retrouvez toutes les déclarations de prélèvements d’eau visibles depuis votre compte.
+            Retrouvez vos déclarations et leur suivi.
           </p>
         </div>
 

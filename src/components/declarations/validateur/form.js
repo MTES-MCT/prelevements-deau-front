@@ -9,6 +9,8 @@ import {Upload} from '@codegouvfr/react-dsfr/Upload'
 
 import DeclarationTemplateDownload from '@/components/declarations/declaration-template-download.js'
 
+import styles from './form.module.css'
+
 const MAX_FILE_SIZE_MB = 50
 const MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024
 const SPREADSHEET_ACCEPT = '.xlsx, .xls, .ods, .csv'
@@ -100,14 +102,15 @@ const FileValidateurForm = ({
       </div>
 
       <Upload
+        multiple
+        className={styles.upload}
+        disabled={!selectedDeclarationTypeCode}
         hint='Déposez un ou plusieurs fichiers du type sélectionné.'
         state={inputError ? 'error' : 'default'}
         stateRelatedMessage={inputError}
         nativeInputProps={{
           onChange: handleFileChange,
-          accept: SPREADSHEET_ACCEPT,
-          multiple: true,
-          disabled: !selectedDeclarationTypeCode
+          accept: SPREADSHEET_ACCEPT
         }}
       />
 

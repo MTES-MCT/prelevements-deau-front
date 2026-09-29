@@ -30,7 +30,7 @@ const MapStyleMenu = ({value, onChange}) => {
         aria-expanded={open}
         aria-haspopup='menu'
         aria-label='Choisir le fond de carte'
-        className='fr-btn fr-btn--secondary fr-btn--sm fr-icon-stack-line bg-white shadow-sm'
+        className='fr-btn fr-btn--secondary fr-btn--sm fr-icon-stack-line bg-white shadow-xs'
         title='Choisir le fond de carte'
         type='button'
         onClick={() => setOpen(current => !current)}

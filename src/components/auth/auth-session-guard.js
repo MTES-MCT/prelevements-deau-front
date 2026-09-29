@@ -5,23 +5,14 @@ import {useEffect} from 'react'
 import {usePathname} from 'next/navigation'
 import {useSession} from 'next-auth/react'
 
-const PUBLIC_PATH_PREFIXES = [
-  '/activation-mot-de-passe',
-  '/auth',
-  '/login',
-  '/validation-email'
-]
-
-function isPublicPath(pathname) {
-  return pathname === '/' || PUBLIC_PATH_PREFIXES.some(path => pathname === path || pathname.startsWith(`${path}/`))
-}
+import {isAuthGuardPublicPath} from '@/lib/public-paths.js'
 
 const AuthSessionGuard = () => {
   const {status} = useSession()
   const pathname = usePathname()
 
   useEffect(() => {
-    if (status !== 'unauthenticated' || isPublicPath(pathname)) {
+    if (status !== 'unauthenticated' || isAuthGuardPublicPath(pathname)) {
       return
     }
 

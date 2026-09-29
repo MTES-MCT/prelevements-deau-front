@@ -162,7 +162,7 @@ const MonthView = ({
                             dayClass += ' rounded-r-full'
                           }
                         } else {
-                          dayClass += ' rounded'
+                          dayClass += ' rounded-sm'
                         }
 
                         return (

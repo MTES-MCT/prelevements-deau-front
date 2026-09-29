@@ -188,11 +188,11 @@ export function createUsagePieChart(usages) {
  * - (start, end) sont des fractions entre 0 et 1 (ex: 0 => 12h, 0.25 => 9h, etc.)
  * - Décalage de 0.25 pour avoir l'origine à 12h
  */
-// eslint-disable-next-line max-params
+
 function createPieSegment(cx, cy, r, start, end, color) {
   // Évite un arc à 360° complet
   if (end - start === 1) {
-    end -= 0.000_01
+    end -= 0.00001
   }
 
   const a0 = 2 * Math.PI * (start - 0.25)
@@ -243,7 +243,7 @@ export function computeBestPopupAnchor(map, coords) {
 
   // Prioritize vertical positioning first (top/bottom)
   // Only use left/right if there's not enough vertical space
-  let anchor = 'bottom' // Default
+  let anchor
 
   // Check if there's enough space at the bottom
   if (marginBottom >= ESTIMATED_POPUP_HEIGHT) {

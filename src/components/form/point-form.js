@@ -1,6 +1,6 @@
 'use client'
 
-import {useState} from 'react'
+import {useState, useSyncExternalStore} from 'react'
 
 import Input from '@codegouvfr/react-dsfr/Input'
 import Select from '@codegouvfr/react-dsfr/SelectNext'
@@ -74,6 +74,10 @@ const precisionsGeom = [
   'Repérage carte'
 ]
 
+const subscribeToHydration = () => () => {}
+const getClientSnapshot = () => true
+const getServerSnapshot = () => false
+
 const PointForm = ({
   point,
   setPoint,
@@ -81,9 +85,10 @@ const PointForm = ({
   boundaryFeature = null
 }) => {
   const [isExpanded, setIsExpanded] = useState(false)
+  const hydrated = useSyncExternalStore(subscribeToHydration, getClientSnapshot, getServerSnapshot)
 
   return (
-    <>
+    <fieldset className='m-0 min-w-0 border-0 p-0' disabled={!hydrated} aria-busy={!hydrated}>
       <Input
         required
         label='Nom du point *'
@@ -142,6 +147,8 @@ const PointForm = ({
               ...(nature === 'PLAN_EAU'
                 ? {}
                 : {
+                  reservoirNominalVolume: null,
+                  waterBodyIdentifier: null,
                   isWaterBodyConnectedToStream: null,
                   isWaterBodyConnectedToGroundwater: null
                 })
@@ -163,6 +170,41 @@ const PointForm = ({
 
       {point.nature === 'PLAN_EAU' && (
         <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+          <Input
+            label='Volume nominal de la retenue (m³)'
+            state={point.reservoirNominalVolume != null && (!Number.isFinite(point.reservoirNominalVolume) || point.reservoirNominalVolume <= 0) ? 'error' : 'default'}
+            stateRelatedMessage='Saisissez un volume strictement supérieur à 0.'
+            nativeInputProps={{
+              type: 'number',
+              min: 0,
+              step: 'any',
+              value: point.reservoirNominalVolume ?? '',
+              onChange: event => setPoint(prev => ({
+                ...prev,
+                reservoirNominalVolume: event.target.value === '' ? null : Number(event.target.value)
+              }))
+            }}
+          />
+
+          <Input
+            label='Identifiant du plan d’eau'
+            nativeInputProps={{
+              type: 'text',
+              maxLength: 100,
+              value: point.waterBodyIdentifier ?? '',
+              onChange: event => setPoint(prev => ({
+                ...prev,
+                waterBodyIdentifier: event.target.value || null
+              })),
+              onBlur(event) {
+                const waterBodyIdentifier = event.target.value.trim() || null
+                if (waterBodyIdentifier !== (point.waterBodyIdentifier ?? null)) {
+                  setPoint(prev => ({...prev, waterBodyIdentifier}))
+                }
+              }
+            }}
+          />
+
           <NullableBooleanSelect
             label='Plan d’eau connecté au cours d’eau'
             value={point.isWaterBodyConnectedToStream}
@@ -252,7 +294,7 @@ const PointForm = ({
           setPoint={setPoint}
         />
       </AccordionCentered>
-    </>
+    </fieldset>
   )
 }
 

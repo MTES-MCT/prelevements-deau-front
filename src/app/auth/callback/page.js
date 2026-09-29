@@ -28,7 +28,7 @@ const AuthCallbackPage = () => {
       // Handle error from backend redirect
       if (error) {
         setStatus('error')
-        /* eslint-disable camelcase */
+
         const errorMessages = {
           expired: 'Le lien de connexion a expiré. Veuillez demander un nouveau lien.',
           invalid_token: 'Le lien de connexion est invalide.',
@@ -37,7 +37,7 @@ const AuthCallbackPage = () => {
           territoire_not_found: 'Le territoire demandé n’existe pas.',
           server_error: 'Erreur de communication avec le serveur. Veuillez réessayer.'
         }
-        /* eslint-enable camelcase */
+
         setErrorMessage(errorMessages[error] || 'Une erreur est survenue lors de la connexion.')
         return
       }

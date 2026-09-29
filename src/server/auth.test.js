@@ -61,6 +61,7 @@ test('conserve uniquement l’échéance API dans la session, sans credential', 
   })
 
   t.is(session.expires, expiresAt)
+  t.is(session.user.apiExpiresAt, expiresAt)
   t.false(Object.hasOwn(token, 'password'))
   t.false(Object.hasOwn(session.user, 'password'))
 })

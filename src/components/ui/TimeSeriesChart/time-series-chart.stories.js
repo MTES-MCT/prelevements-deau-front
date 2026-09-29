@@ -43,6 +43,48 @@ export const Default = {
   }
 }
 
+export const LargeVolumes = {
+  args: {
+    frequency: '1 week',
+    allowQuarterlyTicks: false,
+    series: [{
+      id: 'volume',
+      label: 'Volume rejeté (m³)',
+      axis: 'left',
+      color: '#CE614A',
+      area: true,
+      curve: 'stepAfter',
+      data: Array.from({length: 62}, (_, i) => ({
+        x: new Date(Date.UTC(2025, 5, 1 + i * 7)),
+        y: 10_000 + (i % 4) * 5_000
+      }))
+    }]
+  }
+}
+
+export const LargeValuesAndDecimals = {
+  args: {
+    frequency: '1 day',
+    series: [
+      {
+        id: 'volume',
+        label: 'Volume prélevé (m³)',
+        axis: 'left',
+        color: '#0063CB',
+        data: generateData(10, day, i => ({y: 1_000_000 + i * 100_000}))
+      },
+      {
+        id: 'level',
+        label: 'Niveau (m)',
+        axis: 'right',
+        color: '#009081',
+        precision: 2,
+        data: generateData(10, day, i => ({y: -12.5 + i * 0.25}))
+      }
+    ]
+  }
+}
+
 export const MixedTypesAndAxes = {
   parameters: {
     docs: {description: {story: 'Séries sur deux axes Y différents.'}}

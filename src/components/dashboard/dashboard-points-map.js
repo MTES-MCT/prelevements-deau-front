@@ -9,16 +9,13 @@ import {
 } from 'react'
 
 import {useRouter} from '@bprogress/next/app'
-import maplibre from 'maplibre-gl'
-import 'maplibre-gl/dist/maplibre-gl.css'
+import * as maplibre from 'maplibre-gl'
 import {createRoot} from 'react-dom/client'
 
-import {
-  getVisibleMapFeatures,
-  resolveMapLayerVisibility
-} from './dashboard-map-layers.js'
+import 'maplibre-gl/dist/maplibre-gl.css'
 
 import {cooperativeGesturesMapOptions} from '@/components/map/cooperative-gestures.js'
+import {createMap} from '@/components/map/create-map.js'
 import {IGN_RASTER_MAX_ZOOM} from '@/components/map/ign-raster.js'
 import MapPopupCard from '@/components/map/map-popup-card.js'
 import Popup from '@/components/map/popup.js'
@@ -44,6 +41,11 @@ import {
 } from '@/lib/water-uses.js'
 import {getDashboardPointActorsAction} from '@/server/actions/dashboard.js'
 import {getPointPrelevementDisplayName} from '@/utils/point-prelevement.js'
+
+import {
+  getVisibleMapFeatures,
+  resolveMapLayerVisibility
+} from './dashboard-map-layers.js'
 
 const MARKERS_SOURCE_ID = 'dashboard-points-markers'
 const MARKERS_LAYER_ID = 'dashboard-points-markers-symbol'
@@ -665,7 +667,7 @@ const DashboardPointsMap = ({
     })
     const firstCoordinates = getPointCoordinates(initialVisibleFeatures.points[0])
       ?? getMonitoringStationCoordinates(initialVisibleFeatures.monitoringStations[0])
-    const map = new maplibre.Map({
+    const map = createMap(maplibre, {
       container: containerRef.current,
       style: planIGN,
       center: firstCoordinates ?? DEFAULT_MAP_CENTER,
@@ -674,6 +676,9 @@ const DashboardPointsMap = ({
       maxZoom: IGN_RASTER_MAX_ZOOM,
       ...cooperativeGesturesMapOptions
     })
+    if (!map) {
+      return
+    }
 
     mapRef.current = map
     map.addControl(new maplibre.NavigationControl({showCompass: false}), 'bottom-right')
@@ -1140,7 +1145,7 @@ const DashboardPointsMap = ({
       {hasMapMoved && (
         <button
           type='button'
-          className='fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-focus-3-line absolute right-2 top-2 z-10 bg-white shadow-sm'
+          className='fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-focus-3-line absolute right-2 top-2 z-10 bg-white shadow-xs'
           aria-label='Recentrer la carte sur tous les points'
           onClick={handleRecenter}
         >

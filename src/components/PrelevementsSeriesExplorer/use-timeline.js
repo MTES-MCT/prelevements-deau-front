@@ -8,6 +8,7 @@ import {
 
 import {format, addDays} from 'date-fns'
 import moment from 'moment'
+import {isSampleInCalendarRange} from './utils/exact-reading-range.js'
 
 import {
   clamp,
@@ -234,13 +235,7 @@ export function useTimeline(timelineSamples, showRangeSlider, rangeOverride = nu
       return []
     }
 
-    return timelineSamples.filter(sample => {
-      if (!sample?.timestamp) {
-        return false
-      }
-
-      return sample.timestamp >= startDate && sample.timestamp < endDate
-    })
+    return timelineSamples.filter(sample => isSampleInCalendarRange(sample, startDate, endDate))
   }, [sliderDates, rangeIndices, timelineSamples])
 
   const totalDates = sliderDates.length

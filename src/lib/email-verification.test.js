@@ -58,6 +58,13 @@ test('la normalisation et la validation d’adresse sont cohérentes', t => {
   t.false(isValidEmail('adresse incomplète'))
 })
 
+test('la validation d’adresse refuse les suffixes incomplets même très longs', t => {
+  t.true(isValidEmail('prenom.nom+alias@sub.example.fr'))
+  t.false(isValidEmail('prenom@example.'))
+  t.false(isValidEmail(`prenom@${'.'.repeat(100_000)} `))
+  t.false(isValidEmail('prenom@@example.fr'))
+})
+
 test('seules les demandes utiles restent affichées sur le compte', t => {
   t.false(shouldDisplayEmailVerification({status: 'VERIFIED'}))
   t.false(shouldDisplayEmailVerification({status: 'CANCELLED'}))

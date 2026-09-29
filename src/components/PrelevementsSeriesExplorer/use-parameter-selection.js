@@ -6,6 +6,9 @@ import {
   useMemo, useState, useCallback, useEffect
 } from 'react'
 
+import {formatFrequencyLabel} from '@/utils/frequency.js'
+import {normalizeString} from '@/utils/string.js'
+
 import {
   FALLBACK_PARAMETER_COLOR,
   PARAMETER_COLOR_MAP
@@ -14,9 +17,6 @@ import {
   formatValueTypeLabel,
   normalizeUnitLabel
 } from './utils/parameter-display.js'
-
-import {formatFrequencyLabel} from '@/utils/frequency.js'
-import {normalizeString} from '@/utils/string.js'
 
 // Shared presentation for parameter entries inside the multiselect
 const ParameterOptionContent = ({label, frequencyLabel, valueTypeLabel}) => (
@@ -52,7 +52,7 @@ export function useParameterMetadata(seriesList) {
       const groupByKey = `${series.chunkId}-${normalized}`
 
       const resolvedColor
-          = series.color
+        = series.color
           ?? PARAMETER_COLOR_MAP.get(normalized)
           ?? FALLBACK_PARAMETER_COLOR
 

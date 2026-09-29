@@ -7,7 +7,12 @@
 **/.env.*
 !.env.sample
 node_modules
+.artifacts
+tests/browser
+playwright.config.mjs
 .next
+storybook-static
+public/maplibre
 out
 coverage
 **/*.test.js
