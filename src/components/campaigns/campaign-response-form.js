@@ -12,7 +12,7 @@ import CampaignMeterReview from '@/components/campaigns/campaign-meter-review.js
 import UsageCombobox, {compareUsageOptions} from '@/components/form/usage-combobox.js'
 import {campaignSaveError} from '@/lib/campaign-response-errors.js'
 import {
-  campaignDate, campaignExploitationLabel, campaignPersonLabel, campaignState,
+  campaignDate, campaignExploitationLabel, campaignPersonLabel, campaignRequiresIrrigationDetails, campaignState,
   campaignUsageOptions, emptyCampaignMeter, getCampaignField, initialCampaignAnswer,
   setCampaignField, validateCampaignAnswer, validateCampaignIndices
 } from '@/lib/campaigns.js'
@@ -48,15 +48,15 @@ function UsageInput({value, options, update, path, readOnly, ...props}) {
   }} />
 }
 
-function ResponseField({path, label, answer, errors, update, validateField, readOnly, disabled, type = 'number', hint, options, maxLength = 3000}) {
+function ResponseField({path, label, answer, errors, update, validateField, readOnly, disabled, required = true, type = 'number', hint, options, maxLength = 3000}) {
   const id = `campaign-${path.replaceAll('.', '-')}`
   const value = getCampaignField(answer, path)
   const error = errors[path]
-  if (type === 'crops') return <CampaignCropsSelect id={id} value={value} onChange={value => update(path, value)} readOnly={readOnly} disabled={disabled} error={error} />
-  const inputProps = {id, name: path, readOnly, disabled, onBlur: () => validateField?.(path), 'aria-required': !readOnly, 'aria-invalid': Boolean(error), 'aria-describedby': error ? `${id}-error` : undefined}
+  if (type === 'crops') return <CampaignCropsSelect id={id} value={value} onChange={value => update(path, value)} readOnly={readOnly} disabled={disabled} error={error} required={required} />
+  const inputProps = {id, name: path, readOnly, disabled, onBlur: () => validateField?.(path), 'aria-required': !readOnly && required, 'aria-invalid': Boolean(error), 'aria-describedby': error ? `${id}-error` : undefined}
   return (
     <div className={`fr-input-group fr-mb-0 ${error ? 'fr-input-group--error' : ''}`}>
-      <label className='fr-label text-sm' htmlFor={id}>{label}{hint && <span className='fr-hint-text'>{hint}</span>}</label>
+      <label className='fr-label text-sm' htmlFor={id}>{label}{!required && ' (facultatif)'}{hint && <span className='fr-hint-text'>{hint}</span>}</label>
       {options ? (
         <UsageInput id={id} name={path} value={value} options={options} path={path} update={update} readOnly={readOnly} disabled={disabled} invalid={Boolean(error)} describedBy={inputProps['aria-describedby']} />
       ) : type === 'number' ? (
@@ -71,6 +71,7 @@ function ResponseField({path, label, answer, errors, update, validateField, read
 
 function PeriodFields({path, title, needs = false, season = false, fieldProps}) {
   const dates = season ? 'Du 1er juin au 31 octobre 2026' : 'Du 31 octobre 2025 au 1er juin 2026'
+  const irrigationDetailsRequired = campaignRequiresIrrigationDetails(getCampaignField(fieldProps.answer, `${path}.usageId`), fieldProps.usageOptions)
   return (
     <fieldset className={`m-0 min-w-0 rounded border-t-4 p-3 md:p-4 ${season ? 'border-t-[#c3992a] bg-[#fff9e6]' : 'border-t-[#465f9d] bg-[#eef2fa]'}`}>
       <legend className={`float-left mb-0 w-full ${needs ? 'pb-4' : 'pb-1'} text-base font-semibold ${season ? 'text-[#715300]' : 'text-[#3558a2]'}`}>{title}</legend>
@@ -86,8 +87,8 @@ function PeriodFields({path, title, needs = false, season = false, fieldProps}) 
         <div className='sm:col-span-2'>
           <ResponseField {...fieldProps} path={`${path}.usageId`} label={season ? 'Usage étiage' : 'Usage hors étiage'} options={fieldProps.usageOptions} />
         </div>
-        <ResponseField {...fieldProps} path={`${path}.surface`} label='Surface irriguée (ha)' />
-        <div className='sm:col-span-2'><ResponseField {...fieldProps} path={`${path}.crops`} label='Cultures irriguées' type='crops' /></div>
+        <ResponseField {...fieldProps} path={`${path}.surface`} label='Surface irriguée (ha)' required={irrigationDetailsRequired} />
+        <div className='sm:col-span-2'><ResponseField {...fieldProps} path={`${path}.crops`} label='Cultures irriguées' type='crops' required={irrigationDetailsRequired} /></div>
       </div>
     </fieldset>
   )
@@ -135,6 +136,15 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
     setErrors(previous => {
       const next = {...previous}
       delete next[path]
+      if (path.endsWith('.usageId')) {
+        const validation = validateCampaignAnswer(nextAnswer, usageOptions)
+        for (const field of ['surface', 'crops']) {
+          const dependentPath = path.replace(/usageId$/, field)
+          if (!next[dependentPath]) continue
+          if (validation[dependentPath]) next[dependentPath] = validation[dependentPath]
+          else delete next[dependentPath]
+        }
+      }
       return next
     })
     if (indexPath(path) && Object.keys(indexErrors).length) setIndexErrors(validateCampaignIndices(nextAnswer))
@@ -176,7 +186,7 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
     if (inFlight.current) return
     setError(null)
     setSuccess(null)
-    const nextErrors = submit ? validateCampaignAnswer(answer) : validateCampaignIndices(answer)
+    const nextErrors = submit ? validateCampaignAnswer(answer, usageOptions) : validateCampaignIndices(answer)
     const nextIndexErrors = validateCampaignIndices(answer)
     setIndexErrors(nextIndexErrors)
     setErrors(Object.fromEntries(Object.entries(nextErrors).filter(([path]) => !Object.hasOwn(nextIndexErrors, path))))
@@ -225,6 +235,8 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
         </div>
         {hasCoordinates && <div className='h-64 md:col-span-2' role='region' aria-label='Localisation du point de prélèvement'><PointMap points={mapPoints} /></div>}
       </section>
+      {context.prefill?.active && <p className='fr-hint-text fr-mb-2w'>Données préremplies à vérifier.</p>}
+      {context.prefill?.noAuthorizedOffSeasonUsage && <p className='fr-hint-text fr-mb-2w'>Autorisation précédente : aucun usage autorisé hors étiage.</p>}
       {readOnly && error && <Alert className='mb-4' severity='error' title='Vérifiez votre réponse' description={error} />}
       {readOnly && success && <div className='mb-4' role='status'><Alert severity='success' title={success} small /></div>}
       <form ref={formRef} noValidate onSubmit={event => { event.preventDefault(); persist(true) }} className='grid gap-4'>
