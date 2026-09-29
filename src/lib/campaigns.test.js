@@ -1,7 +1,7 @@
 import test from 'ava'
 
 import {
-  campaignData, campaignDate, campaignExploitationLabel, campaignParticipation, campaignResponseHref, campaignState, campaignUsageOptions,
+  campaignData, campaignDate, campaignExploitationLabel, campaignParticipation, campaignRequiresIrrigationDetails, campaignResponseHref, campaignState, campaignUsageOptions,
   emptyCampaignMeter, formatCampaignVolume, getCampaignField, initialCampaignAnswer, isCampaignRequester, setCampaignField, singleCampaignResponseHref, validateCampaignAnswer, validateCampaignIndices
 } from './campaigns.js'
 
@@ -82,6 +82,55 @@ test('les usages et sous-usages sont proposés sans doublons et gardent leur hi�
   t.is(options[1].parent.id, 'root')
   t.is(campaignUsageOptions([{id: 's', kind: 'SUB_USAGE'}])[0].id, 's')
   t.is(campaignUsageOptions([...options, options[1]]).length, 3)
+})
+
+const replenishmentUsages = [
+  {id: 'irrigation', code: '2', children: [{id: 'aspersion', code: '2A'}]},
+  {id: 'replenishment', code: '12', children: [{id: 'filling', code: '12E'}]},
+  {id: 'industry', code: '4'}
+]
+
+test('les sous-usages d’irrigation et de réalimentation restent accessibles', t => {
+  const options = campaignUsageOptions({items: replenishmentUsages})
+  t.deepEqual(options.map(usage => usage.id), ['irrigation', 'aspersion', 'replenishment', 'filling', 'industry'])
+  t.is(options.find(usage => usage.id === 'filling').parent.code, '12')
+  for (const id of ['replenishment', 'filling']) t.false(campaignRequiresIrrigationDetails(id, replenishmentUsages))
+  for (const id of ['irrigation', 'aspersion', 'industry', 'unknown', '']) t.true(campaignRequiresIrrigationDetails(id, replenishmentUsages))
+  t.true(campaignRequiresIrrigationDetails('filling'))
+})
+
+test('surface et cultures sont facultatives en réalimentation pour les quatre périodes uniquement', t => {
+  const data = initialCampaignAnswer({meters: [{serialNumber: 'M1', offSeason: {indexStart: '10', indexEnd: '20', usageId: 'filling'}, season: {indexEnd: '30', usageId: 'replenishment'}}], needs: {season: {flow: '2', volume: '10', usageId: 'filling'}, offSeason: {flow: '2', volume: '20', usageId: 'replenishment'}}})
+  const original = structuredClone(data)
+  t.deepEqual(validateCampaignAnswer(data, replenishmentUsages), {})
+  t.deepEqual(data, original)
+  for (const path of ['meters.0.offSeason', 'meters.0.season', 'needs.season', 'needs.offSeason']) {
+    const irrigation = setCampaignField(data, `${path}.usageId`, 'aspersion')
+    t.deepEqual(Object.keys(validateCampaignAnswer(irrigation, replenishmentUsages)), [`${path}.surface`, `${path}.crops`])
+  }
+})
+
+test('la réalimentation garde les valeurs agricoles existantes et refuse une surface invalide', t => {
+  const data = initialCampaignAnswer({needs: {offSeason: {usageId: 'filling', surface: '4.5', crops: ['Blé']}}})
+  const original = structuredClone(data)
+  t.falsy(validateCampaignAnswer(data, replenishmentUsages)['needs.offSeason.surface'])
+  t.falsy(validateCampaignAnswer(data, replenishmentUsages)['needs.offSeason.crops'])
+  t.deepEqual(data, original)
+  for (const surface of ['-1', '12.34567', '1e3']) {
+    t.truthy(validateCampaignAnswer(setCampaignField(data, 'needs.offSeason.surface', surface), replenishmentUsages)['needs.offSeason.surface'])
+  }
+  t.truthy(validateCampaignAnswer(data, replenishmentUsages)['needs.offSeason.flow'])
+  t.truthy(validateCampaignAnswer(data, replenishmentUsages)['needs.offSeason.volume'])
+})
+
+test('les propositions restent éditables sans transformer l’absence d’autorisation en réponse', t => {
+  const source = {meters: [{serialNumber: 'M1', offSeason: {indexStart: '123'}}], needs: {season: {volume: '4500'}, offSeason: {}}}
+  const data = initialCampaignAnswer(source)
+  t.is(data.meters[0].offSeason.indexEnd, '')
+  t.is(data.needs.offSeason.usageId, '')
+  t.is(data.needs.offSeason.volume, '')
+  t.is(setCampaignField(data, 'needs.season.volume', '4600').needs.season.volume, '4600')
+  t.is(source.needs.season.volume, '4500')
 })
 
 test('les trois index doivent croître pour chaque compteur, sans comparaison entre compteurs', t => {
