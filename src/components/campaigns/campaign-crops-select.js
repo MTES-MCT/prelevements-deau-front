@@ -20,6 +20,7 @@ export default function CampaignCropsSelect({id, value, onChange, readOnly, disa
 
   return <GroupedMultiselect
     searchable
+    popupZIndex={20}
     id={id}
     label='Cultures irriguées'
     hint='Plusieurs choix possibles, parmi les catégories et les cultures.'

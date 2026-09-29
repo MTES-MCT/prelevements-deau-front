@@ -44,6 +44,7 @@ const GroupedMultiselect = ({
   minSelected = 0,
   minSelectionMessage,
   hideLabel = false,
+  popupZIndex = 10,
   state = 'default',
   stateRelatedMessage = null
 }) => {
@@ -411,7 +412,7 @@ const GroupedMultiselect = ({
             left: 0,
             right: 0,
             border: `1px solid ${fr.colors.decisions.background.contrast.grey.default}`,
-            zIndex: 10,
+            zIndex: popupZIndex,
             padding: 0,
             maxHeight: 'min(440px, 65vh)',
             display: 'flex',
