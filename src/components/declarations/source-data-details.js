@@ -2,12 +2,15 @@
 
 import Link from 'next/link'
 
+import {campaignResponseHref} from '@/lib/campaigns.js'
 import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
 import {
   getDeclarationPointDisplayName,
   getDeclarationPointTechnicalReference
 } from '@/lib/declaration-point-name.js'
 import {getDeclarationTypeLabel} from '@/lib/declaration-types.js'
+import {isMeterTelemetrySource} from '@/lib/declaration.js'
+import {formatMeterExactPeriod, getMeterPeriod, getMeterValuePeriod, isMeterPeriodSource} from '@/lib/meter-period.js'
 import {getPointFlowTypeLabel, POINT_FLOW_TYPES} from '@/lib/point-flow-types.js'
 import {getPointPrelevementURL} from '@/lib/urls.js'
 import {
@@ -365,6 +368,7 @@ function getChunkDateLabel({displayAsIndex, displayAsVolume, isQuickDeclaration}
 }
 
 function getChunkDateValue({chunk, displayAsIndex, displayAsVolume, isQuickDeclaration, shouldShowIndexTime, source}) {
+  if (isMeterPeriodSource(source, chunk)) return formatMeterExactPeriod(getMeterPeriod(source, chunk))
   if (displayAsIndex) {
     return formatReadingDate(getReadingDate(chunk, source), shouldShowIndexTime)
   }
@@ -426,6 +430,7 @@ function getChunkDisplayContext(chunk, source) {
 }
 
 function formatValueDate({chunk, displayAsIndex, displayAsVolume, isQuickDeclaration, shouldShowIndexTime, source, value}) {
+  if (isMeterPeriodSource(source, chunk)) return formatMeterExactPeriod(getMeterValuePeriod(value))
   if (displayAsIndex) {
     return formatReadingDate(value.periodEnd ?? value.periodStart, shouldShowIndexTime)
   }
@@ -438,7 +443,7 @@ function formatValueDate({chunk, displayAsIndex, displayAsVolume, isQuickDeclara
 }
 
 const OverwrittenBadge = () => (
-  <span className='inline-flex rounded-sm border border-red-200 bg-red-50 px-1.5 py-0.5 text-[0.7rem] font-semibold uppercase leading-none text-red-700'>
+  <span className='inline-flex rounded-xs border border-red-200 bg-red-50 px-1.5 py-0.5 text-[0.7rem] font-semibold uppercase leading-none text-red-700'>
     Écrasée
   </span>
 )
@@ -464,6 +469,7 @@ const PointTitle = ({chunk, preferUsageName = false, source}) => {
   const pointLinkTarget = getPointPrelevementLinkTarget(chunk)
   const preleveurLabel = getChunkPreleveurLabel(chunk)
   const flowType = getChunkFlowType(chunk)
+  const meterNumber = chunk.compteur?.serialNumber || chunk.serialNumber || chunk.metadata?.serialNumber
 
   return (
     <>
@@ -483,6 +489,7 @@ const PointTitle = ({chunk, preferUsageName = false, source}) => {
           Référence : {technicalReference}
         </p>
       )}
+      {meterNumber && <p className='fr-text--sm fr-mb-0 text-gray-700'>Compteur : {meterNumber}</p>}
       {flowType && (
         <p className='fr-text--xs fr-mb-0 text-gray-600'>
           Type de point : {getPointFlowTypeLabel(flowType)}
@@ -532,6 +539,7 @@ const ValuesPreview = ({chunk, source}) => {
   const displayAsVolume = isVolumeMetricType(metricType)
   const shouldShowIndexTime = displayAsIndex && !isQuickDeclaration
   const summaryLabel = getValuesPreviewSummaryLabel({displayAsIndex, displayAsVolume, isQuickDeclaration})
+  const showMeter = visibleValues.some(value => value.serialNumber || value.compteurId)
 
   if (values.length === 0) {
     return (
@@ -556,6 +564,7 @@ const ValuesPreview = ({chunk, source}) => {
               <th className='px-3 py-2 text-right font-medium'>
                 {getValueColumnLabel({displayAsIndex, displayAsVolume, isQuickDeclaration})}
               </th>
+              {showMeter && <th className='px-3 py-2 font-medium'>Compteur</th>}
             </tr>
           </thead>
           <tbody className='divide-y divide-gray-100'>
@@ -577,6 +586,7 @@ const ValuesPreview = ({chunk, source}) => {
                   <td className='px-3 py-2 text-right'>
                     <DeclaredValueDisplay value={value} align='right' />
                   </td>
+                  {showMeter && <td className='px-3 py-2'>{value.serialNumber || 'Numéro non renseigné'}</td>}
                 </tr>
               )
             })}
@@ -592,9 +602,10 @@ const ValuesPreview = ({chunk, source}) => {
   )
 }
 
-const SourceDataDetails = ({declaration, preferUsageName = false, source}) => {
+const SourceDataDetails = ({currentRole = null, declaration, preferUsageName = false, source}) => {
   const chunks = source?.chunks ?? []
   const isTelemetry = source?.type === 'API'
+  const campaignHref = campaignResponseHref(source, currentRole)
 
   if (chunks.length === 0) {
     return (
@@ -610,6 +621,17 @@ const SourceDataDetails = ({declaration, preferUsageName = false, source}) => {
         <h2 className='fr-h5 fr-mb-0'>
           {isTelemetry ? 'Données télérelevées' : 'Données déclarées'}
         </h2>
+        {isMeterTelemetrySource(source) && (
+          <p className='fr-text--sm fr-mb-0 text-gray-600'>
+            Ces volumes sont calculés à partir des index des compteurs et mis à jour automatiquement. Ils ne sont pas modifiables ici.
+          </p>
+        )}
+        {source?.metadata?.collectionCampaignId && source?.metadata?.collectionResponseId && (
+          <p className='fr-text--sm fr-mb-0'>
+            Ces index proviennent d’une campagne.
+            {campaignHref && <> <Link href={campaignHref}>Consulter la réponse et les volumes calculés</Link>.</>}
+          </p>
+        )}
       </div>
 
       <div className='divide-y divide-gray-200 border border-gray-300 bg-white'>

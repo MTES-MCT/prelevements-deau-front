@@ -18,6 +18,7 @@ const SeriesOptionsLoadingState = () => (
 
 const SeriesOptionsDataLoader = ({
   collecteurId,
+  exploitationId,
   pointIds,
   preleveurId,
   ...seriesProps
@@ -40,6 +41,7 @@ const SeriesOptionsDataLoader = ({
       try {
         result = await getAggregatedSeriesOptionsAction({
           collecteurId,
+          exploitationId,
           pointIds: requestedPointIds,
           preleveurId
         })
@@ -65,7 +67,7 @@ const SeriesOptionsDataLoader = ({
         requestIdRef.current += 1
       }
     }
-  }, [collecteurId, pointIdsKey, preleveurId])
+  }, [collecteurId, exploitationId, pointIdsKey, preleveurId])
 
   if (error) {
     return (
@@ -83,6 +85,7 @@ const SeriesOptionsDataLoader = ({
     <SeriesExplorer
       {...seriesProps}
       collecteurId={collecteurId}
+      exploitationId={exploitationId}
       pointIds={pointIds}
       preleveurId={preleveurId}
       seriesOptions={seriesOptions}

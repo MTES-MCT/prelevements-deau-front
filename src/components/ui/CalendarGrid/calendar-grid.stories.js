@@ -1,7 +1,8 @@
-import CalendarGrid from './index.js'
 
 import PeriodTooltip from '@/components/ui/PeriodTooltip/index.js'
 import {CALENDAR_STATUS_COLORS} from '@/lib/calendar-colors.js'
+
+import CalendarGrid from './index.js'
 
 // Using CALENDAR_STATUS_COLORS for consistency with legend
 const blue = CALENDAR_STATUS_COLORS.present

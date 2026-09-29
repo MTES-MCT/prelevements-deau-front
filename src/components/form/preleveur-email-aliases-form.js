@@ -7,12 +7,11 @@ import {Input} from '@codegouvfr/react-dsfr/Input'
 import {Alert, Typography} from '@mui/material'
 
 import {CopyEmailButton} from '@/components/ui/CopyableEmail/index.js'
+import {EMAIL_PATTERN} from '@/lib/email-verification.js'
 import {
   createDeclarantEmailAliasAction,
   deleteDeclarantEmailAliasAction
 } from '@/server/actions/declarants.js'
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function normalizeEmail(value) {
   return String(value || '').trim().toLowerCase()

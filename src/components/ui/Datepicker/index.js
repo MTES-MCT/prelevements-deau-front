@@ -130,7 +130,7 @@ const DatepickerTrigger = ({
         const viewportHeight = window.innerHeight
 
         // Largeurs possibles du datepicker selon les breakpoints
-        let dropdownWidth = 300 // MinWidth par défaut
+        let dropdownWidth
         if (viewportWidth >= 900) { // Md breakpoint
           dropdownWidth = 700
         } else if (viewportWidth >= 600) { // Sm breakpoint

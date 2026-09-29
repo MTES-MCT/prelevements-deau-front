@@ -7,6 +7,15 @@ import {
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Box, Typography} from '@mui/material'
 
+import DistributedVolumeRuleInfo from '@/components/PrelevementsSeriesExplorer/distributed-volume-rule-info.js'
+import {buildDailyAndTimelineData, hasEstimatedExactVolumes} from '@/components/PrelevementsSeriesExplorer/utils/aggregation.js'
+import {includeExactReadingBounds} from '@/components/PrelevementsSeriesExplorer/utils/exact-reading-range.js'
+import CalendarGrid from '@/components/ui/CalendarGrid/index.js'
+import PeriodSelectorHeader from '@/components/ui/PeriodSelectorHeader/index.js'
+import {formatFrequencyLabel} from '@/utils/frequency.js'
+import {normalizeString} from '@/utils/string.js'
+import {parseLocalDateTime} from '@/utils/time.js'
+
 import ChartWithRangeSlider from './chart-with-range-slider.js'
 import {
   FALLBACK_PARAMETER_COLOR,
@@ -21,6 +30,7 @@ import LoadingState from './loading-state.js'
 import ParameterOperatorsSelector from './parameter-operators-selector.js'
 import ParameterSelector from './parameter-selector.js'
 import {useChartSeries} from './use-chart-series.js'
+import {useSelectedVolumeTotals} from './use-selected-volume-totals.js'
 import {useTimeline} from './use-timeline.js'
 import {
   aggregationDateOverlapsRange
@@ -41,14 +51,6 @@ import {
   chooseDisplayResolution,
   resolutionToFrequency
 } from './utils/time-bucketing.js'
-
-import DistributedVolumeRuleInfo from '@/components/PrelevementsSeriesExplorer/distributed-volume-rule-info.js'
-import {buildDailyAndTimelineData} from '@/components/PrelevementsSeriesExplorer/utils/aggregation.js'
-import CalendarGrid from '@/components/ui/CalendarGrid/index.js'
-import PeriodSelectorHeader from '@/components/ui/PeriodSelectorHeader/index.js'
-import {formatFrequencyLabel} from '@/utils/frequency.js'
-import {normalizeString} from '@/utils/string.js'
-import {parseLocalDateTime} from '@/utils/time.js'
 
 const DEFAULT_PARAMETER = 'volume'
 
@@ -127,7 +129,7 @@ const FrequencyBadges = ({badges, showDistributedVolumeRule = false}) => {
                 color: 'text.secondary'
               }}
             >
-              {formatFrequencyLabel(frequency) ?? frequency}
+              {frequency === 'instantaneous' ? 'Relevés exacts' : formatFrequencyLabel(frequency) ?? frequency}
             </Typography>
           </Box>
         ))}
@@ -136,9 +138,10 @@ const FrequencyBadges = ({badges, showDistributedVolumeRule = false}) => {
   )
 }
 
-const ParameterOptionContent = ({label, unitLabel}) => (
+const ParameterOptionContent = ({label, unitLabel, color}) => (
   <div className='selector-option-content'>
-    <div className='selector-option-header'>
+    <div className='selector-option-header' style={color ? {justifyContent: 'flex-start'} : undefined}>
+      {color && <span aria-hidden='true' className='inline-block h-2.5 w-2.5 shrink-0 rounded-full' style={{backgroundColor: color}} />}
       <span className='selector-option-label'>{label}</span>
     </div>
     {unitLabel && (
@@ -152,6 +155,8 @@ const buildNormalizedOption = ({
   label,
   unit,
   valueType,
+  metricTypeCode,
+  flowType,
   color,
   disabled = false,
   disabledReason,
@@ -167,6 +172,8 @@ const buildNormalizedOption = ({
     label: resolvedLabel,
     unit: normalizedUnit,
     valueType: normalizedValueType,
+    metricTypeCode,
+    flowType,
     color,
     disabled: Boolean(disabled),
     disabledReason,
@@ -175,6 +182,7 @@ const buildNormalizedOption = ({
       <ParameterOptionContent
         label={resolvedLabel}
         unitLabel={normalizedUnit}
+        color={color}
       />
     )
   }
@@ -213,6 +221,8 @@ const normalizeParameterOptions = options => {
           label: option.label ?? option.parameter ?? value,
           unit: option.unit ?? metadata?.unit,
           valueType: option.valueType ?? metadata?.valueType ?? metadata?.type,
+          metricTypeCode: option.metricTypeCode,
+          flowType: option.flowType,
           color: option.color,
           disabled: option.disabled,
           disabledReason: option.disabledReason,
@@ -300,7 +310,8 @@ const AggregatedSeriesExplorer = ({
   error = null,
   chartWidthPx = 1200,
   seriesOptions = null,
-  dateRangeOverride = null
+  dateRangeOverride = null,
+  getVolumeValuesForRange
 }) => {
   const t = {...DEFAULT_TRANSLATIONS, ...customTranslations}
 
@@ -402,7 +413,9 @@ const AggregatedSeriesExplorer = ({
     const groupedByValueType = new Map()
 
     for (const option of optionsWithDisabled) {
-      const valueTypeLabel = formatValueTypeLabel(option.valueType) ?? 'Non spécifié'
+      const valueTypeLabel = option.metricTypeCode === 'index'
+        ? 'Index'
+        : formatValueTypeLabel(option.valueType) ?? 'Non spécifié'
       if (!groupedByValueType.has(valueTypeLabel)) {
         groupedByValueType.set(valueTypeLabel, [])
       }
@@ -566,7 +579,8 @@ const AggregatedSeriesExplorer = ({
           ?? resolvedOptionValueType
           ?? resolvedMetadataValueType
           ?? null,
-        precision: metadata?.precision ?? 0
+        readingSeries: meta.readingSeries === true,
+        precision: meta.precision ?? metadata?.precision ?? 0
       })
     }
 
@@ -582,6 +596,11 @@ const AggregatedSeriesExplorer = ({
     () => currentParameters.some(parameter =>
       seriesMap.get(parameter)?.metadata?.distribution?.applied === true),
     [currentParameters, seriesMap]
+  )
+
+  const estimatedExactVolumes = useMemo(
+    () => hasEstimatedExactVolumes(seriesMap, currentParameters),
+    [seriesMap, currentParameters]
   )
 
   const loadedValues = useMemo(() => {
@@ -615,6 +634,7 @@ const AggregatedSeriesExplorer = ({
   const {
     allDates,
     rangeIndices,
+    visibleSelectedRange,
     committedSelectedRange,
     visibleSamples,
     sliderMarks,
@@ -622,6 +642,18 @@ const AggregatedSeriesExplorer = ({
     handleRangeChangeCommitted,
     handleCalendarDayClick
   } = useTimeline(timelineSamples, showRangeSlider, dateRange)
+
+  const volumeTotals = useSelectedVolumeTotals({
+    parameters: parameterOptionsNormalized,
+    selectedParameters: currentParameters,
+    seriesMap,
+    fullRange: dateRange,
+    selectedRange: visibleSelectedRange,
+    committedRange: committedSelectedRange,
+    isLoading,
+    error,
+    getVolumeValuesForRange
+  })
 
   // Calculate display resolution based on visible range
   const displayResolution = useMemo(() => {
@@ -823,7 +855,8 @@ const AggregatedSeriesExplorer = ({
             showRangeSlider={showRangeSlider}
             sliderMarks={sliderMarks}
             timeSeriesChartProps={timeSeriesChartProps}
-            timelineRange={committedSelectedRange}
+            timelineRange={includeExactReadingBounds(committedSelectedRange, visibleSamples)}
+            volumeTotals={volumeTotals}
             onRangeChange={handleRangeChange}
             onRangeChangeCommitted={handleRangeChangeCommitted}
           />
@@ -927,6 +960,7 @@ const AggregatedSeriesExplorer = ({
         />
       </Box>
 
+      {estimatedExactVolumes && <Alert severity='info' description='Pour cet affichage, certains volumes sont répartis entre les périodes à titre estimatif. Les données source conservent leurs périodes exactes.' />}
       {renderChartSection()}
     </Box>
   )

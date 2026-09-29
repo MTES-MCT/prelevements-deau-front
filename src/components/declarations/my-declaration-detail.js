@@ -108,7 +108,7 @@ const ProcessingState = ({declaration}) => {
   )
 }
 
-const MyDeclarationDetail = ({availablePoints = [], initialDeclaration, showDeclarant = false}) => {
+const MyDeclarationDetail = ({availablePoints = [], currentRole = null, initialDeclaration, showDeclarant = false}) => {
   const [declaration, setDeclaration] = useState(initialDeclaration)
   const [availableDeclarationPoints, setAvailableDeclarationPoints] = useState(availablePoints)
   const [loadedAvailablePointsKey, setLoadedAvailablePointsKey] = useState(
@@ -204,6 +204,7 @@ const MyDeclarationDetail = ({availablePoints = [], initialDeclaration, showDecl
     declarationDetailsContent = (
       <DeclarationDetails
         preferUsageName
+        currentRole={currentRole}
         availablePoints={availableDeclarationPoints}
         declaration={declaration}
         source={source}

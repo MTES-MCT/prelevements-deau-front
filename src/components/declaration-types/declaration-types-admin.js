@@ -142,7 +142,7 @@ const DeclarationTypesAdmin = ({initialPayload}) => {
   }
 
   const disableType = async item => {
-    // eslint-disable-next-line no-alert
+
     if (!window.confirm(`Désactiver le type de déclaration « ${item.name} » ? Les déclarants ne pourront plus déposer ce type tant qu’il est désactivé.`)) {
       return
     }

@@ -43,9 +43,9 @@ const ParameterTrendChart = ({data, connectNulls}) => {
 
   // ---------- Fallback paramètres 15 min ----------
   const effective15minParameters
-  = fifteenMinutesParameters.length > 0
-    ? fifteenMinutesParameters
-    : dailyParameters // On réutilise ceux du journalier
+    = fifteenMinutesParameters.length > 0
+      ? fifteenMinutesParameters
+      : dailyParameters // On réutilise ceux du journalier
 
   // ---------- Sélecteur de granularité ----------
   const [resolution, setResolution] = useState(
@@ -159,6 +159,7 @@ const ParameterTrendChart = ({data, connectNulls}) => {
       id: u,
       label: u,
       position: i === 0 ? 'left' : 'right',
+      width: 'auto',
       min: 0,
       valueFormatter: v => formatNumber(v, v < 1 ? {maximumFractionDigits: 2, minimumFractionDigits: 2} : {})
     })),
@@ -194,7 +195,7 @@ const ParameterTrendChart = ({data, connectNulls}) => {
 
   useEffect(() => {
     if (resolution === 'daily'
-        && differenceInHours(period.end, period.start) < 24) {
+      && differenceInHours(period.end, period.start) < 24) {
       const dayStart = startOfDay(period.start)
       const dayEnd = addHours(endOfDay(period.start), 1)
       setPeriod(prev => {
@@ -277,6 +278,7 @@ const ParameterTrendChart = ({data, connectNulls}) => {
         series={series}
         xAxis={[{
           scaleType: 'time',
+          height: 'auto',
           data: slicedXData,
           tickMinStep: resolution === '15min' ? 3600 * 1000 : 3600 * 1000 * 24,
           valueFormatter(date, context) {
@@ -296,12 +298,10 @@ const ParameterTrendChart = ({data, connectNulls}) => {
 
         }]}
         yAxis={yAxis}
-        leftAxis={axisUnits[0]}
-        rightAxis={axisUnits[1]}
         height={300}
         slotProps={{
           legend: {
-            direction: 'row',
+            direction: 'horizontal',
             position: {vertical: 'top', horizontal: 'right'}
           }
         }}

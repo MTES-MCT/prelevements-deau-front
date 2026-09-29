@@ -9,9 +9,9 @@ import {
 } from 'react'
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
-import {BarChart} from '@mui/x-charts/BarChart'
 import Link from 'next/link'
 
+import AdminDashboardActivityChart from '@/components/admin/admin-dashboard-activity-chart.js'
 import AdminPageShell from '@/components/admin/admin-page-shell.js'
 import DateRangePicker from '@/components/ui/date-range-picker.js'
 import {
@@ -28,11 +28,6 @@ import {getAdminDashboardAction} from '@/server/actions/admin-dashboard.js'
 
 const AUTO_REFRESH_INTERVAL_MS = 60_000
 const NUMBER_FORMATTER = new Intl.NumberFormat('fr-FR')
-const DATE_FORMATTER = new Intl.DateTimeFormat('fr-FR', {
-  day: 'numeric',
-  month: 'short',
-  timeZone: 'UTC'
-})
 const DATE_TIME_FORMATTER = new Intl.DateTimeFormat('fr-FR', {
   dateStyle: 'short',
   timeStyle: 'short'
@@ -61,10 +56,6 @@ const STATUS_STYLES = {
 
 function formatNumber(value) {
   return NUMBER_FORMATTER.format(value ?? 0)
-}
-
-function formatDate(value) {
-  return DATE_FORMATTER.format(new Date(`${value}T00:00:00.000Z`))
 }
 
 function formatDateTime(value) {
@@ -275,7 +266,6 @@ const AdminDashboard = ({initialData, initialError = null}) => {
     ),
     [data]
   )
-  const tickInterval = Math.max(Math.ceil(chart.items.length / 10), 1)
   const statusItems = buildCurrentStatusItems(data?.currentStatus)
   const hasDeclarationActivity = hasAdminDashboardDeclarationActivity(data?.metrics)
   const showOtherDeclarations = (data?.metrics?.otherDeclarationsReceived ?? 0) > 0
@@ -434,25 +424,10 @@ const AdminDashboard = ({initialData, initialError = null}) => {
               </div>
               {hasDeclarationActivity
                 ? (
-                  <BarChart
-                    grid={{horizontal: true}}
-                    height={320}
-                    margin={{
-                      bottom: 45,
-                      left: 45,
-                      right: 16,
-                      top: 36
-                    }}
+                  <AdminDashboardActivityChart
+                    granularity={chart.granularity}
+                    items={chart.items}
                     series={chartSeries}
-                    xAxis={[
-                      {
-                        data: chart.items.map(item => item.date),
-                        scaleType: 'band',
-                        tickLabelInterval: (_value, index) => index % tickInterval === 0 || index === chart.items.length - 1,
-                        valueFormatter: value => chart.granularity === 'week' ? `Sem. ${formatDate(value)}` : formatDate(value)
-                      }
-                    ]}
-                    yAxis={[{min: 0}]}
                   />
                 )
                 : (

@@ -17,18 +17,25 @@ import {useTheme} from '@mui/material/styles'
 import {
   ChartsReferenceLine,
   ChartsLegend,
-  ChartsTooltip,
-  ChartsAxis,
+  ChartsDataProvider,
+  ChartsSurface,
+  ChartsTooltipContainer,
+  ChartsXAxis,
+  ChartsYAxis,
   ChartsGrid,
   ChartsAxisHighlight,
   LinePlot,
   AreaPlot,
   MarkPlot
 } from '@mui/x-charts'
-import {ChartContainer} from '@mui/x-charts/ChartContainer'
+import {useAxesTooltip} from '@mui/x-charts/ChartsTooltip'
 import {useDrawingArea, useXScale, useYScale} from '@mui/x-charts/hooks'
 
+import CompactAlert from '@/components/ui/CompactAlert/index.js'
+import {parseFrequency} from '@/utils/frequency-parsing.js'
+
 import buildComposedSeries, {buildSeriesElementStyles} from './build-composed-series.js'
+import {isPointInDrawingArea} from './drawing-area.js'
 import {
   AXIS_LEFT_ID,
   AXIS_RIGHT_ID,
@@ -47,14 +54,38 @@ import {
   getDateFormatForFrequency
 } from './util.js'
 
-import CompactAlert from '@/components/ui/CompactAlert/index.js'
-import {parseFrequency} from '@/utils/frequency-parsing.js'
-
 const CHART_HEIGHT = 360
 const CHART_MARGIN = {
-  top: 48, right: 80, bottom: 36, left: 80
+  top: 48, right: 36, bottom: 12, left: 36
 }
-const Y_AXIS_LABEL_OFFSET = 68
+
+// Axis sizes are measured by MUI. Use the remaining plot width, not the full
+// container, to select date ticks (including after resizing or toggling a series).
+const ChartWidthObserver = ({onWidthChange}) => {
+  const {width} = useDrawingArea()
+  useEffect(() => {
+    onWidthChange(width)
+  }, [onWidthChange, width])
+  return null
+}
+
+const TimeSeriesTooltip = props => {
+  const axes = useAxesTooltip({directions: ['x']})
+  const current = axes?.find(axis => axis.axisId === X_AXIS_ID)
+
+  return (
+    <ChartsTooltipContainer trigger='axis'>
+      {current && (
+        <AxisTooltipContent
+          {...props}
+          axisValue={current.axisValue}
+          dataIndex={current.dataIndex}
+          axis={current.mainAxis}
+        />
+      )}
+    </ChartsTooltipContainer>
+  )
+}
 
 /**
  * @typedef {Object} DataPoint
@@ -364,7 +395,7 @@ const ChartAnnotations = ({annotations, getXAxisValue, onPointClick}) => {
           return null
         }
 
-        if (!Number.isFinite(x) || !Number.isFinite(y) || !drawingArea.isPointInside({x, y})) {
+        if (!isPointInDrawingArea({x, y}, drawingArea)) {
           return null
         }
 
@@ -384,7 +415,7 @@ const ChartAnnotations = ({annotations, getXAxisValue, onPointClick}) => {
         return (
           <g
             key={`${annotation.seriesId}-${annotation.index}`}
-            className={onPointClick ? 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500' : undefined}
+            className={onPointClick ? 'cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-blue-500' : undefined}
             role={onPointClick ? 'button' : 'presentation'}
             tabIndex={onPointClick ? 0 : undefined}
             transform={`translate(${x}, ${y})`}
@@ -585,6 +616,7 @@ const TimeSeriesChart = ({
   const visibility = visibilityModel ?? internalVisibility
   const containerRef = useRef(null)
   const [containerWidth, setContainerWidth] = useState(null)
+  const [timelineAvailableWidth, setTimelineAvailableWidth] = useState(0)
 
   useEffect(() => {
     if (visibilityModel === undefined) {
@@ -650,10 +682,6 @@ const TimeSeriesChart = ({
     () => axisFormatterFactory(locale, chartModel.xAxisDates, frequency),
     [chartModel.xAxisDates, locale, frequency]
   )
-  const timelineAvailableWidth = Math.max(
-    0,
-    (containerWidth ?? 0) - CHART_MARGIN.left - CHART_MARGIN.right
-  )
   const timelineTicks = useMemo(() => buildTimelineTicks({
     xAxisDates: chartModel.xAxisDates,
     pointBySeries: chartModel.pointBySeries,
@@ -692,8 +720,8 @@ const TimeSeriesChart = ({
     }
 
     if (Number.isInteger(axisValue)
-        && axisValue >= 0
-        && axisValue < chartModel.xAxisDates.length) {
+      && axisValue >= 0
+      && axisValue < chartModel.xAxisDates.length) {
       return chartModel.xAxisDates[axisValue]
     }
 
@@ -703,8 +731,8 @@ const TimeSeriesChart = ({
 
     const numericValue = Number(axisValue)
     if (Number.isInteger(numericValue)
-        && numericValue >= 0
-        && numericValue < chartModel.xAxisDates.length) {
+      && numericValue >= 0
+      && numericValue < chartModel.xAxisDates.length) {
       return chartModel.xAxisDates[numericValue]
     }
 
@@ -783,14 +811,12 @@ const TimeSeriesChart = ({
     () => yAxis.find(item => item.position === 'right' && item.hasData) ?? null,
     [yAxis]
   )
-  const leftAxisConfig = leftAxis && {
-    axisId: leftAxis.id,
-    ...(leftAxis.label && {slotProps: {axisLabel: {x: -Y_AXIS_LABEL_OFFSET}}})
-  }
-  const rightAxisConfig = rightAxis && {
-    axisId: rightAxis.id,
-    ...(rightAxis.label && {slotProps: {axisLabel: {x: Y_AXIS_LABEL_OFFSET}}})
-  }
+  // An empty side still needs room for the first/last centered date label.
+  const chartMargin = useMemo(() => ({
+    ...CHART_MARGIN,
+    ...(leftAxis && {left: 12}),
+    ...(rightAxis && {right: 12})
+  }), [leftAxis, rightAxis])
 
   const getPointMeta = useCallback((seriesId, index) => chartModel.metaBySeries.get(seriesId)?.[index] ?? null, [chartModel.metaBySeries])
 
@@ -825,84 +851,80 @@ const TimeSeriesChart = ({
       <div ref={containerRef} className='w-full'>
         {containerWidth ? (
           <div role='figure' aria-label={t.chartAriaLabel}>
-            <ChartContainer
+            <ChartsDataProvider
               width={containerWidth}
               height={height}
               series={composedSeries}
               xAxis={xAxisTimeline}
               yAxis={yAxis}
-              margin={CHART_MARGIN}
-              sx={{
-                ...seriesElementStyles
-              }}
+              margin={chartMargin}
             >
-              <ChartBackgroundBands bands={backgroundBands} />
-              <ChartsGrid horizontal vertical />
-              <ChartsAxis
-                leftAxis={leftAxisConfig}
-                rightAxis={rightAxisConfig}
-              />
-              <ChartsAxisHighlight x='line' y='line' />
-              <AreaPlot />
-              <LinePlot />
-              <MarkPlot
-                slotProps={{
-                  mark: {
-                    shape: 'circle'
-                  }
-                }}
-                onItemClick={handleMarkClick}
-              />
-              {showLegend && (
-                <ChartsLegend
-                  direction='row'
-                  position={{vertical: 'top', horizontal: 'middle'}}
-                  onItemClick={handleLegendClick}
-                />
-              )}
-              <ChartsTooltip
-                trigger='axis'
-                slots={{
-                  axisContent: props => (
-                    <AxisTooltipContent
-                      {...props}
-                      getPointMeta={getPointMeta}
-                      getSegmentOrigin={getSegmentOrigin}
-                      getXAxisDate={getTooltipXAxisDate}
-                      translations={t}
-                      locale={locale}
-                      frequency={tooltipFrequency}
+              <ChartWidthObserver onWidthChange={setTimelineAvailableWidth} />
+              <div style={{position: 'relative', height}}>
+                <ChartsSurface sx={seriesElementStyles}>
+                  <ChartBackgroundBands bands={backgroundBands} />
+                  <ChartsGrid horizontal vertical />
+                  <ChartsXAxis axisId={X_AXIS_ID} />
+                  {leftAxis && <ChartsYAxis axisId={leftAxis.id} />}
+                  {rightAxis && <ChartsYAxis axisId={rightAxis.id} />}
+                  <ChartsAxisHighlight x='line' y='line' />
+                  <AreaPlot />
+                  <LinePlot />
+                  <MarkPlot
+                    slotProps={{
+                      mark: {
+                        shape: 'circle'
+                      }
+                    }}
+                    onItemClick={handleMarkClick}
+                  />
+                  {chartModel.staticThresholds.map(threshold => (
+                    <ChartsReferenceLine
+                      key={`${threshold.axisId}-${threshold.value}`}
+                      y={threshold.value}
+                      yAxisId={threshold.axisId}
+                      lineStyle={{stroke: threshold.color, strokeDasharray: '4 4'}}
                     />
-                  )
-                }}
-              />
-              {chartModel.staticThresholds.map(threshold => (
-                <ChartsReferenceLine
-                  key={`${threshold.axisId}-${threshold.value}`}
-                  y={threshold.value}
-                  yAxisId={threshold.axisId}
-                  lineStyle={{stroke: threshold.color, strokeDasharray: '4 4'}}
+                  ))}
+                  {referenceLines.map(referenceLine => (
+                    <ChartsReferenceLine
+                      key={`reference-${referenceLine.y}`}
+                      y={referenceLine.y}
+                      yAxisId={AXIS_LEFT_ID}
+                      lineStyle={{
+                        stroke: referenceLine.color || theme.palette.grey[400],
+                        strokeDasharray: '4 4'
+                      }}
+                    />
+                  ))}
+                  {annotations.length > 0 && (
+                    <ChartAnnotations
+                      annotations={annotations}
+                      getXAxisValue={getXAxisValue}
+                      onPointClick={onPointClick}
+                    />
+                  )}
+                </ChartsSurface>
+                {showLegend && (
+                  <ChartsLegend
+                    direction='horizontal'
+                    sx={{
+                      position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', justifyContent: 'center', width: '100%'
+                    }}
+                    onItemClick={handleLegendClick}
+                  />
+                )}
+                <TimeSeriesTooltip
+                  series={composedSeries}
+                  getPointMeta={getPointMeta}
+                  getSegmentOrigin={getSegmentOrigin}
+                  getXAxisDate={getTooltipXAxisDate}
+                  translations={t}
+                  locale={locale}
+                  frequency={tooltipFrequency}
                 />
-              ))}
-              {referenceLines.map(referenceLine => (
-                <ChartsReferenceLine
-                  key={`reference-${referenceLine.y}`}
-                  y={referenceLine.y}
-                  yAxisId={AXIS_LEFT_ID}
-                  lineStyle={{
-                    stroke: referenceLine.color || theme.palette.grey[400],
-                    strokeDasharray: '4 4'
-                  }}
-                />
-              ))}
-              {annotations.length > 0 && (
-                <ChartAnnotations
-                  annotations={annotations}
-                  getXAxisValue={getXAxisValue}
-                  onPointClick={onPointClick}
-                />
-              )}
-            </ChartContainer>
+              </div>
+            </ChartsDataProvider>
           </div>
         ) : (
           <Box sx={{height}} />
@@ -910,7 +932,7 @@ const TimeSeriesChart = ({
       </div>
 
       {chartModel.didDecimate && (
-        <div className='text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2 gap-2 inline-flex items-center'>
+        <div className='text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-sm px-3 py-2 gap-2 inline-flex items-center'>
           <span aria-hidden className={fr.cx('fr-icon-warning-line')} />
           {t.decimationWarning}
         </div>

@@ -1,6 +1,6 @@
 export const EMAIL_VERIFICATION_STORAGE_KEY = 'ple.email-verification'
 
-export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@.]+$/
 
 export const EMAIL_VERIFICATION_PURPOSES = Object.freeze({
   primary: 'PRIMARY_CHANGE',
@@ -63,7 +63,7 @@ export function takeEmailVerificationValue(storage) {
     return null
   }
 
-  let value = null
+  let value
 
   try {
     value = storage.getItem(EMAIL_VERIFICATION_STORAGE_KEY)

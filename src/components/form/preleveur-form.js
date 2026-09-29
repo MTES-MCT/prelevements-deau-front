@@ -9,10 +9,6 @@ import {Select} from '@codegouvfr/react-dsfr/SelectNext'
 import {Checkbox, FormControlLabel, Typography} from '@mui/material'
 import {pick, trim} from 'lodash-es'
 
-import PreleveurEmailAliasesForm from './preleveur-email-aliases-form.js'
-import PreleveurMoralForm from './preleveur-moral-form.js'
-import PreleveurPhysiqueForm from './preleveur-physique-form.js'
-
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import {
   getPreleveurType,
@@ -23,6 +19,10 @@ import {
 } from '@/lib/declarants.js'
 import {createPreleveurAction, updatePreleveurAction} from '@/server/actions/index.js'
 import {emptyStringToNull} from '@/utils/string.js'
+
+import PreleveurEmailAliasesForm from './preleveur-email-aliases-form.js'
+import PreleveurMoralForm from './preleveur-moral-form.js'
+import PreleveurPhysiqueForm from './preleveur-physique-form.js'
 
 const COMMON_FIELDS = [
   'declarantType',

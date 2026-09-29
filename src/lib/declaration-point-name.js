@@ -1,4 +1,5 @@
 import {isManualQuickDeclarationSource} from '@/lib/declaration.js'
+import {withCountingCode} from '@/lib/exploitation-identity.js'
 import {
   getPointPrelevementDisplayName,
   getPointPrelevementTechnicalReference
@@ -12,14 +13,15 @@ export function getDeclarationPointDisplayName(chunk, source, {
   fallback = 'Point de prélèvement',
   preferUsageName = false
 } = {}) {
+  const exploitation = chunk?.exploitation || {countingCode: chunk?.countingCode || chunk?.metadata?.countingCode}
   if (!chunk?.pointPrelevement) {
-    return chunk?.pointPrelevementName || fallback
+    return withCountingCode(chunk?.pointPrelevementName || fallback, exploitation)
   }
 
-  return getPointPrelevementDisplayName(chunk.pointPrelevement, {
+  return withCountingCode(getPointPrelevementDisplayName(chunk.pointPrelevement, {
     fallback: chunk.pointPrelevementName || fallback,
     preferUsageName: shouldPreferUsageName(source, preferUsageName)
-  })
+  }), exploitation)
 }
 
 export function getDeclarationPointTechnicalReference(chunk, source, {

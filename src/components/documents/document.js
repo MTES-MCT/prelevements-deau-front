@@ -23,8 +23,8 @@ const formatExploitations = exploitations => {
 const Document = ({document, exploitations = [], handleDelete, handleEdit, ...props}) => {
   const linkedIds = new Set(
     document.declarantPointPrelevementIds
-      ?? document.exploitations?.map(({id, declarantPointPrelevementId}) => declarantPointPrelevementId ?? id)
-      ?? (document.declarantPointPrelevementId ? [document.declarantPointPrelevementId] : [])
+    ?? document.exploitations?.map(({id, declarantPointPrelevementId}) => declarantPointPrelevementId ?? id)
+    ?? (document.declarantPointPrelevementId ? [document.declarantPointPrelevementId] : [])
   )
   const linkedExploitations = exploitations.filter(exploitation => linkedIds.has(exploitation.id))
   const exploitationText = formatExploitations(linkedExploitations)

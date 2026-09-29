@@ -9,6 +9,9 @@
 
 import {useMemo} from 'react'
 
+import {addCalendarIncrement, isCalendarBasedUnit, parseFrequency} from '@/utils/frequency-parsing.js'
+import {getSmallestFrequency} from '@/utils/frequency.js'
+
 import {FALLBACK_PARAMETER_COLOR} from './constants/colors.js'
 import {getAggregationDateInterval} from './utils/aggregation-date.js'
 import {processTimeSeriesData} from './utils/gap-detection.js'
@@ -17,9 +20,6 @@ import {
   resolutionFromFrequency,
   resolutionToFrequency
 } from './utils/time-bucketing.js'
-
-import {addCalendarIncrement, isCalendarBasedUnit, parseFrequency} from '@/utils/frequency-parsing.js'
-import {getSmallestFrequency} from '@/utils/frequency.js'
 
 const FIXED_FREQUENCY_DURATION = Object.freeze({
   second: 1000,
@@ -198,7 +198,8 @@ export function useChartSeries({
       const rawData = visibleSamples
         .map(sample => {
           const value = sample.values?.[paramIndex]
-          if (value === null || value === undefined || Number.isNaN(value)) {
+          const meta = sample.metas?.[paramIndex] ?? null
+          if ((value === null || value === undefined || Number.isNaN(value)) && !(param.readingSeries && meta?.readingId)) {
             return null
           }
 
@@ -206,7 +207,6 @@ export function useChartSeries({
             ? sample.timestamp
             : new Date(sample.timestamp)
 
-          const meta = sample.metas?.[paramIndex] ?? null
           const bucketInterval = !sample.time && isCumulativeValueType(param.valueType)
             ? getAggregationDateInterval(sample.date)
             : null
@@ -226,7 +226,7 @@ export function useChartSeries({
 
       // Apply gap detection based on native frequency (no re-aggregation)
       let processedData = rawData
-      if (nativeFrequency) {
+      if (nativeFrequency && !param.readingSeries) {
         processedData = isCumulativeValueType(param.valueType)
           ? prepareCumulativeSeriesData(rawData, nativeFrequency)
           : processTimeSeriesData(rawData, nativeFrequency)

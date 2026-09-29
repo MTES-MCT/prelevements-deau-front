@@ -1,7 +1,11 @@
-/* eslint-disable capitalized-comments */
+
 
 import test from 'ava'
 import {addDays, startOfDay} from 'date-fns'
+
+import {STATIC_CALENDAR_STATUS_COLORS} from '@/lib/calendar-colors.js'
+import {normalizeString} from '@/utils/string.js'
+import {parseLocalDateTime} from '@/utils/time.js'
 
 import {
   buildCalendarEntriesFromMetadata,
@@ -18,10 +22,6 @@ import {
   extractDefaultPeriodsFromSeries,
   parseLocalDate
 } from './utils/index.js'
-
-import {STATIC_CALENDAR_STATUS_COLORS} from '@/lib/calendar-colors.js'
-import {normalizeString} from '@/utils/string.js'
-import {parseLocalDateTime} from '@/utils/time.js'
 
 // Calendar status colors for testing (use centralized values)
 const mockStatusColors = STATIC_CALENDAR_STATUS_COLORS

@@ -86,6 +86,8 @@ test('enrichDeclarationTemplateWorkbook configure points, usages et liste dérou
   t.is(workbook.sheet('point_de_prelevement').cell('A2').value(), 'POINT-1')
   t.is(workbook.sheet('point_de_prelevement').cell('A3').value(), 'POINT-2')
   t.is(workbook.sheet('declaration_de_volume').cell('G2').value(), null)
+  t.is(workbook.sheet('declaration_de_volume').cell('H1').value(), 'Code comptage')
+  t.is(workbook.sheet('declaration_de_volume').cell('H2').style('numberFormat'), '@')
   t.is(
     workbook.sheet('Usages SANDRE').cell('D3').value(),
     '4D - Refroidissement avec restitution supérieure à 99 %'

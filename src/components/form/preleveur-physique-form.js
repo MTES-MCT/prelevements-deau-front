@@ -6,10 +6,10 @@ import {Input} from '@codegouvfr/react-dsfr/Input'
 import {Select} from '@codegouvfr/react-dsfr/SelectNext'
 import {Typography} from '@mui/material'
 
-import OptionalPreleveurFieldsForm from './optional-preleveur-fields-form.js'
-
 import AccordionCentered from '@/components/ui/AccordionCentered/index.js'
 import {CopyEmailButton} from '@/components/ui/CopyableEmail/index.js'
+
+import OptionalPreleveurFieldsForm from './optional-preleveur-fields-form.js'
 
 const PreleveurPhysiqueForm = ({
   emailRequired = false,

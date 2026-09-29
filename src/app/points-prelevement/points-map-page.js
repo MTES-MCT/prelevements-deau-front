@@ -367,7 +367,7 @@ const PointsMapPage = ({initialPointsResult}) => {
                 {mobileView === 'map' && (
                   <div className='absolute left-2 top-2 z-10 flex gap-2 lg:hidden'>
                     <button
-                      className='fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-search-line bg-white shadow-sm'
+                      className='fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-search-line bg-white shadow-xs'
                       type='button'
                       onClick={handleOpenMobileSearch}
                     >
@@ -375,7 +375,7 @@ const PointsMapPage = ({initialPointsResult}) => {
                     </button>
                     <button
                       aria-label='Afficher la liste des points'
-                      className='fr-btn fr-btn--secondary fr-btn--sm fr-icon-list-unordered bg-white shadow-sm'
+                      className='fr-btn fr-btn--secondary fr-btn--sm fr-icon-list-unordered bg-white shadow-xs'
                       title='Afficher la liste'
                       type='button'
                       onClick={() => setMobileView('list')}
@@ -385,7 +385,7 @@ const PointsMapPage = ({initialPointsResult}) => {
 
                 {!desktopListOpen && (
                   <button
-                    className='fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-list-unordered absolute left-2 top-2 z-10 hidden bg-white shadow-sm lg:inline-flex'
+                    className='fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-list-unordered absolute left-2 top-2 z-10 hidden bg-white shadow-xs lg:inline-flex'
                     type='button'
                     onClick={() => setDesktopListOpen(true)}
                   >

@@ -21,8 +21,8 @@ test('convertit les coordonnées Lambert 93 en GPS sans changer le stockage atte
   const gpsCoordinates = lambert93ToWgs84([652_469, 6_862_035])
 
   t.truthy(gpsCoordinates)
-  t.true(isCloseTo(gpsCoordinates[0], 2.3522, 0.000_01))
-  t.true(isCloseTo(gpsCoordinates[1], 48.8566, 0.000_01))
+  t.true(isCloseTo(gpsCoordinates[0], 2.3522, 0.00001))
+  t.true(isCloseTo(gpsCoordinates[1], 48.8566, 0.00001))
 })
 
 test('parse les saisies françaises de coordonnées', t => {
@@ -34,6 +34,6 @@ test('parse les saisies françaises de coordonnées', t => {
 })
 
 test('formate les coordonnées de saisie sans séparateur de milliers', t => {
-  t.is(formatCoordinateInput(2.213_749), '2,213749')
+  t.is(formatCoordinateInput(2.213749), '2,213749')
   t.is(formatCoordinateInput(6_862_035.251, 2), '6862035,25')
 })

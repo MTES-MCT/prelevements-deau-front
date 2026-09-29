@@ -102,7 +102,7 @@ const PointEditionForm = ({canDelete = false, pointPrelevement}) => {
         }}
       />
 
-      {canDelete && <div className='border border-red-500 rounded-sm p-5'>
+      {canDelete && <div className='border border-red-500 rounded-xs p-5'>
         <div className='text-red-500'>
           <InfoOutlined className='mr-3' />
           Action sensible : Supprimer le point de prélèvement

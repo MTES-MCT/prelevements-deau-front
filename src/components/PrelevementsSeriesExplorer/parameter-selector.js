@@ -25,6 +25,7 @@ const ParameterSelector = ({
   return (
     <Box sx={{position: 'relative', zIndex: 1}}>
       <GroupedMultiselect
+        searchable={options.some(group => group.label === 'Index')}
         label={label}
         hint={hint}
         placeholder={placeholder}

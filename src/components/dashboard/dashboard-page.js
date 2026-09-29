@@ -13,6 +13,7 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 
 import {PRELEVEUR_MAP_LAYER_VISIBILITY} from '@/components/dashboard/dashboard-map-layers.js'
+import {CampaignInvitations} from '@/components/campaigns/campaign-common.js'
 import DashboardVolumesChart from '@/components/dashboard/dashboard-volumes-chart.js'
 import DeferredRender from '@/components/ui/deferred-render.js'
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
@@ -325,9 +326,9 @@ const InlineRefreshStatus = () => (
 
 const DECLARATION_CREATION_INTRO = 'Saisissez vos index, volumes prélevés ou volumes rejetés directement sur la plateforme, ou déposez un fichier.'
 
-const DeclarationCreationCard = ({className = 'mt-6', declarationCreation}) => {
+const DeclarationCreationCard = ({className = 'mt-6', declarationCreation, hasCampaign = false}) => {
   const allowedDeclarationTypes = declarationCreation?.allowedDeclarationTypes ?? EMPTY_ARRAY
-  const canCreateDeclaration = declarationCreation?.canCreateDeclaration ?? allowedDeclarationTypes.length > 0
+  const canCreateDeclaration = declarationCreation?.canCreateDeclaration ?? (allowedDeclarationTypes.length > 0)
   const canCreateQuickDeclaration = declarationCreation?.canCreateQuickDeclaration ?? false
   const canCreateAnyDeclaration = canCreateDeclaration || canCreateQuickDeclaration
 
@@ -339,9 +340,9 @@ const DeclarationCreationCard = ({className = 'mt-6', declarationCreation}) => {
     <section className={`border border-gray-200 bg-white p-5 md:p-6 ${className}`}>
       <div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
         <div>
-          <h3 className='fr-h3 fr-mb-1w'>Déclarer mes prélèvements en eau</h3>
+          <h3 className={`${hasCampaign ? 'fr-h5' : 'fr-h3'} fr-mb-1w`}>{hasCampaign ? 'Autres déclarations' : 'Déclarer mes prélèvements en eau'}</h3>
           <p className='fr-text--sm fr-mb-0 max-w-[680px] text-gray-700'>
-            {DECLARATION_CREATION_INTRO}
+            {hasCampaign ? 'Saisissez des index ou des volumes en dehors de cette collecte, ou déposez un fichier.' : DECLARATION_CREATION_INTRO}
           </p>
         </div>
 
@@ -503,6 +504,11 @@ const DashboardZoneFilter = ({
 }) => (
   <div className='w-full md:w-[380px]'>
     <GroupedMultiselect
+      searchable
+      confirmSelection
+      showSelectionActions
+      minSelected={1}
+      minSelectionMessage='Sélectionnez au moins une zone.'
       hideLabel={hideLabel}
       disabled={disabled}
       label={label}
@@ -747,6 +753,7 @@ const DashboardVolumeCharts = ({
 
 const DashboardPage = ({
   declarationCreation = null,
+  campaignSummary = null,
   initialDashboard,
   initialError,
   user
@@ -974,12 +981,12 @@ const DashboardPage = ({
   const handleZoneChange = useCallback(async nextValue => {
     const nextZoneCodes = normalizeZoneCodes(nextValue)
 
-    if (nextZoneCodes.length === 0) {
+    if (nextZoneCodes.length === 0 || areSameValues(nextZoneCodes, normalizeZoneCodes(selectedZoneCodes))) {
       return
     }
 
     await reloadDashboard({zoneCodes: nextZoneCodes})
-  }, [normalizeZoneCodes, reloadDashboard])
+  }, [normalizeZoneCodes, reloadDashboard, selectedZoneCodes])
 
   const handlePeriodTypeChange = useCallback(async nextPeriodType => {
     if (nextPeriodType === selectedPeriodType) {
@@ -1039,14 +1046,17 @@ const DashboardPage = ({
           )}
         </div>
 
+
         <DashboardError error={error} />
 
         {isDeclarant ? (
           <>
             <DashboardBlock boxed className='mt-0' title='Mon activité'>
+              {isPreleveurDeclarant && <CampaignInvitations summary={campaignSummary} />}
               <DeclarationCreationCard
                 className='mt-0'
                 declarationCreation={declarationCreation}
+                hasCampaign={isPreleveurDeclarant && Boolean(campaignSummary?.items?.length)}
               />
 
               <PointsMapSection

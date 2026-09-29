@@ -4,10 +4,11 @@ import {
   useCallback, useEffect, useMemo, useRef, useState
 } from 'react'
 
-import maplibre from 'maplibre-gl'
+import * as maplibre from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 import {cooperativeGesturesMapOptions} from '@/components/map/cooperative-gestures.js'
+import {createMap} from '@/components/map/create-map.js'
 import {IGN_RASTER_MAX_ZOOM} from '@/components/map/ign-raster.js'
 import planIGN from '@/components/map/styles/plan-ign.json'
 import {getPointDisplayName} from '@/lib/quick-declaration-point-name.js'
@@ -270,7 +271,7 @@ const QuickDeclarationMap = ({
     }
 
     const firstCoordinates = getPointCoordinates(pointsWithCoordinates[0])
-    const map = new maplibre.Map({
+    const map = createMap(maplibre, {
       container: containerRef.current,
       style: planIGN,
       center: firstCoordinates,
@@ -279,6 +280,9 @@ const QuickDeclarationMap = ({
       maxZoom: IGN_RASTER_MAX_ZOOM,
       ...cooperativeGesturesMapOptions
     })
+    if (!map) {
+      return
+    }
 
     mapRef.current = map
     map.addControl(new maplibre.NavigationControl({showCompass: false}), 'bottom-right')
@@ -550,7 +554,9 @@ const QuickDeclarationMap = ({
             zoom,
             duration: 350
           })
-        } catch {}
+        } catch {
+          // The source may have been removed while awaiting the cluster zoom.
+        }
       }
 
       for (const layerId of interactivePointLayerIds) {
@@ -639,7 +645,7 @@ const QuickDeclarationMap = ({
       {hasMapMoved && (
         <button
           type='button'
-          className='fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-focus-3-line absolute right-2 top-2 z-10 bg-white shadow-sm'
+          className='fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-focus-3-line absolute right-2 top-2 z-10 bg-white shadow-xs'
           aria-label='Recentrer la carte sur tous les points'
           onClick={fitVisiblePoints}
         >

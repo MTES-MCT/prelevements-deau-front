@@ -73,7 +73,7 @@ function getUsageId(usage) {
 }
 
 function hasUsageData(item) {
-  return item?.hasData ?? Number(item?.total) > 0
+  return item?.hasData ?? (Number(item?.total) > 0)
 }
 
 function getVisibleMonthUsages(month, visibleUsageIds) {
@@ -476,7 +476,7 @@ const DashboardVolumesChart = ({
 
         {tooltip && (
           <div
-            className='pointer-events-none absolute z-20 min-w-[280px] max-w-[360px] rounded bg-gray-900 p-3 text-xs text-white shadow-lg'
+            className='pointer-events-none absolute z-20 min-w-[280px] max-w-[360px] rounded-sm bg-gray-900 p-3 text-xs text-white shadow-lg'
             style={{
               left: tooltip.left,
               top: tooltip.top

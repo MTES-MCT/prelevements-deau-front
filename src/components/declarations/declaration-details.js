@@ -62,6 +62,7 @@ const ProcessingState = ({source}) => {
 const DeclarationDetails = ({
   availablePoints = [],
   canReconcile,
+  currentRole = null,
   declaration,
   isInstructor,
   onDeclarationChange,
@@ -92,6 +93,7 @@ const DeclarationDetails = ({
 
   let content = (
     <SourceDataDetails
+      currentRole={currentRole}
       declaration={declaration}
       preferUsageName={preferUsageName}
       source={source}

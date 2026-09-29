@@ -47,3 +47,8 @@ test('le nom mémorisé dans la ligne reste le fallback sans point rattaché', t
     'Point du fichier'
   )
 })
+
+test('les déclarations affichent le code de leur exploitation et gardent le code brut non rapproché', t => {
+  t.is(getDeclarationPointDisplayName({...chunk, exploitation: {countingCode: '001'}}, {}), '36-4=1234 — Code comptage : 001')
+  t.is(getDeclarationPointDisplayName({pointPrelevementName: 'Point brut', metadata: {countingCode: '0002'}}, {}), 'Point brut — Code comptage : 0002')
+})

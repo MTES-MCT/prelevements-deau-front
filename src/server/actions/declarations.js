@@ -215,8 +215,10 @@ export async function getAvailablePointsPrelevementsForDeclarationAction(declara
 
 export async function reconcileDeclarationChunkAction({
   declarationId,
+  sourceId,
   chunkId,
-  pointPrelevementId
+  pointPrelevementId,
+  exploitationId
 } = {}) {
   return withErrorHandling(async () => {
     if (!declarationId) {
@@ -234,11 +236,13 @@ export async function reconcileDeclarationChunkAction({
     const data = await fetchJSON(`api/declarations/${declarationId}/chunks/${chunkId}/reconcile`, {
       method: 'POST',
       body: {
-        pointPrelevementId
+        pointPrelevementId,
+        ...(exploitationId !== undefined ? {exploitationId} : {})
       }
     })
 
     await revalidateDeclarationPaths(declarationId)
+    if (sourceId) revalidatePath(`/declarations/${sourceId}`)
 
     return data
   })

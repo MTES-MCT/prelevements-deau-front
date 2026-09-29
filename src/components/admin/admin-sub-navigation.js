@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import {usePathname} from 'next/navigation'
 
+import {useAuth} from '@/contexts/auth-context.js'
 import {useAuthMethods} from '@/contexts/auth-methods-context.js'
 import {getActiveAdminNavigationItem, getVisibleAdminNavigationItems} from '@/lib/admin-navigation.js'
 
@@ -10,9 +11,11 @@ const AdminSubNavigation = () => {
   const pathname = usePathname()
   const activeItem = getActiveAdminNavigationItem(pathname)
   const {available, methods} = useAuthMethods()
+  const {user} = useAuth()
   const visibleItems = getVisibleAdminNavigationItems({
     available,
-    authMethods: methods
+    authMethods: methods,
+    role: user?.impersonation?.active ? undefined : user?.role
   })
 
   return (

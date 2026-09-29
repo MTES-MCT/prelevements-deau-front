@@ -76,6 +76,8 @@ const SESSION_CALLBACKS = {
   },
   async session({session, token}) {
     session.user.token = token.token
+    // getServerSession removes session.expires for App Router callers.
+    session.user.apiExpiresAt = token.apiExpiresAt || null
     session.user.role = token.role
     session.user.permissions = token.permissions || []
     session.user.impersonation = token.impersonation || null

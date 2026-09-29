@@ -95,7 +95,7 @@ const DashboardPointsMapLoader = ({
         </div>
       )}
       {isLoading && (
-        <span className='absolute left-2 top-2 z-20 bg-white px-2 py-1 text-xs font-medium text-[#000091] shadow' role='status'>
+        <span className='absolute left-2 top-2 z-20 bg-white px-2 py-1 text-xs font-medium text-[#000091] shadow-sm' role='status'>
           Actualisation de la carte…
         </span>
       )}

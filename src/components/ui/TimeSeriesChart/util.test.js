@@ -1,5 +1,9 @@
 import test from 'ava'
 
+import {prepareCumulativeSeriesData} from '@/components/PrelevementsSeriesExplorer/use-chart-series.js'
+import {buildDailyAndTimelineData} from '@/components/PrelevementsSeriesExplorer/utils/aggregation.js'
+import {processTimeSeriesData} from '@/components/PrelevementsSeriesExplorer/utils/gap-detection.js'
+
 import {
   AXIS_LEFT_ID,
   AXIS_RIGHT_ID,
@@ -34,10 +38,6 @@ import {
   resampleSeriesData,
   detectNativeFrequency
 } from './util.js'
-
-import {prepareCumulativeSeriesData} from '@/components/PrelevementsSeriesExplorer/use-chart-series.js'
-import {buildDailyAndTimelineData} from '@/components/PrelevementsSeriesExplorer/utils/aggregation.js'
-import {processTimeSeriesData} from '@/components/PrelevementsSeriesExplorer/utils/gap-detection.js'
 
 const baseTheme = {
   palette: {
@@ -369,7 +369,7 @@ test('sans vue trimestrielle, une plage de 19 à 60 mois utilise des mois espac�
   const monthGaps = coordinates.slice(1).map((coordinate, index) => coordinate - coordinates[index])
 
   t.is(ticks.granularity, 'month')
-  t.true(monthGaps.every(gap => Math.abs(gap - 6) < 0.000_001))
+  t.true(monthGaps.every(gap => Math.abs(gap - 6) < 0.000001))
   t.false(labels.some(label => /\bT[1-4]\b/u.test(label)))
 
   for (const year of [2021, 2022, 2023, 2024, 2025, 2026]) {
@@ -502,6 +502,7 @@ test('l’axe X utilise les dates comme valeurs d’une échelle temporelle cont
   })
 
   t.is(axis.scaleType, 'time')
+  t.is(axis.height, 'auto')
   t.is(axis.data, xAxisDates)
   t.deepEqual(axis.tickInterval, timelineTicks.values)
   t.deepEqual(axis.min, xAxisDates[0])
@@ -536,6 +537,7 @@ test('l’axe calendaire donne exactement la même largeur à chaque mois', t =>
   t.is(timelineTicks.granularity, 'month')
   t.is(timelineTicks.values.length, 12)
   t.is(axis.scaleType, 'linear')
+  t.is(axis.height, 'auto')
   t.true(axis.data.every(value => typeof value === 'number'))
   t.deepEqual(monthWidths, Array.from({length: 11}, () => 1))
 })
@@ -621,6 +623,8 @@ test('buildYAxisConfigurations peut cadrer une série sans imposer zéro', t => 
   t.is(axes[0].max, 235)
   t.true(axes[0].reverse)
   t.is(axes[0].label, 'Profondeur (m)')
+  t.is(axes[0].width, 'auto')
+  t.is(axes[1].position, 'none')
   t.false(axes[1].reverse)
 })
 
@@ -804,16 +808,14 @@ test('getRangeBasedDateFormatter - respects locale parameter', t => {
 })
 
 test('getRangeBasedDateFormatter - single date uses frequency-based formatter', t => {
-  const dates = [new Date('2024-03-15T14:30:00Z')]
+  // The chart formats times in the browser's local timezone.
+  const date = new Date(2024, 2, 15, 14, 30)
+  const dates = [date]
   const formatter = getRangeBasedDateFormatter('fr-FR', dates, '1 hour')
-  const date = new Date('2024-03-15T14:30:00Z')
   const formatted = formatter.format(date)
 
   // Should use HH:mm format for '1 hour' frequency (no day/month)
-  // Note: UTC 14:30 becomes 15:30 in CET (UTC+1 during winter)
-  t.true(formatted.includes('15')) // Hour (local time)
-  t.true(formatted.includes('30')) // Minutes
-  t.false(formatted.includes('03')) // Should NOT include month
+  t.is(formatted, '14:30')
 })
 
 test('getRangeBasedDateFormatter - range at 6 months boundary uses day/month formatter', t => {
@@ -1301,7 +1303,7 @@ test('getNumberFormatter returns Intl.NumberFormat', t => {
 
 test('getNumberFormatter formats numbers with max 2 decimal places', t => {
   const formatter = getNumberFormatter('en-US')
-  t.is(formatter.format(1.234_56), '1.23')
+  t.is(formatter.format(1.23456), '1.23')
   t.is(formatter.format(10), '10')
 })
 
@@ -1623,6 +1625,8 @@ test('buildSeriesModel creates correct Y-axis configuration', t => {
   t.truthy(rightAxis)
   t.is(leftAxis.position, 'left')
   t.is(rightAxis.position, 'right')
+  t.is(leftAxis.width, 'auto')
+  t.is(rightAxis.width, 'auto')
 })
 
 // Resampling tests

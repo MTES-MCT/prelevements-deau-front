@@ -41,6 +41,7 @@ function revalidateZonePaths(zoneId) {
   revalidatePath(`/zones/${zoneId}/suivi-declarations`)
   revalidatePath(`/zones/${zoneId}/points-prelevement`)
   revalidatePath(`/zones/${zoneId}/parametres-ressources`)
+  revalidatePath(`/zones/${zoneId}/parametres-sage`)
   revalidatePath(`/zones/${zoneId}/exploitations`)
 }
 
@@ -178,6 +179,23 @@ export async function getZoneAction(zoneId) {
 
 export async function getZoneGeometryAction(zoneId) {
   return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/geometry`))
+}
+
+export async function getZoneResourceSettingsAction(zoneId) {
+  return withErrorHandling(async () => fetchJSON(`api/zones/${zoneId}/resource-settings`))
+}
+
+export async function updateZoneResourceSettingsAction(zoneId, managedResourceType) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(`api/zones/${zoneId}/resource-settings`, {
+      method: 'PATCH',
+      body: {managedResourceType}
+    })
+
+    revalidateZonePaths(zoneId)
+
+    return result
+  })
 }
 
 export async function getZoneDeclarantsAction(zoneId, options = {}) {

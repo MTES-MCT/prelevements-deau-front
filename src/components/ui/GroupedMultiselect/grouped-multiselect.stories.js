@@ -79,6 +79,26 @@ const meta = {
       description: `Désactive le composant.
 
 **Type**: \`boolean\``
+    },
+    searchable: {
+      control: {type: 'boolean'},
+      description: 'Affiche une recherche dans les options.'
+    },
+    confirmSelection: {
+      control: {type: 'boolean'},
+      description: 'Conserve un brouillon jusqu’à Appliquer. Échap, Annuler ou la sortie du sélecteur abandonnent les changements.'
+    },
+    showSelectionActions: {
+      control: {type: 'boolean'},
+      description: 'Affiche les actions de sélection groupée, limitées aux résultats activables de la recherche.'
+    },
+    minSelected: {
+      control: {type: 'number', min: 0},
+      description: 'Nombre minimum de choix nécessaire pour appliquer le brouillon.'
+    },
+    minSelectionMessage: {
+      control: {type: 'text'},
+      description: 'Message facultatif lorsque le brouillon ne contient pas assez de choix.'
     }
   }
 }
@@ -347,4 +367,128 @@ export const AvecOptionsDésactivées = {
     }
   },
   render: args => <Wrapper {...args} />
+}
+
+const selectionOptions = [
+  {
+    label: 'Territoires du nord',
+    options: [
+      {value: 'north-a', label: 'Nord — Alpha', content: 'Nord — Alpha'},
+      {value: 'north-b', label: 'Nord — Bêta', content: 'Nord — Bêta'},
+      {
+        value: 'north-locked', label: 'Nord — Accès conservé', content: 'Nord — Accès conservé',
+        disabled: true, disabledReason: 'Ce rattachement ne peut pas être modifié.'
+      }
+    ]
+  },
+  {
+    label: 'Territoires du sud',
+    options: [
+      {value: 'south-a', label: 'Sud — Gamma', content: 'Sud — Gamma'},
+      {
+        value: 'south-disabled', label: 'Sud — Indisponible', content: 'Sud — Indisponible',
+        disabled: true, disabledReason: 'Ce territoire ne peut pas être sélectionné.'
+      }
+    ]
+  }
+]
+
+const SelectionFixture = ({value = ['north-a'], ...props}) => {
+  const [selected, setSelected] = useState(value)
+  const [changes, setChanges] = useState(0)
+  const [submissions, setSubmissions] = useState(0)
+
+  return (
+    <form
+      style={{maxWidth: 480}}
+      onSubmit={event => {
+        event.preventDefault()
+        setSubmissions(current => current + 1)
+      }}
+    >
+      <button type='button' className='fr-btn fr-btn--secondary fr-btn--sm'>Avant le sélecteur</button>
+      <div style={{minHeight: 520, marginTop: 16}}>
+        <GroupedMultiselect
+          {...props}
+          value={selected}
+          onChange={next => {
+            setSelected(next)
+            setChanges(current => current + 1)
+          }}
+        />
+      </div>
+      <button type='button' className='fr-btn fr-btn--secondary fr-btn--sm'>Après le sélecteur</button>
+      <p className='fr-mt-2w fr-mb-0'>Nombre de changements appliqués : <span aria-label='Nombre de changements appliqués'>{changes}</span></p>
+      <pre aria-label='Sélection appliquée' style={{whiteSpace: 'pre-wrap', overflowWrap: 'anywhere'}}>{JSON.stringify(selected)}</pre>
+      <p>Soumissions du formulaire : <span aria-label='Soumissions du formulaire'>{submissions}</span></p>
+    </form>
+  )
+}
+
+const selectionArgs = {
+  label: 'Territoires de démonstration',
+  placeholder: 'Choisissez des territoires',
+  options: selectionOptions,
+  searchable: true,
+  value: ['north-a']
+}
+
+export const SelectionImmediate = {
+  name: 'Sélection immédiate',
+  args: selectionArgs,
+  render: args => <SelectionFixture {...args} />
+}
+
+export const SelectionAvecValidation = {
+  name: 'Sélection avec validation',
+  args: {
+    ...selectionArgs,
+    confirmSelection: true,
+    showSelectionActions: true,
+    minSelected: 1,
+    minSelectionMessage: 'Sélectionnez au moins un territoire.'
+  },
+  render: args => <SelectionFixture {...args} />
+}
+
+export const SelectionAvecOptionsProtegees = {
+  name: 'Sélection avec options protégées',
+  args: {
+    ...selectionArgs,
+    value: ['north-a', 'south-a', 'north-locked'],
+    confirmSelection: true,
+    showSelectionActions: true,
+    minSelected: 1
+  },
+  render: args => <SelectionFixture {...args} />
+}
+
+export const SelectionMinimumParDefaut = {
+  name: 'Minimum de sélection : message par défaut',
+  args: {
+    ...selectionArgs,
+    confirmSelection: true,
+    showSelectionActions: true,
+    minSelected: 1
+  },
+  render: args => <SelectionFixture {...args} />
+}
+
+const manySelectionOptions = Array.from({length: 150}, (_, index) => {
+  const number = String(index + 1).padStart(3, '0')
+  return {value: `zone-${number}`, label: `Zone ${number}`, content: `Zone ${number}`}
+})
+
+export const SelectionNombreusesZones = {
+  name: 'Sélection parmi 150 zones',
+  args: {
+    ...selectionArgs,
+    options: [{label: 'Zones disponibles', options: manySelectionOptions}],
+    value: manySelectionOptions.map(option => option.value),
+    confirmSelection: true,
+    showSelectionActions: true,
+    minSelected: 1,
+    minSelectionMessage: 'Sélectionnez au moins un territoire.'
+  },
+  render: args => <SelectionFixture {...args} />
 }

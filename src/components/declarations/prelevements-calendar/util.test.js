@@ -10,21 +10,21 @@ test('determineColors red when negative value present', t => {
 })
 
 test('determineColors blue when volume preleve present', t => {
-  // eslint-disable-next-line camelcase
+
   const params = [{nom_parametre: 'volume prélevé'}]
   const {color} = determineColors([10], null, params, DEFAULT_PALETTE)
   t.is(color, DEFAULT_PALETTE.blue)
 })
 
 test('determineColors blue when canonical volume is present', t => {
-  // eslint-disable-next-line camelcase
+
   const params = [{nom_parametre: 'volume'}]
   const {color} = determineColors([10], null, params, DEFAULT_PALETTE)
   t.is(color, DEFAULT_PALETTE.blue)
 })
 
 test('determineColors orange when other data but volume missing', t => {
-  // eslint-disable-next-line camelcase
+
   const params = [{nom_parametre: 'volume prélevé'}]
   const {color} = determineColors([Number.NaN], [{values: [null]}], params, DEFAULT_PALETTE)
   t.is(color, DEFAULT_PALETTE.warning)
@@ -39,7 +39,7 @@ test('determineColors grey when no data', t => {
 
 test('buildCalendars groups by month and sorts days', t => {
   const data = {
-    // eslint-disable-next-line camelcase
+
     dailyParameters: [{nom_parametre: 'volume'}],
     dailyValues: [
       {date: '2024-09-02', values: [5]},

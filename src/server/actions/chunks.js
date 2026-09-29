@@ -7,6 +7,7 @@ import {fetchJSON, withErrorHandling} from '@/server/api-wrapper.js'
 export async function instructChunkAction({
   chunkId,
   pointPrelevementId,
+  exploitationId,
   status,
   comment
 } = {}) {
@@ -26,10 +27,16 @@ export async function instructChunkAction({
       instructionStatus: normalizedStatus
     }
 
-    if (typeof pointPrelevementId === 'string' && pointPrelevementId.trim()) {
-      payload.pointPrelevementId = pointPrelevementId.trim()
-    } else {
-      payload.pointPrelevementId = null
+    if (pointPrelevementId !== undefined) {
+      payload.pointPrelevementId = typeof pointPrelevementId === 'string' && pointPrelevementId.trim()
+        ? pointPrelevementId.trim()
+        : null
+    }
+
+    if (exploitationId !== undefined) {
+      payload.exploitationId = typeof exploitationId === 'string' && exploitationId.trim()
+        ? exploitationId.trim()
+        : null
     }
 
     if (typeof comment === 'string' && comment.trim()) {

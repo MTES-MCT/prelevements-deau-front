@@ -233,6 +233,7 @@ export const ZONE_EXPLOITATIONS_EXPORT_COLUMNS = [
   {label: 'Date fin', value: exploitation => formatDate(exploitation.endDate)},
   {label: 'Point', value: exploitation => formatPoint(exploitation.pointPrelevement)},
   {label: 'ID point', value: exploitation => exploitation.pointPrelevement?.id || exploitation.pointPrelevementId},
+  {label: 'Code comptage', value: exploitation => exploitation.countingCode},
   {label: 'Commune du point', value: exploitation => exploitation.pointPrelevement?.communeName},
   {label: 'Préleveur', value: exploitation => getDeclarantTitleFromDeclarant(exploitation.declarant)},
   {label: 'E-mail de connexion préleveur', value: exploitation => exploitation.declarant?.loginEmail || exploitation.declarant?.email || exploitation.declarant?.user?.email},

@@ -15,11 +15,11 @@ import {useMemo} from 'react'
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 
-import {computeCalendarKey, getMinDate} from './util.js'
-
 import Calendar from '@/components/ui/Calendar/index.js'
 import LegendCalendar from '@/components/ui/LegendCalendar/index.js'
 import {getCalendarLegendLabels} from '@/lib/calendar-colors.js'
+
+import {computeCalendarKey, getMinDate} from './util.js'
 
 // Default legend labels using centralized calendar colors
 const defaultLegendLabels = getCalendarLegendLabels()

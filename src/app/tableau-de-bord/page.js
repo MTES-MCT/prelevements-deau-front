@@ -4,6 +4,7 @@ import DashboardPage from '@/components/dashboard/dashboard-page.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getDashboardTerritoryAction} from '@/server/actions/dashboard.js'
 import {getAllowedDeclarationTypesAction} from '@/server/actions/declarations.js'
+import {getCampaignSummaryAction} from '@/server/actions/campaigns.js'
 import {getCurrentSessionInfo} from '@/server/actions/user.js'
 
 export const metadata = {
@@ -58,7 +59,8 @@ const Page = async ({searchParams}) => {
   const isDeclarant = role === 'DECLARANT'
   const [
     dashboardResult,
-    declarationTypesResult
+    declarationTypesResult,
+    campaignSummaryResult
   ] = await Promise.all([
     getDashboardTerritoryAction({
       includePoints: false,
@@ -71,7 +73,8 @@ const Page = async ({searchParams}) => {
     }),
     isDeclarant
       ? getAllowedDeclarationTypesAction({includePreleveurs: false})
-      : Promise.resolve(null)
+      : Promise.resolve(null),
+    isDeclarant && user?.declarantRole !== 'COLLECTEUR' ? getCampaignSummaryAction() : Promise.resolve(null)
   ])
   const declarationTypesResponse = declarationTypesResult?.success ? declarationTypesResult.data : null
   const declarationCreation = isDeclarant
@@ -86,6 +89,7 @@ const Page = async ({searchParams}) => {
       <StartDsfrOnHydration />
 
       <DashboardPage
+        campaignSummary={campaignSummaryResult?.success ? campaignSummaryResult.data?.data : null}
         declarationCreation={declarationCreation}
         initialDashboard={dashboardResult.success ? dashboardResult.data : null}
         initialError={dashboardResult.success ? null : dashboardResult.error}

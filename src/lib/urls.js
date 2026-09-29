@@ -46,8 +46,15 @@ export function getMyTelemetrySourceURL(source) {
   return `/mes-declarations/sources/${source.id}`
 }
 
-export function getPointPrelevementURL(point) {
-  return `/points-prelevement/${point.id}`
+export function getPointPrelevementURL(point, {edit = false, searchParams = {}} = {}) {
+  const pathname = `/points-prelevement/${point.id}${edit ? '/edit' : ''}`
+  const query = new URLSearchParams()
+  for (const [key, values] of Object.entries(searchParams)) {
+    for (const value of Array.isArray(values) ? values : [values]) {
+      if (value !== undefined) query.append(key, value)
+    }
+  }
+  return query.size ? `${pathname}?${query}` : pathname
 }
 
 export function getNewExploitationURL(params) {

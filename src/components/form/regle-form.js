@@ -72,7 +72,7 @@ function getExploitationLabel(exploitation) {
   const declarantName = displayPreleveur(exploitation.declarant)
   const usageText = formatExploitationUsages(exploitation)
 
-  return `${pointName} (${declarantName}) - ${usageText}`
+  return `${pointName} (${declarantName})${exploitation.countingCode ? ` — Code comptage : ${exploitation.countingCode}` : ''} - ${usageText}`
 }
 
 function getExploitationTooltip(exploitation) {

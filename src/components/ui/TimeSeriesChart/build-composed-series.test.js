@@ -132,10 +132,10 @@ test('buildSeriesElementStyles uses a light fill and a stronger stepped outline'
     dynamicThresholdSeries: [{id: 'threshold-volume'}]
   })
 
-  t.deepEqual(styles['& .MuiLineElement-series-volume__segment-0'], {
+  t.deepEqual(styles['& .MuiLineChart-line[data-series="volume__segment-0"]'], {
     strokeLinecap: 'round',
     strokeWidth: 3
   })
-  t.deepEqual(styles['& .MuiAreaElement-series-volume__segment-0'], {fillOpacity: 0.18})
-  t.deepEqual(styles['& .MuiLineElement-series-threshold-volume'], {strokeDasharray: '4 4'})
+  t.deepEqual(styles['& .MuiLineChart-area[data-series="volume__segment-0"]'], {fillOpacity: 0.18})
+  t.deepEqual(styles['& .MuiLineChart-line[data-series="threshold-volume"]'], {strokeDasharray: '4 4'})
 })

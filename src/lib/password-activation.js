@@ -5,7 +5,7 @@ export function takePasswordActivationValue(storage) {
     return null
   }
 
-  let value = null
+  let value
 
   try {
     value = storage.getItem(PASSWORD_ACTIVATION_STORAGE_KEY)

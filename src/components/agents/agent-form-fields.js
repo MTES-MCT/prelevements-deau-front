@@ -68,14 +68,14 @@ export const ZoneAccessFields = ({form, updateField}) => (
   <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
     <TextField
       required
-      InputLabelProps={{shrink: true}}
+      slotProps={{inputLabel: {shrink: true}}}
       label='Date de début'
       type='date'
       value={form.startDate}
       onChange={event => updateField('startDate', event.target.value)}
     />
     <TextField
-      InputLabelProps={{shrink: true}}
+      slotProps={{inputLabel: {shrink: true}}}
       label='Date de fin'
       type='date'
       value={form.endDate}

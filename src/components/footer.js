@@ -4,6 +4,8 @@ import {headerFooterDisplayItem} from '@codegouvfr/react-dsfr/Display'
 import {Footer as DSFRFooter} from '@codegouvfr/react-dsfr/Footer'
 import {usePathname} from 'next/navigation'
 
+import {STATS_FOOTER_ITEM} from '@/lib/public-routes.js'
+
 const noFooterPages = new Set(['/points-prelevement'])
 
 const FooterComponent = () => {
@@ -16,7 +18,7 @@ const FooterComponent = () => {
   return (
     <DSFRFooter
       accessibility='non compliant'
-      bottomItems={[headerFooterDisplayItem]}
+      bottomItems={[STATS_FOOTER_ITEM, headerFooterDisplayItem]}
       contentDescription=''
     />
   )

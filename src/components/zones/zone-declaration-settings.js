@@ -205,7 +205,7 @@ const ZoneDeclarationSettings = ({zone, settings}) => {
               label='Date de début'
               type='date'
               value={form.startDate}
-              InputLabelProps={{shrink: true}}
+              slotProps={{inputLabel: {shrink: true}}}
               onChange={event => setForm(current => ({...current, startDate: event.target.value}))}
             />
             <TextField
@@ -213,7 +213,7 @@ const ZoneDeclarationSettings = ({zone, settings}) => {
               label='Date de fin'
               type='date'
               value={form.endDate}
-              InputLabelProps={{shrink: true}}
+              slotProps={{inputLabel: {shrink: true}}}
               onChange={event => setForm(current => ({...current, endDate: event.target.value}))}
             />
             <TextField

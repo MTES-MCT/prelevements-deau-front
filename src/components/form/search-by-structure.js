@@ -1,4 +1,4 @@
-/* eslint-disable camelcase */
+
 'use client'
 
 import {useEffect, useState} from 'react'
@@ -136,16 +136,17 @@ const SearchByStructure = ({setPreleveur}) => {
             placeholder='Nom, SIREN ou SIRET'
             size='small'
             slotProps={{
+              ...parameters.slotProps,
               htmlInput: {
-                ...parameters.inputProps,
+                ...parameters.slotProps.htmlInput,
                 'aria-describedby': searchError ? 'structure-search-error' : 'structure-search-hint'
               },
               input: {
-                ...parameters.InputProps,
+                ...parameters.slotProps.input,
                 endAdornment: (
                   <>
                     {isLoading && <CircularProgress color='inherit' size={18} />}
-                    {parameters.InputProps.endAdornment}
+                    {parameters.slotProps.input.endAdornment}
                   </>
                 )
               }

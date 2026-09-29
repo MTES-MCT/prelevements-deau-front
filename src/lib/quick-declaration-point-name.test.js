@@ -39,3 +39,14 @@ test('buildPointDisplayNames utilise les brouillons sans modifier les points', t
   )
   t.is(point.usageName, null)
 })
+
+test('deux comptages du même PP conservent leurs brouillons distincts et un nom de PP partagé', t => {
+  const points = [
+    {pointPrelevementId: 'point', exploitationId: 'exp-a', name: 'Point', countingCode: '001'},
+    {pointPrelevementId: 'point', exploitationId: 'exp-b', name: 'Point', countingCode: '002'}
+  ]
+  t.deepEqual(buildPointDisplayNames(points, {'exp-a': {usageName: 'Nom saisi'}}), {'exp-a': 'Nom saisi', 'exp-b': 'Point'})
+  const updated = replacePointUsageName(points, 'point', 'Nom commun')
+  t.true(updated.every(point => point.usageName === 'Nom commun'))
+  t.deepEqual(updated.map(point => point.exploitationId), ['exp-a', 'exp-b'])
+})

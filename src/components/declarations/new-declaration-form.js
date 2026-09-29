@@ -84,9 +84,9 @@ const validateTemplateFiles = async files => {
 
   for (const selectedFile of files) {
     try {
-      // eslint-disable-next-line no-await-in-loop
+
       const buffer = await selectedFile.arrayBuffer()
-      // eslint-disable-next-line no-await-in-loop
+
       const result = await extractTemplateFile(buffer)
       const fileErrors = Array.isArray(result?.errors) ? result.errors : []
 
@@ -212,12 +212,12 @@ const NewDeclarationForm = ({allowedDeclarationTypes = []}) => {
   }
 
   const canSubmitDeclaration
-        = !isLoading
-        && !isSubmitting
-        && Boolean(declarationTypeCode)
-        && files.length > 0
-        && validationResult?.validationStatus
-        && validationResult.validationStatus !== 'error'
+    = !isLoading
+      && !isSubmitting
+      && Boolean(declarationTypeCode)
+      && files.length > 0
+      && validationResult?.validationStatus
+      && validationResult.validationStatus !== 'error'
 
   const submitDeclaration = useCallback(async () => {
     setIsSubmitting(true)
