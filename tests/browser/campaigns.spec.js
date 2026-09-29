@@ -434,7 +434,11 @@ test('les erreurs métier de l’API et les champs invalides restent lisibles sa
 test('collecteur : navigation conditionnelle, résultats envoyés, lecture seule et export complet', async ({page, context, isMobile}) => {
   const requests = await authenticate(context, 'collector')
   await page.goto(`${frontUrl}/campagnes/${campaignIds.campaign}`)
-  if (isMobile) await page.getByRole('button', {name: 'Menu', exact: true}).click()
+  if (isMobile) {
+    const menu = page.getByRole('button', {name: 'Menu', exact: true})
+    await expect(menu).toHaveAttribute('data-fr-js-modal-button', 'true')
+    await menu.click()
+  }
   await expect(page.getByRole('link', {name: 'Campagnes', exact: true})).toBeVisible()
   if (isMobile) await page.getByRole('button', {name: 'Fermer', exact: true}).click()
   await page.getByRole('button', {name: 'Résultats envoyés', exact: true}).click()
