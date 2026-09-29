@@ -1,4 +1,5 @@
 import {readFile} from 'node:fs/promises'
+import {isChartSeriesFixture, handleChartSeriesFixtureRequest} from './chart-series-fixtures.mjs'
 import {mkdtempSync, readFileSync, rmSync} from 'node:fs'
 import {execFileSync} from 'node:child_process'
 import {createServer, request as proxyRequest} from 'node:http'
@@ -58,10 +59,11 @@ const api = createServer(async (request, response) => {
       : /^Bearer browser-test-meter-declarant(?:-|$)/.test(request.headers.authorization) ? 'DECLARANT' : null
   const dashboardRole = getDashboardFixtureRole(request.headers.authorization)
   const pointWaterBodyRole = getPointWaterBodyFixtureRole(request.headers.authorization)
-  if (request.headers.authorization !== 'Bearer browser-test-api-token' && !meterRole && !dashboardRole && !pointWaterBodyRole && !isCountingFixture(request.headers.authorization) && !isCampaignFixture(request.headers.authorization) && !isZoneResourceFixture(request.headers.authorization)) {
+  if (request.headers.authorization !== 'Bearer browser-test-api-token' && !meterRole && !dashboardRole && !pointWaterBodyRole && !isChartSeriesFixture(request.headers.authorization) && !isCountingFixture(request.headers.authorization) && !isCampaignFixture(request.headers.authorization) && !isZoneResourceFixture(request.headers.authorization)) {
     return send(401, {message: 'Unauthorized'})
   }
 
+  if (await handleChartSeriesFixtureRequest(request, send)) return
   if (await handleDashboardFixtureRequest(request, send)) return
   if (await handlePointWaterBodyFixtureRequest(request, send)) return
   if (await handleCountingFixtureRequest(request, send)) return

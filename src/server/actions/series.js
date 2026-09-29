@@ -274,6 +274,7 @@ export async function getAggregatedSeriesOptionsAction(
     }
 
     // Negotiate the new read-only series without changing older API clients.
+    params.set('view', 'chart')
     params.set('includeMeterReadings', 'true')
     params.set('includeExploitationIndexes', 'true')
     const query = params.toString() ? `?${params.toString()}` : ''

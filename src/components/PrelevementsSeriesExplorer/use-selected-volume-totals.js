@@ -49,11 +49,13 @@ export function useSelectedVolumeTotals({
     }
 
     let cancelled = false
+    const controller = new AbortController()
 
     loadSelectedVolumeTotals(
       JSON.parse(parameterIdsKey),
       {startDate, endDate},
-      getVolumeValuesForRange
+      getVolumeValuesForRange,
+      {signal: controller.signal}
     ).then(totals => {
       if (!cancelled) {
         setResponse({requestKey, loader: getVolumeValuesForRange, totals})
@@ -62,6 +64,7 @@ export function useSelectedVolumeTotals({
 
     return () => {
       cancelled = true
+      controller.abort()
     }
   }, [shouldFetch, parameterIdsKey, startDate, endDate, requestKey, getVolumeValuesForRange])
 

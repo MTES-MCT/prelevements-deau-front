@@ -81,10 +81,10 @@ export function sumVolumeValues(values) {
 }
 
 /** A failed flow does not hide the independently available total of another. */
-export async function loadSelectedVolumeTotals(parameterIds, range, getVolumeValuesForRange) {
+export async function loadSelectedVolumeTotals(parameterIds, range, getVolumeValuesForRange, options) {
   const entries = await Promise.all(parameterIds.map(async parameterId => {
     try {
-      const values = await getVolumeValuesForRange(parameterId, range)
+      const values = await getVolumeValuesForRange(parameterId, range, options)
       return [parameterId, sumVolumeValues(values)]
     } catch {
       return [parameterId, {status: 'error', value: null}]
