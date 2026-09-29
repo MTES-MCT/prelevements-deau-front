@@ -120,6 +120,8 @@ test('un changement d’agrégation annule la lecture précédente et ignore sa 
   })
   try {
     await page.goto(`${frontUrl}/declarants/${chartSeriesIds.collecteur}`)
+    // The lazy chart can mount after the page load event on a busy CI runner.
+    await expect(page.getByRole('figure', {name: 'Graphique séries temporelles'})).toBeVisible({timeout: 15_000})
     const totals = page.getByLabel('Totaux sur la période affichée')
     await expect(totals).toContainText(/300\s*m³/)
     const operator = page.getByRole('combobox', {name: 'Agrégation Volume prélevé (m³)', exact: true})

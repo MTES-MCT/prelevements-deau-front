@@ -44,6 +44,9 @@ RUN NEXT_TELEMETRY_DISABLED=1 npm run build
 FROM base AS runner
 WORKDIR /app
 
+# The standalone server runs directly with Node; package managers are build-only.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx /opt/yarn-* /usr/local/bin/yarn /usr/local/bin/yarnpkg
+
 ARG API_URL
 ARG FRONT_URL
 ARG NEXTAUTH_URL
