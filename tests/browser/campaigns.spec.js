@@ -394,6 +394,7 @@ test('sans usage autorisé est une information précédente, pas une réponse ni
   await expect(needs.getByRole('combobox')).toHaveValue('')
   await expect(page.locator('[name="needs.offSeason.volume"]')).toHaveValue('')
   await expect(page.locator('[name="meters.0.offSeason.indexEnd"]')).toHaveValue('')
+  await needs.getByRole('combobox').click()
   await needs.getByRole('combobox').fill('Remplissage')
   await page.getByRole('option', {name: /Remplissage plan d’eau/}).click()
   await page.locator('[name="needs.offSeason.volume"]').fill('5000')
