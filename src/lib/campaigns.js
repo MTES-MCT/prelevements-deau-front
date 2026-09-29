@@ -80,6 +80,13 @@ export function campaignUsageOptions(usages = []) {
   return [...new Map(options.map(usage => [usage.id, usage])).values()]
 }
 
+export function campaignRequiresIrrigationDetails(usageId, usages = []) {
+  const usage = campaignUsageOptions(usages).find(usage => usage.id === usageId)
+  // Only realimentation (including its sub-usages) makes agricultural details
+  // optional. Unknown usages retain the existing validation requirements.
+  return !/^12(?:[A-Z]|$)/i.test(String(usage?.code ?? ''))
+}
+
 export function emptyCampaignPeriod(needs = false) {
   return needs ? {flow: '', volume: '', usageId: '', surface: '', crops: []}
     : {usageId: '', indexStart: '', indexEnd: '', surface: '', crops: []}
@@ -131,7 +138,7 @@ export function validateCampaignIndices(data) {
   return errors
 }
 
-export function validateCampaignAnswer(data) {
+export function validateCampaignAnswer(data, usages = []) {
   const errors = {}
   const number = (value, path) => {
     if (comparableIndex(value) === null) {
@@ -139,9 +146,13 @@ export function validateCampaignAnswer(data) {
     }
   }
   const period = (value, path, numericFields) => {
-    for (const field of numericFields) number(value?.[field], `${path}.${field}`)
+    const irrigationDetailsRequired = campaignRequiresIrrigationDetails(value?.usageId, usages)
+    for (const field of numericFields) {
+      if (field === 'surface' && !irrigationDetailsRequired && String(value?.surface ?? '').trim() === '') continue
+      number(value?.[field], `${path}.${field}`)
+    }
     if (!value?.usageId) errors[`${path}.usageId`] = 'Choisissez un usage.'
-    if (!normalizeCampaignCrops(value?.crops).length) errors[`${path}.crops`] = 'Sélectionnez les cultures, ou choisissez « Aucune ».'
+    if (irrigationDetailsRequired && !normalizeCampaignCrops(value?.crops).length) errors[`${path}.crops`] = 'Sélectionnez les cultures, ou choisissez « Aucune ».'
   }
   for (const [index, meter] of (data.meters || []).entries()) {
     if (!meter.serialNumber?.trim()) errors[`meters.${index}.serialNumber`] = 'Renseignez le numéro du compteur.'
