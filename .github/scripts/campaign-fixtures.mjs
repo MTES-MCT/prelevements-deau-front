@@ -20,6 +20,11 @@ const completeData = () => ({
   meters: [{compteurId: campaignIds.meter, serialNumber: 'SYNTH-M1', offSeason: {usageId: campaignIds.usage, indexStart: '10', indexEnd: '20', surface: '2', crops: 'Blé'}, season: {usageId: campaignIds.usage, indexEnd: '30', surface: '2', crops: 'Maïs'}}],
   needs: {season: {usageId: campaignIds.usage, flow: '4', volume: '120', surface: '3', crops: 'Blé'}, offSeason: {usageId: campaignIds.usage, flow: '2', volume: '40', surface: '2', crops: 'Maïs'}}, comment: 'Réponse envoyée'
 })
+const legacyData = () => {
+  const data = completeData()
+  data.meters[0].offSeason.crops = 'Mélange local : maïs, sorgho / trèfle'
+  return data
+}
 
 export function isCampaignFixture(authorization) { return /^Bearer browser-test-campaign-/.test(authorization || '') }
 
@@ -31,7 +36,7 @@ export async function handleCampaignFixtureRequest(request, send, response) {
   const collector = authorization.includes('-collector-')
   const role = admin ? 'ADMIN' : authorization.includes('-instructor-') ? 'INSTRUCTOR' : 'DECLARANT'
   const ended = authorization.includes('-ended-')
-  if (!states.has(authorization)) states.set(authorization, {draft: authorization.includes('-complete-') ? completeData() : null, submitted: collector || authorization.includes('-review-') ? completeData() : null, revision: 0, requests: [], name: 'Collecte synthétique', status: ended ? 'CLOSED' : admin ? 'DRAFT' : 'OPEN'})
+  if (!states.has(authorization)) states.set(authorization, {draft: authorization.includes('-legacy-') ? legacyData() : authorization.includes('-complete-') ? completeData() : null, submitted: collector || authorization.includes('-review-') ? completeData() : null, revision: 0, requests: [], name: 'Collecte synthétique', status: ended ? 'CLOSED' : admin ? 'DRAFT' : 'OPEN'})
   const state = states.get(authorization)
   const multiple = authorization.includes('-multiple-')
   const responsePoint = authorization.includes('-map-') ? {...point, coordinates: [0.25, 44.65]} : point

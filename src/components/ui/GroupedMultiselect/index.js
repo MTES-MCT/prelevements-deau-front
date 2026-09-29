@@ -382,6 +382,7 @@ const GroupedMultiselect = ({
         id={selectId}
         className={`fr-select${hideLabel ? '' : ' mt-2'}${disabled ? ' fr-bg-disabled-grey' : ''}`}
         aria-disabled={disabled}
+        aria-invalid={state === 'error'}
         aria-controls={listboxId}
         aria-describedby={state !== 'default' && stateRelatedMessage ? stateDescriptionId : undefined}
         aria-label={label || placeholder || 'Sélection multiple'}

@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 
 import {CampaignShell, CampaignStatus, CampaignVolumes} from '@/components/campaigns/campaign-common.js'
+import CampaignCropsSelect from '@/components/campaigns/campaign-crops-select.js'
 import CampaignMeterReview from '@/components/campaigns/campaign-meter-review.js'
 import UsageCombobox, {compareUsageOptions} from '@/components/form/usage-combobox.js'
 import {campaignSaveError} from '@/lib/campaign-response-errors.js'
@@ -51,6 +52,7 @@ function ResponseField({path, label, answer, errors, update, validateField, read
   const id = `campaign-${path.replaceAll('.', '-')}`
   const value = getCampaignField(answer, path)
   const error = errors[path]
+  if (type === 'crops') return <CampaignCropsSelect id={id} value={value} onChange={value => update(path, value)} readOnly={readOnly} disabled={disabled} error={error} />
   const inputProps = {id, name: path, readOnly, disabled, onBlur: () => validateField?.(path), 'aria-required': !readOnly, 'aria-invalid': Boolean(error), 'aria-describedby': error ? `${id}-error` : undefined}
   return (
     <div className={`fr-input-group fr-mb-0 ${error ? 'fr-input-group--error' : ''}`}>
@@ -68,14 +70,12 @@ function ResponseField({path, label, answer, errors, update, validateField, read
 }
 
 function PeriodFields({path, title, needs = false, season = false, fieldProps}) {
-  const dates = needs
-    ? (season ? 'Du 1er juin au 31 octobre 2027' : 'Du 31 octobre 2026 au 1er juin 2027')
-    : (season ? 'Du 1er juin au 31 octobre 2026' : 'Du 31 octobre 2025 au 1er juin 2026')
+  const dates = season ? 'Du 1er juin au 31 octobre 2026' : 'Du 31 octobre 2025 au 1er juin 2026'
   return (
     <fieldset className={`m-0 min-w-0 rounded border-t-4 p-3 md:p-4 ${season ? 'border-t-[#c3992a] bg-[#fff9e6]' : 'border-t-[#465f9d] bg-[#eef2fa]'}`}>
-      <legend className={`float-left mb-0 w-full pb-1 text-base font-semibold ${season ? 'text-[#715300]' : 'text-[#3558a2]'}`}>{title}</legend>
-      <p className={`clear-both mb-4 text-xs ${season ? 'text-[#715300]' : 'text-[#3558a2]'}`}>{dates}</p>
-      <div className='grid items-start gap-3 sm:grid-cols-2'>
+      <legend className={`float-left mb-0 w-full ${needs ? 'pb-4' : 'pb-1'} text-base font-semibold ${season ? 'text-[#715300]' : 'text-[#3558a2]'}`}>{title}</legend>
+      {!needs && <p className={`clear-both mb-4 text-xs ${season ? 'text-[#715300]' : 'text-[#3558a2]'}`}>{dates}</p>}
+      <div className='clear-both grid items-start gap-3 sm:grid-cols-2'>
         {needs ? <>
           <ResponseField {...fieldProps} path={`${path}.flow`} label='Débit demandé (m³/h)' />
           <ResponseField {...fieldProps} path={`${path}.volume`} label='Volume demandé (m³)' />
@@ -87,7 +87,7 @@ function PeriodFields({path, title, needs = false, season = false, fieldProps}) 
           <ResponseField {...fieldProps} path={`${path}.usageId`} label={season ? 'Usage étiage' : 'Usage hors étiage'} options={fieldProps.usageOptions} />
         </div>
         <ResponseField {...fieldProps} path={`${path}.surface`} label='Surface irriguée (ha)' />
-        <ResponseField {...fieldProps} path={`${path}.crops`} label='Cultures irriguées' type='text' />
+        <div className='sm:col-span-2'><ResponseField {...fieldProps} path={`${path}.crops`} label='Cultures irriguées' type='crops' /></div>
       </div>
     </fieldset>
   )
@@ -250,10 +250,10 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
           {!readOnly && <p className='fr-hint-text fr-mt-2w fr-mb-0'>Un compteur a été remplacé ? Indiquez-le dans le commentaire ; son historique sera vérifié avant l’envoi.</p>}
         </section>
         <section className='border bg-white p-4 md:p-5'>
-          <h2 className='fr-h4'>Besoins 2026–2027</h2>
+          <h2 className='fr-h4'>Besoins 2027–2028</h2>
           <div className='grid gap-5 lg:grid-cols-2'>
-            <PeriodFields needs title='Demande hors étiage 2026–2027' path='needs.offSeason' fieldProps={fieldProps} />
-            <PeriodFields needs season title='Demande étiage 2027' path='needs.season' fieldProps={fieldProps} />
+            <PeriodFields needs season title='Demande étiage du 1er juin au 31 octobre 2027' path='needs.season' fieldProps={fieldProps} />
+            <PeriodFields needs title='Demande hors-étiage du 1er novembre 2027 au 31 mai 2028' path='needs.offSeason' fieldProps={fieldProps} />
           </div>
         </section>
         <section className='border bg-white p-4 md:p-5'>

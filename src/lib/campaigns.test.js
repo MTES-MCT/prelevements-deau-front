@@ -16,6 +16,24 @@ test('aucun compteur documentaire : formulaire vide, sans identifiant inventé',
   t.is(data.meters[0].compteurId, null)
   t.is(data.meters[0].serialNumber, '')
   t.is(data.needs.season.volume, '')
+  t.deepEqual(data.meters[0].offSeason.crops, [])
+  t.deepEqual(data.meters[0].season.crops, [])
+  t.deepEqual(data.needs.season.crops, [])
+  t.deepEqual(data.needs.offSeason.crops, [])
+})
+
+test('la reprise normalise les cultures de toutes les périodes sans perdre les anciens textes', t => {
+  const original = {
+    meters: [{compteurId: 'meter', offSeason: {crops: 'Maïs, sorgho (rotation)'}, season: {crops: ['cereales', 'ble']}}],
+    needs: {season: {crops: ['Luzerne', 'Luzerne']}, offSeason: {crops: 'aucune'}}
+  }
+  const data = initialCampaignAnswer(original)
+  t.deepEqual(data.meters[0].offSeason.crops, ['Maïs, sorgho (rotation)'])
+  t.deepEqual(data.meters[0].season.crops, ['Céréales', 'Blé'])
+  t.deepEqual(data.needs.season.crops, ['Luzerne'])
+  t.deepEqual(data.needs.offSeason.crops, ['Aucune'])
+  data.meters[0].season.crops.push('Maïs grain')
+  t.deepEqual(original.meters[0].season.crops, ['cereales', 'ble'])
 })
 
 test('les périodes incomplètes restent des brouillons éditables sans fausse valeur zéro', t => {
@@ -28,13 +46,23 @@ test('les périodes incomplètes restent des brouillons éditables sans fausse v
 
 test('toutes les valeurs zéro sont valides ; les champs vides ne le sont pas', t => {
   const data = initialCampaignAnswer(null)
-  data.meters = [{compteurId: null, serialNumber: 'M1', offSeason: {usageId: 'usage', indexStart: '0', indexEnd: 0, surface: '0', crops: 'aucune'}, season: {usageId: 'usage', indexEnd: 0, surface: 0, crops: 'aucune'}}]
-  data.needs = {season: {flow: 0, volume: '0', surface: 0, usageId: 'usage', crops: 'aucune'}, offSeason: {flow: 0, volume: '0', surface: 0, usageId: 'usage', crops: 'aucune'}}
+  data.meters = [{compteurId: null, serialNumber: 'M1', offSeason: {usageId: 'usage', indexStart: '0', indexEnd: 0, surface: '0', crops: ['Aucune']}, season: {usageId: 'usage', indexEnd: 0, surface: 0, crops: ['Aucune']}}]
+  data.needs = {season: {flow: 0, volume: '0', surface: 0, usageId: 'usage', crops: ['Céréales', 'Blé']}, offSeason: {flow: 0, volume: '0', surface: 0, usageId: 'usage', crops: ['Aucune']}}
   t.deepEqual(validateCampaignAnswer(data), {})
   data.needs.season.volume = ''
   t.truthy(validateCampaignAnswer(data)['needs.season.volume'])
   data.needs.season.volume = '-1'
   t.truthy(validateCampaignAnswer(data)['needs.season.volume'])
+})
+
+test('une sélection de cultures vide bloque l’envoi ; un texte historique reste valide', t => {
+  const data = initialCampaignAnswer(null)
+  for (const crops of [[], [' ', ''], null]) {
+    data.needs.season.crops = crops
+    t.truthy(validateCampaignAnswer(data)['needs.season.crops'])
+  }
+  data.needs.season.crops = 'Mélange local : maïs / sorgho'
+  t.falsy(validateCampaignAnswer(data)['needs.season.crops'])
 })
 
 test('l’édition d’un compteur ne change ni un autre compteur ni la réponse précédente', t => {

@@ -1,3 +1,5 @@
+import {normalizeCampaignCrops} from './campaign-crops.js'
+
 export const CAMPAIGN_TYPE = 'DROPT_INDEX_NEEDS_2026_2027'
 export const CAMPAIGN_TYPE_LABEL = 'Collecte des index de prélèvements et des besoins – irrigants OUGC Dropt'
 export const CAMPAIGN_LAST_READING_DATE = '2026-10-31'
@@ -79,8 +81,8 @@ export function campaignUsageOptions(usages = []) {
 }
 
 export function emptyCampaignPeriod(needs = false) {
-  return needs ? {flow: '', volume: '', usageId: '', surface: '', crops: ''}
-    : {usageId: '', indexStart: '', indexEnd: '', surface: '', crops: ''}
+  return needs ? {flow: '', volume: '', usageId: '', surface: '', crops: []}
+    : {usageId: '', indexStart: '', indexEnd: '', surface: '', crops: []}
 }
 
 export function emptyCampaignMeter(meter = {}) {
@@ -88,16 +90,17 @@ export function emptyCampaignMeter(meter = {}) {
     compteurId: meter.compteurId || meter.id || null,
     serialNumber: meter.serialNumber || meter.number || '',
     offSeason: emptyCampaignPeriod(),
-    season: {usageId: '', indexEnd: '', surface: '', crops: ''}
+    season: {usageId: '', indexEnd: '', surface: '', crops: []}
   }
 }
 
 export function initialCampaignAnswer(data, meters = []) {
+  const period = (value, defaults) => ({...defaults, ...value, crops: normalizeCampaignCrops(value?.crops)})
   return {
-    meters: data?.meters?.length ? data.meters.map(meter => ({...meter, offSeason: {...emptyCampaignPeriod(), ...meter.offSeason}, season: {usageId: '', indexEnd: '', surface: '', crops: '', ...meter.season}})) : (meters.length ? meters.map(emptyCampaignMeter) : [emptyCampaignMeter()]),
+    meters: data?.meters?.length ? data.meters.map(meter => ({...meter, offSeason: period(meter.offSeason, emptyCampaignPeriod()), season: period(meter.season, emptyCampaignMeter().season)})) : (meters.length ? meters.map(emptyCampaignMeter) : [emptyCampaignMeter()]),
     needs: {
-      offSeason: {...emptyCampaignPeriod(true), ...data?.needs?.offSeason},
-      season: {...emptyCampaignPeriod(true), ...data?.needs?.season}
+      offSeason: period(data?.needs?.offSeason, emptyCampaignPeriod(true)),
+      season: period(data?.needs?.season, emptyCampaignPeriod(true))
     },
     comment: data?.comment || ''
   }
@@ -138,7 +141,7 @@ export function validateCampaignAnswer(data) {
   const period = (value, path, numericFields) => {
     for (const field of numericFields) number(value?.[field], `${path}.${field}`)
     if (!value?.usageId) errors[`${path}.usageId`] = 'Choisissez un usage.'
-    if (!value?.crops?.trim()) errors[`${path}.crops`] = 'Précisez les cultures, ou indiquez « aucune ».'
+    if (!normalizeCampaignCrops(value?.crops).length) errors[`${path}.crops`] = 'Sélectionnez les cultures, ou choisissez « Aucune ».'
   }
   for (const [index, meter] of (data.meters || []).entries()) {
     if (!meter.serialNumber?.trim()) errors[`meters.${index}.serialNumber`] = 'Renseignez le numéro du compteur.'
