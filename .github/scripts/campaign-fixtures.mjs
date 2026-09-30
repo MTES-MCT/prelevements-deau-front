@@ -29,8 +29,8 @@ const legacyData = () => {
   data.meters[0].offSeason.crops = 'Mélange local : maïs, sorgho / trèfle'
   return data
 }
-const prefillData = (unauthorized, missing) => ({
-  meters: missing ? [{compteurId: null, serialNumber: null, offSeason: {indexStart: '144413'}, season: {}}] : [{compteurId: campaignIds.meter, serialNumber: 'SYNTH-M1', offSeason: {indexStart: '10'}}],
+const prefillData = (unauthorized, missing, sourceSerial) => ({
+  meters: missing ? [{compteurId: null, serialNumber: sourceSerial ? 'SYNTH-SOURCE-001' : null, offSeason: {indexStart: '144413'}, season: {}}] : [{compteurId: campaignIds.meter, serialNumber: 'SYNTH-M1', offSeason: {indexStart: '10'}}],
   needs: {season: {volume: '120', flow: '4', usageId: campaignIds.usage, surface: '3'}, offSeason: unauthorized ? {} : {volume: '75000', flow: '80', usageId: campaignIds.fillingUsage}}
 })
 
@@ -45,7 +45,7 @@ export async function handleCampaignFixtureRequest(request, send, response) {
   const role = admin ? 'ADMIN' : authorization.includes('-instructor-') ? 'INSTRUCTOR' : 'DECLARANT'
   const ended = authorization.includes('-ended-')
   const unauthorizedOffSeason = authorization.includes('-unauthorized-')
-  if (!states.has(authorization)) states.set(authorization, {draft: authorization.includes('-legacy-') ? legacyData() : authorization.includes('-complete-') ? completeData() : null, submitted: collector || authorization.includes('-review-') ? completeData() : null, prefill: authorization.includes('-prefill-') ? prefillData(unauthorizedOffSeason, authorization.includes('-missing-')) : null, revision: 0, requests: [], name: 'Collecte synthétique', status: ended ? 'CLOSED' : admin ? 'DRAFT' : 'OPEN'})
+  if (!states.has(authorization)) states.set(authorization, {draft: authorization.includes('-legacy-') ? legacyData() : authorization.includes('-complete-') ? completeData() : null, submitted: collector || authorization.includes('-review-') ? completeData() : null, prefill: authorization.includes('-prefill-') ? prefillData(unauthorizedOffSeason, authorization.includes('-missing-'), authorization.includes('-serial-')) : null, revision: 0, requests: [], name: 'Collecte synthétique', status: ended ? 'CLOSED' : admin ? 'DRAFT' : 'OPEN'})
   const state = states.get(authorization)
   const mapMany = authorization.includes('-map-many-')
   const multiple = authorization.includes('-multiple-') || mapMany
