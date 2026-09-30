@@ -464,6 +464,12 @@ const QuickDeclarationMap = ({
         }
       })
 
+      map.on('idle', () => {
+        // A canvas alone is not proof that the worker and point layers rendered.
+        const rendered = map.queryRenderedFeatures({layers: ['quick-declaration-pins', 'quick-declaration-clusters']})
+        map.getContainer().dataset.mapReady = rendered.length > 0 ? 'true' : 'false'
+      })
+
       moveToPoints(
         map,
         getInitialMapPoints(
@@ -474,6 +480,7 @@ const QuickDeclarationMap = ({
       )
 
       const onMapMoveStart = () => {
+        map.getContainer().dataset.mapReady = 'false'
         if (shouldTrackMapMovesRef.current && !isRecenteringRef.current) {
           setHasMapMoved(true)
         }

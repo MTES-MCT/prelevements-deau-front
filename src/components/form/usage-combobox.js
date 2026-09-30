@@ -5,6 +5,7 @@ import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {createPortal} from 'react-dom'
 
 import {matchesSearchTerms} from '@/lib/search-options.js'
+import {usageDropdownPosition} from '@/lib/usage-dropdown.js'
 
 const MOBILE_USAGE_DROPDOWN_MEDIA_QUERY = '(max-width: 47.999rem)'
 
@@ -123,8 +124,11 @@ const UsageCombobox = ({
   describedBy: fieldDescriptionId,
   selectedValue,
   value,
+  variant = 'default',
   warning
 }) => {
+  const campaign = variant === 'campaign'
+  const showSelectionIndicator = campaign
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
   const [dropdownStyle, setDropdownStyle] = useState(null)
@@ -149,11 +153,13 @@ const UsageCombobox = ({
   const visibleParentCodes = new Set(visibleOptions.filter(option => !option.parentUsage).map(option => option.code))
 
   const updateDropdownPosition = useCallback(() => {
-    const useInlineDropdown = shouldUseInlineUsageDropdown()
+    const useInlineDropdown = !campaign && shouldUseInlineUsageDropdown()
 
     setIsInlineDropdown(useInlineDropdown)
-    setDropdownStyle(useInlineDropdown ? null : getUsageComboboxDropdownStyle(inputRef.current))
-  }, [])
+    setDropdownStyle(useInlineDropdown ? null : campaign && inputRef.current
+      ? usageDropdownPosition(inputRef.current.getBoundingClientRect(), window.visualViewport || {width: document.documentElement.clientWidth, height: window.innerHeight})
+      : getUsageComboboxDropdownStyle(inputRef.current))
+  }, [campaign])
 
   useEffect(() => {
     if (!open) {
@@ -184,10 +190,14 @@ const UsageCombobox = ({
     updateDropdownPosition()
     window.addEventListener('resize', updateDropdownPosition)
     document.addEventListener('scroll', updateDropdownPosition, true)
+    window.visualViewport?.addEventListener('resize', updateDropdownPosition)
+    window.visualViewport?.addEventListener('scroll', updateDropdownPosition)
 
     return () => {
       window.removeEventListener('resize', updateDropdownPosition)
       document.removeEventListener('scroll', updateDropdownPosition, true)
+      window.visualViewport?.removeEventListener('resize', updateDropdownPosition)
+      window.visualViewport?.removeEventListener('scroll', updateDropdownPosition)
     }
   }, [open, updateDropdownPosition])
 
@@ -204,10 +214,15 @@ const UsageCombobox = ({
       return
     }
 
-    listboxRef.current
-      ?.querySelector(`[data-option-index="${CSS.escape(String(activeIndex))}"]`)
-      ?.scrollIntoView({block: 'nearest'})
-  }, [activeIndex, open])
+    const listbox = listboxRef.current
+    const option = listbox?.querySelector(`[data-option-index="${CSS.escape(String(activeIndex))}"]`)
+    if (campaign && option) {
+      const list = listbox.getBoundingClientRect()
+      const item = option.getBoundingClientRect()
+      if (item.top < list.top) listbox.scrollTop -= list.top - item.top
+      else if (item.bottom > list.bottom) listbox.scrollTop += item.bottom - list.bottom
+    } else option?.scrollIntoView({block: 'nearest'})
+  }, [activeIndex, campaign, open])
 
   const openDropdown = useCallback(({filter = false} = {}) => {
     if (unavailable) return
@@ -231,7 +246,7 @@ const UsageCombobox = ({
       ref={listboxRef}
       id={`${id}-listbox`}
       className={classNames(
-        'quick-declaration-usage-listbox z-[1200] overflow-auto border border-gray-300 bg-white shadow-lg',
+        campaign ? 'campaign-usage-listbox z-[1200] overflow-auto overscroll-contain rounded border border-gray-300 bg-white shadow-lg' : 'quick-declaration-usage-listbox z-[1200] overflow-auto border border-gray-300 bg-white shadow-lg',
         isInlineDropdown ? 'absolute right-0 left-0 top-full mt-1 max-h-64' : 'fixed'
       )}
       role='listbox'
@@ -254,40 +269,43 @@ const UsageCombobox = ({
             aria-label={usage.parentUsage ? `${formatUsageOptionLabel(usage)} — ${formatUsageParentLabel(usage.parentUsage)}` : undefined}
             aria-selected={isSelected}
             className={classNames(
-              'flex w-full cursor-pointer items-start gap-1.5 border-b border-gray-100 px-2 py-2 text-left text-xs last:border-b-0',
-              isActive ? 'bg-blue-50 text-blue-900' : 'bg-white hover:bg-gray-50',
+              'flex w-full cursor-pointer items-start border-b border-gray-100 text-left last:border-b-0',
+              campaign ? 'min-h-12 gap-3 px-3 py-3 text-sm leading-6' : 'gap-1.5 px-2 py-2 text-xs',
+              isActive ? 'bg-blue-50 text-blue-900' : campaign && !usage.parentUsage ? 'bg-gray-100 hover:bg-blue-50' : 'bg-white hover:bg-gray-50',
               isSelected && 'font-semibold',
-              !usage.parentUsage && 'font-semibold'
+              !usage.parentUsage && 'font-semibold',
+              campaign && usage.parentUsage && 'pl-8'
             )}
             onMouseEnter={() => setActiveIndex(index)}
             onMouseDown={event => {
               event.preventDefault()
-              selectUsage(usage)
+              if (!campaign) selectUsage(usage)
             }}
+            onClick={campaign ? () => selectUsage(usage) : undefined}
           >
-            <span className='inline-flex h-4 w-3 shrink-0 items-center justify-center' aria-hidden='true'>
-              {isSelected && <span className='fr-icon-check-line text-[#18753c]' />}
+            <span className={showSelectionIndicator ? 'mt-1 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-[#000091]' : 'inline-flex h-4 w-3 shrink-0 items-center justify-center'} data-usage-selection-indicator={showSelectionIndicator ? '' : undefined} aria-hidden='true'>
+              {isSelected && <span className={showSelectionIndicator ? 'h-2 w-2 rounded-full bg-[#000091]' : 'fr-icon-check-line text-[#18753c]'} />}
             </span>
             <span className={classNames(
               'flex min-w-0 flex-1 items-start gap-2',
-              usage.parentUsage && 'ml-4 border-l border-gray-300 pl-3'
+              usage.parentUsage && !campaign && 'ml-4 border-l border-gray-300 pl-3'
             )}
             >
-              <span
+              {!showSelectionIndicator && <span
                 className={classNames(
                   'mt-[0.2rem] shrink-0 rounded-xs ring-1 ring-inset ring-black/15',
                   usage.parentUsage ? 'h-2 w-2' : 'h-2.5 w-2.5'
                 )}
                 style={{backgroundColor: getUsageOptionColor(usage)}}
                 aria-hidden='true'
-              />
+              />}
               <span className='min-w-0'>
                 {showParentContext && (
-                  <span className='block text-[0.66rem] font-normal text-gray-600'>
+                  <span className={campaign ? 'block text-xs font-normal text-gray-600' : 'block text-[0.66rem] font-normal text-gray-600'}>
                     {formatUsageParentLabel(usage.parentUsage)}
                   </span>
                 )}
-                <span className='quick-declaration-usage-option-label block' title={formatUsageOptionLabel(usage)}>
+                <span className={campaign ? 'campaign-usage-option-label block whitespace-normal' : 'quick-declaration-usage-option-label block'} title={formatUsageOptionLabel(usage)}>
                   {formatUsageOptionLabel(usage)}
                 </span>
               </span>
@@ -304,7 +322,7 @@ const UsageCombobox = ({
   return (
     <div ref={containerRef} className='quick-declaration-combobox'>
       <div className='relative'>
-        {selectedUsage && (
+        {selectedUsage && !showSelectionIndicator && (
           <span
             className='pointer-events-none absolute left-2 top-1/2 z-10 h-2.5 w-2.5 -translate-y-1/2 rounded-xs ring-1 ring-inset ring-black/15'
             style={{backgroundColor: getUsageOptionColor(selectedUsage)}}
@@ -316,8 +334,8 @@ const UsageCombobox = ({
           id={id}
           name={name}
           className={classNames(
-            'fr-input quick-declaration-control quick-declaration-combobox-input text-xs',
-            selectedUsage && 'quick-declaration-combobox-input--with-color'
+            campaign ? 'fr-input min-h-12 pr-12 text-base' : 'fr-input quick-declaration-control quick-declaration-combobox-input text-xs',
+            selectedUsage && !showSelectionIndicator && 'quick-declaration-combobox-input--with-color'
           )}
           type='text'
           role='combobox'
@@ -333,7 +351,7 @@ const UsageCombobox = ({
           aria-haspopup='listbox'
           aria-describedby={describedBy}
           value={value}
-          placeholder='Rechercher'
+          placeholder={campaign ? 'Choisir un usage' : 'Rechercher'}
           autoComplete='off'
           onFocus={event => {
             if (unavailable) return
@@ -341,6 +359,10 @@ const UsageCombobox = ({
             event.target.select()
             openDropdown({filter: false})
           }}
+          onClick={campaign ? () => { if (!open) openDropdown({filter: false}) } : undefined}
+          onBlur={campaign ? event => {
+            if (!containerRef.current?.contains(event.relatedTarget) && !listboxRef.current?.contains(event.relatedTarget)) setOpen(false)
+          } : undefined}
           onChange={event => {
             if (unavailable) return
             const usageSearch = event.target.value
@@ -374,13 +396,18 @@ const UsageCombobox = ({
             if (event.key === 'Escape') {
               setOpen(false)
             }
+            if (campaign && open && ['Home', 'End'].includes(event.key)) {
+              event.preventDefault()
+              setActiveIndex(event.key === 'Home' ? 0 : Math.max(visibleOptions.length - 1, 0))
+            }
+            if (campaign && event.key === 'Tab') setOpen(false)
           }}
         />
         <button
           type='button'
           disabled={readOnly || disabled}
           tabIndex={-1}
-          className='quick-declaration-combobox-toggle fr-icon-arrow-down-s-line'
+          className={campaign ? 'absolute bottom-0 right-0 top-0 flex w-12 items-center justify-center text-[#000091] fr-icon-arrow-down-s-line' : 'quick-declaration-combobox-toggle fr-icon-arrow-down-s-line'}
           aria-label={open ? 'Fermer la liste des usages' : 'Ouvrir la liste des usages'}
           onMouseDown={event => event.preventDefault()}
           onClick={() => {
@@ -401,7 +428,7 @@ const UsageCombobox = ({
       {selectedUsage?.parentUsage && (
         <p
           id={parentDescriptionId}
-          className='fr-mb-0 mt-1 truncate text-[0.66rem] leading-tight text-gray-600'
+          className={campaign ? 'fr-mb-0 mt-1 text-xs text-gray-600' : 'fr-mb-0 mt-1 truncate text-[0.66rem] leading-tight text-gray-600'}
           title={`Usage principal : ${formatUsageParentLabel(selectedUsage.parentUsage)}`}
         >
           Usage : <span className='font-medium text-gray-800'>{formatUsageParentLabel(selectedUsage.parentUsage)}</span>

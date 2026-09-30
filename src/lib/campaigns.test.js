@@ -6,7 +6,7 @@ import {
 } from './campaigns.js'
 
 test('un code comptage distingue deux exploitations sur le même point', t => {
-  t.is(campaignExploitationLabel({point: {name: 'Puits'}, countingCode: '001'}), 'Puits — Code comptage : 001')
+  t.is(campaignExploitationLabel({point: {name: 'Puits'}, countingCode: '001'}), 'Puits — Code compteur Agence de l’eau : 001')
   t.not(campaignExploitationLabel({point: {name: 'Puits'}, countingCode: '001'}), campaignExploitationLabel({point: {name: 'Puits'}, countingCode: '002'}))
 })
 
@@ -49,6 +49,12 @@ test('toutes les valeurs zéro sont valides ; les champs vides ne le sont pas', 
   data.meters = [{compteurId: null, serialNumber: 'M1', offSeason: {usageId: 'usage', indexStart: '0', indexEnd: 0, surface: '0', crops: ['Aucune']}, season: {usageId: 'usage', indexEnd: 0, surface: 0, crops: ['Aucune']}}]
   data.needs = {season: {flow: 0, volume: '0', surface: 0, usageId: 'usage', crops: ['Céréales', 'Blé']}, offSeason: {flow: 0, volume: '0', surface: 0, usageId: 'usage', crops: ['Aucune']}}
   t.deepEqual(validateCampaignAnswer(data), {})
+  for (const serialNumber of ['', undefined, null]) {
+    const withoutSerial = structuredClone(data)
+    withoutSerial.meters[0].serialNumber = serialNumber
+    t.deepEqual(validateCampaignAnswer(withoutSerial), {})
+    t.is(withoutSerial.meters[0].serialNumber, serialNumber)
+  }
   data.needs.season.volume = ''
   t.truthy(validateCampaignAnswer(data)['needs.season.volume'])
   data.needs.season.volume = '-1'
@@ -133,6 +139,19 @@ test('les propositions restent éditables sans transformer l’absence d’autor
   t.is(source.needs.season.volume, '4500')
 })
 
+test('un index proposé sans compteur rattaché conserve sa valeur et son absence d’identifiant', t => {
+  const source = {meters: [{compteurId: null, serialNumber: null, offSeason: {indexStart: '144413'}, season: {}}]}
+  const data = initialCampaignAnswer(source, [])
+  t.is(data.meters.length, 1)
+  t.is(data.meters[0].compteurId, null)
+  t.is(data.meters[0].serialNumber, null)
+  t.is(data.meters[0].offSeason.indexStart, '144413')
+  t.is(data.meters[0].offSeason.indexEnd, '')
+  t.is(data.meters[0].season.indexEnd, '')
+  t.is(setCampaignField(data, 'meters.0.offSeason.indexStart', '144414').meters[0].offSeason.indexStart, '144414')
+  t.is(source.meters[0].offSeason.indexStart, '144413')
+})
+
 test('les trois index doivent croître pour chaque compteur, sans comparaison entre compteurs', t => {
   const data = initialCampaignAnswer(null, [{id: 'first'}, {id: 'second'}])
   Object.assign(data.meters[0].offSeason, {indexStart: '20', indexEnd: '10'})
@@ -141,8 +160,8 @@ test('les trois index doivent croître pour chaque compteur, sans comparaison en
   data.meters[1].season.indexEnd = '2'
   const errors = validateCampaignIndices(data)
   t.deepEqual(Object.keys(errors), ['meters.0.offSeason.indexEnd', 'meters.0.season.indexEnd'])
-  t.true(errors['meters.0.offSeason.indexEnd'].includes('31/10/2025'))
-  t.true(errors['meters.0.season.indexEnd'].includes('01/06/2026'))
+  t.true(errors['meters.0.offSeason.indexEnd'].includes('01/11/2025'))
+  t.true(errors['meters.0.season.indexEnd'].includes('31/05/2026'))
   t.is(validateCampaignAnswer(data)['meters.0.season.indexEnd'], errors['meters.0.season.indexEnd'])
 })
 
@@ -160,7 +179,7 @@ test('un brouillon incomplet compare seulement les index effectivement renseign�
   data.meters[0].offSeason.indexStart = '12'
   t.deepEqual(validateCampaignIndices(data), {})
   data.meters[0].season.indexEnd = '0'
-  t.true(validateCampaignIndices(data)['meters.0.season.indexEnd'].includes('31/10/2025'))
+  t.true(validateCampaignIndices(data)['meters.0.season.indexEnd'].includes('01/11/2025'))
   data.meters[0].offSeason.indexEnd = '0'
   t.deepEqual(Object.keys(validateCampaignIndices(data)), ['meters.0.offSeason.indexEnd'])
 })
@@ -207,18 +226,20 @@ test('le reçu renvoie à la campagne selon le rôle et ne propose aucun lien au
 
 test('le demandeur voit une réponse à compléter, un brouillon ou un envoi sans terme exploitation', t => {
   const campaign = {status: 'OPEN', progress: {total: 1, submitted: 0, drafts: 0}}
-  t.deepEqual(campaignParticipation(campaign), {complete: false, label: 'Réponse à compléter', action: 'Compléter ma réponse'})
-  t.deepEqual(campaignParticipation({...campaign, progress: {...campaign.progress, drafts: 1}}), {complete: false, label: 'Brouillon enregistré', action: 'Reprendre ma réponse'})
-  t.deepEqual(campaignParticipation({...campaign, progress: {...campaign.progress, submitted: 1}}), {complete: true, label: 'Réponse envoyée', action: 'Consulter ma réponse'})
+  t.deepEqual(campaignParticipation(campaign), {complete: false, label: '0 point déclaré sur 1', action: 'Commencer ma déclaration'})
+  t.deepEqual(campaignParticipation({...campaign, progress: {...campaign.progress, drafts: 1}}), {complete: false, label: '0 point déclaré sur 1', action: 'Reprendre ma déclaration'})
+  t.deepEqual(campaignParticipation({...campaign, progress: {...campaign.progress, submitted: 1}}), {complete: true, label: '1 point déclaré sur 1', action: 'Consulter ma déclaration'})
 })
 
 test('plusieurs codes comptage conservent un suivi de toutes les réponses ; une collecte close se consulte', t => {
-  t.deepEqual(campaignParticipation({status: 'OPEN', progress: {total: 3, submitted: 1, drafts: 1}}), {complete: false, label: '1 réponse envoyée sur 3', action: 'Reprendre mes réponses'})
-  t.is(campaignParticipation({status: 'CLOSED', progress: {total: 1, submitted: 0}}).action, 'Consulter ma réponse')
-  t.is(campaignParticipation({status: 'CLOSED', progress: {total: 1, submitted: 0}}).label, 'Réponse non envoyée')
-  t.is(campaignParticipation({status: 'ARCHIVED', progress: {total: 1, submitted: 0, drafts: 1}}).label, 'Réponse non envoyée')
-  t.is(campaignParticipation({status: 'CLOSED', progress: {total: 1, submitted: 1}}).label, 'Réponse envoyée')
-  t.is(campaignParticipation({status: 'OPEN', permissions: {canRespond: false}, progress: {total: 1}}).action, 'Consulter ma réponse')
+  t.deepEqual(campaignParticipation({status: 'OPEN', progress: {total: 3, submitted: 1, drafts: 1}}), {complete: false, label: '1 point déclaré sur 3', action: 'Reprendre ma déclaration'})
+  t.deepEqual(campaignParticipation({status: 'OPEN', progress: {total: 3, submitted: 1, drafts: 0}}), {complete: false, label: '1 point déclaré sur 3', action: 'Reprendre ma déclaration'})
+  t.deepEqual(campaignParticipation({status: 'OPEN', progress: {total: 3, submitted: 2, drafts: 0}}), {complete: false, label: '2 points déclarés sur 3', action: 'Reprendre ma déclaration'})
+  t.is(campaignParticipation({status: 'CLOSED', progress: {total: 1, submitted: 0}}).action, 'Consulter ma déclaration')
+  t.is(campaignParticipation({status: 'CLOSED', progress: {total: 1, submitted: 0}}).label, '0 point déclaré sur 1')
+  t.is(campaignParticipation({status: 'ARCHIVED', progress: {total: 1, submitted: 0, drafts: 1}}).label, '0 point déclaré sur 1')
+  t.is(campaignParticipation({status: 'CLOSED', progress: {total: 1, submitted: 1}}).label, '1 point déclaré sur 1')
+  t.is(campaignParticipation({status: 'OPEN', permissions: {canRespond: false}, progress: {total: 1}}).action, 'Consulter ma déclaration')
 })
 
 test('le formulaire unique est direct uniquement pour le demandeur et un résultat complet', t => {

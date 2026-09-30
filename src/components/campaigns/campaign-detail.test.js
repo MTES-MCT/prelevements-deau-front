@@ -20,6 +20,7 @@ function harness({tab = 'results', response = {}} = {}) {
     if (specifier === 'next/navigation') return {useRouter: () => ({})}
     if (specifier === 'next/link') return {__esModule: true, default: props => React.createElement('a', props)}
     if (specifier === '@codegouvfr/react-dsfr/Alert') return {Alert: () => null}
+    if (specifier === '@/components/campaigns/campaign-requester-points.js') return {__esModule: true, default: () => null}
     if (specifier === '@/components/campaigns/campaign-common.js') return Object.fromEntries(['CampaignPagination', 'CampaignProgress', 'CampaignShell', 'CampaignStatus', 'CampaignVolumes'].map(name => [name, ({children}) => React.createElement('div', null, children)]))
     if (specifier === '@/lib/campaigns.js') return campaignHelpers
     if (specifier === '@/server/actions/campaigns.js') return Object.fromEntries(['getCampaignResponsesAction', 'getCampaignResultsAction'].map(name => [name, async (id, options) => {

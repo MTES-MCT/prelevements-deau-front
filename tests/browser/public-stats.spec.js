@@ -123,7 +123,6 @@ test('le site vitrine termine la page avec son audience seule et un historique r
   await page.goto('/stats')
   const visitors = page.getByRole('region', {name: visitorsName})
   await expect(visitors).toContainText('Site vitrine · 52 visiteurs uniques en août 2026 sur partageonsleau.beta.gouv.fr.')
-  await expect(visitors).toContainText('Ces visiteurs n’ont pas de compte et sont distincts des utilisateurs du service.')
   await expect(page.getByRole('heading', {name: 'Visiteurs uniques du site vitrine / mois'})).toHaveCount(0)
   expect(await visitors.evaluate(element => element.previousElementSibling.querySelector('h2').textContent)).toBe('Utilité, impact sur la politique publique et efficience')
   expect(await visitors.evaluate(element => element.parentElement.lastElementChild === element)).toBe(true)

@@ -432,7 +432,6 @@ const PublicVisitors = ({publicVisitors}) => {
           ? `${formatStatsCount(latestMonth.uniqueVisitors)} visiteurs uniques en ${formatStatsMonth(latestMonth.month)}`
           : `Données indisponibles${latestMonth ? ` en ${formatStatsMonth(latestMonth.month)}` : ''}`} sur{' '}
         <a className='fr-link' href='https://partageonsleau.beta.gouv.fr/'>partageonsleau.beta.gouv.fr</a>.
-        {' '}Ces visiteurs n’ont pas de compte et sont distincts des utilisateurs du service.
       </p>
       {months.length > 0 ? (
         <details className={styles.visitorsDetails}>

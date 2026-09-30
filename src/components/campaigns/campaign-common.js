@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 import AdminPageShell from '@/components/admin/admin-page-shell.js'
-import {CAMPAIGN_STATUS_LABELS, RESPONSE_STATUS_LABELS, campaignDate, campaignParticipation, formatCampaignVolume} from '@/lib/campaigns.js'
+import {CAMPAIGN_REQUESTER_DESCRIPTION, CAMPAIGN_REQUESTER_TITLE, CAMPAIGN_STATUS_LABELS, RESPONSE_STATUS_LABELS, campaignDate, campaignParticipation, formatCampaignVolume} from '@/lib/campaigns.js'
 
 export function CampaignShell({admin = false, title, description, actions, children}) {
   if (admin) return <AdminPageShell title={title} description={description} actions={actions}>{children}</AdminPageShell>
@@ -29,7 +29,7 @@ export function CampaignProgress({progress = {}, requester = false}) {
   return (
     <div className='min-w-40'>
       <span className='text-sm'>{requester ? campaignParticipation({progress}).label : `${submitted} / ${total} exploitations ont répondu`}</span>
-      {(!requester || total > 1) && <progress className='mt-1 block h-2 w-full accent-[#18753c]' max={total || 1} value={submitted} aria-label={requester ? `${submitted} réponses envoyées sur ${total}` : `${submitted} réponses sur ${total} exploitations`} />}
+      {(!requester || total > 1) && <progress className='mt-1 block h-2 w-full accent-[#18753c]' max={total || 1} value={submitted} aria-label={requester ? campaignParticipation({progress}).label : `${submitted} réponses sur ${total} exploitations`} />}
     </div>
   )
 }
@@ -50,17 +50,17 @@ export function CampaignInvitations({summary}) {
   const campaigns = summary?.items || []
   if (!campaigns.length) return null
   return (
-    <section className='mb-4 border border-[#c1c1fb] border-l-4 border-l-[#000091] bg-white p-5 md:p-6' aria-label='Mes index et mes besoins'>
-      <h3 className='fr-h5 fr-mb-2w'>Mes index et mes besoins</h3>
+    <section className='mb-4 border border-[#c1c1fb] border-l-4 border-l-[#000091] bg-white p-5 md:p-6' aria-label={CAMPAIGN_REQUESTER_TITLE}>
+      <h3 className='fr-h5 fr-mb-2w'>{CAMPAIGN_REQUESTER_TITLE}</h3>
       <ul className='m-0 grid list-none gap-4 p-0'>
         {campaigns.map(campaign => {
           const participation = campaignParticipation(campaign)
           return <li key={campaign.id} className='flex flex-wrap items-center justify-between gap-4'>
             <div className='min-w-0'>
-              <p className='fr-text--sm fr-mb-1w font-medium'>{campaign.name}</p>
+              <p className='fr-text--sm fr-mb-1w font-medium'>{CAMPAIGN_REQUESTER_DESCRIPTION}</p>
               <div className='flex flex-wrap items-center gap-x-3 gap-y-1'>
                 <span className={`fr-badge fr-badge--sm fr-badge--no-icon ${participation.complete ? 'fr-badge--success' : 'fr-badge--info'}`}>{participation.label}</span>
-                {campaign.closesOn && <span className='text-sm text-gray-600'>Échéance : {campaignDate(campaign.closesOn)}</span>}
+                {campaign.closesOn && <span className='text-sm text-gray-600'>Échéance de la campagne : {campaignDate(campaign.closesOn)}</span>}
               </div>
             </div>
             <Link className={`fr-btn fr-btn--icon-right fr-icon-arrow-right-line ${participation.complete ? 'fr-btn--secondary' : ''}`} href={`/campagnes/${campaign.id}`}>{participation.action}</Link>
