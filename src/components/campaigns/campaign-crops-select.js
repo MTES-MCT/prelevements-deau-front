@@ -21,10 +21,12 @@ export default function CampaignCropsSelect({id, value, onChange, readOnly, disa
 
   return <GroupedMultiselect
     searchable
+    showCheckboxes
+    required={required}
     popupZIndex={20}
     id={id}
     label={label}
-    hint='Plusieurs choix possibles, parmi les catégories et les cultures.'
+    hint='Choisissez une ou plusieurs cultures. Si vous ne savez pas encore, choisissez seulement la famille (par exemple : céréales).'
     placeholder='Sélectionner les cultures'
     options={options}
     value={selected}

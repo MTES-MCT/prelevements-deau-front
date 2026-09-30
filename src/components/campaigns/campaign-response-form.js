@@ -10,13 +10,14 @@ import {CampaignShell, CampaignStatus, CampaignVolumes} from '@/components/campa
 import CampaignCropsSelect from '@/components/campaigns/campaign-crops-select.js'
 import CampaignMeterReview from '@/components/campaigns/campaign-meter-review.js'
 import UsageCombobox, {compareUsageOptions} from '@/components/form/usage-combobox.js'
+import {formatCampaignNumberInput, normalizeCampaignNumberInput} from '@/lib/campaign-numbers.js'
 import {campaignSaveError} from '@/lib/campaign-response-errors.js'
 import {
+  CAMPAIGN_REQUESTER_DESCRIPTION, CAMPAIGN_REQUESTER_TITLE,
   campaignDate, campaignExploitationLabel, campaignPersonLabel, campaignRequiresIrrigationDetails, campaignState,
-  campaignUsageOptions, emptyCampaignMeter, getCampaignField, initialCampaignAnswer,
+  campaignUsageOptions, getCampaignField, initialCampaignAnswer,
   setCampaignField, validateCampaignAnswer, validateCampaignIndices
 } from '@/lib/campaigns.js'
-import {countEditableNumberCharacters, formatNumberInput, getFormattedCaretPosition, normalizeNumberInput} from '@/lib/decimal-input.js'
 import {getUsageParent, normalizeUsageOption} from '@/lib/water-uses.js'
 import {getCampaignResponseAction, saveCampaignResponseAction} from '@/server/actions/campaigns.js'
 
@@ -25,24 +26,30 @@ const PointMap = dynamic(() => import('@/components/declarations/quick-declarati
 function NumericInput({value, onChange, ...props}) {
   const inputRef = useRef(null)
   function change(event) {
-    const count = countEditableNumberCharacters(event.target.value, event.target.selectionStart ?? event.target.value.length)
-    const next = normalizeNumberInput(event.target.value)
+    const count = event.target.value.slice(0, event.target.selectionStart ?? event.target.value.length).replaceAll(/\s/g, '').length
+    const next = normalizeCampaignNumberInput(event.target.value)
     onChange(next)
     requestAnimationFrame(() => {
       const input = inputRef.current
       if (input && document.activeElement === input) {
-        const position = getFormattedCaretPosition(formatNumberInput(next), count)
+        const formatted = formatCampaignNumberInput(next)
+        let position = 0
+        let characters = 0
+        while (position < formatted.length && characters < count) {
+          if (!/\s/.test(formatted[position])) characters++
+          position++
+        }
         input.setSelectionRange(position, position)
       }
     })
   }
-  return <input {...props} ref={inputRef} className='fr-input quick-declaration-control text-right font-semibold tabular-nums' type='text' inputMode='decimal' value={formatNumberInput(value)} placeholder='0' onChange={change} />
+  return <input {...props} ref={inputRef} className='fr-input quick-declaration-control text-right font-semibold tabular-nums' type='text' inputMode='decimal' value={formatCampaignNumberInput(value)} onChange={change} />
 }
 
 function UsageInput({value, options, update, path, readOnly, ...props}) {
   const [search, setSearch] = useState(null)
   const selected = options.find(option => option.value === value)
-  return <UsageCombobox {...props} options={options} selectedValue={value} readOnly={readOnly} required={!readOnly} value={selected?.label || (readOnly ? '' : search || '')} onUsageChange={changes => {
+  return <UsageCombobox {...props} variant='campaign' options={options} selectedValue={value} readOnly={readOnly} required={!readOnly} value={selected?.label || (readOnly ? '' : search || '')} onUsageChange={changes => {
     setSearch(changes.usageSearch)
     update(path, changes.usageId)
   }} />
@@ -53,10 +60,11 @@ function ResponseField({path, label, answer, errors, update, validateField, read
   const value = getCampaignField(answer, path)
   const error = errors[path]
   if (type === 'crops') return <CampaignCropsSelect id={id} value={value} onChange={value => update(path, value)} readOnly={readOnly} disabled={disabled} error={error} required={required} />
-  const inputProps = {id, name: path, readOnly, disabled, onBlur: () => validateField?.(path), 'aria-required': !readOnly && required, 'aria-invalid': Boolean(error), 'aria-describedby': error ? `${id}-error` : undefined}
+  const inputProps = {id, name: path, readOnly, disabled, onBlur: () => validateField?.(path), 'aria-required': !readOnly && required, 'aria-invalid': Boolean(error), 'aria-describedby': [hint && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(' ') || undefined}
   return (
     <div className={`fr-input-group fr-mb-0 ${error ? 'fr-input-group--error' : ''}`}>
-      <label className='fr-label text-sm' htmlFor={id}>{label}{!required && ' (facultatif)'}{hint && <span className='fr-hint-text'>{hint}</span>}</label>
+      <label className='fr-label text-sm' htmlFor={id}>{label}{!readOnly && required && <span aria-hidden='true'> *</span>}{!required && ' (facultatif)'}</label>
+      {hint && <p id={`${id}-hint`} className='fr-hint-text fr-mb-1w'>{hint}</p>}
       {options ? (
         <UsageInput id={id} name={path} value={value} options={options} path={path} update={update} readOnly={readOnly} disabled={disabled} invalid={Boolean(error)} describedBy={inputProps['aria-describedby']} />
       ) : type === 'number' ? (
@@ -70,7 +78,7 @@ function ResponseField({path, label, answer, errors, update, validateField, read
 }
 
 function PeriodFields({path, title, needs = false, season = false, fieldProps}) {
-  const dates = season ? 'Du 1er juin au 31 octobre 2026' : 'Du 31 octobre 2025 au 1er juin 2026'
+  const dates = season ? 'Du 1er juin au 31 octobre 2026' : 'Du 1er novembre 2025 au 31 mai 2026'
   const irrigationDetailsRequired = campaignRequiresIrrigationDetails(getCampaignField(fieldProps.answer, `${path}.usageId`), fieldProps.usageOptions)
   return (
     <fieldset className={`m-0 min-w-0 rounded border-t-4 p-3 md:p-4 ${season ? 'border-t-[#c3992a] bg-[#fff9e6]' : 'border-t-[#465f9d] bg-[#eef2fa]'}`}>
@@ -81,8 +89,8 @@ function PeriodFields({path, title, needs = false, season = false, fieldProps}) 
           <ResponseField {...fieldProps} path={`${path}.flow`} label='Débit demandé (m³/h)' />
           <ResponseField {...fieldProps} path={`${path}.volume`} label='Volume demandé (m³)' />
         </> : <>
-          {!season && <ResponseField {...fieldProps} path={`${path}.indexStart`} label='Index au 31/10/2025 (m³)' />}
-          <ResponseField {...fieldProps} path={`${path}.indexEnd`} label={season ? 'Index au 31/10/2026 (m³)' : 'Index au 01/06/2026 (m³)'} />
+          {!season && <ResponseField {...fieldProps} path={`${path}.indexStart`} label='Index au 01/11/2025' />}
+          <ResponseField {...fieldProps} path={`${path}.indexEnd`} label={season ? 'Index au 31/10/2026' : 'Index au 31/05/2026'} />
         </>}
         <div className='sm:col-span-2'>
           <ResponseField {...fieldProps} path={`${path}.usageId`} label={season ? 'Usage étiage' : 'Usage hors étiage'} options={fieldProps.usageOptions} />
@@ -217,8 +225,20 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
     } catch (error) { setError(error.message) } finally { inFlight.current = false; setSaving(false) }
   }
 
+  const pointDetails = (
+    <section className='my-4 grid gap-4 border bg-white p-4 md:grid-cols-2'>
+      <div><h2 className='fr-h6 fr-mb-1w'>Préleveur</h2><p className='fr-mb-1v font-semibold'>{campaignPersonLabel(preleveur)}</p><p className='fr-text--sm fr-mb-0'>SIRET : {preleveur.siret || 'Non renseigné'}<br />{preleveur.email || preleveur.user?.email || 'Email non renseigné'}<br />{preleveur.phoneNumber || preleveur.phone || preleveur.telephone || 'Téléphone non renseigné'}</p></div>
+      <div><h2 className='fr-h6 fr-mb-1w'>Point de prélèvement</h2><p className='fr-mb-1v'>{point.name}</p><p className='fr-text--sm fr-mb-1w'>{point.commune?.name || point.communeName || point.commune || 'Commune non renseignée'}</p>
+        {point.locationDescription && <p className='fr-text--sm fr-mb-1w'>{point.locationDescription}</p>}
+      </div>
+      {hasCoordinates && <div className='h-64 md:col-span-2' role='region' aria-label='Localisation du point de prélèvement'><PointMap points={mapPoints} /></div>}
+    </section>
+  )
+  const pointLabel = campaignExploitationLabel({point, countingCode: exploitation.countingCode || response.countingCode})
+
   return (
-    <CampaignShell admin={admin} title={campaignExploitationLabel({point, countingCode: exploitation.countingCode || response.countingCode})} description={campaign.name} actions={<Link className='fr-btn fr-btn--sm fr-btn--tertiary' href={applicant ? '/tableau-de-bord' : `${base}/${campaign.id}`}>{applicant ? 'Mon activité' : 'Retour à la campagne'}</Link>}>
+    <CampaignShell admin={admin} title={applicant ? CAMPAIGN_REQUESTER_TITLE : pointLabel} description={applicant ? CAMPAIGN_REQUESTER_DESCRIPTION : campaign.name} actions={<Link className='fr-btn fr-btn--sm fr-btn--tertiary' href={applicant ? '/tableau-de-bord' : `${base}/${campaign.id}`}>{applicant ? 'Mon activité' : 'Retour à la campagne'}</Link>}>
+      {applicant && <h2 className='fr-h5'>{pointLabel}</h2>}
       <div className='mb-4 flex flex-wrap items-center gap-3'><CampaignStatus response status={response.status} />
         {response.lastSubmittedAt && <span className='text-sm'>Premier envoi : {campaignDate(response.firstSubmittedAt)} · Dernier envoi : {campaignDate(response.lastSubmittedAt)}</span>}
         {permissions.canEdit && !editing && <button className='fr-btn fr-btn--sm fr-btn--secondary' type='button' onClick={() => setEditing(true)}>Modifier ma réponse</button>}
@@ -228,18 +248,12 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
       <PublicationNotice response={response} />
       {response.lastSubmittedAt && <CampaignVolumes volumes={response.volumes} />}
       {response.declarationId && !admin && <p className='fr-text--sm'><Link href={`/mes-declarations/${response.declarationId}`}>Consulter la déclaration d’index générée</Link></p>}
-      <section className='mb-4 grid gap-4 border bg-white p-4 md:grid-cols-2'>
-        <div><h2 className='fr-h6 fr-mb-1w'>Préleveur</h2><p className='fr-mb-1v font-semibold'>{campaignPersonLabel(preleveur)}</p><p className='fr-text--sm fr-mb-0'>SIRET : {preleveur.siret || 'Non renseigné'}<br />{preleveur.email || preleveur.user?.email || 'Email non renseigné'}<br />{preleveur.phoneNumber || preleveur.phone || preleveur.telephone || 'Téléphone non renseigné'}</p></div>
-        <div><h2 className='fr-h6 fr-mb-1w'>Point de prélèvement</h2><p className='fr-mb-1v'>{point.name}</p><p className='fr-text--sm fr-mb-1w'>{point.commune?.name || point.communeName || point.commune || 'Commune non renseignée'}</p>
-          {point.locationDescription && <p className='fr-text--sm fr-mb-1w'>{point.locationDescription}</p>}
-        </div>
-        {hasCoordinates && <div className='h-64 md:col-span-2' role='region' aria-label='Localisation du point de prélèvement'><PointMap points={mapPoints} /></div>}
-      </section>
+      {!applicant && pointDetails}
       {context.prefill?.active && <p className='fr-hint-text fr-mb-2w'>Données préremplies à vérifier.</p>}
-      {context.prefill?.noAuthorizedOffSeasonUsage && <p className='fr-hint-text fr-mb-2w'>Autorisation précédente : aucun usage autorisé hors étiage.</p>}
       {readOnly && error && <Alert className='mb-4' severity='error' title='Vérifiez votre réponse' description={error} />}
       {readOnly && success && <div className='mb-4' role='status'><Alert severity='success' title={success} small /></div>}
       <form ref={formRef} noValidate onSubmit={event => { event.preventDefault(); persist(true) }} className='grid gap-4'>
+        {!readOnly && <p className='fr-hint-text fr-mb-0'>Les champs marqués d’un astérisque (*) sont obligatoires.</p>}
         <section className='border bg-white p-4 md:p-5'>
           <h2 className='fr-h4'>Bilan des prélèvements 2025–2026</h2>
           <div className='grid gap-5'>
@@ -247,7 +261,7 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
               <div key={meter.compteurId || `new-${index}`} className='min-w-0 rounded border border-gray-200'>
                 <div className='flex flex-wrap items-center gap-3 border-b border-gray-200 bg-gray-50 px-3 py-3 md:px-4'>
                   <span className='fr-icon-dashboard-3-line flex h-9 w-9 shrink-0 items-center justify-center rounded bg-white text-[#000091]' aria-hidden='true' />
-                  {meter.compteurId && context.meters?.some(known => (known.compteurId || known.id) === meter.compteurId && known.serialNumber) ? <h3 className='fr-h6 fr-mb-0 min-w-0 flex-1 break-words'>Compteur <span className='font-mono'>{meter.serialNumber}</span></h3> : <div className='min-w-0 max-w-sm flex-1'><ResponseField {...fieldProps} path={`meters.${index}.serialNumber`} label='Numéro du compteur' type='text' maxLength={100} /></div>}
+                  {meter.compteurId && context.meters?.some(known => (known.compteurId || known.id) === meter.compteurId && known.serialNumber) ? <h3 className='fr-h6 fr-mb-0 min-w-0 flex-1 break-words'>Numéro de série de compteur : <span className='font-mono'>{meter.serialNumber}</span></h3> : <div className='min-w-0 max-w-sm flex-1'><ResponseField {...fieldProps} path={`meters.${index}.serialNumber`} label='Numéro de série de compteur' type='text' required={false} hint={!readOnly ? 'Nous n’avons pas le numéro de série de votre compteur. Pouvez-vous le renseigner ici' : undefined} maxLength={100} /></div>}
                   {!readOnly && !meter.compteurId && answer.meters.length > 1 && <button className='fr-btn fr-btn--sm fr-btn--tertiary' type='button' disabled={saving || !ready} onClick={() => { setAnswer(previous => ({...previous, meters: previous.meters.filter((_, meterIndex) => meterIndex !== index)})); setSuccess(null); setErrors({}); setIndexErrors({}) }}>Retirer ce compteur</button>}
                 </div>
                 <div className='grid gap-3 p-3 md:p-4 lg:grid-cols-2'>
@@ -258,8 +272,7 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
               </div>
             ))}
           </div>
-          {!readOnly && <button className='fr-btn fr-btn--secondary fr-btn--sm mt-4' type='button' disabled={saving || !ready || answer.meters.length >= 50} onClick={() => { setAnswer(previous => ({...previous, meters: [...previous.meters, emptyCampaignMeter()]})); setSuccess(null) }}>Ajouter un compteur</button>}
-          {!readOnly && <p className='fr-hint-text fr-mt-2w fr-mb-0'>Un compteur a été remplacé ? Indiquez-le dans le commentaire ; son historique sera vérifié avant l’envoi.</p>}
+          {!readOnly && <p className='fr-hint-text fr-mt-2w fr-mb-0'>Un compteur a été remplacé ? Indiquez-le dans le commentaire.</p>}
         </section>
         <section className='border bg-white p-4 md:p-5'>
           <h2 className='fr-h4'>Besoins 2027–2028</h2>
@@ -283,6 +296,7 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
           {!permissions.canSubmit && context.blockers?.length > 0 && !error && <span className='text-sm text-gray-600'>{context.blockers[0].replace(/\s*Vous pouvez enregistrer un brouillon\.?/g, '')}</span>}
         </div>}
       </form>
+      {applicant && pointDetails}
     </CampaignShell>
   )
 }

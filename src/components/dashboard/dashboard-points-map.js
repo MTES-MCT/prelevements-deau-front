@@ -736,6 +736,11 @@ const DashboardPointsMap = ({
         }
       })
 
+      map.on('idle', () => {
+        const rendered = map.queryRenderedFeatures({layers: [MARKERS_LAYER_ID, PIEZOMETER_LAYER_ID, FLOW_STATION_LAYER_ID]})
+        map.getContainer().dataset.mapReady = rendered.length > 0 ? 'true' : 'false'
+      })
+
       const visibleFeatures = getVisibleMapFeatures({
         monitoringStations: monitoringStationsRef.current,
         points: pointsRef.current,

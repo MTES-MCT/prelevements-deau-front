@@ -1,8 +1,11 @@
 import {normalizeCampaignCrops} from './campaign-crops.js'
+import {campaignNumberError} from './campaign-numbers.js'
 
 export const CAMPAIGN_TYPE = 'DROPT_INDEX_NEEDS_2026_2027'
 export const CAMPAIGN_TYPE_LABEL = 'Collecte des index de prélèvements et des besoins – irrigants OUGC Dropt'
 export const CAMPAIGN_LAST_READING_DATE = '2026-10-31'
+export const CAMPAIGN_REQUESTER_TITLE = 'Déclarer mes prélèvements et mes besoins'
+export const CAMPAIGN_REQUESTER_DESCRIPTION = 'Bilan de campagne 2026-2027 et recensement des besoins 2027-2028'
 
 export const CAMPAIGN_STATUS_LABELS = {
   DRAFT: 'Brouillon', OPEN: 'Ouverte', CLOSED: 'Clôturée', ARCHIVED: 'Archivée'
@@ -32,18 +35,13 @@ export function isCampaignRequester(permissions = {}) {
 export function campaignParticipation(campaign) {
   const {total = 0, submitted = 0, drafts = 0} = campaign.progress || {}
   const complete = total > 0 && submitted >= total
-  const closed = ['CLOSED', 'ARCHIVED'].includes(campaignState(campaign))
   const canRespond = campaign.permissions?.canRespond ?? campaignState(campaign) === 'OPEN'
-  const singular = total === 1
   return {
     complete,
-    label: singular
-      ? complete ? 'Réponse envoyée' : closed ? 'Réponse non envoyée' : drafts ? 'Brouillon enregistré' : 'Réponse à compléter'
-      : `${submitted} réponse${submitted === 1 ? '' : 's'} envoyée${submitted === 1 ? '' : 's'} sur ${total}`,
+    label: `${submitted} point${submitted > 1 ? 's' : ''} déclaré${submitted > 1 ? 's' : ''} sur ${total}`,
     action: complete || !canRespond
-      ? singular ? 'Consulter ma réponse' : 'Consulter mes réponses'
-      : drafts ? singular ? 'Reprendre ma réponse' : 'Reprendre mes réponses'
-        : singular ? 'Compléter ma réponse' : 'Compléter mes réponses'
+      ? 'Consulter ma déclaration'
+      : drafts || submitted ? 'Reprendre ma déclaration' : 'Commencer ma déclaration'
   }
 }
 
@@ -55,7 +53,7 @@ export function singleCampaignResponseHref(campaignId, permissions, responses) {
 export function campaignExploitationLabel(item) {
   const point = item?.point || item?.pointPrelevement || item?.exploitation?.pointPrelevement
   const code = item?.countingCode || item?.exploitation?.countingCode
-  return `${point?.usageName || point?.name || 'Point de prélèvement'}${code ? ` — Code comptage : ${code}` : ''}`
+  return `${point?.usageName || point?.name || 'Point de prélèvement'}${code ? ` — Code compteur Agence de l’eau : ${code}` : ''}`
 }
 
 export function campaignData(result) {
@@ -129,10 +127,10 @@ export function validateCampaignIndices(data) {
     const middle = comparableIndex(meter.offSeason?.indexEnd)
     const end = comparableIndex(meter.season?.indexEnd)
     if (start !== null && middle !== null && middle < start) {
-      errors[`meters.${index}.offSeason.indexEnd`] = 'L’index du 01/06/2026 doit être supérieur ou égal à celui du 31/10/2025.'
+      errors[`meters.${index}.offSeason.indexEnd`] = 'L’index du 31/05/2026 doit être supérieur ou égal à celui du 01/11/2025.'
     }
     if (end !== null && ((middle !== null && end < middle) || (middle === null && start !== null && end < start))) {
-      errors[`meters.${index}.season.indexEnd`] = `L’index du 31/10/2026 doit être supérieur ou égal à celui du ${middle !== null ? '01/06/2026' : '31/10/2025'}.`
+      errors[`meters.${index}.season.indexEnd`] = `L’index du 31/10/2026 doit être supérieur ou égal à celui du ${middle !== null ? '31/05/2026' : '01/11/2025'}.`
     }
   }
   return errors
@@ -142,7 +140,7 @@ export function validateCampaignAnswer(data, usages = []) {
   const errors = {}
   const number = (value, path) => {
     if (comparableIndex(value) === null) {
-      errors[path] = 'Saisissez un nombre positif ou zéro, avec au plus 12 chiffres avant la virgule et 4 après.'
+      errors[path] = campaignNumberError(value, path.split('.').at(-1))
     }
   }
   const period = (value, path, numericFields) => {
@@ -155,7 +153,6 @@ export function validateCampaignAnswer(data, usages = []) {
     if (irrigationDetailsRequired && !normalizeCampaignCrops(value?.crops).length) errors[`${path}.crops`] = 'Sélectionnez les cultures, ou choisissez « Aucune ».'
   }
   for (const [index, meter] of (data.meters || []).entries()) {
-    if (!meter.serialNumber?.trim()) errors[`meters.${index}.serialNumber`] = 'Renseignez le numéro du compteur.'
     period(meter.offSeason, `meters.${index}.offSeason`, ['indexStart', 'indexEnd', 'surface'])
     period(meter.season, `meters.${index}.season`, ['indexEnd', 'surface'])
   }
