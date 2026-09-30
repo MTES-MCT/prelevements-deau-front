@@ -7,7 +7,8 @@ import Link from 'next/link'
 import {useRouter} from 'next/navigation'
 
 import {CampaignPagination, CampaignProgress, CampaignShell, CampaignStatus, CampaignVolumes} from '@/components/campaigns/campaign-common.js'
-import {campaignData, campaignDate, campaignExploitationLabel, campaignPersonLabel, campaignState, formatCampaignVolume, isCampaignRequester} from '@/lib/campaigns.js'
+import CampaignRequesterPoints from '@/components/campaigns/campaign-requester-points.js'
+import {CAMPAIGN_REQUESTER_DESCRIPTION, CAMPAIGN_REQUESTER_TITLE, campaignData, campaignDate, campaignExploitationLabel, campaignPersonLabel, campaignState, formatCampaignVolume, isCampaignRequester} from '@/lib/campaigns.js'
 import {changeCampaignStateAction, deleteCampaignAction, getCampaignResponsesAction, getCampaignResultsAction} from '@/server/actions/campaigns.js'
 import {exportCampaignResultsAction} from '@/server/actions/exports.js'
 
@@ -74,9 +75,9 @@ export default function CampaignDetail({initialData, initialResponses, initialEr
     } catch (error) { setError(error.message) } finally { setBusy(false) }
   }
   return (
-    <CampaignShell admin={admin} title={requester ? 'Mes index et mes besoins' : campaign.name} description={requester ? campaign.name : undefined} actions={<Link className='fr-btn fr-btn--sm fr-btn--tertiary fr-btn--icon-left fr-icon-arrow-left-line' href={requester ? '/tableau-de-bord' : base}>{requester ? 'Mon activité' : 'Toutes les campagnes'}</Link>}>
+    <CampaignShell admin={admin} title={requester ? CAMPAIGN_REQUESTER_TITLE : campaign.name} description={requester ? CAMPAIGN_REQUESTER_DESCRIPTION : undefined} actions={<Link className='fr-btn fr-btn--sm fr-btn--tertiary fr-btn--icon-left fr-icon-arrow-left-line' href={requester ? '/tableau-de-bord' : base}>{requester ? 'Mon activité' : 'Toutes les campagnes'}</Link>}>
       <section className='mb-4 border bg-white p-4 md:p-5'>
-        <div className='flex flex-wrap items-start justify-between gap-4'><div>{!requester && <CampaignStatus status={state} />}<p className={`fr-text--sm ${requester ? 'fr-mb-1v' : 'fr-mt-2w fr-mb-1v'}`}>{requester ? campaign.closesOn ? `Échéance : ${campaignDate(campaign.closesOn)}` : 'Dates à venir' : campaign.opensOn && campaign.closesOn ? `Du ${campaignDate(campaign.opensOn)} au ${campaignDate(campaign.closesOn)}` : 'Dates à renseigner'}</p><p className='fr-text--sm fr-mb-0'>{requester ? 'À transmettre à' : 'Collecteur :'} {campaignPersonLabel(campaign.collecteur)}</p></div><CampaignProgress requester={requester} progress={campaign.progress} /></div>
+        <div className='flex flex-wrap items-start justify-between gap-4'><div>{!requester && <CampaignStatus status={state} />}<p className={`fr-text--sm ${requester ? 'fr-mb-1v' : 'fr-mt-2w fr-mb-1v'}`}>{requester ? campaign.closesOn ? `Échéance de la campagne : ${campaignDate(campaign.closesOn)}` : 'Dates à venir' : campaign.opensOn && campaign.closesOn ? `Du ${campaignDate(campaign.opensOn)} au ${campaignDate(campaign.closesOn)}` : 'Dates à renseigner'}</p>{!requester && <p className='fr-text--sm fr-mb-0'>Collecteur : {campaignPersonLabel(campaign.collecteur)}</p>}</div><CampaignProgress requester={requester} progress={campaign.progress} /></div>
         {permissions.canManage && <div className='mt-4 flex flex-wrap gap-2'>
           {campaign.status !== 'ARCHIVED' && <Link className='fr-btn fr-btn--sm fr-btn--secondary' href={`/administration/campagnes/${campaign.id}/modifier`}>Modifier</Link>}
           {(state === 'DRAFT' || state === 'CLOSED') && <button className='fr-btn fr-btn--sm' type='button' disabled={busy || !canOpen} onClick={() => changeState('open')}>{state === 'CLOSED' ? 'Rouvrir' : 'Ouvrir la campagne'}</button>}
@@ -99,21 +100,23 @@ export default function CampaignDetail({initialData, initialResponses, initialEr
         <button className='fr-btn fr-btn--secondary' type='submit' disabled={loading}>Filtrer</button>
       </form>}
       {loading ? <p role='status'>Chargement des réponses…</p> : !error && <>
-        {tab === 'results' && result.totals && <RequestedVolumes totals={result.totals} />}
-        {tab === 'results' && <CampaignVolumes volumes={result.totals?.publishedVolumes} />}
-        {tab === 'results' && <p className='fr-text--sm'>Ces besoins sont des volumes demandés, pas des volumes prélevés. Les brouillons ne sont pas inclus.</p>}
-        <ul className='m-0 grid list-none gap-2 p-0'>
-          {result.items?.map(response => <li key={response.id} className='border bg-white p-4'>
-            <div className='flex flex-wrap items-center justify-between gap-3'><div className='min-w-0'><p className='fr-mb-1v font-semibold'>{campaignExploitationLabel(response)}</p>{!requester && <p className='fr-text--sm fr-mb-1w'>{campaignPersonLabel(response.preleveur)}</p>}<CampaignStatus response status={response.status} />{response.lastSubmittedAt && <span className='ml-2 text-sm'>Dernier envoi : {campaignDate(response.lastSubmittedAt)}</span>}{response.hasDraft && response.lastSubmittedAt && <p className='fr-hint-text fr-mt-1w fr-mb-0'>Modification en brouillon, pas encore envoyée</p>}</div>
-              {(requester || response.lastSubmittedAt || permissions.canRespond || permissions.canManage) && <Link className='fr-btn fr-btn--sm fr-btn--secondary' href={`${base}/${campaign.id}/reponses/${response.id}`}>{requester ? !permissions.canRespond || response.lastSubmittedAt ? 'Consulter ma réponse' : response.hasDraft ? 'Reprendre ma réponse' : 'Compléter ma réponse' : 'Consulter'}</Link>}
-            </div>
-            {response.lastSubmittedAt && response.publicationStatus && !['PUBLISHED', 'COMPLETED'].includes(response.publicationStatus) && <p className='fr-text--sm fr-mt-2w fr-mb-0 text-[#695240]'>Réponse envoyée · Volumes en attente de vérification</p>}
-            {tab === 'results' && <ResponseNeeds response={response} />}
-            {tab === 'results' && response.volumes && <p className='fr-text--sm fr-mt-2w fr-mb-0'><strong>Volumes prélevés calculés :</strong> hors étiage {formatCampaignVolume(response.volumes.offSeason)} · étiage {formatCampaignVolume(response.volumes.season)}{response.volumes.partial ? ' · Résultat incomplet' : ''}</p>}
-          </li>)}
-        </ul>
-        {!result.items?.length && <p className='border bg-white p-4'>{requester ? 'Aucun point à compléter pour cette campagne.' : 'Aucune réponse ne correspond à ces filtres.'}</p>}
-        <CampaignPagination page={result.page || 1} total={result.total || 0} pageSize={result.pageSize || 25} onChange={page => load(page)} />
+        {requester ? <CampaignRequesterPoints campaignId={campaign.id} initialPage={result} canRespond={permissions.canRespond} /> : <>
+          {tab === 'results' && result.totals && <RequestedVolumes totals={result.totals} />}
+          {tab === 'results' && <CampaignVolumes volumes={result.totals?.publishedVolumes} />}
+          {tab === 'results' && <p className='fr-text--sm'>Ces besoins sont des volumes demandés, pas des volumes prélevés. Les brouillons ne sont pas inclus.</p>}
+          <ul className='m-0 grid list-none gap-2 p-0'>
+            {result.items?.map(response => <li key={response.id} className='border bg-white p-4'>
+              <div className='flex flex-wrap items-center justify-between gap-3'><div className='min-w-0'><p className='fr-mb-1v font-semibold'>{campaignExploitationLabel(response)}</p>{!requester && <p className='fr-text--sm fr-mb-1w'>{campaignPersonLabel(response.preleveur)}</p>}<CampaignStatus response status={response.status} />{response.lastSubmittedAt && <span className='ml-2 text-sm'>Dernier envoi : {campaignDate(response.lastSubmittedAt)}</span>}{response.hasDraft && response.lastSubmittedAt && <p className='fr-hint-text fr-mt-1w fr-mb-0'>Modification en brouillon, pas encore envoyée</p>}</div>
+                {(requester || response.lastSubmittedAt || permissions.canRespond || permissions.canManage) && <Link className='fr-btn fr-btn--sm fr-btn--secondary' href={`${base}/${campaign.id}/reponses/${response.id}`}>{requester ? !permissions.canRespond || response.lastSubmittedAt ? 'Consulter ma réponse' : response.hasDraft ? 'Reprendre ma réponse' : 'Compléter ma réponse' : 'Consulter'}</Link>}
+              </div>
+              {response.lastSubmittedAt && response.publicationStatus && !['PUBLISHED', 'COMPLETED'].includes(response.publicationStatus) && <p className='fr-text--sm fr-mt-2w fr-mb-0 text-[#695240]'>Réponse envoyée · Volumes en attente de vérification</p>}
+              {tab === 'results' && <ResponseNeeds response={response} />}
+              {tab === 'results' && response.volumes && <p className='fr-text--sm fr-mt-2w fr-mb-0'><strong>Volumes prélevés calculés :</strong> hors étiage {formatCampaignVolume(response.volumes.offSeason)} · étiage {formatCampaignVolume(response.volumes.season)}{response.volumes.partial ? ' · Résultat incomplet' : ''}</p>}
+            </li>)}
+          </ul>
+          {!result.items?.length && <p className='border bg-white p-4'>{requester ? 'Aucun point à compléter pour cette campagne.' : 'Aucune réponse ne correspond à ces filtres.'}</p>}
+          <CampaignPagination page={result.page || 1} total={result.total || 0} pageSize={result.pageSize || 25} onChange={page => load(page)} />
+        </>}
       </>}
     </CampaignShell>
   )

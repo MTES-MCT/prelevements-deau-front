@@ -39,6 +39,8 @@ const GroupedMultiselect = ({
   onChange,
   disabled,
   searchable = false,
+  showCheckboxes = false,
+  required = false,
   confirmSelection = false,
   showSelectionActions = false,
   minSelected = 0,
@@ -375,7 +377,7 @@ const GroupedMultiselect = ({
         }
       }}
     >
-      <label className={hideLabel ? 'sr-only' : 'fr-label'} htmlFor={selectId}>{label}</label>
+      <label className={hideLabel ? 'sr-only' : 'fr-label'} htmlFor={selectId}>{label}{required && <span aria-hidden='true'> *</span>}</label>
       {hint && <span className='fr-hint-text'>{hint}</span>}
 
       <Box
@@ -488,6 +490,7 @@ const GroupedMultiselect = ({
             role='listbox'
             aria-label={label || placeholder || 'Sélection multiple'}
             aria-multiselectable='true'
+            aria-required={required}
             tabIndex={-1}
             sx={{padding: 0, minHeight: 0, overflowY: 'auto', maxHeight: 300}}
           >
@@ -542,7 +545,11 @@ const GroupedMultiselect = ({
                       onClick={isDisabled ? undefined : () => toggleOption(option)}
                       onKeyDown={handleKeyDown}
                     >
-                      {isSelected && (
+                      {showCheckboxes ? (
+                        <span aria-hidden='true' data-selection-indicator='checkbox' data-checked={isSelected} className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-xs border text-xs ${isSelected ? 'border-[#000091] bg-[#000091] text-white' : 'border-gray-500 bg-white'}`}>
+                          {isSelected ? '✓' : ''}
+                        </span>
+                      ) : isSelected && (
                         <span aria-hidden className='selector-option-check mr-1'>
                           ✓
                         </span>
