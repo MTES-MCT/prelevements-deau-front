@@ -150,6 +150,16 @@ test('un index proposé sans compteur rattaché conserve sa valeur et son absenc
   t.is(data.meters[0].season.indexEnd, '')
   t.is(setCampaignField(data, 'meters.0.offSeason.indexStart', '144414').meters[0].offSeason.indexStart, '144414')
   t.is(source.meters[0].offSeason.indexStart, '144413')
+  const numberedSource = structuredClone(source)
+  numberedSource.meters[0].serialNumber = 'SYNTH-SOURCE-001'
+  const numberedData = initialCampaignAnswer(numberedSource, [])
+  t.is(numberedData.meters[0].compteurId, null)
+  t.is(numberedData.meters[0].serialNumber, 'SYNTH-SOURCE-001')
+  t.is(numberedData.meters[0].offSeason.indexStart, '144413')
+  const edited = setCampaignField(numberedData, 'meters.0.serialNumber', 'SYNTH-CORRECTED-001')
+  t.is(edited.meters[0].compteurId, null)
+  t.is(edited.meters[0].serialNumber, 'SYNTH-CORRECTED-001')
+  t.is(numberedSource.meters[0].serialNumber, 'SYNTH-SOURCE-001')
 })
 
 test('les trois index doivent croître pour chaque compteur, sans comparaison entre compteurs', t => {
