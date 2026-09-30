@@ -16,7 +16,7 @@ function buildSourcesSearch({
   statuses = [],
   types
 } = {}) {
-  const searchParams = new URLSearchParams()
+  const searchParams = new URLSearchParams({view: 'summary'})
   const filteredStatuses = Array.isArray(statuses)
     ? [...new Set(statuses.map(status => String(status).trim()).filter(Boolean))]
     : []

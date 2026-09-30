@@ -10,13 +10,14 @@ import {
 
 import {SegmentedControl} from '@codegouvfr/react-dsfr/SegmentedControl'
 import MuiTooltip from '@mui/material/Tooltip'
+import dynamic from 'next/dynamic'
 
-import TimeSeriesChart from '@/components/ui/TimeSeriesChart/index.js'
+import DeferredRender from '@/components/ui/deferred-render.js'
 import {getMonitoringStationMapSummary} from '@/lib/monitoring-stations.js'
 import {
-  getDashboardPiezometryAction,
-  getDashboardRiverFlowsAction
-} from '@/server/actions/dashboard.js'
+  loadDashboardPiezometry,
+  loadDashboardRiverFlows
+} from '@/lib/dashboard-client.js'
 
 import {
   buildResourceHash,
@@ -41,6 +42,16 @@ import {
 } from './station-visibility.js'
 
 const EMPTY_ARRAY = []
+const DynamicTimeSeriesChart = dynamic(() => import('@/components/ui/TimeSeriesChart/index.js'), {ssr: false})
+const TimeSeriesChart = props => (
+  <DeferredRender
+    minHeight={props.height ?? 360}
+    placeholder={<div className='flex min-h-[300px] items-center justify-center bg-gray-50' role='status'>Chargement de la visualisation…</div>}
+    rootMargin='400px 0px'
+  >
+    <DynamicTimeSeriesChart {...props} />
+  </DeferredRender>
+)
 const STATION_COLORS = [
   '#000091',
   '#009081',
@@ -477,8 +488,10 @@ const DashboardWaterResources = ({
   selectedZoneCodes,
   showTitle = true
 }) => {
-  const [piezometry, setPiezometry] = useState(initialPiezometry)
-  const [riverFlows, setRiverFlows] = useState(initialRiverFlows)
+  const [piezometryData, setPiezometry] = useState(initialPiezometry)
+  const [riverFlowsData, setRiverFlows] = useState(initialRiverFlows)
+  const [piezometryScope, setPiezometryScope] = useState(selectedZoneCodes.join(','))
+  const [flowScope, setFlowScope] = useState(selectedZoneCodes.join(','))
   const [piezometryPeriod, setPiezometryPeriod] = useState(DEFAULT_PIEZOMETRY_PERIOD)
   const [flowPeriod, setFlowPeriod] = useState(DEFAULT_FLOW_PERIOD)
   const [piezometryMode, setPiezometryMode] = useState(DEFAULT_PIEZOMETRY_MODE)
@@ -489,11 +502,14 @@ const DashboardWaterResources = ({
   const [isPiezometryLoading, setIsPiezometryLoading] = useState(initialPiezometry === null)
   const [isFlowLoading, setIsFlowLoading] = useState(initialRiverFlows === null)
   const requestIds = useRef({piezometry: 0, flow: 0})
+  const controllers = useRef({piezometry: null, flow: null})
   const lastRawPiezometryPeriod = useRef('month')
   const lastIpsPiezometryPeriod = useRef(DEFAULT_PIEZOMETRY_PERIOD)
   const flowLoadingRef = useRef(false)
   const didMountZoneEffect = useRef(false)
   const zoneCodesKey = selectedZoneCodes.join(',')
+  const piezometry = piezometryScope === zoneCodesKey ? piezometryData : null
+  const riverFlows = flowScope === zoneCodesKey ? riverFlowsData : null
   const piezometryStations = piezometry?.stations ?? EMPTY_ARRAY
   const flowStations = riverFlows?.stations ?? EMPTY_ARRAY
   const piezometryColors = useMemo(() => assignStationColors(piezometryStations), [piezometryStations])
@@ -524,18 +540,21 @@ const DashboardWaterResources = ({
   }, [piezometryMode, piezometryStations])
 
   useEffect(() => {
+    // Loading clears the series, but only a completed response resets choices.
+    if (!piezometry) return
     setPiezometryVisibility(previous => mergeVisibility(previous, piezometryStations))
-  }, [piezometryStations])
+  }, [piezometry, piezometryStations])
 
   useEffect(() => {
+    if (!riverFlows) return
     setFlowVisibility(previous => mergeVisibility(previous, flowStations))
-  }, [flowStations])
+  }, [flowStations, riverFlows])
 
   useEffect(() => {
     const stations = [...piezometryStations, ...flowStations]
       .map(station => getMonitoringStationMapSummary(station))
-    onStationsChange(stations)
-  }, [flowStations, onStationsChange, piezometryStations])
+    onStationsChange(stations, zoneCodesKey)
+  }, [flowStations, onStationsChange, piezometryStations, zoneCodesKey])
 
   const loadPiezometry = useCallback(async (
     period,
@@ -544,23 +563,22 @@ const DashboardWaterResources = ({
   ) => {
     const requestId = requestIds.current.piezometry + 1
     requestIds.current.piezometry = requestId
+    controllers.current.piezometry?.abort()
+    const controller = new AbortController()
+    controllers.current.piezometry = controller
+    setPiezometry(null)
+    setPiezometryScope(zoneCodes.join(','))
     setIsPiezometryLoading(true)
     setPiezometryError(null)
-    let result
     try {
-      result = await getDashboardPiezometryAction({period, zoneCodes, includeIps})
-    } catch {
-      result = {success: false}
-    }
-
-    if (requestIds.current.piezometry === requestId) {
-      if (result.success) {
-        setPiezometry(result.data)
-      } else {
-        setPiezometryError(result.error || 'Impossible de charger les niveaux piézométriques.')
+      const data = await loadDashboardPiezometry({period, zoneCodes, includeIps}, {signal: controller.signal})
+      if (requestIds.current.piezometry === requestId) setPiezometry(data)
+    } catch (error) {
+      if (!controller.signal.aborted && requestIds.current.piezometry === requestId) {
+        setPiezometryError(error.message || 'Impossible de charger les niveaux piézométriques.')
       }
-
-      setIsPiezometryLoading(false)
+    } finally {
+      if (!controller.signal.aborted && requestIds.current.piezometry === requestId) setIsPiezometryLoading(false)
     }
   }, [selectedZoneCodes])
 
@@ -575,27 +593,36 @@ const DashboardWaterResources = ({
 
     const requestId = requestIds.current.flow + 1
     requestIds.current.flow = requestId
+    controllers.current.flow?.abort()
+    const controller = new AbortController()
+    controllers.current.flow = controller
+    if (!skipIfLoading) setRiverFlows(null)
+    setFlowScope(zoneCodes.join(','))
     flowLoadingRef.current = true
     setIsFlowLoading(true)
     setFlowError(null)
-    let result
     try {
-      result = await getDashboardRiverFlowsAction({period, zoneCodes})
-    } catch {
-      result = {success: false}
-    }
-
-    if (requestIds.current.flow === requestId) {
-      if (result.success) {
-        setRiverFlows(result.data)
-      } else {
-        setFlowError(result.error || 'Impossible de charger les débits.')
+      const data = await loadDashboardRiverFlows({period, zoneCodes}, {signal: controller.signal})
+      if (requestIds.current.flow === requestId) setRiverFlows(data)
+    } catch (error) {
+      if (!controller.signal.aborted && requestIds.current.flow === requestId) {
+        setFlowError(error.message || 'Impossible de charger les débits.')
       }
-
-      setIsFlowLoading(false)
-      flowLoadingRef.current = false
+    } finally {
+      if (!controller.signal.aborted && requestIds.current.flow === requestId) {
+        setIsFlowLoading(false)
+        flowLoadingRef.current = false
+      }
     }
   }, [selectedZoneCodes])
+
+  useEffect(() => {
+    const pending = controllers.current
+    return () => {
+      pending.piezometry?.abort()
+      pending.flow?.abort()
+    }
+  }, [])
 
   useEffect(() => {
     const hashState = getInitialResourceState(

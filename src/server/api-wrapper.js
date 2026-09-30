@@ -73,7 +73,8 @@ export async function authenticatedFetch(url, options = {}) {
     body,
     headers = {},
     signal,
-    requireAuth = true
+    requireAuth = true,
+    cache = 'no-store'
   } = options
 
   const fetchHeaders = {...headers}
@@ -93,7 +94,8 @@ export async function authenticatedFetch(url, options = {}) {
 
   const fetchOptions = {
     method,
-    headers: fetchHeaders
+    headers: fetchHeaders,
+    cache
   }
 
   if (signal) {

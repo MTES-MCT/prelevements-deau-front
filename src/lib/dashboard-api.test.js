@@ -2,7 +2,8 @@ import test from 'ava'
 
 import {
   buildDashboardMapSearch,
-  buildDashboardTerritorySearch
+  buildDashboardTerritorySearch,
+  buildDashboardWaterResourceSearch
 } from './dashboard-api.js'
 
 test('le dashboard peut exclure le corpus de points de sa réponse initiale', t => {
@@ -14,6 +15,15 @@ test('le dashboard peut exclure le corpus de points de sa réponse initiale', t 
     }),
     '?zones=zone-1%2Czone-2&period=2026-08&includePoints=false'
   )
+})
+
+test('les filtres de volume ne demandent que leur bloc et dédupliquent les sections', t => {
+  t.is(buildDashboardTerritorySearch({year: 2025, sections: ['volumesByUsage', 'volumesByUsage'], includePoints: false}), '?year=2025&includePoints=false&sections=volumesByUsage')
+})
+
+test('les ressources transmettent uniquement la période et les zones demandées', t => {
+  t.is(buildDashboardWaterResourceSearch({zoneCodes: ['DEP-33'], period: 'year', includeIps: true}), '?zones=DEP-33&period=year&includeIps=true')
+  t.is(buildDashboardWaterResourceSearch({period: 'week', includeIps: false}), '?period=week')
 })
 
 test('le comportement historique du dashboard conserve les points par défaut', t => {
