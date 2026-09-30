@@ -134,5 +134,15 @@ test('les index de deux exploitations sur la fiche PP se sélectionnent et se ch
     return [...new Set(requests.filter(request => request.path === '/api/aggregated-series' && request.query.metricTypeCode === 'index').map(request => request.query.exploitationId))].sort()
   }).toEqual([countingIds.first, countingIds.second].sort())
   const requests = await getRequests(context, apiToken)
-  expect(requests.find(request => request.path === '/api/aggregated-series/options').query.includeExploitationIndexes).toBe('true')
+  // This fixture represents an older API without summary support. The first
+  // request negotiates the compact view; its fallback must still request every
+  // exploitation index, without conflating the two counting scopes above.
+  const optionRequests = requests.filter(request => request.path === '/api/aggregated-series/options')
+  expect(optionRequests.map(request => request.query)).toEqual([
+    expect.objectContaining({view: 'chart', detail: 'summary'}),
+    expect.objectContaining({view: 'chart', includeExploitationIndexes: 'true', includeMeterReadings: 'true'})
+  ])
+  expect(optionRequests[0].query).not.toHaveProperty('includeExploitationIndexes')
+  expect(optionRequests[0].query).not.toHaveProperty('includeMeterReadings')
+  expect(optionRequests[1].query).not.toHaveProperty('detail')
 })
