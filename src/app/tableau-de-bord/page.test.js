@@ -54,7 +54,17 @@ test('les chiffres du tableau de bord n’attendent pas les invitations, qui res
   flow.summary.resolve({success: true, data: {data: {items: [{id: 'campaign'}]}}})
   const html = renderToStaticMarkup(await pending)
   t.true(html.includes('Campagne reçue'))
-  t.true(html.includes('Autres déclarations'))
+  t.false(html.includes('Autres déclarations'))
+  t.false(html.includes('/mes-declarations/new'))
+})
+
+test('le préleveur sans campagne conserve la création de déclaration', async t => {
+  const flow = harness()
+  flow.summary.resolve({success: true, data: {data: {items: []}}})
+  const html = renderToStaticMarkup(await flow.actions({isPreleveur: true}))
+  t.deepEqual(flow.calls, ['types', 'campaigns'])
+  t.false(html.includes('Campagne reçue'))
+  t.true(html.includes('Déclarer mes prélèvements en eau'))
   t.true(html.includes('/mes-declarations/new'))
 })
 
