@@ -24,6 +24,8 @@ export function useSelectedVolumeTotals({
   selectedRange,
   committedRange,
   isLoading = false,
+  pendingParameters = [],
+  parameterErrors,
   error,
   getVolumeValuesForRange
 }) {
@@ -75,7 +77,7 @@ export function useSelectedVolumeTotals({
       // Do not show a previous selection's number while the user drags.
       total = LOADING_TOTAL
     } else if (selectedKey === fullKey) {
-      total = isLoading ? LOADING_TOTAL : error
+      total = isLoading || pendingParameters.includes(parameter.parameterId) ? LOADING_TOTAL : error || parameterErrors?.has(parameter.parameterId)
         ? ERROR_TOTAL
         : sumVolumeValues(seriesMap?.get(parameter.parameterId)?.values)
     } else if (typeof getVolumeValuesForRange !== 'function') {

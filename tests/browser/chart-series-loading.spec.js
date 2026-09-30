@@ -25,6 +25,96 @@ async function getRequests(context, apiToken) {
 }
 const aggregates = requests => requests.filter(request => request.path === '/api/aggregated-series')
 
+async function controlFixture(context, apiToken, params) {
+  const response = await context.request.get(`http://127.0.0.1:3431/api/__chart-series-control?${new URLSearchParams(params)}`, {headers: {authorization: `Bearer ${apiToken}`}})
+  expect(response.ok()).toBe(true)
+}
+
+test('le volume SSR arrive avant le débit et les index ne chargent qu’à l’ouverture du sélecteur', async ({page, context}) => {
+  const apiToken = await authenticate(context)
+  await controlFixture(context, apiToken, {holdMetric: 'débit'})
+  let browserAggregates = 0
+  page.on('request', request => { if (new URL(request.url()).pathname === '/api/aggregated-series') browserAggregates++ })
+  try {
+    await page.goto(`${frontUrl}/declarants/${chartSeriesIds.collecteur}`, {waitUntil: 'commit'})
+    await expect(page.getByRole('figure', {name: 'Graphique séries temporelles'})).toBeVisible({timeout: 15_000})
+    await expect(page.getByLabel('Totaux sur la période affichée')).toContainText(/300\s*m³/)
+    await expect(page.getByRole('status').filter({hasText: /Chargement : Débit/})).toBeVisible()
+    const requests = await getRequests(context, apiToken)
+    expect(aggregates(requests)).toHaveLength(2)
+    expect(aggregates(requests).find(request => request.query.metricTypeCode === 'débit').completedAt).toBeUndefined()
+    expect(requests.filter(request => request.path.endsWith('/options')).map(request => request.query.detail)).toEqual(['summary'])
+    expect(browserAggregates).toBe(0)
+  } finally {
+    await controlFixture(context, apiToken, {releaseMetric: 'débit'})
+  }
+  await expect(page.getByRole('status').filter({hasText: /Chargement : Débit/})).toHaveCount(0)
+  await page.getByRole('button', {name: 'Paramètres à afficher', exact: true}).click()
+  await expect(page.getByText('Index déclaré du compteur synthétique', {exact: true})).toBeVisible()
+  expect((await getRequests(context, apiToken)).filter(request => request.path.endsWith('/options'))).toHaveLength(2)
+  expect(aggregates(await getRequests(context, apiToken))).toHaveLength(2)
+  await page.keyboard.press('Escape')
+  await page.getByRole('button', {name: 'Paramètres à afficher', exact: true}).click()
+  expect((await getRequests(context, apiToken)).filter(request => request.path.endsWith('/options'))).toHaveLength(2)
+})
+
+test('une erreur de chargement des index conserve le graphe et permet de réessayer', async ({page, context}) => {
+  const apiToken = await authenticate(context)
+  await controlFixture(context, apiToken, {failDetails: '1'})
+  await page.goto(`${frontUrl}/declarants/${chartSeriesIds.collecteur}`)
+  await expect(page.getByRole('figure', {name: 'Graphique séries temporelles'})).toBeVisible({timeout: 15_000})
+  await page.getByRole('button', {name: 'Paramètres à afficher', exact: true}).click()
+  await expect(page.getByRole('alert').filter({hasText: 'Impossible de charger les index'})).toBeVisible()
+  await expect(page.getByLabel('Totaux sur la période affichée')).toContainText(/300\s*m³/)
+  await page.getByRole('button', {name: 'Réessayer', exact: true}).click()
+  await expect(page.getByText('Index déclaré du compteur synthétique', {exact: true})).toBeVisible()
+  expect(aggregates(await getRequests(context, apiToken))).toHaveLength(2)
+})
+
+test('un volume vide reste sans total quand un autre paramètre échoue', async ({page, context}) => {
+  const apiToken = await authenticate(context)
+  await controlFixture(context, apiToken, {emptyVolume: 'true', failDebit: 'true'})
+  await page.goto(`${frontUrl}/declarants/${chartSeriesIds.collecteur}`)
+  await expect(page.getByRole('alert').filter({hasText: /Débit prélevé/})).toBeVisible({timeout: 15_000})
+  await expect(page.getByText('Total indisponible', {exact: false})).toHaveCount(0)
+  await expect(page.getByLabel('Totaux sur la période affichée')).toHaveCount(0)
+})
+
+test('une série SSR devenue non sélectionnée ne revient pas après sa résolution tardive', async ({page, context}) => {
+  const apiToken = await authenticate(context)
+  await controlFixture(context, apiToken, {holdMetric: 'débit'})
+  try {
+    await page.goto(`${frontUrl}/declarants/${chartSeriesIds.collecteur}`, {waitUntil: 'commit'})
+    const totals = page.getByLabel('Totaux sur la période affichée')
+    await expect(totals).toContainText(/300\s*m³/, {timeout: 15_000})
+    const selector = page.getByRole('button', {name: 'Paramètres à afficher', exact: true})
+    await selector.click()
+    await page.getByRole('option', {name: /Débit prélevé/}).click()
+    await page.keyboard.press('Escape')
+    await expect(selector).not.toContainText('Débit')
+    await controlFixture(context, apiToken, {releaseMetric: 'débit'})
+    await expect.poll(async () => aggregates(await getRequests(context, apiToken)).every(request => request.completedAt)).toBe(true)
+    await expect(selector).not.toContainText('Débit')
+    await expect(totals).toContainText(/300\s*m³/)
+    expect(aggregates(await getRequests(context, apiToken))).toHaveLength(2)
+  } finally {
+    await controlFixture(context, apiToken, {releaseMetric: 'débit'})
+  }
+})
+
+for (const mode of ['indexOnly', 'legacyOptions']) {
+  test(`la compatibilité ${mode} recharge les options complètes sans perdre le graphe`, async ({page, context}) => {
+    const apiToken = await authenticate(context)
+    await controlFixture(context, apiToken, {[mode]: 'true'})
+    await page.goto(`${frontUrl}/declarants/${chartSeriesIds.collecteur}`)
+    await expect(page.getByRole('figure', {name: 'Graphique séries temporelles'})).toBeVisible({timeout: 15_000})
+    const requests = await getRequests(context, apiToken)
+    expect(requests.filter(request => request.path.endsWith('/options'))).toHaveLength(2)
+    expect(aggregates(requests)).toHaveLength(mode === 'indexOnly' ? 1 : 2)
+    if (mode === 'indexOnly') expect(aggregates(requests)[0].query.metricTypeCode).toBe('index')
+  })
+}
+
 test('charge les agrégats en parallèle avant le module graphique et conserve tout l’historique', async ({page, context}) => {
   const apiToken = await authenticate(context)
   // Resolve the actual dynamic module from the production build. UI strings

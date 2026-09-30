@@ -295,6 +295,9 @@ const AggregatedSeriesExplorer = ({
   defaultTemporalOperators,
   onFiltersChange,
   onDisplayResolutionChange,
+  onParameterOptionsOpen,
+  parameterOptionsLoading = false,
+  parameterOptionsError,
   defaultPeriods,
   selectablePeriods: providedSelectablePeriods,
   defaultInitialViewType = 'years',
@@ -307,6 +310,8 @@ const AggregatedSeriesExplorer = ({
   timeSeriesChartProps,
   legendLabels,
   isLoading = false,
+  pendingParameters = [],
+  parameterErrors,
   error = null,
   chartWidthPx = 1200,
   seriesOptions = null,
@@ -651,6 +656,8 @@ const AggregatedSeriesExplorer = ({
     selectedRange: visibleSelectedRange,
     committedRange: committedSelectedRange,
     isLoading,
+    pendingParameters,
+    parameterErrors,
     error,
     getVolumeValuesForRange
   })
@@ -947,6 +954,9 @@ const AggregatedSeriesExplorer = ({
           value={currentParameters}
           options={parameterOptions}
           onChange={handleParameterSelection}
+          onOpen={onParameterOptionsOpen}
+          loading={parameterOptionsLoading}
+          error={parameterOptionsError}
         />
 
         <ParameterOperatorsSelector
@@ -961,6 +971,14 @@ const AggregatedSeriesExplorer = ({
       </Box>
 
       {estimatedExactVolumes && <Alert severity='info' description='Pour cet affichage, certains volumes sont répartis entre les périodes à titre estimatif. Les données source conservent leurs périodes exactes.' />}
+      {!isLoading && pendingParameters.length > 0 && (
+        <Typography role='status' variant='body2' color='text.secondary'>
+          Chargement : {pendingParameters.map(id => parameterOptionMap.get(id)?.label ?? id).join(', ')}…
+        </Typography>
+      )}
+      {!error && parameterErrors?.size > 0 && <Alert severity='warning' description={
+        [...parameterErrors].map(([id, failure]) => `${parameterOptionMap.get(id)?.label ?? id} : ${failure.message}`).join(' ')
+      } />}
       {renderChartSection()}
     </Box>
   )

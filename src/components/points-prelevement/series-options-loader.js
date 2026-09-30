@@ -43,7 +43,9 @@ const SeriesOptionsDataLoader = ({
           collecteurId,
           exploitationId,
           pointIds: requestedPointIds,
-          preleveurId
+          preleveurId,
+          startDate: seriesProps.startDate,
+          endDate: seriesProps.endDate
         })
       } catch {
         result = {success: false}
@@ -67,7 +69,7 @@ const SeriesOptionsDataLoader = ({
         requestIdRef.current += 1
       }
     }
-  }, [collecteurId, exploitationId, pointIdsKey, preleveurId])
+  }, [collecteurId, exploitationId, pointIdsKey, preleveurId, seriesProps.startDate, seriesProps.endDate])
 
   if (error) {
     return (
