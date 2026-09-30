@@ -110,8 +110,9 @@ function PublicationNotice({response}) {
 
 export default function CampaignResponseForm({initialContext, admin = false}) {
   const [context, setContext] = useState(initialContext)
-  const [answer, setAnswer] = useState(() => initialCampaignAnswer(initialContext.data, initialContext.meters))
-  const [savedValue, setSavedValue] = useState(() => JSON.stringify(initialCampaignAnswer(initialContext.data, initialContext.meters)))
+  const [initialAnswer] = useState(() => initialCampaignAnswer(initialContext.data, initialContext.meters))
+  const [answer, setAnswer] = useState(initialAnswer)
+  const [savedValue, setSavedValue] = useState(() => JSON.stringify(initialAnswer))
   const [fieldErrors, setErrors] = useState({})
   const [indexErrors, setIndexErrors] = useState({})
   const [error, setError] = useState(null)
@@ -261,7 +262,7 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
               <div key={meter.compteurId || `new-${index}`} className='min-w-0 rounded border border-gray-200'>
                 <div className='flex flex-wrap items-center gap-3 border-b border-gray-200 bg-gray-50 px-3 py-3 md:px-4'>
                   <span className='fr-icon-dashboard-3-line flex h-9 w-9 shrink-0 items-center justify-center rounded bg-white text-[#000091]' aria-hidden='true' />
-                  {meter.compteurId && context.meters?.some(known => (known.compteurId || known.id) === meter.compteurId && known.serialNumber) ? <h3 className='fr-h6 fr-mb-0 min-w-0 flex-1 break-words'>Numéro de série de compteur : <span className='font-mono'>{meter.serialNumber}</span></h3> : <div className='min-w-0 max-w-sm flex-1'><ResponseField {...fieldProps} path={`meters.${index}.serialNumber`} label='Numéro de série de compteur' type='text' required={false} hint={!readOnly ? 'Nous n’avons pas le numéro de série de votre compteur. Pouvez-vous le renseigner ici' : undefined} maxLength={100} /></div>}
+                  {meter.compteurId && context.meters?.some(known => (known.compteurId || known.id) === meter.compteurId && known.serialNumber) ? <h3 className='fr-h6 fr-mb-0 min-w-0 flex-1 break-words'>Numéro de série de compteur : <span className='font-mono'>{meter.serialNumber}</span></h3> : <div className='min-w-0 max-w-sm flex-1'><ResponseField {...fieldProps} path={`meters.${index}.serialNumber`} label='Numéro de série de compteur' type='text' required={false} hint={!readOnly && !initialAnswer.meters[index]?.serialNumber ? 'Nous n’avons pas le numéro de série de votre compteur. Pouvez-vous le renseigner ici' : undefined} maxLength={100} /></div>}
                   {!readOnly && !meter.compteurId && answer.meters.length > 1 && <button className='fr-btn fr-btn--sm fr-btn--tertiary' type='button' disabled={saving || !ready} onClick={() => { setAnswer(previous => ({...previous, meters: previous.meters.filter((_, meterIndex) => meterIndex !== index)})); setSuccess(null); setErrors({}); setIndexErrors({}) }}>Retirer ce compteur</button>}
                 </div>
                 <div className='grid gap-3 p-3 md:p-4 lg:grid-cols-2'>
