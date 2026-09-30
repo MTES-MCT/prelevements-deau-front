@@ -39,7 +39,7 @@ import {
   getUsageKey,
   isDashboardVisibleUsage
 } from '@/lib/water-uses.js'
-import {getDashboardPointActorsAction} from '@/server/actions/dashboard.js'
+import {loadDashboardPointActors} from '@/lib/dashboard-client.js'
 import {getPointPrelevementDisplayName} from '@/utils/point-prelevement.js'
 
 import {
@@ -556,6 +556,7 @@ const DashboardPointsMap = ({
   const monitoringStationsByIdRef = useRef(new Map())
   const fittedGeometrySignatureRef = useRef(null)
   const pointActorsCacheRef = useRef(new Map())
+  const pointActorsControllerRef = useRef(null)
   const shouldTrackMapMovesRef = useRef(false)
   const isRecenteringRef = useRef(false)
   const [hasMapMoved, setHasMapMoved] = useState(false)
@@ -642,16 +643,16 @@ const DashboardPointsMap = ({
       return Promise.resolve(null)
     }
 
+    if (!pointActorsControllerRef.current || pointActorsControllerRef.current.signal.aborted) {
+      pointActorsControllerRef.current = new AbortController()
+    }
     return loadCachedValue(pointActorsCacheRef.current, pointId, async () => {
-      const result = await getDashboardPointActorsAction(pointId)
-
-      if (!result.success) {
-        throw new Error(result.error || 'Impossible de charger les acteurs associés.')
-      }
-
-      return normalizeDashboardPointActors(result.data)
+      const data = await loadDashboardPointActors(pointId, {signal: pointActorsControllerRef.current.signal})
+      return normalizeDashboardPointActors(data)
     })
   }, [])
+
+  useEffect(() => () => pointActorsControllerRef.current?.abort(), [])
 
   useEffect(() => {
     if (mapRef.current || !containerRef.current || !hasMapFeatures) {

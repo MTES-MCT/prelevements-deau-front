@@ -1,10 +1,11 @@
+import {Suspense} from 'react'
+
 import {forbidden} from 'next/navigation'
 
 import DashboardPage from '@/components/dashboard/dashboard-page.js'
+import DashboardDeclarationActions from '@/components/dashboard/dashboard-declaration-actions.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getDashboardTerritoryAction} from '@/server/actions/dashboard.js'
-import {getAllowedDeclarationTypesAction} from '@/server/actions/declarations.js'
-import {getCampaignSummaryAction} from '@/server/actions/campaigns.js'
 import {getCurrentSessionInfo} from '@/server/actions/user.js'
 
 export const metadata = {
@@ -57,40 +58,26 @@ const Page = async ({searchParams}) => {
     }
     : null
   const isDeclarant = role === 'DECLARANT'
-  const [
-    dashboardResult,
-    declarationTypesResult,
-    campaignSummaryResult
-  ] = await Promise.all([
-    getDashboardTerritoryAction({
-      includePoints: false,
-      period: requestedPeriod,
-      periodType: requestedPeriodType,
-      waterBodyType: requestedWaterBodyType,
-      waterBodyTypes: requestedWaterBodyTypes,
-      year: requestedYear,
-      zoneCodes: requestedZoneCodes
-    }),
-    isDeclarant
-      ? getAllowedDeclarationTypesAction({includePreleveurs: false})
-      : Promise.resolve(null),
-    isDeclarant && user?.declarantRole !== 'COLLECTEUR' ? getCampaignSummaryAction() : Promise.resolve(null)
-  ])
-  const declarationTypesResponse = declarationTypesResult?.success ? declarationTypesResult.data : null
-  const declarationCreation = isDeclarant
-    ? {
-      ...declarationTypesResponse?.meta,
-      allowedDeclarationTypes: declarationTypesResponse?.data ?? []
-    }
-    : null
+  const dashboardResult = await getDashboardTerritoryAction({
+    includePoints: false,
+    period: requestedPeriod,
+    periodType: requestedPeriodType,
+    waterBodyType: requestedWaterBodyType,
+    waterBodyTypes: requestedWaterBodyTypes,
+    year: requestedYear,
+    zoneCodes: requestedZoneCodes
+  })
 
   return (
     <>
       <StartDsfrOnHydration />
 
       <DashboardPage
-        campaignSummary={campaignSummaryResult?.success ? campaignSummaryResult.data?.data : null}
-        declarationCreation={declarationCreation}
+        declarationActions={isDeclarant ? (
+          <Suspense fallback={<div className='min-h-32 p-5 text-gray-600' role='status'>Chargement de vos déclarations…</div>}>
+            <DashboardDeclarationActions isPreleveur={user?.declarantRole !== 'COLLECTEUR'} />
+          </Suspense>
+        ) : null}
         initialDashboard={dashboardResult.success ? dashboardResult.data : null}
         initialError={dashboardResult.success ? null : dashboardResult.error}
         user={user}

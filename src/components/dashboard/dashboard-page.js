@@ -13,7 +13,6 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 
 import {PRELEVEUR_MAP_LAYER_VISIBILITY} from '@/components/dashboard/dashboard-map-layers.js'
-import {CampaignInvitations} from '@/components/campaigns/campaign-common.js'
 import DashboardVolumesChart from '@/components/dashboard/dashboard-volumes-chart.js'
 import DeferredRender from '@/components/ui/deferred-render.js'
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
@@ -28,7 +27,8 @@ import {
   getUsageLabel,
   isDashboardVisibleUsage
 } from '@/lib/water-uses.js'
-import {getDashboardTerritoryAction} from '@/server/actions/dashboard.js'
+import {loadDashboardTerritory} from '@/lib/dashboard-client.js'
+import {buildDashboardLocation, readLegacyDashboardHash} from '@/lib/dashboard-url.js'
 
 const DeferredDashboardContent = ({children, minHeight}) => (
   <DeferredRender
@@ -140,21 +140,6 @@ function getGreetingName(user) {
   return user?.firstName || user?.name?.split(' ')?.[0] || ''
 }
 
-function buildZoneSearchValue(zoneCodes) {
-  return zoneCodes.join(',')
-}
-
-function buildWaterBodyTypesSearchValue(waterBodyTypes) {
-  return waterBodyTypes.length > 0
-    ? waterBodyTypes.join(',')
-    : NO_WATER_BODY_TYPES_SENTINEL
-}
-
-function areAllWaterBodyTypesSelected(waterBodyTypes) {
-  return waterBodyTypes.length === WATER_BODY_TYPE_VALUES.length
-    && WATER_BODY_TYPE_VALUES.every(value => waterBodyTypes.includes(value))
-}
-
 function areSameValues(firstValues, secondValues) {
   return firstValues.length === secondValues.length
     && firstValues.every((value, index) => secondValues[index] === value)
@@ -201,67 +186,12 @@ function parseDashboardHash(hash) {
   }
 }
 
-function buildDashboardHash({
-  period,
-  periodType,
-  waterBodyTypes,
-  year,
-  zoneCodes
-}) {
-  const params = new URLSearchParams()
-
-  if (Array.isArray(zoneCodes) && zoneCodes.length > 0) {
-    params.set('zones', buildZoneSearchValue(zoneCodes))
-  }
-
-  if (periodType) {
-    params.set('periodType', periodType)
-  }
-
-  if (period) {
-    params.set('period', period)
-  }
-
-  if (year) {
-    params.set('year', year)
-  }
-
-  if (Array.isArray(waterBodyTypes) && !areAllWaterBodyTypesSelected(waterBodyTypes)) {
-    params.set('waterBodyTypes', buildWaterBodyTypesSearchValue(waterBodyTypes))
-  }
-
-  const search = params.toString()
-
-  return search ? `${DASHBOARD_HASH_PREFIX}${search}` : ''
-}
-
-function replaceDashboardHash(options) {
+function replaceDashboardUrl(options) {
   if (typeof window === 'undefined') {
     return
   }
 
-  const territoryHash = buildDashboardHash(options)
-  const parameters = new URLSearchParams(
-    territoryHash.startsWith(DASHBOARD_HASH_PREFIX)
-      ? territoryHash.slice(DASHBOARD_HASH_PREFIX.length)
-      : ''
-  )
-  const currentHash = window.location.hash.startsWith(`#${DASHBOARD_HASH_PREFIX}`)
-    ? new URLSearchParams(window.location.hash.slice(DASHBOARD_HASH_PREFIX.length + 1))
-    : null
-
-  for (const key of ['piezoPeriod', 'flowPeriod', 'piezoMode']) {
-    const value = currentHash?.get(key)
-    if (value) {
-      parameters.set(key, value)
-    }
-  }
-
-  const search = parameters.toString()
-  const hash = search ? `${DASHBOARD_HASH_PREFIX}${search}` : ''
-  const url = `${window.location.pathname}${window.location.search}${hash ? `#${hash}` : ''}`
-
-  window.history.replaceState(window.history.state, '', url)
+  window.history.replaceState(window.history.state, '', buildDashboardLocation(window.location, options))
 }
 
 function isSameDashboardFilterState(current, next) {
@@ -323,39 +253,6 @@ const InlineRefreshStatus = () => (
     <span>Actualisation...</span>
   </span>
 )
-
-const DECLARATION_CREATION_INTRO = 'Saisissez vos index, volumes prélevés ou volumes rejetés directement sur la plateforme, ou déposez un fichier.'
-
-const DeclarationCreationCard = ({className = 'mt-6', declarationCreation, hasCampaign = false}) => {
-  const allowedDeclarationTypes = declarationCreation?.allowedDeclarationTypes ?? EMPTY_ARRAY
-  const canCreateDeclaration = declarationCreation?.canCreateDeclaration ?? (allowedDeclarationTypes.length > 0)
-  const canCreateQuickDeclaration = declarationCreation?.canCreateQuickDeclaration ?? false
-  const canCreateAnyDeclaration = canCreateDeclaration || canCreateQuickDeclaration
-
-  if (!canCreateAnyDeclaration) {
-    return null
-  }
-
-  return (
-    <section className={`border border-gray-200 bg-white p-5 md:p-6 ${className}`}>
-      <div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
-        <div>
-          <h3 className={`${hasCampaign ? 'fr-h5' : 'fr-h3'} fr-mb-1w`}>{hasCampaign ? 'Autres déclarations' : 'Déclarer mes prélèvements en eau'}</h3>
-          <p className='fr-text--sm fr-mb-0 max-w-[680px] text-gray-700'>
-            {hasCampaign ? 'Saisissez des index ou des volumes en dehors de cette collecte, ou déposez un fichier.' : DECLARATION_CREATION_INTRO}
-          </p>
-        </div>
-
-        <Link
-          className='fr-btn fr-btn--icon-left fr-icon-add-line shrink-0'
-          href='/mes-declarations/new'
-        >
-          Nouvelle déclaration
-        </Link>
-      </div>
-    </section>
-  )
-}
 
 function getVolumeChartForRole(chart, isDeclarant) {
   if (!isDeclarant) {
@@ -752,14 +649,14 @@ const DashboardVolumeCharts = ({
 )
 
 const DashboardPage = ({
-  declarationCreation = null,
-  campaignSummary = null,
+  declarationActions = null,
   initialDashboard,
   initialError,
   user
 }) => {
   const hasAppliedInitialHashRef = useRef(false)
   const territoryReloadRequestIdRef = useRef(0)
+  const territoryControllerRef = useRef(null)
   const [dashboard, setDashboard] = useState(initialDashboard)
   const [selectedZoneCodes, setSelectedZoneCodes] = useState(initialDashboard?.selectedZoneCodes ?? [])
   const [selectedPeriodType, setSelectedPeriodType] = useState(
@@ -776,7 +673,8 @@ const DashboardPage = ({
   )
   const [error, setError] = useState(initialError)
   const [isTerritoryLoading, setIsTerritoryLoading] = useState(false)
-  const [monitoringStations, setMonitoringStations] = useState(EMPTY_ARRAY)
+  const [monitoringState, setMonitoringState] = useState({zoneCodesKey: null, stations: EMPTY_ARRAY})
+  const monitoringStations = monitoringState.zoneCodesKey === selectedZoneCodes.join(',') ? monitoringState.stations : EMPTY_ARRAY
 
   const zones = dashboard?.zones ?? EMPTY_ARRAY
   const usageDistribution = (dashboard?.metrics?.usageDistribution ?? EMPTY_ARRAY)
@@ -847,42 +745,55 @@ const DashboardPage = ({
     periodType = selectedPeriodType,
     waterBodyTypes = selectedWaterBodyTypes,
     year = selectedVolumeYear,
-    zoneCodes = selectedZoneCodes
+    zoneCodes = selectedZoneCodes,
+    sections
   } = {}) => {
     const requestId = territoryReloadRequestIdRef.current + 1
     territoryReloadRequestIdRef.current = requestId
+    territoryControllerRef.current?.abort()
+    const controller = new AbortController()
+    territoryControllerRef.current = controller
 
     setIsTerritoryLoading(true)
     setError(null)
 
     try {
-      const result = await getDashboardTerritoryAction({
+      let data = await loadDashboardTerritory({
         includePoints: false,
         period,
         periodType,
         waterBodyTypes,
         year,
-        zoneCodes
-      })
+        zoneCodes,
+        sections
+      }, {signal: controller.signal})
+
+      // A permission/scope change can normalize the selected zones. Never merge
+      // a partial response into figures that belonged to the previous scope.
+      let partial = Boolean(sections)
+      if (partial && (data?.scope !== dashboard?.scope || !areSameValues(data?.selectedZoneCodes ?? [], selectedZoneCodes))) {
+        data = await loadDashboardTerritory({includePoints: false, period, periodType, waterBodyTypes, year, zoneCodes: data?.selectedZoneCodes ?? zoneCodes}, {signal: controller.signal})
+        partial = false
+      }
 
       if (territoryReloadRequestIdRef.current !== requestId) {
         return
       }
 
-      if (result.success) {
-        const nextSelectedZoneCodes = result.data.selectedZoneCodes ?? zoneCodes
-        const nextSelectedPeriodType = result.data.registeredPrelevements?.selectedPeriodType ?? periodType
-        const nextSelectedPeriod = result.data.registeredPrelevements?.selectedPeriod ?? period
-        const nextSelectedYear = result.data.volumesByUsage?.selectedYear ?? year
-        const nextSelectedWaterBodyTypes = result.data.volumesByUsage?.selectedWaterBodyTypes ?? waterBodyTypes
+      if (data) {
+        const nextSelectedZoneCodes = data.selectedZoneCodes ?? zoneCodes
+        const nextSelectedPeriodType = data.registeredPrelevements?.selectedPeriodType ?? periodType
+        const nextSelectedPeriod = data.registeredPrelevements?.selectedPeriod ?? period
+        const nextSelectedYear = data.volumesByUsage?.selectedYear ?? year
+        const nextSelectedWaterBodyTypes = data.volumesByUsage?.selectedWaterBodyTypes ?? waterBodyTypes
 
-        setDashboard(result.data)
+        setDashboard(current => partial ? {...current, ...data} : data)
         setSelectedZoneCodes(nextSelectedZoneCodes)
         setSelectedPeriodType(nextSelectedPeriodType)
         setSelectedPeriod(nextSelectedPeriod)
         setSelectedVolumeYear(nextSelectedYear)
         setSelectedWaterBodyTypes(nextSelectedWaterBodyTypes)
-        replaceDashboardHash({
+        replaceDashboardUrl({
           period: nextSelectedPeriod,
           periodType: nextSelectedPeriodType,
           waterBodyTypes: nextSelectedWaterBodyTypes,
@@ -890,11 +801,11 @@ const DashboardPage = ({
           zoneCodes: nextSelectedZoneCodes
         })
       } else {
-        setError(result.error || 'Impossible de charger le tableau de bord.')
-      }
-    } catch {
-      if (territoryReloadRequestIdRef.current === requestId) {
         setError('Impossible de charger le tableau de bord.')
+      }
+    } catch (error) {
+      if (!controller.signal.aborted && territoryReloadRequestIdRef.current === requestId) {
+        setError(error.message || 'Impossible de charger le tableau de bord.')
       }
     } finally {
       if (territoryReloadRequestIdRef.current === requestId) {
@@ -902,12 +813,15 @@ const DashboardPage = ({
       }
     }
   }, [
+    dashboard?.scope,
     selectedPeriod,
     selectedPeriodType,
     selectedVolumeYear,
     selectedWaterBodyTypes,
     selectedZoneCodes
   ])
+
+  useEffect(() => () => territoryControllerRef.current?.abort(), [])
 
   useEffect(() => {
     if (
@@ -922,10 +836,11 @@ const DashboardPage = ({
 
     hasAppliedInitialHashRef.current = true
 
-    const hashFilters = parseDashboardHash(window.location.hash)
+    const legacyHash = readLegacyDashboardHash(window.location)
+    const hashFilters = legacyHash ? parseDashboardHash(legacyHash) : null
 
     if (!hashFilters) {
-      replaceDashboardHash({
+      replaceDashboardUrl({
         period: selectedPeriod,
         periodType: selectedPeriodType,
         waterBodyTypes: selectedWaterBodyTypes,
@@ -954,14 +869,9 @@ const DashboardPage = ({
     }
 
     if (isSameDashboardFilterState(currentFilters, nextFilters)) {
-      replaceDashboardHash(nextFilters)
+      replaceDashboardUrl(nextFilters)
       return
     }
-
-    setSelectedPeriodType(nextFilters.periodType)
-    setSelectedPeriod(nextFilters.period)
-    setSelectedVolumeYear(nextFilters.year)
-    setSelectedWaterBodyTypes(nextFilters.waterBodyTypes)
 
     async function reloadHashDashboard() {
       await reloadDashboard(nextFilters)
@@ -993,36 +903,32 @@ const DashboardPage = ({
       return
     }
 
-    setSelectedPeriodType(nextPeriodType)
-    setSelectedPeriod('')
     await reloadDashboard({
       period: '',
-      periodType: nextPeriodType
+      periodType: nextPeriodType,
+      sections: ['registeredPrelevements']
     })
   }, [reloadDashboard, selectedPeriodType])
 
   const handlePeriodChange = useCallback(async event => {
     const nextPeriod = event.target.value
 
-    setSelectedPeriod(nextPeriod)
-    await reloadDashboard({period: nextPeriod})
+    await reloadDashboard({period: nextPeriod, sections: ['registeredPrelevements']})
   }, [reloadDashboard])
 
   const handleVolumeYearChange = useCallback(async nextYear => {
-    setSelectedVolumeYear(nextYear)
-    await reloadDashboard({year: nextYear})
+    await reloadDashboard({year: nextYear, sections: ['volumesByUsage']})
   }, [reloadDashboard])
 
   const handleWaterBodyTypesChange = useCallback(async nextWaterBodyTypes => {
-    setSelectedWaterBodyTypes(nextWaterBodyTypes)
-    await reloadDashboard({waterBodyTypes: nextWaterBodyTypes})
+    await reloadDashboard({waterBodyTypes: nextWaterBodyTypes, sections: ['volumesByUsage']})
   }, [reloadDashboard])
 
-  const handleMonitoringStationsChange = useCallback(stations => {
-    setMonitoringStations(current =>
-      getMonitoringStationsSignature(current) === getMonitoringStationsSignature(stations)
+  const handleMonitoringStationsChange = useCallback((stations, zoneCodesKey) => {
+    setMonitoringState(current =>
+      current.zoneCodesKey === zoneCodesKey && getMonitoringStationsSignature(current.stations) === getMonitoringStationsSignature(stations)
         ? current
-        : stations)
+        : {stations, zoneCodesKey})
   }, [])
 
   return (
@@ -1052,12 +958,7 @@ const DashboardPage = ({
         {isDeclarant ? (
           <>
             <DashboardBlock boxed className='mt-0' title='Mon activité'>
-              {isPreleveurDeclarant && <CampaignInvitations summary={campaignSummary} />}
-              <DeclarationCreationCard
-                className='mt-0'
-                declarationCreation={declarationCreation}
-                hasCampaign={isPreleveurDeclarant && Boolean(campaignSummary?.items?.length)}
-              />
+              {declarationActions}
 
               <PointsMapSection
                 preferUsageName

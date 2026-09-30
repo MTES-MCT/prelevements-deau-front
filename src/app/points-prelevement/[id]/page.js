@@ -32,6 +32,17 @@ const PointHistory = async ({historyPromise, pointId}) => {
   )
 }
 
+const PointExploitations = async ({exploitationsPromise, pointId, canCreate}) => {
+  const result = await exploitationsPromise
+  return (
+    <ExploitationsList
+      exploitations={result.data || []}
+      createHref={canCreate ? getNewExploitationURL({idPoint: pointId}) : undefined}
+      canCreate={canCreate}
+    />
+  )
+}
+
 export async function generateMetadata({params}) {
   const {id} = await params
   const [result, userResult] = await Promise.all([
@@ -72,12 +83,10 @@ const Page = async ({params, searchParams}) => {
 
   const exploitationsPromise = can('exploitation.list')
     ? getExploitationsByPointIdAction(pointPrelevement.id)
-    : Promise.resolve({data: []})
+    : null
   const historyPromise = can('pp.update')
     ? getResourceAuditHistoryAction('POINT', pointPrelevement.id)
     : null
-  const exploitationsResult = await exploitationsPromise
-  const exploitations = exploitationsResult.data || []
 
   return (
     <>
@@ -96,12 +105,14 @@ const Page = async ({params, searchParams}) => {
             pointIds={[pointPrelevement.id]}
           />
         )}
-        {can('exploitation.list') && (
-          <ExploitationsList
-            exploitations={exploitations}
-            createHref={can('exploitation.create') ? getNewExploitationURL({idPoint: pointPrelevement.id}) : undefined}
-            canCreate={can('exploitation.create')}
-          />
+        {exploitationsPromise && (
+          <Suspense fallback={<p role='status'>Chargement des exploitations…</p>}>
+            <PointExploitations
+              exploitationsPromise={exploitationsPromise}
+              pointId={pointPrelevement.id}
+              canCreate={can('exploitation.create')}
+            />
+          </Suspense>
         )}
         {historyPromise && (
           <Suspense fallback={null}>

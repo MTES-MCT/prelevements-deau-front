@@ -279,6 +279,9 @@ test('un ancien texte libre reste sélectionné, enregistré et lisible après l
   const legacy = 'Mélange local : maïs, sorgho / trèfle'
   const crops = page.getByRole('button', {name: 'Cultures irriguées', exact: true}).first()
   await expect(crops).toHaveText(legacy)
+  // Long legacy values must stay inside the mobile grid instead of widening
+  // the viewport and shifting click targets under the sticky save toolbar.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1)
   await crops.click()
   await expect(page.getByRole('option', {name: legacy, exact: true})).toHaveAttribute('aria-selected', 'true')
   await page.getByRole('option', {name: 'Blé', exact: true}).click()

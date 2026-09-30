@@ -173,6 +173,39 @@ test('le modèle de filtres partage un seul index entre options, recherche et va
   )
 })
 
+test('les comptes optimisés conservent exactement toutes les autres facettes appliquées', t => {
+  const index = createPointFilterIndex(points)
+  const keys = Object.keys(index.facetValues)
+  const referenceMatches = (metadata, filters, excluded) => keys.every(key => {
+    const selected = filters[key]
+    return key === excluded || !Array.isArray(selected)
+      || haveSameSelection(selected, [...index.facetValues[key]])
+      || metadata.facets[key].some(value => selected.includes(value))
+  })
+  for (let combination = 0; combination < 256; combination++) {
+    const filters = {query: combination % 3 ? '' : 'forage', ...Object.fromEntries(keys.map((key, i) => {
+      const values = [...index.facetValues[key]]
+      const mode = (combination >> i) % 4
+      return [key, mode === 0 ? values : mode === 1 ? values.slice(0, 1) : mode === 2 ? [] : undefined]
+    }))}
+    const expected = Object.fromEntries(keys.map(key => [key, Object.fromEntries([...index.facetValues[key]].map(value => [value, 0]))]))
+    const expectedPoints = []
+    for (const point of points) {
+      if (!pointMatchesSearch(point, filters.query, index)) continue
+      const metadata = index.get(point.id)
+      if (referenceMatches(metadata, filters)) expectedPoints.push(point.id)
+      for (const key of keys) {
+        if (referenceMatches(metadata, filters, key)) {
+          for (const value of metadata.facets[key]) expected[key][value] = (expected[key][value] ?? 0) + 1
+        }
+      }
+    }
+    const result = filterPointsWithScores(points, filters, index)
+    t.deepEqual(result.points.map(point => point.id), expectedPoints)
+    t.deepEqual(getPointFacetCounts(points, filters, index, result.scores), expected)
+  }
+})
+
 test('les sous-usages sont regroupés sous leur usage racine', t => {
   t.deepEqual(getPointUsageRootKeys(points[0]), ['2', '5'])
   t.deepEqual(getPointUsageRootKeys(points[2]), [MISSING_USAGE_KEY])

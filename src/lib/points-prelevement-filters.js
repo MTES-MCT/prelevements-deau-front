@@ -364,27 +364,23 @@ export function haveSameSelection(left = [], right = []) {
   return left.length === right.length && left.every(value => right.includes(value))
 }
 
-function matchesFacet(metadata, filters, pointFilterIndex, key) {
-  const selectedValues = filters[key]
-  if (!Array.isArray(selectedValues)) {
-    return true
-  }
-
-  const allValues = [...(pointFilterIndex?.facetValues?.[key] ?? [])]
-  if (haveSameSelection(selectedValues, allValues)) {
-    return true
-  }
-
-  return metadata.facets[key].some(value => selectedValues.includes(value))
+function compileFacetFilters(filters, pointFilterIndex) {
+  return Object.fromEntries(FACET_KEYS.map(key => {
+    const selectedValues = filters[key]
+    const allValues = [...(pointFilterIndex?.facetValues?.[key] ?? [])]
+    return [key, !Array.isArray(selectedValues) || haveSameSelection(selectedValues, allValues)
+      ? null
+      : new Set(selectedValues)]
+  }))
 }
 
-function matchesFilters(metadata, filters, pointFilterIndex, excludedFacet) {
-  return FACET_KEYS.every(key => key === excludedFacet
-    || matchesFacet(metadata, filters, pointFilterIndex, key))
+function matchesFacet(metadata, compiled, key) {
+  return compiled[key] === null || metadata.facets[key].some(value => compiled[key].has(value))
 }
 
 export function filterPointsWithScores(points = [], filters, pointFilterIndex) {
   const index = pointFilterIndex ?? createPointFilterIndex(points)
+  const compiled = compileFacetFilters(filters, index)
   const scores = new Map()
   const matchingPoints = []
 
@@ -396,7 +392,7 @@ export function filterPointsWithScores(points = [], filters, pointFilterIndex) {
       scores.set(point.id, score)
     }
 
-    if (score !== null && matchesFilters(metadata, filters, index)) {
+    if (score !== null && FACET_KEYS.every(key => matchesFacet(metadata, compiled, key))) {
       matchingPoints.push(point)
     }
   }
@@ -410,6 +406,7 @@ export function filterPoints(points = [], filters, pointFilterIndex) {
 
 export function getPointFacetCounts(points = [], filters, pointFilterIndex, searchScores) {
   const index = pointFilterIndex ?? createPointFilterIndex(points)
+  const compiled = compileFacetFilters(filters, index)
   const counts = Object.fromEntries(FACET_KEYS.map(key => [key, Object.fromEntries(
     [...(index.facetValues[key] ?? [])].map(value => [value, 0])
   )]))
@@ -424,11 +421,11 @@ export function getPointFacetCounts(points = [], filters, pointFilterIndex, sear
       continue
     }
 
-    for (const key of FACET_KEYS) {
-      if (!matchesFilters(metadata, filters, index, key)) {
-        continue
-      }
-
+    // A facet ignores only its own selection. Two failed facets therefore
+    // exclude this point from every count; one failure contributes only there.
+    const failed = FACET_KEYS.filter(key => !matchesFacet(metadata, compiled, key))
+    if (failed.length > 1) continue
+    for (const key of failed.length ? failed : FACET_KEYS) {
       for (const value of metadata.facets[key]) {
         counts[key][value] = (counts[key][value] ?? 0) + 1
       }

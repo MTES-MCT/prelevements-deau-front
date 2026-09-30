@@ -5,8 +5,9 @@ import {isMiddlewarePublicPath} from './lib/public-paths.js'
 export default withAuth({
   callbacks: {
     authorized({req, token}) {
-      // The chart route authenticates the server session itself and returns JSON 401.
-      if (req.nextUrl.pathname === '/api/aggregated-series') return true
+      // These read routes authenticate the server session and return JSON 401.
+      if (req.nextUrl.pathname === '/api/aggregated-series'
+        || req.nextUrl.pathname.startsWith('/api/dashboard/')) return true
 
       if (isMiddlewarePublicPath(req.nextUrl.pathname)) {
         return true
