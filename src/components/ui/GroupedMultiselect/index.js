@@ -37,6 +37,8 @@ const GroupedMultiselect = ({
   placeholder,
   options = [],
   onChange,
+  onOpen,
+  popupHeader,
   disabled,
   searchable = false,
   showCheckboxes = false,
@@ -96,7 +98,8 @@ const GroupedMultiselect = ({
 
     setOpen(true)
     setFocusedIndex(searchable ? -1 : 0)
-  }, [disabled, value, confirmSelection, searchable])
+    onOpen?.()
+  }, [disabled, value, confirmSelection, searchable, onOpen])
 
   const valueLabelMap = useMemo(() => {
     const map = new Map()
@@ -428,6 +431,7 @@ const GroupedMultiselect = ({
             }
           }}
         >
+          {popupHeader && <Box sx={{padding: 1}}>{popupHeader}</Box>}
           {searchable && (
             <Box sx={{padding: 1}}>
               <Input

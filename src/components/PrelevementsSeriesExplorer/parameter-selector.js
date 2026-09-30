@@ -6,7 +6,7 @@
 
 'use client'
 
-import {Box} from '@mui/material'
+import {Box, Typography} from '@mui/material'
 
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 
@@ -16,7 +16,10 @@ const ParameterSelector = ({
   placeholder,
   value,
   options,
-  onChange
+  onChange,
+  onOpen,
+  loading = false,
+  error
 }) => {
   if (options.length === 0) {
     return null
@@ -32,6 +35,13 @@ const ParameterSelector = ({
         value={value}
         options={options}
         onChange={onChange}
+        onOpen={onOpen}
+        popupHeader={loading
+          ? <Typography role='status' variant='body2' color='text.secondary'>Chargement des index…</Typography>
+          : error ? <div role='alert' className='fr-text--sm'>
+            {error}{' '}
+            <button type='button' className='fr-btn fr-btn--tertiary-no-outline fr-btn--sm' onClick={onOpen}>Réessayer</button>
+          </div> : null}
       />
     </Box>
   )

@@ -7,12 +7,15 @@ import {
 import {resolveSelectedParametersDateRange} from '@/components/points-prelevement/series-date-range.js'
 import {getMeterSeriesQuery, METER_SERIES_LIMIT} from '@/components/points-prelevement/meter-series.js'
 import {buildChartSeriesQuery, loadChartSeries} from '@/lib/chart-series.js'
+import {loadChartSeriesProgressively} from '@/lib/chart-series-loader.js'
 import {buildSeriesPresentations} from '@/components/points-prelevement/series-presentation.js'
 import {
   resolveInitialDisplayFrequency,
   resolveSeriesDisplayFrequency
 } from '@/components/points-prelevement/series-display-frequency.js'
 import {getParameterFlowColor} from '@/components/PrelevementsSeriesExplorer/constants/colors.js'
+import {getAggregatedSeriesOptionsAction} from '@/server/actions/series.js'
+import {mergeDetailedSeriesOptions, resolveDefaultSeriesParameterIds} from './initial-series.js'
 import {
   getParameterMetadata,
   MAX_DIFFERENT_UNITS,
@@ -26,7 +29,6 @@ import {pickAvailableFrequency} from '@/utils/frequency.js'
 
 const EMPTY_SERIES_MAP = new Map()
 
-const DEFAULT_METRIC_TYPE_CODES = ['volume', 'débit']
 const FALLBACK_VOLUME_TEMPORAL_OPERATORS = ['sum', 'mean', 'min', 'max']
 const FALLBACK_STANDARD_TEMPORAL_OPERATORS = ['mean', 'min', 'max']
 
@@ -36,12 +38,37 @@ const useSeriesExplorer = ({
   pointIds = null,
   preleveurId = null,
   exploitationId = null,
-  seriesOptions = null,
+  seriesOptions: initialSeriesOptions = null,
   startDate = null,
   subtitle = null,
   title = 'Historique des prélèvements',
   titleComponent = 'h2'
 }) => {
+  const [detailsState, setDetailsState] = useState(null)
+  const detailsRequestRef = useRef(null)
+  const detailsAreCurrent = detailsState?.initial === initialSeriesOptions
+  const seriesOptions = detailsAreCurrent && detailsState.options ? detailsState.options : initialSeriesOptions
+  const detailsLoading = detailsAreCurrent && detailsState.loading
+  const detailsError = detailsAreCurrent ? detailsState.error : null
+  const loadDetailedOptions = useCallback(async () => {
+    if (!initialSeriesOptions?.detailsDeferred || detailsRequestRef.current?.initial === initialSeriesOptions) return
+    const request = {initial: initialSeriesOptions}
+    detailsRequestRef.current = request
+    setDetailsState({initial: initialSeriesOptions, loading: true, error: null})
+    let result
+    try {
+      result = await getAggregatedSeriesOptionsAction({collecteurId, exploitationId, pointIds, preleveurId, detail: 'full', preload: false}, {forbiddenOnAccessDenied: false})
+    } catch {
+      result = {success: false}
+    }
+    if (detailsRequestRef.current !== request) return
+    if (result.success && Array.isArray(result.data?.parameters)) {
+      setDetailsState({initial: initialSeriesOptions, options: mergeDetailedSeriesOptions(initialSeriesOptions, result.data), loading: false, error: null})
+    } else {
+      detailsRequestRef.current = null
+      setDetailsState({initial: initialSeriesOptions, loading: false, error: 'Impossible de charger les index. Réessayez.'})
+    }
+  }, [initialSeriesOptions, collecteurId, exploitationId, pointIds, preleveurId])
   // Vérifie si des paramètres sont disponibles depuis l'API
   const hasParameters = seriesOptions?.parameters?.length > 0
 
@@ -115,17 +142,7 @@ const useSeriesExplorer = ({
 
   // Prioritize withdrawn volume and flow rate on point details when available.
   const derivedDefaultParameters = useMemo(() => {
-    const defaultParameters = DEFAULT_METRIC_TYPE_CODES
-      .map(metricTypeCode => parameterOptions.find(
-        option => option.metricTypeCode?.toLowerCase() === metricTypeCode
-      )?.value)
-      .filter(Boolean)
-
-    if (defaultParameters.length > 0) {
-      return defaultParameters
-    }
-
-    return parameterOptions[0]?.value ? [parameterOptions[0].value] : []
+    return resolveDefaultSeriesParameterIds(parameterOptions)
   }, [parameterOptions])
 
   const [selectedParameters, setSelectedParameters] = useState(derivedDefaultParameters)
@@ -161,7 +178,7 @@ const useSeriesExplorer = ({
   )
   const [parameterTemporalOperators, setParameterTemporalOperators] = useState({})
   const [targetDisplayFrequency, setTargetDisplayFrequency] = useState(initialDisplayFrequency)
-  const [loadState, setLoadState] = useState({key: null, series: EMPTY_SERIES_MAP, error: null})
+  const [loadState, setLoadState] = useState({key: null, series: EMPTY_SERIES_MAP, errors: EMPTY_SERIES_MAP, pending: []})
   const previousExplorerStateKeyRef = useRef(explorerStateKey)
 
   useEffect(() => {
@@ -336,8 +353,12 @@ const useSeriesExplorer = ({
   const hasRequests = requestKey !== '[]'
   const isCurrent = loadState.key === requestKey
   const aggregatedSeriesMap = isCurrent ? loadState.series : EMPTY_SERIES_MAP
-  const loadError = isCurrent ? loadState.error : null
-  const isLoading = hasRequests && !isCurrent
+  const parameterErrors = isCurrent ? loadState.errors : EMPTY_SERIES_MAP
+  const pendingParameters = isCurrent ? loadState.pending : JSON.parse(requestKey).map(([parameterId]) => parameterId)
+  const hasReadySeries = aggregatedSeriesMap.size > 0
+  const isLoading = hasRequests && pendingParameters.length > 0 && !hasReadySeries
+  const loadError = !hasReadySeries && pendingParameters.length === 0 && parameterErrors.size > 0
+    ? [...parameterErrors.values()][0].message : null
 
   useEffect(() => {
     const requests = JSON.parse(requestKey)
@@ -345,41 +366,23 @@ const useSeriesExplorer = ({
 
     let active = true
     const controller = new AbortController()
-    const pendingByQuery = new Map()
-    const load = query => {
-      if (!pendingByQuery.has(query)) {
-        pendingByQuery.set(query, loadChartSeries(query, {signal: controller.signal}))
+    loadChartSeriesProgressively({
+      requests,
+      initialSeries: seriesOptions?.initialSeries,
+      signal: controller.signal,
+      onUpdate: state => {
+        if (active) setLoadState({key: requestKey, ...state})
+      },
+      onError: error => {
+        if (active && error?.code === METER_SERIES_LIMIT) setLimitedScope(selectionScope)
       }
-      return pendingByQuery.get(query)
-    }
-
-    Promise.all(requests.map(async ([parameterId, query]) => {
-      const response = await load(query)
-      return [parameterId, {
-        ...response,
-        metadata: {
-          ...response?.metadata,
-          frequency: response?.metadata?.frequency ?? new URLSearchParams(query).get('aggregationFrequency')
-        }
-      }]
-    })).then(entries => {
-      if (active) setLoadState({key: requestKey, series: new Map(entries), error: null})
-    }).catch(error => {
-      if (!active || error?.name === 'AbortError') return
-      controller.abort()
-      if (error?.code === METER_SERIES_LIMIT) setLimitedScope(selectionScope)
-      setLoadState({
-        key: requestKey,
-        series: EMPTY_SERIES_MAP,
-        error: error instanceof Error ? error.message : 'Impossible de charger les séries agrégées'
-      })
     })
 
     return () => {
       active = false
       controller.abort()
     }
-  }, [requestKey, selectionScope])
+  }, [requestKey, selectionScope, seriesOptions?.initialSeries])
 
   const handleFiltersChange = useCallback(({parameters, parameterTemporalOperators: nextParameterTemporalOperators}) => {
     let nextParameters = selectedParameters
@@ -421,13 +424,14 @@ const useSeriesExplorer = ({
 
   return {
     hasParameters, title, titleComponent, subtitle, limitedScope, selectionScope,
+    loadDetailedOptions, detailsLoading, detailsError,
     fullDateRange, dateRange,
     onMeterRangeApply: range => setRequestedMeterRange({scope: selectionScope, range}),
     selectedParameters, explorerStateKey, aggregatedSeriesMap, parameterOptions,
     derivedDefaultParameters, temporalOperatorOptionsByParameter,
     resolvedTemporalOperatorsByParameter, defaultTemporalOperatorsByParameter,
     selectablePeriods, defaultPeriods, getVolumeValuesForRange,
-    loadError, isLoading, seriesOptions, handleFiltersChange,
+    loadError, isLoading, parameterErrors, pendingParameters, seriesOptions, handleFiltersChange,
     handleDisplayResolutionChange, parameterDefinitionMap
   }
 }

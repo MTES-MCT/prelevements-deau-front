@@ -5,6 +5,7 @@ import {
   withErrorHandling
 } from '@/server/api-wrapper.js'
 import {normalizeDate} from '@/utils/time.js'
+import {preloadInitialChartSeries} from '@/components/points-prelevement/initial-series.js'
 
 export async function getSeriesMetadataAction(seriesId) {
   return withErrorHandling(async () => fetchJSON(`api/series/${seriesId}`))
@@ -246,7 +247,7 @@ export async function getAggregatedSeriesAction(params = {}) {
  * @returns {Promise<Object>} - Result object
  */
 export async function getAggregatedSeriesOptionsAction(
-  {pointIds, preleveurId, collecteurId, sourceId, exploitationId} = {},
+  {pointIds, preleveurId, collecteurId, sourceId, exploitationId, startDate, endDate, detail = 'summary', preload = true} = {},
   {forbiddenOnAccessDenied = true} = {}
 ) {
   return withErrorHandling(async () => {
@@ -275,9 +276,25 @@ export async function getAggregatedSeriesOptionsAction(
 
     // Negotiate the new read-only series without changing older API clients.
     params.set('view', 'chart')
-    params.set('includeMeterReadings', 'true')
-    params.set('includeExploitationIndexes', 'true')
-    const query = params.toString() ? `?${params.toString()}` : ''
-    return fetchJSON(`api/aggregated-series/options${query}`)
+    const loadDetails = () => {
+      params.delete('detail')
+      params.set('includeMeterReadings', 'true')
+      params.set('includeExploitationIndexes', 'true')
+      return fetchJSON(`api/aggregated-series/options?${params}`)
+    }
+    let options
+    if (detail === 'summary') {
+      params.set('detail', 'summary')
+      options = await fetchJSON(`api/aggregated-series/options?${params}`)
+      // An index-only point keeps its previous default view. Older API releases
+      // may ignore detail=summary, so explicitly request the old complete shape.
+      if (options.detailsDeferred !== true || options.parameters?.length === 0) options = await loadDetails()
+    } else {
+      options = await loadDetails()
+    }
+    if (!preload) return options
+    return {...options, initialSeries: preloadInitialChartSeries({
+      parameters: options.parameters, pointIds: normalizedPointIds, preleveurId, collecteurId, sourceId, exploitationId, startDate, endDate
+    }, query => fetchJSON(`api/aggregated-series?${query}`))}
   }, {forbiddenOnAccessDenied})
 }

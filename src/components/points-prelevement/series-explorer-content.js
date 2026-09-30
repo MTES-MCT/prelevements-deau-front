@@ -8,11 +8,12 @@ import AggregatedSeriesExplorer from '@/components/PrelevementsSeriesExplorer/ag
 
 const SeriesExplorer = ({
   hasParameters, title, titleComponent, subtitle, limitedScope, selectionScope,
+  loadDetailedOptions, detailsLoading, detailsError,
   fullDateRange, dateRange, onMeterRangeApply, selectedParameters, explorerStateKey,
   aggregatedSeriesMap, parameterOptions, derivedDefaultParameters,
   temporalOperatorOptionsByParameter, resolvedTemporalOperatorsByParameter,
   defaultTemporalOperatorsByParameter, selectablePeriods, defaultPeriods,
-  getVolumeValuesForRange, loadError, isLoading, seriesOptions,
+  getVolumeValuesForRange, loadError, isLoading, parameterErrors, pendingParameters, seriesOptions,
   handleFiltersChange, handleDisplayResolutionChange, parameterDefinitionMap
 }) => {
   return hasParameters ? (
@@ -55,9 +56,14 @@ const SeriesExplorer = ({
           getVolumeValuesForRange={getVolumeValuesForRange}
           error={loadError}
           isLoading={isLoading}
+          pendingParameters={pendingParameters}
+          parameterErrors={parameterErrors}
           seriesOptions={seriesOptions}
           onFiltersChange={handleFiltersChange}
           onDisplayResolutionChange={handleDisplayResolutionChange}
+          onParameterOptionsOpen={loadDetailedOptions}
+          parameterOptionsLoading={detailsLoading}
+          parameterOptionsError={detailsError}
         />
       )}
       {selectedParameters.some(parameter => parameterDefinitionMap.get(parameter)?.readingSeries) && (
