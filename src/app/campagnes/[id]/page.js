@@ -10,11 +10,13 @@ export const dynamic = 'force-dynamic'
 
 export default async function Page({params}) {
   const {id} = await params
-  const result = await getCampaignAction(id)
+  const [result, responses] = await Promise.all([
+    getCampaignAction(id),
+    getCampaignResponsesAction(id, {view: 'summary'})
+  ])
   if (result.code === 403) forbidden()
   if (result.code === 404) notFound()
   if (!result.success) return <Alert severity='error' title='Campagne indisponible' description={result.error} />
-  const responses = await getCampaignResponsesAction(id)
   const responseHref = responses.success && singleCampaignResponseHref(id, result.data.data.permissions, responses.data?.data)
   if (responseHref) redirect(responseHref)
   return <CampaignDetail key={`${id}-${result.data.data.campaign.updatedAt}`} initialData={result.data.data} initialResponses={responses.success ? responses.data?.data : null} initialError={responses.success ? null : responses.error} />

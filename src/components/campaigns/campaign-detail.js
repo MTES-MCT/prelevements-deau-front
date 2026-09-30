@@ -16,6 +16,12 @@ function RequestedVolumes({totals}) {
   return <div className='mb-4 grid gap-3 sm:grid-cols-2'><div className='border bg-white p-3'><strong>Demandes étiage 2027</strong><p className='fr-mb-0'>{format(totals.requestedSeasonVolume)}</p></div><div className='border bg-white p-3'><strong>Demandes hors-étiage 2027–2028</strong><p className='fr-mb-0'>{format(totals.requestedOffSeasonVolume)}</p></div></div>
 }
 
+function ResponseNeeds({response}) {
+  const needs = response.submittedNeeds ?? response.submittedData?.needs
+  if (!needs) return null
+  return <dl className='mt-3 grid gap-2 text-sm sm:grid-cols-2'>{['season', 'offSeason'].map(season => <div key={season}><dt className='font-medium'>{season === 'season' ? 'Étiage 2027' : 'Hors-étiage 2027–2028'}</dt><dd className='m-0'>{needs[season]?.volume ?? '—'} m³ demandés · {needs[season]?.flow ?? '—'} m³/h</dd></div>)}</dl>
+}
+
 export default function CampaignDetail({initialData, initialResponses, initialError, admin = false}) {
   const router = useRouter()
   const {campaign, permissions = campaign.permissions || {}} = initialData
@@ -39,7 +45,7 @@ export default function CampaignDetail({initialData, initialResponses, initialEr
     setTab(nextTab)
     try {
       const action = nextTab === 'results' ? getCampaignResultsAction : getCampaignResponsesAction
-      const next = campaignData(await action(campaign.id, {...nextFilters, page, pageSize: 25}))
+      const next = campaignData(await action(campaign.id, {...nextFilters, page, pageSize: 25, view: 'summary'}))
       if (current === requestId.current) { setResult(next); setAppliedFilters(nextFilters) }
     } catch (error) { if (current === requestId.current) setError(error.message) } finally { if (current === requestId.current) setLoading(false) }
   }
@@ -102,7 +108,7 @@ export default function CampaignDetail({initialData, initialResponses, initialEr
               {(requester || response.lastSubmittedAt || permissions.canRespond || permissions.canManage) && <Link className='fr-btn fr-btn--sm fr-btn--secondary' href={`${base}/${campaign.id}/reponses/${response.id}`}>{requester ? !permissions.canRespond || response.lastSubmittedAt ? 'Consulter ma réponse' : response.hasDraft ? 'Reprendre ma réponse' : 'Compléter ma réponse' : 'Consulter'}</Link>}
             </div>
             {response.lastSubmittedAt && response.publicationStatus && !['PUBLISHED', 'COMPLETED'].includes(response.publicationStatus) && <p className='fr-text--sm fr-mt-2w fr-mb-0 text-[#695240]'>Réponse envoyée · Volumes en attente de vérification</p>}
-            {tab === 'results' && response.submittedData?.needs && <dl className='mt-3 grid gap-2 text-sm sm:grid-cols-2'>{['season', 'offSeason'].map(season => <div key={season}><dt className='font-medium'>{season === 'season' ? 'Étiage 2027' : 'Hors-étiage 2027–2028'}</dt><dd className='m-0'>{response.submittedData.needs[season]?.volume ?? '—'} m³ demandés · {response.submittedData.needs[season]?.flow ?? '—'} m³/h</dd></div>)}</dl>}
+            {tab === 'results' && <ResponseNeeds response={response} />}
             {tab === 'results' && response.volumes && <p className='fr-text--sm fr-mt-2w fr-mb-0'><strong>Volumes prélevés calculés :</strong> hors étiage {formatCampaignVolume(response.volumes.offSeason)} · étiage {formatCampaignVolume(response.volumes.season)}{response.volumes.partial ? ' · Résultat incomplet' : ''}</p>}
           </li>)}
         </ul>

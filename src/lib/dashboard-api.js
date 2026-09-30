@@ -45,6 +45,10 @@ export function buildDashboardTerritorySearch(options = {}) {
     parameters.set('includePoints', String(options.includePoints))
   }
 
+  if (Array.isArray(options.sections) && options.sections.length > 0) {
+    parameters.set('sections', [...new Set(options.sections)].join(','))
+  }
+
   const search = parameters.toString()
   return search ? `?${search}` : ''
 }
@@ -60,4 +64,13 @@ export function buildDashboardMapSearch({scope, zoneCodes} = {}) {
   }
 
   return `?${parameters.toString()}`
+}
+
+export function buildDashboardWaterResourceSearch(options = {}) {
+  const parameters = new URLSearchParams()
+  appendZoneCodes(parameters, options.zoneCodes)
+  if (options.period) parameters.set('period', options.period)
+  if (options.includeIps) parameters.set('includeIps', 'true')
+  const search = parameters.toString()
+  return search ? `?${search}` : ''
 }

@@ -76,7 +76,7 @@ function PeriodFields({path, title, needs = false, season = false, fieldProps}) 
     <fieldset className={`m-0 min-w-0 rounded border-t-4 p-3 md:p-4 ${season ? 'border-t-[#c3992a] bg-[#fff9e6]' : 'border-t-[#465f9d] bg-[#eef2fa]'}`}>
       <legend className={`float-left mb-0 w-full ${needs ? 'pb-4' : 'pb-1'} text-base font-semibold ${season ? 'text-[#715300]' : 'text-[#3558a2]'}`}>{title}</legend>
       {!needs && <p className={`clear-both mb-4 text-xs ${season ? 'text-[#715300]' : 'text-[#3558a2]'}`}>{dates}</p>}
-      <div className='clear-both grid items-start gap-3 sm:grid-cols-2'>
+      <div className='clear-both grid grid-cols-1 items-start gap-3 sm:grid-cols-2'>
         {needs ? <>
           <ResponseField {...fieldProps} path={`${path}.flow`} label='Débit demandé (m³/h)' />
           <ResponseField {...fieldProps} path={`${path}.volume`} label='Volume demandé (m³)' />

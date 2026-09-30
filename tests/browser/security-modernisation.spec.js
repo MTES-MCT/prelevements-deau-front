@@ -67,6 +67,28 @@ test('proxy Next : pages privées et sessions expirées refusées', async ({page
   await expect(page).toHaveURL(/\/login\?callbackUrl=/)
 })
 
+test('dashboard GET : session absente ou expirée en JSON, préfixes voisins toujours protégés', async ({context}) => {
+  const paths = ['territory', 'map', 'water-resources/piezometry', 'water-resources/flows', `map/points/${zoneId}/actors`]
+  for (const path of paths) {
+    const response = await context.request.get(`${frontUrl}/api/dashboard/${path}`, {maxRedirects: 0})
+    expect(response.status()).toBe(401)
+    expect(response.headers()['location']).toBeUndefined()
+    expect(response.headers()['cache-control']).toBe('private, no-store')
+    expect(await response.json()).toEqual({message: 'Session expirée'})
+  }
+
+  const cookie = await authenticate(context, Date.now() - 60_000)
+  const expired = await context.request.get(`${frontUrl}/api/dashboard/territory`, {headers: {cookie}, maxRedirects: 0})
+  expect(expired.status()).toBe(401)
+  expect(await expired.json()).toEqual({message: 'Session expirée'})
+
+  for (const path of ['/tableau-de-bord', '/api/dashboard-neighbor/territory', '/api/dashboard']) {
+    const response = await context.request.get(frontUrl + path, {headers: {cookie}, maxRedirects: 0})
+    expect([302, 307]).toContain(response.status())
+    expect(new URL(response.headers()['location'], frontUrl).pathname).toBe('/login')
+  }
+})
+
 test('export anonyme : aucun fichier confidentiel', async ({request}) => {
   const response = await request.get('/api/declarations/template', {maxRedirects: 0})
   expect([302, 307, 401, 403]).toContain(response.status())

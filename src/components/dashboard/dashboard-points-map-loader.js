@@ -11,7 +11,7 @@ import {
   DEFAULT_DASHBOARD_MAP_CAPABILITIES,
   normalizeDashboardMapCapabilities
 } from '@/lib/dashboard-map-popups.js'
-import {getDashboardMapAction} from '@/server/actions/dashboard.js'
+import {loadDashboardMap} from '@/lib/dashboard-client.js'
 
 const EMPTY_ARRAY = []
 
@@ -36,8 +36,11 @@ const DashboardPointsMapLoader = ({
   const [error, setError] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const zoneCodesKey = selectedZoneCodes.join(',')
+  const scopeKey = `${scope}:${scope === 'territory' ? zoneCodesKey : ''}`
+  const [loadedScopeKey, setLoadedScopeKey] = useState(null)
 
   useEffect(() => {
+    const controller = new AbortController()
     const requestId = requestIdRef.current + 1
     requestIdRef.current = requestId
     const zoneCodes = zoneCodesKey ? zoneCodesKey.split(',') : EMPTY_ARRAY
@@ -47,27 +50,21 @@ const DashboardPointsMapLoader = ({
     setError(null)
 
     async function loadPoints() {
-      let result
       try {
-        result = await getDashboardMapAction({
+        const data = await loadDashboardMap({
           scope,
           zoneCodes: scope === 'territory' ? zoneCodes : EMPTY_ARRAY
-        })
-      } catch {
-        result = {success: false}
-      }
-
-      if (requestIdRef.current !== requestId) {
-        return
-      }
-
-      if (result.success && Array.isArray(result.data?.points)) {
-        setPoints(result.data.points)
-        setCapabilities(normalizeDashboardMapCapabilities(result.data.capabilities))
-      } else {
+        }, {signal: controller.signal})
+        if (requestIdRef.current !== requestId) return
+        if (!Array.isArray(data?.points)) throw new Error('Impossible de charger les points de la carte.')
+        setPoints(data.points)
+        setCapabilities(normalizeDashboardMapCapabilities(data.capabilities))
+        setLoadedScopeKey(`${scope}:${scope === 'territory' ? zoneCodesKey : ''}`)
+      } catch (error) {
+        if (controller.signal.aborted || requestIdRef.current !== requestId) return
         setPoints(EMPTY_ARRAY)
         setCapabilities(DEFAULT_DASHBOARD_MAP_CAPABILITIES)
-        setError(result.error || 'Impossible de charger les points de la carte.')
+        setError(error.message || 'Impossible de charger les points de la carte.')
       }
 
       hasLoadedOnceRef.current = true
@@ -77,6 +74,7 @@ const DashboardPointsMapLoader = ({
     loadPoints()
 
     return () => {
+      controller.abort()
       if (requestIdRef.current === requestId) {
         requestIdRef.current += 1
       }
@@ -99,7 +97,11 @@ const DashboardPointsMapLoader = ({
           Actualisation de la carte…
         </span>
       )}
-      <DashboardPointsMap {...mapProps} capabilities={capabilities} points={points} />
+      <DashboardPointsMap
+        {...mapProps}
+        capabilities={loadedScopeKey === scopeKey ? capabilities : DEFAULT_DASHBOARD_MAP_CAPABILITIES}
+        points={loadedScopeKey === scopeKey ? points : EMPTY_ARRAY}
+      />
     </div>
   )
 }
