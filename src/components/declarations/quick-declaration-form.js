@@ -758,7 +758,7 @@ const QuickDeclarationStatusAlerts = ({
         className='fr-mb-2w'
         severity='info'
         title='Aucun point à déclarer'
-        description='Aucun point de prélèvement actif n’est rattaché à ce déclarant.'
+        description='Aucune exploitation n’est disponible pour la saisie rapide pour ce déclarant.'
       />
     )}
   </>

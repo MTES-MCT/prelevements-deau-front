@@ -1,5 +1,8 @@
 import {normalizeCampaignCrops} from './campaign-crops.js'
 import {campaignNumberError} from './campaign-numbers.js'
+import {getUsageCode, getUsageRootCode} from './water-uses.js'
+
+const CAMPAIGN_USAGE_FAMILY_CODES = new Set(['2', '12'])
 
 export const CAMPAIGN_TYPE = 'DROPT_INDEX_NEEDS_2026_2027'
 export const CAMPAIGN_TYPE_LABEL = 'Collecte des index de prélèvements et des besoins – irrigants OUGC Dropt'
@@ -76,6 +79,14 @@ export function campaignUsageOptions(usages = []) {
   const items = Array.isArray(usages) ? usages : (usages.items || [])
   const options = items.flatMap(usage => [usage, ...(usage.children || []).map(child => ({...child, parent: usage}))])
   return [...new Map(options.map(usage => [usage.id, usage])).values()]
+}
+
+// Restrict new choices only: existing answers and validation still use the full reference.
+export function campaignSelectableUsageOptions(usages = []) {
+  return campaignUsageOptions(usages).filter(usage => {
+    const code = getUsageCode(usage)
+    return code === '0' || code === '1' || CAMPAIGN_USAGE_FAMILY_CODES.has(getUsageRootCode(usage))
+  })
 }
 
 export function campaignRequiresIrrigationDetails(usageId, usages = []) {

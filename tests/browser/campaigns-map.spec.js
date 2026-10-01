@@ -33,7 +33,7 @@ test.beforeEach(async ({page}) => {
   await page.clock.setFixedTime(new Date('2026-11-01T12:00:00Z'))
 })
 
-test('la carte préleveur inclut les pages suivantes et conserve chaque fiche d’un point partagé', async ({page, context}, testInfo) => {
+test('la carte préleveur ouvre une vue d’ensemble sans sélection et conserve chaque fiche d’un point partagé', async ({page, context}, testInfo) => {
   await authenticate(context, 'map-many')
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
@@ -44,16 +44,10 @@ test('la carte préleveur inclut les pages suivantes et conserve chaque fiche d�
   await expect(map.locator('[data-map-ready="true"]')).toBeVisible({timeout: 20_000})
   await expect(page.getByText('Page 1 sur 2', {exact: true})).toBeVisible()
   await expect(page.getByRole('link', {name: 'Commencer ma déclaration', exact: true})).toHaveCount(25)
-  await page.getByRole('button', {name: /Point sans coordonnées/}).click()
-  await expect(selected).toContainText('002')
-  await page.getByRole('button', {name: 'Suivant', exact: true}).click()
-  await expect(page.getByText('Page 2 sur 2', {exact: true})).toBeVisible()
-  await expect(page.getByRole('link', {name: 'Commencer ma déclaration', exact: true})).toHaveCount(2)
-  await expect(selected).toContainText('026')
-  await map.getByRole('button', {name: 'Zoom out', exact: true}).click()
-  await map.getByRole('button', {name: 'Recentrer la carte sur tous les points', exact: true}).click()
+  await expect(selected).toHaveCount(0)
   // With two distinct points at the same latitude, fitBounds places the eastern
-  // point at the right padding. It belongs to a response beyond the first page.
+  // point at the right padding. Its response is on page 2, but its marker must
+  // already be visible on arrival, without zooming or recentering the map.
   const canvas = map.locator('canvas')
   const box = await canvas.boundingBox()
   await expect(map.locator('[data-map-ready="true"]')).toBeVisible()
@@ -62,6 +56,15 @@ test('la carte préleveur inclut les pages suivantes et conserve chaque fiche d�
     await expect(selected).toContainText('027')
   }).toPass()
   await expect(page.getByText('Page 2 sur 2', {exact: true})).toBeVisible()
+  await expect(page.getByRole('link', {name: 'Commencer ma déclaration', exact: true})).toHaveCount(2)
+  await page.getByRole('button', {name: 'Précédent', exact: true}).click()
+  await expect(page.getByText('Page 1 sur 2', {exact: true})).toBeVisible()
+  await expect(selected).toHaveCount(0)
+  await page.getByRole('button', {name: /Point sans coordonnées/}).click()
+  await expect(selected).toContainText('002')
+  await page.getByRole('button', {name: 'Suivant', exact: true}).click()
+  await expect(page.getByText('Page 2 sur 2', {exact: true})).toBeVisible()
+  await expect(selected).toHaveCount(0)
   await page.getByRole('button', {name: /026/}).click()
   await expect(selected).toContainText('026')
   await expect(map.locator('[data-map-ready="true"]')).toBeVisible()
@@ -74,6 +77,18 @@ test('la carte préleveur inclut les pages suivantes et conserve chaque fiche d�
   expect(errors).toEqual([])
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
   await map.screenshot({path: testInfo.outputPath('points-campagne.png')})
+})
+
+test('sans coordonnées la liste reste accessible et aucun point n’est présélectionné', async ({page, context}) => {
+  await authenticate(context, 'multiple')
+  await page.goto(`${frontUrl}/campagnes/${campaignIds.campaign}`)
+  const map = page.getByRole('region', {name: 'Localisation des points de prélèvement', exact: true})
+  await expect(map.getByText('Aucun point géolocalisé.', {exact: true})).toBeVisible()
+  await expect(map.locator('canvas')).toHaveCount(0)
+  await expect(page.locator('button[aria-pressed="true"]')).toHaveCount(0)
+  await page.getByRole('button', {name: /Point synthétique.*001/}).click()
+  await expect(page.locator('button[aria-pressed="true"]')).toContainText('001')
+  await expect(page.getByRole('link', {name: 'Commencer ma déclaration', exact: true}).first()).toHaveAttribute('href', `/campagnes/${campaignIds.campaign}/reponses/${campaignIds.response}`)
 })
 
 test('la carte du formulaire rend réellement son point dans chaque moteur', async ({page, context}, testInfo) => {

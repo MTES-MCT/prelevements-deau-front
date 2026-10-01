@@ -12,7 +12,7 @@ import * as campaignHelpers from '../../lib/campaigns.js'
 
 const require = createRequire(import.meta.url)
 
-function harness({tab = 'results', response = {}} = {}) {
+function harness({tab = 'results', response = {}, permissions = {canReadResults: true}} = {}) {
   const calls = []
   const filename = new URL('campaign-detail.js', import.meta.url)
   const componentRequire = specifier => {
@@ -33,7 +33,7 @@ function harness({tab = 'results', response = {}} = {}) {
   const {code} = transformSync(readFileSync(filename, 'utf8'), {filename: filename.pathname, jsc: {parser: {syntax: 'ecmascript', jsx: true}, transform: {react: {runtime: 'automatic'}}, target: 'es2022'}, module: {type: 'commonjs'}})
   const compiled = {exports: {}}
   runInNewContext('(function(require, module, exports) {' + code + '\n})', {})(componentRequire, compiled, compiled.exports)
-  const tree = compiled.exports.default({initialData: {campaign: {id: 'campaign', name: 'Campagne', status: 'CLOSED'}, permissions: {canReadResults: true}}, initialResponses: {items: [{id: 'response', ...response}], total: 1}})
+  const tree = compiled.exports.default({initialData: {campaign: {id: 'campaign', name: 'Campagne', status: 'CLOSED'}, permissions}, initialResponses: {items: [{id: 'response', ...response}], total: 1}})
   return {calls, tree}
 }
 
@@ -65,4 +65,28 @@ test('les deux onglets demandent explicitement la projection compacte', async t 
     {name: 'getCampaignResponsesAction', id: 'campaign', page: 1, pageSize: 25, view: 'summary'},
     {name: 'getCampaignResultsAction', id: 'campaign', page: 1, pageSize: 25, view: 'summary'}
   ])
+})
+
+for (const [name, response, label] of [
+  ['réponse vide', {}, 'Compléter'],
+  ['brouillon partagé', {hasDraft: true}, 'Reprendre'],
+  ['réponse envoyée', {lastSubmittedAt: '2026-09-24'}, 'Consulter / modifier'],
+  ['correction en brouillon', {lastSubmittedAt: '2026-09-24', hasDraft: true}, 'Consulter / modifier']
+]) {
+  test(`le collecteur peut ouvrir la réponse selon ses droits : ${name}`, t => {
+    const {tree} = harness({tab: 'responses', response: {...response, permissions: {canEdit: true, canSubmit: true, respondingOnBehalf: true}}})
+    const link = elements(tree).find(node => node.props.href === '/campagnes/campaign/reponses/response')
+    t.is(link?.props.children, label)
+  })
+}
+
+test('la capacité globale du collecteur ne rend pas une réponse non modifiable éditable', t => {
+  const {tree} = harness({tab: 'responses', permissions: {canReadResults: true, canRespondForParticipants: true}, response: {hasDraft: true, permissions: {canEdit: false, canSubmit: false, respondingOnBehalf: true}}})
+  const link = elements(tree).find(node => node.props.href === '/campagnes/campaign/reponses/response')
+  t.is(link?.props.children, 'Consulter')
+})
+
+test('sans nouvelle permission une réponse non envoyée reste inaccessible au collecteur', t => {
+  const {tree} = harness({tab: 'responses', permissions: {canReadResults: true, canRespondForParticipants: true}})
+  t.false(elements(tree).some(node => node.props.href === '/campagnes/campaign/reponses/response'))
 })

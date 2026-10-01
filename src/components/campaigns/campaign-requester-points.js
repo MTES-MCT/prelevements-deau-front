@@ -17,7 +17,7 @@ const PAGE_SIZE = 25
 export default function CampaignRequesterPoints({campaignId, initialPage, canRespond}) {
   const [responses, setResponses] = useState(initialPage.items)
   const [page, setPage] = useState(1)
-  const [selectedId, setSelectedId] = useState(initialPage.items[0]?.id)
+  const [selectedId, setSelectedId] = useState(null)
   const [focusRequestId, setFocusRequestId] = useState(0)
   const [loading, setLoading] = useState(initialPage.total > initialPage.items.length)
   const [error, setError] = useState(null)
@@ -33,7 +33,7 @@ export default function CampaignRequesterPoints({campaignId, initialPage, canRes
       .then(items => {
         if (!current) return
         setResponses(items)
-        setSelectedId(previous => items.some(response => response.id === previous) ? previous : items[0]?.id)
+        setSelectedId(previous => items.some(response => response.id === previous) ? previous : null)
         setPage(1)
       })
       .catch(error => { if (current) setError(error.message) })
@@ -70,7 +70,7 @@ export default function CampaignRequesterPoints({campaignId, initialPage, canRes
         </ul>
         {!responses.length && <p className='border bg-white p-4'>Aucun point à compléter pour cette campagne.</p>}
         {loading && <p role='status'>Chargement des réponses…</p>}
-        <CampaignPagination page={page} total={responses.length} pageSize={PAGE_SIZE} onChange={nextPage => { setPage(nextPage); setSelectedId(responses[(nextPage - 1) * PAGE_SIZE]?.id) }} />
+        <CampaignPagination page={page} total={responses.length} pageSize={PAGE_SIZE} onChange={nextPage => { setPage(nextPage); setSelectedId(null) }} />
       </div>
       <div className='h-80 min-w-0 lg:sticky lg:top-4 lg:h-[36rem]' role='region' aria-label='Localisation des points de prélèvement'>
         <PointMap points={points} activePointId={activePointId} focusRequestId={focusRequestId} onFocusPoint={selectPoint} />
