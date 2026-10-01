@@ -13,13 +13,13 @@ test.beforeEach(async ({page}) => {
   await page.clock.setFixedTime(new Date('2026-11-01T12:00:00Z'))
 })
 
-async function authenticate(context, role = 'preleveur') {
-  const apiToken = `browser-test-campaign-${role}-${randomUUID()}`
+async function authenticate(context, role = 'preleveur', sessionId = randomUUID()) {
+  const apiToken = `browser-test-campaign-${role}-${sessionId}`
   const token = await encode({secret: 'browser-tests-only-never-a-real-secret', token: {
     sub: campaignIds.user, token: apiToken, role: role.startsWith('admin') ? 'ADMIN' : role === 'instructor' ? 'INSTRUCTOR' : 'DECLARANT', permissions: [],
-    declarantRole: role === 'collector' ? 'COLLECTEUR' : 'PRELEVEUR',
+    declarantRole: role.startsWith('collector') ? 'COLLECTEUR' : 'PRELEVEUR',
     apiExpiresAt: new Date(Date.now() + 3_600_000).toISOString(), infoRefreshedAt: Date.now(),
-    userInfo: {id: campaignIds.user, email: 'campaign@example.test', declarantRole: role === 'collector' ? 'COLLECTEUR' : 'PRELEVEUR'}
+    userInfo: {id: campaignIds.user, email: 'campaign@example.test', declarantRole: role.startsWith('collector') ? 'COLLECTEUR' : 'PRELEVEUR'}
   }, maxAge: 3600})
   await context.addCookies(['next-auth.session-token', '__Secure-next-auth.session-token'].map(name => ({name, value: token, url: frontUrl, httpOnly: true, secure: true, sameSite: 'Lax'})))
   return async () => (await context.request.get('http://127.0.0.1:3431/api/__campaign-requests', {headers: {authorization: `Bearer ${apiToken}`}})).json()
@@ -71,7 +71,8 @@ test('deux compteurs : brouillon incomplet, reprise, envoi et modification sans 
   await page.getByRole('button', {name: 'Modifier ma réponse', exact: true}).click()
   await page.locator('[name="needs.season.volume"]').fill('20')
   await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
-  await expect(page.getByText(/Le collecteur voit votre dernière réponse envoyée/)).toBeVisible()
+  await expect(page.getByText('Ces modifications ne sont pas encore envoyées.', {exact: true})).toBeVisible()
+  await expect(page.getByText('Le collecteur autorisé peut aussi compléter cette réponse et consulter le brouillon enregistré.', {exact: true})).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
   await page.screenshot({path: testInfo.outputPath('formulaire-campagne.png'), fullPage: true})
 })
@@ -431,19 +432,21 @@ test('usages et sous-usages restent proposés, indentés et sélectionnables san
   const child = choices.getByRole('option', {name: 'Aspersion — Irrigation', exact: true})
   await expect(parent).toHaveAttribute('data-usage-level', 'parent')
   await expect(child).toHaveAttribute('data-usage-level', 'child')
-  await expect(choices.getByRole('option').first()).toHaveText('Irrigation')
+  await expect(choices.getByRole('option').first()).toHaveText('Usage inconnu')
   expect((await parent.boundingBox()).height).toBeGreaterThanOrEqual(44)
   const parentLabel = await parent.locator('.campaign-usage-option-label').boundingBox()
   const childLabel = await child.locator('.campaign-usage-option-label').boundingBox()
   expect(childLabel.x).toBeGreaterThan(parentLabel.x + 15)
   await page.screenshot({path: testInfo.outputPath('usages-campagne.png')})
+  await usage.press('ArrowDown')
+  await usage.press('ArrowDown')
   await usage.press('Enter')
   await expect(usage).toHaveValue('Irrigation')
   await usage.click()
   await expect(choices).toBeVisible()
   await expect(parent).toHaveAttribute('aria-selected', 'true')
   await usage.press('End')
-  await expect(usage).toHaveAttribute('aria-activedescendant', /option-4$/)
+  await expect(usage).toHaveAttribute('aria-activedescendant', /option-6$/)
   await usage.press('Home')
   await expect(usage).toHaveAttribute('aria-activedescendant', /option-0$/)
   await usage.press('Tab')
@@ -455,7 +458,7 @@ test('usages et sous-usages restent proposés, indentés et sélectionnables san
   await secondUsage.press('Escape')
   await expect(page.getByRole('option')).toHaveCount(0)
   await secondUsage.press('ArrowDown')
-  await expect(page.getByRole('option')).toHaveCount(5)
+  await expect(page.getByRole('option')).toHaveCount(7)
   await secondUsage.fill('Asp')
   await expect(page.getByRole('option')).toHaveCount(1)
   await secondUsage.press('Enter')
@@ -467,6 +470,80 @@ test('usages et sous-usages restent proposés, indentés et sélectionnables san
   await expect(usage).toHaveValue('Irrigation')
   await expect(secondUsage).toHaveValue('Aspersion')
 })
+
+for (const role of ['preleveur', 'collector-fresh']) {
+  test(`${role} : les usages autorisés sont les seuls choix des quatre périodes du bilan et des besoins`, async ({page, context}) => {
+    const requests = await authenticate(context, `${role}-complete`)
+    await page.goto(responseUrl)
+    const periods = ['meters.0.offSeason', 'meters.0.season', 'needs.season', 'needs.offSeason']
+    const choices = [
+      'Usage inconnu', 'Pas d’usage', 'Irrigation', 'Aspersion — Irrigation', 'Goutte-à-goutte — Irrigation',
+      'Réalimentation d’une ressource en eau', 'Remplissage plan d’eau — Réalimentation d’une ressource en eau'
+    ]
+    const selections = [
+      {id: campaignIds.unknownUsage, label: 'Usage inconnu'},
+      {id: campaignIds.noUsage, label: 'Pas d’usage'},
+      {id: campaignIds.secondUsage, label: 'Goutte-à-goutte — Irrigation'},
+      {id: campaignIds.fillingUsage, label: 'Remplissage plan d’eau — Réalimentation d’une ressource en eau'}
+    ]
+    for (const [index, path] of periods.entries()) {
+      const usage = page.locator(`[name="${path}.usageId"]`)
+      await usage.click()
+      await expect(page.getByRole('option')).toHaveCount(choices.length)
+      for (const label of choices) await expect(page.getByRole('option', {name: label, exact: true})).toBeVisible()
+      await usage.fill('Industrie')
+      await expect(page.getByRole('option')).toHaveCount(0)
+      await expect(page.getByText('Aucun usage trouvé.', {exact: true})).toBeVisible()
+      await usage.fill('')
+      await page.getByRole('option', {name: selections[index].label, exact: true}).click()
+    }
+    await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
+    await expect(page.getByText('Brouillon enregistré.', {exact: true})).toBeVisible()
+    const data = (await requests())[0].body.data
+    expect([data.meters[0].offSeason, data.meters[0].season, data.needs.season, data.needs.offSeason].map(period => period.usageId)).toEqual(selections.map(usage => usage.id))
+  })
+
+  for (const source of ['draft', 'prefill']) {
+    test(`${role} : les usages hors liste du ${source} restent affichés, enregistrables et envoyables`, async ({page, context}) => {
+      const requests = await authenticate(context, `${role}-outsideusage${source === 'prefill' ? '-prefill' : ''}`)
+      await page.goto(responseUrl)
+      const periods = [
+        {path: 'meters.0.offSeason', id: campaignIds.industryUsage, label: 'Industrie'},
+        {path: 'meters.0.season', id: campaignIds.industrialChildUsage, label: 'Refroidissement industriel'},
+        {path: 'needs.season', id: campaignIds.drinkingUsage, label: 'Alimentation en eau potable'},
+        {path: 'needs.offSeason', id: campaignIds.industryUsage, label: 'Industrie'}
+      ]
+      if (source === 'prefill') await expect(page.getByText('Données préremplies à vérifier.', {exact: true})).toBeVisible()
+      for (const {path, label} of periods) {
+        const usage = page.locator(`[name="${path}.usageId"]`)
+        await expect(usage).toHaveValue(label)
+        await usage.click()
+        await expect(page.getByRole('option')).toHaveCount(7)
+        await expect(page.getByRole('option', {name: /Industrie|Refroidissement industriel|Alimentation en eau potable/})).toHaveCount(0)
+        await usage.press('Escape')
+        await expect(usage).toHaveValue(label)
+      }
+      await page.locator('[name="needs.season.volume"]').fill('125')
+      await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
+      await expect(page.getByText('Brouillon enregistré.', {exact: true})).toBeVisible()
+      await page.reload()
+      for (const {path, label} of periods) await expect(page.locator(`[name="${path}.usageId"]`)).toHaveValue(label)
+      await page.getByRole('button', {name: role === 'preleveur' ? 'Envoyer ma réponse' : 'Envoyer la réponse', exact: true}).click()
+      await expect(page.getByText(role === 'preleveur' ? 'Votre réponse a bien été envoyée.' : 'La réponse a bien été envoyée.', {exact: true})).toBeVisible()
+      const writes = await requests()
+      expect(writes.map(write => [write.method, write.body.revision])).toEqual([['PUT', 0], ['POST', 1]])
+      for (const write of writes) {
+        const {data} = write.body
+        expect([data.meters[0].offSeason, data.meters[0].season, data.needs.season, data.needs.offSeason].map(period => period.usageId)).toEqual(periods.map(period => period.id))
+        expect(data.needs.season.volume).toBe('125')
+      }
+      for (const {path, label} of periods) {
+        await expect(page.locator(`[name="${path}.usageId"]`)).toHaveValue(label)
+        await expect(page.locator(`[name="${path}.usageId"]`)).toHaveAttribute('readonly', '')
+      }
+    })
+  }
+}
 
 test('les propositions sont modifiables, enregistrables puis soumises sans données agricoles en réalimentation', async ({page, context}) => {
   const requests = await authenticate(context, 'prefill')
@@ -710,7 +787,7 @@ test('les erreurs métier de l’API et les champs invalides restent lisibles sa
   await expect(page.locator('[name="meters.0.offSeason.indexStart"]')).toHaveValue('15')
 })
 
-test('collecteur : navigation conditionnelle, résultats envoyés, lecture seule et export complet', async ({page, context, isMobile}) => {
+test('collecteur : navigation, export des résultats envoyés et correction de la réponse', async ({page, context, isMobile}) => {
   const requests = await authenticate(context, 'collector')
   await page.goto(`${frontUrl}/campagnes/${campaignIds.campaign}`)
   if (isMobile) await page.getByRole('button', {name: 'Menu', exact: true}).click()
@@ -725,12 +802,106 @@ test('collecteur : navigation conditionnelle, résultats envoyés, lecture seule
   await page.getByRole('button', {name: 'Exporter tous les résultats (CSV)', exact: true}).click()
   expect((await downloaded).suggestedFilename()).toBe('resultats-campagne.csv')
   expect((await requests())[0].path.endsWith('/export')).toBe(true)
-  await page.getByRole('link', {name: 'Consulter', exact: true}).click()
+  await page.getByRole('link', {name: 'Consulter / modifier', exact: true}).click()
+  await expect(page.getByText('Vous répondez pour Ferme synthétique. Le brouillon enregistré est partagé avec ce préleveur.', {exact: true})).toBeVisible()
   await expect(page.locator('[name="needs.season.volume"]')).toHaveValue('120')
   await expect(page.locator('[name="needs.season.volume"]')).toHaveAttribute('readonly', '')
   await expect(page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true})).toHaveCount(0)
   await expect(page.getByRole('button', {name: 'Modifier ma réponse', exact: true})).toHaveCount(0)
+  await page.getByRole('button', {name: 'Modifier la réponse', exact: true}).click()
+  await page.locator('[name="needs.season.volume"]').fill('150')
+  await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
+  await expect(page.getByText('Brouillon enregistré.', {exact: true})).toBeVisible()
+  await page.getByRole('link', {name: 'Retour à la campagne', exact: true}).click()
+  await page.getByRole('button', {name: 'Résultats envoyés', exact: true}).click()
+  await expect(page.getByText('120 m³ demandés · 4 m³/h', {exact: true})).toBeVisible()
+  await page.getByRole('link', {name: 'Consulter / modifier', exact: true}).click()
+  await expect(page.locator('[name="needs.season.volume"]')).toHaveValue('150')
+  await page.getByRole('button', {name: 'Envoyer les modifications', exact: true}).click()
+  await expect(page.getByText('La réponse a bien été envoyée.', {exact: true})).toBeVisible()
+  const writes = await requests()
+  expect(writes.slice(1).map(write => [write.method, write.body.revision])).toEqual([['PUT', 0], ['POST', 1]])
+  expect(writes[2].body.data.needs.season.volume).toBe('150')
 })
+
+test('collecteur : compléter une réponse vide puis reprendre le brouillon', async ({page, context}) => {
+  const requests = await authenticate(context, 'collector-fresh')
+  await page.goto(`${frontUrl}/campagnes/${campaignIds.campaign}`)
+  await page.getByRole('link', {name: 'Compléter', exact: true}).click()
+  await expect(page.getByText(/Vous répondez pour Ferme synthétique/)).toBeVisible()
+  await page.getByRole('button', {name: 'Envoyer la réponse', exact: true}).click()
+  await expect(page.getByText('Vérifiez les champs signalés avant d’envoyer la réponse.', {exact: true})).toBeVisible()
+  expect(await requests()).toHaveLength(0)
+  await page.locator('[name="meters.0.offSeason.indexStart"]').fill('12')
+  await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
+  await expect(page.getByText('Brouillon enregistré.', {exact: true})).toBeVisible()
+  await page.getByRole('link', {name: 'Retour à la campagne', exact: true}).click()
+  await page.getByRole('link', {name: 'Reprendre', exact: true}).click()
+  await expect(page.locator('[name="meters.0.offSeason.indexStart"]')).toHaveValue('12')
+  expect((await requests())[0].body.revision).toBe(0)
+})
+
+test('collecteur et préleveur partagent le brouillon, conservent la saisie en conflit et peuvent reprendre après envoi', async ({page, context, browser}) => {
+  const sessionId = randomUUID()
+  const requests = await authenticate(context, 'complete-shared', sessionId)
+  await page.goto(responseUrl)
+  const collectorContext = await browser.newContext({ignoreHTTPSErrors: true, locale: 'fr-FR', timezoneId: 'Europe/Paris', reducedMotion: 'reduce'})
+  try {
+    await authenticate(collectorContext, 'collector-shared', sessionId)
+    const collectorPage = await collectorContext.newPage()
+    await collectorPage.route('**/*', route => [frontUrl, 'http://127.0.0.1:3417'].includes(new URL(route.request().url()).origin) ? route.continue() : route.abort())
+    await collectorPage.clock.setFixedTime(new Date('2026-11-01T12:00:00Z'))
+    await collectorPage.goto(`${frontUrl}/campagnes/${campaignIds.campaign}`)
+    await collectorPage.getByRole('link', {name: 'Reprendre', exact: true}).click()
+    await expect(collectorPage.locator('[name="needs.season.volume"]')).toHaveValue('120')
+    await page.locator('[name="needs.season.volume"]').fill('175')
+    await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
+    await expect(page.getByText('Brouillon enregistré.', {exact: true})).toBeVisible()
+    await collectorPage.locator('[name="needs.season.volume"]').fill('200')
+    await collectorPage.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
+    await expect(collectorPage.getByText('Révision périmée. Vos saisies sont conservées ici.', {exact: true})).toBeVisible()
+    await expect(collectorPage.locator('[name="needs.season.volume"]')).toHaveValue('200')
+    collectorPage.once('dialog', dialog => dialog.accept())
+    await collectorPage.reload()
+    await expect(collectorPage.locator('[name="needs.season.volume"]')).toHaveValue('175')
+    await collectorPage.locator('[name="needs.season.volume"]').fill('200')
+    await collectorPage.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
+    await expect(collectorPage.getByText('Brouillon enregistré.', {exact: true})).toBeVisible()
+    await page.reload()
+    await expect(page.locator('[name="needs.season.volume"]')).toHaveValue('200')
+    await collectorPage.getByRole('button', {name: 'Envoyer la réponse', exact: true}).click()
+    await expect(collectorPage.getByText('La réponse a bien été envoyée.', {exact: true})).toBeVisible()
+    await page.reload()
+    await expect(page.locator('[name="needs.season.volume"]')).toHaveValue('200')
+    await expect(page.locator('[name="needs.season.volume"]')).toHaveAttribute('readonly', '')
+    await page.getByRole('button', {name: 'Modifier ma réponse', exact: true}).click()
+    await page.locator('[name="needs.season.volume"]').fill('250')
+    await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
+    await expect(page.getByText('Brouillon enregistré.', {exact: true})).toBeVisible()
+    await collectorPage.reload()
+    await expect(collectorPage.locator('[name="needs.season.volume"]')).toHaveValue('250')
+    await expect(collectorPage.locator('[name="needs.season.volume"]')).not.toHaveAttribute('readonly', '')
+    const writes = await requests()
+    expect(writes.map(write => [write.method, write.body.revision])).toEqual([['PUT', 0], ['PUT', 0], ['PUT', 1], ['POST', 2], ['PUT', 3]])
+    expect(writes[3].path.endsWith('/submit')).toBe(true)
+  } finally {
+    await collectorContext.close()
+  }
+})
+
+for (const role of ['collector-ended', 'collector-ended-complete-fresh']) {
+  test(`collecteur (${role}) : une campagne clôturée reste consultable sans écriture`, async ({page, context}) => {
+    const requests = await authenticate(context, role)
+    await page.goto(`${frontUrl}/campagnes/${campaignIds.campaign}`)
+    await page.getByRole('link', {name: 'Consulter', exact: true}).click()
+    await expect(page.getByText(/Vous consultez la réponse de Ferme synthétique/)).toBeVisible()
+    await expect(page.getByText('Cette collecte est clôturée. La réponse reste consultable.', {exact: true})).toBeVisible()
+    await expect(page.locator('[name="needs.season.volume"]')).toHaveAttribute('readonly', '')
+    await expect(page.getByRole('button', {name: /Modifier la réponse|Enregistrer le brouillon|Envoyer la réponse|Envoyer les modifications/})).toHaveCount(0)
+    await page.locator('form').dispatchEvent('submit')
+    expect(await requests()).toHaveLength(0)
+  })
+}
 
 test('admin : sélection groupée locale puis création du brouillon', async ({page, context}) => {
   const requests = await authenticate(context, 'admin')

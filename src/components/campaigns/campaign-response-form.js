@@ -15,7 +15,7 @@ import {campaignSaveError} from '@/lib/campaign-response-errors.js'
 import {
   CAMPAIGN_REQUESTER_DESCRIPTION, CAMPAIGN_REQUESTER_TITLE,
   campaignDate, campaignExploitationLabel, campaignPersonLabel, campaignRequiresIrrigationDetails, campaignState,
-  campaignUsageOptions, getCampaignField, initialCampaignAnswer,
+  campaignUsageOptions, campaignSelectableUsageOptions, getCampaignField, initialCampaignAnswer,
   setCampaignField, validateCampaignAnswer, validateCampaignIndices
 } from '@/lib/campaigns.js'
 import {getUsageParent, normalizeUsageOption} from '@/lib/water-uses.js'
@@ -46,16 +46,16 @@ function NumericInput({value, onChange, ...props}) {
   return <input {...props} ref={inputRef} className='fr-input quick-declaration-control text-right font-semibold tabular-nums' type='text' inputMode='decimal' value={formatCampaignNumberInput(value)} onChange={change} />
 }
 
-function UsageInput({value, options, update, path, readOnly, ...props}) {
+function UsageInput({value, options, selectableOptions, update, path, readOnly, ...props}) {
   const [search, setSearch] = useState(null)
   const selected = options.find(option => option.value === value)
-  return <UsageCombobox {...props} variant='campaign' options={options} selectedValue={value} readOnly={readOnly} required={!readOnly} value={selected?.label || (readOnly ? '' : search || '')} onUsageChange={changes => {
+  return <UsageCombobox {...props} variant='campaign' options={selectableOptions} referenceOptions={options} selectedValue={value} readOnly={readOnly} required={!readOnly} value={selected?.label || (readOnly ? '' : search || '')} onUsageChange={changes => {
     setSearch(changes.usageSearch)
     update(path, changes.usageId)
   }} />
 }
 
-function ResponseField({path, label, answer, errors, update, validateField, readOnly, disabled, required = true, type = 'number', hint, options, maxLength = 3000}) {
+function ResponseField({path, label, answer, errors, update, validateField, readOnly, disabled, required = true, type = 'number', hint, options, selectableUsageOptions, maxLength = 3000}) {
   const id = `campaign-${path.replaceAll('.', '-')}`
   const value = getCampaignField(answer, path)
   const error = errors[path]
@@ -66,7 +66,7 @@ function ResponseField({path, label, answer, errors, update, validateField, read
       <label className='fr-label text-sm' htmlFor={id}>{label}{!readOnly && required && <span aria-hidden='true'> *</span>}{!required && ' (facultatif)'}</label>
       {hint && <p id={`${id}-hint`} className='fr-hint-text fr-mb-1w'>{hint}</p>}
       {options ? (
-        <UsageInput id={id} name={path} value={value} options={options} path={path} update={update} readOnly={readOnly} disabled={disabled} invalid={Boolean(error)} describedBy={inputProps['aria-describedby']} />
+        <UsageInput id={id} name={path} value={value} options={options} selectableOptions={selectableUsageOptions} path={path} update={update} readOnly={readOnly} disabled={disabled} invalid={Boolean(error)} describedBy={inputProps['aria-describedby']} />
       ) : type === 'number' ? (
         <NumericInput {...inputProps} value={value} onChange={value => update(path, value)} />
       ) : (
@@ -123,6 +123,7 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
   const formRef = useRef(null)
   const inFlight = useRef(false)
   const {campaign, response, permissions = {}} = context
+  const respondingOnBehalf = permissions.respondingOnBehalf === true
   const readOnly = !permissions.canEdit || !editing
   const dirty = !readOnly && JSON.stringify(answer) !== savedValue
   const exploitation = context.exploitation || response.exploitation || {}
@@ -131,12 +132,13 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
   const mapPoints = useMemo(() => [point], [point])
   const hasCoordinates = point.coordinates?.coordinates?.length === 2 && point.coordinates.coordinates.every(Number.isFinite)
   const preleveur = context.preleveur || response.preleveur || exploitation.declarant || {}
-  const usageOptions = campaignUsageOptions(context.waterUses).map(usage => ({...normalizeUsageOption(usage), parentUsage: getUsageParent(usage)})).sort(compareUsageOptions)
+  const usageOptions = useMemo(() => campaignUsageOptions(context.waterUses).map(usage => ({...normalizeUsageOption(usage), parentUsage: getUsageParent(usage)})).sort(compareUsageOptions), [context.waterUses])
+  const selectableUsageOptions = useMemo(() => campaignSelectableUsageOptions(usageOptions), [usageOptions])
   const base = admin ? '/administration/campagnes' : '/campagnes'
-  const applicant = !admin && !permissions.canManage && !permissions.canReadResults
+  const applicant = !admin && !respondingOnBehalf && !permissions.canManage && !permissions.canReadResults
   const errors = {...fieldErrors, ...indexErrors}
   const indexPath = path => /^meters\.\d+\.(?:offSeason|season)\.index(?:Start|End)$/.test(path)
-  const fieldProps = {answer, errors, readOnly, disabled: saving || !ready, usageOptions, validateField: path => {
+  const fieldProps = {answer, errors, readOnly, disabled: saving || !ready, usageOptions, selectableUsageOptions, validateField: path => {
     if (indexPath(path)) setIndexErrors(validateCampaignIndices(answer))
   }, update: (path, value) => {
     const nextAnswer = setCampaignField(answer, path, value)
@@ -192,7 +194,7 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
     })
   }
   async function persist(submit) {
-    if (inFlight.current) return
+    if (readOnly || inFlight.current) return
     setError(null)
     setSuccess(null)
     const nextErrors = submit ? validateCampaignAnswer(answer, usageOptions) : validateCampaignIndices(answer)
@@ -200,7 +202,7 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
     setIndexErrors(nextIndexErrors)
     setErrors(Object.fromEntries(Object.entries(nextErrors).filter(([path]) => !Object.hasOwn(nextIndexErrors, path))))
     if (submit && Object.keys(nextErrors).length) {
-      setError('Vérifiez les champs signalés avant d’envoyer votre réponse.')
+      setError(respondingOnBehalf ? 'Vérifiez les champs signalés avant d’envoyer la réponse.' : 'Vérifiez les champs signalés avant d’envoyer votre réponse.')
       focusInvalidField()
       return
     }
@@ -222,7 +224,7 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
       if (next?.response) acceptContext(next)
       else throw new Error('La réponse a été enregistrée, mais son actualisation a échoué. Rechargez la page avant de poursuivre.')
       setEditing(!submit)
-      setSuccess(submit ? 'Votre réponse a bien été envoyée.' : Object.keys(nextErrors).length ? 'Brouillon enregistré. Les index signalés restent à corriger avant l’envoi.' : 'Brouillon enregistré.')
+      setSuccess(submit ? respondingOnBehalf ? 'La réponse a bien été envoyée.' : 'Votre réponse a bien été envoyée.' : Object.keys(nextErrors).length ? 'Brouillon enregistré. Les index signalés restent à corriger avant l’envoi.' : 'Brouillon enregistré.')
     } catch (error) { setError(error.message) } finally { inFlight.current = false; setSaving(false) }
   }
 
@@ -240,12 +242,13 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
   return (
     <CampaignShell admin={admin} title={applicant ? CAMPAIGN_REQUESTER_TITLE : pointLabel} description={applicant ? CAMPAIGN_REQUESTER_DESCRIPTION : campaign.name} actions={<Link className='fr-btn fr-btn--sm fr-btn--tertiary' href={applicant ? '/tableau-de-bord' : `${base}/${campaign.id}`}>{applicant ? 'Mon activité' : 'Retour à la campagne'}</Link>}>
       {applicant && <h2 className='fr-h5'>{pointLabel}</h2>}
+      {respondingOnBehalf && <p className='fr-text--sm'>{permissions.canEdit ? 'Vous répondez pour' : 'Vous consultez la réponse de'} <strong>{campaignPersonLabel(preleveur)}</strong>. Le brouillon enregistré est partagé avec ce préleveur.</p>}
       <div className='mb-4 flex flex-wrap items-center gap-3'><CampaignStatus response status={response.status} />
         {response.lastSubmittedAt && <span className='text-sm'>Premier envoi : {campaignDate(response.firstSubmittedAt)} · Dernier envoi : {campaignDate(response.lastSubmittedAt)}</span>}
-        {permissions.canEdit && !editing && <button className='fr-btn fr-btn--sm fr-btn--secondary' type='button' onClick={() => setEditing(true)}>Modifier ma réponse</button>}
+        {permissions.canEdit && !editing && <button className='fr-btn fr-btn--sm fr-btn--secondary' type='button' onClick={() => setEditing(true)}>{respondingOnBehalf ? 'Modifier la réponse' : 'Modifier ma réponse'}</button>}
       </div>
-      {applicant && !permissions.canEdit && ['CLOSED', 'ARCHIVED'].includes(campaignState(campaign)) && <p className='fr-text--sm'>Cette collecte est clôturée. Votre réponse reste consultable.</p>}
-      {response.hasDraft && response.lastSubmittedAt && <p className='fr-text--sm'>Ces modifications ne sont pas encore envoyées. Le collecteur voit votre dernière réponse envoyée.</p>}
+      {(applicant || respondingOnBehalf) && !permissions.canEdit && ['CLOSED', 'ARCHIVED'].includes(campaignState(campaign)) && <p className='fr-text--sm'>Cette collecte est clôturée. {respondingOnBehalf ? 'La réponse reste consultable.' : 'Votre réponse reste consultable.'}</p>}
+      {response.hasDraft && response.lastSubmittedAt && <p className='fr-text--sm'>Ces modifications ne sont pas encore envoyées.</p>}
       <PublicationNotice response={response} />
       {response.lastSubmittedAt && <CampaignVolumes volumes={response.volumes} />}
       {response.declarationId && !admin && <p className='fr-text--sm'><Link href={`/mes-declarations/${response.declarationId}`}>Consulter la déclaration d’index générée</Link></p>}
@@ -254,6 +257,7 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
       {readOnly && error && <Alert className='mb-4' severity='error' title='Vérifiez votre réponse' description={error} />}
       {readOnly && success && <div className='mb-4' role='status'><Alert severity='success' title={success} small /></div>}
       <form ref={formRef} noValidate onSubmit={event => { event.preventDefault(); persist(true) }} className='grid gap-4'>
+        {applicant && permissions.canEdit && <p className='fr-text--sm fr-mb-0'>Le collecteur autorisé peut aussi compléter cette réponse et consulter le brouillon enregistré.</p>}
         {!readOnly && <p className='fr-hint-text fr-mb-0'>Les champs marqués d’un astérisque (*) sont obligatoires.</p>}
         <section className='border bg-white p-4 md:p-5'>
           <h2 className='fr-h4'>Bilan des prélèvements 2025–2026</h2>
@@ -288,7 +292,7 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
         </section>
         {!readOnly && <div role='region' aria-label='Enregistrement de la réponse' className='sticky bottom-0 z-10 flex flex-wrap items-center gap-3 border bg-white p-3 shadow-sm'>
           <button className='fr-btn fr-btn--secondary' type='button' disabled={saving || !ready} onClick={() => persist(false)}>Enregistrer le brouillon</button>
-          <button className='fr-btn' type='submit' disabled={saving || !ready}>{saving ? 'Enregistrement…' : response.lastSubmittedAt ? 'Envoyer les modifications' : 'Envoyer ma réponse'}</button>
+          <button className='fr-btn' type='submit' disabled={saving || !ready}>{saving ? 'Enregistrement…' : response.lastSubmittedAt ? 'Envoyer les modifications' : respondingOnBehalf ? 'Envoyer la réponse' : 'Envoyer ma réponse'}</button>
           {success && <p role='status' className='m-0 text-sm font-semibold text-[#18753c]'>{success}</p>}
           {dirty && !saving && !success && <span className='text-sm text-gray-600'>Modifications non enregistrées</span>}
           {error && <div className='w-full' role='alert'><p className='fr-error-text m-0'>{error}</p>

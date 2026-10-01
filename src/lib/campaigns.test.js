@@ -1,7 +1,7 @@
 import test from 'ava'
 
 import {
-  campaignData, campaignDate, campaignExploitationLabel, campaignParticipation, campaignRequiresIrrigationDetails, campaignResponseHref, campaignState, campaignUsageOptions,
+  campaignData, campaignDate, campaignExploitationLabel, campaignParticipation, campaignRequiresIrrigationDetails, campaignResponseHref, campaignSelectableUsageOptions, campaignState, campaignUsageOptions,
   emptyCampaignMeter, formatCampaignVolume, getCampaignField, initialCampaignAnswer, isCampaignRequester, setCampaignField, singleCampaignResponseHref, validateCampaignAnswer, validateCampaignIndices
 } from './campaigns.js'
 
@@ -88,6 +88,54 @@ test('les usages et sous-usages sont proposés sans doublons et gardent leur hi�
   t.is(options[1].parent.id, 'root')
   t.is(campaignUsageOptions([{id: 's', kind: 'SUB_USAGE'}])[0].id, 's')
   t.is(campaignUsageOptions([...options, options[1]]).length, 3)
+})
+
+test('les choix de campagne gardent seulement 0, 1, irrigation et réalimentation avec leurs sous-usages', t => {
+  const usages = [
+    {id: 'unknown', code: '0'},
+    {id: 'none', code: '1'},
+    {id: 'irrigation', code: '2', children: [{id: 'aspersion', code: '2A'}, {id: 'drip', code: '2B'}]},
+    {id: 'replenishment', code: '12', children: [{id: 'filling', code: '12E'}]},
+    {id: 'agriculture', code: '3', children: [{id: 'aquaculture', code: '3B'}]},
+    {id: 'industry', code: '4'},
+    {id: 'twenty', code: '20'},
+    {id: 'one-twenty', code: '120'},
+    {id: 'unknown-child', code: '0A'},
+    {id: 'none-child', code: '1A'}
+  ]
+  const original = structuredClone(usages)
+  const options = campaignSelectableUsageOptions({items: usages})
+  t.deepEqual(options.map(usage => usage.id), ['unknown', 'none', 'irrigation', 'aspersion', 'drip', 'replenishment', 'filling'])
+  t.is(options.find(usage => usage.id === 'aspersion').parent.id, 'irrigation')
+  t.is(options.find(usage => usage.id === 'filling').parent.code, '12')
+  t.deepEqual(usages, original)
+  t.true(campaignUsageOptions(usages).some(usage => usage.id === 'industry'))
+})
+
+test('les choix acceptent le catalogue à plat et les sous-codes sans parent sans doublons', t => {
+  const irrigation = {id: 'irrigation', code: '2'}
+  const aspersion = {id: 'aspersion', code: '2A', parent: irrigation}
+  const usages = [irrigation, aspersion, {id: 'filling', code: '12E'}, {id: 'industry', code: '4A'}, aspersion]
+  t.deepEqual(campaignSelectableUsageOptions(usages).map(usage => usage.id), ['irrigation', 'aspersion', 'filling'])
+  t.deepEqual(campaignSelectableUsageOptions(), [])
+})
+
+test('un usage historique hors liste reste inchangé et valide dans les quatre périodes', t => {
+  const usages = [{id: 'industry', code: '4'}, {id: 'filling', code: '12E'}]
+  const source = {
+    meters: [{offSeason: {usageId: 'industry', indexStart: '0', indexEnd: '1', surface: '2', crops: ['Blé']}, season: {usageId: 'industry', indexEnd: '2', surface: '3', crops: ['Maïs']}}],
+    needs: {season: {usageId: 'industry', flow: '1', volume: '2', surface: '3', crops: ['Blé']}, offSeason: {usageId: 'industry', flow: '1', volume: '2', surface: '3', crops: ['Maïs']}}
+  }
+  const original = structuredClone(source)
+  const answer = initialCampaignAnswer(source)
+  t.deepEqual(validateCampaignAnswer(answer, usages), {})
+  for (const path of ['meters.0.offSeason', 'meters.0.season', 'needs.season', 'needs.offSeason']) {
+    t.is(getCampaignField(answer, `${path}.usageId`), 'industry')
+    t.truthy(validateCampaignAnswer(setCampaignField(answer, `${path}.surface`, ''), usages)[`${path}.surface`])
+    t.truthy(validateCampaignAnswer(setCampaignField(answer, `${path}.crops`, []), usages)[`${path}.crops`])
+  }
+  t.deepEqual(campaignSelectableUsageOptions(usages).map(usage => usage.id), ['filling'])
+  t.deepEqual(source, original)
 })
 
 const replenishmentUsages = [

@@ -12,6 +12,7 @@ import {getPointWaterBodyFixtureRole, handlePointWaterBodyFixtureRequest} from '
 import {isCountingFixture, handleCountingFixtureRequest} from './counting-code-fixtures.mjs'
 import {isCampaignFixture, handleCampaignFixtureRequest} from './campaign-fixtures.mjs'
 import {isZoneResourceFixture, handleZoneResourceFixtureRequest} from './zone-resource-settings-fixtures.mjs'
+import {isQuickExclusionFixture, handleQuickExclusionFixtureRequest} from './quick-exclusion-fixtures.mjs'
 
 // Synthetic backend: deliberately no database, outbound HTTP, mail or jobs.
 const zoneId = '11111111-1111-4111-8111-111111111111'
@@ -59,7 +60,7 @@ const api = createServer(async (request, response) => {
       : /^Bearer browser-test-meter-declarant(?:-|$)/.test(request.headers.authorization) ? 'DECLARANT' : null
   const dashboardRole = getDashboardFixtureRole(request.headers.authorization)
   const pointWaterBodyRole = getPointWaterBodyFixtureRole(request.headers.authorization)
-  if (request.headers.authorization !== 'Bearer browser-test-api-token' && !meterRole && !dashboardRole && !pointWaterBodyRole && !isChartSeriesFixture(request.headers.authorization) && !isCountingFixture(request.headers.authorization) && !isCampaignFixture(request.headers.authorization) && !isZoneResourceFixture(request.headers.authorization)) {
+  if (request.headers.authorization !== 'Bearer browser-test-api-token' && !meterRole && !dashboardRole && !pointWaterBodyRole && !isChartSeriesFixture(request.headers.authorization) && !isCountingFixture(request.headers.authorization) && !isCampaignFixture(request.headers.authorization) && !isZoneResourceFixture(request.headers.authorization) && !isQuickExclusionFixture(request.headers.authorization)) {
     return send(401, {message: 'Unauthorized'})
   }
 
@@ -69,6 +70,7 @@ const api = createServer(async (request, response) => {
   if (await handleCountingFixtureRequest(request, send)) return
   if (await handleCampaignFixtureRequest(request, send, response)) return
   if (await handleZoneResourceFixtureRequest(request, send)) return
+  if (await handleQuickExclusionFixtureRequest(request, send)) return
 
   if (pathname === '/api/campaigns/summary') return send(200, {success: true, data: {hasCampaigns: false, items: []}})
 

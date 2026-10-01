@@ -7,6 +7,7 @@ const browserTests = [
   'chart-series-loading.spec.js',
   'meter-synchronization.spec.js',
   'counting-code.spec.js',
+  'quick-exclusion.spec.js',
   'security-modernisation.spec.js',
   'selected-volume-totals.spec.js',
   'public-stats.spec.js',
