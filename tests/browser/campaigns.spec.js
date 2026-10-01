@@ -207,6 +207,7 @@ test('plusieurs comptages : une liste simple sans recherche, sans confondre deux
   await page.goto(`${frontUrl}/campagnes/${campaignIds.campaign}`)
   await expect(page.getByText(/Code compteur Agence de l’eau : 001/)).toBeVisible()
   await expect(page.getByText(/Code compteur Agence de l’eau : 002/)).toBeVisible()
+  await expect(page.getByText('Commune de test · Parcelle du moulin', {exact: true})).toHaveCount(2)
   await expect(page.getByRole('searchbox')).toHaveCount(0)
   await expect(page.getByRole('button', {name: 'Filtrer', exact: true})).toHaveCount(0)
   await expect(page.getByRole('main')).not.toContainText(/exploitation/i)
@@ -787,12 +788,18 @@ test('les erreurs métier de l’API et les champs invalides restent lisibles sa
   await expect(page.locator('[name="meters.0.offSeason.indexStart"]')).toHaveValue('15')
 })
 
-test('collecteur : navigation, export des résultats envoyés et correction de la réponse', async ({page, context, isMobile}) => {
+test('collecteur : navigation, export des résultats envoyés et correction de la réponse', async ({page, context, isMobile}, testInfo) => {
   const requests = await authenticate(context, 'collector')
   await page.goto(`${frontUrl}/campagnes/${campaignIds.campaign}`)
   if (isMobile) await page.getByRole('button', {name: 'Menu', exact: true}).click()
   await expect(page.getByRole('link', {name: 'Campagnes', exact: true})).toBeVisible()
   if (isMobile) await page.getByRole('button', {name: 'Fermer', exact: true}).click()
+  await expect(page.getByRole('heading', {name: 'Points de la campagne', exact: true})).toBeVisible()
+  await expect(page.getByText('Commune de test · Parcelle du moulin', {exact: true})).toBeVisible()
+  await expect(page.getByText('Code compteur Agence de l’eau : 001', {exact: true})).toBeVisible()
+  await expect(page.getByRole('searchbox', {name: 'Rechercher un point ou un préleveur', exact: true})).toHaveAttribute('placeholder', 'Nom du point, commune, code compteur, préleveur')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
+  await page.screenshot({path: testInfo.outputPath('points-campagne-collecteur.png'), fullPage: true})
   await page.getByRole('button', {name: 'Résultats envoyés', exact: true}).click()
   await expect(page.getByText('120 m³', {exact: true})).toBeVisible()
   await expect(page.getByRole('heading', {name: 'Volumes prélevés calculés', exact: true})).toBeVisible()

@@ -25,7 +25,7 @@ const uses = [
   {id: campaignIds.industrialChildUsage, kind: 'SUB_USAGE', code: '4A', label: 'Refroidissement industriel', parent: industryUsage},
   {id: campaignIds.drinkingUsage, kind: 'USAGE', code: '5', label: 'Alimentation en eau potable'}
 ]
-const point = {id: campaignIds.point, name: 'Point synthétique', communeName: 'Commune de test'}
+const point = {id: campaignIds.point, name: 'Point synthétique', communeName: 'Commune de test', locationDescription: 'Parcelle du moulin'}
 const preleveur = {userId: campaignIds.user, socialReason: 'Ferme synthétique', siret: '00000000000000', email: 'campaign@example.test', phoneNumber: '0000000000'}
 const collecteur = {userId: campaignIds.collector, socialReason: 'Collecteur synthétique'}
 const completeData = () => ({
@@ -66,7 +66,7 @@ export async function handleCampaignFixtureRequest(request, send, response) {
     draft: authorization.includes('-outsideusage-') && !authorization.includes('-prefill-') ? outsideUsageData() : authorization.includes('-legacy-') ? legacyData() : authorization.includes('-complete-') ? completeData() : null,
     submitted: (collector && !authorization.includes('-fresh-') && !authorization.includes('-shared-')) || authorization.includes('-review-') ? completeData() : null,
     prefill: authorization.includes('-prefill-') ? authorization.includes('-outsideusage-') ? outsideUsageData() : prefillData(unauthorizedOffSeason, authorization.includes('-missing-'), authorization.includes('-serial-')) : null,
-    revision: 0, requests: [], name: 'Collecte synthétique', status: ended ? 'CLOSED' : admin ? 'DRAFT' : 'OPEN'
+    revision: 0, requests: [], summaryReads: 0, name: 'Collecte synthétique', status: ended ? 'CLOSED' : admin ? 'DRAFT' : 'OPEN'
   })
   const state = states.get(stateKey)
   const mapMany = authorization.includes('-map-many-')
@@ -84,6 +84,7 @@ export async function handleCampaignFixtureRequest(request, send, response) {
 
   if (pathname === '/info' || pathname === '/api/info') return respond(200, {role, declarantRole: collector ? 'COLLECTEUR' : 'PRELEVEUR', permissions: [], user: {id: campaignIds.user, email: 'campaign@example.test', socialReason: preleveur.socialReason}, expiresAt: new Date(Date.now() + 3_600_000).toISOString()})
   if (pathname === '/api/__campaign-requests') return respond(200, state.requests)
+  if (pathname === '/api/__campaign-summary-reads') return respond(200, state.summaryReads)
   if (pathname === '/api/dashboard/territory') return respond(200, {
     scope: 'DECLARANT', zones: [], selectedZoneCodes: [], metrics: {totalPoints: 1, usageDistribution: []},
     registeredPrelevements: {selectedPeriodType: 'month', selectedPeriod: '2026-09', periodOptions: [], byUsage: []},
@@ -101,7 +102,12 @@ export async function handleCampaignFixtureRequest(request, send, response) {
     const declaration = {id: campaignIds.declaration, code: 'SYNTH', type: 'quick-declaration', dataSourceType: 'MANUAL', createdAt: '2026-11-01', files: [], canReconcile: false}
     return ok(pathname.startsWith('/api/sources/') ? {...source, declaration} : {...declaration, source})
   }
-  if (pathname === '/api/campaigns/summary') return ok({hasCampaigns: true, items: [campaign()]})
+  if (pathname === '/api/campaigns/summary') {
+    state.summaryReads++
+    if (authorization.includes('-collector-summary-error-')) return respond(503, {message: 'Indisponibilité synthétique.'})
+    const hasCampaigns = !authorization.includes('-collector-no-campaigns-')
+    return ok({hasCampaigns, items: hasCampaigns ? [campaign()] : []})
+  }
   if (pathname === '/api/campaigns/candidates') {
     const items = [{id: campaignIds.exploitation, point, preleveur, countingCode: '001', usage: {id: 'parent', code: '2', label: 'Irrigation'}}]
     return ok({items, total: 1, page: 1, pageSize: 25, collecteurs: [collecteur], usages: [], ...(searchParams.get('selectAll') === 'true' ? {selectedIds: [campaignIds.exploitation]} : {})})

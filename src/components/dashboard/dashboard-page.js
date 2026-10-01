@@ -114,6 +114,7 @@ const VOLUME_CHART_SCOPE_NOTICE = 'Volumes représentant uniquement les déclara
 const WITHDRAWN_VOLUME_CHART_SUBTITLE = `Eau prélevée dans le milieu naturel (cours d'eau, nappe, plan d'eau, retenue), qu'elle y retourne ensuite ou non. ${VOLUME_CHART_SCOPE_NOTICE}`
 const DISCHARGED_VOLUME_CHART_SUBTITLE = `Eau restituée, après utilisation, au milieu où elle a été prélevée. ${VOLUME_CHART_SCOPE_NOTICE}`
 const EMPTY_ARRAY = []
+const EMPTY_FILTERS = {}
 const DASHBOARD_HASH_PREFIX = 'dashboard?'
 
 function formatZoneLabel(zone) {
@@ -652,6 +653,7 @@ const DashboardPage = ({
   declarationActions = null,
   initialDashboard,
   initialError,
+  initialFilters = EMPTY_FILTERS,
   user
 }) => {
   const hasAppliedInitialHashRef = useRef(false)
@@ -660,19 +662,22 @@ const DashboardPage = ({
   const [dashboard, setDashboard] = useState(initialDashboard)
   const [selectedZoneCodes, setSelectedZoneCodes] = useState(initialDashboard?.selectedZoneCodes ?? [])
   const [selectedPeriodType, setSelectedPeriodType] = useState(
-    initialDashboard?.registeredPrelevements?.selectedPeriodType ?? 'month'
+    initialDashboard?.registeredPrelevements?.selectedPeriodType ?? initialFilters.periodType ?? 'month'
   )
   const [selectedPeriod, setSelectedPeriod] = useState(
-    initialDashboard?.registeredPrelevements?.selectedPeriod ?? ''
+    initialDashboard?.registeredPrelevements?.selectedPeriod ?? initialFilters.period ?? ''
   )
   const [selectedVolumeYear, setSelectedVolumeYear] = useState(
-    initialDashboard?.volumesByUsage?.selectedYear ?? ''
+    initialDashboard?.volumesByUsage?.selectedYear ?? initialFilters.year ?? ''
   )
   const [selectedWaterBodyTypes, setSelectedWaterBodyTypes] = useState(
-    initialDashboard?.volumesByUsage?.selectedWaterBodyTypes ?? WATER_BODY_TYPE_VALUES
+    initialDashboard?.volumesByUsage?.selectedWaterBodyTypes
+      ?? parseDashboardHashWaterBodyTypes(initialFilters.waterBodyTypes ?? initialFilters.waterBodyType ?? null)
   )
   const [error, setError] = useState(initialError)
   const [isTerritoryLoading, setIsTerritoryLoading] = useState(false)
+  const [isInitialStatisticsLoading, setIsInitialStatisticsLoading] = useState(Boolean(initialDashboard)
+    && (!initialDashboard.registeredPrelevements || !initialDashboard.volumesByUsage))
   const [monitoringState, setMonitoringState] = useState({zoneCodesKey: null, stations: EMPTY_ARRAY})
   const monitoringStations = monitoringState.zoneCodesKey === selectedZoneCodes.join(',') ? monitoringState.stations : EMPTY_ARRAY
 
@@ -702,6 +707,7 @@ const DashboardPage = ({
   const withdrawnChart = getVolumeChartForRole(volumesByUsage?.charts?.withdrawn, isDeclarant)
   const dischargedChart = getVolumeChartForRole(volumesByUsage?.charts?.discharged, isDeclarant)
   const hasSelectableZones = zones.length > 0
+  const hasStatistics = Boolean(registeredPrelevements && volumesByUsage)
   const isZoneFilterDisabled = !hasSelectableZones || isTerritoryLoading
   const showWaterResourcesTitle = user?.role !== 'ADMIN'
 
@@ -740,6 +746,53 @@ const DashboardPage = ({
       .filter(code => selectedSet.has(code))
   }, [zones])
 
+  // A lightweight server-rendered context lets the map and actions load first.
+  // This read is fresh, cancellable and never cached across identities/scopes.
+  useEffect(() => {
+    if (!initialDashboard || (initialDashboard.registeredPrelevements && initialDashboard.volumesByUsage)) return
+    const controller = new AbortController()
+    territoryControllerRef.current = controller
+    const requestId = ++territoryReloadRequestIdRef.current
+    setIsInitialStatisticsLoading(true)
+
+    async function loadInitialStatistics() {
+      try {
+        let data = await loadDashboardTerritory({
+          ...initialFilters,
+          zoneCodes: initialDashboard.selectedZoneCodes,
+          includePoints: false,
+          sections: ['registeredPrelevements', 'volumesByUsage']
+        }, {signal: controller.signal})
+        const sameScope = data?.scope === initialDashboard.scope
+          && areSameValues(data?.selectedZoneCodes ?? [], initialDashboard.selectedZoneCodes ?? [])
+        if (!sameScope) {
+          data = await loadDashboardTerritory({
+            ...initialFilters, includePoints: false, zoneCodes: data?.selectedZoneCodes ?? []
+          }, {signal: controller.signal})
+        }
+        if (controller.signal.aborted || territoryReloadRequestIdRef.current !== requestId) return
+        if (!data?.registeredPrelevements || !data?.volumesByUsage) throw new Error('Impossible de charger les indicateurs du territoire.')
+        setDashboard(sameScope ? {...initialDashboard, ...data} : data)
+        setSelectedZoneCodes(data.selectedZoneCodes ?? [])
+        setSelectedPeriodType(data.registeredPrelevements.selectedPeriodType)
+        setSelectedPeriod(data.registeredPrelevements.selectedPeriod)
+        setSelectedVolumeYear(data.volumesByUsage.selectedYear)
+        setSelectedWaterBodyTypes(data.volumesByUsage.selectedWaterBodyTypes)
+      } catch (error) {
+        if (!controller.signal.aborted && territoryReloadRequestIdRef.current === requestId) {
+          setError(error.message || 'Impossible de charger les indicateurs du territoire.')
+        }
+      } finally {
+        if (!controller.signal.aborted && territoryReloadRequestIdRef.current === requestId) {
+          setIsInitialStatisticsLoading(false)
+        }
+      }
+    }
+
+    loadInitialStatistics()
+    return () => controller.abort()
+  }, [initialDashboard, initialFilters])
+
   const reloadDashboard = useCallback(async ({
     period = selectedPeriod,
     periodType = selectedPeriodType,
@@ -755,6 +808,7 @@ const DashboardPage = ({
     territoryControllerRef.current = controller
 
     setIsTerritoryLoading(true)
+    setIsInitialStatisticsLoading(false)
     setError(null)
 
     try {
@@ -931,6 +985,48 @@ const DashboardPage = ({
         : {stations, zoneCodesKey})
   }, [])
 
+  const statistics = hasStatistics ? (
+    <>
+      <RegisteredPrelevementsSection
+        className={isDeclarant ? 'mt-0' : 'mt-6'}
+        declarationsURL={declarationsURL}
+        declarationsURLLabel={declarationsURLLabel}
+        isLoading={isTerritoryLoading}
+        periodOptions={periodOptions}
+        registeredPrelevementsByUsage={registeredPrelevementsByUsage}
+        selectedPeriod={selectedPeriod}
+        selectedPeriodType={selectedPeriodType}
+        showReminder={!isPreleveurDeclarant}
+        title={isDeclarant ? 'Prélèvements déclarés' : undefined}
+        onPeriodChange={handlePeriodChange}
+        onPeriodTypeChange={handlePeriodTypeChange}
+      />
+      <DashboardVolumeCharts
+        dischargedChart={dischargedChart}
+        isLoading={isTerritoryLoading}
+        selectedVolumeYear={selectedVolumeYear}
+        selectedWaterBodyTypes={selectedWaterBodyTypes}
+        volumeYearOptions={volumeYearOptions}
+        withdrawnChart={withdrawnChart}
+        onVolumeYearChange={handleVolumeYearChange}
+        onWaterBodyTypesChange={handleWaterBodyTypesChange}
+      />
+    </>
+  ) : (
+    <div className='mt-6 min-h-48 border border-gray-200 bg-white p-5 text-gray-600'>
+      {isInitialStatisticsLoading || isTerritoryLoading ? (
+        <p role='status'>Chargement des indicateurs du territoire…</p>
+      ) : (
+        <>
+          <p>Les indicateurs du territoire n’ont pas pu être chargés.</p>
+          <button className='fr-btn fr-btn--secondary fr-btn--sm' type='button' onClick={() => reloadDashboard()}>
+            Réessayer
+          </button>
+        </>
+      )}
+    </div>
+  )
+
   return (
     <main className='min-h-screen bg-[#f7f7fb] pb-12'>
       <DashboardRefreshStatus isLoading={isTerritoryLoading} />
@@ -999,31 +1095,7 @@ const DashboardPage = ({
                 )}
                 title='Chiffres clés de mon territoire'
               >
-                <RegisteredPrelevementsSection
-                  className='mt-0'
-                  declarationsURL={declarationsURL}
-                  declarationsURLLabel={declarationsURLLabel}
-                  isLoading={isTerritoryLoading}
-                  periodOptions={periodOptions}
-                  registeredPrelevementsByUsage={registeredPrelevementsByUsage}
-                  selectedPeriod={selectedPeriod}
-                  selectedPeriodType={selectedPeriodType}
-                  showReminder={!isPreleveurDeclarant}
-                  title='Prélèvements déclarés'
-                  onPeriodChange={handlePeriodChange}
-                  onPeriodTypeChange={handlePeriodTypeChange}
-                />
-
-                <DashboardVolumeCharts
-                  dischargedChart={dischargedChart}
-                  isLoading={isTerritoryLoading}
-                  selectedVolumeYear={selectedVolumeYear}
-                  selectedWaterBodyTypes={selectedWaterBodyTypes}
-                  volumeYearOptions={volumeYearOptions}
-                  withdrawnChart={withdrawnChart}
-                  onVolumeYearChange={handleVolumeYearChange}
-                  onWaterBodyTypesChange={handleWaterBodyTypesChange}
-                />
+                {statistics}
 
                 <DashboardWaterResources
                   selectedZoneCodes={selectedZoneCodes}
@@ -1054,29 +1126,7 @@ const DashboardPage = ({
               showCollecteurs={!isCollector}
             />
 
-            <RegisteredPrelevementsSection
-              showReminder
-              declarationsURL={declarationsURL}
-              declarationsURLLabel={declarationsURLLabel}
-              isLoading={isTerritoryLoading}
-              periodOptions={periodOptions}
-              registeredPrelevementsByUsage={registeredPrelevementsByUsage}
-              selectedPeriod={selectedPeriod}
-              selectedPeriodType={selectedPeriodType}
-              onPeriodChange={handlePeriodChange}
-              onPeriodTypeChange={handlePeriodTypeChange}
-            />
-
-            <DashboardVolumeCharts
-              dischargedChart={dischargedChart}
-              isLoading={isTerritoryLoading}
-              selectedVolumeYear={selectedVolumeYear}
-              selectedWaterBodyTypes={selectedWaterBodyTypes}
-              volumeYearOptions={volumeYearOptions}
-              withdrawnChart={withdrawnChart}
-              onVolumeYearChange={handleVolumeYearChange}
-              onWaterBodyTypesChange={handleWaterBodyTypesChange}
-            />
+            {statistics}
 
             <DashboardWaterResources
               selectedZoneCodes={selectedZoneCodes}

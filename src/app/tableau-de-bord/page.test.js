@@ -20,6 +20,8 @@ function compile(file, stubs) {
 function harness({role = 'DECLARANT', declarantRole = 'PRELEVEUR', permissions = [], canCreate = true} = {}) {
   const summary = Promise.withResolvers()
   const calls = []
+  const territoryOptions = []
+  let dashboardData = {scope: role}
   const actions = compile('../../components/dashboard/dashboard-declaration-actions.js', {
     'next/link': {__esModule: true, default: ({children, href}) => React.createElement('a', {href}, children)},
     '@/components/campaigns/campaign-common.js': {CampaignInvitations: ({summary}) => summary?.items?.length ? React.createElement('p', null, 'Campagne reçue') : null},
@@ -35,10 +37,53 @@ function harness({role = 'DECLARANT', declarantRole = 'PRELEVEUR', permissions =
     '@/components/dashboard/dashboard-declaration-actions.js': {__esModule: true, default: actions},
     '@/dsfr-bootstrap/index.js': {StartDsfrOnHydration: () => null},
     '@/server/actions/user.js': {getCurrentSessionInfo: async () => ({success: true, data: {role, declarantRole, permissions, user: {id: 'user'}}})},
-    '@/server/actions/dashboard.js': {getDashboardTerritoryAction: async () => { calls.push('territory'); return {success: true, data: {scope: role}} }}
+    '@/server/actions/dashboard.js': {getDashboardTerritoryAction: async options => {
+      territoryOptions.push(options)
+      calls.push('territory')
+      return {success: true, data: dashboardData}
+    }}
   })
-  return {page: () => page({searchParams: Promise.resolve({})}), actions, summary, calls}
+  return {
+    page: (searchParams = {}) => page({searchParams: Promise.resolve(searchParams)}),
+    setDashboard: data => { dashboardData = data },
+    actions, summary, calls, territoryOptions
+  }
 }
+
+test('un rafraîchissement du même utilisateur et de la même URL réinitialise les anciens chiffres et droits', async t => {
+  const flow = harness({role: 'ADMIN'})
+  const firstSnapshot = {
+    scope: 'TERRITORY', selectedZoneCodes: ['zone-a'],
+    zones: [{code: 'zone-a', permissions: ['zone.dashboard.read']}],
+    metrics: {totalPoints: 10}
+  }
+  flow.setDashboard(firstSnapshot)
+  const first = (await flow.page()).props.children[1]
+  const same = (await flow.page()).props.children[1]
+  t.is(first.key, same.key)
+  for (const snapshot of [
+    {...firstSnapshot, metrics: {totalPoints: 11}},
+    {...firstSnapshot, selectedZoneCodes: [], zones: []},
+    {...firstSnapshot, zones: [{code: 'zone-a', permissions: []}]}
+  ]) {
+    flow.setDashboard(snapshot)
+    const refreshed = (await flow.page()).props.children[1]
+    t.not(refreshed.key, first.key)
+    t.deepEqual(refreshed.props.initialDashboard, snapshot)
+  }
+})
+
+test('le rendu initial ne calcule pas les agrégations et transmet les filtres pour leur lecture différée', async t => {
+  for (const role of ['ADMIN', 'DECLARANT']) {
+    const flow = harness({role})
+    const dashboard = (await flow.page({period: '2025-08', year: '2025', waterBodyTypes: 'SOUTERRAIN', zones: 'sage-1'})).props.children[1]
+    t.deepEqual(flow.territoryOptions[0].sections, role === 'DECLARANT' ? ['context'] : ['context', 'metrics'])
+    t.deepEqual(dashboard.props.initialFilters, {
+      includePoints: false, period: '2025-08', periodType: undefined, year: '2025',
+      waterBodyTypes: 'SOUTERRAIN', waterBodyType: undefined, zoneCodes: ['sage-1']
+    })
+  }
+})
 
 test('les chiffres du tableau de bord n’attendent pas les invitations, qui restent dans Suspense', async t => {
   const flow = harness()
