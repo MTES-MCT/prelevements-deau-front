@@ -25,10 +25,10 @@ export default function CampaignList({initialData, initialError, admin = false})
       {error && <Alert severity='error' title='Les campagnes ne peuvent pas être affichées' description={error} className='mb-4' />}
       {loading ? <p role='status'>Chargement des campagnes…</p> : !error && (
         <>
-          {!result.items?.length && <p className='border bg-white p-5'>Aucune campagne pour le moment.</p>}
+          {!result.items?.length && <p className='border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-5'>Aucune campagne pour le moment.</p>}
           <ul className='m-0 grid list-none gap-3 p-0'>
             {result.items?.map(campaign => (
-              <li key={campaign.id} className='border border-gray-200 bg-white p-4'>
+              <li key={campaign.id} className='border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-4'>
                 <div className='flex flex-wrap items-start justify-between gap-3'>
                   <div><h2 className='fr-h5 fr-mb-1w'><Link href={`${base}/${campaign.id}`}>{campaign.name}</Link></h2><CampaignStatus status={campaignState(campaign)} /></div>
                   <CampaignProgress requester={requester} progress={campaign.progress} />

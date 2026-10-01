@@ -14,10 +14,10 @@ export default function CampaignCropsSelect({id, value, onChange, readOnly, disa
     value: label,
     label,
     title: parent ? `${label} — ${parent}` : label,
-    content: <span data-crop-level={parent ? 'child' : 'parent'} className={`block min-w-0 whitespace-normal text-sm ${parent ? 'ml-4 border-l border-gray-300 pl-3' : 'font-semibold'}`}>{label}</span>
+    content: <span data-crop-level={parent ? 'child' : 'parent'} className={`block min-w-0 whitespace-normal text-sm text-[var(--text-default-grey)] ${parent ? 'ml-4 border-l border-[var(--border-default-grey)] pl-3' : 'font-semibold'}`}>{label}</span>
   }))
 
-  if (readOnly) return <div><p className='fr-label text-sm'>{label}</p><p id={id} className='mb-0 mt-2 whitespace-pre-wrap text-sm'>{selected.join(', ') || 'Non renseignées'}</p></div>
+  if (readOnly) return <div><p className='fr-label text-sm'>{label}</p><p id={id} className='mb-0 mt-2 whitespace-pre-wrap text-sm text-[var(--text-default-grey)]'>{selected.join(', ') || 'Non renseignées'}</p></div>
 
   return <GroupedMultiselect
     searchable

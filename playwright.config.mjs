@@ -3,6 +3,7 @@ import {defineConfig, devices} from '@playwright/test'
 const frontUrl = 'http://127.0.0.1:3417'
 const browserTests = [
   'campaigns.spec.js',
+  'campaigns-theme.spec.js',
   'campaign-navigation.spec.js',
   'campaigns-map.spec.js',
   'chart-series-loading.spec.js',
