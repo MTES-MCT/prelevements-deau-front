@@ -550,7 +550,7 @@ const GroupedMultiselect = ({
                       onKeyDown={handleKeyDown}
                     >
                       {showCheckboxes ? (
-                        <span aria-hidden='true' data-selection-indicator='checkbox' data-checked={isSelected} className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-xs border text-xs ${isSelected ? 'border-[#000091] bg-[#000091] text-white' : 'border-gray-500 bg-white'}`}>
+                        <span aria-hidden='true' data-selection-indicator='checkbox' data-checked={isSelected} className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-xs border text-xs ${isSelected ? 'border-[var(--border-active-blue-france)] bg-[var(--background-active-blue-france)] text-[var(--text-inverted-blue-france)]' : 'border-[var(--border-plain-grey)] bg-[var(--background-default-grey)]'}`}>
                           {isSelected ? '✓' : ''}
                         </span>
                       ) : isSelected && (
