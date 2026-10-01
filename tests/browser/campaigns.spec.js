@@ -263,12 +263,24 @@ test('les périodes des besoins gardent leurs dates et couleurs, les catégories
   await page.goto(responseUrl)
   const seasonNeeds = page.getByRole('group', {name: seasonNeedsTitle, exact: true})
   const offSeasonNeeds = page.getByRole('group', {name: offSeasonNeedsTitle, exact: true})
-  await expect(seasonNeeds).toHaveCSS('background-color', 'rgb(255, 249, 230)')
-  await expect(seasonNeeds).toHaveCSS('border-top-color', 'rgb(195, 153, 42)')
-  await expect(offSeasonNeeds).toHaveCSS('background-color', 'rgb(238, 242, 250)')
-  await expect(offSeasonNeeds).toHaveCSS('border-top-color', 'rgb(70, 95, 157)')
-  await expect(page.getByRole('group', {name: 'Étiage 2026', exact: true}).first()).toHaveCSS('background-color', 'rgb(255, 249, 230)')
-  await expect(page.getByRole('group', {name: 'Hors étiage 2025–2026', exact: true}).first()).toHaveCSS('background-color', 'rgb(238, 242, 250)')
+  const periodColours = await page.evaluate(() => {
+    const probe = document.createElement('span')
+    document.body.append(probe)
+    const values = Object.fromEntries(['background-alt-yellow-tournesol', 'border-plain-yellow-tournesol', 'background-alt-blue-cumulus', 'border-plain-blue-cumulus'].map(token => {
+      probe.style.color = `var(--${token})`
+      return [token, getComputedStyle(probe).color]
+    }))
+    probe.remove()
+    return values
+  })
+  expect(periodColours['background-alt-yellow-tournesol']).not.toBe(periodColours['background-alt-blue-cumulus'])
+  expect(periodColours['border-plain-yellow-tournesol']).not.toBe(periodColours['border-plain-blue-cumulus'])
+  await expect(seasonNeeds).toHaveCSS('background-color', periodColours['background-alt-yellow-tournesol'])
+  await expect(seasonNeeds).toHaveCSS('border-top-color', periodColours['border-plain-yellow-tournesol'])
+  await expect(offSeasonNeeds).toHaveCSS('background-color', periodColours['background-alt-blue-cumulus'])
+  await expect(offSeasonNeeds).toHaveCSS('border-top-color', periodColours['border-plain-blue-cumulus'])
+  await expect(page.getByRole('group', {name: 'Étiage 2026', exact: true}).first()).toHaveCSS('background-color', periodColours['background-alt-yellow-tournesol'])
+  await expect(page.getByRole('group', {name: 'Hors étiage 2025–2026', exact: true}).first()).toHaveCSS('background-color', periodColours['background-alt-blue-cumulus'])
   expect(await seasonNeeds.evaluate(element => element.nextElementSibling?.querySelector('legend')?.textContent)).toBe(offSeasonNeedsTitle)
   const crops = seasonNeeds.getByRole('button', {name: 'Cultures irriguées', exact: true})
   await crops.click()

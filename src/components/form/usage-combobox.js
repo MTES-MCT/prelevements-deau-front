@@ -246,7 +246,8 @@ const UsageCombobox = ({
       ref={listboxRef}
       id={`${id}-listbox`}
       className={classNames(
-        campaign ? 'campaign-usage-listbox z-[1200] overflow-auto overscroll-contain rounded border border-gray-300 bg-white shadow-lg' : 'quick-declaration-usage-listbox z-[1200] overflow-auto border border-gray-300 bg-white shadow-lg',
+        'z-[1200] overflow-auto border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] text-[var(--text-default-grey)] shadow-lg',
+        campaign ? 'campaign-usage-listbox overscroll-contain rounded' : 'quick-declaration-usage-listbox',
         isInlineDropdown ? 'absolute right-0 left-0 top-full mt-1 max-h-64' : 'fixed'
       )}
       role='listbox'
@@ -269,9 +270,9 @@ const UsageCombobox = ({
             aria-label={usage.parentUsage ? `${formatUsageOptionLabel(usage)} — ${formatUsageParentLabel(usage.parentUsage)}` : undefined}
             aria-selected={isSelected}
             className={classNames(
-              'flex w-full cursor-pointer items-start border-b border-gray-100 text-left last:border-b-0',
+              'flex w-full cursor-pointer items-start border-b border-[var(--border-default-grey)] text-left last:border-b-0',
               campaign ? 'min-h-12 gap-3 px-3 py-3 text-sm leading-6' : 'gap-1.5 px-2 py-2 text-xs',
-              isActive ? 'bg-blue-50 text-blue-900' : campaign && !usage.parentUsage ? 'bg-gray-100 hover:bg-blue-50' : 'bg-white hover:bg-gray-50',
+              isActive ? 'bg-[var(--background-contrast-blue-france)] text-[var(--text-action-high-blue-france)]' : campaign && !usage.parentUsage ? 'bg-[var(--background-alt-grey)] hover:bg-[var(--background-contrast-blue-france)]' : 'bg-[var(--background-default-grey)] hover:bg-[var(--background-alt-grey)]',
               isSelected && 'font-semibold',
               !usage.parentUsage && 'font-semibold',
               campaign && usage.parentUsage && 'pl-8'
@@ -283,12 +284,12 @@ const UsageCombobox = ({
             }}
             onClick={campaign ? () => selectUsage(usage) : undefined}
           >
-            <span className={showSelectionIndicator ? 'mt-1 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-[#000091]' : 'inline-flex h-4 w-3 shrink-0 items-center justify-center'} data-usage-selection-indicator={showSelectionIndicator ? '' : undefined} aria-hidden='true'>
-              {isSelected && <span className={showSelectionIndicator ? 'h-2 w-2 rounded-full bg-[#000091]' : 'fr-icon-check-line text-[#18753c]'} />}
+            <span className={showSelectionIndicator ? 'mt-1 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-[var(--border-active-blue-france)]' : 'inline-flex h-4 w-3 shrink-0 items-center justify-center'} data-usage-selection-indicator={showSelectionIndicator ? '' : undefined} aria-hidden='true'>
+              {isSelected && <span className={showSelectionIndicator ? 'h-2 w-2 rounded-full bg-[var(--background-active-blue-france)]' : 'fr-icon-check-line text-[var(--text-default-success)]'} />}
             </span>
             <span className={classNames(
               'flex min-w-0 flex-1 items-start gap-2',
-              usage.parentUsage && !campaign && 'ml-4 border-l border-gray-300 pl-3'
+              usage.parentUsage && !campaign && 'ml-4 border-l border-[var(--border-default-grey)] pl-3'
             )}
             >
               {!showSelectionIndicator && <span
@@ -301,7 +302,7 @@ const UsageCombobox = ({
               />}
               <span className='min-w-0'>
                 {showParentContext && (
-                  <span className={campaign ? 'block text-xs font-normal text-gray-600' : 'block text-[0.66rem] font-normal text-gray-600'}>
+                  <span className={campaign ? 'block text-xs font-normal text-[var(--text-mention-grey)]' : 'block text-[0.66rem] font-normal text-[var(--text-mention-grey)]'}>
                     {formatUsageParentLabel(usage.parentUsage)}
                   </span>
                 )}
@@ -407,7 +408,7 @@ const UsageCombobox = ({
           type='button'
           disabled={readOnly || disabled}
           tabIndex={-1}
-          className={campaign ? 'absolute bottom-0 right-0 top-0 flex w-12 items-center justify-center text-[#000091] fr-icon-arrow-down-s-line' : 'quick-declaration-combobox-toggle fr-icon-arrow-down-s-line'}
+          className={campaign ? 'absolute bottom-0 right-0 top-0 flex w-12 items-center justify-center text-[var(--text-action-high-blue-france)] fr-icon-arrow-down-s-line' : 'quick-declaration-combobox-toggle fr-icon-arrow-down-s-line'}
           aria-label={open ? 'Fermer la liste des usages' : 'Ouvrir la liste des usages'}
           onMouseDown={event => event.preventDefault()}
           onClick={() => {
@@ -428,15 +429,15 @@ const UsageCombobox = ({
       {selectedUsage?.parentUsage && (
         <p
           id={parentDescriptionId}
-          className={campaign ? 'fr-mb-0 mt-1 text-xs text-gray-600' : 'fr-mb-0 mt-1 truncate text-[0.66rem] leading-tight text-gray-600'}
+          className={campaign ? 'fr-mb-0 mt-1 text-xs text-[var(--text-mention-grey)]' : 'fr-mb-0 mt-1 truncate text-[0.66rem] leading-tight text-[var(--text-mention-grey)]'}
           title={`Usage principal : ${formatUsageParentLabel(selectedUsage.parentUsage)}`}
         >
-          Usage : <span className='font-medium text-gray-800'>{formatUsageParentLabel(selectedUsage.parentUsage)}</span>
+          Usage : <span className='font-medium text-[var(--text-default-grey)]'>{formatUsageParentLabel(selectedUsage.parentUsage)}</span>
         </p>
       )}
 
       {warning && (
-        <p id={warningId} className='fr-hint-text fr-mb-0 mt-2 text-[0.72rem] leading-tight text-orange-700'>
+        <p id={warningId} className='fr-hint-text fr-mb-0 mt-2 text-[0.72rem] leading-tight text-[var(--text-default-warning)]'>
           {warning}
         </p>
       )}

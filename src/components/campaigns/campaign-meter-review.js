@@ -48,16 +48,16 @@ export default function CampaignMeterReview({campaignId, compteurId, serialNumbe
     } catch (error) { setError(error.message) } finally { setBusy(false) }
   }
   const percentagesValid = ['offSeasonPercentage', 'seasonPercentage'].every(field => allocations.length && allocations.every(item => item[field] !== '' && Number.isFinite(Number(item[field])) && Number(item[field]) >= 0) && Math.abs(allocations.reduce((sum, item) => sum + Number(item[field]), 0) - 100) < 0.00001)
-  return <div className='mt-4 border-t pt-3'>
+  return <div className='mt-4 border-t border-[var(--border-default-grey)] pt-3'>
     {!review && <button className='fr-btn fr-btn--sm fr-btn--secondary' type='button' disabled={busy || !ready} onClick={load}>Vérifier le compteur {serialNumber}</button>}
     {error && <Alert severity='error' title='Vérification non enregistrée' description={error} className='mt-3' />}
     {success && <Alert severity='success' title={success} className='mt-3' />}
-    {review && <section className='mt-3 bg-[#f5f5fe] p-3' aria-label={`Vérification du compteur ${serialNumber}`}>
+    {review && <section className='mt-3 bg-[var(--background-alt-blue-france)] p-3 text-[var(--text-default-grey)]' aria-label={`Vérification du compteur ${serialNumber}`}>
       <h4 className='fr-h6'>Rattachement et partage du compteur {serialNumber}</h4>
       <p className='fr-text--sm'>Vérifiez les bénéficiaires et la part de volume de chaque exploitation pour les deux périodes. Les pourcentages doivent totaliser 100 % par période.</p>
       {review.blockedReasons?.length > 0 && <Alert severity='warning' title='Informations à compléter' description={review.blockedReasons.join(' ')} className='mb-3' />}
       <div className='grid gap-3'>
-        {review.beneficiaries.map((item, index) => <fieldset key={item.exploitationId} className='min-w-0 border bg-white p-3'>
+        {review.beneficiaries.map((item, index) => <fieldset key={item.exploitationId} className='min-w-0 border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-3'>
           <legend className='px-1 text-sm font-semibold'>{item.preleveurName} · {item.pointName}{item.countingCode ? ` · Comptage ${item.countingCode}` : ''}</legend>
           <p className='fr-text--sm'>{item.inCampaign === false ? 'Part hors campagne — conservée dans la répartition, non publiée ici.' : item.submitted ? `Index : ${item.meter?.offSeason?.indexStart ?? '—'} → ${item.meter?.offSeason?.indexEnd ?? '—'} → ${item.meter?.season?.indexEnd ?? '—'} m³` : 'Réponse non envoyée'}</p>
           <div className='grid gap-3 sm:grid-cols-2'>{[['offSeasonPercentage', 'Part hors étiage 2025–2026 (%)'], ['seasonPercentage', 'Part étiage 2026 (%)']].map(([field, label]) => <div key={field}><label className='fr-label text-sm' htmlFor={`${compteurId}-${index}-${field}`}>{label}</label><input id={`${compteurId}-${index}-${field}`} className='fr-input' type='number' min='0' max='100' step='any' value={allocations[index][field]} onChange={event => change(index, field, event.target.value)} /></div>)}</div>

@@ -6,7 +6,7 @@ import {CAMPAIGN_REQUESTER_DESCRIPTION, CAMPAIGN_REQUESTER_TITLE, CAMPAIGN_STATU
 export function CampaignShell({admin = false, title, description, actions, children}) {
   if (admin) return <AdminPageShell title={title} description={description} actions={actions}>{children}</AdminPageShell>
   return (
-    <div className='min-h-screen bg-[#f7f7fb] pb-12'>
+    <div className='min-h-screen bg-[var(--background-alt-grey)] pb-12'>
       <div className='fr-container pt-6 md:pt-8'>
         <header className='mb-5 flex flex-wrap items-start justify-between gap-3'>
           <div><h1 className='fr-h3 fr-mb-1w'>{title}</h1>{description && <p className='fr-text--sm fr-mb-0'>{description}</p>}</div>
@@ -29,7 +29,7 @@ export function CampaignProgress({progress = {}, requester = false}) {
   return (
     <div className='min-w-40'>
       <span className='text-sm'>{requester ? campaignParticipation({progress}).label : `${submitted} / ${total} exploitations ont répondu`}</span>
-      {(!requester || total > 1) && <progress className='mt-1 block h-2 w-full accent-[#18753c]' max={total || 1} value={submitted} aria-label={requester ? campaignParticipation({progress}).label : `${submitted} réponses sur ${total} exploitations`} />}
+      {(!requester || total > 1) && <progress className='mt-1 block h-2 w-full accent-[var(--background-action-high-success)]' max={total || 1} value={submitted} aria-label={requester ? campaignParticipation({progress}).label : `${submitted} réponses sur ${total} exploitations`} />}
     </div>
   )
 }
@@ -50,7 +50,7 @@ export function CampaignInvitations({summary}) {
   const campaigns = summary?.items || []
   if (!campaigns.length) return null
   return (
-    <section className='mb-4 border border-[#c1c1fb] border-l-4 border-l-[#000091] bg-white p-5 md:p-6' aria-label={CAMPAIGN_REQUESTER_TITLE}>
+    <section className='mb-4 border border-[var(--border-action-low-blue-france)] border-l-4 border-l-[var(--border-action-high-blue-france)] bg-[var(--background-default-grey)] p-5 md:p-6' aria-label={CAMPAIGN_REQUESTER_TITLE}>
       <h3 className='fr-h5 fr-mb-2w'>{CAMPAIGN_REQUESTER_TITLE}</h3>
       <ul className='m-0 grid list-none gap-4 p-0'>
         {campaigns.map(campaign => {
@@ -60,7 +60,7 @@ export function CampaignInvitations({summary}) {
               <p className='fr-text--sm fr-mb-1w font-medium'>{CAMPAIGN_REQUESTER_DESCRIPTION}</p>
               <div className='flex flex-wrap items-center gap-x-3 gap-y-1'>
                 <span className={`fr-badge fr-badge--sm fr-badge--no-icon ${participation.complete ? 'fr-badge--success' : 'fr-badge--info'}`}>{participation.label}</span>
-                {campaign.closesOn && <span className='text-sm text-gray-600'>Échéance de la campagne : {campaignDate(campaign.closesOn)}</span>}
+                {campaign.closesOn && <span className='text-sm text-[var(--text-mention-grey)]'>Échéance de la campagne : {campaignDate(campaign.closesOn)}</span>}
               </div>
             </div>
             <Link className={`fr-btn fr-btn--icon-right fr-icon-arrow-right-line ${participation.complete ? 'fr-btn--secondary' : ''}`} href={`/campagnes/${campaign.id}`}>{participation.action}</Link>
@@ -74,7 +74,7 @@ export function CampaignInvitations({summary}) {
 export function CampaignVolumes({volumes}) {
   if (!volumes) return null
   return (
-    <section className='mb-4 border bg-white p-4'>
+    <section className='mb-4 border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-4'>
       <h2 className='fr-h5 fr-mb-2w'>Volumes prélevés calculés</h2>
       <dl className='m-0 grid gap-3 sm:grid-cols-3'>
         {[['offSeason', 'Hors étiage 2025–2026'], ['season', 'Étiage 2026'], ['total', 'Total']].map(([key, label]) => <div key={key}><dt className='text-sm'>{label}</dt><dd className='m-0 font-semibold'>{formatCampaignVolume(volumes[key])}</dd></div>)}

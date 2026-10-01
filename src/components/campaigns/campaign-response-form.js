@@ -81,9 +81,9 @@ function PeriodFields({path, title, needs = false, season = false, fieldProps}) 
   const dates = season ? 'Du 1er juin au 31 octobre 2026' : 'Du 1er novembre 2025 au 31 mai 2026'
   const irrigationDetailsRequired = campaignRequiresIrrigationDetails(getCampaignField(fieldProps.answer, `${path}.usageId`), fieldProps.usageOptions)
   return (
-    <fieldset className={`m-0 min-w-0 rounded border-t-4 p-3 md:p-4 ${season ? 'border-t-[#c3992a] bg-[#fff9e6]' : 'border-t-[#465f9d] bg-[#eef2fa]'}`}>
-      <legend className={`float-left mb-0 w-full ${needs ? 'pb-4' : 'pb-1'} text-base font-semibold ${season ? 'text-[#715300]' : 'text-[#3558a2]'}`}>{title}</legend>
-      {!needs && <p className={`clear-both mb-4 text-xs ${season ? 'text-[#715300]' : 'text-[#3558a2]'}`}>{dates}</p>}
+    <fieldset className={`m-0 min-w-0 rounded border-t-4 p-3 md:p-4 ${season ? 'border-t-[var(--border-plain-yellow-tournesol)] bg-[var(--background-alt-yellow-tournesol)]' : 'border-t-[var(--border-plain-blue-cumulus)] bg-[var(--background-alt-blue-cumulus)]'}`}>
+      <legend className={`float-left mb-0 w-full ${needs ? 'pb-4' : 'pb-1'} text-base font-semibold ${season ? 'text-[var(--text-label-yellow-tournesol)]' : 'text-[var(--text-label-blue-cumulus)]'}`}>{title}</legend>
+      {!needs && <p className={`clear-both mb-4 text-xs ${season ? 'text-[var(--text-label-yellow-tournesol)]' : 'text-[var(--text-label-blue-cumulus)]'}`}>{dates}</p>}
       <div className='clear-both grid grid-cols-1 items-start gap-3 sm:grid-cols-2'>
         {needs ? <>
           <ResponseField {...fieldProps} path={`${path}.flow`} label='Débit demandé (m³/h)' />
@@ -227,7 +227,7 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
   }
 
   const pointDetails = (
-    <section className='my-4 grid gap-4 border bg-white p-4 md:grid-cols-2'>
+    <section className='my-4 grid gap-4 border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-4 text-[var(--text-default-grey)] md:grid-cols-2'>
       <div><h2 className='fr-h6 fr-mb-1w'>Préleveur</h2><p className='fr-mb-1v font-semibold'>{campaignPersonLabel(preleveur)}</p><p className='fr-text--sm fr-mb-0'>SIRET : {preleveur.siret || 'Non renseigné'}<br />{preleveur.email || preleveur.user?.email || 'Email non renseigné'}<br />{preleveur.phoneNumber || preleveur.phone || preleveur.telephone || 'Téléphone non renseigné'}</p></div>
       <div><h2 className='fr-h6 fr-mb-1w'>Point de prélèvement</h2><p className='fr-mb-1v'>{point.name}</p><p className='fr-text--sm fr-mb-1w'>{point.commune?.name || point.communeName || point.commune || 'Commune non renseignée'}</p>
         {point.locationDescription && <p className='fr-text--sm fr-mb-1w'>{point.locationDescription}</p>}
@@ -255,13 +255,13 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
       {readOnly && success && <div className='mb-4' role='status'><Alert severity='success' title={success} small /></div>}
       <form ref={formRef} noValidate onSubmit={event => { event.preventDefault(); persist(true) }} className='grid gap-4'>
         {!readOnly && <p className='fr-hint-text fr-mb-0'>Les champs marqués d’un astérisque (*) sont obligatoires.</p>}
-        <section className='border bg-white p-4 md:p-5'>
+        <section className='border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-4 text-[var(--text-default-grey)] md:p-5'>
           <h2 className='fr-h4'>Bilan des prélèvements 2025–2026</h2>
           <div className='grid gap-5'>
             {answer.meters.map((meter, index) => (
-              <div key={meter.compteurId || `new-${index}`} className='min-w-0 rounded border border-gray-200'>
-                <div className='flex flex-wrap items-center gap-3 border-b border-gray-200 bg-gray-50 px-3 py-3 md:px-4'>
-                  <span className='fr-icon-dashboard-3-line flex h-9 w-9 shrink-0 items-center justify-center rounded bg-white text-[#000091]' aria-hidden='true' />
+              <div key={meter.compteurId || `new-${index}`} className='min-w-0 rounded border border-[var(--border-default-grey)]'>
+                <div className='flex flex-wrap items-center gap-3 border-b border-[var(--border-default-grey)] bg-[var(--background-alt-grey)] px-3 py-3 md:px-4'>
+                  <span className='fr-icon-dashboard-3-line flex h-9 w-9 shrink-0 items-center justify-center rounded bg-[var(--background-default-grey)] text-[var(--text-action-high-blue-france)]' aria-hidden='true' />
                   {meter.compteurId && context.meters?.some(known => (known.compteurId || known.id) === meter.compteurId && known.serialNumber) ? <h3 className='fr-h6 fr-mb-0 min-w-0 flex-1 break-words'>Numéro de série de compteur : <span className='font-mono'>{meter.serialNumber}</span></h3> : <div className='min-w-0 max-w-sm flex-1'><ResponseField {...fieldProps} path={`meters.${index}.serialNumber`} label='Numéro de série de compteur' type='text' required={false} hint={!readOnly && !initialAnswer.meters[index]?.serialNumber ? 'Nous n’avons pas le numéro de série de votre compteur. Pouvez-vous le renseigner ici' : undefined} maxLength={100} /></div>}
                   {!readOnly && !meter.compteurId && answer.meters.length > 1 && <button className='fr-btn fr-btn--sm fr-btn--tertiary' type='button' disabled={saving || !ready} onClick={() => { setAnswer(previous => ({...previous, meters: previous.meters.filter((_, meterIndex) => meterIndex !== index)})); setSuccess(null); setErrors({}); setIndexErrors({}) }}>Retirer ce compteur</button>}
                 </div>
@@ -275,26 +275,26 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
           </div>
           {!readOnly && <p className='fr-hint-text fr-mt-2w fr-mb-0'>Un compteur a été remplacé ? Indiquez-le dans le commentaire.</p>}
         </section>
-        <section className='border bg-white p-4 md:p-5'>
+        <section className='border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-4 text-[var(--text-default-grey)] md:p-5'>
           <h2 className='fr-h4'>Besoins 2027–2028</h2>
           <div className='grid gap-5 lg:grid-cols-2'>
             <PeriodFields needs season title='Demande étiage du 1er juin au 31 octobre 2027' path='needs.season' fieldProps={fieldProps} />
             <PeriodFields needs title='Demande hors-étiage du 1er novembre 2027 au 31 mai 2028' path='needs.offSeason' fieldProps={fieldProps} />
           </div>
         </section>
-        <section className='border bg-white p-4 md:p-5'>
+        <section className='border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-4 text-[var(--text-default-grey)] md:p-5'>
           <label className='fr-label' htmlFor='campaign-comment'>Commentaire (facultatif)</label>
           <textarea id='campaign-comment' className='fr-input' rows={3} readOnly={readOnly || saving || !ready} maxLength={20000} value={answer.comment} placeholder='Modifications : raison sociale, SIRET, localisation du point, changement de compteurs…' onChange={event => fieldProps.update('comment', event.target.value)} />
         </section>
-        {!readOnly && <div role='region' aria-label='Enregistrement de la réponse' className='sticky bottom-0 z-10 flex flex-wrap items-center gap-3 border bg-white p-3 shadow-sm'>
+        {!readOnly && <div role='region' aria-label='Enregistrement de la réponse' className='sticky bottom-0 z-10 flex flex-wrap items-center gap-3 border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-3 text-[var(--text-default-grey)] shadow-sm'>
           <button className='fr-btn fr-btn--secondary' type='button' disabled={saving || !ready} onClick={() => persist(false)}>Enregistrer le brouillon</button>
           <button className='fr-btn' type='submit' disabled={saving || !ready}>{saving ? 'Enregistrement…' : response.lastSubmittedAt ? 'Envoyer les modifications' : 'Envoyer ma réponse'}</button>
-          {success && <p role='status' className='m-0 text-sm font-semibold text-[#18753c]'>{success}</p>}
-          {dirty && !saving && !success && <span className='text-sm text-gray-600'>Modifications non enregistrées</span>}
+          {success && <p role='status' className='m-0 text-sm font-semibold text-[var(--text-default-success)]'>{success}</p>}
+          {dirty && !saving && !success && <span className='text-sm text-[var(--text-mention-grey)]'>Modifications non enregistrées</span>}
           {error && <div className='w-full' role='alert'><p className='fr-error-text m-0'>{error}</p>
             {Object.keys(errors).length > 0 && <button className='fr-link fr-text--sm mt-1' type='button' onClick={focusInvalidField}>Voir les champs à corriger ({Object.keys(errors).length})</button>}
           </div>}
-          {!permissions.canSubmit && context.blockers?.length > 0 && !error && <span className='text-sm text-gray-600'>{context.blockers[0].replace(/\s*Vous pouvez enregistrer un brouillon\.?/g, '')}</span>}
+          {!permissions.canSubmit && context.blockers?.length > 0 && !error && <span className='text-sm text-[var(--text-mention-grey)]'>{context.blockers[0].replace(/\s*Vous pouvez enregistrer un brouillon\.?/g, '')}</span>}
         </div>}
       </form>
       {applicant && pointDetails}

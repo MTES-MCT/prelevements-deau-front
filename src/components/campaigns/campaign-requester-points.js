@@ -72,16 +72,16 @@ export default function CampaignRequesterPoints({campaignId, initialPage, canRes
     <div className='grid items-start gap-4 lg:grid-cols-2'>
       <div className='min-w-0'>
         <ul className='m-0 grid list-none gap-2 p-0'>
-          {visibleResponses.map(response => <li key={response.id} className={`border bg-white p-4 ${response.id === selectedId ? 'border-[#000091]' : ''}`}>
+          {visibleResponses.map(response => <li key={response.id} className={`border bg-[var(--background-default-grey)] p-4 ${response.id === selectedId ? 'border-[var(--border-active-blue-france)]' : 'border-[var(--border-default-grey)]'}`}>
             <button ref={element => { if (element) rowRefs.current.set(response.id, element); else rowRefs.current.delete(response.id) }} type='button' className='mb-3 block w-full text-left' aria-pressed={response.id === selectedId} onClick={() => selectResponse(response)}><CampaignPointIdentity response={response} /></button>
             <div className='flex flex-wrap items-center justify-between gap-3'>
               <div><CampaignStatus response status={response.status} />{response.lastSubmittedAt && <span className='ml-2 text-sm'>Dernier envoi : {campaignDate(response.lastSubmittedAt)}</span>}{response.hasDraft && response.lastSubmittedAt && <p className='fr-hint-text fr-mt-1w fr-mb-0'>Modification en brouillon, pas encore envoyée</p>}</div>
               <Link className='fr-btn fr-btn--sm fr-btn--secondary' href={`/campagnes/${campaignId}/reponses/${response.id}`}>{!canRespond || response.lastSubmittedAt ? 'Consulter ma déclaration' : response.hasDraft ? 'Reprendre ma déclaration' : 'Commencer ma déclaration'}</Link>
             </div>
-            {response.lastSubmittedAt && response.publicationStatus && !['PUBLISHED', 'COMPLETED'].includes(response.publicationStatus) && <p className='fr-text--sm fr-mt-2w fr-mb-0 text-[#695240]'>Réponse envoyée · Volumes en attente de vérification</p>}
+            {response.lastSubmittedAt && response.publicationStatus && !['PUBLISHED', 'COMPLETED'].includes(response.publicationStatus) && <p className='fr-text--sm fr-mt-2w fr-mb-0 text-[var(--text-label-yellow-moutarde)]'>Réponse envoyée · Volumes en attente de vérification</p>}
           </li>)}
         </ul>
-        {!filteredResponses.length && !loading && !error && <p className='border bg-white p-4'>{responses.length ? 'Aucun point ne correspond à ces filtres.' : 'Aucun point à compléter pour cette campagne.'}</p>}
+        {!filteredResponses.length && !loading && !error && <p className='border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-4'>{responses.length ? 'Aucun point ne correspond à ces filtres.' : 'Aucun point à compléter pour cette campagne.'}</p>}
         {loading && <p role='status'>Chargement des réponses…</p>}
         <CampaignPagination page={page} total={filteredResponses.length} pageSize={PAGE_SIZE} onChange={nextPage => { setPage(nextPage); setSelectedId(filteredResponses[(nextPage - 1) * PAGE_SIZE]?.id) }} />
       </div>

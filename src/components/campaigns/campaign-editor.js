@@ -66,7 +66,7 @@ export default function CampaignEditor({campaign = null, initialCandidates, init
       <form onSubmit={save}>
         <fieldset disabled={!ready || saving} className='m-0 grid min-w-0 gap-4 border-0 p-0'>
           {error && <Alert severity='error' title='La campagne n’a pas été enregistrée' description={error} />}
-          <section className='border bg-white p-4 md:p-5'>
+          <section className='border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-4 md:p-5'>
             <h2 className='fr-h5'>Informations générales</h2>
             <div className='fr-input-group'><label className='fr-label' htmlFor='campaign-name'>Nom de la campagne</label><input id='campaign-name' className='fr-input' required maxLength={200} value={form.name} onChange={event => field('name', event.target.value)} /></div>
             <p className='fr-text--sm'><span className='font-semibold'>Type :</span> {CAMPAIGN_TYPE_LABEL}</p>
@@ -82,7 +82,7 @@ export default function CampaignEditor({campaign = null, initialCandidates, init
             </div>
           </section>
           {populationEditable ? (
-            <section className='border bg-white p-4 md:p-5'>
+            <section className='border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-4 md:p-5'>
               <h2 className='fr-h5'>Exploitations concernées</h2>
               <div className='mb-3 flex flex-wrap items-end gap-3'>
                 <div className='fr-input-group fr-mb-0 min-w-52 flex-1'><label className='fr-label' htmlFor='campaign-search'>Rechercher</label><input id='campaign-search' className='fr-input' type='search' placeholder='Point, préleveur, code comptage' value={filters.q} onChange={event => setFilters(previous => ({...previous, q: event.target.value}))} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); search(1, filters) } }} /></div>
@@ -95,10 +95,10 @@ export default function CampaignEditor({campaign = null, initialCandidates, init
                 <button className='fr-btn fr-btn--tertiary-no-outline fr-btn--sm' type='button' disabled={!selected.length} onClick={() => setSelected([])}>Tout désélectionner</button>
               </div>
               {loading ? <p role='status'>Chargement des exploitations…</p> : (
-                <><ul className='m-0 max-h-[32rem] list-none overflow-auto border p-0'>
+                <><ul className='m-0 max-h-[32rem] list-none overflow-auto border border-[var(--border-default-grey)] p-0'>
                   {result.items?.map(item => (
-                    <li key={item.id || item.exploitationId} className='flex items-start gap-3 border-b p-3 last:border-b-0'>
-                      <input type='checkbox' className='mt-1 h-5 w-5 shrink-0 accent-[#000091]' disabled={!form.collecteurUserId || saving} id={`candidate-${item.id || item.exploitationId}`} checked={selected.includes(item.id || item.exploitationId)} onChange={event => toggle(item.id || item.exploitationId, event.target.checked)} />
+                    <li key={item.id || item.exploitationId} className='flex items-start gap-3 border-b border-[var(--border-default-grey)] p-3 last:border-b-0'>
+                      <input type='checkbox' className='mt-1 h-5 w-5 shrink-0 accent-[var(--background-action-high-blue-france)]' disabled={!form.collecteurUserId || saving} id={`candidate-${item.id || item.exploitationId}`} checked={selected.includes(item.id || item.exploitationId)} onChange={event => toggle(item.id || item.exploitationId, event.target.checked)} />
                       <label className='min-w-0 flex-1 cursor-pointer text-sm' htmlFor={`candidate-${item.id || item.exploitationId}`}><span className='block font-semibold'>{campaignExploitationLabel(item)}</span><span>{campaignPersonLabel(item.preleveur || item.declarant)}{item.point?.commune?.name ? ` · ${item.point.commune.name}` : ''}</span></label>
                       <div className='hidden max-w-52 sm:block'><ExploitationUsageChips compact exploitation={item.exploitation || item} /></div>
                     </li>

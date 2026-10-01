@@ -639,7 +639,7 @@ const QuickDeclarationMap = ({
 
   if (pointsWithCoordinates.length === 0) {
     return (
-      <div className='fr-p-2w text-center bg-white'>
+      <div className='fr-p-2w text-center bg-[var(--background-default-grey)]'>
         <p className='fr-hint-text fr-mb-0'>
           Aucun point géolocalisé.
         </p>
@@ -648,11 +648,11 @@ const QuickDeclarationMap = ({
   }
 
   return (
-    <div className='relative h-full min-h-[220px] w-full overflow-hidden bg-white'>
+    <div className='relative h-full min-h-[220px] w-full overflow-hidden bg-[var(--background-default-grey)]'>
       {hasMapMoved && (
         <button
           type='button'
-          className='fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-focus-3-line absolute right-2 top-2 z-10 bg-white shadow-xs'
+          className='fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-focus-3-line absolute right-2 top-2 z-10 bg-[var(--background-default-grey)] shadow-xs'
           aria-label='Recentrer la carte sur tous les points'
           onClick={fitVisiblePoints}
         >
