@@ -30,12 +30,12 @@ export default function CampaignList({initialData, initialError, admin = false})
             {result.items?.map(campaign => (
               <li key={campaign.id} className='border border-gray-200 bg-white p-4'>
                 <div className='flex flex-wrap items-start justify-between gap-3'>
-                  <div><h2 className='fr-h5 fr-mb-1w'><Link href={`${base}/${campaign.id}`}>{requester ? CAMPAIGN_REQUESTER_DESCRIPTION : campaign.name}</Link></h2><CampaignStatus status={campaignState(campaign)} /></div>
+                  <div><h2 className='fr-h5 fr-mb-1w'><Link href={`${base}/${campaign.id}`}>{campaign.name}</Link></h2><CampaignStatus status={campaignState(campaign)} /></div>
                   <CampaignProgress requester={requester} progress={campaign.progress} />
                 </div>
                 <div className='mt-3 flex flex-wrap items-center justify-between gap-3'>
                   <p className='fr-text--sm fr-mb-0'>{requester ? campaign.closesOn ? `Échéance de la campagne : ${campaignDate(campaign.closesOn)}` : 'Dates à venir' : `${campaign.opensOn && campaign.closesOn ? `Du ${campaignDate(campaign.opensOn)} au ${campaignDate(campaign.closesOn)}` : 'Dates à renseigner'}${campaign.collecteur?.socialReason ? ` · ${campaign.collecteur.socialReason}` : ''}`}</p>
-                  {requester && <Link className='fr-btn fr-btn--sm fr-btn--secondary' href={`${base}/${campaign.id}`}>{campaignParticipation(campaign).action}</Link>}
+                  <Link className='fr-btn fr-btn--sm fr-btn--secondary fr-btn--icon-right fr-icon-arrow-right-line' href={`${base}/${campaign.id}`}>{requester ? campaignParticipation(campaign).action : 'Voir les points et les réponses'}</Link>
                 </div>
               </li>
             ))}

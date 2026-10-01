@@ -99,6 +99,7 @@ export async function handleDashboardFixtureRequest(request, send) {
     for await (const chunk of request) chunks.push(chunk)
     const command = JSON.parse(Buffer.concat(chunks).toString())
     if (command.holdNext) state.holdNext = true
+    if (command.holdStatistics) state.holdStatistics = true
     if (command.holdCampaign) state.holdCampaign = true
     if (command.releaseCampaign && state.releaseCampaign) state.releaseCampaign()
     if (typeof command.stations === 'boolean') state.stations = command.stations
@@ -107,8 +108,9 @@ export async function handleDashboardFixtureRequest(request, send) {
   } else if (pathname === '/api/dashboard/territory') {
     state.requests.push(Object.fromEntries(url.searchParams))
     let status = 200
-    if (state.holdNext) {
+    if (state.holdNext || (state.holdStatistics && url.searchParams.get('sections') === 'registeredPrelevements,volumesByUsage')) {
       state.holdNext = false
+      state.holdStatistics = false
       const pending = Promise.withResolvers()
       state.release = pending.resolve
       status = await pending.promise

@@ -12,7 +12,7 @@ test.beforeEach(async ({page}) => {
     ? route.continue() : route.abort())
 })
 
-async function openDashboard(page, context, role, {stations = false, holdCampaign = false} = {}) {
+async function openDashboard(page, context, role, {stations = false, holdCampaign = false, holdStatistics = false, search = ''} = {}) {
   const apiToken = `browser-test-dashboard-${role.toLowerCase()}-${randomUUID()}`
   const id = '11111111-1111-4111-8111-111111111111'
   const cookie = await encode({
@@ -33,21 +33,69 @@ async function openDashboard(page, context, role, {stations = false, holdCampaig
   const requests = async (all = false) => {
     const response = await context.request.get(`${fixtureUrl}/api/__dashboard-requests${all ? '?all' : ''}`, {headers})
     expect(response.ok()).toBe(true)
-    return response.json()
+    const reads = await response.json()
+    // Count figure reads separately from the lightweight SSR bootstrap.
+    return all ? reads : reads.filter(item => !item.sections?.includes('context'))
   }
   const control = async data => {
     const response = await context.request.post(`${fixtureUrl}/api/__dashboard-control`, {headers, data})
     expect(response.ok()).toBe(true)
   }
-  if (stations || holdCampaign) await control({stations, holdCampaign})
-  await page.goto(`${frontUrl}/tableau-de-bord`, {waitUntil: 'commit'})
+  if (stations || holdCampaign || holdStatistics) await control({stations, holdCampaign, holdStatistics})
+  await page.goto(`${frontUrl}/tableau-de-bord${search}`, {waitUntil: 'commit'})
   const trigger = page.getByRole('button', {name: role === 'DECLARANT' ? 'Zones' : 'Filtrer le contenu de la page par :', exact: true})
   await expect(trigger).toBeVisible()
   await expect(trigger).toContainText('Gironde')
-  await expect(page).toHaveURL(/zones=DEP-33/)
+  if (!holdStatistics) await expect(page).toHaveURL(/zones=DEP-33/)
   await expect.poll(async () => (await requests()).length).toBe(1)
   return {trigger, requests, control}
 }
+
+for (const role of ['ADMIN', 'DECLARANT']) {
+  test(`${role} : les agrégations lentes ne bloquent pas la carte ni les filtres`, async ({page, context}) => {
+    const {trigger, control, requests} = await openDashboard(page, context, role, {
+      holdStatistics: true,
+      search: '?periodType=month&period=2026-08&year=2025&waterBodyTypes=SOUTERRAIN'
+    })
+    try {
+      await expect(page.getByRole('status').filter({hasText: 'Chargement des indicateurs du territoire…'})).toBeVisible()
+      await expect.poll(async () => (await requests(true)).some(item => item.pathname === '/api/dashboard/map')).toBe(true)
+      const initialRequests = (await requests(true)).filter(item => item.pathname === '/api/dashboard/territory')
+      expect(initialRequests).toHaveLength(2)
+      expect(initialRequests[0].parameters.sections).toBe(role === 'DECLARANT' ? 'context' : 'context,metrics')
+      expect(initialRequests[1].parameters.sections).toBe('registeredPrelevements,volumesByUsage')
+      if (role === 'DECLARANT') {
+        await expect.poll(async () => (await requests(true)).some(item => item.pathname === '/api/campaigns/summary')).toBe(true)
+      }
+
+      // Changing scope can cancel the slow initial read without dropping URL filters.
+      await trigger.click()
+      await page.getByRole('option', {name: /Lot-et-Garonne/}).click()
+      await page.getByRole('button', {name: 'Appliquer', exact: true}).click()
+      await expect(page.locator('#withdrawn-year')).toHaveValue('2025')
+      await expect(page.locator('#dashboard-declaration-period')).toHaveValue('2026-08')
+      const lastRequest = (await requests()).at(-1)
+      expect(lastRequest).toMatchObject({zones: 'DEP-33,DEP-47', year: '2025', period: '2026-08', waterBodyTypes: 'SOUTERRAIN'})
+      await expect(trigger).toContainText('Gironde + 1 autre')
+    } finally {
+      await control({releaseStatus: 200})
+    }
+    await expect(trigger).toContainText('Gironde + 1 autre')
+    await trigger.click()
+    await expect(page.getByRole('option', {name: /Lot-et-Garonne/})).toHaveAttribute('aria-selected', 'true')
+    await page.getByRole('button', {name: 'Annuler', exact: true}).click()
+  })
+}
+
+test('une erreur des indicateurs laisse la carte disponible et peut être retentée', async ({page, context}) => {
+  const {requests, control} = await openDashboard(page, context, 'ADMIN', {holdStatistics: true})
+  await control({releaseStatus: 503})
+  await expect(page.getByText('Les indicateurs du territoire n’ont pas pu être chargés.')).toBeVisible()
+  await expect(page.getByText('Aucun prélèvement enregistré pour les zones sélectionnées.')).toHaveCount(0)
+  await page.getByRole('button', {name: 'Réessayer', exact: true}).click()
+  await expect(page.locator('#withdrawn-year')).toHaveValue('2026')
+  expect((await requests()).length).toBe(2)
+})
 
 test('les invitations lentes ne bloquent ni les chiffres ni les filtres du déclarant', async ({page, context}) => {
   const {trigger, control, requests} = await openDashboard(page, context, 'DECLARANT', {holdCampaign: true})
@@ -92,7 +140,7 @@ for (const role of ['ADMIN', 'DECLARANT']) {
     await expect.poll(async () => (await requests()).length).toBe(2)
     await expect(trigger).toContainText('Lot-et-Garonne')
     const [initialRequest, appliedRequest] = await requests()
-    expect(initialRequest.zones).toBeUndefined()
+    expect(initialRequest.zones).toBe('DEP-33')
     expect(appliedRequest.zones).toBe('DEP-47,SAGE-DROPT')
     await expect(page).toHaveURL(/zones=DEP-47%2CSAGE-DROPT/)
 
@@ -254,7 +302,7 @@ test('les choix de stations survivent aux changements de période et de mode', a
   await expect(flow).not.toBeChecked()
 })
 
-test('une URL query est restaurée au SSR sans seconde lecture, les anciens fragments migrent', async ({page, context}) => {
+test('une URL query est restaurée dès la première lecture des indicateurs, les anciens fragments migrent', async ({page, context}) => {
   const {requests} = await openDashboard(page, context, 'ADMIN')
   await page.goto(`${frontUrl}/tableau-de-bord?zones=DEP-47&periodType=month&period=2026-08&year=2025&waterBodyTypes=SOUTERRAIN#dashboard?flowPeriod=month`)
   await expect(page.locator('#withdrawn-year')).toHaveValue('2025')

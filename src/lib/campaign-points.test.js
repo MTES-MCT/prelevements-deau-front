@@ -1,8 +1,31 @@
 import test from 'ava'
 
-import {campaignMapPoints, campaignResponseForPoint, campaignResponsePoint, loadCampaignMapResponses} from './campaign-points.js'
+import {campaignMapPoints, campaignPointIdentity, campaignResponseForPoint, campaignResponsePoint, filterCampaignPointResponses, loadCampaignMapResponses} from './campaign-points.js'
 
 const response = (id, pointId = id, coordinates = [0.25, 44.65]) => ({id, point: {id: pointId, coordinates}})
+
+test('le nom du point, sa commune et son code compteur restent distincts', t => {
+  t.deepEqual(campaignPointIdentity({point: {usageName: 'Forage du moulin', name: 'Nom du référentiel', communeName: 'Éymet', locationDescription: 'Parcelle 12'}, countingCode: '001'}), {
+    name: 'Forage du moulin', referenceName: 'Nom du référentiel', location: 'Éymet · Parcelle 12', countingCode: '001'
+  })
+  t.deepEqual(campaignPointIdentity({exploitation: {pointPrelevement: {name: 'Forage', communeName: 'Eymet', locationDescription: 'Eymet'}, countingCode: '002'}}), {
+    name: 'Forage', referenceName: null, location: 'Eymet', countingCode: '002'
+  })
+  t.deepEqual(campaignPointIdentity({point: {id: 'internal-id'}}), {
+    name: 'Point de prélèvement', referenceName: null, location: '', countingCode: null
+  })
+})
+
+test('la recherche locale trouve nom, commune et comptage sans fusionner les réponses', t => {
+  const first = {...response('first', 'shared'), countingCode: '001', status: 'DRAFT', point: {id: 'shared', usageName: 'Forage', name: 'Source A', communeName: 'Éymet'}}
+  const second = {...first, id: 'second', countingCode: '002', status: 'SUBMITTED'}
+  const rows = [first, second]
+  for (const q of ['FORAGE', ' eymet ', 'source a']) t.deepEqual(filterCampaignPointResponses(rows, {q}), rows)
+  t.deepEqual(filterCampaignPointResponses(rows, {q: '002'}), [second])
+  t.deepEqual(filterCampaignPointResponses(rows, {q: 'eymet', status: 'DRAFT'}), [first])
+  t.deepEqual(filterCampaignPointResponses(rows, {q: 'inconnu'}), [])
+  t.deepEqual(filterCampaignPointResponses(rows), rows)
+})
 
 test('les fiches restent distinctes mais un point partagé ne produit qu’un marqueur', t => {
   const rows = [response('first', 'point'), response('second', 'point'), response('missing', 'missing', null)]
