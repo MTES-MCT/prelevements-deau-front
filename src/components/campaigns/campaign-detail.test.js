@@ -9,10 +9,18 @@ import {transformSync} from 'next/dist/build/swc/index.js'
 import {renderToStaticMarkup} from 'react-dom/server'
 
 import * as campaignHelpers from '../../lib/campaigns.js'
+import * as campaignPointHelpers from '../../lib/campaign-points.js'
 
 const require = createRequire(import.meta.url)
 
-function harness({tab = 'results', response = {}} = {}) {
+function compileComponent(filename, componentRequire) {
+  const {code} = transformSync(readFileSync(filename, 'utf8'), {filename: filename.pathname, jsc: {parser: {syntax: 'ecmascript', jsx: true}, transform: {react: {runtime: 'automatic'}}, target: 'es2022'}, module: {type: 'commonjs'}})
+  const compiled = {exports: {}}
+  runInNewContext('(function(require, module, exports) {' + code + '\n})', {})(componentRequire, compiled, compiled.exports)
+  return compiled.exports
+}
+
+function harness({tab = 'results', response = {}, permissions = {canReadResults: true}} = {}) {
   const calls = []
   const filename = new URL('campaign-detail.js', import.meta.url)
   const componentRequire = specifier => {
@@ -21,8 +29,10 @@ function harness({tab = 'results', response = {}} = {}) {
     if (specifier === 'next/link') return {__esModule: true, default: props => React.createElement('a', props)}
     if (specifier === '@codegouvfr/react-dsfr/Alert') return {Alert: () => null}
     if (specifier === '@/components/campaigns/campaign-requester-points.js') return {__esModule: true, default: () => null}
+    if (specifier === '@/components/campaigns/campaign-point-identity.js') return compileComponent(new URL('campaign-point-identity.js', import.meta.url), componentRequire)
     if (specifier === '@/components/campaigns/campaign-common.js') return Object.fromEntries(['CampaignPagination', 'CampaignProgress', 'CampaignShell', 'CampaignStatus', 'CampaignVolumes'].map(name => [name, ({children}) => React.createElement('div', null, children)]))
     if (specifier === '@/lib/campaigns.js') return campaignHelpers
+    if (specifier === '@/lib/campaign-points.js') return campaignPointHelpers
     if (specifier === '@/server/actions/campaigns.js') return Object.fromEntries(['getCampaignResponsesAction', 'getCampaignResultsAction'].map(name => [name, async (id, options) => {
       calls.push({name, id, options})
       return {success: true, data: {items: [], total: 0}}
@@ -30,10 +40,7 @@ function harness({tab = 'results', response = {}} = {}) {
     if (specifier === '@/server/actions/exports.js') return {}
     return require(specifier)
   }
-  const {code} = transformSync(readFileSync(filename, 'utf8'), {filename: filename.pathname, jsc: {parser: {syntax: 'ecmascript', jsx: true}, transform: {react: {runtime: 'automatic'}}, target: 'es2022'}, module: {type: 'commonjs'}})
-  const compiled = {exports: {}}
-  runInNewContext('(function(require, module, exports) {' + code + '\n})', {})(componentRequire, compiled, compiled.exports)
-  const tree = compiled.exports.default({initialData: {campaign: {id: 'campaign', name: 'Campagne', status: 'CLOSED'}, permissions: {canReadResults: true}}, initialResponses: {items: [{id: 'response', ...response}], total: 1}})
+  const tree = compileComponent(filename, componentRequire).default({initialData: {campaign: {id: 'campaign', name: 'Campagne', status: 'CLOSED'}, permissions}, initialResponses: {items: [{id: 'response', ...response}], total: 1}})
   return {calls, tree}
 }
 
@@ -41,6 +48,13 @@ function elements(node) {
   if (!React.isValidElement(node)) return []
   return [node, ...React.Children.toArray(node.props.children).flatMap(elements)]
 }
+
+test('le suivi distingue le point, la commune, le code compteur et le préleveur', t => {
+  const {tree} = harness({tab: 'responses', response: {point: {name: 'Forage du moulin', communeName: 'Eymet', locationDescription: 'Parcelle 12'}, countingCode: '001', preleveur: {socialReason: 'Ferme du moulin'}}})
+  const html = renderToStaticMarkup(tree)
+  for (const value of ['Points de la campagne', 'Forage du moulin', 'Eymet · Parcelle 12', 'Code compteur Agence de l’eau', 'Ferme du moulin']) t.true(html.includes(value), value)
+  t.false(html.includes('/points-prelevement/'), 'Ne suppose pas un droit de consultation externe à la campagne')
+})
 
 test('les résultats affichent les besoins compacts et conservent les zéros', t => {
   const {tree} = harness({response: {submittedNeeds: {season: {flow: 0, volume: 0}, offSeason: {flow: 12, volume: 240}}}})

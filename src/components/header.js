@@ -125,18 +125,29 @@ function getNavigationText(item, href, role) {
 const HeaderComponent = () => {
   const {user, logout, isLoading: isLoadingUser} = useAuth()
   const pathname = usePathname()
-  const [hasCampaigns, setHasCampaigns] = useState(false)
+  const campaignActorKey = user?.role === 'DECLARANT' && user.declarantRole === 'COLLECTEUR'
+    ? JSON.stringify([user.id, Boolean(user.impersonation?.active), user.impersonation?.actor?.id || null])
+    : null
+  const [campaignNavigation, setCampaignNavigation] = useState(null)
+  const hasCampaigns = Boolean(campaignActorKey && campaignNavigation?.actorKey === campaignActorKey && campaignNavigation.hasCampaigns)
 
   useEffect(() => {
-    let active = true
-    setHasCampaigns(false)
-    if (user?.role === 'DECLARANT' && user.declarantRole === 'COLLECTEUR') {
-      getCampaignSummaryAction().then(result => {
-        if (active) setHasCampaigns(result.success && result.data?.data?.hasCampaigns === true)
-      }).catch(() => {})
+    if (!campaignActorKey) {
+      setCampaignNavigation(null)
+      return
     }
+
+    // The root layout preserves this state during navigation. NextAuth refreshes
+    // the session on focus and periodically: recheck then without hiding the tab
+    // during loading or a transient error, never reuse another user's result.
+    let active = true
+    getCampaignSummaryAction().then(result => {
+      if (active && (result.success || result.code === 401 || result.code === 403)) {
+        setCampaignNavigation({actorKey: campaignActorKey, hasCampaigns: result.success && result.data?.data?.hasCampaigns === true})
+      }
+    }).catch(() => {})
     return () => { active = false }
-  }, [user?.id, user?.role, user?.declarantRole, pathname])
+  }, [campaignActorKey, user])
 
   const handleLogout = useCallback(async () => {
     await logout()

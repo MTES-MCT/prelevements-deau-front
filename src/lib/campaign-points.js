@@ -1,3 +1,25 @@
+export function campaignPointIdentity(response) {
+  const point = response?.point ?? response?.pointPrelevement ?? response?.exploitation?.pointPrelevement
+  const name = point?.usageName || point?.name || 'Point de prélèvement'
+  return {
+    name,
+    referenceName: point?.usageName && point?.name && point.usageName !== point.name ? point.name : null,
+    location: [point?.communeName, point?.locationDescription].filter(Boolean).filter((value, index, values) => values.indexOf(value) === index).join(' · '),
+    countingCode: response?.countingCode ?? response?.exploitation?.countingCode ?? null
+  }
+}
+
+export function filterCampaignPointResponses(responses, {q = '', status = ''} = {}) {
+  const normalize = value => String(value ?? '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLocaleLowerCase('fr').trim()
+  const query = normalize(q)
+  return responses.filter(response => {
+    if (status && response.status !== status) return false
+    if (!query) return true
+    const {name, referenceName, location, countingCode} = campaignPointIdentity(response)
+    return [name, referenceName, location, countingCode, response.preleveur?.socialReason].some(value => normalize(value).includes(query))
+  })
+}
+
 export function campaignResponsePoint(response) {
   const point = response.point ?? response.exploitation?.pointPrelevement
   const coordinates = Array.isArray(point?.coordinates) ? point.coordinates : point?.coordinates?.coordinates

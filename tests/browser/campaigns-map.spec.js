@@ -76,6 +76,25 @@ test('la carte préleveur inclut les pages suivantes et conserve chaque fiche d�
   await map.screenshot({path: testInfo.outputPath('points-campagne.png')})
 })
 
+test('sur une grande liste la recherche et le statut filtrent les réponses sans confondre les comptages', async ({page, context}) => {
+  await authenticate(context, 'map-many')
+  await page.goto(`${frontUrl}/campagnes/${campaignIds.campaign}`)
+  await expect(page.getByText('Page 1 sur 2', {exact: true})).toBeVisible()
+  const search = page.getByRole('searchbox', {name: 'Rechercher un point', exact: true})
+  await search.fill('027')
+  await expect(page.getByRole('link', {name: 'Commencer ma déclaration', exact: true})).toHaveCount(1)
+  await expect(page.getByRole('button', {name: /Point est.*027/})).toBeVisible()
+  await expect(page.getByRole('navigation', {name: 'Pagination', exact: true})).toHaveCount(0)
+  await search.fill('partagé')
+  await expect(page.getByRole('link', {name: 'Commencer ma déclaration', exact: true})).toHaveCount(25)
+  await page.getByRole('combobox', {name: 'Réponse', exact: true}).selectOption('SUBMITTED')
+  await expect(page.getByText('Aucun point ne correspond à ces filtres.', {exact: true})).toBeVisible()
+  await page.getByRole('combobox', {name: 'Réponse', exact: true}).selectOption('')
+  await search.clear()
+  await expect(page.getByText('Page 1 sur 2', {exact: true})).toBeVisible()
+  await expect(page.locator('button[aria-pressed="true"]')).toHaveCount(0)
+})
+
 test('la carte du formulaire rend réellement son point dans chaque moteur', async ({page, context}, testInfo) => {
   await authenticate(context, 'map')
   const errors = []

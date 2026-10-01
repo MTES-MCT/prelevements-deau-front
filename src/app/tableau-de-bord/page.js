@@ -58,7 +58,7 @@ const Page = async ({searchParams}) => {
     }
     : null
   const isDeclarant = role === 'DECLARANT'
-  const dashboardResult = await getDashboardTerritoryAction({
+  const initialFilters = {
     includePoints: false,
     period: requestedPeriod,
     periodType: requestedPeriodType,
@@ -66,6 +66,12 @@ const Page = async ({searchParams}) => {
     waterBodyTypes: requestedWaterBodyTypes,
     year: requestedYear,
     zoneCodes: requestedZoneCodes
+  }
+  // The map and declaration actions must not wait for historical aggregations.
+  // Declarants do not display the territorial point-count/usage tiles either.
+  const dashboardResult = await getDashboardTerritoryAction({
+    ...initialFilters,
+    sections: isDeclarant ? ['context'] : ['context', 'metrics']
   })
 
   return (
@@ -73,6 +79,9 @@ const Page = async ({searchParams}) => {
       <StartDsfrOnHydration />
 
       <DashboardPage
+        // A server refresh can change accessible zones or point counts without
+        // changing the URL. Reset client-owned filters/data for that snapshot.
+        key={JSON.stringify([user?.id, initialFilters, dashboardResult])}
         declarationActions={isDeclarant ? (
           <Suspense fallback={<div className='min-h-32 p-5 text-gray-600' role='status'>Chargement de vos déclarations…</div>}>
             <DashboardDeclarationActions isPreleveur={user?.declarantRole !== 'COLLECTEUR'} />
@@ -80,6 +89,7 @@ const Page = async ({searchParams}) => {
         ) : null}
         initialDashboard={dashboardResult.success ? dashboardResult.data : null}
         initialError={dashboardResult.success ? null : dashboardResult.error}
+        initialFilters={initialFilters}
         user={user}
       />
     </>

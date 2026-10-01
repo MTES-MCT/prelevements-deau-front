@@ -7,8 +7,9 @@ import Link from 'next/link'
 import {useRouter} from 'next/navigation'
 
 import {CampaignPagination, CampaignProgress, CampaignShell, CampaignStatus, CampaignVolumes} from '@/components/campaigns/campaign-common.js'
+import CampaignPointIdentity from '@/components/campaigns/campaign-point-identity.js'
 import CampaignRequesterPoints from '@/components/campaigns/campaign-requester-points.js'
-import {CAMPAIGN_REQUESTER_DESCRIPTION, CAMPAIGN_REQUESTER_TITLE, campaignData, campaignDate, campaignExploitationLabel, campaignPersonLabel, campaignState, formatCampaignVolume, isCampaignRequester} from '@/lib/campaigns.js'
+import {CAMPAIGN_REQUESTER_DESCRIPTION, CAMPAIGN_REQUESTER_TITLE, campaignData, campaignDate, campaignPersonLabel, campaignState, formatCampaignVolume, isCampaignRequester} from '@/lib/campaigns.js'
 import {changeCampaignStateAction, deleteCampaignAction, getCampaignResponsesAction, getCampaignResultsAction} from '@/server/actions/campaigns.js'
 import {exportCampaignResultsAction} from '@/server/actions/exports.js'
 
@@ -93,9 +94,9 @@ export default function CampaignDetail({initialData, initialResponses, initialEr
         <button className='fr-btn fr-btn--sm fr-btn--tertiary ml-auto' type='button' disabled={busy} onClick={download}>Exporter tous les résultats (CSV)</button>
       </div>}
       {error && <Alert className='mb-4' severity='error' title='Chargement ou enregistrement impossible' description={error} />}
-      {requester && <h2 className='fr-h5 fr-mb-2w'>Mes points concernés</h2>}
+      <h2 className='fr-h5 fr-mb-2w'>{requester ? 'Mes points concernés' : 'Points de la campagne'}</h2>
       {!requester && <form className='mb-3 flex flex-wrap items-end gap-3' onSubmit={event => { event.preventDefault(); load(1, tab, filters) }}>
-        <div className='fr-input-group fr-mb-0 min-w-52 flex-1'><label className='fr-label' htmlFor='response-search'>Rechercher</label><input id='response-search' className='fr-input' type='search' placeholder='Préleveur, point, code comptage' value={filters.q} onChange={event => setFilters(previous => ({...previous, q: event.target.value}))} /></div>
+        <div className='fr-input-group fr-mb-0 min-w-52 flex-1'><label className='fr-label' htmlFor='response-search'>Rechercher un point ou un préleveur</label><input id='response-search' className='fr-input' type='search' placeholder='Nom du point, commune, code compteur, préleveur' value={filters.q} onChange={event => setFilters(previous => ({...previous, q: event.target.value}))} /></div>
         {tab === 'responses' && <div className='fr-select-group fr-mb-0'><label className='fr-label' htmlFor='response-status'>Réponse</label><select id='response-status' className='fr-select' value={filters.status} onChange={event => setFilters(previous => ({...previous, status: event.target.value}))}><option value=''>Toutes</option><option value='NOT_STARTED'>À compléter</option><option value='DRAFT'>Brouillon</option><option value='SUBMITTED'>Envoyé</option></select></div>}
         <button className='fr-btn fr-btn--secondary' type='submit' disabled={loading}>Filtrer</button>
       </form>}
@@ -104,10 +105,14 @@ export default function CampaignDetail({initialData, initialResponses, initialEr
           {tab === 'results' && result.totals && <RequestedVolumes totals={result.totals} />}
           {tab === 'results' && <CampaignVolumes volumes={result.totals?.publishedVolumes} />}
           {tab === 'results' && <p className='fr-text--sm'>Ces besoins sont des volumes demandés, pas des volumes prélevés. Les brouillons ne sont pas inclus.</p>}
-          <ul className='m-0 grid list-none gap-2 p-0'>
-            {result.items?.map(response => <li key={response.id} className='border bg-white p-4'>
-              <div className='flex flex-wrap items-center justify-between gap-3'><div className='min-w-0'><p className='fr-mb-1v font-semibold'>{campaignExploitationLabel(response)}</p>{!requester && <p className='fr-text--sm fr-mb-1w'>{campaignPersonLabel(response.preleveur)}</p>}<CampaignStatus response status={response.status} />{response.lastSubmittedAt && <span className='ml-2 text-sm'>Dernier envoi : {campaignDate(response.lastSubmittedAt)}</span>}{response.hasDraft && response.lastSubmittedAt && <p className='fr-hint-text fr-mt-1w fr-mb-0'>Modification en brouillon, pas encore envoyée</p>}</div>
-                {(requester || response.lastSubmittedAt || permissions.canRespond || permissions.canManage) && <Link className='fr-btn fr-btn--sm fr-btn--secondary' href={`${base}/${campaign.id}/reponses/${response.id}`}>{requester ? !permissions.canRespond || response.lastSubmittedAt ? 'Consulter ma réponse' : response.hasDraft ? 'Reprendre ma réponse' : 'Compléter ma réponse' : 'Consulter'}</Link>}
+          <div className='hidden grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_11rem] gap-4 border border-b-0 bg-[#f6f6f6] px-4 py-3 text-sm font-semibold lg:grid' aria-hidden='true'><span>Point de prélèvement</span><span>Préleveur</span><span>Réponse</span><span>Actions</span></div>
+          <ul className='m-0 list-none divide-y border bg-white p-0'>
+            {result.items?.map(response => <li key={response.id} className='p-4'>
+              <div className='grid items-center gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_11rem]'>
+                <CampaignPointIdentity response={response} />
+                <div className='min-w-0 break-words text-sm'><span className='mb-1 block text-xs text-[#666666] lg:hidden'>Préleveur</span>{campaignPersonLabel(response.preleveur)}</div>
+                <div><CampaignStatus response status={response.status} />{response.lastSubmittedAt && <span className='mt-1 block text-sm text-[#666666]'>Dernier envoi : {campaignDate(response.lastSubmittedAt)}</span>}{response.hasDraft && response.lastSubmittedAt && <p className='fr-hint-text fr-mt-1w fr-mb-0'>Modification en brouillon, pas encore envoyée</p>}</div>
+                <div>{(requester || response.lastSubmittedAt || permissions.canRespond || permissions.canManage) && <Link className='fr-btn fr-btn--sm fr-btn--secondary' href={`${base}/${campaign.id}/reponses/${response.id}`}>{requester ? !permissions.canRespond || response.lastSubmittedAt ? 'Consulter ma réponse' : response.hasDraft ? 'Reprendre ma réponse' : 'Compléter ma réponse' : 'Consulter'}</Link>}</div>
               </div>
               {response.lastSubmittedAt && response.publicationStatus && !['PUBLISHED', 'COMPLETED'].includes(response.publicationStatus) && <p className='fr-text--sm fr-mt-2w fr-mb-0 text-[#695240]'>Réponse envoyée · Volumes en attente de vérification</p>}
               {tab === 'results' && <ResponseNeeds response={response} />}
