@@ -1,8 +1,10 @@
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import moment from 'moment'
+import {Suspense} from 'react'
 
 import MyDeclarationsList from '@/components/declarations/my-declarations-list.js'
+import DeclarationCampaignInvitations from '@/components/declarations/declaration-campaign-invitations.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {
   getMyDeclarationFeedAction
@@ -93,6 +95,7 @@ const Dossiers = async () => {
           </p>
         </div>
 
+        <Suspense fallback={null}><DeclarationCampaignInvitations /></Suspense>
         {canCreateAnyDeclaration && (
           <section className='mb-5 border border-gray-200 bg-white px-4 py-4 md:px-5'>
             <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>

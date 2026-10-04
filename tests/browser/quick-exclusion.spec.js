@@ -90,10 +90,10 @@ test('la saisie rapide affiche seulement le comptage disponible sur un point par
   await expect(page.getByRole('textbox', {name: /Code comptage : 001/})).toHaveCount(0)
 })
 
-test('toutes les exploitations exclues : état vide et aucune soumission', async ({page, context}) => {
+test('toutes les exploitations exclues : saisie rapide masquée et aucune soumission', async ({page, context}) => {
   const apiToken = await authenticate(context, 'readonly-all-excluded')
   await page.goto(`${frontUrl}/mes-declarations/new`)
-  await expect(page.getByText('Aucune exploitation n’est disponible pour la saisie rapide pour ce déclarant.', {exact: true})).toBeVisible()
+  await expect(page.getByText('Aucun mode de déclaration disponible', {exact: true})).toBeVisible()
   await expect(page.getByRole('textbox', {name: /^Index \(m³\) —/})).toHaveCount(0)
   await expect(page.getByRole('button', {name: /^Soumettre/})).toHaveCount(0)
   expect(await getRequests(context, apiToken)).toEqual([])
@@ -122,4 +122,20 @@ test('formulaire devenu obsolète : refus API explicite et index ou volume conse
   const writes = await getRequests(context, apiToken)
   expect(writes.map(request => request.path)).toEqual(['/api/declarations/quick', '/api/declarations/quick/conflicts'])
   await expect(page.getByRole('textbox', {name: 'Volume (m³) — Point partagé synthétique — Code comptage : 001', exact: true})).toHaveValue('120')
+})
+
+
+test('collecteur : passer à un préleveur exclu pendant le chargement ferme l’attente', async ({page, context}) => {
+  await authenticate(context, 'readonly-collector')
+  await page.goto(`${frontUrl}/mes-declarations/new`)
+  const declarant = page.getByRole('combobox', {name: 'Déclarant', exact: true})
+  // Wait for the interactive form before exercising the in-flight transition.
+  await expect(async () => {
+    await declarant.selectOption(ids.user)
+    await expect(page.getByText('Chargement des points', {exact: true})).toBeVisible({timeout: 250})
+  }).toPass({timeout: 5000})
+  await declarant.selectOption(ids.second)
+  await expect(page.getByText('Saisie rapide indisponible pour ce préleveur', {exact: true})).toBeVisible()
+  await expect(page.getByText('Chargement des points', {exact: true})).toHaveCount(0)
+  await expect(page.getByRole('textbox', {name: /^Index \(m³\) —/})).toHaveCount(0)
 })

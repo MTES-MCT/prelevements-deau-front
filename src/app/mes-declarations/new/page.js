@@ -1,4 +1,6 @@
 import NewDeclarationEntry from '@/components/declarations/new-declaration-entry.js'
+import DeclarationCampaignInvitations from '@/components/declarations/declaration-campaign-invitations.js'
+import {Suspense} from 'react'
 import {getAllowedDeclarationTypesAction} from '@/server/actions/declarations.js'
 
 export const metadata = {
@@ -26,13 +28,14 @@ const NouvelleDeclarationPage = async () => {
           </p>
         </div>
 
+        <Suspense fallback={null}><DeclarationCampaignInvitations /></Suspense>
         <section className='border border-gray-200 bg-white p-4 md:p-5'>
           <NewDeclarationEntry
             allowedDeclarationTypes={allowedDeclarationTypes}
             availablePreleveurs={meta.preleveurs ?? []}
             declarantRole={meta.declarantRole}
             quickDeclarationEnabled={meta.quickDeclarationEnabled}
-            canCreateQuickDeclaration={meta.canCreateQuickDeclaration}
+            canCreateQuickDeclaration={meta.canCreateQuickDeclaration ?? false}
           />
         </section>
       </div>

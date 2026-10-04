@@ -13,14 +13,13 @@ export default async function DashboardDeclarationActions({isPreleveur}) {
   ])
   const declarationTypes = typesResult?.success ? typesResult.data : null
   const summary = summaryResult?.success ? summaryResult.data?.data : null
-  const hasCampaign = Boolean(summary?.items?.length)
   const canCreate = declarationTypes?.meta?.canCreateDeclaration ?? Boolean(declarationTypes?.data?.length)
   const canCreateQuick = declarationTypes?.meta?.canCreateQuickDeclaration ?? false
 
   return (
     <>
       <CampaignInvitations summary={summary} />
-      {!hasCampaign && (canCreate || canCreateQuick) && (
+      {(canCreate || canCreateQuick) && (
         <section className='border border-gray-200 bg-white p-5 md:p-6'>
           <div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
             <div>

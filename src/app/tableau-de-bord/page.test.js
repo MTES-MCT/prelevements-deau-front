@@ -100,7 +100,7 @@ test('les chiffres du tableau de bord n’attendent pas les invitations, qui res
   const html = renderToStaticMarkup(await pending)
   t.true(html.includes('Campagne reçue'))
   t.false(html.includes('Autres déclarations'))
-  t.false(html.includes('/mes-declarations/new'))
+  t.true(html.includes('/mes-declarations/new'), 'La campagne ne masque pas un autre mode encore disponible')
 })
 
 test('le préleveur sans campagne conserve la création de déclaration', async t => {

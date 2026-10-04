@@ -78,7 +78,7 @@ const NewDeclarationEntry = ({
       return true
     }
 
-    return availablePreleveurs.some(preleveur => preleveur.quickDeclarationEnabled !== false)
+    return availablePreleveurs.some(preleveur => preleveur.quickDeclarationEnabled !== false && preleveur.canCreateQuickDeclaration !== false)
   }, [availablePreleveurs, canCreateQuickDeclaration, declarantRole, quickDeclarationEnabled])
 
   const fileAvailable = useMemo(() => allowedDeclarationTypes.length > 0, [allowedDeclarationTypes])

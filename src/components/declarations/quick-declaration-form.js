@@ -398,7 +398,7 @@ function isQuickDeclarationEnabledForCurrentDeclarant({
     return true
   }
 
-  return selectedPreleveur?.quickDeclarationEnabled !== false
+  return selectedPreleveur?.quickDeclarationEnabled !== false && selectedPreleveur?.canCreateQuickDeclaration !== false
 }
 
 function getTargetDeclarantUserId(shouldSelectPreleveur, selectedPreleveurId) {
@@ -744,12 +744,12 @@ const QuickDeclarationStatusAlerts = ({
       />
     )}
 
-    {shouldSelectPreleveur && selectedPreleveur && selectedPreleveur.quickDeclarationEnabled === false && (
+    {shouldSelectPreleveur && selectedPreleveur && (selectedPreleveur.quickDeclarationEnabled === false || selectedPreleveur.canCreateQuickDeclaration === false) && (
       <Alert
         className='fr-mb-2w'
         severity='info'
-        title='Déclarant non configuré'
-        description='Sélectionnez un autre déclarant ou déposez un fichier.'
+        title='Saisie rapide indisponible pour ce préleveur'
+        description='Aucune exploitation n’est disponible pour la saisie rapide. Sélectionnez un autre préleveur.'
       />
     )}
 
@@ -1544,6 +1544,7 @@ const QuickDeclarationForm = ({
     let ignore = false
 
     const loadContext = async () => {
+      setIsContextLoading(false)
       setContext(null)
       setContextError(null)
       setSubmitResult(null)
