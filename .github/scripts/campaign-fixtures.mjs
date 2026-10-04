@@ -32,6 +32,7 @@ const completeData = () => ({
   meters: [{compteurId: campaignIds.meter, serialNumber: 'SYNTH-M1', offSeason: {usageId: campaignIds.usage, indexStart: '10', indexEnd: '20', surface: '2', crops: 'Blé'}, season: {usageId: campaignIds.usage, indexEnd: '30', surface: '2', crops: 'Maïs'}}],
   needs: {season: {usageId: campaignIds.usage, flow: '4', volume: '120', surface: '3', crops: 'Blé'}, offSeason: {usageId: campaignIds.usage, flow: '2', volume: '40', surface: '2', crops: 'Maïs'}}, comment: 'Réponse envoyée'
 })
+const changedData = () => { const data = completeData(); Object.assign(data.meters[0], {meterChanged: true, meterChangeReason: 'Remplacement, nouveau compteur SYNTH-NEW'}); return data }
 const legacyData = () => {
   const data = completeData()
   data.meters[0].offSeason.crops = 'Mélange local : maïs, sorgho / trèfle'
@@ -64,7 +65,7 @@ export async function handleCampaignFixtureRequest(request, send, response) {
   const stateKey = authorization.includes('-shared-') ? `shared-${authorization.slice(-36)}` : authorization
   if (!states.has(stateKey)) states.set(stateKey, {
     draft: authorization.includes('-outsideusage-') && !authorization.includes('-prefill-') ? outsideUsageData() : authorization.includes('-legacy-') ? legacyData() : authorization.includes('-complete-') ? completeData() : null,
-    submitted: (collector && !authorization.includes('-fresh-') && !authorization.includes('-shared-')) || authorization.includes('-review-') ? completeData() : null,
+    submitted: authorization.includes('-changed-') ? changedData() : (collector && !authorization.includes('-fresh-') && !authorization.includes('-shared-')) || authorization.includes('-review-') ? completeData() : null,
     prefill: authorization.includes('-prefill-') ? authorization.includes('-outsideusage-') ? outsideUsageData() : prefillData(unauthorizedOffSeason, authorization.includes('-missing-'), authorization.includes('-serial-')) : null,
     revision: 0, requests: [], summaryReads: 0, name: 'Collecte synthétique', status: ended ? 'CLOSED' : admin ? 'DRAFT' : 'OPEN'
   })
@@ -79,7 +80,7 @@ export async function handleCampaignFixtureRequest(request, send, response) {
   const permissions = {canManage: admin, canReadResults: admin || collector, canRespond: !admin && !collector && !ended, canRespondForParticipants: collector && !ended, canDelete: admin, canOpen: admin}
   const responsePermissions = {canEdit: !admin && !ended, canSubmit: !admin && !ended, respondingOnBehalf: collector}
   const campaign = () => ({id: campaignIds.campaign, name: state.name, status: state.status, opensOn: '2026-09-01', closesOn: '2026-12-31', type: 'DROPT_INDEX_NEEDS_2026_2027', collecteurUserId: campaignIds.collector, collecteur, updatedAt: `2026-09-24T00:00:0${state.revision}Z`, exploitationIds: [campaignIds.exploitation], progress: {total: responseCount, submitted: state.submitted ? 1 : 0, drafts: state.draft ? 1 : 0, remaining: responseCount - (state.submitted ? 1 : 0)}, permissions})
-  const item = () => ({id: campaignIds.response, campaignId: campaignIds.campaign, exploitationId: campaignIds.exploitation, revision: state.revision, preleveurUserId: campaignIds.user, exploitation: {id: campaignIds.exploitation, countingCode: '001'}, preleveur, point, countingCode: '001', status: state.submitted ? 'SUBMITTED' : state.draft ? 'DRAFT' : 'NOT_STARTED', hasDraft: Boolean(state.draft), firstSubmittedAt: state.submitted ? submittedAt : null, lastSubmittedAt: state.submitted ? submittedAt : null, publicationStatus: state.submitted ? 'PENDING_REVIEW' : null, publicationIssues: ['Le partage du compteur doit être vérifié.'], volumes: {offSeason: null, season: null, total: null, partial: true}, submittedData: state.submitted, draftData: state.draft, permissions: responsePermissions})
+  const item = () => ({id: campaignIds.response, campaignId: campaignIds.campaign, exploitationId: campaignIds.exploitation, revision: state.revision, preleveurUserId: campaignIds.user, exploitation: {id: campaignIds.exploitation, countingCode: '001'}, preleveur, point, countingCode: '001', status: state.submitted ? 'SUBMITTED' : state.draft ? 'DRAFT' : 'NOT_STARTED', hasDraft: Boolean(state.draft), firstSubmittedAt: state.submitted ? submittedAt : null, lastSubmittedAt: state.submitted ? submittedAt : null, publicationStatus: state.submitted ? 'PENDING_REVIEW' : null, publicationIssues: state.submitted?.meters.some(meter => meter.meterChanged) ? [{code: 'METER_CHANGE_REPORTED', compteurId: campaignIds.meter}] : ['Le partage du compteur doit être vérifié.'], meterChanges: state.submitted?.meters.filter(meter => meter.meterChanged) || [], volumes: {offSeason: null, season: null, total: null, partial: true}, submittedData: state.submitted, draftData: state.draft, permissions: responsePermissions})
   const context = () => ({campaign: campaign(), response: item(), point: responsePoint, exploitation: {id: campaignIds.exploitation, countingCode: '001', declarant: preleveur, pointPrelevement: responsePoint}, waterUses: uses, permissions: {...permissions, ...responsePermissions}, meters: authorization.includes('-missing-') ? [] : [{compteurId: campaignIds.meter, serialNumber: 'SYNTH-M1'}, {compteurId: campaignIds.secondMeter, serialNumber: 'SYNTH-M2'}], data: state.draft || state.submitted || state.prefill, ...(state.prefill ? {prefill: {active: !state.draft && !state.submitted, noAuthorizedOffSeasonUsage: unauthorizedOffSeason}} : {}), blockers: []})
 
   if (pathname === '/info' || pathname === '/api/info') return respond(200, {role, declarantRole: collector ? 'COLLECTEUR' : 'PRELEVEUR', permissions: [], user: {id: campaignIds.user, email: 'campaign@example.test', socialReason: preleveur.socialReason}, expiresAt: new Date(Date.now() + 3_600_000).toISOString()})
@@ -92,7 +93,8 @@ export async function handleCampaignFixtureRequest(request, send, response) {
   })
   if (pathname === '/api/dashboard/map') return respond(200, {points: authorization.includes('-map-') ? [{...responsePoint, coordinates: {type: 'Point', coordinates: [0.25, 44.65]}, usages: [parentUsage]}] : [], capabilities: {readPointDetails: true, readPointActors: false}})
   if (pathname === '/api/aggregated-series/options') return respond(200, {parameters: []})
-  if (pathname === '/api/declarations/allowed-types') return respond(200, {data: [], meta: {canCreateDeclaration: true, canCreateQuickDeclaration: true}})
+  if (pathname === '/api/declarations/allowed-types') return respond(200, {success: true, data: [], meta: {declarantRole: collector ? 'COLLECTEUR' : 'PRELEVEUR', quickDeclarationEnabled: true, canCreateDeclaration: false, canCreateQuickDeclaration: authorization.includes('-ordinary-')}})
+  if (pathname === '/api/declarations/me/feed') return authorization.includes('-feed-error-') ? respond(503, {message: 'Fil indisponible.'}) : respond(200, {success: true, data: [], meta: {total: 0, declarantRole: collector ? 'COLLECTEUR' : 'PRELEVEUR', canCreateDeclaration: false, canCreateQuickDeclaration: authorization.includes('-ordinary-')}})
   if (pathname === `/api/declarations/${campaignIds.declaration}` || pathname === '/api/sources/synthetic-source') {
     const source = {id: 'synthetic-source', type: 'DECLARATION', status: 'COMPLETED', globalInstructionStatus: 'VALIDATED', metadata: {manualQuickDeclaration: true, measurementType: 'INDEX', collectionCampaignId: campaignIds.campaign, collectionResponseId: campaignIds.response}, chunks: [campaignIds.meter, campaignIds.secondMeter].map((compteurId, index) => ({
       id: `synthetic-chunk-${index}`, pointPrelevement: point, pointPrelevementId: point.id, exploitationId: campaignIds.exploitation, exploitation: {countingCode: '001'}, compteurId, metadata: {serialNumber: `SYNTH-M${index + 1}`, readingDate: '2026-10-31'}, usage: uses[0], flowType: 'PRELEVEMENT', minDate: '2026-10-31', maxDate: '2026-10-31',
@@ -104,7 +106,7 @@ export async function handleCampaignFixtureRequest(request, send, response) {
   }
   if (pathname === '/api/campaigns/summary') {
     state.summaryReads++
-    if (authorization.includes('-collector-summary-error-')) return respond(503, {message: 'Indisponibilité synthétique.'})
+    if (authorization.includes('-summary-error-')) return respond(503, {message: 'Indisponibilité synthétique.'})
     const hasCampaigns = !authorization.includes('-collector-no-campaigns-')
     return ok({hasCampaigns, items: hasCampaigns ? [campaign()] : []})
   }
@@ -158,6 +160,7 @@ export async function handleCampaignFixtureRequest(request, send, response) {
     if (authorization.includes('-conflict-')) return respond(409, {message: 'La réponse a été modifiée.'})
     if (ended || authorization.includes('-closed-')) return respond(409, {code: 409, message: 'Cette campagne n’est pas ouverte à la saisie.'})
     if (authorization.includes('-invalid-')) return respond(400, {code: 400, message: 'Vérifiez les champs de la réponse.', data: {fields: {'meters.0.offSeason.indexStart': 'Le relevé du compteur doit être vérifié.'}}})
+    if (authorization.includes('-historical-') && pathname.endsWith('/submit') && (!body.data.meters[0].meterChanged || !body.data.meters[0].meterChangeReason?.trim())) return respond(400, {message: 'Index historique incohérent.', data: {fields: {'meters.0.meterChanged': 'Signalez le changement de compteur.', 'meters.0.meterChangeReason': 'Précisez le motif du changement de compteur.'}}})
     if (body.revision !== state.revision) return respond(409, {message: 'Révision périmée.'})
     state.revision++
     if (pathname.endsWith('/submit')) { state.submitted = body.data; state.draft = null } else state.draft = body.data

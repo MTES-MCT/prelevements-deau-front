@@ -13,15 +13,17 @@ import UsageCombobox, {compareUsageOptions} from '@/components/form/usage-combob
 import {formatCampaignNumberInput, normalizeCampaignNumberInput} from '@/lib/campaign-numbers.js'
 import {campaignSaveError} from '@/lib/campaign-response-errors.js'
 import {
-  CAMPAIGN_REQUESTER_DESCRIPTION, CAMPAIGN_REQUESTER_TITLE,
+  CAMPAIGN_REQUESTER_DESCRIPTION, CAMPAIGN_REQUESTER_TITLE, CAMPAIGN_METER_CHANGE_VOLUME_LABEL,
+  campaignMeterChangeReported,
   campaignDate, campaignExploitationLabel, campaignPersonLabel, campaignRequiresIrrigationDetails, campaignState,
   campaignUsageOptions, campaignSelectableUsageOptions, getCampaignField, initialCampaignAnswer,
-  setCampaignField, validateCampaignAnswer, validateCampaignIndices
+  normalizeCampaignMeterChanges, setCampaignField, validateCampaignAnswer, validateCampaignIndices
 } from '@/lib/campaigns.js'
 import {getUsageParent, normalizeUsageOption} from '@/lib/water-uses.js'
 import {getCampaignResponseAction, saveCampaignResponseAction} from '@/server/actions/campaigns.js'
 
 const PointMap = dynamic(() => import('@/components/declarations/quick-declaration-map.js'), {ssr: false, loading: () => <p role='status'>Chargement de la carte…</p>})
+const DynamicCheckbox = dynamic(() => import('@codegouvfr/react-dsfr/Checkbox'), {ssr: false})
 
 function NumericInput({value, onChange, ...props}) {
   const inputRef = useRef(null)
@@ -69,6 +71,8 @@ function ResponseField({path, label, answer, errors, update, validateField, read
         <UsageInput id={id} name={path} value={value} options={options} selectableOptions={selectableUsageOptions} path={path} update={update} readOnly={readOnly} disabled={disabled} invalid={Boolean(error)} describedBy={inputProps['aria-describedby']} />
       ) : type === 'number' ? (
         <NumericInput {...inputProps} value={value} onChange={value => update(path, value)} />
+      ) : type === 'textarea' ? (
+        <textarea {...inputProps} className='fr-input' rows={3} value={value} maxLength={maxLength} onChange={event => update(path, event.target.value)} />
       ) : (
         <input {...inputProps} className='fr-input quick-declaration-control' type='text' value={value} maxLength={maxLength} onChange={event => update(path, event.target.value)} />
       )}
@@ -105,6 +109,10 @@ function PeriodFields({path, title, needs = false, season = false, fieldProps}) 
 function PublicationNotice({response}) {
   if (!response?.lastSubmittedAt || !response.publicationStatus || ['PUBLISHED', 'COMPLETED'].includes(response.publicationStatus)) return null
   const issues = response.publicationIssues || []
+  if (campaignMeterChangeReported(response)) {
+    const otherIssues = issues.filter(issue => issue?.code !== 'METER_CHANGE_REPORTED')
+    return <div className='mb-4 grid gap-3'><Alert severity='info' title='Changement de compteur signalé' description='Le signalement est enregistré avec votre réponse. Aucun volume n’est calculé automatiquement pour le compteur concerné.' />{otherIssues.length > 0 && <Alert severity='info' title='Autres volumes en attente de vérification' description={otherIssues.map(issue => typeof issue === 'string' ? issue : issue.message).filter(Boolean).join(' ')} />}</div>
+  }
   return <Alert severity='info' title='Réponse enregistrée — volumes en attente de vérification' description={issues.map(issue => typeof issue === 'string' ? issue : issue.message).filter(Boolean).join(' ') || 'Le rattachement ou le partage des compteurs doit être vérifié avant de publier les volumes.'} className='mb-4' />
 }
 
@@ -115,6 +123,8 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
   const [savedValue, setSavedValue] = useState(() => JSON.stringify(initialAnswer))
   const [fieldErrors, setErrors] = useState({})
   const [indexErrors, setIndexErrors] = useState({})
+  const [validatedAnswer, setValidatedAnswer] = useState(initialAnswer)
+  const [historicalMeterChanges, setHistoricalMeterChanges] = useState([])
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -122,6 +132,7 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
   const [ready, setReady] = useState(false)
   const formRef = useRef(null)
   const inFlight = useRef(false)
+  const automaticMeterChanges = useRef(new Set(initialAnswer.meters.flatMap((meter, index) => meter.meterChanged && !initialContext.data?.meters?.[index]?.meterChanged ? [index] : [])))
   const {campaign, response, permissions = {}} = context
   const respondingOnBehalf = permissions.respondingOnBehalf === true
   const readOnly = !permissions.canEdit || !editing
@@ -138,11 +149,30 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
   const applicant = !admin && !respondingOnBehalf && !permissions.canManage && !permissions.canReadResults
   const errors = {...fieldErrors, ...indexErrors}
   const indexPath = path => /^meters\.\d+\.(?:offSeason|season)\.index(?:Start|End)$/.test(path)
-  const fieldProps = {answer, errors, readOnly, disabled: saving || !ready, usageOptions, selectableUsageOptions, validateField: path => {
-    if (indexPath(path)) setIndexErrors(validateCampaignIndices(answer))
-  }, update: (path, value) => {
-    const nextAnswer = setCampaignField(answer, path, value)
+  const validateIndices = data => validateCampaignIndices(data, {allowMeterChanges: true})
+  const inconsistentMeters = new Set(Object.keys(validateCampaignIndices(validatedAnswer)).map(path => Number(path.split('.')[1])))
+  function commitIndexChanges(data) {
+    const nextAnswer = normalizeCampaignMeterChanges(data)
+    const inconsistent = new Set(Object.keys(validateCampaignIndices(data)).map(path => Number(path.split('.')[1])))
+    for (const [index, meter] of nextAnswer.meters.entries()) {
+      if (!data.meters[index].meterChanged && meter.meterChanged) automaticMeterChanges.current.add(index)
+      if (!inconsistent.has(index) && !historicalMeterChanges.includes(index) && automaticMeterChanges.current.has(index)) {
+        meter.meterChanged = Boolean(meter.meterChangeReason.trim())
+        automaticMeterChanges.current.delete(index)
+      }
+    }
     setAnswer(nextAnswer)
+    setValidatedAnswer(nextAnswer)
+    return nextAnswer
+  }
+  const fieldProps = {answer, errors, readOnly, disabled: saving || !ready, usageOptions, selectableUsageOptions, validateField: path => {
+    if (indexPath(path)) setIndexErrors(validateIndices(commitIndexChanges(answer)))
+  }, update: (path, value) => {
+    const nextAnswer = setCampaignField(answer, path, value, {normalizeMeterChanges: false})
+    const meterIndex = Number(path.split('.')[1])
+    if (path.endsWith('.meterChanged')) automaticMeterChanges.current.delete(meterIndex)
+    setAnswer(nextAnswer)
+    if (indexPath(path)) setHistoricalMeterChanges(previous => previous.filter(index => index !== Number(path.split('.')[1])))
     setSuccess(null)
     setErrors(previous => {
       const next = {...previous}
@@ -158,7 +188,7 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
       }
       return next
     })
-    if (indexPath(path) && Object.keys(indexErrors).length) setIndexErrors(validateCampaignIndices(nextAnswer))
+    if ((path.endsWith('.meterChangeReason') || path.endsWith('.meterChanged')) && Object.keys(indexErrors).length) setIndexErrors(validateIndices(nextAnswer))
   }}
 
   useEffect(() => { setReady(true) }, [])
@@ -179,6 +209,7 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
     const nextAnswer = initialCampaignAnswer(next.data, next.meters)
     setContext(next)
     setAnswer(nextAnswer)
+    setValidatedAnswer(nextAnswer)
     setSavedValue(JSON.stringify(nextAnswer))
   }
   async function refreshAfterApproval() {
@@ -197,8 +228,9 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
     if (readOnly || inFlight.current) return
     setError(null)
     setSuccess(null)
-    const nextErrors = submit ? validateCampaignAnswer(answer, usageOptions) : validateCampaignIndices(answer)
-    const nextIndexErrors = validateCampaignIndices(answer)
+    const nextAnswer = commitIndexChanges(answer)
+    const nextErrors = submit ? validateCampaignAnswer(nextAnswer, usageOptions) : validateIndices(nextAnswer)
+    const nextIndexErrors = validateIndices(nextAnswer)
     setIndexErrors(nextIndexErrors)
     setErrors(Object.fromEntries(Object.entries(nextErrors).filter(([path]) => !Object.hasOwn(nextIndexErrors, path))))
     if (submit && Object.keys(nextErrors).length) {
@@ -213,9 +245,16 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
     inFlight.current = true
     setSaving(true)
     try {
-      const result = await saveCampaignResponseAction(campaign.id, response.id, {revision: response.revision, data: answer}, submit)
+      const result = await saveCampaignResponseAction(campaign.id, response.id, {revision: response.revision, data: nextAnswer}, submit)
       if (!result.success) {
-        setErrors(result.data?.fields || result.data?.data?.fields || result.validationErrors || {})
+        const errors = result.data?.fields || result.data?.data?.fields || result.validationErrors || {}
+        const changed = Object.keys(errors).filter(path => /^meters\.\d+\.meterChanged$/.test(path)).map(path => Number(path.split('.')[1]))
+        if (changed.length) {
+          for (const index of changed) automaticMeterChanges.current.add(index)
+          setHistoricalMeterChanges(changed)
+          setAnswer(previous => ({...previous, meters: previous.meters.map((meter, index) => changed.includes(index) ? {...meter, meterChanged: true} : meter)}))
+        }
+        setErrors(errors)
         focusInvalidField()
         throw new Error(campaignSaveError(result))
       }
@@ -224,7 +263,7 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
       if (next?.response) acceptContext(next)
       else throw new Error('La réponse a été enregistrée, mais son actualisation a échoué. Rechargez la page avant de poursuivre.')
       setEditing(!submit)
-      setSuccess(submit ? respondingOnBehalf ? 'La réponse a bien été envoyée.' : 'Votre réponse a bien été envoyée.' : Object.keys(nextErrors).length ? 'Brouillon enregistré. Les index signalés restent à corriger avant l’envoi.' : 'Brouillon enregistré.')
+      setSuccess(submit ? respondingOnBehalf ? 'La réponse a bien été envoyée.' : 'Votre réponse a bien été envoyée.' : Object.keys(nextErrors).length ? 'Brouillon enregistré. Complétez le motif du changement de compteur ou corrigez les index avant l’envoi.' : 'Brouillon enregistré.')
     } catch (error) { setError(error.message) } finally { inFlight.current = false; setSaving(false) }
   }
 
@@ -250,14 +289,14 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
       {(applicant || respondingOnBehalf) && !permissions.canEdit && ['CLOSED', 'ARCHIVED'].includes(campaignState(campaign)) && <p className='fr-text--sm'>Cette collecte est clôturée. {respondingOnBehalf ? 'La réponse reste consultable.' : 'Votre réponse reste consultable.'}</p>}
       {response.hasDraft && response.lastSubmittedAt && <p className='fr-text--sm'>Ces modifications ne sont pas encore envoyées.</p>}
       <PublicationNotice response={response} />
-      {response.lastSubmittedAt && <CampaignVolumes volumes={response.volumes} />}
+      {response.lastSubmittedAt && <CampaignVolumes volumes={response.volumes} unavailableLabel={campaignMeterChangeReported(response) ? CAMPAIGN_METER_CHANGE_VOLUME_LABEL : undefined} />}
       {response.declarationId && !admin && <p className='fr-text--sm'><Link href={`/mes-declarations/${response.declarationId}`}>Consulter la déclaration d’index générée</Link></p>}
       {!applicant && pointDetails}
       {context.prefill?.active && <p className='fr-hint-text fr-mb-2w'>Données préremplies à vérifier.</p>}
       {readOnly && error && <Alert className='mb-4' severity='error' title='Vérifiez votre réponse' description={error} />}
       {readOnly && success && <div className='mb-4' role='status'><Alert severity='success' title={success} small /></div>}
-      <form ref={formRef} noValidate onSubmit={event => { event.preventDefault(); persist(true) }} className='grid gap-4'>
-        {applicant && permissions.canEdit && <p className='fr-text--sm fr-mb-0'>Le collecteur autorisé peut aussi compléter cette réponse et consulter le brouillon enregistré.</p>}
+      <form id='campaign-response-form' ref={formRef} noValidate onSubmit={event => { event.preventDefault(); persist(true) }} className='grid gap-4'>
+        {applicant && permissions.canEdit && <p className='fr-text--sm fr-mb-0'>L’OUGC peut aussi compléter cette réponse et consulter le brouillon enregistré.</p>}
         {!readOnly && <p className='fr-hint-text fr-mb-0'>Les champs marqués d’un astérisque (*) sont obligatoires.</p>}
         <section className='border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-4 text-[var(--text-default-grey)] md:p-5'>
           <h2 className='fr-h4'>Bilan des prélèvements 2025–2026</h2>
@@ -266,18 +305,30 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
               <div key={meter.compteurId || `new-${index}`} className='min-w-0 rounded border border-[var(--border-default-grey)]'>
                 <div className='flex flex-wrap items-center gap-3 border-b border-[var(--border-default-grey)] bg-[var(--background-alt-grey)] px-3 py-3 md:px-4'>
                   <span className='fr-icon-dashboard-3-line flex h-9 w-9 shrink-0 items-center justify-center rounded bg-[var(--background-default-grey)] text-[var(--text-action-high-blue-france)]' aria-hidden='true' />
-                  {meter.compteurId && context.meters?.some(known => (known.compteurId || known.id) === meter.compteurId && known.serialNumber) ? <h3 className='fr-h6 fr-mb-0 min-w-0 flex-1 break-words'>Numéro de série de compteur : <span className='font-mono'>{meter.serialNumber}</span></h3> : <div className='min-w-0 max-w-sm flex-1'><ResponseField {...fieldProps} path={`meters.${index}.serialNumber`} label='Numéro de série de compteur' type='text' required={false} hint={!readOnly && !initialAnswer.meters[index]?.serialNumber ? 'Nous n’avons pas le numéro de série de votre compteur. Pouvez-vous le renseigner ici' : undefined} maxLength={100} /></div>}
-                  {!readOnly && !meter.compteurId && answer.meters.length > 1 && <button className='fr-btn fr-btn--sm fr-btn--tertiary' type='button' disabled={saving || !ready} onClick={() => { setAnswer(previous => ({...previous, meters: previous.meters.filter((_, meterIndex) => meterIndex !== index)})); setSuccess(null); setErrors({}); setIndexErrors({}) }}>Retirer ce compteur</button>}
+                  {meter.serialNumber && meter.compteurId && context.meters?.some(known => (known.compteurId || known.id) === meter.compteurId && known.serialNumber) ? <h3 className='fr-h6 fr-mb-0 min-w-0 flex-1 break-words'>Numéro de série du compteur : <span className='font-mono'>{meter.serialNumber}</span></h3> : <div className='min-w-0 max-w-sm flex-1'><ResponseField {...fieldProps} path={`meters.${index}.serialNumber`} label='Numéro de série du compteur' type='text' hint={!readOnly && !initialAnswer.meters[index]?.serialNumber ? 'Nous n’avons pas le numéro de série de votre compteur. Pouvez-vous le renseigner ici' : undefined} maxLength={100} /></div>}
+                  <DynamicCheckbox id={`campaign-meter-changed-${index}`} className='fr-mb-0' options={[{
+                    label: 'Je souhaite signaler un changement de compteur',
+                    nativeInputProps: {
+                      checked: meter.meterChanged,
+                      disabled: readOnly || saving || !ready || inconsistentMeters.has(index) || historicalMeterChanges.includes(index),
+                      onChange: event => fieldProps.update(`meters.${index}.meterChanged`, event.target.checked),
+                      'aria-describedby': meter.meterChanged ? `campaign-meter-changed-${index}-hint` : undefined
+                    }
+                  }]} />
+                  {!readOnly && !meter.compteurId && answer.meters.length > 1 && <button className='fr-btn fr-btn--sm fr-btn--tertiary' type='button' disabled={saving || !ready} onClick={() => { setAnswer(previous => ({...previous, meters: previous.meters.filter((_, meterIndex) => meterIndex !== index)})); setValidatedAnswer(previous => ({...previous, meters: previous.meters.filter((_, meterIndex) => meterIndex !== index)})); setSuccess(null); setErrors({}); setIndexErrors({}) }}>Retirer ce compteur</button>}
                 </div>
+                {meter.meterChanged && <div className='grid gap-3 px-3 pt-3 md:px-4'>
+                  <p id={`campaign-meter-changed-${index}-hint`} className='fr-text--sm fr-mb-0'>{inconsistentMeters.has(index) || historicalMeterChanges.includes(index) ? 'Les index renseignés sont incohérents. Le changement de compteur est signalé automatiquement ; précisez le motif ou corrigez les index.' : 'Aucun volume n’est calculé automatiquement pour ce compteur signalé.'}</p>
+                  <ResponseField {...fieldProps} path={`meters.${index}.meterChangeReason`} label='Motif du changement de compteur' type='textarea' hint='Indiquez la raison du changement et le numéro de série du nouveau compteur.' maxLength={2000} />
+                </div>}
                 <div className='grid gap-3 p-3 md:p-4 lg:grid-cols-2'>
                   <PeriodFields title='Hors étiage 2025–2026' path={`meters.${index}.offSeason`} fieldProps={fieldProps} />
                   <PeriodFields season title='Étiage 2026' path={`meters.${index}.season`} fieldProps={fieldProps} />
                 </div>
-                {admin && response.lastSubmittedAt && meter.compteurId && <div className='px-3 pb-3 md:px-4'><CampaignMeterReview campaignId={campaign.id} compteurId={meter.compteurId} serialNumber={meter.serialNumber} onApproved={refreshAfterApproval} /></div>}
+                {admin && response.lastSubmittedAt && meter.compteurId && !meter.meterChanged && !campaignMeterChangeReported(response, meter.compteurId) && <div className='px-3 pb-3 md:px-4'><CampaignMeterReview campaignId={campaign.id} compteurId={meter.compteurId} serialNumber={meter.serialNumber} onApproved={refreshAfterApproval} /></div>}
               </div>
             ))}
           </div>
-          {!readOnly && <p className='fr-hint-text fr-mt-2w fr-mb-0'>Un compteur a été remplacé ? Indiquez-le dans le commentaire.</p>}
         </section>
         <section className='border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-4 text-[var(--text-default-grey)] md:p-5'>
           <h2 className='fr-h4'>Besoins 2027–2028</h2>
@@ -290,17 +341,17 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
           <label className='fr-label' htmlFor='campaign-comment'>Commentaire (facultatif)</label>
           <textarea id='campaign-comment' className='fr-input' rows={3} readOnly={readOnly || saving || !ready} maxLength={20000} value={answer.comment} placeholder='Modifications : raison sociale, SIRET, localisation du point, changement de compteurs…' onChange={event => fieldProps.update('comment', event.target.value)} />
         </section>
-        {!readOnly && <div role='region' aria-label='Enregistrement de la réponse' className='sticky bottom-0 z-10 flex flex-wrap items-center gap-3 border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-3 text-[var(--text-default-grey)] shadow-sm'>
-          <button className='fr-btn fr-btn--secondary' type='button' disabled={saving || !ready} onClick={() => persist(false)}>Enregistrer le brouillon</button>
-          <button className='fr-btn' type='submit' disabled={saving || !ready}>{saving ? 'Enregistrement…' : response.lastSubmittedAt ? 'Envoyer les modifications' : respondingOnBehalf ? 'Envoyer la réponse' : 'Envoyer ma réponse'}</button>
-          {success && <p role='status' className='m-0 text-sm font-semibold text-[var(--text-default-success)]'>{success}</p>}
-          {dirty && !saving && !success && <span className='text-sm text-[var(--text-mention-grey)]'>Modifications non enregistrées</span>}
-          {error && <div className='w-full' role='alert'><p className='fr-error-text m-0'>{error}</p>
-            {Object.keys(errors).length > 0 && <button className='fr-link fr-text--sm mt-1' type='button' onClick={focusInvalidField}>Voir les champs à corriger ({Object.keys(errors).length})</button>}
-          </div>}
-          {!permissions.canSubmit && context.blockers?.length > 0 && !error && <span className='text-sm text-[var(--text-mention-grey)]'>{context.blockers[0].replace(/\s*Vous pouvez enregistrer un brouillon\.?/g, '')}</span>}
-        </div>}
       </form>
+      {!readOnly && <div role='region' aria-label='Enregistrement de la réponse' className='sticky bottom-0 z-10 flex flex-wrap items-center gap-3 border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-3 text-[var(--text-default-grey)] shadow-sm'>
+        <button className='fr-btn fr-btn--secondary' type='button' disabled={saving || !ready} onClick={() => persist(false)}>Enregistrer le brouillon</button>
+        <button className='fr-btn' type='submit' form='campaign-response-form' disabled={saving || !ready}>{saving ? 'Enregistrement…' : response.lastSubmittedAt ? 'Envoyer les modifications' : respondingOnBehalf ? 'Envoyer la réponse' : 'Envoyer ma réponse'}</button>
+        {success && <p role='status' className='m-0 text-sm font-semibold text-[var(--text-default-success)]'>{success}</p>}
+        {dirty && !saving && !success && <span className='text-sm text-[var(--text-mention-grey)]'>Modifications non enregistrées</span>}
+        {error && <div className='w-full' role='alert'><p className='fr-error-text m-0'>{error}</p>
+          {Object.keys(errors).length > 0 && <button className='fr-link fr-text--sm mt-1' type='button' onClick={focusInvalidField}>Voir les champs à corriger ({Object.keys(errors).length})</button>}
+        </div>}
+        {!permissions.canSubmit && context.blockers?.length > 0 && !error && <span className='text-sm text-[var(--text-mention-grey)]'>{context.blockers[0].replace(/\s*Vous pouvez enregistrer un brouillon\.?/g, '')}</span>}
+      </div>}
       {applicant && pointDetails}
     </CampaignShell>
   )

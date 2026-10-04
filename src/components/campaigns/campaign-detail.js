@@ -6,10 +6,10 @@ import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import Link from 'next/link'
 import {useRouter} from 'next/navigation'
 
-import {CampaignPagination, CampaignProgress, CampaignShell, CampaignStatus, CampaignVolumes} from '@/components/campaigns/campaign-common.js'
+import {CampaignPagination, CampaignProgress, CampaignShell, CampaignStatus, CampaignVolumes, CampaignReplenishmentNotice, CampaignMeterChanges} from '@/components/campaigns/campaign-common.js'
 import CampaignPointIdentity from '@/components/campaigns/campaign-point-identity.js'
 import CampaignRequesterPoints from '@/components/campaigns/campaign-requester-points.js'
-import {CAMPAIGN_REQUESTER_DESCRIPTION, CAMPAIGN_REQUESTER_TITLE, campaignData, campaignDate, campaignPersonLabel, campaignState, formatCampaignVolume, isCampaignRequester} from '@/lib/campaigns.js'
+import {CAMPAIGN_REQUESTER_DESCRIPTION, CAMPAIGN_REQUESTER_TITLE, CAMPAIGN_METER_CHANGE_VOLUME_LABEL, campaignMeterChangeReported, campaignPublicationLabel, campaignData, campaignDate, campaignPersonLabel, campaignState, formatCampaignVolume, isCampaignRequester} from '@/lib/campaigns.js'
 import {changeCampaignStateAction, deleteCampaignAction, getCampaignResponsesAction, getCampaignResultsAction} from '@/server/actions/campaigns.js'
 import {exportCampaignResultsAction} from '@/server/actions/exports.js'
 
@@ -94,7 +94,8 @@ export default function CampaignDetail({initialData, initialResponses, initialEr
         <button className='fr-btn fr-btn--sm fr-btn--tertiary ml-auto' type='button' disabled={busy} onClick={download}>Exporter tous les résultats (CSV)</button>
       </div>}
       {error && <Alert className='mb-4' severity='error' title='Chargement ou enregistrement impossible' description={error} />}
-      <h2 className='fr-h5 fr-mb-2w'>{requester ? 'Mes points concernés' : 'Points de la campagne'}</h2>
+      <h2 className='fr-h5 fr-mb-2w'>{requester ? 'Mes compteurs concernés' : 'Points de la campagne'}</h2>
+      {requester && <div className='mb-4'><CampaignReplenishmentNotice /></div>}
       {!requester && <form className='mb-3 flex flex-wrap items-end gap-3' onSubmit={event => { event.preventDefault(); load(1, tab, filters) }}>
         <div className='fr-input-group fr-mb-0 min-w-52 flex-1'><label className='fr-label' htmlFor='response-search'>Rechercher un point ou un préleveur</label><input id='response-search' className='fr-input' type='search' placeholder='Nom du point, commune, code compteur, préleveur' value={filters.q} onChange={event => setFilters(previous => ({...previous, q: event.target.value}))} /></div>
         {tab === 'responses' && <div className='fr-select-group fr-mb-0'><label className='fr-label' htmlFor='response-status'>Réponse</label><select id='response-status' className='fr-select' value={filters.status} onChange={event => setFilters(previous => ({...previous, status: event.target.value}))}><option value=''>Toutes</option><option value='NOT_STARTED'>À compléter</option><option value='DRAFT'>Brouillon</option><option value='SUBMITTED'>Envoyé</option></select></div>}
@@ -103,7 +104,7 @@ export default function CampaignDetail({initialData, initialResponses, initialEr
       {loading ? <p role='status'>Chargement des réponses…</p> : !error && <>
         {requester ? <CampaignRequesterPoints campaignId={campaign.id} initialPage={result} canRespond={permissions.canRespond} /> : <>
           {tab === 'results' && result.totals && <RequestedVolumes totals={result.totals} />}
-          {tab === 'results' && <CampaignVolumes volumes={result.totals?.publishedVolumes} />}
+          {tab === 'results' && <CampaignVolumes volumes={result.totals?.publishedVolumes} unavailableLabel='Non calculé' partialDescription='Total incomplet : certains volumes ne sont pas calculés.' />}
           {tab === 'results' && <p className='fr-text--sm'>Ces besoins sont des volumes demandés, pas des volumes prélevés. Les brouillons ne sont pas inclus.</p>}
           <div className='hidden grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_11rem] gap-4 border border-[var(--border-default-grey)] border-b-0 bg-[var(--background-alt-grey)] px-4 py-3 text-sm font-semibold lg:grid' aria-hidden='true'><span>Point de prélèvement</span><span>Préleveur</span><span>Réponse</span><span>Actions</span></div>
           <ul className='m-0 list-none divide-y divide-[var(--border-default-grey)] border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-0'>
@@ -114,9 +115,10 @@ export default function CampaignDetail({initialData, initialResponses, initialEr
                 <div><CampaignStatus response status={response.status} />{response.lastSubmittedAt && <span className='mt-1 block text-sm text-[var(--text-mention-grey)]'>Dernier envoi : {campaignDate(response.lastSubmittedAt)}</span>}{response.hasDraft && response.lastSubmittedAt && <p className='fr-hint-text fr-mt-1w fr-mb-0'>Modification en brouillon, pas encore envoyée</p>}</div>
                 <div>{(response.permissions?.canEdit || response.permissions?.respondingOnBehalf || response.lastSubmittedAt || permissions.canRespond || permissions.canManage) && <Link className='fr-btn fr-btn--sm fr-btn--secondary' href={`${base}/${campaign.id}/reponses/${response.id}`}>{response.permissions?.canEdit ? response.lastSubmittedAt ? 'Consulter / modifier' : response.hasDraft ? 'Reprendre' : 'Compléter' : 'Consulter'}</Link>}</div>
               </div>
-              {response.lastSubmittedAt && response.publicationStatus && !['PUBLISHED', 'COMPLETED'].includes(response.publicationStatus) && <p className='fr-text--sm fr-mt-2w fr-mb-0 text-[var(--text-label-yellow-moutarde)]'>Réponse envoyée · Volumes en attente de vérification</p>}
+              {response.lastSubmittedAt && response.publicationStatus && !['PUBLISHED', 'COMPLETED'].includes(response.publicationStatus) && <p className='fr-text--sm fr-mt-2w fr-mb-0 text-[var(--text-label-yellow-moutarde)]'>Réponse envoyée · {campaignPublicationLabel(response)}</p>}
+              {tab === 'results' && <CampaignMeterChanges response={response} />}
               {tab === 'results' && <ResponseNeeds response={response} />}
-              {tab === 'results' && response.volumes && <p className='fr-text--sm fr-mt-2w fr-mb-0'><strong>Volumes prélevés calculés :</strong> hors étiage {formatCampaignVolume(response.volumes.offSeason)} · étiage {formatCampaignVolume(response.volumes.season)}{response.volumes.partial ? ' · Résultat incomplet' : ''}</p>}
+              {tab === 'results' && response.volumes && <p className='fr-text--sm fr-mt-2w fr-mb-0'><strong>Volumes prélevés calculés :</strong> hors étiage {formatCampaignVolume(response.volumes.offSeason, campaignMeterChangeReported(response) ? CAMPAIGN_METER_CHANGE_VOLUME_LABEL : undefined)} · étiage {formatCampaignVolume(response.volumes.season, campaignMeterChangeReported(response) ? CAMPAIGN_METER_CHANGE_VOLUME_LABEL : undefined)}{response.volumes.partial ? ' · Résultat incomplet' : ''}</p>}
             </li>)}
           </ul>
           {!result.items?.length && <p className='border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-4'>{requester ? 'Aucun point à compléter pour cette campagne.' : 'Aucune réponse ne correspond à ces filtres.'}</p>}

@@ -1,7 +1,18 @@
 import Link from 'next/link'
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
 
 import AdminPageShell from '@/components/admin/admin-page-shell.js'
-import {CAMPAIGN_REQUESTER_DESCRIPTION, CAMPAIGN_REQUESTER_TITLE, CAMPAIGN_STATUS_LABELS, RESPONSE_STATUS_LABELS, campaignDate, campaignParticipation, formatCampaignVolume} from '@/lib/campaigns.js'
+import {CAMPAIGN_REQUESTER_DESCRIPTION, CAMPAIGN_REQUESTER_TITLE, CAMPAIGN_STATUS_LABELS, CAMPAIGN_REPLENISHMENT_NOTICE, RESPONSE_STATUS_LABELS, campaignDate, campaignParticipation, formatCampaignVolume} from '@/lib/campaigns.js'
+
+export function CampaignReplenishmentNotice({small = false}) {
+  return <Alert severity='warning' title={CAMPAIGN_REPLENISHMENT_NOTICE} small={small} />
+}
+
+export function CampaignMeterChanges({response}) {
+  const changes = response.meterChanges || response.submittedData?.meters?.filter(meter => meter.meterChanged) || []
+  if (!changes.length) return null
+  return <section className='mt-3 text-sm' aria-label='Changements de compteur signalés'><h3 className='fr-h6 fr-mb-1w'>Changements de compteur signalés</h3><ul className='mb-0'>{changes.map((meter, index) => <li key={meter.compteurId || index}><strong>Compteur {meter.serialNumber || 'non renseigné'} :</strong> {meter.meterChangeReason}</li>)}</ul></section>
+}
 
 export function CampaignShell({admin = false, title, description, actions, children}) {
   if (admin) return <AdminPageShell title={title} description={description} actions={actions}>{children}</AdminPageShell>
@@ -71,15 +82,15 @@ export function CampaignInvitations({summary}) {
   )
 }
 
-export function CampaignVolumes({volumes}) {
+export function CampaignVolumes({volumes, unavailableLabel, partialDescription}) {
   if (!volumes) return null
   return (
     <section className='mb-4 border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-4'>
       <h2 className='fr-h5 fr-mb-2w'>Volumes prélevés calculés</h2>
       <dl className='m-0 grid gap-3 sm:grid-cols-3'>
-        {[['offSeason', 'Hors étiage 2025–2026'], ['season', 'Étiage 2026'], ['total', 'Total']].map(([key, label]) => <div key={key}><dt className='text-sm'>{label}</dt><dd className='m-0 font-semibold'>{formatCampaignVolume(volumes[key])}</dd></div>)}
+        {[['offSeason', 'Hors étiage 2025–2026'], ['season', 'Étiage 2026'], ['total', 'Total']].map(([key, label]) => <div key={key}><dt className='text-sm'>{label}</dt><dd className='m-0 font-semibold'>{formatCampaignVolume(volumes[key], unavailableLabel)}</dd></div>)}
       </dl>
-      {volumes.partial && <p className='fr-hint-text fr-mt-2w fr-mb-0'>Total incomplet : certains volumes attendent encore une vérification.</p>}
+      {volumes.partial && <p className='fr-hint-text fr-mt-2w fr-mb-0'>{partialDescription || (unavailableLabel ? 'Total incomplet : les volumes des compteurs signalés ne sont pas calculés automatiquement.' : 'Total incomplet : certains volumes attendent encore une vérification.')}</p>}
     </section>
   )
 }

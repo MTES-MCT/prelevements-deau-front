@@ -30,7 +30,7 @@ function harness({tab = 'results', response = {}, permissions = {canReadResults:
     if (specifier === '@codegouvfr/react-dsfr/Alert') return {Alert: () => null}
     if (specifier === '@/components/campaigns/campaign-requester-points.js') return {__esModule: true, default: () => null}
     if (specifier === '@/components/campaigns/campaign-point-identity.js') return compileComponent(new URL('campaign-point-identity.js', import.meta.url), componentRequire)
-    if (specifier === '@/components/campaigns/campaign-common.js') return Object.fromEntries(['CampaignPagination', 'CampaignProgress', 'CampaignShell', 'CampaignStatus', 'CampaignVolumes'].map(name => [name, ({children}) => React.createElement('div', null, children)]))
+    if (specifier === '@/components/campaigns/campaign-common.js') return Object.fromEntries(['CampaignPagination', 'CampaignProgress', 'CampaignShell', 'CampaignStatus', 'CampaignVolumes', 'CampaignReplenishmentNotice', 'CampaignMeterChanges'].map(name => [name, ({children}) => React.createElement('div', null, children)]))
     if (specifier === '@/lib/campaigns.js') return campaignHelpers
     if (specifier === '@/lib/campaign-points.js') return campaignPointHelpers
     if (specifier === '@/server/actions/campaigns.js') return Object.fromEntries(['getCampaignResponsesAction', 'getCampaignResultsAction'].map(name => [name, async (id, options) => {

@@ -9,6 +9,8 @@ export const CAMPAIGN_TYPE_LABEL = 'Collecte des index de prélèvements et des 
 export const CAMPAIGN_LAST_READING_DATE = '2026-10-31'
 export const CAMPAIGN_REQUESTER_TITLE = 'Déclarer mes prélèvements et mes besoins'
 export const CAMPAIGN_REQUESTER_DESCRIPTION = 'Bilan de campagne 2026-2027 et recensement des besoins 2027-2028'
+export const CAMPAIGN_REPLENISHMENT_NOTICE = 'Les points de réalimentation n’ont pas à être déclarés ici'
+export const CAMPAIGN_METER_CHANGE_VOLUME_LABEL = 'Non calculé : changement de compteur signalé'
 
 export const CAMPAIGN_STATUS_LABELS = {
   DRAFT: 'Brouillon', OPEN: 'Ouverte', CLOSED: 'Clôturée', ARCHIVED: 'Archivée'
@@ -71,8 +73,17 @@ export function campaignResponseHref(source, currentRole) {
   return `${base}/${collectionCampaignId}/reponses/${collectionResponseId}`
 }
 
-export function formatCampaignVolume(value) {
-  return value === null || value === undefined ? 'En attente de publication' : `${new Intl.NumberFormat('fr-FR', {maximumFractionDigits: 4}).format(Number(value))} m³`
+export function formatCampaignVolume(value, unavailableLabel = 'En attente de publication') {
+  return value === null || value === undefined ? unavailableLabel : `${new Intl.NumberFormat('fr-FR', {maximumFractionDigits: 4}).format(Number(value))} m³`
+}
+
+export function campaignMeterChangeReported(response, compteurId) {
+  return (response?.publicationIssues || []).some(issue => issue?.code === 'METER_CHANGE_REPORTED' && (!compteurId || issue.compteurId === compteurId))
+    || (response?.meterChanges || response?.submittedData?.meters || []).some(meter => (response?.meterChanges || meter.meterChanged) && (!compteurId || meter.compteurId === compteurId))
+}
+
+export function campaignPublicationLabel(response) {
+  return response?.publicationStatusLabel || (campaignMeterChangeReported(response) ? CAMPAIGN_METER_CHANGE_VOLUME_LABEL : 'Volumes en attente de vérification')
 }
 
 export function campaignUsageOptions(usages = []) {
@@ -105,6 +116,8 @@ export function emptyCampaignMeter(meter = {}) {
   return {
     compteurId: meter.compteurId || meter.id || null,
     serialNumber: meter.serialNumber || meter.number || '',
+    meterChanged: false,
+    meterChangeReason: '',
     offSeason: emptyCampaignPeriod(),
     season: {usageId: '', indexEnd: '', surface: '', crops: []}
   }
@@ -112,14 +125,14 @@ export function emptyCampaignMeter(meter = {}) {
 
 export function initialCampaignAnswer(data, meters = []) {
   const period = (value, defaults) => ({...defaults, ...value, crops: normalizeCampaignCrops(value?.crops)})
-  return {
+  return normalizeCampaignMeterChanges({
     meters: data?.meters?.length ? data.meters.map(meter => ({...meter, offSeason: period(meter.offSeason, emptyCampaignPeriod()), season: period(meter.season, emptyCampaignMeter().season)})) : (meters.length ? meters.map(emptyCampaignMeter) : [emptyCampaignMeter()]),
     needs: {
       offSeason: period(data?.needs?.offSeason, emptyCampaignPeriod(true)),
       season: period(data?.needs?.season, emptyCampaignPeriod(true))
     },
     comment: data?.comment || ''
-  }
+  })
 }
 
 // Index precision is four decimal places, as in the API. BigInt avoids rounding
@@ -131,9 +144,10 @@ function comparableIndex(value) {
   return BigInt(integer) * 10000n + BigInt(fraction.padEnd(4, '0'))
 }
 
-export function validateCampaignIndices(data) {
+export function validateCampaignIndices(data, {allowMeterChanges = false} = {}) {
   const errors = {}
   for (const [index, meter] of (data.meters || []).entries()) {
+    if (allowMeterChanges && meter.meterChanged && String(meter.meterChangeReason || '').trim()) continue
     const start = comparableIndex(meter.offSeason?.indexStart)
     const middle = comparableIndex(meter.offSeason?.indexEnd)
     const end = comparableIndex(meter.season?.indexEnd)
@@ -145,6 +159,11 @@ export function validateCampaignIndices(data) {
     }
   }
   return errors
+}
+
+export function normalizeCampaignMeterChanges(data) {
+  const inconsistent = new Set(Object.keys(validateCampaignIndices(data)).map(path => Number(path.split('.')[1])))
+  return {...data, meters: (data.meters || []).map((meter, index) => ({...meter, meterChanged: meter.meterChanged === true || inconsistent.has(index), meterChangeReason: meter.meterChangeReason || ''}))}
 }
 
 export function validateCampaignAnswer(data, usages = []) {
@@ -164,21 +183,23 @@ export function validateCampaignAnswer(data, usages = []) {
     if (irrigationDetailsRequired && !normalizeCampaignCrops(value?.crops).length) errors[`${path}.crops`] = 'Sélectionnez les cultures, ou choisissez « Aucune ».'
   }
   for (const [index, meter] of (data.meters || []).entries()) {
+    if (!String(meter.serialNumber || '').trim()) errors[`meters.${index}.serialNumber`] = 'Renseignez le numéro de série du compteur.'
+    if (meter.meterChanged && !String(meter.meterChangeReason || '').trim()) errors[`meters.${index}.meterChangeReason`] = 'Précisez le motif du changement de compteur.'
     period(meter.offSeason, `meters.${index}.offSeason`, ['indexStart', 'indexEnd', 'surface'])
     period(meter.season, `meters.${index}.season`, ['indexEnd', 'surface'])
   }
   if (!data.meters?.length) errors.meters = 'Renseignez au moins un compteur.'
   for (const season of ['season', 'offSeason']) period(data.needs?.[season], `needs.${season}`, ['flow', 'volume', 'surface'])
-  return {...errors, ...validateCampaignIndices(data)}
+  return {...errors, ...validateCampaignIndices(data, {allowMeterChanges: true})}
 }
 
-export function setCampaignField(data, path, value) {
+export function setCampaignField(data, path, value, {normalizeMeterChanges = true} = {}) {
   const next = structuredClone(data)
   const parts = path.split('.')
   let target = next
   for (const key of parts.slice(0, -1)) target = target[key]
   target[parts.at(-1)] = value
-  return next
+  return normalizeMeterChanges ? normalizeCampaignMeterChanges(next) : next
 }
 
 export function getCampaignField(data, path) {

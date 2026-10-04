@@ -22,6 +22,7 @@ export async function handleQuickExclusionFixtureRequest(request, send) {
   const {pathname} = new URL(request.url, 'http://127.0.0.1:3431')
   const respond = (status, data) => { send(status, data); return true }
   const readOnly = authorization.includes('-readonly-')
+  const collector = authorization.includes('-collector-')
   const role = readOnly ? 'DECLARANT' : authorization.includes('-instructor-') ? 'INSTRUCTOR' : 'ADMIN'
   const permissions = readOnly ? [] : ['exploitation.create', 'exploitation.update', 'exploitation.list', 'zone.detail.read']
   const state = sessions.get(authorization) ?? {requests: [], excludeFromQuickDeclaration: authorization.includes('-excluded-') ? true : undefined}
@@ -49,8 +50,10 @@ export async function handleQuickExclusionFixtureRequest(request, send) {
   if (pathname === '/api/points-prelevement' || pathname === `/api/zones/${zone.id}/points-prelevement/options`) return respond(200, [point])
   if (pathname === '/api/declarants' || pathname === `/api/zones/${zone.id}/exploitations/declarants-options`) return respond(200, [declarant])
   if (pathname === `/api/zones/${zone.id}`) return respond(200, zone)
-  if (pathname === '/api/declarations/allowed-types') return respond(200, {success: true, data: [], meta: {declarantRole: 'PRELEVEUR', quickDeclarationEnabled: true, canCreateQuickDeclaration: true}})
+  if (pathname === '/api/campaigns/summary') return respond(200, {success: true, data: {items: []}})
+  if (pathname === '/api/declarations/allowed-types') return respond(200, {success: true, data: authorization.includes('-file-') ? [{code: 'template-file', name: 'Modèle de déclaration'}] : [], meta: {declarantRole: collector ? 'COLLECTEUR' : 'PRELEVEUR', preleveurs: collector ? [{id: quickExclusionIds.user, firstName: 'Préleveur', lastName: 'Disponible', quickDeclarationEnabled: true, canCreateQuickDeclaration: true}, {id: quickExclusionIds.second, firstName: 'Préleveur', lastName: 'Exclu', quickDeclarationEnabled: true, canCreateQuickDeclaration: false}] : [], quickDeclarationEnabled: true, canCreateQuickDeclaration: !authorization.includes('-all-excluded-') && !authorization.includes('-file-')}})
   if (pathname === '/api/declarations/quick/context') {
+    if (collector) await new Promise(resolve => setTimeout(resolve, 800))
     const ids = authorization.includes('-all-excluded-') ? [] : [quickExclusionIds.first, quickExclusionIds.second].filter(id => id !== quickExclusionIds.first || !state.excludeFromQuickDeclaration)
     return respond(200, {success: true, data: {points: ids.map(id => ({
       id: point.id, pointPrelevementId: point.id, exploitationId: id,

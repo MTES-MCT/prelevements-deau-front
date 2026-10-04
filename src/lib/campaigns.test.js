@@ -2,7 +2,7 @@ import test from 'ava'
 
 import {
   campaignData, campaignDate, campaignExploitationLabel, campaignParticipation, campaignRequiresIrrigationDetails, campaignResponseHref, campaignSelectableUsageOptions, campaignState, campaignUsageOptions,
-  emptyCampaignMeter, formatCampaignVolume, getCampaignField, initialCampaignAnswer, isCampaignRequester, setCampaignField, singleCampaignResponseHref, validateCampaignAnswer, validateCampaignIndices
+  campaignMeterChangeReported, campaignPublicationLabel, normalizeCampaignMeterChanges, emptyCampaignMeter, formatCampaignVolume, getCampaignField, initialCampaignAnswer, isCampaignRequester, setCampaignField, singleCampaignResponseHref, validateCampaignAnswer, validateCampaignIndices
 } from './campaigns.js'
 
 test('un code comptage distingue deux exploitations sur le même point', t => {
@@ -52,7 +52,7 @@ test('toutes les valeurs zéro sont valides ; les champs vides ne le sont pas', 
   for (const serialNumber of ['', undefined, null]) {
     const withoutSerial = structuredClone(data)
     withoutSerial.meters[0].serialNumber = serialNumber
-    t.deepEqual(validateCampaignAnswer(withoutSerial), {})
+    t.is(validateCampaignAnswer(withoutSerial)['meters.0.serialNumber'], 'Renseignez le numéro de série du compteur.')
     t.is(withoutSerial.meters[0].serialNumber, serialNumber)
   }
   data.needs.season.volume = ''
@@ -123,7 +123,7 @@ test('les choix acceptent le catalogue à plat et les sous-codes sans parent san
 test('un usage historique hors liste reste inchangé et valide dans les quatre périodes', t => {
   const usages = [{id: 'industry', code: '4'}, {id: 'filling', code: '12E'}]
   const source = {
-    meters: [{offSeason: {usageId: 'industry', indexStart: '0', indexEnd: '1', surface: '2', crops: ['Blé']}, season: {usageId: 'industry', indexEnd: '2', surface: '3', crops: ['Maïs']}}],
+    meters: [{serialNumber: 'M1', offSeason: {usageId: 'industry', indexStart: '0', indexEnd: '1', surface: '2', crops: ['Blé']}, season: {usageId: 'industry', indexEnd: '2', surface: '3', crops: ['Maïs']}}],
     needs: {season: {usageId: 'industry', flow: '1', volume: '2', surface: '3', crops: ['Blé']}, offSeason: {usageId: 'industry', flow: '1', volume: '2', surface: '3', crops: ['Maïs']}}
   }
   const original = structuredClone(source)
@@ -312,4 +312,40 @@ test('le formulaire unique est direct uniquement pour le demandeur et un résult
   t.is(singleCampaignResponseHref('campaign', permissions, {...responses, total: 2}), null)
   t.is(singleCampaignResponseHref('campaign', permissions, {...responses, items: []}), null)
   t.is(singleCampaignResponseHref('campaign', permissions, undefined), null)
+})
+
+
+test('un changement exige un motif sans autoriser les nombres invalides', t => {
+  let data = initialCampaignAnswer({meters: [{serialNumber: 'M1', offSeason: {indexStart: '20', indexEnd: '10'}, season: {indexEnd: '5'}}]})
+  t.true(data.meters[0].meterChanged)
+  t.truthy(validateCampaignAnswer(data)['meters.0.meterChangeReason'])
+  data = setCampaignField(data, 'meters.0.meterChanged', false)
+  t.true(data.meters[0].meterChanged)
+  data = setCampaignField(data, 'meters.0.meterChangeReason', 'Remplacement, nouveau compteur M2')
+  t.falsy(validateCampaignAnswer(data)['meters.0.offSeason.indexEnd'])
+  t.falsy(validateCampaignAnswer(data)['meters.0.meterChangeReason'])
+  data = setCampaignField(data, 'meters.0.offSeason.indexEnd', '-1')
+  t.truthy(validateCampaignAnswer(data)['meters.0.offSeason.indexEnd'])
+  t.is(data.meters[0].compteurId, undefined)
+})
+
+test('les anciens brouillons et plusieurs compteurs gardent leurs identités et motifs séparés', t => {
+  const source = {meters: [{compteurId: 'm1', serialNumber: '', meterChanged: true, meterChangeReason: ' ', offSeason: {}}, {compteurId: 'm2', serialNumber: 'M2', offSeason: {indexStart: '1', indexEnd: '2'}}]}
+  const data = normalizeCampaignMeterChanges(source)
+  t.is(data.meters[0].serialNumber, '')
+  t.is(data.meters[0].meterChangeReason, ' ')
+  t.false(data.meters[1].meterChanged)
+  t.truthy(validateCampaignAnswer(data)['meters.0.serialNumber'])
+  t.truthy(validateCampaignAnswer(data)['meters.0.meterChangeReason'])
+  t.falsy(validateCampaignAnswer(data)['meters.1.meterChangeReason'])
+  t.false(Object.hasOwn(source.meters[1], 'meterChanged'))
+})
+
+test('un signalement partagé ne devient ni un volume zéro ni une demande de vérification', t => {
+  const response = {publicationIssues: [{code: 'METER_CHANGE_REPORTED', compteurId: 'm1'}]}
+  t.true(campaignMeterChangeReported(response, 'm1'))
+  t.false(campaignMeterChangeReported(response, 'm2'))
+  t.is(campaignPublicationLabel(response), 'Non calculé : changement de compteur signalé')
+  t.is(formatCampaignVolume(null, campaignPublicationLabel(response)), 'Non calculé : changement de compteur signalé')
+  t.is(formatCampaignVolume(0, campaignPublicationLabel(response)), '0 m³')
 })

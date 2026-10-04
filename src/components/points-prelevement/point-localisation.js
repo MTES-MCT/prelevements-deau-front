@@ -26,23 +26,6 @@ const LabelValue = ({label, value, children}) => {
   )
 }
 
-const getGeoportailUrl = coordinates => {
-  if (!Array.isArray(coordinates) || coordinates.length !== 2) {
-    return null
-  }
-
-  const [lon, lat] = coordinates
-
-  const params = new URLSearchParams({
-    c: `${lon},${lat}`,
-    z: '15',
-    l0: 'GEOGRAPHICALGRIDSYSTEMS.MAPS::GEOPORTAIL:OGC:WMTS(1)',
-    permalink: 'yes'
-  })
-
-  return `https://www.geoportail.gouv.fr/carte?${params.toString()}`
-}
-
 const surfaceFields = [
   {key: 'watershed', label: 'Bassin versant'},
   {key: 'underWatershed', label: 'Sous-bassin versant'},
@@ -77,7 +60,6 @@ const hasAnyValue = (point, fields) => fields.some(({key}) => point[key])
 
 const PointLocalisation = ({pointPrelevement}) => {
   const coordinates = pointPrelevement.coordinates?.coordinates
-  const geoportailUrl = getGeoportailUrl(coordinates)
 
   const hasCoordinates = Array.isArray(coordinates) && coordinates.length === 2
 
@@ -87,19 +69,6 @@ const PointLocalisation = ({pointPrelevement}) => {
         {hasCoordinates && (
           <LabelValue label='Coordonnées'>
             <i>{getLambert93Label(coordinates)}</i>
-            {geoportailUrl && (
-              <span>
-                { ' ('}
-                <a
-                  href={geoportailUrl}
-                  target='_blank'
-                  rel='noopener noreferrer'
-                >
-                  voir sur Géoportail
-                </a>
-                { ')' }
-              </span>
-            )}
           </LabelValue>
         )}
 
