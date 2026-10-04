@@ -38,10 +38,10 @@ test('le lien Campagnes reste présent entre les pages sans recharger son résum
     }).observe(document.querySelector('header'), {subtree: true, childList: true})
   }, navigationSelector)
 
-  await page.getByRole('link', {name: 'Consulter', exact: true}).click()
+  await page.getByRole('link', {name: 'Compléter', exact: true}).click()
   await expect(page.getByRole('link', {name: 'Retour à la campagne', exact: true})).toBeVisible()
   await page.getByRole('link', {name: 'Retour à la campagne', exact: true}).click()
-  await expect(page.getByRole('link', {name: 'Consulter', exact: true})).toBeVisible()
+  await expect(page.getByRole('link', {name: 'Compléter', exact: true})).toBeVisible()
   if (isMobile) await page.getByRole('button', {name: 'Menu', exact: true}).click()
   await page.locator(navigationSelector).click()
   await expect(page).toHaveURL(`${frontUrl}/campagnes`)

@@ -18,8 +18,8 @@ test.beforeEach(async ({page}) => {
   await page.clock.setFixedTime(new Date('2026-11-01T12:00:00Z'))
 })
 
-async function authenticate(context, role) {
-  const apiToken = `browser-test-campaign-${role}-${randomUUID()}`
+async function authenticate(context, role, fixture = 'campaign') {
+  const apiToken = `browser-test-${fixture}-${role}-${randomUUID()}`
   const token = await encode({secret: 'browser-tests-only-never-a-real-secret', token: {
     sub: campaignIds.user, token: apiToken, role: role.startsWith('admin') ? 'ADMIN' : 'DECLARANT', permissions: [],
     apiExpiresAt: new Date(Date.now() + 3_600_000).toISOString(), infoRefreshedAt: Date.now(),
@@ -79,9 +79,10 @@ async function readable(locator, {theme, surface = false} = {}) {
   await expect(locator).toBeVisible()
   await expect.poll(async () => (await colours(locator)).contrast, {message: `Texte lisible : ${locator}`}).toBeGreaterThanOrEqual(4.5)
   if (surface) {
-    const {backgroundLuminance} = await colours(locator)
-    if (theme === 'dark') expect(backgroundLuminance).toBeLessThan(0.25)
-    else expect(backgroundLuminance).toBeGreaterThan(0.5)
+    // Theme transitions may still be running after the document attribute changes.
+    const backgroundLuminance = () => colours(locator).then(value => value.backgroundLuminance)
+    if (theme === 'dark') await expect.poll(backgroundLuminance).toBeLessThan(0.25)
+    else await expect.poll(backgroundLuminance).toBeGreaterThan(0.5)
   }
 }
 
@@ -159,7 +160,7 @@ test('thème : les campagnes du collecteur et les codes des points restent lisib
     await readable(page.getByText('Code compteur Agence de l’eau : 001', {exact: true}), {theme, surface: true})
     const pointRow = page.locator('#content li').filter({has: page.getByText('Point synthétique', {exact: true})})
     await readable(pointRow.getByText('Ferme synthétique'), {theme, surface: true})
-    await readable(page.getByRole('link', {name: 'Consulter', exact: true}))
+    await readable(page.getByRole('link', {name: 'Consulter / modifier', exact: true}))
   })
 })
 
@@ -168,8 +169,14 @@ test('thème : relevés, besoins, indications et barre d’enregistrement resten
   await page.goto(responseUrl)
   const index = page.locator('[name="meters.0.offSeason.indexStart"]')
   await index.fill('144414')
+  await page.getByRole('checkbox', {name: 'Je souhaite signaler un changement de compteur', exact: true}).focus()
+  await page.getByRole('checkbox', {name: 'Je souhaite signaler un changement de compteur', exact: true}).press('Space')
+  const reason = page.getByRole('textbox', {name: 'Motif du changement de compteur', exact: true})
+  await reason.fill('Nouveau compteur THEME-2')
   await checkThemes(page, testInfo, 'campagne-declarant-formulaire', async theme => {
     await expect(index).toHaveValue(/144\s?414/)
+    await expect(reason).toHaveValue('Nouveau compteur THEME-2')
+    await readable(reason, {theme, surface: true})
     for (const name of ['Hors étiage 2025–2026', 'Étiage 2026', needsSeasonTitle, needsOffSeasonTitle]) {
       const period = page.getByRole('group', {name, exact: true})
       await readable(period.locator('legend'), {theme, surface: true})
@@ -250,7 +257,7 @@ test('thème : le préleveur distingue son point sélectionné et retrouve sa ca
   const writes = await authenticate(context, 'map-many')
   await page.goto(campaignUrl)
   await expect(page.getByText('Page 1 sur 2', {exact: true})).toBeVisible()
-  await expect(page.getByRole('button', {name: /Point partagé.*001/})).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.locator('button[aria-pressed="true"]')).toHaveCount(0)
   await page.getByRole('searchbox', {name: 'Rechercher un point', exact: true}).fill('001')
   const point = page.getByRole('button', {name: /Point partagé.*001/})
   await point.click()
@@ -280,4 +287,47 @@ test('thème : le préleveur distingue son point sélectionné et retrouve sa ca
     await expect(map.locator('canvas')).toBeVisible()
   })
   expect(await writes()).toEqual([])
+})
+
+
+test('thème : la saisie rapide, ses usages et son calendrier gardent la saisie lisible', async ({page, context}, testInfo) => {
+  await authenticate(context, 'readonly', 'quick-exclusion')
+  await page.goto(`${frontUrl}/mes-declarations/new`)
+  const value = page.getByRole('textbox', {name: /Index \(m³\) — Point partagé synthétique — Code comptage : 001/})
+  await value.fill('120')
+  await checkThemes(page, testInfo, 'declaration-rapide', async theme => {
+    await expect(value).toHaveValue('120')
+    await readable(value, {theme, surface: true})
+    await readable(page.getByText('Point partagé synthétique', {exact: true}).first(), {theme, surface: true})
+  })
+  await page.getByRole('radio', {name: 'Volume', exact: true}).focus()
+  await page.getByRole('radio', {name: 'Volume', exact: true}).press('Space')
+  for (const theme of ['light', 'dark']) {
+    await setTheme(page, theme)
+    await page.getByRole('button', {name: /^Période déclarée/}).click()
+    const calendar = page.getByRole('dialog', {name: 'Choisir une période'})
+    const day = calendar.getByRole('button', {name: '1', exact: true}).first()
+    await day.click()
+    await readable(day, {theme})
+    await page.keyboard.press('Escape')
+  }
+})
+
+test('thème : le dépôt de fichier conserve commentaire, sélection et erreurs lisibles', async ({page, context}, testInfo) => {
+  await authenticate(context, 'readonly-file', 'quick-exclusion')
+  await page.goto(`${frontUrl}/mes-declarations/new`)
+  // Wait for client-side controls before selecting files on the server-rendered form.
+  await setTheme(page, 'light')
+  const comment = page.getByRole('textbox', {name: 'Commentaire Facultatif', exact: true})
+  const upload = page.getByLabel(/Ajouter des fichiers/)
+  await upload.setInputFiles({name: 'invalide.csv', mimeType: 'text/csv', buffer: Buffer.from('colonne_invalide\nvaleur')})
+  await expect(page.getByText('invalide.csv', {exact: true})).toBeVisible()
+  await comment.fill('Commentaire conservé dans les deux thèmes')
+  await checkThemes(page, testInfo, 'declaration-fichier', async theme => {
+    await expect(comment).toHaveValue('Commentaire conservé dans les deux thèmes')
+    await readable(comment, {theme, surface: true})
+    await readable(page.getByText('invalide.csv', {exact: true}), {theme, surface: true})
+    await expect(page.getByRole('button', {name: 'Soumettre la déclaration', exact: true})).toBeDisabled()
+    await readable(page.getByRole('button', {name: 'Réinitialiser', exact: true}), {theme})
+  })
 })

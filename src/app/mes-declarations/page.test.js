@@ -21,6 +21,7 @@ function compile(filename, componentRequire) {
 function harness({feed = successfulFeed} = {}) {
   const calls = []
   const componentRequire = specifier => {
+    if (specifier === '@/components/declarations/declaration-campaign-invitations.js') return {__esModule: true, default: () => React.createElement('div', null, 'Accès aux campagnes')}
     if (specifier === '@/components/declarations/my-declarations-list.js') {
       return {__esModule: true, default: () => React.createElement('div', null, 'Liste des déclarations existantes')}
     }
@@ -52,7 +53,7 @@ function harness({feed = successfulFeed} = {}) {
   return {calls, page: compile(new URL('page.js', import.meta.url), componentRequire).default}
 }
 
-test('Mes déclarations conserve la création et le fil, sans demandes de campagne', async t => {
+test('Mes déclarations conserve la création et le fil avec un accès indépendant aux campagnes', async t => {
   const flow = harness()
   const html = renderToStaticMarkup(await flow.page())
   t.false(html.includes('id="demandes"'))
@@ -62,19 +63,19 @@ test('Mes déclarations conserve la création et le fil, sans demandes de campag
   t.deepEqual(structuredClone(flow.calls), [{limit: 20}])
 })
 
-test('les déclarations existantes ne nécessitent aucun chargement de campagnes', async t => {
+test('le fil historique reste présent avec l’accès indépendant aux campagnes', async t => {
   const flow = harness()
   const html = renderToStaticMarkup(await flow.page())
   t.true(html.includes('Liste des déclarations existantes'))
   t.true(html.includes('Nouvelle déclaration'))
-  t.false(html.includes('Vos demandes'))
+  t.true(html.includes('Accès aux campagnes'))
   t.false(html.includes('Chargement des demandes'))
 })
 
 test('un échec de chargement du fil propose de réessayer', async t => {
   const flow = harness({feed: {success: false}})
   const html = renderToStaticMarkup(await flow.page())
-  t.false(html.includes('Vos demandes'))
+  t.true(html.includes('Accès aux campagnes'))
   t.true(html.includes('Déclarations indisponibles'))
   t.true(html.includes('Réessayer'))
 })
@@ -82,4 +83,13 @@ test('un échec de chargement du fil propose de réessayer', async t => {
 test('le tableau de bord ne charge pas les demandes', t => {
   const source = readFileSync(new URL('../../components/dashboard/dashboard-page.js', import.meta.url), 'utf8')
   t.notRegex(source, /CampaignResponseCard|CampaignRequestsSection|listCampaignsAction|getCampaignContextAction/)
+})
+
+
+test('sans outil disponible la campagne et le fil restent accessibles sans bouton de création', async t => {
+  const flow = harness({feed: {success: true, data: {success: true, data: [], meta: {total: 0, canCreateDeclaration: false, canCreateQuickDeclaration: false}}}})
+  const html = renderToStaticMarkup(await flow.page())
+  t.false(html.includes('Nouvelle déclaration'))
+  t.true(html.includes('Accès aux campagnes'))
+  t.true(html.includes('Aucune déclaration'))
 })

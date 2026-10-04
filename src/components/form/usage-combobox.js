@@ -117,6 +117,7 @@ const UsageCombobox = ({
   onFocus,
   onUsageChange,
   options,
+  referenceOptions = options,
   readOnly = false,
   disabled = false,
   required = false,
@@ -139,7 +140,8 @@ const UsageCombobox = ({
   const listboxRef = useRef(null)
   const unavailable = readOnly || disabled
   const normalizedSearch = normalizeSearchText(value)
-  const selectedUsage = selectedValue === undefined ? findUsageOptionBySearchValue(options, value) : findUsageOptionById(options, selectedValue)
+  // A stored value can remain readable without being offered as a new choice.
+  const selectedUsage = selectedValue === undefined ? findUsageOptionBySearchValue(options, value) : findUsageOptionById(referenceOptions, selectedValue)
   const parentDescriptionId = selectedUsage?.parentUsage ? `${id}-parent-usage` : undefined
   const warningId = warning ? `${id}-warning` : undefined
   const describedBy = [fieldDescriptionId, parentDescriptionId, warningId].filter(Boolean).join(' ') || undefined

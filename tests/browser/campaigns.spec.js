@@ -13,13 +13,13 @@ test.beforeEach(async ({page}) => {
   await page.clock.setFixedTime(new Date('2026-11-01T12:00:00Z'))
 })
 
-async function authenticate(context, role = 'preleveur') {
-  const apiToken = `browser-test-campaign-${role}-${randomUUID()}`
+async function authenticate(context, role = 'preleveur', sessionId = randomUUID()) {
+  const apiToken = `browser-test-campaign-${role}-${sessionId}`
   const token = await encode({secret: 'browser-tests-only-never-a-real-secret', token: {
     sub: campaignIds.user, token: apiToken, role: role.startsWith('admin') ? 'ADMIN' : role === 'instructor' ? 'INSTRUCTOR' : 'DECLARANT', permissions: [],
-    declarantRole: role === 'collector' ? 'COLLECTEUR' : 'PRELEVEUR',
+    declarantRole: role.startsWith('collector') ? 'COLLECTEUR' : 'PRELEVEUR',
     apiExpiresAt: new Date(Date.now() + 3_600_000).toISOString(), infoRefreshedAt: Date.now(),
-    userInfo: {id: campaignIds.user, email: 'campaign@example.test', declarantRole: role === 'collector' ? 'COLLECTEUR' : 'PRELEVEUR'}
+    userInfo: {id: campaignIds.user, email: 'campaign@example.test', declarantRole: role.startsWith('collector') ? 'COLLECTEUR' : 'PRELEVEUR'}
   }, maxAge: 3600})
   await context.addCookies(['next-auth.session-token', '__Secure-next-auth.session-token'].map(name => ({name, value: token, url: frontUrl, httpOnly: true, secure: true, sameSite: 'Lax'})))
   return async () => (await context.request.get('http://127.0.0.1:3431/api/__campaign-requests', {headers: {authorization: `Bearer ${apiToken}`}})).json()
@@ -33,8 +33,8 @@ test('deux compteurs : brouillon incomplet, reprise, envoi et modification sans 
   const requests = await authenticate(context)
   await page.goto(responseUrl)
   await expect(page.getByRole('heading', {name: /Code compteur Agence de l’eau : 001/})).toBeVisible()
-  await expect(page.getByRole('heading', {name: 'Numéro de série de compteur : SYNTH-M1', exact: true})).toBeVisible()
-  await expect(page.getByRole('heading', {name: 'Numéro de série de compteur : SYNTH-M2', exact: true})).toBeVisible()
+  await expect(page.getByRole('heading', {name: 'Numéro de série du compteur : SYNTH-M1', exact: true})).toBeVisible()
+  await expect(page.getByRole('heading', {name: 'Numéro de série du compteur : SYNTH-M2', exact: true})).toBeVisible()
   await page.locator('[name="meters.0.offSeason.indexStart"]').fill('123')
   await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
   const saveFeedback = page.getByRole('region', {name: 'Enregistrement de la réponse', exact: true}).getByRole('status')
@@ -71,7 +71,8 @@ test('deux compteurs : brouillon incomplet, reprise, envoi et modification sans 
   await page.getByRole('button', {name: 'Modifier ma réponse', exact: true}).click()
   await page.locator('[name="needs.season.volume"]').fill('20')
   await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
-  await expect(page.getByText(/Le collecteur voit votre dernière réponse envoyée/)).toBeVisible()
+  await expect(page.getByText('Ces modifications ne sont pas encore envoyées.', {exact: true})).toBeVisible()
+  await expect(page.getByText('L’OUGC peut aussi compléter cette réponse et consulter le brouillon enregistré.', {exact: true})).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
   await page.screenshot({path: testInfo.outputPath('formulaire-campagne.png'), fullPage: true})
 })
@@ -79,25 +80,25 @@ test('deux compteurs : brouillon incomplet, reprise, envoi et modification sans 
 test('numéro absent et conflit : la saisie est conservée, aucune valeur inventée', async ({page, context}) => {
   const requests = await authenticate(context, 'missing-conflict')
   await page.goto(responseUrl)
-  await expect(page.getByLabel('Numéro de série de compteur (facultatif)', {exact: true})).toHaveValue('')
-  await page.getByLabel('Numéro de série de compteur (facultatif)', {exact: true}).fill('MANUEL-001')
+  await expect(page.getByRole('textbox', {name: 'Numéro de série du compteur', exact: true})).toHaveValue('')
+  await page.getByRole('textbox', {name: 'Numéro de série du compteur', exact: true}).fill('MANUEL-001')
   await expect(page.getByText('Nous n’avons pas le numéro de série de votre compteur. Pouvez-vous le renseigner ici', {exact: true})).toBeVisible()
   await page.locator('[name="meters.0.offSeason.indexStart"]').fill('0')
   await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
   await expect(page.getByText(/La réponse a été modifiée/)).toBeVisible()
-  await expect(page.getByLabel('Numéro de série de compteur (facultatif)', {exact: true})).toHaveValue('MANUEL-001')
+  await expect(page.getByRole('textbox', {name: 'Numéro de série du compteur', exact: true})).toHaveValue('MANUEL-001')
   expect((await requests())[0].body.data.meters[0].compteurId).toBeNull()
 })
 
-test('le numéro de série est facultatif, les champs vides restent vides et une réponse avec de vrais zéros peut être envoyée', async ({page, context}) => {
+test('le numéro est obligatoire à l’envoi, les brouillons incomplets et les vrais zéros sont conservés', async ({page, context}) => {
   const requests = await authenticate(context, 'missing')
   await page.goto(responseUrl)
   await expect(page.getByRole('heading', {name: 'Déclarer mes prélèvements et mes besoins', exact: true})).toBeVisible()
-  const serial = page.getByLabel('Numéro de série de compteur (facultatif)', {exact: true})
+  const serial = page.getByRole('textbox', {name: 'Numéro de série du compteur', exact: true})
   await expect(page.getByRole('button', {name: 'Ajouter un compteur', exact: true})).toHaveCount(0)
   await expect(page.locator('[name$=".indexStart"]')).toHaveCount(1)
   await expect(serial).toHaveValue('')
-  await expect(serial).toHaveAttribute('aria-required', 'false')
+  await expect(serial).toHaveAttribute('aria-required', 'true')
   await expect(page.getByText('Nous n’avons pas le numéro de série de votre compteur. Pouvez-vous le renseigner ici', {exact: true})).toBeVisible()
   const index = page.getByRole('textbox', {name: 'Index au 01/11/2025', exact: true})
   await expect(index).toHaveValue('')
@@ -120,24 +121,32 @@ test('le numéro de série est facultatif, les champs vides restent vides et une
     await page.getByRole('option', {name: /Aspersion/}).click()
   }
   await expect(index).toHaveValue('0')
+  await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
+  await expect(page.getByText('Brouillon enregistré.', {exact: true})).toBeVisible()
+  await page.getByRole('button', {name: 'Envoyer ma réponse', exact: true}).click()
+  await expect(serial).toBeFocused()
+  await expect(page.getByText('Renseignez le numéro de série du compteur.', {exact: true})).toBeVisible()
+  expect(await requests()).toHaveLength(1)
+  await serial.fill('MANUEL-001')
   await page.getByRole('button', {name: 'Envoyer ma réponse', exact: true}).click()
   await expect(page.getByText('Votre réponse a bien été envoyée.', {exact: true})).toBeVisible()
   const writes = await requests()
-  expect(writes).toHaveLength(1)
-  expect(writes[0].path).toBe(`/api/campaigns/${campaignIds.campaign}/responses/${campaignIds.response}/submit`)
-  expect(writes[0].body.data.meters[0]).toMatchObject({compteurId: null, serialNumber: '', offSeason: {indexStart: '0', indexEnd: '0'}, season: {indexEnd: '0'}})
+  expect(writes).toHaveLength(2)
+  expect(writes[1].path).toBe(`/api/campaigns/${campaignIds.campaign}/responses/${campaignIds.response}/submit`)
+  expect(writes[1].body.data.meters[0]).toMatchObject({compteurId: null, serialNumber: 'MANUEL-001', offSeason: {indexStart: '0', indexEnd: '0'}, season: {indexEnd: '0'}})
   await page.reload()
-  await expect(serial).toHaveValue('')
+  await expect(serial).toHaveValue('MANUEL-001')
   await expect(index).toHaveValue('0')
 })
 
 for (const sourceSerial of [null, 'SYNTH-SOURCE-001']) {
-  test(`un index proposé sans compteur identifié reste modifiable et peut être envoyé ${sourceSerial ? 'avec le numéro source' : 'sans numéro'}`, async ({page, context}) => {
+  test(`un index proposé sans compteur identifié reste modifiable et peut être envoyé ${sourceSerial ? 'avec le numéro source' : 'après renseignement du numéro manquant'}`, async ({page, context}) => {
     const requests = await authenticate(context, sourceSerial ? 'prefill-missing-serial' : 'prefill-missing')
-    const submittedSerial = sourceSerial ? 'SYNTH-CORRECTED-001' : null
+    const draftSerial = sourceSerial ? 'SYNTH-CORRECTED-001' : null
+    const submittedSerial = draftSerial || 'MANUEL-001'
     await page.goto(responseUrl)
     const index = page.getByRole('textbox', {name: 'Index au 01/11/2025', exact: true})
-    const serial = page.getByLabel('Numéro de série de compteur (facultatif)', {exact: true})
+    const serial = page.getByRole('textbox', {name: 'Numéro de série du compteur', exact: true})
     await expect(page.getByText('Données préremplies à vérifier.', {exact: true})).toBeVisible()
     await expect(page.getByText('À compléter', {exact: true})).toBeVisible()
     await expect(index).toHaveValue(/144\s413/)
@@ -155,10 +164,10 @@ for (const sourceSerial of [null, 'SYNTH-SOURCE-001']) {
     await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
     await expect(page.getByText('Brouillon enregistré.', {exact: true})).toBeVisible()
     expect((await requests())[0]).toMatchObject({method: 'PUT', path: `/api/campaigns/${campaignIds.campaign}/responses/${campaignIds.response}`})
-    expect((await requests())[0].body).toMatchObject({revision: 0, data: {meters: [{compteurId: null, serialNumber: submittedSerial, offSeason: {indexStart: '144414'}}]}})
+    expect((await requests())[0].body).toMatchObject({revision: 0, data: {meters: [{compteurId: null, serialNumber: draftSerial, offSeason: {indexStart: '144414'}}]}})
     await page.reload()
     await expect(index).toHaveValue(/144\s414/)
-    await expect(serial).toHaveValue(submittedSerial || '')
+    await expect(serial).toHaveValue(draftSerial || '')
     await expect(page.getByText('Données préremplies à vérifier.', {exact: true})).toHaveCount(0)
     await page.getByRole('textbox', {name: 'Index au 31/05/2026', exact: true}).fill('144500')
     await page.getByRole('textbox', {name: 'Index au 31/10/2026', exact: true}).fill('144600')
@@ -168,6 +177,7 @@ for (const sourceSerial of [null, 'SYNTH-SOURCE-001']) {
       await usage.fill('Remplissage')
       await page.getByRole('option', {name: /Remplissage plan d’eau/}).click()
     }
+    if (!sourceSerial) await serial.fill(submittedSerial)
     await page.getByRole('button', {name: 'Envoyer ma réponse', exact: true}).click()
     await expect(page.getByText('Votre réponse a bien été envoyée.', {exact: true})).toBeVisible()
     const writes = await requests()
@@ -444,19 +454,21 @@ test('usages et sous-usages restent proposés, indentés et sélectionnables san
   const child = choices.getByRole('option', {name: 'Aspersion — Irrigation', exact: true})
   await expect(parent).toHaveAttribute('data-usage-level', 'parent')
   await expect(child).toHaveAttribute('data-usage-level', 'child')
-  await expect(choices.getByRole('option').first()).toHaveText('Irrigation')
+  await expect(choices.getByRole('option').first()).toHaveText('Usage inconnu')
   expect((await parent.boundingBox()).height).toBeGreaterThanOrEqual(44)
   const parentLabel = await parent.locator('.campaign-usage-option-label').boundingBox()
   const childLabel = await child.locator('.campaign-usage-option-label').boundingBox()
   expect(childLabel.x).toBeGreaterThan(parentLabel.x + 15)
   await page.screenshot({path: testInfo.outputPath('usages-campagne.png')})
+  await usage.press('ArrowDown')
+  await usage.press('ArrowDown')
   await usage.press('Enter')
   await expect(usage).toHaveValue('Irrigation')
   await usage.click()
   await expect(choices).toBeVisible()
   await expect(parent).toHaveAttribute('aria-selected', 'true')
   await usage.press('End')
-  await expect(usage).toHaveAttribute('aria-activedescendant', /option-4$/)
+  await expect(usage).toHaveAttribute('aria-activedescendant', /option-6$/)
   await usage.press('Home')
   await expect(usage).toHaveAttribute('aria-activedescendant', /option-0$/)
   await usage.press('Tab')
@@ -468,7 +480,7 @@ test('usages et sous-usages restent proposés, indentés et sélectionnables san
   await secondUsage.press('Escape')
   await expect(page.getByRole('option')).toHaveCount(0)
   await secondUsage.press('ArrowDown')
-  await expect(page.getByRole('option')).toHaveCount(5)
+  await expect(page.getByRole('option')).toHaveCount(7)
   await secondUsage.fill('Asp')
   await expect(page.getByRole('option')).toHaveCount(1)
   await secondUsage.press('Enter')
@@ -480,6 +492,80 @@ test('usages et sous-usages restent proposés, indentés et sélectionnables san
   await expect(usage).toHaveValue('Irrigation')
   await expect(secondUsage).toHaveValue('Aspersion')
 })
+
+for (const role of ['preleveur', 'collector-fresh']) {
+  test(`${role} : les usages autorisés sont les seuls choix des quatre périodes du bilan et des besoins`, async ({page, context}) => {
+    const requests = await authenticate(context, `${role}-complete`)
+    await page.goto(responseUrl)
+    const periods = ['meters.0.offSeason', 'meters.0.season', 'needs.season', 'needs.offSeason']
+    const choices = [
+      'Usage inconnu', 'Pas d’usage', 'Irrigation', 'Aspersion — Irrigation', 'Goutte-à-goutte — Irrigation',
+      'Réalimentation d’une ressource en eau', 'Remplissage plan d’eau — Réalimentation d’une ressource en eau'
+    ]
+    const selections = [
+      {id: campaignIds.unknownUsage, label: 'Usage inconnu'},
+      {id: campaignIds.noUsage, label: 'Pas d’usage'},
+      {id: campaignIds.secondUsage, label: 'Goutte-à-goutte — Irrigation'},
+      {id: campaignIds.fillingUsage, label: 'Remplissage plan d’eau — Réalimentation d’une ressource en eau'}
+    ]
+    for (const [index, path] of periods.entries()) {
+      const usage = page.locator(`[name="${path}.usageId"]`)
+      await usage.click()
+      await expect(page.getByRole('option')).toHaveCount(choices.length)
+      for (const label of choices) await expect(page.getByRole('option', {name: label, exact: true})).toBeVisible()
+      await usage.fill('Industrie')
+      await expect(page.getByRole('option')).toHaveCount(0)
+      await expect(page.getByText('Aucun usage trouvé.', {exact: true})).toBeVisible()
+      await usage.fill('')
+      await page.getByRole('option', {name: selections[index].label, exact: true}).click()
+    }
+    await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
+    await expect(page.getByText('Brouillon enregistré.', {exact: true})).toBeVisible()
+    const data = (await requests())[0].body.data
+    expect([data.meters[0].offSeason, data.meters[0].season, data.needs.season, data.needs.offSeason].map(period => period.usageId)).toEqual(selections.map(usage => usage.id))
+  })
+
+  for (const source of ['draft', 'prefill']) {
+    test(`${role} : les usages hors liste du ${source} restent affichés, enregistrables et envoyables`, async ({page, context}) => {
+      const requests = await authenticate(context, `${role}-outsideusage${source === 'prefill' ? '-prefill' : ''}`)
+      await page.goto(responseUrl)
+      const periods = [
+        {path: 'meters.0.offSeason', id: campaignIds.industryUsage, label: 'Industrie'},
+        {path: 'meters.0.season', id: campaignIds.industrialChildUsage, label: 'Refroidissement industriel'},
+        {path: 'needs.season', id: campaignIds.drinkingUsage, label: 'Alimentation en eau potable'},
+        {path: 'needs.offSeason', id: campaignIds.industryUsage, label: 'Industrie'}
+      ]
+      if (source === 'prefill') await expect(page.getByText('Données préremplies à vérifier.', {exact: true})).toBeVisible()
+      for (const {path, label} of periods) {
+        const usage = page.locator(`[name="${path}.usageId"]`)
+        await expect(usage).toHaveValue(label)
+        await usage.click()
+        await expect(page.getByRole('option')).toHaveCount(7)
+        await expect(page.getByRole('option', {name: /Industrie|Refroidissement industriel|Alimentation en eau potable/})).toHaveCount(0)
+        await usage.press('Escape')
+        await expect(usage).toHaveValue(label)
+      }
+      await page.locator('[name="needs.season.volume"]').fill('125')
+      await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
+      await expect(page.getByText('Brouillon enregistré.', {exact: true})).toBeVisible()
+      await page.reload()
+      for (const {path, label} of periods) await expect(page.locator(`[name="${path}.usageId"]`)).toHaveValue(label)
+      await page.getByRole('button', {name: role === 'preleveur' ? 'Envoyer ma réponse' : 'Envoyer la réponse', exact: true}).click()
+      await expect(page.getByText(role === 'preleveur' ? 'Votre réponse a bien été envoyée.' : 'La réponse a bien été envoyée.', {exact: true})).toBeVisible()
+      const writes = await requests()
+      expect(writes.map(write => [write.method, write.body.revision])).toEqual([['PUT', 0], ['POST', 1]])
+      for (const write of writes) {
+        const {data} = write.body
+        expect([data.meters[0].offSeason, data.meters[0].season, data.needs.season, data.needs.offSeason].map(period => period.usageId)).toEqual(periods.map(period => period.id))
+        expect(data.needs.season.volume).toBe('125')
+      }
+      for (const {path, label} of periods) {
+        await expect(page.locator(`[name="${path}.usageId"]`)).toHaveValue(label)
+        await expect(page.locator(`[name="${path}.usageId"]`)).toHaveAttribute('readonly', '')
+      }
+    })
+  }
+}
 
 test('les propositions sont modifiables, enregistrables puis soumises sans données agricoles en réalimentation', async ({page, context}) => {
   const requests = await authenticate(context, 'prefill')
@@ -602,7 +688,66 @@ test('les champs du demandeur attendent l’activation de l’interface avant d�
   expect(await requests()).toHaveLength(0)
 })
 
-test('les index d’un compteur sont croissants : signalement immédiat, brouillon conservé et égalité autorisée', async ({page, context}) => {
+test('les index attendent la sortie du champ : frappe 2, 20, 200 sans signalement et correction au blur', async ({page, context}) => {
+  const requests = await authenticate(context, 'complete')
+  await page.goto(responseUrl)
+  const start = page.locator('[name="meters.0.offSeason.indexStart"]')
+  const middle = page.locator('[name="meters.0.offSeason.indexEnd"]')
+  const end = page.locator('[name="meters.0.season.indexEnd"]')
+  const changed = page.getByRole('checkbox', {name: 'Je souhaite signaler un changement de compteur', exact: true})
+  const reason = page.getByRole('textbox', {name: 'Motif du changement de compteur', exact: true})
+  await end.fill('300')
+  await end.press('Tab')
+  await middle.fill('200')
+  await middle.press('Tab')
+  await start.fill('100')
+  await start.press('Tab')
+  await expect(changed).not.toBeChecked()
+
+  await middle.fill('')
+  for (const [digit, value] of [['2', '2'], ['0', '20'], ['0', '200']]) {
+    await middle.pressSequentially(digit)
+    await expect(middle).toHaveValue(value)
+    await expect(middle).toBeFocused()
+    await expect(middle).toHaveAttribute('aria-invalid', 'false')
+    await expect(changed).not.toBeChecked()
+    await expect(reason).toHaveCount(0)
+  }
+  await middle.press('Tab')
+  await expect(changed).not.toBeChecked()
+  await expect(reason).toHaveCount(0)
+
+  await middle.fill('20')
+  await expect(changed).not.toBeChecked()
+  await expect(reason).toHaveCount(0)
+  await middle.press('Tab')
+  await expect(middle).toHaveAttribute('aria-invalid', 'true')
+  await expect(changed).toBeChecked()
+  await expect(changed).toBeDisabled()
+  await expect(reason).toBeVisible()
+  await expect(reason).toHaveAttribute('aria-required', 'true')
+
+  await middle.fill('200')
+  await expect(changed).toBeChecked()
+  await expect(reason).toBeVisible()
+  await middle.press('Tab')
+  await expect(middle).toHaveAttribute('aria-invalid', 'false')
+  await expect(changed).not.toBeChecked()
+  await expect(changed).toBeEnabled()
+  await expect(reason).toHaveCount(0)
+
+  // Enter submits directly from the field, so save-time validation must also run.
+  await middle.fill('20')
+  await expect(middle).toBeFocused()
+  await expect(changed).not.toBeChecked()
+  await middle.press('Enter')
+  await expect(changed).toBeChecked()
+  await expect(reason).toBeFocused()
+  await expect(reason).toHaveAttribute('aria-invalid', 'true')
+  expect(await requests()).toHaveLength(0)
+})
+
+test('les index d’un compteur sont croissants : signalement au blur, brouillon conservé et égalité autorisée', async ({page, context}) => {
   const requests = await authenticate(context, 'complete')
   await page.goto(responseUrl)
   const middle = page.locator('[name="meters.0.offSeason.indexEnd"]')
@@ -616,10 +761,10 @@ test('les index d’un compteur sont croissants : signalement immédiat, brouill
   await expect(end).toHaveAttribute('aria-invalid', 'true')
   await expect(page.getByText('L’index du 31/10/2026 doit être supérieur ou égal à celui du 31/05/2026.', {exact: true})).toBeVisible()
   await page.getByRole('button', {name: 'Envoyer ma réponse', exact: true}).click()
-  await expect(middle).toBeFocused()
+  await expect(page.getByRole('textbox', {name: 'Motif du changement de compteur', exact: true})).toBeFocused()
   expect(await requests()).toHaveLength(0)
   await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
-  await expect(page.getByRole('region', {name: 'Enregistrement de la réponse', exact: true}).getByRole('status')).toHaveText('Brouillon enregistré. Les index signalés restent à corriger avant l’envoi.')
+  await expect(page.getByRole('region', {name: 'Enregistrement de la réponse', exact: true}).getByRole('status')).toHaveText('Brouillon enregistré. Complétez le motif du changement de compteur ou corrigez les index avant l’envoi.')
   expect((await requests())[0].body.data.meters[0]).toMatchObject({offSeason: {indexStart: '10', indexEnd: '9'}, season: {indexEnd: '8'}})
   await page.reload()
   await expect(middle).toHaveValue('9')
@@ -629,6 +774,8 @@ test('les index d’un compteur sont croissants : signalement immédiat, brouill
   await end.press('Tab')
   await expect(middle).toHaveAttribute('aria-invalid', 'false')
   await expect(end).toHaveAttribute('aria-invalid', 'false')
+  await page.getByRole('checkbox', {name: 'Je souhaite signaler un changement de compteur', exact: true}).focus()
+  await page.getByRole('checkbox', {name: 'Je souhaite signaler un changement de compteur', exact: true}).press('Space')
   await page.getByRole('button', {name: 'Envoyer ma réponse', exact: true}).click()
   await expect(page.getByText('Votre réponse a bien été envoyée.', {exact: true})).toBeVisible()
   const writes = await requests()
@@ -723,14 +870,10 @@ test('les erreurs métier de l’API et les champs invalides restent lisibles sa
   await expect(page.locator('[name="meters.0.offSeason.indexStart"]')).toHaveValue('15')
 })
 
-test('collecteur : navigation conditionnelle, résultats envoyés, lecture seule et export complet', async ({page, context, isMobile}, testInfo) => {
+test('collecteur : navigation, export des résultats envoyés et correction de la réponse', async ({page, context, isMobile}, testInfo) => {
   const requests = await authenticate(context, 'collector')
   await page.goto(`${frontUrl}/campagnes/${campaignIds.campaign}`)
-  if (isMobile) {
-    const menu = page.getByRole('button', {name: 'Menu', exact: true})
-    await expect(menu).toHaveAttribute('data-fr-js-modal-button', 'true')
-    await menu.click()
-  }
+  if (isMobile) await page.getByRole('button', {name: 'Menu', exact: true}).click()
   await expect(page.getByRole('link', {name: 'Campagnes', exact: true})).toBeVisible()
   if (isMobile) await page.getByRole('button', {name: 'Fermer', exact: true}).click()
   await expect(page.getByRole('heading', {name: 'Points de la campagne', exact: true})).toBeVisible()
@@ -743,17 +886,111 @@ test('collecteur : navigation conditionnelle, résultats envoyés, lecture seule
   await expect(page.getByText('120 m³', {exact: true})).toBeVisible()
   await expect(page.getByRole('heading', {name: 'Volumes prélevés calculés', exact: true})).toBeVisible()
   await expect(page.getByText('0 m³', {exact: true}).first()).toBeVisible()
-  await expect(page.getByText('En attente de publication', {exact: true})).toBeVisible()
+  await expect(page.getByText('Non calculé', {exact: true})).toBeVisible()
   const downloaded = page.waitForEvent('download')
   await page.getByRole('button', {name: 'Exporter tous les résultats (CSV)', exact: true}).click()
   expect((await downloaded).suggestedFilename()).toBe('resultats-campagne.csv')
   expect((await requests())[0].path.endsWith('/export')).toBe(true)
-  await page.getByRole('link', {name: 'Consulter', exact: true}).click()
+  await page.getByRole('link', {name: 'Consulter / modifier', exact: true}).click()
+  await expect(page.getByText('Vous répondez pour Ferme synthétique. Le brouillon enregistré est partagé avec ce préleveur.', {exact: true})).toBeVisible()
   await expect(page.locator('[name="needs.season.volume"]')).toHaveValue('120')
   await expect(page.locator('[name="needs.season.volume"]')).toHaveAttribute('readonly', '')
   await expect(page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true})).toHaveCount(0)
   await expect(page.getByRole('button', {name: 'Modifier ma réponse', exact: true})).toHaveCount(0)
+  await page.getByRole('button', {name: 'Modifier la réponse', exact: true}).click()
+  await page.locator('[name="needs.season.volume"]').fill('150')
+  await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
+  await expect(page.getByText('Brouillon enregistré.', {exact: true})).toBeVisible()
+  await page.getByRole('link', {name: 'Retour à la campagne', exact: true}).click()
+  await page.getByRole('button', {name: 'Résultats envoyés', exact: true}).click()
+  await expect(page.getByText('120 m³ demandés · 4 m³/h', {exact: true})).toBeVisible()
+  await page.getByRole('link', {name: 'Consulter / modifier', exact: true}).click()
+  await expect(page.locator('[name="needs.season.volume"]')).toHaveValue('150')
+  await page.getByRole('button', {name: 'Envoyer les modifications', exact: true}).click()
+  await expect(page.getByText('La réponse a bien été envoyée.', {exact: true})).toBeVisible()
+  const writes = await requests()
+  expect(writes.slice(1).map(write => [write.method, write.body.revision])).toEqual([['PUT', 0], ['POST', 1]])
+  expect(writes[2].body.data.needs.season.volume).toBe('150')
 })
+
+test('collecteur : compléter une réponse vide puis reprendre le brouillon', async ({page, context}) => {
+  const requests = await authenticate(context, 'collector-fresh')
+  await page.goto(`${frontUrl}/campagnes/${campaignIds.campaign}`)
+  await page.getByRole('link', {name: 'Compléter', exact: true}).click()
+  await expect(page.getByText(/Vous répondez pour Ferme synthétique/)).toBeVisible()
+  await page.getByRole('button', {name: 'Envoyer la réponse', exact: true}).click()
+  await expect(page.getByText('Vérifiez les champs signalés avant d’envoyer la réponse.', {exact: true})).toBeVisible()
+  expect(await requests()).toHaveLength(0)
+  await page.locator('[name="meters.0.offSeason.indexStart"]').fill('12')
+  await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
+  await expect(page.getByText('Brouillon enregistré.', {exact: true})).toBeVisible()
+  await page.getByRole('link', {name: 'Retour à la campagne', exact: true}).click()
+  await page.getByRole('link', {name: 'Reprendre', exact: true}).click()
+  await expect(page.locator('[name="meters.0.offSeason.indexStart"]')).toHaveValue('12')
+  expect((await requests())[0].body.revision).toBe(0)
+})
+
+test('collecteur et préleveur partagent le brouillon, conservent la saisie en conflit et peuvent reprendre après envoi', async ({page, context, browser}) => {
+  const sessionId = randomUUID()
+  const requests = await authenticate(context, 'complete-shared', sessionId)
+  await page.goto(responseUrl)
+  const collectorContext = await browser.newContext({ignoreHTTPSErrors: true, locale: 'fr-FR', timezoneId: 'Europe/Paris', reducedMotion: 'reduce'})
+  try {
+    await authenticate(collectorContext, 'collector-shared', sessionId)
+    const collectorPage = await collectorContext.newPage()
+    await collectorPage.route('**/*', route => [frontUrl, 'http://127.0.0.1:3417'].includes(new URL(route.request().url()).origin) ? route.continue() : route.abort())
+    await collectorPage.clock.setFixedTime(new Date('2026-11-01T12:00:00Z'))
+    await collectorPage.goto(`${frontUrl}/campagnes/${campaignIds.campaign}`)
+    await collectorPage.getByRole('link', {name: 'Reprendre', exact: true}).click()
+    await expect(collectorPage.locator('[name="needs.season.volume"]')).toHaveValue('120')
+    await page.locator('[name="needs.season.volume"]').fill('175')
+    await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
+    await expect(page.getByText('Brouillon enregistré.', {exact: true})).toBeVisible()
+    await collectorPage.locator('[name="needs.season.volume"]').fill('200')
+    await collectorPage.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
+    await expect(collectorPage.getByText('Révision périmée. Vos saisies sont conservées ici.', {exact: true})).toBeVisible()
+    await expect(collectorPage.locator('[name="needs.season.volume"]')).toHaveValue('200')
+    collectorPage.once('dialog', dialog => dialog.accept())
+    await collectorPage.reload()
+    await expect(collectorPage.locator('[name="needs.season.volume"]')).toHaveValue('175')
+    await collectorPage.locator('[name="needs.season.volume"]').fill('200')
+    await collectorPage.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
+    await expect(collectorPage.getByText('Brouillon enregistré.', {exact: true})).toBeVisible()
+    await page.reload()
+    await expect(page.locator('[name="needs.season.volume"]')).toHaveValue('200')
+    await collectorPage.getByRole('button', {name: 'Envoyer la réponse', exact: true}).click()
+    await expect(collectorPage.getByText('La réponse a bien été envoyée.', {exact: true})).toBeVisible()
+    await page.reload()
+    await expect(page.locator('[name="needs.season.volume"]')).toHaveValue('200')
+    await expect(page.locator('[name="needs.season.volume"]')).toHaveAttribute('readonly', '')
+    await page.getByRole('button', {name: 'Modifier ma réponse', exact: true}).click()
+    await page.locator('[name="needs.season.volume"]').fill('250')
+    await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
+    await expect(page.getByText('Brouillon enregistré.', {exact: true})).toBeVisible()
+    await collectorPage.reload()
+    await expect(collectorPage.locator('[name="needs.season.volume"]')).toHaveValue('250')
+    await expect(collectorPage.locator('[name="needs.season.volume"]')).not.toHaveAttribute('readonly', '')
+    const writes = await requests()
+    expect(writes.map(write => [write.method, write.body.revision])).toEqual([['PUT', 0], ['PUT', 0], ['PUT', 1], ['POST', 2], ['PUT', 3]])
+    expect(writes[3].path.endsWith('/submit')).toBe(true)
+  } finally {
+    await collectorContext.close()
+  }
+})
+
+for (const role of ['collector-ended', 'collector-ended-complete-fresh']) {
+  test(`collecteur (${role}) : une campagne clôturée reste consultable sans écriture`, async ({page, context}) => {
+    const requests = await authenticate(context, role)
+    await page.goto(`${frontUrl}/campagnes/${campaignIds.campaign}`)
+    await page.getByRole('link', {name: 'Consulter', exact: true}).click()
+    await expect(page.getByText(/Vous consultez la réponse de Ferme synthétique/)).toBeVisible()
+    await expect(page.getByText('Cette collecte est clôturée. La réponse reste consultable.', {exact: true})).toBeVisible()
+    await expect(page.locator('[name="needs.season.volume"]')).toHaveAttribute('readonly', '')
+    await expect(page.getByRole('button', {name: /Modifier la réponse|Enregistrer le brouillon|Envoyer la réponse|Envoyer les modifications/})).toHaveCount(0)
+    await page.locator('form').dispatchEvent('submit')
+    expect(await requests()).toHaveLength(0)
+  })
+}
 
 test('admin : sélection groupée locale puis création du brouillon', async ({page, context}) => {
   const requests = await authenticate(context, 'admin')
@@ -899,4 +1136,93 @@ test('le reçu conserve la notice pour l’instructeur et oriente l’admin vers
   await authenticate(context, 'admin')
   await page.reload()
   await expect(page.getByRole('link', {name: 'Consulter la réponse et les volumes calculés', exact: true})).toHaveAttribute('href', `/administration/campagnes/${campaignIds.campaign}/reponses/${campaignIds.response}`)
+})
+
+
+test('un changement automatique exige un motif, reste en brouillon puis est envoyé sans volume ni action', async ({page, context}) => {
+  const requests = await authenticate(context, 'complete')
+  await page.goto(responseUrl)
+  const changed = page.getByRole('checkbox', {name: 'Je souhaite signaler un changement de compteur', exact: true})
+  const reason = page.getByRole('textbox', {name: 'Motif du changement de compteur', exact: true})
+  const middle = page.locator('[name="meters.0.offSeason.indexEnd"]')
+  await middle.fill('5')
+  await expect(changed).not.toBeChecked()
+  await middle.press('Tab')
+  await expect(changed).toBeChecked()
+  await expect(changed).toBeDisabled()
+  await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
+  await page.reload()
+  await expect(changed).toBeChecked()
+  await expect(reason).toHaveValue('')
+  await page.getByRole('button', {name: 'Envoyer ma réponse', exact: true}).click()
+  await expect(reason).toBeFocused()
+  expect(await requests()).toHaveLength(1)
+  await reason.fill('Remplacement : nouveau compteur SYNTH-NEW')
+  await page.getByRole('button', {name: 'Envoyer ma réponse', exact: true}).click()
+  await expect(page.getByText('Votre réponse a bien été envoyée.', {exact: true})).toBeVisible()
+  await expect(page.getByRole('heading', {name: 'Changement de compteur signalé', exact: true})).toBeVisible()
+  await expect(page.getByText('Non calculé : changement de compteur signalé', {exact: true})).toHaveCount(3)
+  await expect(page.getByText(/volumes en attente de vérification/i)).toHaveCount(0)
+  expect((await requests())[1].body.data.meters[0]).toMatchObject({meterChanged: true, meterChangeReason: 'Remplacement : nouveau compteur SYNTH-NEW'})
+  await page.reload()
+  await expect(reason).toHaveValue('Remplacement : nouveau compteur SYNTH-NEW')
+  await expect(reason).toHaveAttribute('readonly', '')
+})
+
+test('une incohérence historique de l’API ouvre le motif sans perdre la réponse', async ({page, context}) => {
+  const requests = await authenticate(context, 'complete-historical')
+  await page.goto(responseUrl)
+  await page.getByRole('button', {name: 'Envoyer ma réponse', exact: true}).click()
+  const changed = page.getByRole('checkbox', {name: 'Je souhaite signaler un changement de compteur', exact: true})
+  await expect(changed).toBeChecked()
+  await expect(changed).toBeDisabled()
+  await expect(page.locator('[name="meters.0.offSeason.indexStart"]')).toHaveValue('10')
+  const start = page.locator('[name="meters.0.offSeason.indexStart"]')
+  await start.fill('11')
+  await expect(changed).toBeChecked()
+  await start.press('Tab')
+  await expect(changed).not.toBeChecked()
+  await page.getByRole('button', {name: 'Envoyer ma réponse', exact: true}).click()
+  await expect(changed).toBeChecked()
+  await page.getByRole('textbox', {name: 'Motif du changement de compteur', exact: true}).fill('Nouveau compteur HIST-2')
+  await page.getByRole('button', {name: 'Envoyer ma réponse', exact: true}).click()
+  await expect(page.getByText('Votre réponse a bien été envoyée.', {exact: true})).toBeVisible()
+  expect(await requests()).toHaveLength(3)
+})
+
+test('admin : le signalement reste visible dans les résultats et ne propose aucune validation', async ({page, context}) => {
+  await authenticate(context, 'admin-changed')
+  await page.goto(`${frontUrl}/administration/campagnes/${campaignIds.campaign}/reponses/${campaignIds.response}`)
+  await expect(page.getByRole('textbox', {name: 'Motif du changement de compteur', exact: true})).toHaveValue('Remplacement, nouveau compteur SYNTH-NEW')
+  await expect(page.getByRole('button', {name: /Vérifier le compteur/})).toHaveCount(0)
+  await page.goto(`${frontUrl}/administration/campagnes/${campaignIds.campaign}`)
+  await page.getByRole('button', {name: 'Résultats envoyés', exact: true}).click()
+  await expect(page.getByRole('region', {name: 'Changements de compteur signalés'})).toContainText('Remplacement, nouveau compteur SYNTH-NEW')
+})
+
+for (const ordinary of [false, true]) {
+  test(`Mes déclarations et Mon activité proposent la campagne avec outil ordinaire disponible : ${ordinary}`, async ({page, context}) => {
+    await authenticate(context, ordinary ? 'ordinary' : 'preleveur')
+    for (const path of ['/mes-declarations', '/tableau-de-bord']) {
+      await page.goto(frontUrl + path)
+      await expect(page.getByRole('region', {name: 'Déclarer mes prélèvements et mes besoins', exact: true})).toBeVisible()
+      await expect(page.getByRole('link', {name: 'Nouvelle déclaration', exact: true})).toHaveCount(ordinary ? 1 : 0)
+    }
+    if (!ordinary) {
+      await page.goto(`${frontUrl}/mes-declarations/new`)
+      await expect(page.getByRole('region', {name: 'Déclarer mes prélèvements et mes besoins', exact: true})).toBeVisible()
+      await expect(page.getByText('Aucun mode de déclaration disponible', {exact: true})).toBeVisible()
+      await expect(page.getByRole('textbox', {name: /^Index/})).toHaveCount(0)
+    }
+  })
+}
+
+test('l’avertissement de réalimentation reste sur la liste des compteurs, sans rappel dans le formulaire', async ({page, context}) => {
+  await authenticate(context, 'multiple')
+  await page.goto(`${frontUrl}/campagnes/${campaignIds.campaign}`)
+  await expect(page.getByRole('heading', {name: 'Mes compteurs concernés', exact: true})).toBeVisible()
+  await expect(page.getByText('Les points de réalimentation n’ont pas à être déclarés ici', {exact: true})).toBeVisible()
+  await page.goto(responseUrl)
+  await expect(page.getByRole('region', {name: 'Enregistrement de la réponse', exact: true})).toBeVisible()
+  await expect(page.getByText('Les points de réalimentation n’ont pas à être déclarés ici', {exact: true})).toHaveCount(0)
 })

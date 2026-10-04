@@ -30,7 +30,7 @@ function harness({tab = 'results', response = {}, permissions = {canReadResults:
     if (specifier === '@codegouvfr/react-dsfr/Alert') return {Alert: () => null}
     if (specifier === '@/components/campaigns/campaign-requester-points.js') return {__esModule: true, default: () => null}
     if (specifier === '@/components/campaigns/campaign-point-identity.js') return compileComponent(new URL('campaign-point-identity.js', import.meta.url), componentRequire)
-    if (specifier === '@/components/campaigns/campaign-common.js') return Object.fromEntries(['CampaignPagination', 'CampaignProgress', 'CampaignShell', 'CampaignStatus', 'CampaignVolumes'].map(name => [name, ({children}) => React.createElement('div', null, children)]))
+    if (specifier === '@/components/campaigns/campaign-common.js') return Object.fromEntries(['CampaignPagination', 'CampaignProgress', 'CampaignShell', 'CampaignStatus', 'CampaignVolumes', 'CampaignReplenishmentNotice', 'CampaignMeterChanges'].map(name => [name, ({children}) => React.createElement('div', null, children)]))
     if (specifier === '@/lib/campaigns.js') return campaignHelpers
     if (specifier === '@/lib/campaign-points.js') return campaignPointHelpers
     if (specifier === '@/server/actions/campaigns.js') return Object.fromEntries(['getCampaignResponsesAction', 'getCampaignResultsAction'].map(name => [name, async (id, options) => {
@@ -79,4 +79,28 @@ test('les deux onglets demandent explicitement la projection compacte', async t 
     {name: 'getCampaignResponsesAction', id: 'campaign', page: 1, pageSize: 25, view: 'summary'},
     {name: 'getCampaignResultsAction', id: 'campaign', page: 1, pageSize: 25, view: 'summary'}
   ])
+})
+
+for (const [name, response, label] of [
+  ['réponse vide', {}, 'Compléter'],
+  ['brouillon partagé', {hasDraft: true}, 'Reprendre'],
+  ['réponse envoyée', {lastSubmittedAt: '2026-09-24'}, 'Consulter / modifier'],
+  ['correction en brouillon', {lastSubmittedAt: '2026-09-24', hasDraft: true}, 'Consulter / modifier']
+]) {
+  test(`le collecteur peut ouvrir la réponse selon ses droits : ${name}`, t => {
+    const {tree} = harness({tab: 'responses', response: {...response, permissions: {canEdit: true, canSubmit: true, respondingOnBehalf: true}}})
+    const link = elements(tree).find(node => node.props.href === '/campagnes/campaign/reponses/response')
+    t.is(link?.props.children, label)
+  })
+}
+
+test('la capacité globale du collecteur ne rend pas une réponse non modifiable éditable', t => {
+  const {tree} = harness({tab: 'responses', permissions: {canReadResults: true, canRespondForParticipants: true}, response: {hasDraft: true, permissions: {canEdit: false, canSubmit: false, respondingOnBehalf: true}}})
+  const link = elements(tree).find(node => node.props.href === '/campagnes/campaign/reponses/response')
+  t.is(link?.props.children, 'Consulter')
+})
+
+test('sans nouvelle permission une réponse non envoyée reste inaccessible au collecteur', t => {
+  const {tree} = harness({tab: 'responses', permissions: {canReadResults: true, canRespondForParticipants: true}})
+  t.false(elements(tree).some(node => node.props.href === '/campagnes/campaign/reponses/response'))
 })

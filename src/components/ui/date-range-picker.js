@@ -283,7 +283,7 @@ const DateRangePicker = ({
                     outsideMonth && 'text-[var(--text-mention-grey)]',
                     !dayDisabled && !selected && !inRange && 'hover:bg-[var(--background-alt-blue-france)]',
                     inRange && !selected && 'bg-[var(--background-contrast-blue-ecume)] text-[var(--background-active-blue-france)]',
-                    selected && 'rounded-full bg-[var(--background-active-blue-france)] font-semibold text-white',
+                    selected && 'rounded-full bg-[var(--background-active-blue-france)] font-semibold text-[var(--text-inverted-blue-france)]',
                     dayDisabled && 'cursor-not-allowed text-gray-300'
                   )}
                   disabled={dayDisabled}

@@ -57,6 +57,7 @@ const FIELD_LABELS = {
   email: 'Email',
   enabled: 'Actif',
   endDate: 'Fin',
+  excludeFromQuickDeclaration: 'Exclure de la saisie rapide',
   exploitationIds: 'Exploitations',
   countingCode: 'Code comptage',
   filename: 'Nom du fichier',
