@@ -286,6 +286,10 @@ const DateRangePicker = ({
                     selected && 'rounded-full bg-[var(--background-active-blue-france)] font-semibold text-[var(--text-inverted-blue-france)]',
                     dayDisabled && 'cursor-not-allowed text-gray-300'
                   )}
+                  style={selected ? {
+                    '--hover': 'var(--background-active-blue-france-hover)',
+                    '--active': 'var(--background-active-blue-france-active)'
+                  } : undefined}
                   disabled={dayDisabled}
                   type='button'
                   onMouseEnter={() => setHoveredDate(day)}
