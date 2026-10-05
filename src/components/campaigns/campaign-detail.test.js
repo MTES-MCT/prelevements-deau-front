@@ -24,7 +24,7 @@ function harness({tab = 'results', response = {}, permissions = {canReadResults:
   const calls = []
   const filename = new URL('campaign-detail.js', import.meta.url)
   const componentRequire = specifier => {
-    if (specifier === 'react') return {...React, useState: value => [value === 'responses' ? tab : value, () => {}], useRef: value => ({current: value})}
+    if (specifier === 'react') return {...React, useState: value => [value === 'responses' ? tab : value, () => {}], useRef: value => ({current: value}), useSyncExternalStore: (_, getSnapshot) => getSnapshot()}
     if (specifier === 'next/navigation') return {useRouter: () => ({})}
     if (specifier === 'next/link') return {__esModule: true, default: props => React.createElement('a', props)}
     if (specifier === '@codegouvfr/react-dsfr/Alert') return {Alert: () => null}

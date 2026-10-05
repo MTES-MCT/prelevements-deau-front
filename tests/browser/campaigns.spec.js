@@ -1195,8 +1195,23 @@ test('admin : le signalement reste visible dans les résultats et ne propose auc
   await page.goto(`${frontUrl}/administration/campagnes/${campaignIds.campaign}/reponses/${campaignIds.response}`)
   await expect(page.getByRole('textbox', {name: 'Motif du changement de compteur', exact: true})).toHaveValue('Remplacement, nouveau compteur SYNTH-NEW')
   await expect(page.getByRole('button', {name: /Vérifier le compteur/})).toHaveCount(0)
-  await page.goto(`${frontUrl}/administration/campagnes/${campaignIds.campaign}`)
-  await page.getByRole('button', {name: 'Résultats envoyés', exact: true}).click()
+  const scripts = Promise.withResolvers()
+  await page.route(`${frontUrl}/_next/static/**/*.js`, async route => {
+    await scripts.promise
+    await route.continue()
+  })
+  const results = page.getByRole('button', {name: 'Résultats envoyés', exact: true})
+  try {
+    await page.goto(`${frontUrl}/administration/campagnes/${campaignIds.campaign}`, {waitUntil: 'commit'})
+    await expect(results).toBeVisible()
+    await expect(results).toBeDisabled()
+    await expect(page.getByRole('button', {name: 'Suivi des réponses', exact: true})).toBeDisabled()
+  } finally {
+    scripts.resolve()
+  }
+  await expect(results).toBeEnabled()
+  await results.click()
+  await expect(results).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByRole('region', {name: 'Changements de compteur signalés'})).toContainText('Remplacement, nouveau compteur SYNTH-NEW')
 })
 
