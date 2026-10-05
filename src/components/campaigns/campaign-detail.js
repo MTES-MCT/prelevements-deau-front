@@ -1,6 +1,6 @@
 'use client'
 
-import {useRef, useState} from 'react'
+import {useRef, useState, useSyncExternalStore} from 'react'
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import Link from 'next/link'
@@ -12,6 +12,10 @@ import CampaignRequesterPoints from '@/components/campaigns/campaign-requester-p
 import {CAMPAIGN_REQUESTER_DESCRIPTION, CAMPAIGN_REQUESTER_TITLE, CAMPAIGN_METER_CHANGE_VOLUME_LABEL, campaignMeterChangeReported, campaignPublicationLabel, campaignData, campaignDate, campaignPersonLabel, campaignState, formatCampaignVolume, isCampaignRequester} from '@/lib/campaigns.js'
 import {changeCampaignStateAction, deleteCampaignAction, getCampaignResponsesAction, getCampaignResultsAction} from '@/server/actions/campaigns.js'
 import {exportCampaignResultsAction} from '@/server/actions/exports.js'
+
+const subscribeToHydration = () => () => {}
+const getClientSnapshot = () => true
+const getServerSnapshot = () => false
 
 function RequestedVolumes({totals}) {
   const format = value => value === null || value === undefined ? 'Non renseigné' : `${new Intl.NumberFormat('fr-FR').format(Number(value))} m³`
@@ -26,6 +30,7 @@ function ResponseNeeds({response}) {
 
 export default function CampaignDetail({initialData, initialResponses, initialError, admin = false}) {
   const router = useRouter()
+  const hydrated = useSyncExternalStore(subscribeToHydration, getClientSnapshot, getServerSnapshot)
   const {campaign, permissions = campaign.permissions || {}} = initialData
   const [result, setResult] = useState(initialResponses || {items: [], total: 0, page: 1, pageSize: 25})
   const [filters, setFilters] = useState({q: '', status: ''})
@@ -89,8 +94,8 @@ export default function CampaignDetail({initialData, initialResponses, initialEr
         {permissions.canManage && state === 'DRAFT' && !canOpen && <p className='fr-hint-text fr-mt-2w fr-mb-0'>Pour ouvrir la campagne, précisez ses dates et une date de fin au plus tôt le 31 octobre 2026.</p>}
       </section>
       {permissions.canReadResults && <div className='mb-4 flex flex-wrap items-center gap-2' aria-label='Afficher'>
-        <button className={`fr-btn fr-btn--sm ${tab === 'responses' ? '' : 'fr-btn--secondary'}`} type='button' aria-pressed={tab === 'responses'} onClick={() => load(1, 'responses', {})}>Suivi des réponses</button>
-        <button className={`fr-btn fr-btn--sm ${tab === 'results' ? '' : 'fr-btn--secondary'}`} type='button' aria-pressed={tab === 'results'} onClick={() => load(1, 'results', {})}>Résultats envoyés</button>
+        <button className={`fr-btn fr-btn--sm ${tab === 'responses' ? '' : 'fr-btn--secondary'}`} type='button' disabled={!hydrated} aria-pressed={tab === 'responses'} onClick={() => load(1, 'responses', {})}>Suivi des réponses</button>
+        <button className={`fr-btn fr-btn--sm ${tab === 'results' ? '' : 'fr-btn--secondary'}`} type='button' disabled={!hydrated} aria-pressed={tab === 'results'} onClick={() => load(1, 'results', {})}>Résultats envoyés</button>
         <button className='fr-btn fr-btn--sm fr-btn--tertiary ml-auto' type='button' disabled={busy} onClick={download}>Exporter tous les résultats (CSV)</button>
       </div>}
       {error && <Alert className='mb-4' severity='error' title='Chargement ou enregistrement impossible' description={error} />}
