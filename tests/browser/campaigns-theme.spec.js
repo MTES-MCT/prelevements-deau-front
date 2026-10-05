@@ -308,7 +308,33 @@ test('thème : la saisie rapide, ses usages et son calendrier gardent la saisie 
     const calendar = page.getByRole('dialog', {name: 'Choisir une période'})
     const day = calendar.getByRole('button', {name: '1', exact: true}).first()
     await day.click()
-    await readable(day, {theme})
+    await expect(day).toHaveAttribute('aria-pressed', 'true')
+    const checkSelectedDay = async backgroundToken => {
+      const expectedBackground = await day.evaluate((element, token) => {
+        const probe = document.createElement('span')
+        probe.style.backgroundColor = `var(${token})`
+        element.append(probe)
+        const colour = getComputedStyle(probe).backgroundColor
+        probe.remove()
+        return colour
+      }, backgroundToken)
+      // Wait for the selected background, so a transient contrast during the
+      // colour transition cannot hide an unreadable final hover/active state.
+      await expect(day).toHaveCSS('background-color', expectedBackground)
+      await readable(day, {theme})
+    }
+    await calendar.getByText('Périodes suggérées', {exact: true}).hover()
+    await checkSelectedDay('--background-active-blue-france')
+    if (await page.evaluate(() => matchMedia('(hover: hover)').matches)) {
+      await day.hover()
+      await checkSelectedDay('--background-active-blue-france-hover')
+      await page.mouse.down()
+      try {
+        await checkSelectedDay('--background-active-blue-france-active')
+      } finally {
+        await page.mouse.up()
+      }
+    }
     await page.keyboard.press('Escape')
   }
 })
