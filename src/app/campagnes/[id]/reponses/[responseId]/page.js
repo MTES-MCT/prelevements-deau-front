@@ -7,11 +7,11 @@ import {getCampaignResponseAction} from '@/server/actions/campaigns.js'
 export const metadata = {title: 'Réponse à la campagne'}
 export const dynamic = 'force-dynamic'
 
-export default async function Page({params}) {
+export default async function Page({params, searchParams}) {
   const {id, responseId} = await params
   const result = await getCampaignResponseAction(id, responseId)
   if (result.code === 403) forbidden()
   if (result.code === 404) notFound()
   if (!result.success) return <Alert severity='error' title='Réponse indisponible' description={result.error} />
-  return <CampaignResponseForm initialContext={result.data.data} />
+  return <CampaignResponseForm initialContext={result.data.data} initialEditing={(await searchParams)?.modifier === '1'} />
 }

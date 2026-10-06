@@ -104,3 +104,21 @@ test('sans nouvelle permission une réponse non envoyée reste inaccessible au c
   const {tree} = harness({tab: 'responses', permissions: {canReadResults: true, canRespondForParticipants: true}})
   t.false(elements(tree).some(node => node.props.href === '/campagnes/campaign/reponses/response'))
 })
+
+for (const hasDraft of [false, true]) {
+  test(`les résultats proposent une modification directe autorisée, brouillon ${hasDraft}`, t => {
+    const {tree} = harness({response: {lastSubmittedAt: '2026-09-24', hasDraft, permissions: {canEdit: true, respondingOnBehalf: true}}})
+    const links = elements(tree).filter(node => node.props.href)
+    t.is(links.find(node => node.props.href === '/campagnes/campaign/reponses/response')?.props.children, 'Consulter')
+    t.is(links.find(node => node.props.href === '/campagnes/campaign/reponses/response?modifier=1')?.props.children, hasDraft ? 'Reprendre la modification' : 'Modifier la réponse')
+  })
+}
+
+for (const permissions of [undefined, {canEdit: false, respondingOnBehalf: true}]) {
+  test(`les résultats sans droit de modification gardent seulement la consultation, permissions ${Boolean(permissions)}`, t => {
+    const {tree} = harness({permissions: {canReadResults: true, canRespondForParticipants: true}, response: {lastSubmittedAt: '2026-09-24', permissions}})
+    const links = elements(tree).filter(node => node.props.href)
+    t.is(links.find(node => node.props.href === '/campagnes/campaign/reponses/response')?.props.children, 'Consulter')
+    t.false(links.some(node => node.props.href.includes('?modifier=')))
+  })
+}

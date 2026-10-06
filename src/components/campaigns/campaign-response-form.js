@@ -116,7 +116,7 @@ function PublicationNotice({response}) {
   return <Alert severity='info' title='Réponse enregistrée — volumes en attente de vérification' description={issues.map(issue => typeof issue === 'string' ? issue : issue.message).filter(Boolean).join(' ') || 'Le rattachement ou le partage des compteurs doit être vérifié avant de publier les volumes.'} className='mb-4' />
 }
 
-export default function CampaignResponseForm({initialContext, admin = false}) {
+export default function CampaignResponseForm({initialContext, admin = false, initialEditing = false}) {
   const [context, setContext] = useState(initialContext)
   const [initialAnswer] = useState(() => initialCampaignAnswer(initialContext.data, initialContext.meters))
   const [answer, setAnswer] = useState(initialAnswer)
@@ -128,7 +128,7 @@ export default function CampaignResponseForm({initialContext, admin = false}) {
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
   const [saving, setSaving] = useState(false)
-  const [editing, setEditing] = useState(!initialContext.response.lastSubmittedAt || initialContext.response.hasDraft)
+  const [editing, setEditing] = useState(Boolean(initialContext.permissions?.canEdit && initialEditing) || !initialContext.response.lastSubmittedAt || initialContext.response.hasDraft)
   const [ready, setReady] = useState(false)
   const formRef = useRef(null)
   const inFlight = useRef(false)
