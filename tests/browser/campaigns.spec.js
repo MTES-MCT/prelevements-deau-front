@@ -990,6 +990,7 @@ for (const role of ['collector-ended', 'collector-ended-complete-fresh']) {
     await page.goto(`${frontUrl}/campagnes/${campaignIds.campaign}`)
     await expect(page.getByRole('link', {name: /Modifier la réponse|Reprendre la modification/})).toHaveCount(0)
     await page.getByRole('link', {name: 'Consulter', exact: true}).click()
+    await expect(page.getByText(/Vous consultez la réponse de Ferme synthétique/)).toBeVisible()
     await page.goto(`${responseUrl}?modifier=1`)
     await expect(page.getByText(/Vous consultez la réponse de Ferme synthétique/)).toBeVisible()
     await expect(page.getByText('Cette collecte est clôturée. La réponse reste consultable.', {exact: true})).toBeVisible()
