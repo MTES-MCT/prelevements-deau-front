@@ -10,7 +10,6 @@ export const CAMPAIGN_LAST_READING_DATE = '2026-10-31'
 export const CAMPAIGN_REQUESTER_TITLE = 'Déclarer mes prélèvements et mes besoins'
 export const CAMPAIGN_REQUESTER_DESCRIPTION = 'Bilan de campagne 2026-2027 et recensement des besoins 2027-2028'
 export const CAMPAIGN_REPLENISHMENT_NOTICE = 'Les points de réalimentation n’ont pas à être déclarés ici'
-export const CAMPAIGN_METER_CHANGE_VOLUME_LABEL = 'Non calculé : changement de compteur signalé'
 
 export const CAMPAIGN_STATUS_LABELS = {
   DRAFT: 'Brouillon', OPEN: 'Ouverte', CLOSED: 'Clôturée', ARCHIVED: 'Archivée'
@@ -73,17 +72,8 @@ export function campaignResponseHref(source, currentRole) {
   return `${base}/${collectionCampaignId}/reponses/${collectionResponseId}`
 }
 
-export function formatCampaignVolume(value, unavailableLabel = 'En attente de publication') {
-  return value === null || value === undefined ? unavailableLabel : `${new Intl.NumberFormat('fr-FR', {maximumFractionDigits: 4}).format(Number(value))} m³`
-}
-
-export function campaignMeterChangeReported(response, compteurId) {
-  return (response?.publicationIssues || []).some(issue => issue?.code === 'METER_CHANGE_REPORTED' && (!compteurId || issue.compteurId === compteurId))
-    || (response?.meterChanges || response?.submittedData?.meters || []).some(meter => (response?.meterChanges || meter.meterChanged) && (!compteurId || meter.compteurId === compteurId))
-}
-
-export function campaignPublicationLabel(response) {
-  return response?.publicationStatusLabel || (campaignMeterChangeReported(response) ? CAMPAIGN_METER_CHANGE_VOLUME_LABEL : 'Volumes en attente de vérification')
+export function formatCampaignVolume(value) {
+  return value === null || value === undefined ? '—' : `${new Intl.NumberFormat('fr-FR', {maximumFractionDigits: 4}).format(Number(value))} m³`
 }
 
 export function campaignUsageOptions(usages = []) {

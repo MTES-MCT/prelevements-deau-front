@@ -59,7 +59,9 @@ test('deux compteurs : brouillon incomplet, reprise, envoi et modification sans 
   }
   await page.getByRole('button', {name: 'Envoyer ma réponse', exact: true}).click()
   await expect(page.getByText('Votre réponse a bien été envoyée.', {exact: true})).toBeVisible()
-  await expect(page.getByRole('heading', {name: /volumes en attente de vérification/i})).toBeVisible()
+  await expect(page.getByRole('heading', {name: 'Volumes prélevés calculés', exact: true})).toBeVisible()
+  await expect(page.locator('dd').filter({hasText: /^0 m³$/})).toHaveCount(3)
+  await expect(page.getByText(/volumes en attente de vérification/i)).toHaveCount(0)
   const writes = await requests()
   expect(writes).toHaveLength(2)
   expect(writes[1].body.revision).toBe(1)
@@ -885,8 +887,9 @@ test('collecteur : navigation, export des résultats envoyés et correction de l
   await page.getByRole('button', {name: 'Résultats envoyés', exact: true}).click()
   await expect(page.getByText('120 m³', {exact: true})).toBeVisible()
   await expect(page.getByRole('heading', {name: 'Volumes prélevés calculés', exact: true})).toBeVisible()
-  await expect(page.getByText('0 m³', {exact: true}).first()).toBeVisible()
-  await expect(page.getByText('Non calculé', {exact: true})).toBeVisible()
+  await expect(page.locator('dd').filter({hasText: /^10 m³$/})).toHaveCount(2)
+  await expect(page.locator('dd').filter({hasText: /^20 m³$/})).toHaveCount(1)
+  await expect(page.getByText(/volumes en attente|Non calculé/i)).toHaveCount(0)
   const downloaded = page.waitForEvent('download')
   await page.getByRole('button', {name: 'Exporter tous les résultats (CSV)', exact: true}).click()
   expect((await downloaded).suggestedFilename()).toBe('resultats-campagne.csv')
@@ -1060,7 +1063,8 @@ test('avant le 31 octobre, une réponse complète peut être reprise, envoyée e
   await submit.click()
   await expect(page.getByText('Votre réponse a bien été envoyée.', {exact: true})).toBeVisible()
   await expect(page.getByText('Premier envoi : 24/09/2026 · Dernier envoi : 24/09/2026', {exact: true})).toBeVisible()
-  await expect(page.getByRole('heading', {name: /volumes en attente de vérification/i})).toBeVisible()
+  await expect(page.getByRole('heading', {name: 'Volumes prélevés calculés', exact: true})).toBeVisible()
+  await expect(page.locator('dd').filter({hasText: /^25 m³$/})).toHaveCount(1)
   await expect(page.locator('form [aria-invalid="true"]')).toHaveCount(0)
   await page.reload()
   await expect(end).toHaveValue('35')
@@ -1081,49 +1085,23 @@ test('avant le 31 octobre, une réponse complète peut être reprise, envoyée e
   await expect(page.getByText(/Le bilan pourra être envoyé à partir du 31 octobre 2026/)).toHaveCount(0)
 })
 
-test('admin : la part hors campagne est conservée, validation à 100 % et confirmation explicite', async ({page, context}) => {
+test('admin : une ancienne réponse à vérifier affiche ses volumes sans parcours de validation', async ({page, context}, testInfo) => {
   const requests = await authenticate(context, 'admin-review')
   await page.goto(`${frontUrl}/administration/campagnes/${campaignIds.campaign}/reponses/${campaignIds.response}`)
-  await page.getByRole('button', {name: 'Vérifier le compteur SYNTH-M1', exact: true}).click()
-  await expect(page.getByText(/Part hors campagne — conservée dans la répartition/)).toBeVisible()
-  const approve = page.getByRole('button', {name: 'Valider et publier les volumes', exact: true})
-  await expect(approve).toBeDisabled()
-  const off = page.getByLabel('Part hors étiage 2025–2026 (%)', {exact: true})
-  const season = page.getByLabel('Part étiage 2026 (%)', {exact: true})
-  await off.nth(0).fill('70')
-  await off.nth(1).fill('20')
-  await season.nth(0).fill('70')
-  await season.nth(1).fill('30')
-  await page.getByRole('checkbox', {name: /Je confirme que ces rattachements/}).check()
-  await expect(approve).toBeDisabled()
-  await off.nth(1).fill('30')
-  await approve.click()
-  await expect(page.getByRole('heading', {name: 'Rattachement et répartition validés. Les volumes sont publiés.', exact: true})).toBeVisible()
-  const writes = await requests()
-  expect(writes).toHaveLength(1)
-  expect(writes[0].body).toMatchObject({expectedHash: '1'.repeat(64), confirmHistorical: true})
-  expect(writes[0].body.allocations.map(row => row.offSeasonPercentage)).toEqual(['70', '30'])
-})
-
-test('la vérification du compteur attend l’activation de l’interface avant d’accepter un clic', async ({page, context}) => {
-  await authenticate(context, 'admin-review')
-  const scripts = Promise.withResolvers()
-  await page.route(`${frontUrl}/_next/static/**/*.js`, async route => {
-    await scripts.promise
-    await route.continue()
-  })
-  const verify = page.getByRole('button', {name: 'Vérifier le compteur SYNTH-M1', exact: true})
-  try {
-    await page.goto(`${frontUrl}/administration/campagnes/${campaignIds.campaign}/reponses/${campaignIds.response}`, {waitUntil: 'commit'})
-    await expect(verify).toBeVisible()
-    await expect(verify).toBeDisabled()
-  } finally {
-    scripts.resolve()
-  }
-  await expect(verify).toBeEnabled()
-  await verify.click()
-  await expect(page.getByRole('region', {name: 'Vérification du compteur SYNTH-M1', exact: true})).toBeVisible()
-  await expect(page.getByText(/Part hors campagne — conservée dans la répartition/)).toBeVisible()
+  await expect(page.getByRole('heading', {name: 'Volumes prélevés calculés', exact: true})).toBeVisible()
+  await expect(page.locator('dd').filter({hasText: /^10 m³$/})).toHaveCount(2)
+  await expect(page.locator('dd').filter({hasText: /^20 m³$/})).toHaveCount(1)
+  await expect(page.getByRole('button', {name: /Vérifier le compteur|Valider et publier/})).toHaveCount(0)
+  await expect(page.getByRole('checkbox', {name: /Je confirme que ces rattachements/})).toHaveCount(0)
+  await expect(page.getByText(/en attente de|doit être vérifié|publiés/i)).toHaveCount(0)
+  await expect(page.locator('[name="meters.0.offSeason.indexStart"]')).toHaveAttribute('readonly', '')
+  await page.screenshot({path: testInfo.outputPath('reponse-volumes-calcules-sans-validation.png'), fullPage: true})
+  await page.goto(`${frontUrl}/administration/campagnes/${campaignIds.campaign}`)
+  await expect(page.getByText(/en attente de|doit être vérifié/i)).toHaveCount(0)
+  await page.getByRole('button', {name: 'Résultats envoyés', exact: true}).click()
+  await expect(page.locator('dd').filter({hasText: /^20 m³$/})).toHaveCount(1)
+  await expect(page.getByText(/en attente de|doit être vérifié/i)).toHaveCount(0)
+  expect(await requests()).toHaveLength(0)
 })
 
 test('la déclaration générée distingue ses compteurs et renvoie vers la réponse de campagne', async ({page, context}) => {
@@ -1148,7 +1126,7 @@ test('le reçu conserve la notice pour l’instructeur et oriente l’admin vers
 })
 
 
-test('un changement automatique exige un motif, reste en brouillon puis est envoyé sans volume ni action', async ({page, context}) => {
+test('un changement automatique conserve le motif et la période calculable, sans validation', async ({page, context}) => {
   const requests = await authenticate(context, 'complete')
   await page.goto(responseUrl)
   const changed = page.getByRole('checkbox', {name: 'Je souhaite signaler un changement de compteur', exact: true})
@@ -1169,8 +1147,9 @@ test('un changement automatique exige un motif, reste en brouillon puis est envo
   await reason.fill('Remplacement : nouveau compteur SYNTH-NEW')
   await page.getByRole('button', {name: 'Envoyer ma réponse', exact: true}).click()
   await expect(page.getByText('Votre réponse a bien été envoyée.', {exact: true})).toBeVisible()
-  await expect(page.getByRole('heading', {name: 'Changement de compteur signalé', exact: true})).toBeVisible()
-  await expect(page.getByText('Non calculé : changement de compteur signalé', {exact: true})).toHaveCount(3)
+  await expect(changed).toBeChecked()
+  await expect(page.locator('dd').filter({hasText: /^—$/})).toHaveCount(1)
+  await expect(page.locator('dd').filter({hasText: /^25 m³$/})).toHaveCount(2)
   await expect(page.getByText(/volumes en attente de vérification/i)).toHaveCount(0)
   expect((await requests())[1].body.data.meters[0]).toMatchObject({meterChanged: true, meterChangeReason: 'Remplacement : nouveau compteur SYNTH-NEW'})
   await page.reload()
@@ -1204,6 +1183,9 @@ test('admin : le signalement reste visible dans les résultats et ne propose auc
   await page.goto(`${frontUrl}/administration/campagnes/${campaignIds.campaign}/reponses/${campaignIds.response}`)
   await expect(page.getByRole('textbox', {name: 'Motif du changement de compteur', exact: true})).toHaveValue('Remplacement, nouveau compteur SYNTH-NEW')
   await expect(page.getByRole('button', {name: /Vérifier le compteur/})).toHaveCount(0)
+  await expect(page.locator('dd').filter({hasText: /^10 m³$/})).toHaveCount(2)
+  await expect(page.locator('dd').filter({hasText: /^20 m³$/})).toHaveCount(1)
+  await expect(page.getByText(/en attente de|Non calculé/i)).toHaveCount(0)
   const scripts = Promise.withResolvers()
   await page.route(`${frontUrl}/_next/static/**/*.js`, async route => {
     await scripts.promise
@@ -1222,6 +1204,8 @@ test('admin : le signalement reste visible dans les résultats et ne propose auc
   await results.click()
   await expect(results).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByRole('region', {name: 'Changements de compteur signalés'})).toContainText('Remplacement, nouveau compteur SYNTH-NEW')
+  await expect(page.locator('dd').filter({hasText: /^20 m³$/})).toHaveCount(1)
+  await expect(page.getByText(/hors étiage 10 m³ · étiage 10 m³/)).toBeVisible()
 })
 
 for (const ordinary of [false, true]) {

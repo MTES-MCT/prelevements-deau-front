@@ -44,5 +44,3 @@ export async function getCampaignResponseAction(id, responseId) { return read(`/
 export async function saveCampaignResponseAction(id, responseId, payload, submit = false) {
   return mutate(`/${encodeURIComponent(id)}/responses/${encodeURIComponent(responseId)}${submit ? '/submit' : ''}`, submit ? 'POST' : 'PUT', payload)
 }
-export async function getCampaignMeterReviewAction(id, compteurId) { return read(`/${encodeURIComponent(id)}/meters/${encodeURIComponent(compteurId)}/review`) }
-export async function approveCampaignMeterAction(id, compteurId, payload) { return mutate(`/${encodeURIComponent(id)}/meters/${encodeURIComponent(compteurId)}/approve`, 'POST', payload) }

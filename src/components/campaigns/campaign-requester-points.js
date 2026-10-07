@@ -9,7 +9,7 @@ import Link from 'next/link'
 import {CampaignPagination, CampaignStatus} from '@/components/campaigns/campaign-common.js'
 import CampaignPointIdentity from '@/components/campaigns/campaign-point-identity.js'
 import {campaignMapPoints, campaignResponseForPoint, filterCampaignPointResponses, loadCampaignMapResponses} from '@/lib/campaign-points.js'
-import {campaignData, campaignDate, campaignPublicationLabel} from '@/lib/campaigns.js'
+import {campaignData, campaignDate} from '@/lib/campaigns.js'
 import {getCampaignResponsesAction} from '@/server/actions/campaigns.js'
 
 const PointMap = dynamic(() => import('@/components/declarations/quick-declaration-map.js'), {ssr: false, loading: () => <p role='status'>Chargement de la carte…</p>})
@@ -78,7 +78,6 @@ export default function CampaignRequesterPoints({campaignId, initialPage, canRes
               <div><CampaignStatus response status={response.status} />{response.lastSubmittedAt && <span className='ml-2 text-sm'>Dernier envoi : {campaignDate(response.lastSubmittedAt)}</span>}{response.hasDraft && response.lastSubmittedAt && <p className='fr-hint-text fr-mt-1w fr-mb-0'>Modification en brouillon, pas encore envoyée</p>}</div>
               <Link className='fr-btn fr-btn--sm fr-btn--secondary' href={`/campagnes/${campaignId}/reponses/${response.id}`}>{!canRespond || response.lastSubmittedAt ? 'Consulter ma déclaration' : response.hasDraft ? 'Reprendre ma déclaration' : 'Commencer ma déclaration'}</Link>
             </div>
-            {response.lastSubmittedAt && response.publicationStatus && !['PUBLISHED', 'COMPLETED'].includes(response.publicationStatus) && <p className='fr-text--sm fr-mt-2w fr-mb-0 text-[var(--text-label-yellow-moutarde)]'>Réponse envoyée · {campaignPublicationLabel(response)}</p>}
           </li>)}
         </ul>
         {!filteredResponses.length && !loading && !error && <p className='border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-4'>{responses.length ? 'Aucun point ne correspond à ces filtres.' : 'Aucun point à compléter pour cette campagne.'}</p>}

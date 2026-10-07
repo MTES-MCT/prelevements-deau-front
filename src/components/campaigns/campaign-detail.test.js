@@ -70,6 +70,28 @@ test('les résultats restent compatibles avec les réponses détaillées', t => 
   t.true(html.includes('— m³ demandés · — m³/h'))
 })
 
+test('un ancien statut à vérifier et un changement de compteur ne masquent pas les volumes calculés', t => {
+  const {tree} = harness({response: {
+    lastSubmittedAt: '2026-09-24', publicationStatus: 'PENDING_REVIEW', publicationStatusLabel: 'Volumes en attente de vérification',
+    publicationIssues: [{code: 'METER_CHANGE_REPORTED', compteurId: 'meter'}],
+    meterChanges: [{compteurId: 'meter', meterChanged: true, meterChangeReason: 'Remplacement'}],
+    volumes: {offSeason: 10, season: 0, total: 10, partial: false}
+  }})
+  const html = renderToStaticMarkup(tree)
+  t.true(html.includes('hors étiage 10 m³'))
+  t.true(html.includes('étiage 0 m³'))
+  t.false(/attente|vérification|publication|Valider|Vérifier le compteur/.test(html))
+})
+
+test('un volume impossible affiche un tiret sans masquer la période calculable', t => {
+  const {tree} = harness({response: {volumes: {offSeason: null, season: 25, total: 25, partial: true}}})
+  const html = renderToStaticMarkup(tree)
+  t.true(html.includes('hors étiage —'))
+  t.true(html.includes('étiage 25 m³'))
+  t.true(html.includes('Résultat incomplet'))
+  t.false(/attente|vérification/.test(html))
+})
+
 test('les deux onglets demandent explicitement la projection compacte', async t => {
   const {tree, calls} = harness({tab: 'responses'})
   const buttons = elements(tree).filter(node => node.type === 'button')

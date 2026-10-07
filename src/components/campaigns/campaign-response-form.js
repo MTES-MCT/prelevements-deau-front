@@ -8,13 +8,11 @@ import Link from 'next/link'
 
 import {CampaignShell, CampaignStatus, CampaignVolumes} from '@/components/campaigns/campaign-common.js'
 import CampaignCropsSelect from '@/components/campaigns/campaign-crops-select.js'
-import CampaignMeterReview from '@/components/campaigns/campaign-meter-review.js'
 import UsageCombobox, {compareUsageOptions} from '@/components/form/usage-combobox.js'
 import {formatCampaignNumberInput, normalizeCampaignNumberInput} from '@/lib/campaign-numbers.js'
 import {campaignSaveError} from '@/lib/campaign-response-errors.js'
 import {
-  CAMPAIGN_REQUESTER_DESCRIPTION, CAMPAIGN_REQUESTER_TITLE, CAMPAIGN_METER_CHANGE_VOLUME_LABEL,
-  campaignMeterChangeReported,
+  CAMPAIGN_REQUESTER_DESCRIPTION, CAMPAIGN_REQUESTER_TITLE,
   campaignDate, campaignExploitationLabel, campaignPersonLabel, campaignRequiresIrrigationDetails, campaignState,
   campaignUsageOptions, campaignSelectableUsageOptions, getCampaignField, initialCampaignAnswer,
   normalizeCampaignMeterChanges, setCampaignField, validateCampaignAnswer, validateCampaignIndices
@@ -104,16 +102,6 @@ function PeriodFields({path, title, needs = false, season = false, fieldProps}) 
       </div>
     </fieldset>
   )
-}
-
-function PublicationNotice({response}) {
-  if (!response?.lastSubmittedAt || !response.publicationStatus || ['PUBLISHED', 'COMPLETED'].includes(response.publicationStatus)) return null
-  const issues = response.publicationIssues || []
-  if (campaignMeterChangeReported(response)) {
-    const otherIssues = issues.filter(issue => issue?.code !== 'METER_CHANGE_REPORTED')
-    return <div className='mb-4 grid gap-3'><Alert severity='info' title='Changement de compteur signalé' description='Le signalement est enregistré avec votre réponse. Aucun volume n’est calculé automatiquement pour le compteur concerné.' />{otherIssues.length > 0 && <Alert severity='info' title='Autres volumes en attente de vérification' description={otherIssues.map(issue => typeof issue === 'string' ? issue : issue.message).filter(Boolean).join(' ')} />}</div>
-  }
-  return <Alert severity='info' title='Réponse enregistrée — volumes en attente de vérification' description={issues.map(issue => typeof issue === 'string' ? issue : issue.message).filter(Boolean).join(' ') || 'Le rattachement ou le partage des compteurs doit être vérifié avant de publier les volumes.'} className='mb-4' />
 }
 
 export default function CampaignResponseForm({initialContext, admin = false, initialEditing = false}) {
@@ -212,11 +200,6 @@ export default function CampaignResponseForm({initialContext, admin = false, ini
     setValidatedAnswer(nextAnswer)
     setSavedValue(JSON.stringify(nextAnswer))
   }
-  async function refreshAfterApproval() {
-    const result = await getCampaignResponseAction(campaign.id, response.id)
-    if (result.success) acceptContext(result.data.data)
-    else setError('La vérification a été enregistrée. Rechargez la page pour actualiser les volumes.')
-  }
   function focusInvalidField() {
     requestAnimationFrame(() => {
       const invalid = formRef.current?.querySelector('[aria-invalid="true"]')
@@ -288,8 +271,7 @@ export default function CampaignResponseForm({initialContext, admin = false, ini
       </div>
       {(applicant || respondingOnBehalf) && !permissions.canEdit && ['CLOSED', 'ARCHIVED'].includes(campaignState(campaign)) && <p className='fr-text--sm'>Cette collecte est clôturée. {respondingOnBehalf ? 'La réponse reste consultable.' : 'Votre réponse reste consultable.'}</p>}
       {response.hasDraft && response.lastSubmittedAt && <p className='fr-text--sm'>Ces modifications ne sont pas encore envoyées.</p>}
-      <PublicationNotice response={response} />
-      {response.lastSubmittedAt && <CampaignVolumes volumes={response.volumes} unavailableLabel={campaignMeterChangeReported(response) ? CAMPAIGN_METER_CHANGE_VOLUME_LABEL : undefined} />}
+      {response.lastSubmittedAt && <CampaignVolumes volumes={response.volumes} />}
       {response.declarationId && !admin && <p className='fr-text--sm'><Link href={`/mes-declarations/${response.declarationId}`}>Consulter la déclaration d’index générée</Link></p>}
       {!applicant && pointDetails}
       {context.prefill?.active && <p className='fr-hint-text fr-mb-2w'>Données préremplies à vérifier.</p>}
@@ -318,14 +300,13 @@ export default function CampaignResponseForm({initialContext, admin = false, ini
                   {!readOnly && !meter.compteurId && answer.meters.length > 1 && <button className='fr-btn fr-btn--sm fr-btn--tertiary' type='button' disabled={saving || !ready} onClick={() => { setAnswer(previous => ({...previous, meters: previous.meters.filter((_, meterIndex) => meterIndex !== index)})); setValidatedAnswer(previous => ({...previous, meters: previous.meters.filter((_, meterIndex) => meterIndex !== index)})); setSuccess(null); setErrors({}); setIndexErrors({}) }}>Retirer ce compteur</button>}
                 </div>
                 {meter.meterChanged && <div className='grid gap-3 px-3 pt-3 md:px-4'>
-                  <p id={`campaign-meter-changed-${index}-hint`} className='fr-text--sm fr-mb-0'>{inconsistentMeters.has(index) || historicalMeterChanges.includes(index) ? 'Les index renseignés sont incohérents. Le changement de compteur est signalé automatiquement ; précisez le motif ou corrigez les index.' : 'Aucun volume n’est calculé automatiquement pour ce compteur signalé.'}</p>
+                  <p id={`campaign-meter-changed-${index}-hint`} className='fr-text--sm fr-mb-0'>{inconsistentMeters.has(index) || historicalMeterChanges.includes(index) ? 'Les index renseignés sont incohérents. Le changement de compteur est signalé automatiquement ; précisez le motif ou corrigez les index.' : 'Le signalement est enregistré avec votre réponse.'}</p>
                   <ResponseField {...fieldProps} path={`meters.${index}.meterChangeReason`} label='Motif du changement de compteur' type='textarea' hint='Indiquez la raison du changement et le numéro de série du nouveau compteur.' maxLength={2000} />
                 </div>}
                 <div className='grid gap-3 p-3 md:p-4 lg:grid-cols-2'>
                   <PeriodFields title='Hors étiage 2025–2026' path={`meters.${index}.offSeason`} fieldProps={fieldProps} />
                   <PeriodFields season title='Étiage 2026' path={`meters.${index}.season`} fieldProps={fieldProps} />
                 </div>
-                {admin && response.lastSubmittedAt && meter.compteurId && !meter.meterChanged && !campaignMeterChangeReported(response, meter.compteurId) && <div className='px-3 pb-3 md:px-4'><CampaignMeterReview campaignId={campaign.id} compteurId={meter.compteurId} serialNumber={meter.serialNumber} onApproved={refreshAfterApproval} /></div>}
               </div>
             ))}
           </div>

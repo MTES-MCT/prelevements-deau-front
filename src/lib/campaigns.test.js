@@ -2,7 +2,7 @@ import test from 'ava'
 
 import {
   campaignData, campaignDate, campaignExploitationLabel, campaignParticipation, campaignRequiresIrrigationDetails, campaignResponseHref, campaignSelectableUsageOptions, campaignState, campaignUsageOptions,
-  campaignMeterChangeReported, campaignPublicationLabel, normalizeCampaignMeterChanges, emptyCampaignMeter, formatCampaignVolume, getCampaignField, initialCampaignAnswer, isCampaignRequester, setCampaignField, singleCampaignResponseHref, validateCampaignAnswer, validateCampaignIndices
+  normalizeCampaignMeterChanges, emptyCampaignMeter, formatCampaignVolume, getCampaignField, initialCampaignAnswer, isCampaignRequester, setCampaignField, singleCampaignResponseHref, validateCampaignAnswer, validateCampaignIndices
 } from './campaigns.js'
 
 test('un code comptage distingue deux exploitations sur le même point', t => {
@@ -267,10 +267,10 @@ test('une erreur n’est jamais présentée comme une liste vide', t => {
   t.is(emptyCampaignMeter({id: 'm', serialNumber: '123'}).compteurId, 'm')
 })
 
-test('volume zéro publié et volume non publié sont visiblement distincts', t => {
+test('volume zéro calculé et volume impossible à calculer sont visiblement distincts', t => {
   t.is(formatCampaignVolume(0), '0 m³')
-  t.is(formatCampaignVolume(null), 'En attente de publication')
-  t.is(formatCampaignVolume(undefined), 'En attente de publication')
+  t.is(formatCampaignVolume(null), '—')
+  t.is(formatCampaignVolume(undefined), '—')
 })
 
 test('le reçu renvoie à la campagne selon le rôle et ne propose aucun lien aux instructeurs', t => {
@@ -339,13 +339,4 @@ test('les anciens brouillons et plusieurs compteurs gardent leurs identités et 
   t.truthy(validateCampaignAnswer(data)['meters.0.meterChangeReason'])
   t.falsy(validateCampaignAnswer(data)['meters.1.meterChangeReason'])
   t.false(Object.hasOwn(source.meters[1], 'meterChanged'))
-})
-
-test('un signalement partagé ne devient ni un volume zéro ni une demande de vérification', t => {
-  const response = {publicationIssues: [{code: 'METER_CHANGE_REPORTED', compteurId: 'm1'}]}
-  t.true(campaignMeterChangeReported(response, 'm1'))
-  t.false(campaignMeterChangeReported(response, 'm2'))
-  t.is(campaignPublicationLabel(response), 'Non calculé : changement de compteur signalé')
-  t.is(formatCampaignVolume(null, campaignPublicationLabel(response)), 'Non calculé : changement de compteur signalé')
-  t.is(formatCampaignVolume(0, campaignPublicationLabel(response)), '0 m³')
 })

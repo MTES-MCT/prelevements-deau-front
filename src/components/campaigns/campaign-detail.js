@@ -9,7 +9,7 @@ import {useRouter} from 'next/navigation'
 import {CampaignPagination, CampaignProgress, CampaignShell, CampaignStatus, CampaignVolumes, CampaignReplenishmentNotice, CampaignMeterChanges} from '@/components/campaigns/campaign-common.js'
 import CampaignPointIdentity from '@/components/campaigns/campaign-point-identity.js'
 import CampaignRequesterPoints from '@/components/campaigns/campaign-requester-points.js'
-import {CAMPAIGN_REQUESTER_DESCRIPTION, CAMPAIGN_REQUESTER_TITLE, CAMPAIGN_METER_CHANGE_VOLUME_LABEL, campaignMeterChangeReported, campaignPublicationLabel, campaignData, campaignDate, campaignPersonLabel, campaignState, formatCampaignVolume, isCampaignRequester} from '@/lib/campaigns.js'
+import {CAMPAIGN_REQUESTER_DESCRIPTION, CAMPAIGN_REQUESTER_TITLE, campaignData, campaignDate, campaignPersonLabel, campaignState, formatCampaignVolume, isCampaignRequester} from '@/lib/campaigns.js'
 import {changeCampaignStateAction, deleteCampaignAction, getCampaignResponsesAction, getCampaignResultsAction} from '@/server/actions/campaigns.js'
 import {exportCampaignResultsAction} from '@/server/actions/exports.js'
 
@@ -109,7 +109,7 @@ export default function CampaignDetail({initialData, initialResponses, initialEr
       {loading ? <p role='status'>Chargement des réponses…</p> : !error && <>
         {requester ? <CampaignRequesterPoints campaignId={campaign.id} initialPage={result} canRespond={permissions.canRespond} /> : <>
           {tab === 'results' && result.totals && <RequestedVolumes totals={result.totals} />}
-          {tab === 'results' && <CampaignVolumes volumes={result.totals?.publishedVolumes} unavailableLabel='Non calculé' partialDescription='Total incomplet : certains volumes ne sont pas calculés.' />}
+          {tab === 'results' && <CampaignVolumes volumes={result.totals?.publishedVolumes} />}
           {tab === 'results' && <p className='fr-text--sm'>Ces besoins sont des volumes demandés, pas des volumes prélevés. Les brouillons ne sont pas inclus.</p>}
           <div className='hidden grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_11rem] gap-4 border border-[var(--border-default-grey)] border-b-0 bg-[var(--background-alt-grey)] px-4 py-3 text-sm font-semibold lg:grid' aria-hidden='true'><span>Point de prélèvement</span><span>Préleveur</span><span>Réponse</span><span>Actions</span></div>
           <ul className='m-0 list-none divide-y divide-[var(--border-default-grey)] border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-0'>
@@ -123,10 +123,9 @@ export default function CampaignDetail({initialData, initialResponses, initialEr
                   {tab === 'results' && response.permissions?.canEdit && <Link className='fr-btn fr-btn--sm' href={`${base}/${campaign.id}/reponses/${response.id}?modifier=1`}>{response.hasDraft ? 'Reprendre la modification' : 'Modifier la réponse'}</Link>}
                 </div>
               </div>
-              {response.lastSubmittedAt && response.publicationStatus && !['PUBLISHED', 'COMPLETED'].includes(response.publicationStatus) && <p className='fr-text--sm fr-mt-2w fr-mb-0 text-[var(--text-label-yellow-moutarde)]'>Réponse envoyée · {campaignPublicationLabel(response)}</p>}
               {tab === 'results' && <CampaignMeterChanges response={response} />}
               {tab === 'results' && <ResponseNeeds response={response} />}
-              {tab === 'results' && response.volumes && <p className='fr-text--sm fr-mt-2w fr-mb-0'><strong>Volumes prélevés calculés :</strong> hors étiage {formatCampaignVolume(response.volumes.offSeason, campaignMeterChangeReported(response) ? CAMPAIGN_METER_CHANGE_VOLUME_LABEL : undefined)} · étiage {formatCampaignVolume(response.volumes.season, campaignMeterChangeReported(response) ? CAMPAIGN_METER_CHANGE_VOLUME_LABEL : undefined)}{response.volumes.partial ? ' · Résultat incomplet' : ''}</p>}
+              {tab === 'results' && response.volumes && <p className='fr-text--sm fr-mt-2w fr-mb-0'><strong>Volumes prélevés calculés :</strong> hors étiage {formatCampaignVolume(response.volumes.offSeason)} · étiage {formatCampaignVolume(response.volumes.season)}{response.volumes.partial ? ' · Résultat incomplet' : ''}</p>}
             </li>)}
           </ul>
           {!result.items?.length && <p className='border border-[var(--border-default-grey)] bg-[var(--background-default-grey)] p-4'>{requester ? 'Aucun point à compléter pour cette campagne.' : 'Aucune réponse ne correspond à ces filtres.'}</p>}

@@ -33,6 +33,14 @@ const completeData = () => ({
   needs: {season: {usageId: campaignIds.usage, flow: '4', volume: '120', surface: '3', crops: 'Blé'}, offSeason: {usageId: campaignIds.usage, flow: '2', volume: '40', surface: '2', crops: 'Maïs'}}, comment: 'Réponse envoyée'
 })
 const changedData = () => { const data = completeData(); Object.assign(data.meters[0], {meterChanged: true, meterChangeReason: 'Remplacement, nouveau compteur SYNTH-NEW'}); return data }
+const calculatedVolumes = data => {
+  const difference = (start, end) => start == null || start === '' || end == null || end === '' || !Number.isFinite(Number(start)) || !Number.isFinite(Number(end)) || Number(end) < Number(start) ? null : Number(end) - Number(start)
+  const periods = (data?.meters || []).map(meter => ({offSeason: difference(meter.offSeason?.indexStart, meter.offSeason?.indexEnd), season: difference(meter.offSeason?.indexEnd, meter.season?.indexEnd)}))
+  const sum = values => values.some(value => value !== null) ? values.reduce((total, value) => total + (value ?? 0), 0) : null
+  const offSeason = sum(periods.map(period => period.offSeason))
+  const season = sum(periods.map(period => period.season))
+  return {offSeason, season, total: sum([offSeason, season]), partial: !periods.length || periods.some(period => period.offSeason === null || period.season === null)}
+}
 const legacyData = () => {
   const data = completeData()
   data.meters[0].offSeason.crops = 'Mélange local : maïs, sorgho / trèfle'
@@ -80,7 +88,9 @@ export async function handleCampaignFixtureRequest(request, send, response) {
   const permissions = {canManage: admin, canReadResults: admin || collector, canRespond: !admin && !collector && !ended, canRespondForParticipants: collector && !ended, canDelete: admin, canOpen: admin}
   const responsePermissions = {canEdit: !admin && !ended, canSubmit: !admin && !ended, respondingOnBehalf: collector}
   const campaign = () => ({id: campaignIds.campaign, name: state.name, status: state.status, opensOn: '2026-09-01', closesOn: '2026-12-31', type: 'DROPT_INDEX_NEEDS_2026_2027', collecteurUserId: campaignIds.collector, collecteur, updatedAt: `2026-09-24T00:00:0${state.revision}Z`, exploitationIds: [campaignIds.exploitation], progress: {total: responseCount, submitted: state.submitted ? 1 : 0, drafts: state.draft ? 1 : 0, remaining: responseCount - (state.submitted ? 1 : 0)}, permissions})
-  const item = () => ({id: campaignIds.response, campaignId: campaignIds.campaign, exploitationId: campaignIds.exploitation, revision: state.revision, preleveurUserId: campaignIds.user, exploitation: {id: campaignIds.exploitation, countingCode: '001'}, preleveur, point, countingCode: '001', status: state.submitted ? 'SUBMITTED' : state.draft ? 'DRAFT' : 'NOT_STARTED', hasDraft: Boolean(state.draft), firstSubmittedAt: state.submitted ? submittedAt : null, lastSubmittedAt: state.submitted ? submittedAt : null, publicationStatus: state.submitted ? 'PENDING_REVIEW' : null, publicationIssues: state.submitted?.meters.some(meter => meter.meterChanged) ? [{code: 'METER_CHANGE_REPORTED', compteurId: campaignIds.meter}] : ['Le partage du compteur doit être vérifié.'], meterChanges: state.submitted?.meters.filter(meter => meter.meterChanged) || [], volumes: {offSeason: null, season: null, total: null, partial: true}, submittedData: state.submitted, draftData: state.draft, permissions: responsePermissions})
+  // The legacy fixture proves that obsolete publication metadata cannot hide calculated values.
+  const legacyPublication = authorization.includes('-review-') ? {publicationStatus: 'PENDING_REVIEW', publicationIssues: ['Le partage du compteur doit être vérifié.'], publicationStatusLabel: 'Volumes en attente de vérification'} : {}
+  const item = () => ({id: campaignIds.response, campaignId: campaignIds.campaign, exploitationId: campaignIds.exploitation, revision: state.revision, preleveurUserId: campaignIds.user, exploitation: {id: campaignIds.exploitation, countingCode: '001'}, preleveur, point, countingCode: '001', status: state.submitted ? 'SUBMITTED' : state.draft ? 'DRAFT' : 'NOT_STARTED', hasDraft: Boolean(state.draft), firstSubmittedAt: state.submitted ? submittedAt : null, lastSubmittedAt: state.submitted ? submittedAt : null, ...legacyPublication, meterChanges: state.submitted?.meters.filter(meter => meter.meterChanged) || [], volumes: calculatedVolumes(state.submitted), submittedData: state.submitted, draftData: state.draft, permissions: responsePermissions})
   const context = () => ({campaign: campaign(), response: item(), point: responsePoint, exploitation: {id: campaignIds.exploitation, countingCode: '001', declarant: preleveur, pointPrelevement: responsePoint}, waterUses: uses, permissions: {...permissions, ...responsePermissions}, meters: authorization.includes('-missing-') ? [] : [{compteurId: campaignIds.meter, serialNumber: 'SYNTH-M1'}, {compteurId: campaignIds.secondMeter, serialNumber: 'SYNTH-M2'}], data: state.draft || state.submitted || state.prefill, ...(state.prefill ? {prefill: {active: !state.draft && !state.submitted, noAuthorizedOffSeasonUsage: unauthorizedOffSeason}} : {}), blockers: []})
 
   if (pathname === '/info' || pathname === '/api/info') return respond(200, {role, declarantRole: collector ? 'COLLECTEUR' : 'PRELEVEUR', permissions: [], user: {id: campaignIds.user, email: 'campaign@example.test', socialReason: preleveur.socialReason}, expiresAt: new Date(Date.now() + 3_600_000).toISOString()})
@@ -131,17 +141,7 @@ export async function handleCampaignFixtureRequest(request, send, response) {
     if (multiple) items.push({...item(), id: '92222222-2222-4222-8222-222222222223', exploitationId: '94444444-4444-4444-8444-444444444445', countingCode: '002'})
     return ok({items, total: items.length, page: 1, pageSize: 25})
   }
-  if (pathname === `/api/campaigns/${campaignIds.campaign}/results`) return ok({items: state.submitted ? [item()] : [], total: state.submitted ? 1 : 0, page: 1, pageSize: 25, totals: {requestedSeasonVolume: 120, requestedOffSeasonVolume: 40, publishedVolumes: {offSeason: null, season: 0, total: 0, partial: true}}})
-  if (pathname === `/api/campaigns/${campaignIds.campaign}/meters/${campaignIds.meter}/review`) return ok({compteurId: campaignIds.meter, serialNumber: 'SYNTH-M1', expectedHash: '1'.repeat(64), canApprove: true, contradictoryReadings: false, blockedReasons: [], beneficiaries: [
-    {exploitationId: campaignIds.exploitation, responseId: campaignIds.response, countingCode: '001', preleveurName: preleveur.socialReason, pointName: point.name, submitted: true, inCampaign: true, meter: completeData().meters[0]},
-    {exploitationId: campaignIds.point, responseId: null, countingCode: '002', preleveurName: 'Ferme hors campagne', pointName: point.name, submitted: false, inCampaign: false, meter: null}
-  ]})
-  if (pathname === `/api/campaigns/${campaignIds.campaign}/meters/${campaignIds.meter}/approve`) {
-    const parts = []
-    for await (const part of request) parts.push(part)
-    state.requests.push({path: pathname, method: request.method, body: JSON.parse(Buffer.concat(parts).toString())})
-    return ok({status: 'PUBLISHED', published: 2})
-  }
+  if (pathname === `/api/campaigns/${campaignIds.campaign}/results`) return ok({items: state.submitted ? [item()] : [], total: state.submitted ? 1 : 0, page: 1, pageSize: 25, totals: {requestedSeasonVolume: 120, requestedOffSeasonVolume: 40, publishedVolumes: calculatedVolumes(state.submitted)}})
   if (pathname === `/api/campaigns/${campaignIds.campaign}/export`) {
     state.requests.push({path: pathname, method: request.method})
     response.writeHead(200, {'Content-Type': 'text/csv; charset=utf-8'})
