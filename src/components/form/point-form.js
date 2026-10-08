@@ -8,6 +8,7 @@ import {Typography} from '@mui/material'
 import dynamic from 'next/dynamic'
 
 import NullableBooleanSelect from '@/components/form/nullable-boolean-select.js'
+import PointCommuneSelect from '@/components/form/point-commune-select.js'
 import OptionalPointFieldsForm from '@/components/form/optional-point-fields-form.js'
 import AccordionCentered from '@/components/ui/AccordionCentered/index.js'
 import DeferredRender from '@/components/ui/deferred-render.js'
@@ -82,14 +83,18 @@ const PointForm = ({
   point,
   setPoint,
   handleSetGeom,
-  boundaryFeature = null
+  boundaryFeature = null,
+  editableFields = null,
+  canEditLocation = true
 }) => {
   const [isExpanded, setIsExpanded] = useState(false)
   const hydrated = useSyncExternalStore(subscribeToHydration, getClientSnapshot, getServerSnapshot)
+  const collector = Array.isArray(editableFields)
+  const allows = field => !collector || editableFields.includes(field)
 
   return (
-    <fieldset className='m-0 min-w-0 border-0 p-0' disabled={!hydrated} aria-busy={!hydrated}>
-      <Input
+    <fieldset className='m-0 min-w-0 border-0 p-0 [&_select]:truncate' disabled={!hydrated} aria-busy={!hydrated}>
+      {allows('name') && <Input
         required
         label='Nom du point *'
         nativeInputProps={{
@@ -97,9 +102,14 @@ const PointForm = ({
           defaultValue: point.name || '',
           onChange: e => setPoint(prev => ({...prev, name: e.target.value}))
         }}
-      />
+      />}
 
-      <Select
+      {collector && <Input label='Nom d’usage' nativeInputProps={{
+        value: point.usageName ?? '',
+        onChange: event => setPoint(previous => ({...previous, usageName: event.target.value || null}))
+      }} />}
+
+      {allows('flowType') && <Select
         label='Type de point *'
         placeholder='Sélectionner le type de point'
         nativeSelectProps={{
@@ -111,9 +121,9 @@ const PointForm = ({
           }))
         }}
         options={pointFlowTypes}
-      />
+      />}
 
-      <Select
+      {allows('pointKind') && <Select
         label='Nature du point *'
         nativeSelectProps={{
           value: point.pointKind || POINT_KINDS.PHYSIQUE,
@@ -121,7 +131,7 @@ const PointForm = ({
           onChange: e => setPoint(prev => ({...prev, pointKind: e.target.value}))
         }}
         options={pointKindOptions}
-      />
+      />}
 
       <Select
         label='Type de milieu *'
@@ -129,6 +139,7 @@ const PointForm = ({
         nativeSelectProps={{
           value: point.waterBodyType || '',
           required: true,
+          disabled: !canEditLocation,
           onChange: e => setPoint(prev => ({...prev, waterBodyType: e.target.value}))
         }}
         options={waterBodyTypes}
@@ -148,7 +159,7 @@ const PointForm = ({
                 ? {}
                 : {
                   reservoirNominalVolume: null,
-                  waterBodyIdentifier: null,
+                  ...(!collector ? {waterBodyIdentifier: null} : {}),
                   isWaterBodyConnectedToStream: null,
                   isWaterBodyConnectedToGroundwater: null
                 })
@@ -186,7 +197,7 @@ const PointForm = ({
             }}
           />
 
-          <Input
+          {allows('waterBodyIdentifier') && <Input
             label='Identifiant du plan d’eau'
             nativeInputProps={{
               type: 'text',
@@ -203,7 +214,7 @@ const PointForm = ({
                 }
               }
             }}
-          />
+          />}
 
           <NullableBooleanSelect
             label='Plan d’eau connecté au cours d’eau'
@@ -225,7 +236,7 @@ const PointForm = ({
         </div>
       )}
 
-      <div className='pb-5'>
+      {canEditLocation ? <><div className='pb-5'>
         <Typography variant='h5'>
           Localisation
         </Typography>
@@ -240,7 +251,9 @@ const PointForm = ({
 
       <div style={{height: '600px', marginBottom: '2rem'}}>
         <MiniMapForm boundaryFeature={boundaryFeature} geom={point.coordinates} setGeom={handleSetGeom} />
-      </div>
+      </div></> : <p className='fr-text--sm'>La localisation et le milieu nécessitent l’intervention d’un agent : ce point possède des rattachements territoriaux particuliers.</p>}
+
+      {collector && <PointCommuneSelect point={point} setPoint={setPoint} />}
 
       <Input
         label='Détails sur la localisation'
@@ -274,7 +287,7 @@ const PointForm = ({
         }}
       />
 
-      <Input
+      {allows('internalComment') && <Input
         textArea
         label='Remarque interne (visible uniquement par les agents)'
         nativeTextAreaProps={{
@@ -282,9 +295,18 @@ const PointForm = ({
           defaultValue: point?.internalComment || '',
           onChange: e => setPoint(prev => ({...prev, internalComment: e.target.value}))
         }}
-      />
+      />}
 
-      <AccordionCentered
+      {collector ? <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+        <Input label='Date de mise en service' nativeInputProps={{
+          type: 'date', value: point.commissioningDate?.slice(0, 10) ?? '',
+          onChange: event => setPoint(previous => ({...previous, commissioningDate: event.target.value || null}))
+        }} />
+        <Input label='Profondeur (m)' nativeInputProps={{
+          type: 'number', min: 0, step: 'any', value: point.depth ?? '',
+          onChange: event => setPoint(previous => ({...previous, depth: event.target.value === '' ? null : Number(event.target.value)}))
+        }} />
+      </div> : <AccordionCentered
         isExpanded={isExpanded}
         setIsExpanded={setIsExpanded}
         label='les champs optionnels'
@@ -293,7 +315,7 @@ const PointForm = ({
           point={point}
           setPoint={setPoint}
         />
-      </AccordionCentered>
+      </AccordionCentered>}
     </fieldset>
   )
 }

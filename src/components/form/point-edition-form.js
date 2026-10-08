@@ -4,6 +4,7 @@ import {useState} from 'react'
 
 import {useRouter} from '@bprogress/next/app'
 import Button from '@codegouvfr/react-dsfr/Button'
+import Alert from '@codegouvfr/react-dsfr/Alert'
 import InfoOutlined from '@mui/icons-material/InfoOutlined'
 import {
   Dialog,
@@ -27,8 +28,11 @@ const PointEditionForm = ({canDelete = false, pointPrelevement}) => {
   const [error, setError] = useState(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [flowChangeDetails, setFlowChangeDetails] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const collector = point.right?.editScope === 'COLLECTOR'
 
   const handleSubmit = async ({confirmFlowReclassification = false} = {}) => {
+    if (saving) return
     setError(null)
     setValidationErrors([])
 
@@ -38,13 +42,16 @@ const PointEditionForm = ({canDelete = false, pointPrelevement}) => {
     }
 
     try {
+      setSaving(true)
       const cleanedPayload = emptyStringToNull({
         ...payload,
+        ...(collector ? {expectedUpdatedAt: point.updatedAt} : {}),
         ...(confirmFlowReclassification ? {confirmFlowReclassification: true} : {})
       })
       const response = await editPointPrelevementAction(point.id, cleanedPayload)
 
       if (response.success) {
+        router.refresh()
         router.push(`/points-prelevement/${response.data.id}`)
       } else if (response.validationErrors) {
         setValidationErrors(response.validationErrors)
@@ -58,6 +65,8 @@ const PointEditionForm = ({canDelete = false, pointPrelevement}) => {
       }
     } catch (error_) {
       setError(error_.message)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -86,10 +95,14 @@ const PointEditionForm = ({canDelete = false, pointPrelevement}) => {
 
   return (
     <div>
+      {collector && point.right.isShared && <Alert severity='info' small className='fr-mb-3w'
+        description='Ces informations sont communes à toutes les exploitations de ce point.' />}
       <PointForm
         point={visiblePoint}
         setPoint={setPayload}
         handleSetGeom={handleSetGeom}
+        editableFields={collector ? point.right.editableFields : null}
+        canEditLocation={!collector || point.right.canEditLocation}
       />
 
       <PointFlowReclassificationDialog
@@ -165,8 +178,8 @@ const PointEditionForm = ({canDelete = false, pointPrelevement}) => {
       )}
 
       <div className='w-full flex justify-center p-5 my-5'>
-        <Button disabled={!visiblePoint.waterBodyType} onClick={() => handleSubmit()}>
-          Valider les modifications sur le point de prélèvement {point.name}
+        <Button disabled={saving || !visiblePoint.waterBodyType} onClick={() => handleSubmit()}>
+          {saving ? 'Enregistrement…' : collector ? 'Enregistrer les modifications' : `Valider les modifications sur le point de prélèvement ${point.name}`}
         </Button>
       </div>
     </div>

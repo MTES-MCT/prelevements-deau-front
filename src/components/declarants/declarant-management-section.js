@@ -2,6 +2,7 @@ import AccountCreationNotificationCard from '@/components/accounts/account-creat
 import ImpersonateUserButton from '@/components/auth/impersonate-user-button.js'
 import DeclarantDeclarationTypesCard from '@/components/declarants/declarant-declaration-types-card.js'
 import DeclarantZonesCard from '@/components/declarants/declarant-zones-card.js'
+import CollectorPointManagementCard from '@/components/declarants/collector-point-management-card.js'
 import PreleveurDeleteSection from '@/components/form/preleveur-delete-section.js'
 import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
 
@@ -10,6 +11,9 @@ const DeclarantManagementSection = ({
   canDelete,
   canInvite,
   canManageZones,
+  canManageCollectorPoints = false,
+  pointManagementResult,
+  pointManagementZonesLoaded = false,
   canReadDeclarationTypes,
   declarant,
   declarantId,
@@ -41,6 +45,15 @@ const DeclarantManagementSection = ({
       )}
 
       {canInvite && <AccountCreationNotificationCard declarant={declarant} />}
+
+      {canManageCollectorPoints && (
+        <CollectorPointManagementCard
+          collecteurId={declarantId}
+          initialManagement={pointManagementResult?.data}
+          availableZones={zoneOptions}
+          loadError={!pointManagementResult?.success || !pointManagementZonesLoaded}
+        />
+      )}
 
       {canManageZones && (
         <DeclarantZonesCard

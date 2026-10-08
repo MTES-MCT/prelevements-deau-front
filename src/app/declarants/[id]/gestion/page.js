@@ -11,6 +11,8 @@ import {
 } from '@/server/actions/index.js'
 import {getCurrentSessionInfo} from '@/server/actions/user.js'
 import {getZoneOptionsForPermissionAction} from '@/server/actions/zones.js'
+import {getCollectorPointManagementAdminAction} from '@/server/actions/collector-point-management.js'
+import {canConfigureCollectorPointManagement} from '@/lib/collector-point-management.js'
 
 const emptyDeclarationTypesPayload = {
   data: [],
@@ -52,6 +54,7 @@ const Page = async ({params}) => {
   const canReadDeclarationTypes = permissions.has('declarant.declaration-type.read')
   const canManageZones = permissions.has('declarant.zone.update')
   const canImpersonate = currentRole === 'ADMIN' && !isImpersonating && currentUser?.id !== declarantId
+  const canManageCollectorPoints = canConfigureCollectorPointManagement(currentUserResult?.data, declarant)
 
   if (!canImpersonate && !canDelete && !canInvite && !canReadDeclarationTypes && !canManageZones) {
     notFound()
@@ -69,6 +72,9 @@ const Page = async ({params}) => {
       getZoneOptionsForPermissionAction('declarant.zone.update')
     ])
     : [{success: true, data: {items: []}}, {success: true, data: []}]
+  const pointManagementResult = canManageCollectorPoints
+    ? await getCollectorPointManagementAdminAction(declarantId)
+    : null
 
   return (
     <div className='fr-container mb-8'>
@@ -81,6 +87,9 @@ const Page = async ({params}) => {
         canDelete={canDelete}
         canInvite={canInvite}
         canManageZones={canManageZones}
+        canManageCollectorPoints={canManageCollectorPoints}
+        pointManagementResult={pointManagementResult}
+        pointManagementZonesLoaded={zoneOptionsResult.success}
         canReadDeclarationTypes={canReadDeclarationTypes}
         declarant={declarant}
         declarantId={declarantId}
