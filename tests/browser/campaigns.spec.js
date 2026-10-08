@@ -875,7 +875,13 @@ test('les erreurs métier de l’API et les champs invalides restent lisibles sa
 test('collecteur : navigation, export des résultats envoyés et correction de la réponse', async ({page, context, isMobile}, testInfo) => {
   const requests = await authenticate(context, 'collector')
   await page.goto(`${frontUrl}/campagnes/${campaignIds.campaign}`)
-  if (isMobile) await page.getByRole('button', {name: 'Menu', exact: true}).click()
+  if (isMobile) {
+    const menu = page.getByRole('button', {name: 'Menu', exact: true})
+    // The DSFR menu is rendered by SSR before its modal listener is attached.
+    await expect(menu).toHaveAttribute('data-fr-js-modal-button', 'true')
+    await menu.click()
+    await expect(menu).toHaveAttribute('data-fr-opened', 'true')
+  }
   await expect(page.getByRole('link', {name: 'Campagnes', exact: true})).toBeVisible()
   if (isMobile) await page.getByRole('button', {name: 'Fermer', exact: true}).click()
   await expect(page.getByRole('heading', {name: 'Points de la campagne', exact: true})).toBeVisible()
