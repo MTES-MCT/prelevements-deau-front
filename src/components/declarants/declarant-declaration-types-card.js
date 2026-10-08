@@ -1,13 +1,13 @@
 'use client'
 
-import {useMemo, useState} from 'react'
+import {useEffect, useId, useRef, useState} from 'react'
 
 import Badge from '@codegouvfr/react-dsfr/Badge'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Input} from '@codegouvfr/react-dsfr/Input'
 import {Alert, Box, Typography} from '@mui/material'
 
-import SectionCard from '@/components/ui/SectionCard/index.js'
+import DeclarantManagementCard from '@/components/declarants/declarant-management-card.js'
 import {
   addDeclarantDeclarationTypeAction,
   getDeclarantDeclarationTypesAction,
@@ -36,11 +36,23 @@ const emptyForm = {
 }
 
 function formatDate(date) {
-  if (!date) {
-    return 'Non bornée'
+  return new Date(date).toLocaleDateString('fr-FR', {timeZone: 'UTC'})
+}
+
+function formatPeriod({startDate, endDate}) {
+  if (startDate && endDate) {
+    return `Du ${formatDate(startDate)} au ${formatDate(endDate)}`
   }
 
-  return new Date(date).toLocaleDateString('fr-FR')
+  if (startDate) {
+    return `À partir du ${formatDate(startDate)}`
+  }
+
+  if (endDate) {
+    return `Jusqu’au ${formatDate(endDate)}`
+  }
+
+  return 'Sans limite de dates'
 }
 
 function getTypeLabel(declarationType) {
@@ -48,7 +60,7 @@ function getTypeLabel(declarationType) {
     return 'Type inconnu'
   }
 
-  return `${declarationType.name} (${declarationType.code})`
+  return declarationType.name
 }
 
 function buildPayload(form) {
@@ -77,23 +89,89 @@ const StatusBadge = ({status}) => (
   </Badge>
 )
 
+const PeriodFields = ({form, onChange, disabled}) => {
+  const [isExpanded, setIsExpanded] = useState(Boolean(form.startDate || form.endDate))
+  const fieldsId = useId()
+
+  return (
+    <div className='flex flex-col gap-3 sm:col-span-2'>
+      <div>
+        <Button
+          priority='tertiary no outline'
+          size='small'
+          type='button'
+          iconId={isExpanded ? 'fr-icon-arrow-up-s-line' : 'fr-icon-arrow-down-s-line'}
+          iconPosition='right'
+          aria-expanded={isExpanded}
+          aria-controls={fieldsId}
+          disabled={disabled}
+          onClick={() => setIsExpanded(previous => !previous)}
+        >
+          Limiter à une période
+        </Button>
+      </div>
+      {!isExpanded && <p className='fr-text--sm fr-mb-0'>{formatPeriod(form)}</p>}
+      <div id={fieldsId} hidden={!isExpanded}>
+        <p className='fr-hint-text fr-mb-2w'>
+          Vous pouvez renseigner une date de début, une date de fin, ou les deux.
+        </p>
+        <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+          <Input
+            className='mb-0'
+            label='Date de début (facultative)'
+            disabled={disabled}
+            nativeInputProps={{
+              type: 'date',
+              value: form.startDate,
+              onChange: event => onChange(previous => ({...previous, startDate: event.target.value}))
+            }}
+          />
+          <Input
+            className='mb-0'
+            label='Date de fin (facultative)'
+            disabled={disabled}
+            nativeInputProps={{
+              type: 'date',
+              value: form.endDate,
+              onChange: event => onChange(previous => ({...previous, endDate: event.target.value}))
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const DeclarantDeclarationTypesCard = ({declarantId, initialPayload}) => {
   const [links, setLinks] = useState(initialPayload?.data ?? [])
   const [options, setOptions] = useState(initialPayload?.meta?.availableDeclarationTypes ?? [])
   const [canManage, setCanManage] = useState(Boolean(initialPayload?.meta?.canManage))
   const [form, setForm] = useState(emptyForm)
+  const [isAdding, setIsAdding] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [editingDraft, setEditingDraft] = useState(emptyForm)
   const [message, setMessage] = useState(null)
   const [error, setError] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const addButtonRef = useRef(null)
+  const creationSelectRef = useRef(null)
+  const editingSelectRef = useRef(null)
+  const editButtonRefs = useRef(new Map())
+  const previousEditor = useRef({isAdding: false, editingId: null})
 
-  const counters = useMemo(() => ({
-    active: links.filter(link => link.status === 'ACTIVE').length,
-    future: links.filter(link => link.status === 'FUTURE').length,
-    expired: links.filter(link => link.status === 'EXPIRED').length,
-    unavailable: links.filter(link => link.status === 'UNAVAILABLE').length
-  }), [links])
+  useEffect(() => {
+    if (isAdding) {
+      creationSelectRef.current?.focus()
+    } else if (editingId) {
+      editingSelectRef.current?.focus()
+    } else if (previousEditor.current.isAdding) {
+      addButtonRef.current?.focus()
+    } else if (previousEditor.current.editingId) {
+      editButtonRefs.current.get(previousEditor.current.editingId)?.focus()
+    }
+
+    previousEditor.current = {isAdding, editingId}
+  }, [isAdding, editingId])
 
   const applyPayload = payload => {
     setLinks(payload?.data ?? [])
@@ -140,6 +218,10 @@ const DeclarantDeclarationTypesCard = ({declarantId, initialPayload}) => {
   const submitCreation = async event => {
     event.preventDefault()
 
+    if (isSubmitting || !canManage) {
+      return
+    }
+
     if (!form.declarationTypeId) {
       setError('Sélectionnez un type de déclaration.')
       return
@@ -149,11 +231,14 @@ const DeclarantDeclarationTypesCard = ({declarantId, initialPayload}) => {
 
     if (success) {
       setForm(emptyForm)
+      setIsAdding(false)
       setMessage('Autorisation ajoutée.')
     }
   }
 
   const startEditing = link => {
+    setIsAdding(false)
+    setForm(emptyForm)
     setEditingId(link.id)
     setEditingDraft({
       declarationTypeId: link.declarationTypeId,
@@ -165,6 +250,10 @@ const DeclarantDeclarationTypesCard = ({declarantId, initialPayload}) => {
   }
 
   const submitEdition = async link => {
+    if (isSubmitting || !canManage) {
+      return
+    }
+
     if (!editingDraft.declarationTypeId) {
       setError('Sélectionnez un type de déclaration.')
       return
@@ -183,6 +272,9 @@ const DeclarantDeclarationTypesCard = ({declarantId, initialPayload}) => {
   }
 
   const removeLink = async link => {
+    if (isSubmitting || !canManage) {
+      return
+    }
 
     if (!window.confirm(`Retirer l’autorisation « ${getTypeLabel(link.declarationType)} » de ce déclarant ?`)) {
       return
@@ -195,26 +287,25 @@ const DeclarantDeclarationTypesCard = ({declarantId, initialPayload}) => {
     }
   }
 
+  const cancelCreation = () => {
+    setIsAdding(false)
+    setForm(emptyForm)
+    setError(null)
+  }
+
+  const cancelEdition = () => {
+    setEditingId(null)
+    setEditingDraft(emptyForm)
+    setError(null)
+  }
+
   return (
-    <SectionCard
+    <DeclarantManagementCard
+      id='declarant-declaration-types'
       title='Types de déclaration autorisés'
-      icon='ri-file-list-3-line'
-      editorOnly={false}
+      description='Les déclarations que ce déclarant peut déposer dans « Mes déclarations ».'
     >
       <div className='flex flex-col gap-4'>
-        <Box className='flex gap-2 flex-wrap'>
-          <Badge noIcon severity='success'>{counters.active} actif{counters.active > 1 ? 's' : ''}</Badge>
-          <Badge noIcon severity='info'>{counters.future} à venir</Badge>
-          <Badge noIcon severity='warning'>{counters.expired} expiré{counters.expired > 1 ? 's' : ''}</Badge>
-          {counters.unavailable > 0 && (
-            <Badge noIcon severity='error'>{counters.unavailable} désactivé{counters.unavailable > 1 ? 's' : ''}</Badge>
-          )}
-        </Box>
-
-        <p className='fr-text--sm fr-mb-0'>
-          Ces autorisations déterminent les types de déclaration que ce déclarant peut déposer dans “Mes déclarations”.
-        </p>
-
         {(message || error) && (
           <Alert severity={error ? 'error' : 'success'} onClose={() => {
             setMessage(null)
@@ -222,50 +313,6 @@ const DeclarantDeclarationTypesCard = ({declarantId, initialPayload}) => {
           }}
           >
             {error || message}
-          </Alert>
-        )}
-
-        {canManage && (
-          <form className='grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_auto] gap-3 items-end' onSubmit={submitCreation}>
-            <div className='fr-input-group'>
-              <label className='fr-label' htmlFor='declaration-type-select'>Type de déclaration</label>
-              <select
-                className='fr-select'
-                id='declaration-type-select'
-                value={form.declarationTypeId}
-                onChange={event => setForm(previous => ({...previous, declarationTypeId: event.target.value}))}
-              >
-                <option value=''>Sélectionner un type</option>
-                {options.map(option => (
-                  <option key={option.id} value={option.id}>{getTypeLabel(option)}</option>
-                ))}
-              </select>
-            </div>
-            <Input
-              label='Début'
-              nativeInputProps={{
-                type: 'date',
-                value: form.startDate,
-                onChange: event => setForm(previous => ({...previous, startDate: event.target.value}))
-              }}
-            />
-            <Input
-              label='Fin'
-              nativeInputProps={{
-                type: 'date',
-                value: form.endDate,
-                onChange: event => setForm(previous => ({...previous, endDate: event.target.value}))
-              }}
-            />
-            <Button disabled={isSubmitting || options.length === 0} type='submit'>
-              Autoriser
-            </Button>
-          </form>
-        )}
-
-        {options.length === 0 && canManage && (
-          <Alert severity='warning'>
-            Aucun type actif n’est disponible sur la plateforme. Un administrateur doit d’abord créer ou réactiver un type.
           </Alert>
         )}
 
@@ -280,53 +327,69 @@ const DeclarantDeclarationTypesCard = ({declarantId, initialPayload}) => {
               const selectOptions = getOptionsWithCurrent(options, link)
 
               return (
-                <Box key={link.id} className='border p-3 flex flex-col gap-3'>
+                <Box key={link.id} className='border-t border-[var(--border-default-grey)] pt-4 flex min-w-0 flex-col gap-3'>
                   <Box className='flex justify-between gap-3 flex-wrap'>
                     <Box>
                       <Box className='flex gap-2 items-center flex-wrap'>
-                        <Typography variant='subtitle1' fontWeight='bold'>
+                        <Typography component='h3' variant='subtitle1' fontWeight='bold'>
                           {link.declarationType?.name || 'Type inconnu'}
                         </Typography>
                         <StatusBadge status={link.status} />
                       </Box>
-                      <p className='fr-text--sm fr-mb-0'>
-                        <code>{link.declarationType?.code}</code> · Version {link.declarationType?.version || 1}
-                      </p>
+                      {!isEditing && <p className='fr-text--sm fr-mb-0'>{formatPeriod(link)}</p>}
                     </Box>
 
-                    {canManage && (
+                    {canManage && !isEditing && (
                       <Box className='flex gap-2 flex-wrap'>
-                        {isEditing ? (
-                          <>
-                            <Button priority='secondary' size='small' onClick={() => setEditingId(null)}>
-                              Annuler
-                            </Button>
-                            <Button size='small' disabled={isSubmitting} onClick={() => submitEdition(link)}>
-                              Enregistrer
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <Button priority='secondary' size='small' onClick={() => startEditing(link)}>
-                              Modifier
-                            </Button>
-                            <Button priority='tertiary no outline' size='small' onClick={() => removeLink(link)}>
-                              Retirer
-                            </Button>
-                          </>
-                        )}
+                        <Button
+                          ref={element => {
+                            if (element) {
+                              editButtonRefs.current.set(link.id, element)
+                            } else {
+                              editButtonRefs.current.delete(link.id)
+                            }
+                          }}
+                          priority='secondary'
+                          size='small'
+                          disabled={isSubmitting || isAdding || Boolean(editingId)}
+                          onClick={() => startEditing(link)}
+                        >
+                          Modifier
+                        </Button>
+                        <Button
+                          priority='tertiary no outline'
+                          size='small'
+                          disabled={isSubmitting || isAdding || Boolean(editingId)}
+                          onClick={() => removeLink(link)}
+                        >
+                          Retirer
+                        </Button>
                       </Box>
                     )}
                   </Box>
 
-                  {isEditing ? (
-                    <Box className='grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr] gap-3 items-end'>
-                      <div className='fr-input-group'>
-                        <label className='fr-label' htmlFor={`declaration-type-${link.id}`}>Type</label>
+                  {isEditing && canManage && (
+                    <form
+                      className='grid grid-cols-1 sm:grid-cols-2 gap-3 items-end'
+                      onSubmit={event => {
+                        event.preventDefault()
+                        void submitEdition(link)
+                      }}
+                      onKeyDown={event => {
+                        if (event.key === 'Escape' && !isSubmitting) {
+                          event.preventDefault()
+                          cancelEdition()
+                        }
+                      }}
+                    >
+                      <div className='fr-input-group mb-0 sm:col-span-2'>
+                        <label className='fr-label' htmlFor={`declaration-type-${link.id}`}>Type de déclaration</label>
                         <select
+                          ref={editingSelectRef}
                           className='fr-select'
                           id={`declaration-type-${link.id}`}
                           value={editingDraft.declarationTypeId}
+                          disabled={isSubmitting}
                           onChange={event => setEditingDraft(previous => ({...previous, declarationTypeId: event.target.value}))}
                         >
                           {selectOptions.map(option => (
@@ -334,36 +397,93 @@ const DeclarantDeclarationTypesCard = ({declarantId, initialPayload}) => {
                           ))}
                         </select>
                       </div>
-                      <Input
-                        label='Début'
-                        nativeInputProps={{
-                          type: 'date',
-                          value: editingDraft.startDate,
-                          onChange: event => setEditingDraft(previous => ({...previous, startDate: event.target.value}))
-                        }}
+                      <PeriodFields
+                        key={link.id}
+                        form={editingDraft}
+                        onChange={setEditingDraft}
+                        disabled={isSubmitting}
                       />
-                      <Input
-                        label='Fin'
-                        nativeInputProps={{
-                          type: 'date',
-                          value: editingDraft.endDate,
-                          onChange: event => setEditingDraft(previous => ({...previous, endDate: event.target.value}))
-                        }}
-                      />
-                    </Box>
-                  ) : (
-                    <Box className='grid grid-cols-1 md:grid-cols-2 gap-2 fr-text--sm'>
-                      <span>Début : {formatDate(link.startDate)}</span>
-                      <span>Fin : {formatDate(link.endDate)}</span>
-                    </Box>
+                      <div className='flex justify-end gap-3 flex-wrap sm:col-span-2'>
+                        <Button priority='secondary' size='small' type='button' disabled={isSubmitting} onClick={cancelEdition}>
+                          Annuler
+                        </Button>
+                        <Button size='small' type='submit' disabled={isSubmitting}>
+                          Enregistrer
+                        </Button>
+                      </div>
+                    </form>
                   )}
                 </Box>
               )
             })}
           </div>
         )}
+
+        {canManage && (
+          <div className='border-t border-[var(--border-default-grey)] pt-4'>
+            {isAdding ? (
+              <form
+                className='grid grid-cols-1 sm:grid-cols-2 gap-4 items-end'
+                onSubmit={submitCreation}
+                onKeyDown={event => {
+                  if (event.key === 'Escape' && !isSubmitting) {
+                    event.preventDefault()
+                    cancelCreation()
+                  }
+                }}
+              >
+                <div className='fr-input-group mb-0 sm:col-span-2'>
+                  <label className='fr-label' htmlFor='declaration-type-select'>Type de déclaration</label>
+                  <select
+                    ref={creationSelectRef}
+                    className='fr-select'
+                    id='declaration-type-select'
+                    value={form.declarationTypeId}
+                    disabled={isSubmitting}
+                    onChange={event => setForm(previous => ({...previous, declarationTypeId: event.target.value}))}
+                  >
+                    <option value=''>Sélectionner un type</option>
+                    {options.map(option => (
+                      <option key={option.id} value={option.id}>{getTypeLabel(option)}</option>
+                    ))}
+                  </select>
+                </div>
+                <PeriodFields form={form} onChange={setForm} disabled={isSubmitting} />
+                <div className='flex justify-end gap-3 flex-wrap sm:col-span-2'>
+                  <Button priority='secondary' type='button' disabled={isSubmitting} onClick={cancelCreation}>
+                    Annuler
+                  </Button>
+                  <Button disabled={isSubmitting || options.length === 0} type='submit'>
+                    Ajouter
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <Button
+                ref={addButtonRef}
+                priority='secondary'
+                size='small'
+                iconId='fr-icon-add-line'
+                disabled={isSubmitting || options.length === 0 || Boolean(editingId)}
+                onClick={() => {
+                  setIsAdding(true)
+                  setError(null)
+                  setMessage(null)
+                }}
+              >
+                Ajouter un type
+              </Button>
+            )}
+
+            {options.length === 0 && (
+              <Alert severity='warning' className='mt-3'>
+                Aucun type actif n’est disponible sur la plateforme. Un administrateur doit d’abord créer ou réactiver un type.
+              </Alert>
+            )}
+          </div>
+        )}
       </div>
-    </SectionCard>
+    </DeclarantManagementCard>
   )
 }
 

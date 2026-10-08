@@ -39,21 +39,20 @@ const PreleveurDeleteSection = ({preleveur}) => {
   }
 
   return (
-    <div>
-      <div className='border border-red-500 rounded-xs p-5'>
-        <div className='text-red-500'>
-          <InfoOutlined className='mr-3' />
-          Action sensible : supprimer le déclarant
+    <section aria-labelledby='declarant-delete-title' className='border-t border-[var(--border-default-grey)] pt-6'>
+      <div className='flex flex-wrap items-center justify-between gap-4'>
+        <div>
+          <h2 id='declarant-delete-title' className='fr-h6 fr-mb-1w'>Supprimer le déclarant</h2>
+          <p className='fr-text--sm fr-mb-0 text-[var(--text-mention-grey)]'>
+            Suppression définitive, uniquement si aucune exploitation n’est en activité.
+          </p>
         </div>
-        <div className='ml-8'>
-          Cette action est irréversible et peut avoir des conséquences importantes
-        </div>
-        <div className='ml-8 mt-5'>
+        <div>
           <Button
             priority='secondary'
             style={{
-              color: 'var(--app-color-error, red)',
-              boxShadow: '0 0 0 1px var(--app-delete-border, red)'
+              color: 'var(--text-default-error)',
+              boxShadow: 'inset 0 0 0 1px var(--border-plain-error)'
             }}
             onClick={() => setIsDialogOpen(!isDialogOpen)}
           >
@@ -89,12 +88,12 @@ const PreleveurDeleteSection = ({preleveur}) => {
         </Dialog>
       </div>
       {error && (
-        <div className='text-center p-5 text-red-500'>
+        <div role='alert' className='mt-4 text-[var(--text-default-error)]'>
           <p><b>Un problème est survenu :</b></p>
           {error}
         </div>
       )}
-    </div>
+    </section>
   )
 }
 

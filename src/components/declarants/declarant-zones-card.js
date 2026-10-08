@@ -6,7 +6,7 @@ import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Alert} from '@mui/material'
 
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
-import SectionCard from '@/components/ui/SectionCard/index.js'
+import DeclarantManagementCard from '@/components/declarants/declarant-management-card.js'
 import {updateDeclarantZonesAction} from '@/server/actions/declarants.js'
 
 const ZONE_TYPE_LABELS = {
@@ -44,7 +44,7 @@ const DeclarantZonesCard = ({availableZones, declarantId, initialItems}) => {
       groups.get(type).push({
         value: zone.id,
         label: zone.name,
-        content: `${zone.name}${zone.code ? ` - ${zone.code}` : ''}`,
+        content: zone.name,
         disabled: !canManage,
         disabledReason: 'Vous ne pouvez pas modifier le rattachement à cette zone.'
       })
@@ -78,16 +78,17 @@ const DeclarantZonesCard = ({availableZones, declarantId, initialItems}) => {
   }
 
   return (
-    <SectionCard title='Zones de rattachement' icon='ri-map-pin-2-line' editorOnly={false}>
+    <DeclarantManagementCard
+      id='declarant-zones'
+      title='Quels agents peuvent consulter ce déclarant ?'
+      description='Les agents habilités sur les zones choisies pourront accéder à sa fiche.'
+    >
       <div className='flex flex-col gap-4'>
-        <p className='fr-text--sm fr-mb-0'>
-          Ces zones déterminent où le déclarant est visible et quels agents peuvent le gérer.
-        </p>
-
         <GroupedMultiselect
           searchable
           id='declarant-management-zone-ids'
-          label='Zones *'
+          label='Zones d’intervention des agents'
+          hint='Les droits du déclarant restent inchangés.'
           options={options}
           placeholder='Sélectionner une ou plusieurs zones'
           value={zoneIds}
@@ -103,7 +104,7 @@ const DeclarantZonesCard = ({availableZones, declarantId, initialItems}) => {
           </Button>
         </div>
       </div>
-    </SectionCard>
+    </DeclarantManagementCard>
   )
 }
 

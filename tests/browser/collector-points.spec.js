@@ -11,11 +11,13 @@ test.beforeEach(async ({page}) => {
 })
 async function authenticate(context, scenario = 'enabled') {
   const apiToken = `browser-test-collector-points-${scenario}-${randomUUID()}`
+  const admin = scenario.startsWith('admin')
+  const agent = admin || scenario === 'readonly'
   const token = await encode({secret: 'browser-tests-only-never-a-real-secret', maxAge: 3600,
-    token: {sub: scenario === 'admin' ? ids.preleveur : ids.collector, token: apiToken,
-      role: scenario === 'admin' ? 'ADMIN' : 'DECLARANT', declarantRole: 'COLLECTEUR', permissions: [],
+    token: {sub: agent ? ids.preleveur : ids.collector, token: apiToken,
+      role: admin ? 'ADMIN' : scenario === 'readonly' ? 'INSTRUCTOR' : 'DECLARANT', declarantRole: 'COLLECTEUR', permissions: [],
       apiExpiresAt: new Date(Date.now() + 3600000).toISOString(), infoRefreshedAt: Date.now(),
-      userInfo: {id: scenario === 'admin' ? ids.preleveur : ids.collector, email: 'collector@example.test'}}})
+      userInfo: {id: agent ? ids.preleveur : ids.collector, email: agent ? 'agent@example.test' : 'collector@example.test'}}})
   await context.addCookies(['next-auth.session-token', '__Secure-next-auth.session-token'].map(name => ({
     name, value: token, url: frontUrl, httpOnly: true, secure: true, sameSite: 'Lax'
   })))
@@ -26,6 +28,24 @@ async function writes(context, apiToken) {
     headers: {authorization: `Bearer ${apiToken}`}
   })
   return response.json()
+}
+
+async function setTheme(page, theme) {
+  const settings = page.getByRole('button', {name: "Paramètres d'affichage", exact: true})
+  await expect(settings).toHaveAttribute('data-fr-js-modal-button', 'true')
+  await settings.click()
+  const modal = page.locator('#fr-theme-modal')
+  const label = theme === 'dark' ? 'Thème sombre' : 'Thème clair'
+  await expect(modal).toBeVisible()
+  await modal.getByText(label, {exact: true}).click()
+  await expect(modal.getByRole('radio', {name: label, exact: true})).toBeChecked()
+  await modal.getByRole('button', {name: 'Fermer', exact: true}).click()
+  await expect(modal).not.toBeVisible()
+  await expect(page.locator('html')).toHaveAttribute('data-fr-theme', theme)
+}
+
+async function assertNoHorizontalOverflow(page) {
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
 }
 
 test('édition partagée : champs protégés absents et version transmise', async ({page, context}, testInfo) => {
@@ -120,15 +140,189 @@ test('la création attend le chargement interactif avant de permettre la saisie'
 test('un admin active puis révoque sans supprimer les zones choisies', async ({page, context}) => {
   const token = await authenticate(context, 'admin')
   await page.goto(`${frontUrl}/declarants/${ids.collector}/gestion`)
-  const enabled = page.getByLabel('Autoriser la gestion des points', {exact: true})
+  const enabled = page.getByLabel('Autoriser ce collecteur', {exact: true})
   await expect(enabled).not.toBeChecked()
+  const zones = page.getByRole('button', {name: 'Zones où créer ou déplacer un point', exact: true})
+  await expect(zones).toHaveCount(0)
   await enabled.check()
-  await page.getByRole('button', {name: 'Enregistrer l’habilitation', exact: true}).click()
-  await expect(page.getByText('Gestion des points autorisée.', {exact: true})).toBeVisible()
+  await expect(zones).toBeVisible()
+  await page.getByRole('button', {name: 'Enregistrer les droits', exact: true}).click()
+  await expect(page.getByText('Autorisation enregistrée.', {exact: true})).toBeVisible()
   await enabled.uncheck()
-  await page.getByRole('button', {name: 'Enregistrer l’habilitation', exact: true}).click()
-  await expect(page.getByText('Gestion des points désactivée. Les autres droits sont conservés.')).toBeVisible()
+  await expect(zones).toHaveCount(0)
+  await page.getByRole('button', {name: 'Enregistrer les droits', exact: true}).click()
+  await expect(page.getByText('Autorisation retirée. Les autres droits sont conservés.')).toBeVisible()
+  await enabled.check()
+  await expect(zones).toContainText('Territoire synthétique')
   expect((await writes(context, token)).map(item => item.body)).toEqual([
     {enabled: true, zoneIds: [ids.zone]}, {enabled: false, zoneIds: [ids.zone]}
   ])
+})
+
+test('gestion du déclarant : sections accessibles et formulaire conservé dans les deux thèmes', async ({page, context}, testInfo) => {
+  const token = await authenticate(context, 'admin')
+  await page.goto(`${frontUrl}/declarants/${ids.collector}/gestion`)
+  await expect(page.getByRole('heading', {level: 1})).toHaveText('Gestion du déclarant')
+  await expect(page.getByRole('link', {name: 'Retour à la fiche', exact: true})).toHaveAttribute('href', `/declarants/${ids.collector}`)
+  const titles = ['Création et modification des points', 'Quels agents peuvent consulter ce déclarant ?', 'Types de déclaration autorisés',
+    'Connexion temporaire', 'Notification du compte', 'Supprimer le déclarant']
+  for (const title of titles) {
+    await expect(page.getByRole('heading', {level: 2, name: title, exact: true})).toBeVisible()
+    await expect(page.getByRole('region', {name: title, exact: true})).toBeVisible()
+  }
+  await expect(page.getByRole('heading', {name: 'Déclaration annuelle des volumes prélevés', exact: true})).toBeVisible()
+  const enabled = page.getByLabel('Autoriser ce collecteur', {exact: true})
+  await enabled.check()
+  const card = page.getByRole('region', {name: 'Création et modification des points', exact: true})
+  const backgrounds = []
+  for (const [index, theme] of ['light', 'dark', 'light'].entries()) {
+    await setTheme(page, theme)
+    await expect(enabled).toBeChecked()
+    await expect(page.getByRole('button', {name: 'Enregistrer les droits', exact: true})).toBeEnabled()
+    await assertNoHorizontalOverflow(page)
+    const background = await card.evaluate(element => getComputedStyle(element).backgroundColor)
+    expect(background).not.toBe('rgba(0, 0, 0, 0)')
+    backgrounds.push(background)
+    await page.screenshot({path: testInfo.outputPath(`declarant-management-${index}-${theme}.png`), fullPage: true, animations: 'disabled'})
+  }
+  expect(backgrounds[1]).not.toBe(backgrounds[0])
+  expect(backgrounds[2]).toBe(backgrounds[0])
+  expect(await writes(context, token)).toEqual([])
+})
+
+test('gestion du déclarant : annuler invitation et suppression ne déclenche aucune écriture', async ({page, context}) => {
+  const token = await authenticate(context, 'admin')
+  await page.goto(`${frontUrl}/declarants/${ids.collector}/gestion`)
+  const notification = page.getByRole('region', {name: 'Notification du compte', exact: true})
+  const invite = notification.getByRole('button', {name: 'Envoyer le mail de compte', exact: true})
+  await invite.click()
+  await expect(notification.getByText(/Confirmer l’envoi du mail de création de compte/)).toBeVisible()
+  await assertNoHorizontalOverflow(page)
+  expect(await writes(context, token)).toEqual([])
+  await notification.getByRole('button', {name: 'Annuler', exact: true}).click()
+  await expect(invite).toBeVisible()
+
+  const deletion = page.getByRole('region', {name: 'Supprimer le déclarant', exact: true})
+  const remove = deletion.getByRole('button', {name: 'Supprimer', exact: true})
+  await remove.click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByText(/Cette action est irréversible/)).toBeVisible()
+  await assertNoHorizontalOverflow(page)
+  expect(await writes(context, token)).toEqual([])
+  await dialog.getByRole('button', {name: 'Annuler', exact: true}).click()
+  await expect(dialog).not.toBeVisible()
+  await expect(remove).toBeFocused()
+  await remove.click()
+  await expect(dialog).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(dialog).not.toBeVisible()
+  await expect(remove).toBeFocused()
+  expect(await writes(context, token)).toEqual([])
+})
+
+test('gestion du déclarant : un agent en lecture seule ne voit aucune action de gestion', async ({page, context}) => {
+  const token = await authenticate(context, 'readonly')
+  await page.goto(`${frontUrl}/declarants/${ids.collector}/gestion`)
+  await expect(page.getByRole('heading', {level: 1, name: 'Gestion du déclarant', exact: true})).toBeVisible()
+  await expect(page.getByRole('heading', {level: 2})).toHaveText(['Types de déclaration autorisés'])
+  await expect(page.getByRole('heading', {name: 'Déclaration annuelle des volumes prélevés', exact: true})).toBeVisible()
+  for (const name of ['Ajouter un type', 'Autoriser', 'Modifier', 'Retirer', 'Envoyer le mail de compte', 'Supprimer', 'Prendre la place de ce déclarant']) {
+    await expect(page.getByRole('button', {name, exact: true})).toHaveCount(0)
+  }
+  await assertNoHorizontalOverflow(page)
+  expect(await writes(context, token)).toEqual([])
+})
+
+test('types autorisés : liste simple et ajout sans limite de dates', async ({page, context}) => {
+  const token = await authenticate(context, 'admin')
+  await page.goto(`${frontUrl}/declarants/${ids.collector}/gestion`)
+  const card = page.getByRole('region', {name: 'Types de déclaration autorisés', exact: true})
+  await expect(card.getByText('À partir du 01/01/2026', {exact: true})).toBeVisible()
+  await expect(card.getByText(/VOLUMES_ANNUELS|Version|Non bornée/)).toHaveCount(0)
+  await expect(card.getByLabel('Type de déclaration', {exact: true})).toHaveCount(0)
+  const add = card.getByRole('button', {name: 'Ajouter un type', exact: true})
+  await add.click()
+  const select = card.getByLabel('Type de déclaration', {exact: true})
+  await expect(select).toBeFocused()
+  await select.selectOption(ids.secondDeclarationType)
+  await expect(select.locator('option:checked')).toHaveText('Relevés de compteurs')
+  await expect(card.getByLabel('Date de début (facultative)', {exact: true})).not.toBeVisible()
+  await expect(card.getByText('Sans limite de dates', {exact: true})).toBeVisible()
+  await assertNoHorizontalOverflow(page)
+  await card.getByRole('button', {name: 'Ajouter', exact: true}).click()
+  await expect(card.getByText('Autorisation ajoutée.', {exact: true})).toBeVisible()
+  await expect(card.getByRole('heading', {name: 'Relevés de compteurs', exact: true})).toBeVisible()
+  await expect(add).toBeFocused()
+  expect(await writes(context, token)).toEqual([{
+    path: `/api/declarants/${ids.collector}/declaration-types`, method: 'POST',
+    body: {declarationTypeId: ids.secondDeclarationType, startDate: null, endDate: null}
+  }])
+})
+
+test('types autorisés : annulation sans écriture et période conservée quand le volet est fermé', async ({page, context}) => {
+  const token = await authenticate(context, 'admin')
+  await page.goto(`${frontUrl}/declarants/${ids.collector}/gestion`)
+  const card = page.getByRole('region', {name: 'Types de déclaration autorisés', exact: true})
+  const add = card.getByRole('button', {name: 'Ajouter un type', exact: true})
+  await add.click()
+  await card.getByLabel('Type de déclaration', {exact: true}).selectOption(ids.secondDeclarationType)
+  await card.getByRole('button', {name: 'Annuler', exact: true}).click()
+  await expect(add).toBeFocused()
+  expect(await writes(context, token)).toEqual([])
+  const modify = card.getByRole('button', {name: 'Modifier', exact: true})
+  await modify.click()
+  const start = card.getByLabel('Date de début (facultative)', {exact: true})
+  await expect(start).toBeVisible()
+  await expect(start).toHaveValue('2026-01-01')
+  await card.getByLabel('Type de déclaration', {exact: true}).press('Escape')
+  await expect(modify).toBeFocused()
+  expect(await writes(context, token)).toEqual([])
+  await modify.click()
+  await card.getByLabel('Date de fin (facultative)', {exact: true}).fill('2026-12-31')
+  await card.getByRole('button', {name: 'Limiter à une période', exact: true}).click()
+  await expect(start).not.toBeVisible()
+  await expect(card.getByText('Du 01/01/2026 au 31/12/2026', {exact: true})).toBeVisible()
+  await assertNoHorizontalOverflow(page)
+  await card.getByRole('button', {name: 'Enregistrer', exact: true}).click()
+  await expect(card.getByText('Autorisation mise à jour.', {exact: true})).toBeVisible()
+  await expect(card.getByText('Du 01/01/2026 au 31/12/2026', {exact: true})).toBeVisible()
+  expect(await writes(context, token)).toEqual([{
+    path: `/api/declarants/${ids.collector}/declaration-types/${ids.declarationTypeLink}`, method: 'PUT',
+    body: {declarationTypeId: ids.declarationType, startDate: '2026-01-01', endDate: '2026-12-31'}
+  }])
+})
+
+test('types autorisés : erreur visible et saisie conservée', async ({page, context}) => {
+  const token = await authenticate(context, 'admin-type-error')
+  await page.goto(`${frontUrl}/declarants/${ids.collector}/gestion`)
+  const card = page.getByRole('region', {name: 'Types de déclaration autorisés', exact: true})
+  await card.getByRole('button', {name: 'Ajouter un type', exact: true}).click()
+  await card.getByLabel('Type de déclaration', {exact: true}).selectOption(ids.declarationType)
+  await card.getByRole('button', {name: 'Limiter à une période', exact: true}).click()
+  await card.getByLabel('Date de début (facultative)', {exact: true}).fill('2026-06-01')
+  await card.getByRole('button', {name: 'Limiter à une période', exact: true}).click()
+  await card.getByRole('button', {name: 'Ajouter', exact: true}).click()
+  await expect(card.getByRole('alert')).toContainText('Une autorisation existe déjà sur cette période.')
+  await expect(card.getByLabel('Type de déclaration', {exact: true})).toHaveValue(ids.declarationType)
+  await expect(card.getByText('À partir du 01/06/2026', {exact: true})).toBeVisible()
+  await card.getByRole('button', {name: 'Limiter à une période', exact: true}).click()
+  await expect(card.getByLabel('Date de début (facultative)', {exact: true})).toHaveValue('2026-06-01')
+  expect(await writes(context, token)).toHaveLength(1)
+})
+
+test('types autorisés : le retrait exige toujours une confirmation', async ({page, context}) => {
+  const token = await authenticate(context, 'admin')
+  await page.goto(`${frontUrl}/declarants/${ids.collector}/gestion`)
+  const card = page.getByRole('region', {name: 'Types de déclaration autorisés', exact: true})
+  page.once('dialog', dialog => dialog.dismiss())
+  await card.getByRole('button', {name: 'Retirer', exact: true}).click()
+  expect(await writes(context, token)).toEqual([])
+  page.once('dialog', dialog => dialog.accept())
+  await card.getByRole('button', {name: 'Retirer', exact: true}).click()
+  await expect(card.getByText('Autorisation retirée.', {exact: true})).toBeVisible()
+  await expect(card.getByRole('heading', {name: 'Déclaration annuelle des volumes prélevés', exact: true})).toHaveCount(0)
+  expect(await writes(context, token)).toEqual([{
+    path: `/api/declarants/${ids.collector}/declaration-types/${ids.declarationTypeLink}`, method: 'DELETE', body: null
+  }])
 })

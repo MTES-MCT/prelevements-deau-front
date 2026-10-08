@@ -1,4 +1,4 @@
-import {Typography} from '@mui/material'
+import Button from '@codegouvfr/react-dsfr/Button'
 import {notFound} from 'next/navigation'
 
 import {buildPageTitle} from '@/app/metadata-utils.js'
@@ -77,10 +77,18 @@ const Page = async ({params}) => {
     : null
 
   return (
-    <div className='fr-container mb-8'>
-      <Typography component='h1' variant='h3' sx={{pb: 5}}>
-        Gestion du déclarant
-      </Typography>
+    <div className='mb-10'>
+      <div className='mb-6 flex flex-wrap items-start justify-between gap-4'>
+        <div className='min-w-0'>
+          <h1 className='fr-h2 fr-mb-1w'>Gestion du déclarant</h1>
+          <p className='fr-mb-0 break-words text-[var(--text-mention-grey)]'>
+            {getDeclarantTitleFromDeclarant(declarant)}
+          </p>
+        </div>
+        <Button priority='secondary' size='small' iconId='fr-icon-arrow-left-line' linkProps={{href: `/declarants/${id}`}}>
+          Retour à la fiche
+        </Button>
+      </div>
 
       <DeclarantManagementSection
         canImpersonate={canImpersonate}

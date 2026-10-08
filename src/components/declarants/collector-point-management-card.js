@@ -4,7 +4,7 @@ import {useMemo, useState} from 'react'
 import Button from '@codegouvfr/react-dsfr/Button'
 import {Alert, Checkbox, FormControlLabel} from '@mui/material'
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
-import SectionCard from '@/components/ui/SectionCard/index.js'
+import DeclarantManagementCard from '@/components/declarants/declarant-management-card.js'
 import {collectorManagementHasChanges, collectorManagementZoneOptions} from '@/lib/collector-point-management.js'
 import {updateCollectorPointManagementAction} from '@/server/actions/collector-point-management.js'
 
@@ -28,13 +28,13 @@ const CollectorPointManagementCard = ({collecteurId, initialManagement, availabl
     try {
       const result = await updateCollectorPointManagementAction(collecteurId, {enabled, zoneIds})
       if (!result.success) {
-        setError(result.error || 'Impossible d’enregistrer cette habilitation.')
+        setError(result.error || 'Impossible d’enregistrer cette autorisation.')
         return
       }
       setSaved(result.data)
       setEnabled(result.data.enabled)
       setZoneIds(result.data.zoneIds)
-      setSuccess(result.data.enabled ? 'Gestion des points autorisée.' : 'Gestion des points désactivée. Les autres droits sont conservés.')
+      setSuccess(result.data.enabled ? 'Autorisation enregistrée.' : 'Autorisation retirée. Les autres droits sont conservés.')
     } catch {
       setError('L’enregistrement a échoué. Réessayez.')
     } finally {
@@ -43,8 +43,10 @@ const CollectorPointManagementCard = ({collecteurId, initialManagement, availabl
   }
 
   return (
-    <SectionCard title='Gestion des points' icon='ri-map-pin-add-line' editorOnly={false}>
-      {loadError || !initialManagement ? <Alert severity='error'>Impossible de charger cette habilitation. Rechargez la page.</Alert> : (
+    <DeclarantManagementCard id='collector-point-management' title='Création et modification des points'
+      description='Pour les points des préleveurs suivis par ce collecteur.'
+    >
+      {loadError || !initialManagement ? <Alert severity='error'>Impossible de charger cette autorisation. Rechargez la page.</Alert> : (
         <form className='flex flex-col gap-4' onSubmit={save}>
           <div>
             <FormControlLabel
@@ -52,40 +54,43 @@ const CollectorPointManagementCard = ({collecteurId, initialManagement, availabl
                 setEnabled(event.target.checked)
                 setSuccess(null)
               }} />}
-              label='Autoriser la gestion des points'
+              label='Autoriser ce collecteur'
             />
-            <p className='fr-text--sm fr-mb-0'>
-              Le collecteur peut modifier les points qu’il suit et en créer pour ses préleveurs.
-              Les points partagés sont modifiés pour toutes leurs exploitations.
-            </p>
           </div>
-          <GroupedMultiselect
-            searchable
-            showCheckboxes
-            disabled={pending || !enabled}
-            id={`collector-management-zones-${collecteurId}`}
-            label='Zones autorisées pour créer ou déplacer un point'
-            hint='Ces zones ne donnent pas accès aux autres points ou préleveurs.'
-            options={options}
-            value={zoneIds}
-            placeholder='Sélectionner une ou plusieurs zones'
-            state={missingZones ? 'error' : 'default'}
-            stateRelatedMessage={missingZones ? 'Sélectionnez au moins une zone.' : null}
-            onChange={next => {
-              setZoneIds(next)
-              setSuccess(null)
-            }}
-          />
+          {enabled && (
+            <>
+              <GroupedMultiselect
+                searchable
+                showCheckboxes
+                disabled={pending}
+                id={`collector-management-zones-${collecteurId}`}
+                label='Zones où créer ou déplacer un point'
+                hint='Aucun accès supplémentaire aux autres points de ces zones.'
+                options={options}
+                value={zoneIds}
+                placeholder='Sélectionner une ou plusieurs zones'
+                state={missingZones ? 'error' : 'default'}
+                stateRelatedMessage={missingZones ? 'Sélectionnez au moins une zone.' : null}
+                onChange={next => {
+                  setZoneIds(next)
+                  setSuccess(null)
+                }}
+              />
+              <p className='fr-text--sm fr-mb-0 text-[var(--text-mention-grey)]'>
+                Les modifications d’un point partagé s’appliquent à tous les préleveurs concernés.
+              </p>
+            </>
+          )}
           {error && <Alert severity='error'>{error}</Alert>}
           {success && <Alert severity='success'>{success}</Alert>}
           <div className='flex justify-end'>
             <Button type='submit' disabled={pending || !hasChanges || missingZones}>
-              {pending ? 'Enregistrement…' : 'Enregistrer l’habilitation'}
+              {pending ? 'Enregistrement…' : 'Enregistrer les droits'}
             </Button>
           </div>
         </form>
       )}
-    </SectionCard>
+    </DeclarantManagementCard>
   )
 }
 

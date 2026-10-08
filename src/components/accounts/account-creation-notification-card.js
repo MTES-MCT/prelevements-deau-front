@@ -3,8 +3,9 @@
 import {useMemo, useState, useTransition} from 'react'
 
 import moment from 'moment'
+import Button from '@codegouvfr/react-dsfr/Button'
 
-import SectionCard from '@/components/ui/SectionCard/index.js'
+import DeclarantManagementCard from '@/components/declarants/declarant-management-card.js'
 import {sendDeclarantAccountCreationNotificationAction} from '@/server/actions/declarants.js'
 
 function getDeclarantId(declarant) {
@@ -38,23 +39,20 @@ const AccountCreationNotificationCard = ({declarant}) => {
     if (result?.success) {
       return {
         className: 'fr-badge fr-badge--green-emeraude',
-        label: 'Notification envoyée',
-        description: 'Le mail de création de compte a bien été envoyé.'
+        label: 'Notification envoyée'
       }
     }
 
     if (lastSentAt) {
       return {
         className: 'fr-badge fr-badge--blue-cumulus',
-        label: 'Déjà notifié',
-        description: 'Un mail de création de compte a déjà été envoyé.'
+        label: 'Déjà notifié'
       }
     }
 
     return {
       className: 'fr-badge fr-badge--orange-terre-battue',
-      label: 'Non notifié',
-      description: 'Aucun mail de création de compte n’a encore été envoyé.'
+      label: 'Non notifié'
     }
   }, [lastSentAt, result])
 
@@ -74,64 +72,61 @@ const AccountCreationNotificationCard = ({declarant}) => {
   }
 
   return (
-    <SectionCard title='Notification du compte'>
-      <div className='fr-grid-row fr-grid-row--gutters fr-grid-row--middle'>
-        <div className='fr-col-12 fr-col-lg-8'>
-          <p className={`fr-mb-1w ${status.className}`}>{status.label}</p>
-          <p className='fr-text--sm fr-mb-2w'>{status.description}</p>
-
-          <div className='fr-text--sm fr-text-mention--grey fr-mb-1v'>
-            Dernier mail de création de compte
-          </div>
-          <div className='fr-text--bold'>{formatDate(lastSentAt)}</div>
+    <DeclarantManagementCard id='declarant-notification' title='Notification du compte'
+      description='Envoyer au déclarant les informations pour accéder à son compte.'
+    >
+      <div className='flex flex-col gap-4'>
+        <div>
+          <p className={`fr-mb-1w fr-badge--sm ${status.className}`} role='status'>{status.label}</p>
+          <p className='fr-text--sm fr-mb-0 text-[var(--text-mention-grey)]'>
+            Dernier envoi : {formatDate(lastSentAt)}
+          </p>
 
           {result?.error && (
-            <p className='fr-text--sm fr-mt-2w fr-mb-0' style={{color: 'var(--text-default-error)'}}>
+            <p role='alert' className='fr-text--sm fr-mt-2w fr-mb-0' style={{color: 'var(--text-default-error)'}}>
               {result.error}
             </p>
           )}
         </div>
 
-        <div className='fr-col-12 fr-col-lg-4'>
+        <div>
           {isConfirming ? (
-            <div className='fr-p-2w fr-background-alt--grey fr-radius-a'>
+            <div className='p-4 bg-[var(--background-alt-grey)]'>
               <p className='fr-text--sm fr-mb-2w'>
                 Confirmer l’envoi du mail de création de compte&nbsp;?
               </p>
 
-              <div className='fr-btns-group fr-btns-group--inline fr-btns-group--sm fr-mb-0'>
-                <button
-                  type='button'
-                  className='fr-btn'
+              <div className='flex flex-wrap gap-2'>
+                <Button
+                  size='small'
                   disabled={isPending}
                   onClick={handleSend}
                 >
                   {isPending ? 'Envoi…' : 'Confirmer'}
-                </button>
+                </Button>
 
-                <button
-                  type='button'
-                  className='fr-btn fr-btn--secondary'
+                <Button
+                  size='small'
+                  priority='secondary'
                   disabled={isPending}
                   onClick={() => setIsConfirming(false)}
                 >
                   Annuler
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
-            <button
-              type='button'
-              className='fr-btn'
+            <Button
+              priority='secondary'
               disabled={isPending || !declarantId}
               onClick={() => setIsConfirming(true)}
             >
               Envoyer le mail de compte
-            </button>
+            </Button>
           )}
         </div>
       </div>
-    </SectionCard>
+    </DeclarantManagementCard>
   )
 }
 
