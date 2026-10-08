@@ -3,6 +3,7 @@ import ImpersonateUserButton from '@/components/auth/impersonate-user-button.js'
 import DeclarantDeclarationTypesCard from '@/components/declarants/declarant-declaration-types-card.js'
 import DeclarantZonesCard from '@/components/declarants/declarant-zones-card.js'
 import CollectorPointManagementCard from '@/components/declarants/collector-point-management-card.js'
+import DeclarantManagementCard from '@/components/declarants/declarant-management-card.js'
 import PreleveurDeleteSection from '@/components/form/preleveur-delete-section.js'
 import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
 
@@ -25,50 +26,59 @@ const DeclarantManagementSection = ({
     return null
   }
 
+  const hasPermissions = canManageCollectorPoints || canManageZones || canReadDeclarationTypes
+  const hasAccountActions = canImpersonate || canInvite
+
   return (
     <div className='flex flex-col gap-6'>
-      {canImpersonate && (
-        <section className='border border-gray-200 p-5 md:p-6'>
-          <div className='mb-4'>
-            <h2 className='fr-h5 fr-mb-1w'>Connexion temporaire</h2>
-            <p className='fr-text--sm fr-mb-0'>
-              Ouvrir l’application avec les droits de ce déclarant pour vérifier son accès.
-            </p>
-          </div>
-          <ImpersonateUserButton
-            label='Prendre la place de ce déclarant'
-            priority='secondary'
-            targetLabel={getDeclarantTitleFromDeclarant(declarant)}
-            targetUserId={declarantId}
-          />
-        </section>
-      )}
+      <div className={hasPermissions && hasAccountActions
+        ? 'grid min-w-0 grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]'
+        : 'grid min-w-0 grid-cols-1 gap-6'}
+      >
+        {hasPermissions && <div className='flex min-w-0 flex-col gap-6'>
+          {canManageCollectorPoints && (
+            <CollectorPointManagementCard
+              collecteurId={declarantId}
+              initialManagement={pointManagementResult?.data}
+              availableZones={zoneOptions}
+              loadError={!pointManagementResult?.success || !pointManagementZonesLoaded}
+            />
+          )}
 
-      {canInvite && <AccountCreationNotificationCard declarant={declarant} />}
+          {canManageZones && (
+            <DeclarantZonesCard
+              availableZones={zoneOptions}
+              declarantId={declarantId}
+              initialItems={zoneItems}
+            />
+          )}
 
-      {canManageCollectorPoints && (
-        <CollectorPointManagementCard
-          collecteurId={declarantId}
-          initialManagement={pointManagementResult?.data}
-          availableZones={zoneOptions}
-          loadError={!pointManagementResult?.success || !pointManagementZonesLoaded}
-        />
-      )}
+          {canReadDeclarationTypes && (
+            <DeclarantDeclarationTypesCard
+              declarantId={declarantId}
+              initialPayload={declarationTypesPayload}
+            />
+          )}
+        </div>}
 
-      {canManageZones && (
-        <DeclarantZonesCard
-          availableZones={zoneOptions}
-          declarantId={declarantId}
-          initialItems={zoneItems}
-        />
-      )}
-
-      {canReadDeclarationTypes && (
-        <DeclarantDeclarationTypesCard
-          declarantId={declarantId}
-          initialPayload={declarationTypesPayload}
-        />
-      )}
+        {hasAccountActions && <div className='flex min-w-0 flex-col gap-6'>
+          {canImpersonate && (
+            <DeclarantManagementCard
+              id='declarant-connection'
+              title='Connexion temporaire'
+              description='Vérifier l’accès à l’application avec les droits de ce déclarant.'
+            >
+              <ImpersonateUserButton
+                label='Prendre la place de ce déclarant'
+                priority='secondary'
+                targetLabel={getDeclarantTitleFromDeclarant(declarant)}
+                targetUserId={declarantId}
+              />
+            </DeclarantManagementCard>
+          )}
+          {canInvite && <AccountCreationNotificationCard declarant={declarant} />}
+        </div>}
+      </div>
 
       {canDelete && <PreleveurDeleteSection preleveur={declarant} />}
     </div>
