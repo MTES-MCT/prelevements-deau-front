@@ -68,7 +68,7 @@ function findUsageOptionBySearchValue(usageOptions, value) {
     return null
   }
 
-  return usageOptions.find(option => [
+  return usageOptions.find(option => !option.disabled && [
     option.code,
     option.label,
     formatUsageOptionLabel(option)
@@ -115,6 +115,7 @@ const UsageCombobox = ({
   id,
   name,
   onFocus,
+  onBlur,
   onUsageChange,
   options,
   referenceOptions = options,
@@ -126,6 +127,8 @@ const UsageCombobox = ({
   selectedValue,
   value,
   variant = 'default',
+  placeholder,
+  selectOnExactMatch = true,
   warning
 }) => {
   const campaign = variant === 'campaign'
@@ -234,7 +237,7 @@ const UsageCombobox = ({
   }, [unavailable, updateDropdownPosition])
 
   const selectUsage = useCallback(usage => {
-    if (unavailable) return
+    if (unavailable || usage.disabled) return
     onUsageChange({
       usageId: usage.value,
       usageSearch: formatUsageOptionLabel(usage)
@@ -271,11 +274,13 @@ const UsageCombobox = ({
             tabIndex={-1}
             aria-label={usage.parentUsage ? `${formatUsageOptionLabel(usage)} — ${formatUsageParentLabel(usage.parentUsage)}` : undefined}
             aria-selected={isSelected}
+            aria-disabled={usage.disabled || undefined}
             className={classNames(
               'flex w-full cursor-pointer items-start border-b border-[var(--border-default-grey)] text-left last:border-b-0',
               campaign ? 'min-h-12 gap-3 px-3 py-3 text-sm leading-6' : 'gap-1.5 px-2 py-2 text-xs',
               isActive ? 'bg-[var(--background-contrast-blue-france)] text-[var(--text-action-high-blue-france)]' : campaign && !usage.parentUsage ? 'bg-[var(--background-alt-grey)] hover:bg-[var(--background-contrast-blue-france)]' : 'bg-[var(--background-default-grey)] hover:bg-[var(--background-alt-grey)]',
               isSelected && 'font-semibold',
+              usage.disabled && 'cursor-not-allowed opacity-50',
               !usage.parentUsage && 'font-semibold',
               campaign && usage.parentUsage && 'pl-8'
             )}
@@ -354,7 +359,7 @@ const UsageCombobox = ({
           aria-haspopup='listbox'
           aria-describedby={describedBy}
           value={value}
-          placeholder={campaign ? 'Choisir un usage' : 'Rechercher'}
+          placeholder={placeholder ?? (campaign ? 'Choisir un usage' : 'Rechercher')}
           autoComplete='off'
           onFocus={event => {
             if (unavailable) return
@@ -363,13 +368,16 @@ const UsageCombobox = ({
             openDropdown({filter: false})
           }}
           onClick={campaign ? () => { if (!open) openDropdown({filter: false}) } : undefined}
-          onBlur={campaign ? event => {
-            if (!containerRef.current?.contains(event.relatedTarget) && !listboxRef.current?.contains(event.relatedTarget)) setOpen(false)
-          } : undefined}
+          onBlur={event => {
+            if (!containerRef.current?.contains(event.relatedTarget) && !listboxRef.current?.contains(event.relatedTarget)) {
+              if (campaign) setOpen(false)
+              onBlur?.(event)
+            }
+          }}
           onChange={event => {
             if (unavailable) return
             const usageSearch = event.target.value
-            const selectedUsage = findUsageOptionBySearchValue(options, usageSearch)
+            const selectedUsage = selectOnExactMatch ? findUsageOptionBySearchValue(options, usageSearch) : null
 
             onUsageChange({
               usageSearch,
@@ -391,9 +399,9 @@ const UsageCombobox = ({
               setActiveIndex(index => Math.max(index - 1, 0))
             }
 
-            if (event.key === 'Enter' && open && visibleOptions[activeIndex]) {
+            if (event.key === 'Enter' && open) {
               event.preventDefault()
-              selectUsage(visibleOptions[activeIndex])
+              if (visibleOptions[activeIndex]) selectUsage(visibleOptions[activeIndex])
             }
 
             if (event.key === 'Escape') {
