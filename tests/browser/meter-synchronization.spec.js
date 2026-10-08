@@ -88,10 +88,12 @@ async function openChartSelector(page) {
 }
 
 async function revealChart(page) {
-  await page.getByRole('main').evaluate(main => {
-    const loading = [...main.querySelectorAll('[role="status"]')].find(element => element.textContent.includes('Chargement'))
-    loading?.scrollIntoView({block: 'center'})
-  })
+  const main = page.getByRole('main')
+  // DeferredRender stays mounted while its loading placeholder is replaced.
+  const loading = main.getByRole('status').filter({hasText: /^Chargement (des séries|de la visualisation)…$/}).locator('..')
+  const selector = main.getByRole('button', {name: 'Paramètres à afficher', exact: true})
+  // Wait for the streamed page content, not its initial page-loading status.
+  await loading.or(selector).first().scrollIntoViewIfNeeded()
 }
 
 async function chooseChartParameter(page, label) {
