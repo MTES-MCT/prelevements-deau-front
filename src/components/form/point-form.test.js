@@ -13,7 +13,7 @@ import * as flowTypes from '../../lib/point-flow-types.js'
 
 const require = createRequire(import.meta.url)
 
-function renderPointForm(point, setPoint = () => {}) {
+function renderPointForm(point, setPoint = () => {}, extraProps = {}) {
   const controls = new Map()
   const input = ({label, nativeInputProps, nativeTextAreaProps, textArea, required, state, stateRelatedMessage}) => {
     const props = textArea ? nativeTextAreaProps : nativeInputProps
@@ -60,6 +60,10 @@ function renderPointForm(point, setPoint = () => {}) {
         }
       }
 
+      if (specifier === '@/components/form/point-commune-select.js') {
+        return () => React.createElement('div', null, 'Sélection de commune')
+      }
+
       if (specifier === '@/components/ui/AccordionCentered/index.js' || specifier === '@/components/ui/deferred-render.js') {
         return function Container({children}) {
           return React.createElement('div', null, children)
@@ -81,7 +85,7 @@ function renderPointForm(point, setPoint = () => {}) {
     return compiledModule.exports
   }
 
-  const html = renderToStaticMarkup(React.createElement(loadComponent('point-form').default, {point, setPoint, handleSetGeom() {}}))
+  const html = renderToStaticMarkup(React.createElement(loadComponent('point-form').default, {point, setPoint, handleSetGeom() {}, ...extraProps}))
   return {html, controls}
 }
 
@@ -89,6 +93,44 @@ const pointFixture = () => ({
   id: 'point', name: 'Forage des prés', flowType: 'PRELEVEMENT', pointKind: 'PHYSIQUE', waterBodyType: 'SOUTERRAIN',
   nature: 'NAPPE', withdrawalType: 'SOUTERRAIN', coordinates: [1.25, 44.5], locationDescription: 'Parcelle du moulin',
   geometryPrecision: 'Coordonnées précises', comment: 'Accès par le chemin', internalComment: 'Vérifier la localisation'
+})
+
+test('le collecteur n’a ni identifiants techniques, ni commentaire interne, ni requalification historique', t => {
+  const {html, controls} = renderPointForm({...pointFixture(), nature: 'PLAN_EAU'}, () => {}, {
+    editableFields: ['usageName', 'coordinates'], canEditLocation: true
+  })
+  t.false(controls.has('Nom du point *'))
+  t.false(controls.has('Type de point *'))
+  t.false(controls.has('Nature du point *'))
+  t.false(controls.has('Identifiant du plan d’eau'))
+  t.false(controls.has('Remarque interne (visible uniquement par les agents)'))
+  t.true(controls.has('Nom d’usage'))
+  t.true(controls.has('Date de mise en service'))
+  t.true(controls.has('Profondeur (m)'))
+  t.true(html.includes('Sélection de commune'))
+  t.false(html.includes('Champs optionnels'))
+})
+
+test('une localisation particulière désactive le milieu et la carte seulement', t => {
+  const {html, controls} = renderPointForm(pointFixture(), () => {}, {editableFields: ['usageName'], canEditLocation: false})
+  t.true(controls.get('Type de milieu *').disabled)
+  t.false(html.includes('Chargement de la carte…'))
+  t.true(html.includes('rattachements territoriaux particuliers'))
+  t.true(controls.has('Remarque'))
+})
+
+test('la création collecteur expose uniquement les identifiants initiaux autorisés', t => {
+  const {controls} = renderPointForm(pointFixture(), () => {}, {editableFields: ['name', 'flowType', 'usageName']})
+  t.true(controls.has('Nom du point *'))
+  t.true(controls.has('Type de point *'))
+  t.false(controls.has('Nature du point *'))
+})
+
+test('le changement d’origine par un collecteur ne modifie pas l’identifiant technique du plan d’eau', t => {
+  let patch
+  const {controls} = renderPointForm({...pointFixture(), nature: 'PLAN_EAU'}, updater => {patch = updater({})}, {editableFields: ['nature']})
+  controls.get('Origine prélèvement / rejet').onChange({target: {value: 'SOURCE'}})
+  t.false(Object.hasOwn(patch, 'waterBodyIdentifier'))
 })
 
 test('le HTML initial garde la saisie désactivée jusqu’à l’hydratation React', t => {

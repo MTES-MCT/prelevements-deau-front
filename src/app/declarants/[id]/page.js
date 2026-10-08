@@ -42,6 +42,7 @@ import {
   getReglesFromPreleveurAction
 } from '@/server/actions/index.js'
 import {getPointsPrelevementBatchAction} from '@/server/actions/points-prelevement.js'
+import {getMyCollectorPointManagementAction} from '@/server/actions/collector-points.js'
 import {getAggregatedSeriesOptionsAction} from '@/server/actions/series.js'
 import {getCurrentSessionInfo} from '@/server/actions/user.js'
 
@@ -348,6 +349,9 @@ const Page = async ({params}) => {
   const declarantId = getDeclarantId(declarant)
   const declarantRole = getDeclarantRole(declarant)
   const isCollecteur = declarantRole === 'COLLECTEUR'
+  const collectorManagement = !isCollecteur && currentUserResult?.data?.declarantRole === 'COLLECTEUR'
+    ? await getMyCollectorPointManagementAction()
+    : null
   const preleveurTypeLabel = getPreleveurTypeLabel(getPreleveurType(declarant))
   const exploitations = getDeclarantDetailExploitations(declarant)
   const pointIds = getExploitationPointIds(exploitations)
@@ -403,6 +407,13 @@ const Page = async ({params}) => {
           }
         ].filter(Boolean)}
         hrefButtons={[
+          {
+            label: 'Ajouter un point',
+            icon: 'fr-icon-add-line',
+            priority: 'secondary',
+            href: `/points-prelevement/new?preleveurId=${declarantId}`,
+            hidden: collectorManagement?.data?.enabled !== true
+          },
           {
             label: 'Gérer les exploitations',
             icon: 'fr-icon-link',
