@@ -24,6 +24,9 @@ const meterRequests = new Map()
 const refreshedMeters = new Set()
 const readingRequests = new Map()
 const syntheticExports = new Map()
+// Dedicated months isolate the stale-snapshot scenario across browser engines.
+const staleStatsMonths = new Set(['2026-01', '2026-02', '2026-03'])
+const staleStatsRequests = new Map()
 const sourceId = '55555555-5555-4555-8555-555555555555'
 const streamId = '66666666-6666-4666-8666-666666666666'
 const targetId = '77777777-7777-4777-8777-777777777777'
@@ -48,13 +51,38 @@ const api = createServer(async (request, response) => {
     return send(200, {success: true})
   }
 
+  if (pathname === '/__public-stats-fixture-requests' && request.method === 'GET') {
+    const month = new URL(request.url, 'http://127.0.0.1:3431').searchParams.get('month')
+    return send(200, staleStatsRequests.get(month) ?? [])
+  }
+
   if (pathname === '/api/stats/public' && request.method === 'GET') {
     const month = new URL(request.url, 'http://127.0.0.1:3431').searchParams.get('month') ?? '2026-08'
+    if (staleStatsMonths.has(month)) {
+      const requests = staleStatsRequests.get(month) ?? []
+      requests.push({month, hasAuthorization: Boolean(request.headers.authorization), hasCookie: Boolean(request.headers.cookie)})
+      staleStatsRequests.set(month, requests)
+      const data = createPublicStatsFixture(month)
+      data.generatedAt = new Date(Date.now() - (requests.length === 1 ? 2 * 60 * 60 * 1000 : 0)).toISOString()
+      // Distinct values prove that the selected month, not the latest one, won.
+      for (const territories of Object.values(data.territories)) {
+        for (const territory of territories) {
+          territory.reportingPreleveursCount = 4
+          territory.reportingRate = 40
+          territory.profiles[0].reportingCount = 3
+          territory.profiles[1].reportingCount = 1
+        }
+      }
+      data.channels = [{key: 'DIRECT', count: 2, percentage: 50}, {key: 'THIRD_PARTY', count: 2, percentage: 50}]
+      return send(200, data)
+    }
     if (!['2026-06', '2026-07', '2026-08'].includes(month)) {
       return send(400, {message: 'Sélectionnez un mois terminé.'})
     }
 
-    return send(200, createPublicStatsFixture(month))
+    const data = createPublicStatsFixture(month)
+    data.availableMonths = [...staleStatsMonths, ...data.availableMonths]
+    return send(200, data)
   }
 
   const meterRole = /^Bearer browser-test-meter-admin(?:-|$)/.test(request.headers.authorization) ? 'ADMIN'

@@ -45,6 +45,37 @@ test.beforeEach(async ({page}) => {
   })
 })
 
+test('un instantané périmé est renouvelé pendant la première navigation sans rechargement', async ({page, request}, testInfo) => {
+  const month = {chromium: '2026-01', webkit: '2026-02', mobile: '2026-03'}[testInfo.project.name]
+  expect(month).toBeDefined()
+  const documents = []
+  const errors = []
+  page.on('request', request => {
+    if (request.isNavigationRequest() && request.frame() === page.mainFrame()) documents.push(request.url())
+  })
+  page.on('pageerror', error => errors.push(error.message))
+
+  await page.goto(`/stats?month=${month}`)
+
+  const territories = page.getByRole('region', {name: territoriesName})
+  await expect(territories.getByRole('combobox', {name: 'Mois', exact: true})).toHaveValue(month)
+  await expect(territories.getByRole('article')).toContainText('4 sur 10 préleveurs')
+  await expect(territories.getByRole('article')).toContainText('40 %')
+  await expect(page.getByText('Les données de ce mois sont temporairement indisponibles', {exact: true})).toHaveCount(0)
+  await expect(page.getByText('Les statistiques sont temporairement indisponibles', {exact: true})).toHaveCount(0)
+  await expect(page.getByRole('region', {name: 'Comment la donnée arrive'})).toContainText('50 %')
+  await expect(page).toHaveURL(new RegExp(`/stats\\?month=${month}$`))
+  expect(documents).toHaveLength(1)
+
+  const response = await request.get(`http://127.0.0.1:3431/__public-stats-fixture-requests?month=${month}`)
+  expect(response.ok()).toBe(true)
+  expect(await response.json()).toEqual([
+    {month, hasAuthorization: false, hasCookie: false},
+    {month, hasAuthorization: false, hasCookie: false}
+  ])
+  expect(errors).toEqual([])
+})
+
 test('le mois change ensemble les déclarations territoriales et les canaux, pas les graphiques d’activité et d’audience', async ({page}, testInfo) => {
   const errors = []
   page.on('pageerror', error => errors.push(error.message))

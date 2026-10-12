@@ -110,6 +110,102 @@ test('ne présente pas indéfiniment un ancien résultat si la revalidation du c
   }))
 })
 
+test('le premier accès attend des chiffres frais si le cache renvoie un instantané trop ancien', async t => {
+  const requests = []
+  const result = await getPublicStats(undefined, {
+    apiUrl: 'https://api.example.test',
+    now: () => Date.parse('2026-09-09T12:30:00Z'),
+    async fetchImpl(url, options) {
+      requests.push({url, options})
+      const data = requests.length === 1 ? {...snapshot, generatedAt: '2026-09-09T10:00:00Z'} : snapshot
+      return new Response(JSON.stringify(data))
+    }
+  })
+  t.deepEqual(result, {data: snapshot, error: null})
+  t.is(requests.length, 2)
+  t.is(requests[0].url, requests[1].url)
+  t.deepEqual(requests[0].options.next, {revalidate: 60})
+  t.is(requests[1].options.cache, 'no-store')
+  t.is(requests[1].options.next, undefined)
+  t.deepEqual(requests[1].options.headers, {Accept: 'application/json'})
+  t.is(requests[1].options.credentials, 'omit')
+  t.is(requests[0].options.signal, requests[1].options.signal)
+})
+
+test('la relecture conserve le mois demandé et les chiffres globaux du dernier mois', async t => {
+  const requests = []
+  const selected = {...snapshot, month: '2026-07', channels: [{count: 2}]}
+  const result = await getPublicStatsPage('2026-07', {
+    apiUrl: 'https://api.example.test',
+    now: () => Date.parse('2026-09-09T12:30:00Z'),
+    async fetchImpl(url, options) {
+      const month = new URL(url).searchParams.get('month') ?? 'latest'
+      requests.push(month)
+      const data = month === 'latest' ? snapshot
+        : options.cache === 'no-store' ? selected
+          : {...selected, generatedAt: '2026-09-09T10:00:00Z'}
+      return new Response(JSON.stringify(data))
+    }
+  })
+  t.deepEqual(requests, ['latest', '2026-07', '2026-07'])
+  t.deepEqual(result.data, snapshot)
+  t.deepEqual(result.periodData, selected)
+  t.is(result.error, null)
+  t.is(result.periodError, null)
+})
+
+test('une seule relecture est autorisée et ne présente jamais des chiffres périmés ou invalides', async t => {
+  for (const generatedAt of ['2026-09-09T10:00:00Z', null, 'invalid']) {
+    let calls = 0
+    const result = await getPublicStats(undefined, {
+      apiUrl: 'https://api.example.test',
+      now: () => Date.parse('2026-09-09T12:30:00Z'),
+      async fetchImpl() {
+        calls += 1
+        return new Response(JSON.stringify({...snapshot, generatedAt}))
+      }
+    })
+    t.is(calls, 2)
+    t.deepEqual(result, {data: null, error: 'unavailable'})
+  }
+})
+
+test('une panne pendant la relecture reste une erreur explicite, sans ancien résultat', async t => {
+  for (const failure of ['network', 'http', 'json']) {
+    let calls = 0
+    const result = await getPublicStats(undefined, {
+      apiUrl: 'https://api.example.test',
+      now: () => Date.parse('2026-09-09T12:30:00Z'),
+      async fetchImpl() {
+        calls += 1
+        if (calls === 1) {
+          return new Response(JSON.stringify({...snapshot, generatedAt: '2026-09-09T10:00:00Z'}))
+        }
+
+        if (failure === 'network') throw new Error('Private upstream details')
+        return failure === 'http' ? new Response('{}', {status: 503}) : new Response('Invalid JSON')
+      }
+    })
+    t.is(calls, 2)
+    t.deepEqual(result, {data: null, error: 'unavailable'})
+  }
+})
+
+test('une erreur HTTP initiale ne déclenche pas de nouvelle requête, notamment en cas de limitation', async t => {
+  for (const status of [400, 401, 403, 429, 503]) {
+    let calls = 0
+    const result = await getPublicStats(undefined, {
+      apiUrl: 'https://api.example.test',
+      async fetchImpl() {
+        calls += 1
+        return new Response('{}', {status})
+      }
+    })
+    t.is(calls, 1)
+    t.deepEqual(result, {data: null, error: status === 400 ? 'invalid-month' : 'unavailable'})
+  }
+})
+
 test('n’appelle pas l’API si le mois demandé est malformé', async t => {
   const result = await getPublicStats(['2026-08'], {
     apiUrl: 'https://api.example.test',
