@@ -94,7 +94,7 @@ jobs:
         run: npx --no-install playwright test --list --reporter=./.github/scripts/browser-ci-reporter.mjs
       - name: Package the same build, preserving hidden files and symlinks
         run: |
-          tar -czf .artifacts/browser-build/browser-build.tar.gz .next/standalone .next/static public storybook-static
+          tar -czf .artifacts/browser-build/browser-build.tar.gz .next/standalone .next/static .next/react-loadable-manifest.json public storybook-static
           node .github/scripts/browser-ci.mjs seal .artifacts/browser-build
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
