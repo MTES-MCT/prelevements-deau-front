@@ -10,8 +10,8 @@ pour `braces@3.0.3` dans les dépendances de développement. Aucune version corr
 n’est publiée au moment de la préparation, le 4 octobre 2026. Dans le front, cette dépendance est
 utilisée par AVA et le plugin ESLint Next, via `globby`, `fast-glob` et `micromatch`.
 
-L’exception expire le **11 octobre 2026 à 00 h, heure de Paris**
-(`2026-10-10T22:00:00Z`). Elle ne corrige pas le paquet. Le contrôle
+L’exception expire le **19 octobre 2026 à 00 h, heure de Paris**
+(`2026-10-18T22:00:00Z`). Elle ne corrige pas le paquet. Le contrôle
 `node scripts/security/audit-dependencies.js` conserve le rapport npm brut et
 signale explicitement les alertes couvertes. Il vérifie les chemins du lockfile et
 les causes transitives : une autre alerte, un chemin de production, une erreur
