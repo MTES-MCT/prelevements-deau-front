@@ -29,7 +29,7 @@ jobs:
       - name: Test deployment safeguards
         run: |
           for script in .github/scripts/*.mjs; do node --check "$script"; done
-          node --test .github/scripts/deployment-policy.test.mjs
+          node --test .github/scripts/*.test.mjs
       - name: Test audit policy
         run: npx --no-install ava scripts/security/__tests__/audit-dependencies.js
       - name: Audit all dependencies with expiring development exception
@@ -52,10 +52,10 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-  tests:
-    name: Front quality, tests and production builds
+  build:
+    name: Build synthetic browser fixtures
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 15
     env:
       NEXT_TELEMETRY_DISABLED: '1'
       NEXT_PUBLIC_API_URL: http://127.0.0.1:3001
@@ -71,24 +71,182 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-      - run: |
-          npm install --global "$(node -p 'require("./package.json").packageManager')" --ignore-scripts --no-audit --no-fund
+      - name: Use locked npm version
+        run: npm install --global "$(node -p 'require("./package.json").packageManager')" --ignore-scripts --no-audit --no-fund
       - run: npm ci
       - run: npm run lint
       - run: npm test
+      - name: Cache synthetic Next compilation only
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .next/cache
+          key: ${{ runner.os }}-front-synthetic-v1-${{ hashFiles('.nvmrc', 'package.json', 'package-lock.json', '.npmrc', 'next.config.mjs') }}-${{ hashFiles('src/**', 'public/**') }}
+          restore-keys: |
+            ${{ runner.os }}-front-synthetic-v1-${{ hashFiles('.nvmrc', 'package.json', 'package-lock.json', '.npmrc', 'next.config.mjs') }}-
+      - name: Discard cached HTTP responses before building fixtures
+        run: node --input-type=module -e "import {rmSync} from 'node:fs'; rmSync('.next/cache/fetch-cache', {recursive:true, force:true})"
       - run: npm run build
       - run: npm run build-storybook
+      - name: Record the complete browser test inventory
+        env:
+          BROWSER_CI_REPORT: .artifacts/browser-build/inventory.json
+          BROWSER_CI_PART: inventory
+        run: npx --no-install playwright test --list --reporter=./.github/scripts/browser-ci-reporter.mjs
+      - name: Package the same build, preserving hidden files and symlinks
+        run: |
+          tar -czf .artifacts/browser-build/browser-build.tar.gz .next/standalone .next/static public storybook-static
+          node .github/scripts/browser-ci.mjs seal .artifacts/browser-build
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: browser-build-${{ github.sha }}-${{ github.run_attempt }}
+          path: .artifacts/browser-build/
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 1
+
+  browser:
+    name: Browser shard ${{ matrix.shard }}/4
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Use locked npm version
+        run: npm install --global "$(node -p 'require("./package.json").packageManager')" --ignore-scripts --no-audit --no-fund
+      - run: npm ci
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: browser-build-${{ github.sha }}-${{ github.run_attempt }}
+          path: .artifacts/browser-build
+      - name: Verify the synthetic build before extraction
+        run: node .github/scripts/browser-ci.mjs verify-build .artifacts/browser-build
+      - name: Restore the same synthetic build
+        run: tar -xzf .artifacts/browser-build/browser-build.tar.gz
       - name: Install browser engines
         run: npx --no-install playwright install --with-deps chromium webkit
       - name: Browser regression tests (synthetic API only)
-        run: npm run test:browser
-      - name: Retain browser reports and failure traces
+        env:
+          BROWSER_CI_PART: shard-${{ matrix.shard }}
+          BROWSER_CI_REPORT: .artifacts/browser-ci/shard-${{ matrix.shard }}.json
+          PLAYWRIGHT_BLOB_OUTPUT_FILE: .artifacts/browser-ci/blobs/shard-${{ matrix.shard }}.zip
+        run: npm run test:browser -- --project=chromium --project=webkit --project=mobile --shard=${{ matrix.shard }}/4 --workers=2 --reporter=list,blob,./.github/scripts/browser-ci-reporter.mjs
+      - name: Retain shard results and failure traces
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: browser-tests
-          path: |
-            .artifacts/browser-results/
-            .artifacts/browser-report/
-          if-no-files-found: warn
+          name: browser-report-${{ github.sha }}-${{ github.run_attempt }}-shard-${{ matrix.shard }}
+          path: .artifacts/browser-ci/
+          if-no-files-found: error
           retention-days: 14
+
+  spreadsheet:
+    name: Large spreadsheet regression
+    needs: [build, browser]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Use locked npm version
+        run: npm install --global "$(node -p 'require("./package.json").packageManager')" --ignore-scripts --no-audit --no-fund
+      - run: npm ci
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: browser-build-${{ github.sha }}-${{ github.run_attempt }}
+          path: .artifacts/browser-build
+      - name: Verify the synthetic build before extraction
+        run: node .github/scripts/browser-ci.mjs verify-build .artifacts/browser-build
+      - name: Restore the same synthetic build
+        run: tar -xzf .artifacts/browser-build/browser-build.tar.gz
+      - name: Install the spreadsheet browser
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Test the complete 500000-cell export after all browser shards
+        env:
+          BROWSER_CI_PART: spreadsheet
+          BROWSER_CI_REPORT: .artifacts/browser-ci/spreadsheet.json
+          PLAYWRIGHT_BLOB_OUTPUT_FILE: .artifacts/browser-ci/blobs/spreadsheet.zip
+        run: npm run test:browser -- --project=large-spreadsheet --no-deps --workers=2 --reporter=list,blob,./.github/scripts/browser-ci-reporter.mjs
+      - name: Retain spreadsheet results and failure traces
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: browser-report-${{ github.sha }}-${{ github.run_attempt }}-spreadsheet
+          path: .artifacts/browser-ci/
+          if-no-files-found: error
+          retention-days: 14
+
+  reports:
+    name: Verify full browser coverage and merge reports
+    needs: [build, browser, spreadsheet]
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Use locked npm version
+        run: npm install --global "$(node -p 'require("./package.json").packageManager')" --ignore-scripts --no-audit --no-fund
+      - run: npm ci
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: browser-build-${{ github.sha }}-${{ github.run_attempt }}
+          path: .artifacts/browser-build
+      - name: Verify the synthetic build before extraction
+        run: node .github/scripts/browser-ci.mjs verify-build .artifacts/browser-build
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: browser-report-${{ github.sha }}-${{ github.run_attempt }}-*
+          path: .artifacts/browser-ci
+          merge-multiple: true
+      - name: Reject missing, duplicate or failed tests and mismatched execution identities
+        run: node .github/scripts/browser-ci.mjs coverage .artifacts/browser-build .artifacts/browser-ci
+      - name: Merge browser reports
+        if: ${{ !cancelled() }}
+        env:
+          PLAYWRIGHT_HTML_OUTPUT_DIR: .artifacts/browser-report
+        run: npx --no-install playwright merge-reports --reporter=html .artifacts/browser-ci/blobs
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: browser-tests
+          path: .artifacts/browser-report/
+          if-no-files-found: error
+          retention-days: 14
+
+  tests:
+    name: Front quality, tests and production builds
+    needs: [security, build, browser, spreadsheet, reports]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+      - name: Require every quality gate to succeed
+        env:
+          CI_NEEDS: ${{ toJSON(needs) }}
+        run: node .github/scripts/ci-gates.mjs quality
