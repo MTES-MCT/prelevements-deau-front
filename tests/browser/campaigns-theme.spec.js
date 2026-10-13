@@ -154,6 +154,8 @@ test('thème : les campagnes du collecteur et les codes des points restent lisib
     await readable(page.getByText('1 / 1 exploitations ont répondu', {exact: true}))
   })
   await page.getByRole('link', {name: 'Voir les points et les réponses', exact: true}).click()
+  await expect(page).toHaveURL(campaignUrl)
+  await expect(page.locator('#content').getByText('Point synthétique', {exact: true})).toBeVisible()
   await checkThemes(page, testInfo, 'campagne-collecteur-points', async theme => {
     await readable(page.getByText('Point synthétique', {exact: true}), {theme, surface: true})
     await readable(page.getByText('Commune de test · Parcelle du moulin', {exact: true}), {theme, surface: true})
