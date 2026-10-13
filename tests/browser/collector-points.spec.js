@@ -2,6 +2,7 @@ import {randomUUID} from 'node:crypto'
 import {test, expect} from '@playwright/test'
 import {encode} from 'next-auth/jwt'
 import {collectorPointIds as ids} from '../../.github/scripts/collector-point-fixtures.mjs'
+import {usageIds} from '../../.github/scripts/exploitation-usages-fixtures.mjs'
 
 const frontUrl = 'https://127.0.0.1:3443'
 test.use({ignoreHTTPSErrors: true})
@@ -105,7 +106,11 @@ test('création avec nouveau préleveur : pas d’invitation implicite', async (
   await page.getByText('Ou renseigner les coordonnées manuellement sous la carte', {exact: true}).scrollIntoViewIfNeeded()
   await page.getByRole('textbox', {name: /^X Lambert 93/}).fill('650000')
   await page.getByRole('textbox', {name: /^Y Lambert 93/}).fill('6860000')
-  await page.getByLabel('Usage principal *', {exact: true}).selectOption(ids.usage)
+  await page.getByRole('combobox', {name: 'Usage principal *', exact: true}).click()
+  await page.getByRole('option', {name: '2A — Aspersion — 2 — Irrigation', exact: true}).click()
+  await page.getByRole('button', {name: 'Usages secondaires', exact: true}).click()
+  await page.getByRole('option', {name: '2B — Gravitaire', exact: true}).click()
+  await page.getByRole('button', {name: 'Usages secondaires', exact: true}).press('Escape')
   const form = page.getByRole('group', {name: 'Création d’un point et de son exploitation', exact: true})
   await expect.poll(() => form.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true)
   await page.screenshot({path: testInfo.outputPath('collector-create.png'), fullPage: true})
@@ -113,7 +118,7 @@ test('création avec nouveau préleveur : pas d’invitation implicite', async (
   await expect(page).toHaveURL(`${frontUrl}/points-prelevement/${ids.created}`)
   const requests = await writes(context, token)
   expect(requests).toHaveLength(1)
-  expect(requests[0].body).toMatchObject({notifyAccountCreation: false, preleveur: {firstName: 'Camille'}, exploitation: {status: 'EN_ACTIVITE'}})
+  expect(requests[0].body).toMatchObject({notifyAccountCreation: false, preleveur: {firstName: 'Camille'}, exploitation: {status: 'EN_ACTIVITE', usageId: usageIds.spray, secondaryUsageIds: [usageIds.gravity]}})
   expect(requests[0].body.requestId).toMatch(/^[a-f\d-]{36}$/)
 })
 

@@ -1,18 +1,20 @@
 'use client'
 
 import {
-  useCallback, useEffect, useMemo, useState
+  useCallback, useEffect, useId, useMemo, useState
 } from 'react'
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Button} from '@codegouvfr/react-dsfr/Button'
-import {Select} from '@codegouvfr/react-dsfr/SelectNext'
 
 import ExploitationUsageChips from '@/components/exploitations/exploitation-usage-chips.js'
+import UsageCombobox from '@/components/form/usage-combobox.js'
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import {
+  areExploitationUsagesRelated,
   changePrimaryUsage,
-  compareExploitationUsages,
+  flattenExploitationWaterUses,
+  getExploitationUsageParentId,
   isExclusiveUsage,
   normalizeSecondaryUsageIds
 } from '@/lib/exploitation-usages.js'
@@ -23,12 +25,6 @@ import {
   getUsageLabel
 } from '@/lib/water-uses.js'
 import {getWaterUsesAction} from '@/server/actions/referentiels.js'
-
-function rootWaterUses(waterUses = []) {
-  return waterUses
-    .filter(usage => usage?.kind === 'USAGE' && getUsageId(usage))
-    .sort(compareExploitationUsages)
-}
 
 function formatOptionLabel(usage) {
   return [getUsageCode(usage), getUsageLabel(usage)].filter(Boolean).join(' — ')
@@ -52,6 +48,8 @@ const WaterUseSelect = ({
   const [loadError, setLoadError] = useState(null)
   const [retryCount, setRetryCount] = useState(0)
   const [announcement, setAnnouncement] = useState('')
+  const [search, setSearch] = useState(null)
+  const primaryId = useId()
 
   useEffect(() => {
     let ignore = false
@@ -91,7 +89,7 @@ const WaterUseSelect = ({
     }
   }, [retryCount])
 
-  const usages = useMemo(() => rootWaterUses(waterUses), [waterUses])
+  const usages = useMemo(() => flattenExploitationWaterUses(waterUses), [waterUses])
   const usagesById = useMemo(() => new Map(
     [...selectedUsages, ...usages]
       .map(usage => [getUsageId(usage), usage])
@@ -124,16 +122,21 @@ const WaterUseSelect = ({
 
     const previousUsage = usagesById.get(value)
     const nextUsage = usagesById.get(nextUsageId)
+    const removedChildren = [previousUsage, ...selectedSecondaryUsages]
+      .filter(usage => getExploitationUsageParentId(usage) === nextUsageId)
 
+    setSearch(null)
     onChange(transition.usageId)
     onSecondaryChange(transition.secondaryUsageIds)
 
-    if (previousUsage && nextUsage && !isExclusiveUsage(previousUsage) && !isExclusiveUsage(nextUsage)) {
+    if (removedChildren.length > 0) {
+      setAnnouncement(`Usage principal remplacé par ${getUsageLabel(nextUsage)}. Sous-usages retirés pour éviter un doublon avec leur parent : ${removedChildren.map(getUsageLabel).join(', ')}.`)
+    } else if (transition.secondaryUsageIds.includes(value) && value !== nextUsageId) {
       setAnnouncement(`${getUsageLabel(previousUsage)} est maintenant un usage secondaire.`)
     } else {
       setAnnouncement(`Usage principal remplacé par ${getUsageLabel(nextUsage)}.`)
     }
-  }, [normalizedSecondaryValues, onChange, onSecondaryChange, usagesById, value])
+  }, [normalizedSecondaryValues, onChange, onSecondaryChange, selectedSecondaryUsages, usagesById, value])
 
   const handleSecondaryChange = useCallback(nextSecondaryIds => {
     onSecondaryChange(normalizeSecondaryUsageIds({
@@ -143,19 +146,32 @@ const WaterUseSelect = ({
     }))
   }, [onSecondaryChange, usagesById, value])
 
-  const primaryOptions = usages.map(usage => ({
-    value: getUsageId(usage),
-    label: formatOptionLabel(usage),
-    disabled: isExclusiveUsage(usage) && hasRealUsage && getUsageId(usage) !== value
-  }))
-  const secondaryOptions = usages
-    .filter(usage => !isExclusiveUsage(usage) && getUsageId(usage) !== value)
-    .map(usage => ({
+  const primaryOptions = usages.map(usage => {
+    const parent = usagesById.get(getExploitationUsageParentId(usage))
+    return {
+      value: getUsageId(usage),
+      code: getUsageCode(usage),
+      label: formatOptionLabel(usage),
+      color: getUsageColor(usage),
+      parentUsage: parent ? {value: getUsageId(parent), code: getUsageCode(parent), label: formatOptionLabel(parent), color: getUsageColor(parent)} : null,
+      disabled: isExclusiveUsage(usage) && hasRealUsage && getUsageId(usage) !== value
+    }
+  })
+  const secondaryGroups = new Map()
+  for (const usage of usages.filter(usage => !isExclusiveUsage(usage) && getUsageId(usage) !== value)) {
+    const parent = usagesById.get(getExploitationUsageParentId(usage))
+    const root = parent ?? usage
+    const rootId = getUsageId(root)
+    if (!secondaryGroups.has(rootId)) secondaryGroups.set(rootId, {label: formatOptionLabel(root), options: []})
+    const disabled = !normalizedSecondaryValues.includes(usage.id)
+      && [selectedPrimaryUsage, ...selectedSecondaryUsages].some(selected => areExploitationUsagesRelated(selected, usage))
+    secondaryGroups.get(rootId).options.push({
       value: getUsageId(usage),
       label: formatOptionLabel(usage),
-      title: formatOptionLabel(usage),
+      title: [parent && formatOptionLabel(parent), formatOptionLabel(usage)].filter(Boolean).join(' : '),
+      disabled,
       content: (
-        <span className='flex min-w-0 items-center gap-2'>
+        <span className={`flex min-w-0 items-center gap-2${parent ? ' pl-4' : ''}`}>
           <span
             aria-hidden='true'
             className='h-2 w-2 shrink-0 rounded-full'
@@ -164,7 +180,8 @@ const WaterUseSelect = ({
           <span className='min-w-0 whitespace-normal break-words'>{formatOptionLabel(usage)}</span>
         </span>
       )
-    }))
+    })
+  }
   const selectedExploitation = {
     usage: selectedPrimaryUsage,
     secondaryUsages: selectedSecondaryUsages
@@ -197,26 +214,39 @@ const WaterUseSelect = ({
         />
       )}
 
-      <Select
-        disabled={loadingState !== 'ready'}
-        label={label}
-        options={primaryOptions}
-        placeholder={isLoading ? 'Chargement…' : placeholder}
-        state={state}
-        stateRelatedMessage={stateRelatedMessage}
-        nativeSelectProps={{
-          value: value || '',
-          onChange: event => handlePrimaryChange(event.target.value)
-        }}
-      />
+      <div className={state === 'error' ? 'fr-input-group fr-input-group--error' : 'fr-input-group'}>
+        <label className='fr-label fr-mb-1w' htmlFor={primaryId}>{label}</label>
+        <UsageCombobox
+          id={primaryId}
+          disabled={loadingState !== 'ready'}
+          invalid={state === 'error'}
+          describedBy={stateRelatedMessage ? `${primaryId}-message` : undefined}
+          options={primaryOptions}
+          placeholder={isLoading ? 'Chargement…' : placeholder}
+          selectedValue={value || ''}
+          selectOnExactMatch={false}
+          value={search ?? (selectedPrimaryUsage ? formatOptionLabel(selectedPrimaryUsage) : '')}
+          variant='campaign'
+          onBlur={() => setSearch(null)}
+          onUsageChange={({usageId, usageSearch}) => {
+            setSearch(usageSearch)
+            if (usageId && usagesById.has(usageId)) handlePrimaryChange(usageId)
+          }}
+        />
+        {stateRelatedMessage && (
+          <p id={`${primaryId}-message`} className={state === 'error' ? 'fr-error-text' : 'fr-info-text'} role={state === 'error' ? 'alert' : undefined}>
+            {stateRelatedMessage}
+          </p>
+        )}
+      </div>
 
       <GroupedMultiselect
         disabled={loadingState !== 'ready' || !value || isExclusiveUsage(selectedPrimaryUsage)}
-        hint='Ajoutez les autres usages exercés sur cette exploitation. Les choix « Usage inconnu » et « Pas d’usage » sont exclusifs et ne peuvent pas être secondaires.'
+        hint='Ajoutez les autres usages ou sous-usages exercés sur cette exploitation. Un usage et ses sous-usages ne peuvent pas être associés ensemble. « Usage inconnu » et « Pas d’usage » restent exclusifs.'
         label='Usages secondaires'
-        options={[{label: 'Usages disponibles', options: secondaryOptions}]}
+        options={[...secondaryGroups.values()]}
         placeholder='Aucun usage secondaire'
-        searchable={secondaryOptions.length > 8}
+        searchable={usages.length > 8}
         state={secondaryState}
         stateRelatedMessage={secondaryStateRelatedMessage}
         value={normalizedSecondaryValues}

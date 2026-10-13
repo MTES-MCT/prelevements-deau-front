@@ -73,7 +73,8 @@ export async function handleCollectorPointFixture(request, send) {
         exploitationId: collectorPointIds.usage, replayed: false, notification: {status: body.notifyAccountCreation ? 'failed' : 'not_requested'}})
     }
   } else if (pathname === '/api/points-prelevement/options') send(200, [state.point])
-  else if (pathname === '/api/referentiels/usages-eau') send(200, {items: [{id: collectorPointIds.usage, code: '2', label: 'Irrigation', kind: 'USAGE'}]})
+  else if (pathname === '/api/referentiels/usages-eau') send(200, {items: hierarchicalWaterUses.map(usage => usage.id === usageIds.root
+    ? {...usage, id: collectorPointIds.usage, children: usage.children.map(child => ({...child, parentId: collectorPointIds.usage}))} : usage)})
   else if (pathname === '/api/referentiels/communes') send(200, [{code: '33353', name: 'Rimons'}])
   else if (pathname === `/api/declarants/${collectorPointIds.collector}/overview`) send(200, {
     id: collectorPointIds.collector, role: 'DECLARANT', email: 'collector@example.test', socialReason: 'Collecteur synthétique', declarantRole: 'COLLECTEUR',
@@ -118,3 +119,4 @@ export async function handleCollectorPointFixture(request, send) {
   } else return false
   return true
 }
+import {hierarchicalWaterUses, usageIds} from './exploitation-usages-fixtures.mjs'
