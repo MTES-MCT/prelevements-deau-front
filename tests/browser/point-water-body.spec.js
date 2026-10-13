@@ -98,6 +98,8 @@ test('création, édition et effacement des caractéristiques du plan d’eau sa
   await expect(identifier).toHaveAttribute('maxlength', '100')
   await volume.fill('12500.75')
   await identifier.fill('  PE-SYNTH-001  ')
+  // Observe the controlled value before testing normalization on blur.
+  await expect(identifier).toHaveValue('  PE-SYNTH-001  ')
   await identifier.press('Tab')
   await expect(identifier).toHaveValue('PE-SYNTH-001')
   await page.screenshot({path: testInfo.outputPath('plan-eau-creation.png'), animations: 'disabled'})
