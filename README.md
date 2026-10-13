@@ -114,6 +114,23 @@ variables d'environnement ni les données réelles. Les rapports sont dans
 `.artifacts/`. La validation CI et le déploiement sont décrits dans le
 [guide commun des pipelines](https://github.com/MTES-MCT/prelevements-deau-api/blob/testing/docs/pipelines.md).
 
+Pour chaque déploiement, la qualité et la préparation de l'image s'exécutent en
+parallèle. La livraison attend leur réussite et utilise le digest exact de
+l'image contrôlée ; l'alias d'environnement n'est publié qu'après les sondes de
+santé. Le build Next synthétique et Storybook sont partagés par quatre lots
+Playwright (Chromium, WebKit et mobile, deux workers par lot), puis le test du
+classeur de 500 000 cellules s'exécute séparément. Le rapport final vérifie que
+chaque test de l'inventaire est présent exactement une fois avant de fusionner
+les rapports et traces. Les exclusions et échecs attendus déclarés par les
+tests gardent leur sémantique Playwright.
+
+Les artefacts sont liés au commit, au run et à sa tentative : en cas d'échec,
+utiliser **Re-run all jobs**, et non **Re-run failed jobs**, pour reconstruire
+un ensemble cohérent. Le cache Next concerne seulement la compilation des
+fixtures ; les réponses HTTP mises en cache sont effacées et aucun build
+synthétique n'est utilisé pour l'image déployée. Le cache BuildKit de cette
+image est séparé par environnement.
+
 Points à préserver lors des mises à jour :
 
 - MapLibre nécessite WebGL 2. `prepare-maplibre`, exécuté avant dev, build et

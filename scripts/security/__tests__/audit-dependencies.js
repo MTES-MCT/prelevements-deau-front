@@ -31,8 +31,8 @@ test('only the exact development advisory and exclusively affected parents are t
 })
 
 test('expiration is exclusive: allowed one millisecond before, blocked at the exact Paris midnight boundary', t => {
-  t.true(evaluateAudit({...fixture(), now: Date.parse('2026-10-10T21:59:59.999Z')}).ok)
-  for (const now of [Date.parse('2026-10-10T22:00:00Z'), Date.parse('2026-10-11T00:00:00Z')]) {
+  t.true(evaluateAudit({...fixture(), now: Date.parse('2026-10-18T21:59:59.999Z')}).ok)
+  for (const now of [Date.parse('2026-10-18T22:00:00Z'), Date.parse('2026-10-19T00:00:00Z')]) {
     const result = evaluateAudit({...fixture(), now})
     t.false(result.ok)
     t.true(result.expired)
