@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import {mkdtemp, rm, writeFile} from 'node:fs/promises'
+import {mkdir, mkdtemp, rm, writeFile} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join, resolve} from 'node:path'
 import {pathToFileURL} from 'node:url'
@@ -109,6 +109,29 @@ test('real Playwright inventory IDs survive sharding and runtime skip/fail annot
     assert.deepEqual(verifyCoverage(inventory, reports, env), {tests: 13, projects: 4, parts: 5})
     assert.equal(reports.flatMap(report => report.results).filter(row => row.expectedStatus === 'skipped').length, 6)
     assert.equal(reports.flatMap(report => report.results).filter(row => row.expectedStatus === 'failed').length, 3)
+  } finally {
+    await rm(directory, {recursive: true, force: true})
+  }
+})
+
+
+test('the real workflow archive includes the chart loader manifest alongside its static chunks', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'browser-ci-archive-'))
+  try {
+    const files = ['.next/standalone/server.js', '.next/standalone/.next/BUILD_ID',
+      '.next/static/chunks/chart.js', '.next/react-loadable-manifest.json', 'public/test.txt', 'storybook-static/index.html']
+    for (const file of files) {
+      await mkdir(join(directory, file, '..'), {recursive: true})
+      await writeFile(join(directory, file), 'synthetic build file')
+    }
+    await mkdir(join(directory, '.artifacts/browser-build'), {recursive: true})
+    const workflow = await readFile(new URL('../workflows/quality.yml', import.meta.url), 'utf8')
+    const command = workflow.match(/^\s*(tar -czf .+)$/m)?.[1].split(/\s+/)
+    assert.ok(command, 'Missing build packaging command')
+    // Exercise the exact workflow arguments without evaluating shell code.
+    execFileSync(command[0], command.slice(1), {cwd: directory})
+    const entries = execFileSync('tar', ['-tzf', join(directory, '.artifacts/browser-build/browser-build.tar.gz')], {encoding: 'utf8'}).split('\n')
+    for (const file of files) assert.ok(entries.includes(file), `Required browser build file omitted: ${file}`)
   } finally {
     await rm(directory, {recursive: true, force: true})
   }
