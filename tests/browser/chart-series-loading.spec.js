@@ -183,7 +183,8 @@ test('le zoom au clavier conserve l’historique et demande un total exact de la
   const totals = page.getByLabel('Totaux sur la période affichée')
   await expect(totals).toContainText(/300\s*m³/)
   await page.getByRole('slider').nth(1).press('ArrowLeft')
-  await expect(totals).toContainText(/77\s*m³/)
+  // WebKit may finish the chart render after the exact-total response arrives.
+  await expect(totals).toContainText(/77\s*m³/, {timeout: 15_000})
   const requests = aggregates(await getRequests(context, apiToken))
   expect(requests.filter(request => request.query.aggregationFrequency === '1 year').map(request => request.query)).toEqual([
     expect.objectContaining({metricTypeCode: 'volume', temporalOperator: 'sum', startDate: '2020-01-01', endDate: '2026-08-31'})
