@@ -21,3 +21,19 @@ limites, y compris une expiration pendant l’audit.
 L’audit de production, les contrôles de l’image, les tests et les builds restent
 inchangés et bloquants. Dès qu’une version officielle corrigée est disponible,
 mettre à jour le lockfile, retirer l’exception, puis rejouer les audits et les tests.
+
+## Suppression de sprintf-js dans les outils de test (6 octobre 2026)
+
+L’override `supertap → js-yaml → argparse@2.0.1` retire `sprintf-js`, affecté par
+[GHSA-hp3w-g68c-fv3c](https://github.com/advisories/GHSA-hp3w-g68c-fv3c), dont aucune
+version publiée n’est corrigée à cette date. AVA, supertap et js-yaml conservent
+leurs versions : supertap utilise `yaml.safeDump`, supprimé dans js-yaml 4.
+
+La suite AVA, la sortie TAP avec succès et diagnostics d’échec, ainsi que les
+conversions YAML/JSON ont été vérifiées. Limite connue : le binaire tiers
+`js-yaml --version` affiche une valeur vide avec argparse 2 ; ce binaire n’est
+pas utilisé par le projet. Le chemin TAP d’AVA ne charge pas argparse.
+
+Retirer cet override lorsque supertap adoptera une chaîne corrigée compatible,
+puis rejouer ces vérifications et les audits. L’exception braces et son échéance
+restent inchangées.
