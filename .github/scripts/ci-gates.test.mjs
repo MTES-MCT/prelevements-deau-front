@@ -41,3 +41,11 @@ test('all release workflows keep independent image preparation and gated deploym
     assert.doesNotMatch(image + deploy, /run: npm ci|npm install --global/)
   }
 })
+
+
+test('production deployment preserves the runtime API configuration without requiring a build-time fallback', () => {
+  const workflow = readFileSync(new URL('../workflows/deploy-prod.yml', import.meta.url), 'utf8')
+  const deploy = workflow.split('  deploy:\n')[1]
+  assert.doesNotMatch(deploy, /test -n "\$NEXT_PUBLIC_API_URL"/)
+  assert.match(deploy, /node \.github\/scripts\/deploy-container\.mjs --check prod/)
+})

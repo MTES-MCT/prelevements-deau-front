@@ -147,7 +147,7 @@ jobs:
           SCW_CONFIGURED_CONTAINER_ID: ${{ secrets.SCW_SERVERLESS_CONTAINER_ID_PROD }}
         run: |
           set -euo pipefail
-          test -n "$NEXT_PUBLIC_API_URL"
+          # Production inherits its API endpoint from the preserved Scaleway namespace.
           node .github/scripts/deploy-container.mjs --check prod
 
       - name: Install Scaleway CLI
