@@ -62,7 +62,8 @@ test('édition partagée : champs protégés absents et version transmise', asyn
   await page.screenshot({path: testInfo.outputPath('collector-edit.png'), fullPage: true})
   await page.getByRole('button', {name: 'Enregistrer les modifications', exact: true}).click()
   await expect(page).toHaveURL(`${frontUrl}/points-prelevement/${ids.point}`)
-  expect((await writes(context, token))[0].body).toEqual({usageName: 'Forage corrigé', expectedUpdatedAt: '2026-10-07T12:00:00.000Z'})
+  expect((await writes(context, token))[0]).toEqual({path: `/api/collecteurs/me/points-prelevement/${ids.point}/form`, method: 'PATCH',
+    body: {point: {usageName: 'Forage corrigé'}, exploitations: [], expectedUpdatedAt: '2026-10-07T12:00:00.000Z'}})
 })
 
 test('un conflit de version conserve la saisie et affiche une erreur claire', async ({page, context}) => {
@@ -72,6 +73,7 @@ test('un conflit de version conserve la saisie et affiche une erreur claire', as
   await page.getByRole('button', {name: 'Enregistrer les modifications', exact: true}).click()
   await expect(page.getByText(/Ce point a été modifié depuis son ouverture/)).toBeVisible()
   await expect(page.getByLabel('Nom d’usage', {exact: true})).toHaveValue('Correction conservée')
+  await expect(page.getByRole('button', {name: 'Enregistrer les modifications', exact: true})).toBeDisabled()
 })
 
 test('un point exceptionnel reste éditable sans déplacer sa localisation', async ({page, context}) => {
@@ -102,7 +104,11 @@ test('création avec nouveau préleveur : pas d’invitation implicite', async (
   await expect(page.getByLabel('Envoyer un email d’accès', {exact: true})).not.toBeChecked()
   await page.getByLabel('Nom du point *', {exact: true}).fill('Nouveau forage synthétique')
   await page.getByLabel('Type de point *', {exact: true}).selectOption('PRELEVEMENT')
-  await page.getByLabel('Type de milieu *', {exact: true}).selectOption('SOUTERRAIN')
+  await page.getByLabel('Type de milieu *', {exact: true}).selectOption('SUPERFICIELLE')
+  await page.getByLabel(/^Identifiant interne Agence de l’eau/).fill('000AE')
+  await page.getByLabel('Origine prélèvement / rejet', {exact: true}).selectOption('PLAN_EAU')
+  await page.getByLabel('Volume nominal de la retenue (m³)', {exact: true}).fill('123.5')
+  await page.getByLabel('Identifiant du plan d’eau', {exact: true}).fill('000RET')
   await page.getByText('Ou renseigner les coordonnées manuellement sous la carte', {exact: true}).scrollIntoViewIfNeeded()
   await page.getByRole('textbox', {name: /^X Lambert 93/}).fill('650000')
   await page.getByRole('textbox', {name: /^Y Lambert 93/}).fill('6860000')
@@ -111,6 +117,10 @@ test('création avec nouveau préleveur : pas d’invitation implicite', async (
   await page.getByRole('button', {name: 'Usages secondaires', exact: true}).click()
   await page.getByRole('option', {name: '2B — Gravitaire', exact: true}).click()
   await page.getByRole('button', {name: 'Usages secondaires', exact: true}).press('Escape')
+  await page.getByLabel(/^Code comptage Agence de l’eau/).fill('00012')
+  await page.getByRole('button', {name: 'Ajouter un compteur', exact: true}).click()
+  await page.getByLabel(/^Numéro de série du compteur 1/).fill('000SERIE')
+  await page.getByRole('button', {name: 'Ajouter un compteur', exact: true}).click()
   const form = page.getByRole('group', {name: 'Création d’un point et de son exploitation', exact: true})
   await expect.poll(() => form.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true)
   await page.screenshot({path: testInfo.outputPath('collector-create.png'), fullPage: true})
@@ -120,6 +130,67 @@ test('création avec nouveau préleveur : pas d’invitation implicite', async (
   expect(requests).toHaveLength(1)
   expect(requests[0].body).toMatchObject({notifyAccountCreation: false, preleveur: {firstName: 'Camille'}, exploitation: {status: 'EN_ACTIVITE', usageId: usageIds.spray, secondaryUsageIds: [usageIds.gravity]}})
   expect(requests[0].body.requestId).toMatch(/^[a-f\d-]{36}$/)
+  expect(requests[0].body.point).toMatchObject({waterAgencyInternalIdentifier: '000AE', waterBodyIdentifier: '000RET', reservoirNominalVolume: 123.5})
+  expect(requests[0].body.exploitation).toMatchObject({countingCode: '00012', meters: [{serialNumber: '000SERIE'}]})
+})
+
+test('plusieurs exploitations : correction ciblée, ajout et compteurs protégés', async ({page, context}, testInfo) => {
+  const token = await authenticate(context, 'multi')
+  await page.goto(`${frontUrl}/points-prelevement/${ids.point}/edit`)
+  const first = page.getByRole('region', {name: 'Exploitation 1 — Ferme synthétique A — Irrigation', exact: true})
+  const second = page.getByRole('region', {name: 'Exploitation 2 — Camille Test — Irrigation', exact: true})
+  await expect(first.getByLabel(/^Code comptage Agence de l’eau/)).toHaveValue('001')
+  await expect(second.getByLabel(/^Code comptage Agence de l’eau/)).toHaveValue('002')
+  await expect(first.getByLabel(/^Numéro de série du compteur 2/)).toHaveAttribute('readonly', '')
+  await expect(second.getByLabel(/^Numéro de série du compteur 1/)).toHaveAttribute('readonly', '')
+  await expect(second.getByLabel(/^Numéro de série du compteur 2/)).toHaveAttribute('readonly', '')
+  for (const reason of ['Compteur partagé entre plusieurs exploitations.', 'Compteur lié à un fournisseur de données.', 'Rattachement historique à vérifier.']) {
+    await expect(page.getByText(`Correction par un administrateur. ${reason}`, {exact: true})).toBeVisible()
+  }
+  await first.getByLabel(/^Numéro de série du compteur 1/).fill('000CORRIGE')
+  await second.getByLabel(/^Code comptage Agence de l’eau/).fill('00022')
+  await second.getByRole('button', {name: 'Ajouter un compteur', exact: true}).click()
+  await second.getByLabel(/^Numéro de série du compteur 3/).fill('000NOUVEAU')
+  await page.getByLabel(/^Identifiant interne Agence de l’eau/).fill('000AE-CORRIGE')
+  await assertNoHorizontalOverflow(page)
+  await page.screenshot({path: testInfo.outputPath('collector-multiple-meters.png'), fullPage: true})
+  await page.getByRole('button', {name: 'Enregistrer les modifications', exact: true}).click()
+  await expect(page).toHaveURL(`${frontUrl}/points-prelevement/${ids.point}`)
+  expect((await writes(context, token))[0].body).toEqual({expectedUpdatedAt: '2026-10-07T12:00:00.000Z', point: {waterAgencyInternalIdentifier: '000AE-CORRIGE'}, exploitations: [
+    {id: ids.firstExploitation, meters: [{id: ids.manualMeter, expectedUpdatedAt: '2026-10-07T12:00:00.000Z', serialNumber: '000CORRIGE'}]},
+    {id: ids.secondExploitation, countingCode: '00022', expectedCountingCode: '002', meters: [{serialNumber: '000NOUVEAU'}]}
+  ]})
+})
+
+test('effacer le numéro conserve le compteur et ses autres rattachements', async ({page, context}) => {
+  const token = await authenticate(context, 'multi')
+  await page.goto(`${frontUrl}/points-prelevement/${ids.point}/edit`)
+  const first = page.getByRole('region', {name: 'Exploitation 1 — Ferme synthétique A — Irrigation', exact: true})
+  await first.getByLabel(/^Numéro de série du compteur 1/).fill('')
+  await page.getByRole('button', {name: 'Enregistrer les modifications', exact: true}).click()
+  await expect(page).toHaveURL(`${frontUrl}/points-prelevement/${ids.point}`)
+  expect((await writes(context, token))[0].body).toEqual({expectedUpdatedAt: '2026-10-07T12:00:00.000Z', point: {}, exploitations: [
+    {id: ids.firstExploitation, meters: [{id: ids.manualMeter, expectedUpdatedAt: '2026-10-07T12:00:00.000Z', serialNumber: null}]}
+  ]})
+})
+
+test('sans modification, les exploitations et compteurs ne sont pas réécrits', async ({page, context}) => {
+  const token = await authenticate(context, 'multi')
+  await page.goto(`${frontUrl}/points-prelevement/${ids.point}/edit`)
+  const first = page.getByRole('region', {name: 'Exploitation 1 — Ferme synthétique A — Irrigation', exact: true})
+  await first.getByRole('button', {name: 'Ajouter un compteur', exact: true}).click()
+  await page.getByRole('button', {name: 'Enregistrer les modifications', exact: true}).click()
+  await expect(page).toHaveURL(`${frontUrl}/points-prelevement/${ids.point}`)
+  expect(await writes(context, token)).toEqual([])
+})
+
+test('un formulaire collecteur indisponible ne bascule pas sur le formulaire agent', async ({page, context}) => {
+  const token = await authenticate(context, 'form-error')
+  await page.goto(`${frontUrl}/points-prelevement/${ids.point}/edit`)
+  await expect(page.getByText('Le formulaire n’a pas pu être chargé.', {exact: true})).toBeVisible()
+  await expect(page.getByRole('button', {name: 'Enregistrer les modifications', exact: true})).toHaveCount(0)
+  await expect(page.getByLabel(/^Identifiant interne Agence de l’eau/)).toHaveCount(0)
+  expect(await writes(context, token)).toEqual([])
 })
 
 test('la création attend le chargement interactif avant de permettre la saisie', async ({page, context}) => {

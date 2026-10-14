@@ -7,12 +7,18 @@ export const collectorPointIds = {
   usage: '12121212-1212-4212-8212-121212121216',
   declarationType: '12121212-1212-4212-8212-121212121217',
   declarationTypeLink: '12121212-1212-4212-8212-121212121218',
-  secondDeclarationType: '12121212-1212-4212-8212-121212121219'
+  secondDeclarationType: '12121212-1212-4212-8212-121212121219',
+  firstExploitation: '12121212-1212-4212-8212-121212121221',
+  secondExploitation: '12121212-1212-4212-8212-121212121222',
+  manualMeter: '12121212-1212-4212-8212-121212121231',
+  sharedMeter: '12121212-1212-4212-8212-121212121232',
+  externalMeter: '12121212-1212-4212-8212-121212121233',
+  historicalMeter: '12121212-1212-4212-8212-121212121234'
 }
 const sessions = new Map()
 const editableFields = ['usageName', 'coordinates', 'communeCode', 'communeName', 'geometryPrecision', 'waterBodyType',
   'nature', 'withdrawalType', 'locationDescription', 'comment', 'commissioningDate', 'depth', 'reservoirNominalVolume',
-  'isWaterBodyConnectedToStream', 'isWaterBodyConnectedToGroundwater']
+  'isWaterBodyConnectedToStream', 'isWaterBodyConnectedToGroundwater', 'waterAgencyInternalIdentifier', 'waterBodyIdentifier']
 export const isCollectorPointFixture = (authorization = '') => authorization.startsWith('Bearer browser-test-collector-points-')
 
 export async function handleCollectorPointFixture(request, send) {
@@ -36,6 +42,16 @@ export async function handleCollectorPointFixture(request, send) {
       right: {canRead: true, canEdit: enabled, canEditUsageName: true, editScope: 'COLLECTOR',
         editableFields, canEditLocation: !auth.includes('-exception-'), isShared: true, permissions: []}}}
   sessions.set(auth, state)
+  state.exploitations ??= auth.includes('-multi-') ? [
+    {id: collectorPointIds.firstExploitation, countingCode: '001', preleveur: {id: collectorPointIds.preleveur, socialReason: 'Ferme synthétique A'},
+      usage: {id: collectorPointIds.usage, label: 'Irrigation'}, capabilities: {canEditCountingCode: true, canAddMeter: true},
+      meters: [{id: collectorPointIds.manualMeter, serialNumber: '000MANUEL', updatedAt: '2026-10-07T12:00:00.000Z', capabilities: {canEditSerialNumber: true, reason: null}},
+        {id: collectorPointIds.sharedMeter, serialNumber: 'PARTAGE', updatedAt: '2026-10-07T12:00:00.000Z', capabilities: {canEditSerialNumber: false, reason: 'SHARED_METER'}}]},
+    {id: collectorPointIds.secondExploitation, countingCode: '002', preleveur: {id: collectorPointIds.preleveur, firstName: 'Camille', lastName: 'Test'},
+      usage: {id: collectorPointIds.usage, label: 'Irrigation'}, capabilities: {canEditCountingCode: true, canAddMeter: true},
+      meters: [{id: collectorPointIds.externalMeter, serialNumber: 'FOURNISSEUR', updatedAt: '2026-10-07T12:00:00.000Z', capabilities: {canEditSerialNumber: false, reason: 'EXTERNAL_METER'}},
+        {id: collectorPointIds.historicalMeter, serialNumber: 'HISTORIQUE', updatedAt: '2026-10-07T12:00:00.000Z', capabilities: {canEditSerialNumber: false, reason: 'AMBIGUOUS_HISTORY'}}]}
+  ] : []
   const readBody = async () => {
     const chunks = []
     for await (const chunk of request) chunks.push(chunk)
@@ -72,6 +88,27 @@ export async function handleCollectorPointFixture(request, send) {
       send(201, {point: state.point, preleveurId: body.preleveurId ?? collectorPointIds.preleveur,
         exploitationId: collectorPointIds.usage, replayed: false, notification: {status: body.notifyAccountCreation ? 'failed' : 'not_requested'}})
     }
+  } else if (pathname === `/api/collecteurs/me/points-prelevement/${state.point.id}/form`) {
+    if (!enabled) send(403, {message: 'Gestion désactivée.'})
+    else if (auth.includes('-form-error-')) send(503, {message: 'Formulaire indisponible.'})
+    else if (request.method === 'GET') send(200, {point: state.point, exploitations: state.exploitations})
+    else if (request.method === 'PATCH') {
+      const body = await readBody()
+      state.writes.push({path: pathname, method: 'PATCH', body})
+      if (auth.includes('-conflict-')) send(409, {message: 'Ce point a été modifié depuis son ouverture. Rechargez la fiche avant de réessayer.'})
+      else {
+        state.point = {...state.point, ...body.point, updatedAt: '2026-10-07T13:00:00.000Z'}
+        for (const changes of body.exploitations) {
+          const exploitation = state.exploitations.find(item => item.id === changes.id)
+          if (Object.hasOwn(changes, 'countingCode')) exploitation.countingCode = changes.countingCode
+          for (const meter of changes.meters ?? []) {
+            if (meter.id) Object.assign(exploitation.meters.find(item => item.id === meter.id), {serialNumber: meter.serialNumber})
+            else exploitation.meters.push({...meter, id: `created-${exploitation.meters.length}`, updatedAt: state.point.updatedAt, capabilities: {canEditSerialNumber: true, reason: null}})
+          }
+        }
+        send(200, {point: state.point, exploitations: state.exploitations})
+      }
+    } else send(405, {message: 'Méthode interdite.'})
   } else if (pathname === '/api/points-prelevement/options') send(200, [state.point])
   else if (pathname === '/api/referentiels/usages-eau') send(200, {items: hierarchicalWaterUses.map(usage => usage.id === usageIds.root
     ? {...usage, id: collectorPointIds.usage, children: usage.children.map(child => ({...child, parentId: collectorPointIds.usage}))} : usage)})

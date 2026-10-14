@@ -36,6 +36,16 @@ test('la reprise normalise les cultures de toutes les périodes sans perdre les 
   t.deepEqual(original.meters[0].season.crops, ['cereales', 'ble'])
 })
 
+test('la saisie campagne conserve la série attendue transmise par le contexte pour détecter une correction concurrente', t => {
+  for (const expectedSerialNumber of [null, '000SERIE']) {
+    const initial = initialCampaignAnswer({meters: [{compteurId: 'meter', serialNumber: expectedSerialNumber ?? '', expectedSerialNumber}]})
+    const changed = setCampaignField(initial, 'meters.0.season.indexEnd', '123')
+    const submitted = normalizeCampaignMeterChanges(changed)
+    t.is(submitted.meters[0].expectedSerialNumber, expectedSerialNumber)
+    t.is(submitted.meters[0].season.indexEnd, '123')
+  }
+})
+
 test('les périodes incomplètes restent des brouillons éditables sans fausse valeur zéro', t => {
   const data = initialCampaignAnswer({meters: [{compteurId: 'meter', serialNumber: 'M001', offSeason: {indexStart: '0'}, season: {}}]}, [])
   t.is(data.meters[0].offSeason.indexStart, '0')

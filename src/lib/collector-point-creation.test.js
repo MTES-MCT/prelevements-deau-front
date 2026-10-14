@@ -53,3 +53,24 @@ test('avertissement homonymes utilise seulement les points fournis sans recherch
   t.deepEqual(findSimilarAccessiblePoints({name: 'ab'}, [{id: 'short', name: 'ab'}]), [])
   t.deepEqual(findSimilarAccessiblePoints({name: 'Autre point'}), [])
 })
+
+test('les identifiants facultatifs et les compteurs saisis restent textuels et sans champs serveur', t => {
+  const value = input()
+  Object.assign(value.point, {waterAgencyInternalIdentifier: ' 000AE ', nature: 'PLAN_EAU', waterBodyIdentifier: ' 000RET ', reservoirNominalVolume: 12.5})
+  Object.assign(value.exploitation, {countingCode: ' 00012 ', meters: [{draftId: 'draft', id: 'forbidden', serialNumber: ' 000M '}, {serialNumber: ' '}]})
+  const result = buildCollectorPointCreationPayload(value)
+  t.is(result.point.waterAgencyInternalIdentifier, '000AE')
+  t.is(result.point.waterBodyIdentifier, '000RET')
+  t.is(result.point.reservoirNominalVolume, 12.5)
+  t.is(result.exploitation.countingCode, '00012')
+  t.deepEqual(result.exploitation.meters, [{serialNumber: '000M'}])
+})
+
+test('un compteur nouveau vide et un code vide ne sont pas créés', t => {
+  const value = input()
+  value.exploitation.meters = [{serialNumber: '   '}]
+  value.exploitation.countingCode = '   '
+  const {exploitation} = buildCollectorPointCreationPayload(value)
+  t.false(Object.hasOwn(exploitation, 'meters'))
+  t.false(Object.hasOwn(exploitation, 'countingCode'))
+})

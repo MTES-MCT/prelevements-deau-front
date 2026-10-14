@@ -2,9 +2,9 @@
 
 import {Input} from '@codegouvfr/react-dsfr/Input'
 
-const CountingCodeField = ({value, onChange, error}) => (
+const CountingCodeField = ({value, onChange, error, label = 'Code comptage'}) => (
   <Input
-    label='Code comptage'
+    label={label}
     hintText='Facultatif. Identifie ce comptage, indépendamment du numéro de série du compteur.'
     state={error ? 'error' : 'default'}
     stateRelatedMessage={error}

@@ -1,7 +1,10 @@
+import {normalizeCountingCode} from './exploitation-identity.js'
+
 export const COLLECTOR_POINT_CREATION_FIELDS = [
   'name', 'usageName', 'coordinates', 'communeCode', 'communeName',
   'geometryPrecision', 'waterBodyType', 'flowType', 'nature', 'withdrawalType',
   'commissioningDate', 'locationDescription', 'comment', 'depth',
+  'waterAgencyInternalIdentifier', 'waterBodyIdentifier',
   'reservoirNominalVolume', 'isWaterBodyConnectedToStream', 'isWaterBodyConnectedToGroundwater'
 ]
 
@@ -19,13 +22,19 @@ export function buildCollectorPointCreationPayload({requestId, point, preleveur,
   const identityFields = preleveur.declarantType === 'LEGAL_PERSON'
     ? IDENTITY_FIELDS
     : IDENTITY_FIELDS.filter(field => !['socialReason', 'siret'].includes(field))
+  const meters = (exploitation.meters ?? []).map(meter => ({serialNumber: String(meter.serialNumber ?? '').trim()})).filter(meter => meter.serialNumber)
+  const countingCode = normalizeCountingCode(exploitation.countingCode)
   return {
     requestId,
     point: pickFilled(point, COLLECTOR_POINT_CREATION_FIELDS),
     ...(mode === 'new'
       ? {preleveur: pickFilled(preleveur, identityFields)}
       : {preleveurId}),
-    exploitation: pickFilled(exploitation, ['usageId', 'secondaryUsageIds', 'status', 'startDate', 'endDate']),
+    exploitation: {
+      ...pickFilled(exploitation, ['usageId', 'secondaryUsageIds', 'status', 'startDate', 'endDate']),
+      ...(countingCode ? {countingCode} : {}),
+      ...(meters.length ? {meters} : {})
+    },
     notifyAccountCreation: mode === 'new' && Boolean(preleveur.email?.trim()) && notifyAccountCreation === true
   }
 }

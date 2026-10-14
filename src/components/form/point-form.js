@@ -109,6 +109,15 @@ const PointForm = ({
         onChange: event => setPoint(previous => ({...previous, usageName: event.target.value || null}))
       }} />}
 
+      {collector && allows('waterAgencyInternalIdentifier') && <Input
+        label='Identifiant interne Agence de l’eau'
+        hintText='Facultatif'
+        nativeInputProps={{
+          type: 'text', maxLength: 255, value: point.waterAgencyInternalIdentifier ?? '',
+          onChange: event => setPoint(previous => ({...previous, waterAgencyInternalIdentifier: event.target.value || null}))
+        }}
+      />}
+
       {allows('flowType') && <Select
         label='Type de point *'
         placeholder='Sélectionner le type de point'
@@ -159,7 +168,7 @@ const PointForm = ({
                 ? {}
                 : {
                   reservoirNominalVolume: null,
-                  ...(!collector ? {waterBodyIdentifier: null} : {}),
+                  ...(allows('waterBodyIdentifier') ? {waterBodyIdentifier: null} : {}),
                   isWaterBodyConnectedToStream: null,
                   isWaterBodyConnectedToGroundwater: null
                 })

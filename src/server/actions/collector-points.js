@@ -32,3 +32,20 @@ export async function createCollectorPointAction(payload) {
     return result
   }, {forbiddenOnAccessDenied: false})
 }
+
+export async function getCollectorPointFormAction(pointId) {
+  return withErrorHandling(() => fetchJSON(`api/collecteurs/me/points-prelevement/${pointId}/form`), {
+    forbiddenOnAccessDenied: false
+  })
+}
+
+export async function updateCollectorPointFormAction(pointId, payload) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(`api/collecteurs/me/points-prelevement/${pointId}/form`, {method: 'PATCH', body: payload})
+    revalidatePath(`/points-prelevement/${pointId}`)
+    revalidatePath('/points-prelevement')
+    revalidatePath('/exploitations')
+    for (const exploitation of result.exploitations) revalidatePath(`/exploitations/${exploitation.id}`)
+    return result
+  }, {forbiddenOnAccessDenied: false})
+}

@@ -12,6 +12,8 @@ import {Autocomplete, Checkbox, FormControlLabel, TextField} from '@mui/material
 import Link from 'next/link'
 
 import PointForm from '@/components/form/point-form.js'
+import CountingCodeField from '@/components/form/counting-code-field.js'
+import CollectorMeterFields from '@/components/form/collector-meter-fields.js'
 import PreleveurMoralForm from '@/components/form/preleveur-moral-form.js'
 import PreleveurPhysiqueForm from '@/components/form/preleveur-physique-form.js'
 import WaterUseSelect from '@/components/form/water-use-select.js'
@@ -49,7 +51,7 @@ export default function CollectorPointCreationForm({preleveurs, accessiblePoints
   const [preleveurId, setPreleveurId] = useState(preleveurs.some(item => item.id === initialPreleveurId) ? initialPreleveurId : '')
   const [preleveur, setPreleveur] = useState({declarantType: 'NATURAL_PERSON', preleveurType: '', firstName: '', lastName: '', email: ''})
   const [point, setPoint] = useState({name: '', usageName: '', flowType: '', waterBodyType: '', geometryPrecision: ''})
-  const [exploitation, setExploitation] = useState({usageId: '', secondaryUsageIds: [], status: 'EN_ACTIVITE', startDate: '', endDate: ''})
+  const [exploitation, setExploitation] = useState({usageId: '', secondaryUsageIds: [], status: 'EN_ACTIVITE', startDate: '', endDate: '', countingCode: '', meters: []})
   const [notifyAccountCreation, setNotifyAccountCreation] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState(null)
@@ -144,6 +146,8 @@ export default function CollectorPointCreationForm({preleveurs, accessiblePoints
         </ul>} />}
       </CreationSection>
       <CreationSection number={3} title='Exploitation'>
+        <CountingCodeField label='Code comptage Agence de l’eau' value={exploitation.countingCode}
+          onChange={countingCode => setExploitation(previous => ({...previous, countingCode}))} />
         <WaterUseSelect value={exploitation.usageId} secondaryValues={exploitation.secondaryUsageIds}
           onChange={usageId => setExploitation(previous => ({...previous, usageId}))}
           onSecondaryChange={secondaryUsageIds => setExploitation(previous => ({...previous, secondaryUsageIds}))} />
@@ -153,6 +157,8 @@ export default function CollectorPointCreationForm({preleveurs, accessiblePoints
           <Input label='Fin d’activité' hintText='À laisser vide si l’exploitation se poursuit' nativeInputProps={{type: 'date', value: exploitation.endDate,
             min: getMinimumEndDate(), onChange: event => setExploitation(previous => ({...previous, endDate: event.target.value}))}} />
         </div>
+        <CollectorMeterFields meters={exploitation.meters} canAddMeter
+          onChange={meters => setExploitation(previous => ({...previous, meters}))} />
       </CreationSection>
       {error && <Alert severity='error' title={error} description={validationErrors.length > 0 ? <ul>
         {validationErrors.map((item, index) => <li key={`${item.path}-${index}`}>{item.message}</li>)}

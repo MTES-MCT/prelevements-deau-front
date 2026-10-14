@@ -133,6 +133,19 @@ test('le changement d’origine par un collecteur ne modifie pas l’identifiant
   t.false(Object.hasOwn(patch, 'waterBodyIdentifier'))
 })
 
+test('les identifiants autorisés au collecteur sont visibles et quitter PLAN_EAU efface celui du plan d’eau', t => {
+  let patch
+  const {controls} = renderPointForm({...pointFixture(), nature: 'PLAN_EAU', waterAgencyInternalIdentifier: '000AE', waterBodyIdentifier: '000RET'},
+    updater => {patch = updater({})}, {editableFields: ['nature', 'waterAgencyInternalIdentifier', 'waterBodyIdentifier']})
+  t.is(controls.get('Identifiant interne Agence de l’eau').value, '000AE')
+  t.is(controls.get('Identifiant du plan d’eau').value, '000RET')
+  t.false(controls.has('Remarque interne (visible uniquement par les agents)'))
+  controls.get('Origine prélèvement / rejet').onChange({target: {value: 'SOURCE'}})
+  t.is(patch.waterBodyIdentifier, null)
+  t.is(patch.reservoirNominalVolume, null)
+  t.false(Object.hasOwn(patch, 'waterAgencyInternalIdentifier'))
+})
+
 test('le HTML initial garde la saisie désactivée jusqu’à l’hydratation React', t => {
   const {html} = renderPointForm(pointFixture())
   t.regex(html, /<fieldset[^>]*disabled=""[^>]*aria-busy="true"/)

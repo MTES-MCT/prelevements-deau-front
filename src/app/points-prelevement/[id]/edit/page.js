@@ -1,9 +1,12 @@
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Typography} from '@mui/material'
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {forbidden, notFound, redirect} from 'next/navigation'
 
 import {buildPageTitle} from '@/app/metadata-utils.js'
 import PointEditionForm from '@/components/form/point-edition-form.js'
+import CollectorPointEditionForm from '@/components/form/collector-point-edition-form.js'
+import {getCollectorPointFormAction} from '@/server/actions/collector-points.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getPointPrelevementURL} from '@/lib/urls.js'
 import {
@@ -39,6 +42,9 @@ const Page = async ({params, searchParams}) => {
     redirect(getPointPrelevementURL(pointPrelevement, {edit: true, searchParams: await searchParams}))
   }
 
+  const collectorForm = pointPrelevement.right.editScope === 'COLLECTOR' ? await getCollectorPointFormAction(id) : null
+  if (collectorForm?.code === 403) forbidden()
+
   return (
     <>
       <StartDsfrOnHydration />
@@ -59,10 +65,13 @@ const Page = async ({params, searchParams}) => {
         </Button>
       </div>
 
-      <PointEditionForm
-        canDelete={pointPrelevement.right.permissions?.includes('pp.delete')}
-        pointPrelevement={pointPrelevement}
-      />
+      {collectorForm ? collectorForm.success
+        ? <CollectorPointEditionForm form={collectorForm.data} />
+        : <Alert severity='error' title='Le formulaire n’a pas pu être chargé.' description='Rechargez la page pour réessayer.' />
+        : <PointEditionForm
+          canDelete={pointPrelevement.right.permissions?.includes('pp.delete')}
+          pointPrelevement={pointPrelevement}
+        />}
     </>
   )
 }
