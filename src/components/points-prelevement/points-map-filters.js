@@ -56,18 +56,22 @@ const FilterFieldset = ({
   const hasPartialSelection = !haveSameSelection(selectedValues, allValues)
 
   return (
-    <fieldset className={`relative border-0 border-t border-gray-200 p-0 pt-2 ${className}`}>
-      <legend className='mb-1 text-xs font-semibold text-gray-900'>{legend}</legend>
-      {hasPartialSelection && (
-        <button
-          className='absolute right-0 top-2 cursor-pointer text-xs text-[#000091] underline decoration-1 underline-offset-2'
-          type='button'
-          onClick={() => onChange(allValues)}
-        >
-          Tout afficher
-        </button>
-      )}
-      <div className={`clear-both flex flex-col ${scrollable ? 'max-h-44 overflow-y-auto pr-1' : ''}`}>
+    <fieldset aria-label={legend} className={`border-0 border-t border-gray-200 p-0 pt-2 ${className}`}>
+      <legend className='mb-1 w-full text-xs text-gray-900'>
+        <span className='flex items-start justify-between gap-2'>
+          <span className='min-w-0 font-semibold'>{legend}</span>
+          {hasPartialSelection && (
+            <button
+              className='shrink-0 cursor-pointer text-xs text-[#000091] underline decoration-1 underline-offset-2'
+              type='button'
+              onClick={() => onChange(allValues)}
+            >
+              Tout afficher
+            </button>
+          )}
+        </span>
+      </legend>
+      <div className={`flex flex-col ${scrollable ? 'max-h-44 overflow-y-auto pr-1' : ''}`}>
         {options.map(option => (
           <FilterCheckbox
             key={option.value}
@@ -101,18 +105,22 @@ const GroupedFilterFieldset = ({
   const hasPartialSelection = !haveSameSelection(selectedValues, allValues)
 
   return (
-    <fieldset className={`relative border-0 border-t border-gray-200 p-0 pt-2 ${className}`}>
-      <legend className='mb-1 text-xs font-semibold text-gray-900'>{legend}</legend>
-      {hasPartialSelection && (
-        <button
-          className='absolute right-0 top-2 cursor-pointer text-xs text-[#000091] underline decoration-1 underline-offset-2'
-          type='button'
-          onClick={() => onChange(allValues)}
-        >
-          Tout afficher
-        </button>
-      )}
-      <div className='clear-both flex max-h-44 flex-col overflow-y-auto pr-1'>
+    <fieldset aria-label={legend} className={`border-0 border-t border-gray-200 p-0 pt-2 ${className}`}>
+      <legend className='mb-1 w-full text-xs text-gray-900'>
+        <span className='flex items-start justify-between gap-2'>
+          <span className='min-w-0 font-semibold'>{legend}</span>
+          {hasPartialSelection && (
+            <button
+              className='shrink-0 cursor-pointer text-xs text-[#000091] underline decoration-1 underline-offset-2'
+              type='button'
+              onClick={() => onChange(allValues)}
+            >
+              Tout afficher
+            </button>
+          )}
+        </span>
+      </legend>
+      <div className='flex max-h-44 flex-col overflow-y-auto pr-1'>
         {optionGroups.map(group => (
           <div key={group.label}>
             <p className='fr-mb-0 px-1 py-1 text-[0.6875rem] font-semibold text-gray-600'>
