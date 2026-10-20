@@ -3,6 +3,6 @@
   "packageName": "braces",
   "version": "3.0.3",
   "developmentOnly": true,
-  "expiresAt": "2026-10-18T22:00:00Z",
-  "reason": "Prolongation temporaire explicitement autorisée jusqu'au 19 octobre 2026 à 00 h, heure de Paris, limitée à braces@3.0.3 en développement. Aucun paquet d'exécution ni autre avis de sécurité n'est exempté."
+  "expiresAt": "2026-10-27T23:00:00Z",
+  "reason": "Prolongation temporaire explicitement autorisée le 20 octobre 2026 jusqu'à la fin du 27 octobre, heure de Paris, limitée à braces@3.0.3 en développement. Aucun correctif officiel disponible à cette date. Aucun paquet d'exécution ni autre avis de sécurité n'est exempté."
 }
