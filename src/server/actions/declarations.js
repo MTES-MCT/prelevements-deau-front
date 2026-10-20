@@ -84,9 +84,9 @@ export async function getMyDeclarationsAction() {
   return withErrorHandling(async () => fetchJSON('api/declarations/me'))
 }
 
-export async function getMyDeclarationFeedAction({cursor, includeMeta, limit} = {}) {
+export async function getMyDeclarationFeedAction(options = {}) {
   return withErrorHandling(async () => {
-    const searchParameters = buildDeclarationFeedSearchParams({cursor, includeMeta, limit})
+    const searchParameters = buildDeclarationFeedSearchParams(options)
     return fetchJSON(`api/declarations/me/feed?${searchParameters}`)
   })
 }

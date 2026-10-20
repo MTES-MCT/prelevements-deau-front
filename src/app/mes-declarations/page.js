@@ -21,10 +21,10 @@ export const metadata = {
 export const dynamic = 'force-dynamic'
 
 const DECLARATION_CREATION_INTRO = 'Saisissez vos index, volumes prélevés ou volumes rejetés directement sur la plateforme, ou déposez un fichier.'
-const INITIAL_FEED_LIMIT = 20
+const INITIAL_FEED_LIMIT = 25
 
 const Dossiers = async () => {
-  const result = await getMyDeclarationFeedAction({limit: INITIAL_FEED_LIMIT})
+  const result = await getMyDeclarationFeedAction({includeCounts: false, limit: INITIAL_FEED_LIMIT})
   const response = result?.success && result.data?.success ? result.data : null
   const entries = response?.data ?? []
   const meta = response?.meta ?? {}
@@ -53,7 +53,7 @@ const Dossiers = async () => {
         </div>
       </div>
     )
-  } else if (meta.total === 0) {
+  } else if (entries.length === 0 && !meta.pagination?.hasNext) {
     declarationsContent = (
       <div className='border border-gray-200 bg-white p-5 md:p-6'>
         <div className='flex max-w-2xl flex-col gap-2'>

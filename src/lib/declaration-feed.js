@@ -1,8 +1,15 @@
-export const DEFAULT_DECLARATION_FEED_LIMIT = 20
+export const DEFAULT_DECLARATION_FEED_LIMIT = 25
 
 export function buildDeclarationFeedSearchParams({
   cursor,
   includeMeta = true,
+  includeCounts = true,
+  kinds,
+  declarationCode,
+  declarantName,
+  dateFrom,
+  dateTo,
+  pointsToAssociateOnly = false,
   limit = DEFAULT_DECLARATION_FEED_LIMIT
 } = {}) {
   const searchParameters = new URLSearchParams()
@@ -13,6 +20,24 @@ export function buildDeclarationFeedSearchParams({
 
   if (!includeMeta) {
     searchParameters.set('includeMeta', 'false')
+  }
+
+  if (!includeCounts) {
+    searchParameters.set('includeCounts', 'false')
+  }
+
+  if (Array.isArray(kinds)) {
+    searchParameters.set('kinds', kinds.join(','))
+  }
+
+  for (const [name, value] of Object.entries({declarationCode, declarantName, dateFrom, dateTo})) {
+    if (typeof value === 'string' && value.trim()) {
+      searchParameters.set(name, value.trim())
+    }
+  }
+
+  if (pointsToAssociateOnly) {
+    searchParameters.set('pointsToAssociateOnly', 'true')
   }
 
   if (limit) {

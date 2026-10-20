@@ -20,7 +20,7 @@ test('construit les paramètres du flux sans encoder manuellement le curseur', t
 test('utilise la limite par défaut sans curseur', t => {
   const searchParameters = buildDeclarationFeedSearchParams()
 
-  t.is(searchParameters.toString(), 'limit=20')
+  t.is(searchParameters.toString(), 'limit=25')
 })
 
 test('désactive les métadonnées globales sur les pages suivantes', t => {
@@ -61,7 +61,38 @@ test('normalise une pagination incohérente sans exposer de curseur inutilisable
     nextCursor: null
   }), {
     hasNext: true,
-    limit: 20,
+    limit: 25,
     nextCursor: null
   })
+})
+
+
+test('désactive les comptes sans supprimer les métadonnées des droits', t => {
+  const parameters = buildDeclarationFeedSearchParams({includeCounts: false})
+  t.is(parameters.get('includeCounts'), 'false')
+  t.false(parameters.has('includeMeta'))
+})
+
+test('transmet tous les filtres au serveur avec leur encodage et une limite bornée', t => {
+  const parameters = buildDeclarationFeedSearchParams({
+    kinds: ['SPREADSHEET', 'TELEMETRY'],
+    declarationCode: ' 123456 ',
+    declarantName: ' Élevage & Cie ',
+    dateFrom: '2026-07-01',
+    dateTo: '2026-07-31',
+    pointsToAssociateOnly: true,
+    includeMeta: false,
+    includeCounts: false,
+    limit: 100
+  })
+  t.deepEqual(Object.fromEntries(parameters), {
+    includeMeta: 'false', includeCounts: 'false', kinds: 'SPREADSHEET,TELEMETRY',
+    declarationCode: '123456', declarantName: 'Élevage & Cie',
+    dateFrom: '2026-07-01', dateTo: '2026-07-31', pointsToAssociateOnly: 'true', limit: '100'
+  })
+})
+
+test('une sélection de types vide reste distincte de tous les types', t => {
+  t.is(buildDeclarationFeedSearchParams({kinds: []}).get('kinds'), '')
+  t.false(buildDeclarationFeedSearchParams().has('kinds'))
 })

@@ -60,7 +60,7 @@ test('Mes déclarations conserve la création et le fil avec un accès indépend
   t.true(html.includes('Nouvelle déclaration'))
   t.true(html.includes('Saisissez vos index, volumes prélevés ou volumes rejetés'))
   t.true(html.includes('Liste des déclarations existantes'))
-  t.deepEqual(structuredClone(flow.calls), [{limit: 20}])
+  t.deepEqual(structuredClone(flow.calls), [{includeCounts: false, limit: 25}])
 })
 
 test('le fil historique reste présent avec l’accès indépendant aux campagnes', async t => {
@@ -92,4 +92,20 @@ test('sans outil disponible la campagne et le fil restent accessibles sans bouto
   t.false(html.includes('Nouvelle déclaration'))
   t.true(html.includes('Accès aux campagnes'))
   t.true(html.includes('Aucune déclaration'))
+})
+
+
+test('un total inconnu laisse visibles les premières lignes et les droits de création', async t => {
+  const flow = harness({feed: {success: true, data: {success: true, data: [{id: 'telemetry'}], meta: {total: null, countsByKind: null, canCreateQuickDeclaration: true, pagination: {limit: 25, hasNext: true, nextCursor: 'opaque'}}}}})
+  const html = renderToStaticMarkup(await flow.page())
+  t.true(html.includes('Liste des déclarations existantes'))
+  t.true(html.includes('Nouvelle déclaration'))
+  t.false(html.includes('Aucune déclaration'))
+})
+
+test('une première page vide sans total suffit à afficher l’état vide', async t => {
+  const flow = harness({feed: {success: true, data: {success: true, data: [], meta: {total: null, pagination: {hasNext: false}}}}})
+  const html = renderToStaticMarkup(await flow.page())
+  t.true(html.includes('Aucune déclaration'))
+  t.false(html.includes('Liste des déclarations existantes'))
 })

@@ -1,9 +1,7 @@
 'use client'
 
 import {
-  useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState
 } from 'react'
@@ -15,24 +13,10 @@ import DeclarationSummaryItem, {
   DeclarationSummaryListHeader
 } from '@/components/declarations/declaration-summary-item.js'
 import {useAuth} from '@/contexts/auth-context.js'
-import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
 import {
-  mergeDeclarationFeedEntries,
   normalizeDeclarationFeedPagination
 } from '@/lib/declaration-feed.js'
-import {
-  buildDeclarationViewFromSource,
-  getDeclarationDisplayStatus,
-  getDeclarationEntryKind
-} from '@/lib/declaration.js'
-import {matchesSearchTerms} from '@/lib/search-options.js'
-import {
-  getMyDeclarationURL,
-  getMyTelemetrySourceURL
-} from '@/lib/urls.js'
 import {getMyDeclarationFeedAction} from '@/server/actions/declarations.js'
-
-const pointsToAssociateStatuses = new Set(['TO_INSTRUCT', 'INSTRUCTION_IN_PROGRESS', 'PARTIALLY_VALIDATED'])
 
 const declarationTypeFilterOptions = [
   {
@@ -70,341 +54,81 @@ const declarationTypeFilterOptions = [
 ]
 
 const declarationTypeFilterValues = declarationTypeFilterOptions.map(option => option.value)
-const defaultDeclarationTypeFilterValues = declarationTypeFilterValues
-
-function compareEntries(entryA, entryB) {
-  const dateA = new Date(entryA.createdAt ?? 0).getTime()
-  const dateB = new Date(entryB.createdAt ?? 0).getTime()
-
-  return dateB - dateA
+const defaultFilters = {
+  declarationCode: '',
+  declarantName: '',
+  dateFrom: '',
+  dateTo: '',
+  kinds: declarationTypeFilterValues,
+  pointsToAssociateOnly: false
 }
 
-function buildDeclarationEntry(declaration) {
-  return {
-    createdAt: declaration.createdAt ?? declaration.source?.createdAt,
-    declaration,
-    id: `declaration-${declaration.id}`,
-    kind: getDeclarationEntryKind(declaration, declaration.source),
-    source: declaration.source,
-    url: getMyDeclarationURL(declaration)
-  }
-}
-
-function buildTelemetryEntry(source) {
-  const declaration = buildDeclarationViewFromSource(source)
-
-  return {
-    createdAt: source.createdAt,
-    declaration,
-    id: `telemetry-${source.id}`,
-    kind: 'TELEMETRY',
-    source,
-    url: getMyTelemetrySourceURL(source)
-  }
-}
-
-function getCountsByKind(entries) {
-  const countsByKind = {}
-
-  for (const entry of entries) {
-    countsByKind[entry.kind] = (countsByKind[entry.kind] ?? 0) + 1
-  }
-
-  return countsByKind
-}
-
-function getShortSourceCode(source) {
-  const sourceId = source?.id
-
-  if (!sourceId) {
-    return null
-  }
-
-  const digits = String(sourceId).replaceAll(/\D/g, '')
-  return digits.length >= 6 ? digits.slice(0, 6) : null
-}
-
-function getEntryNumberSearchText(entry) {
-  return [
-    entry.declaration?.code,
-    entry.source?.declaration?.code,
-    entry.kind === 'TELEMETRY' ? getShortSourceCode(entry.source) : null
-  ]
-    .filter(Boolean)
-    .join(' ')
-}
-
-function getDeclarantSearchText(entry) {
-  const values = []
-  const pushDeclarant = declarant => {
-    if (!declarant) {
-      return
-    }
-
-    values.push(
-      getDeclarantTitleFromDeclarant(declarant),
-      declarant.socialReason,
-      declarant.firstName,
-      declarant.lastName,
-      declarant.user?.email,
-      declarant.user?.firstName,
-      declarant.user?.lastName
-    )
-  }
-
-  pushDeclarant(entry.declaration?.declarant)
-  pushDeclarant(entry.declaration?.createdByDeclarant)
-  pushDeclarant(entry.source?.declarant)
-
-  for (const chunk of entry.source?.chunks ?? []) {
-    for (const link of chunk.pointPrelevement?.declarants ?? []) {
-      pushDeclarant(link.declarant)
-    }
-  }
-
-  return values.filter(Boolean).join(' ')
-}
-
-function getEntryDateBounds(entry) {
-  const dates = (entry.source?.chunks ?? [])
-    .flatMap(chunk => [chunk.minDate, chunk.maxDate])
-    .filter(Boolean)
-    .map(value => new Date(value))
-    .filter(date => Number.isFinite(date.getTime()))
-
-  if (dates.length === 0) {
-    for (const value of [
-      entry.declaration?.createdAt,
-      entry.source?.createdAt,
-      entry.createdAt
-    ]) {
-      const date = new Date(value)
-
-      if (Number.isFinite(date.getTime())) {
-        dates.push(date)
-      }
-    }
-  }
-
-  if (dates.length === 0) {
-    return {end: null, start: null}
-  }
-
-  const timestamps = dates.map(date => date.getTime())
-
-  return {
-    end: new Date(Math.max(...timestamps)),
-    start: new Date(Math.min(...timestamps))
-  }
-}
-
-function parseDateFilter(value, endOfDay = false) {
-  if (!value) {
-    return null
-  }
-
-  const date = new Date(`${value}T${endOfDay ? '23:59:59.999' : '00:00:00.000'}Z`)
-  return Number.isFinite(date.getTime()) ? date : null
-}
-
-function entryMatchesPeriod(entry, startDate, endDate) {
-  const filterStart = parseDateFilter(startDate)
-  const filterEnd = parseDateFilter(endDate, true)
-
-  if (!filterStart && !filterEnd) {
-    return true
-  }
-
-  const bounds = getEntryDateBounds(entry)
-
-  if (!bounds.start || !bounds.end) {
-    return false
-  }
-
-  if (filterStart && bounds.end < filterStart) {
-    return false
-  }
-
-  return !(filterEnd && bounds.start > filterEnd)
-}
-
-function isChunkToAssociate(chunk) {
-  return !chunk?.pointPrelevementId
-}
-
-function getPointsToAssociateCount(source) {
-  const chunks = source?.chunks ?? []
-
-  if (chunks.length > 0) {
-    return chunks.filter(chunk => isChunkToAssociate(chunk)).length
-  }
-
-  return source?._count?.chunks ?? 0
-}
-
-function hasPointsToAssociate(entry) {
-  const status = getDeclarationDisplayStatus(entry.declaration, entry.source)
-
-  return entry.kind === 'SPREADSHEET'
-    && pointsToAssociateStatuses.has(status)
-    && getPointsToAssociateCount(entry.source) > 0
-}
-
-function matchesSearch(text, query) {
-  return matchesSearchTerms(text, query)
-}
-
-const MyDeclarationsList = ({
-  declarations = [],
-  initialEntries = null,
-  initialMeta = null,
-  showDeclarant: showDeclarantFromProps,
-  telemetrySources = []
-}) => {
+const MyDeclarationsList = ({initialEntries = [], initialMeta = {}, showDeclarant: showDeclarantFromProps}) => {
   const {user} = useAuth()
-  const hasPaginatedFeed = Array.isArray(initialEntries)
-  const legacyEntries = useMemo(
-    () => [
-      ...declarations.map(declaration => buildDeclarationEntry(declaration)),
-      ...telemetrySources.map(source => buildTelemetryEntry(source))
-    ].sort(compareEntries),
-    [declarations, telemetrySources]
-  )
-  const [entries, setEntries] = useState(() => hasPaginatedFeed
-    ? mergeDeclarationFeedEntries([], initialEntries)
-    : legacyEntries)
-  const [feedMeta, setFeedMeta] = useState(() => initialMeta ?? {})
-  const [pagination, setPagination] = useState(() => normalizeDeclarationFeedPagination(
-    hasPaginatedFeed ? initialMeta?.pagination : null
-  ))
-  const [loadingMode, setLoadingMode] = useState(null)
+  const [entries, setEntries] = useState(initialEntries)
+  const [pagination, setPagination] = useState(() => normalizeDeclarationFeedPagination(initialMeta?.pagination))
+  const [loading, setLoading] = useState(false)
   const [paginationError, setPaginationError] = useState(null)
-  const [filters, setFilters] = useState({
-    declarant: '',
-    dossierNumber: '',
-    endDate: '',
-    startDate: ''
-  })
-  const [selectedKinds, setSelectedKinds] = useState(defaultDeclarationTypeFilterValues)
-  const [pointsToAssociateOnly, setPointsToAssociateOnly] = useState(false)
-  const entriesRef = useRef(entries)
-  const paginationRef = useRef(pagination)
+  const [filters, setFilters] = useState(defaultFilters)
+  const [appliedFilters, setAppliedFilters] = useState(defaultFilters)
+  const [pageIndex, setPageIndex] = useState(0)
+  const [pageCursors, setPageCursors] = useState([null])
+  const resultsRef = useRef(null)
+  const requestRef = useRef(null)
   const isLoadingRef = useRef(false)
   const isMountedRef = useRef(true)
-  const shouldLoadAllRef = useRef(false)
   const showDeclarant = typeof showDeclarantFromProps === 'boolean'
     ? showDeclarantFromProps
-    : (feedMeta.declarantRole ?? user?.declarantRole) === 'COLLECTEUR'
-  const loadedCountsByKind = useMemo(() => getCountsByKind(entries), [entries])
-  const countsByKind = feedMeta.countsByKind ?? loadedCountsByKind
-  const totalEntries = Number.isInteger(feedMeta.total) ? feedMeta.total : entries.length
-  const availableTypeOptions = useMemo(
-    () => declarationTypeFilterOptions.filter(option => countsByKind[option.value] > 0),
-    [countsByKind]
-  )
-  const availableKindValues = useMemo(
-    () => availableTypeOptions.map(option => option.value),
-    [availableTypeOptions]
-  )
-  const selectedKindSet = useMemo(() => new Set(selectedKinds), [selectedKinds])
-  const defaultKindSet = useMemo(() => new Set(defaultDeclarationTypeFilterValues), [])
-  const hasActiveTypeFilter = availableKindValues.some(kind =>
-    selectedKindSet.has(kind) !== defaultKindSet.has(kind))
-  const hasSpreadsheetType = availableKindValues.includes('SPREADSHEET') && selectedKindSet.has('SPREADSHEET')
-  const visibleEntries = useMemo(
-    () => entries.filter(entry => {
-      if (!selectedKindSet.has(entry.kind)) {
-        return false
-      }
+    : (initialMeta.declarantRole ?? user?.declarantRole) === 'COLLECTEUR'
+  const selectedKindSet = new Set(filters.kinds)
+  const hasSpreadsheetType = selectedKindSet.has('SPREADSHEET')
+  const hasActiveFilters = JSON.stringify(filters) !== JSON.stringify(defaultFilters)
 
-      if (pointsToAssociateOnly && !hasPointsToAssociate(entry)) {
-        return false
-      }
-
-      if (!matchesSearch(getEntryNumberSearchText(entry), filters.dossierNumber)) {
-        return false
-      }
-
-      if (showDeclarant && !matchesSearch(getDeclarantSearchText(entry), filters.declarant)) {
-        return false
-      }
-
-      return entryMatchesPeriod(entry, filters.startDate, filters.endDate)
-    }),
-    [entries, filters, pointsToAssociateOnly, selectedKindSet, showDeclarant]
-  )
-  const hasActiveFilters = Boolean(
-    filters.dossierNumber
-    || filters.startDate
-    || filters.endDate
-    || (showDeclarant && filters.declarant)
-    || pointsToAssociateOnly
-    || hasActiveTypeFilter
-  )
-  shouldLoadAllRef.current = hasActiveFilters
-
-  const loadFeedPages = useCallback(async ({all = false} = {}) => {
-    if (!hasPaginatedFeed || isLoadingRef.current || !paginationRef.current.hasNext) {
+  const loadPage = async ({nextFilters, cursor = null, index = 0, cursors = [null], limit = pagination.limit}) => {
+    if (isLoadingRef.current) {
       return
     }
 
+    const request = {nextFilters, cursor, index, cursors, limit}
+    requestRef.current = request
     isLoadingRef.current = true
-    setLoadingMode(all ? 'all' : 'next')
+    setLoading(true)
     setPaginationError(null)
+    setAppliedFilters(nextFilters)
+    setPageIndex(index)
+    setPageCursors(cursors)
+    // Never show the previous page as the result of a new search or failed request.
+    setEntries([])
 
     try {
-      let currentPagination = paginationRef.current
-      let shouldContinue = true
-
-      while (shouldContinue) {
-        const requestedCursor = currentPagination.nextCursor
-        const requestedLimit = all ? 50 : currentPagination.limit
-
-        if (!requestedCursor) {
-          throw new Error('Le curseur de pagination est manquant.')
-        }
-
-        // Les pages sont chargées séquentiellement pour conserver l’ordre du flux.
-
-        const actionResult = await getMyDeclarationFeedAction({
-          cursor: requestedCursor,
-          includeMeta: false,
-          limit: requestedLimit
-        })
-
-        if (!isMountedRef.current) {
-          return
-        }
-
-        const response = actionResult?.success ? actionResult.data : null
-
-        if (!response?.success || !Array.isArray(response.data)) {
-          throw new Error(actionResult?.error || 'Le chargement des déclarations a échoué.')
-        }
-
-        const nextPagination = normalizeDeclarationFeedPagination(
-          response.meta?.pagination,
-          requestedLimit
-        )
-
-        if (nextPagination.hasNext
-          && (!nextPagination.nextCursor || nextPagination.nextCursor === requestedCursor)) {
-          throw new Error('La pagination des déclarations ne peut pas continuer.')
-        }
-
-        const mergedEntries = mergeDeclarationFeedEntries(entriesRef.current, response.data)
-        entriesRef.current = mergedEntries
-        paginationRef.current = nextPagination
-        currentPagination = nextPagination
-        setEntries(mergedEntries)
-        setPagination(nextPagination)
-        setFeedMeta(previousMeta => ({
-          ...previousMeta,
-          ...response.meta,
-          pagination: nextPagination
-        }))
-        shouldContinue = all && shouldLoadAllRef.current && currentPagination.hasNext
+      const actionResult = await getMyDeclarationFeedAction({
+        ...nextFilters,
+        cursor,
+        includeCounts: false,
+        includeMeta: false,
+        limit
+      })
+      if (!isMountedRef.current) {
+        return
       }
+
+      const response = actionResult?.success ? actionResult.data : null
+      if (!response?.success || !Array.isArray(response.data)) {
+        throw new Error(actionResult?.error || 'Le chargement des déclarations a échoué.')
+      }
+
+      const nextPagination = normalizeDeclarationFeedPagination(response.meta?.pagination, limit)
+      if (nextPagination.hasNext && (!nextPagination.nextCursor || nextPagination.nextCursor === cursor)) {
+        throw new Error('La pagination des déclarations ne peut pas continuer.')
+      }
+
+      setEntries(response.data)
+      setPagination(nextPagination)
+      setPageCursors(cursors.slice(0, index + 1))
+      requestAnimationFrame(() => {
+        resultsRef.current?.focus({preventScroll: true})
+        resultsRef.current?.scrollIntoView({block: 'start'})
+      })
     } catch (error) {
       if (isMountedRef.current) {
         setPaginationError(error.message || 'Le chargement des déclarations a échoué.')
@@ -412,291 +136,249 @@ const MyDeclarationsList = ({
     } finally {
       isLoadingRef.current = false
       if (isMountedRef.current) {
-        setLoadingMode(null)
+        setLoading(false)
       }
     }
-  }, [hasPaginatedFeed])
+  }
 
   useEffect(() => {
     isMountedRef.current = true
-
     return () => {
       isMountedRef.current = false
     }
   }, [])
 
-  useEffect(() => {
-    if (hasActiveFilters && pagination.hasNext && !paginationError) {
-      const completeFeed = async () => {
-        await loadFeedPages({all: true})
-      }
-
-      completeFeed()
-    }
-  }, [
-    hasActiveFilters,
-    loadFeedPages,
-    pagination.hasNext,
-    pagination.nextCursor,
-    paginationError
-  ])
-
   const updateFilter = (name, value) => {
-    setFilters(previous => ({
-      ...previous,
-      [name]: value
-    }))
+    setFilters(previous => ({...previous, [name]: value}))
   }
 
   const toggleKind = kind => {
-    const nextKinds = selectedKindSet.has(kind)
-      ? selectedKinds.filter(selectedKind => selectedKind !== kind)
-      : declarationTypeFilterValues.filter(value => [...selectedKinds, kind].includes(value))
+    const kinds = selectedKindSet.has(kind)
+      ? filters.kinds.filter(value => value !== kind)
+      : declarationTypeFilterValues.filter(value => [...filters.kinds, kind].includes(value))
+    setFilters(previous => ({
+      ...previous,
+      kinds,
+      pointsToAssociateOnly: kinds.includes('SPREADSHEET') && previous.pointsToAssociateOnly
+    }))
+  }
 
-    setSelectedKinds(nextKinds)
-
-    if (!nextKinds.includes('SPREADSHEET')) {
-      setPointsToAssociateOnly(false)
+  const applyFilters = event => {
+    event.preventDefault()
+    const nextFilters = {...filters, declarationCode: filters.declarationCode.trim(), declarantName: filters.declarantName.trim()}
+    setFilters(nextFilters)
+    if (paginationError || JSON.stringify(nextFilters) !== JSON.stringify(appliedFilters)) {
+      loadPage({nextFilters})
     }
   }
 
   const resetFilters = () => {
-    setFilters({
-      declarant: '',
-      dossierNumber: '',
-      endDate: '',
-      startDate: ''
-    })
-    setSelectedKinds(defaultDeclarationTypeFilterValues)
-    setPointsToAssociateOnly(false)
+    setFilters(defaultFilters)
+    if (paginationError || JSON.stringify(appliedFilters) !== JSON.stringify(defaultFilters)) {
+      loadPage({nextFilters: defaultFilters})
+    }
   }
 
-  const isPreparingFilteredResults = hasActiveFilters && pagination.hasNext
-  let paginationButtonLabel = 'Charger plus'
-
-  if (loadingMode === 'next') {
-    paginationButtonLabel = 'Chargement…'
-  } else if (paginationError) {
-    paginationButtonLabel = 'Réessayer le chargement'
-  }
-
-  if (totalEntries === 0) {
-    return null
+  const navigate = index => {
+    const cursors = index > pageIndex ? [...pageCursors, pagination.nextCursor] : pageCursors
+    loadPage({nextFilters: appliedFilters, cursor: cursors[index], index, cursors})
   }
 
   return (
     <div className='flex flex-col gap-3'>
-      <section className='border border-gray-200 bg-white px-4 py-3' aria-label='Filtres des déclarations'>
-        <div className='mb-3 flex flex-wrap items-center justify-between gap-2'>
-          {hasActiveFilters && (
-            <Button
-              priority='secondary'
-              size='small'
-              iconId='fr-icon-refresh-line'
-              onClick={resetFilters}
-            >
-              Réinitialiser
-            </Button>
-          )}
-        </div>
+      <form className='border border-gray-200 bg-white px-4 py-3' aria-label='Filtres des déclarations' onSubmit={applyFilters}>
+        <fieldset disabled={loading} className='m-0 min-w-0 border-0 p-0'>
+          <legend className='sr-only'>Filtres des déclarations</legend>
+          <div className='mb-3 flex flex-wrap items-center justify-between gap-2'>
+            {hasActiveFilters && (
+              <Button
+                priority='secondary'
+                size='small'
+                iconId='fr-icon-refresh-line'
+                type='button'
+                onClick={resetFilters}
+              >
+                Réinitialiser
+              </Button>
+            )}
+          </div>
 
-        <div className={`grid grid-cols-1 gap-x-4 gap-y-3 ${showDeclarant ? 'lg:grid-cols-[minmax(12rem,1fr)_minmax(10rem,.75fr)_minmax(25rem,1.25fr)]' : 'lg:grid-cols-[minmax(10rem,.75fr)_minmax(25rem,1.25fr)]'} lg:items-end`}>
-          {showDeclarant && (
+          <div className={`grid grid-cols-1 gap-x-4 gap-y-3 ${showDeclarant ? 'lg:grid-cols-[minmax(12rem,1fr)_minmax(10rem,.75fr)_minmax(25rem,1.25fr)]' : 'lg:grid-cols-[minmax(10rem,.75fr)_minmax(25rem,1.25fr)]'} lg:items-end`}>
+            {showDeclarant && (
+              <div className='fr-input-group fr-mb-0 min-w-0'>
+                <label className='fr-label min-h-6' htmlFor='my-declarations-declarant-filter'>Déclarant concerné</label>
+                <input
+                  className='fr-input'
+                  id='my-declarations-declarant-filter'
+                  type='search'
+                  value={filters.declarantName}
+                  onChange={event => updateFilter('declarantName', event.target.value)}
+                />
+              </div>
+            )}
+
             <div className='fr-input-group fr-mb-0 min-w-0'>
-              <label className='fr-label min-h-6' htmlFor='my-declarations-declarant-filter'>Déclarant concerné</label>
+              <label className='fr-label min-h-6' htmlFor='my-declarations-number-filter'>Numéro</label>
               <input
                 className='fr-input'
-                id='my-declarations-declarant-filter'
-                type='search'
-                value={filters.declarant}
-                onChange={event => updateFilter('declarant', event.target.value)}
+                id='my-declarations-number-filter'
+                inputMode='numeric'
+                value={filters.declarationCode}
+                onChange={event => updateFilter('declarationCode', event.target.value)}
               />
             </div>
-          )}
 
-          <div className='fr-input-group fr-mb-0 min-w-0'>
-            <label className='fr-label min-h-6' htmlFor='my-declarations-number-filter'>Numéro</label>
-            <input
-              className='fr-input'
-              id='my-declarations-number-filter'
-              inputMode='numeric'
-              value={filters.dossierNumber}
-              onChange={event => updateFilter('dossierNumber', event.target.value)}
-            />
-          </div>
-
-          <div className='min-w-0' role='group' aria-labelledby='my-declarations-period-filter-label'>
-            <div className='fr-label fr-mb-1w min-h-6' id='my-declarations-period-filter-label'>Période concernée</div>
-            <div className='grid grid-cols-1 gap-2 sm:grid-cols-2'>
-              <div className='flex min-w-0 items-center gap-2'>
-                <label className='fr-label fr-mb-0 w-8 shrink-0 text-right text-sm' htmlFor='my-declarations-start-date'>Du</label>
-                <input
-                  className='fr-input'
-                  id='my-declarations-start-date'
-                  type='date'
-                  value={filters.startDate}
-                  onChange={event => updateFilter('startDate', event.target.value)}
-                />
-              </div>
-              <div className='flex min-w-0 items-center gap-2'>
-                <label className='fr-label fr-mb-0 w-8 shrink-0 text-right text-sm' htmlFor='my-declarations-end-date'>Au</label>
-                <input
-                  className='fr-input'
-                  id='my-declarations-end-date'
-                  min={filters.startDate || undefined}
-                  type='date'
-                  value={filters.endDate}
-                  onChange={event => updateFilter('endDate', event.target.value)}
-                />
+            <div className='min-w-0' role='group' aria-labelledby='my-declarations-period-filter-label'>
+              <div className='fr-label fr-mb-1w min-h-6' id='my-declarations-period-filter-label'>Période concernée</div>
+              <div className='grid grid-cols-1 gap-2 sm:grid-cols-2'>
+                <div className='flex min-w-0 items-center gap-2'>
+                  <label className='fr-label fr-mb-0 w-8 shrink-0 text-right text-sm' htmlFor='my-declarations-start-date'>Du</label>
+                  <input
+                    className='fr-input'
+                    id='my-declarations-start-date'
+                    type='date'
+                    value={filters.dateFrom}
+                    onChange={event => updateFilter('dateFrom', event.target.value)}
+                  />
+                </div>
+                <div className='flex min-w-0 items-center gap-2'>
+                  <label className='fr-label fr-mb-0 w-8 shrink-0 text-right text-sm' htmlFor='my-declarations-end-date'>Au</label>
+                  <input
+                    className='fr-input'
+                    id='my-declarations-end-date'
+                    min={filters.dateFrom || undefined}
+                    type='date'
+                    value={filters.dateTo}
+                    onChange={event => updateFilter('dateTo', event.target.value)}
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className='mt-3 grid grid-cols-1 gap-3 border-t border-gray-100 pt-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start'>
-          <div className='min-w-0' role='group' aria-labelledby='my-declaration-types-filter-label'>
-            <div className='fr-label fr-mb-1w min-h-6' id='my-declaration-types-filter-label'>Types de déclaration</div>
-            <div className='flex flex-wrap gap-2'>
-              {availableTypeOptions.map(option => {
-                const checked = selectedKindSet.has(option.value)
-                return (
-                  <label
-                    key={option.value}
-                    className={`inline-flex cursor-pointer items-center gap-1.5 border px-2 py-1 text-sm font-medium transition-colors ${checked ? option.checkedClassName : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'}`}
-                    htmlFor={`my-declaration-type-filter-${option.value}`}
-                  >
-                    <input
-                      checked={checked}
-                      className={`h-3.5 w-3.5 ${option.checkboxClassName}`}
-                      id={`my-declaration-type-filter-${option.value}`}
-                      type='checkbox'
-                      onChange={() => toggleKind(option.value)}
-                    />
-                    <span
-                      className={`${option.iconClassName} text-[0.66rem] ${checked ? option.colorClassName : 'text-gray-500'} [&::after]:![--icon-size:0.72rem] [&::before]:![--icon-size:0.72rem]`}
-                      aria-hidden='true'
-                    />
-                    <span>{option.label}</span>
-                    <span className='text-xs font-normal opacity-75'>({countsByKind[option.value]})</span>
+          <div className='mt-3 grid grid-cols-1 gap-3 border-t border-gray-100 pt-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start'>
+            <div className='min-w-0' role='group' aria-labelledby='my-declaration-types-filter-label'>
+              <div className='fr-label fr-mb-1w min-h-6' id='my-declaration-types-filter-label'>Types de déclaration</div>
+              <div className='flex flex-wrap gap-2'>
+                {declarationTypeFilterOptions.map(option => {
+                  const checked = selectedKindSet.has(option.value)
+                  return (
+                    <label
+                      key={option.value}
+                      className={`inline-flex cursor-pointer items-center gap-1.5 border px-2 py-1 text-sm font-medium transition-colors ${checked ? option.checkedClassName : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'}`}
+                      htmlFor={`my-declaration-type-filter-${option.value}`}
+                    >
+                      <input
+                        checked={checked}
+                        className={`h-3.5 w-3.5 ${option.checkboxClassName}`}
+                        id={`my-declaration-type-filter-${option.value}`}
+                        type='checkbox'
+                        onChange={() => toggleKind(option.value)}
+                      />
+                      <span
+                        className={`${option.iconClassName} text-[0.66rem] ${checked ? option.colorClassName : 'text-gray-500'} [&::after]:![--icon-size:0.72rem] [&::before]:![--icon-size:0.72rem]`}
+                        aria-hidden='true'
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+
+            {hasSpreadsheetType && (
+              <div className='min-w-0 lg:justify-self-end lg:pt-7'>
+                <div className='fr-checkbox-group fr-mb-0'>
+                  <input
+                    checked={filters.pointsToAssociateOnly}
+                    id='my-declarations-points-to-associate-filter'
+                    type='checkbox'
+                    onChange={() => updateFilter('pointsToAssociateOnly', !filters.pointsToAssociateOnly)}
+                  />
+                  <label className='fr-label' htmlFor='my-declarations-points-to-associate-filter'>
+                    Afficher uniquement les déclarations avec points à associer
                   </label>
-                )
-              })}
-            </div>
-          </div>
-
-          {hasSpreadsheetType && (
-            <div className='min-w-0 lg:justify-self-end lg:pt-7'>
-              <div className='fr-checkbox-group fr-mb-0'>
-                <input
-                  checked={pointsToAssociateOnly}
-                  id='my-declarations-points-to-associate-filter'
-                  type='checkbox'
-                  onChange={() => setPointsToAssociateOnly(value => !value)}
-                />
-                <label className='fr-label' htmlFor='my-declarations-points-to-associate-filter'>
-                  Afficher uniquement les déclarations avec points à associer
-                </label>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-
-        <p className='fr-text--sm fr-mb-0 mt-3 text-gray-600' aria-live='polite'>
-          {isPreparingFilteredResults
-            ? `Chargement de toutes les déclarations avant application des filtres (${entries.length} sur ${totalEntries})`
-            : (
-              <>
-                {visibleEntries.length === 1
-                  ? '1 élément affiché'
-                  : `${visibleEntries.length} éléments affichés`}
-                {' '}
-                sur
-                {' '}
-                {totalEntries}
-                {' '}
-                {totalEntries === 1 ? 'déclaration' : 'déclarations'}
-              </>
             )}
+          </div>
+
+          <div className='mt-3'>
+            <Button type='submit' size='small' iconId='fr-icon-search-line'>Rechercher</Button>
+          </div>
+        </fieldset>
+      </form>
+
+      <div className='flex flex-wrap items-center justify-between gap-3'>
+        <p ref={resultsRef} tabIndex={-1} className='fr-text--sm fr-mb-0 text-gray-600' aria-live='polite'>
+          {loading ? 'Chargement des déclarations…' : paginationError ? 'Déclarations indisponibles' : `${entries.length} ${entries.length === 1 ? 'élément affiché' : 'éléments affichés'}`}
         </p>
-      </section>
-
-      {isPreparingFilteredResults ? (
-        paginationError ? (
-          <div className='flex flex-col gap-3' aria-live='polite'>
-            <Alert
-              severity='error'
-              title='Impossible d’appliquer les filtres'
-              description={`${paginationError} Aucun résultat partiel n’est affiché.`}
-            />
-            <div>
-              <Button
-                priority='secondary'
-                iconId='fr-icon-refresh-line'
-                disabled={loadingMode !== null}
-                onClick={() => loadFeedPages({all: true})}
-              >
-                Réessayer
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div
-            className='border border-gray-200 bg-white p-5 text-center text-sm text-gray-700'
-            aria-busy='true'
-            aria-live='polite'
+        <div className='flex items-center gap-2'>
+          <label className='fr-label fr-mb-0 text-sm' htmlFor='my-declarations-page-size'>Par page</label>
+          <select
+            className='fr-select w-24'
+            id='my-declarations-page-size'
+            disabled={loading}
+            value={pagination.limit}
+            onChange={event => loadPage({nextFilters: appliedFilters, limit: Number(event.target.value)})}
           >
-            <span
-              className='fr-icon-refresh-line mr-2 inline-block animate-spin'
-              aria-hidden='true'
-            />
-            {' '}
-            Chargement de l’ensemble des déclarations pour garantir un résultat complet…
+            {[25, 50, 100].map(limit => <option key={limit} value={limit}>{limit}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className='border border-gray-200 bg-white p-5 text-center text-sm text-gray-700' aria-busy='true'>
+          Chargement des déclarations…
+        </div>
+      ) : paginationError ? (
+        <div className='flex flex-col gap-3'>
+          <Alert severity='error' title='Déclarations indisponibles' description={paginationError} />
+          <div>
+            <Button priority='secondary' iconId='fr-icon-refresh-line' onClick={() => loadPage(requestRef.current)}>
+              Réessayer
+            </Button>
           </div>
-        )
+        </div>
+      ) : entries.length === 0 ? (
+        <div className='border border-dashed border-gray-300 bg-white p-4 text-center text-sm text-gray-600'>
+          Aucune déclaration ne correspond à ces filtres.
+        </div>
       ) : (
-        <>
-          {paginationError && (
-            <Alert
-              severity='error'
-              title='Chargement interrompu'
-              description={paginationError}
+        <div className='divide-y divide-gray-200 border border-gray-300 bg-white'>
+          <DeclarationSummaryListHeader showDeclarant={showDeclarant} />
+          {entries.map(entry => (
+            <DeclarationSummaryItem
+              key={entry.id}
+              preferUsageName
+              declaration={entry.declaration}
+              source={entry.source}
+              url={entry.url}
+              showDeclarant={showDeclarant}
             />
-          )}
-
-          {visibleEntries.length === 0 ? (
-            <div className='border border-dashed border-gray-300 bg-white p-4 text-center text-sm text-gray-600'>
-              Aucune déclaration ne correspond à ces filtres.
-            </div>
-          ) : (
-            <div className='divide-y divide-gray-200 border border-gray-300 bg-white'>
-              <DeclarationSummaryListHeader showDeclarant={showDeclarant} />
-              {visibleEntries.map(entry => (
-                <DeclarationSummaryItem
-                  key={entry.id}
-                  preferUsageName
-                  declaration={entry.declaration}
-                  source={entry.source}
-                  url={entry.url}
-                  showDeclarant={showDeclarant}
-                />
-              ))}
-            </div>
-          )}
-
-          {pagination.hasNext && (
-            <div className='flex justify-center pt-1'>
-              <Button
-                priority='secondary'
-                iconId='fr-icon-arrow-down-line'
-                disabled={loadingMode !== null}
-                onClick={() => loadFeedPages()}
-              >
-                {paginationButtonLabel}
-              </Button>
-            </div>
-          )}
-        </>
+          ))}
+        </div>
       )}
+
+      <nav className='flex flex-wrap items-center justify-end gap-2' aria-label='Pagination des déclarations'>
+        <Button
+          priority='tertiary no outline'
+          size='small'
+          disabled={loading || pageIndex === 0}
+          onClick={() => navigate(pageIndex - 1)}
+        >
+          Précédent
+        </Button>
+        <span className='text-sm' aria-current='page'>Page {pageIndex + 1}</span>
+        <Button
+          priority='tertiary no outline'
+          size='small'
+          disabled={loading || Boolean(paginationError) || !pagination.hasNext}
+          onClick={() => navigate(pageIndex + 1)}
+        >
+          Suivant
+        </Button>
+      </nav>
     </div>
   )
 }
