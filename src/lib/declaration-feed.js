@@ -74,3 +74,27 @@ export function normalizeDeclarationFeedPagination(pagination, fallbackLimit = D
       : null
   }
 }
+
+
+export function hasOtherDeclarations(meta, entries = []) {
+  if (typeof meta?.hasOtherDeclarations === 'boolean') {
+    return meta.hasOtherDeclarations
+  }
+
+  return meta?.countsByKind?.NONE > 0 || entries.some(entry => entry.kind === 'NONE'
+    || (!entry.kind && entry.declaration && [null, undefined, 'NONE'].includes(entry.declaration.dataSourceType)))
+}
+
+export function updateDeclarationFeedCursors(cursors, pageIndex, pagination) {
+  const nextCursors = [...cursors]
+  const nextIndex = pageIndex + 1
+  if (!pagination.hasNext || !pagination.nextCursor) {
+    return nextCursors.slice(0, nextIndex)
+  }
+
+  if (nextCursors[nextIndex] !== pagination.nextCursor) {
+    nextCursors.splice(nextIndex, nextCursors.length, pagination.nextCursor)
+  }
+
+  return nextCursors
+}

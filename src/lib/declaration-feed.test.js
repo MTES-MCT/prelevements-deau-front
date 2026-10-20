@@ -2,6 +2,8 @@ import test from 'ava'
 
 import {
   buildDeclarationFeedSearchParams,
+  hasOtherDeclarations,
+  updateDeclarationFeedCursors,
   mergeDeclarationFeedEntries,
   normalizeDeclarationFeedPagination
 } from './declaration-feed.js'
@@ -95,4 +97,26 @@ test('transmet tous les filtres au serveur avec leur encodage et une limite born
 test('une sélection de types vide reste distincte de tous les types', t => {
   t.is(buildDeclarationFeedSearchParams({kinds: []}).get('kinds'), '')
   t.false(buildDeclarationFeedSearchParams().has('kinds'))
+})
+
+
+test('les types Autres dépendent de l’existence globale ou d’une preuve en réponse ancienne', t => {
+  t.true(hasOtherDeclarations({hasOtherDeclarations: true}, []))
+  t.false(hasOtherDeclarations({hasOtherDeclarations: false}, [{kind: 'NONE'}]))
+  t.false(hasOtherDeclarations({}, [{kind: 'TELEMETRY'}]))
+  t.true(hasOtherDeclarations({countsByKind: {NONE: 1}}, []))
+  t.true(hasOtherDeclarations({}, [{kind: 'NONE'}]))
+  t.true(hasOtherDeclarations({}, [{declaration: {dataSourceType: null}}]))
+  t.true(hasOtherDeclarations({}, [{declaration: {dataSourceType: 'NONE'}}]))
+  t.false(hasOtherDeclarations({}, [{}]))
+})
+
+test('les pages visitées restent accessibles après un retour en arrière', t => {
+  t.deepEqual(updateDeclarationFeedCursors([null, 'page-2', 'page-3', 'page-4'], 0, {hasNext: true, nextCursor: 'page-2'}), [null, 'page-2', 'page-3', 'page-4'])
+})
+
+test('un curseur modifié invalide seulement les pages suivantes devenues inconnues', t => {
+  t.deepEqual(updateDeclarationFeedCursors([null, 'page-2', 'page-3', 'page-4'], 1, {hasNext: true, nextCursor: 'new-page-3'}), [null, 'page-2', 'new-page-3'])
+  t.deepEqual(updateDeclarationFeedCursors([null, 'page-2', 'page-3'], 1, {hasNext: false, nextCursor: null}), [null, 'page-2'])
+  t.deepEqual(updateDeclarationFeedCursors([null], 0, {hasNext: true, nextCursor: 'page-2'}), [null, 'page-2'])
 })

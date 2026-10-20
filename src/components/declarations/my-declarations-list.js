@@ -12,9 +12,12 @@ import {Button} from '@codegouvfr/react-dsfr/Button'
 import DeclarationSummaryItem, {
   DeclarationSummaryListHeader
 } from '@/components/declarations/declaration-summary-item.js'
+import {DeclarationsPagination, DeclarationResultsToolbar} from '@/components/declarations/declaration-pagination.js'
 import {useAuth} from '@/contexts/auth-context.js'
 import {
-  normalizeDeclarationFeedPagination
+  hasOtherDeclarations,
+  normalizeDeclarationFeedPagination,
+  updateDeclarationFeedCursors
 } from '@/lib/declaration-feed.js'
 import {getMyDeclarationFeedAction} from '@/server/actions/declarations.js'
 
@@ -72,7 +75,7 @@ const MyDeclarationsList = ({initialEntries = [], initialMeta = {}, showDeclaran
   const [filters, setFilters] = useState(defaultFilters)
   const [appliedFilters, setAppliedFilters] = useState(defaultFilters)
   const [pageIndex, setPageIndex] = useState(0)
-  const [pageCursors, setPageCursors] = useState([null])
+  const [pageCursors, setPageCursors] = useState(() => updateDeclarationFeedCursors([null], 0, pagination))
   const resultsRef = useRef(null)
   const requestRef = useRef(null)
   const isLoadingRef = useRef(false)
@@ -80,6 +83,8 @@ const MyDeclarationsList = ({initialEntries = [], initialMeta = {}, showDeclaran
   const showDeclarant = typeof showDeclarantFromProps === 'boolean'
     ? showDeclarantFromProps
     : (initialMeta.declarantRole ?? user?.declarantRole) === 'COLLECTEUR'
+  const showOtherKind = hasOtherDeclarations(initialMeta, initialEntries)
+  const availableTypeOptions = declarationTypeFilterOptions.filter(option => option.value !== 'NONE' || showOtherKind)
   const selectedKindSet = new Set(filters.kinds)
   const hasSpreadsheetType = selectedKindSet.has('SPREADSHEET')
   const hasActiveFilters = JSON.stringify(filters) !== JSON.stringify(defaultFilters)
@@ -124,7 +129,7 @@ const MyDeclarationsList = ({initialEntries = [], initialMeta = {}, showDeclaran
 
       setEntries(response.data)
       setPagination(nextPagination)
-      setPageCursors(cursors.slice(0, index + 1))
+      setPageCursors(updateDeclarationFeedCursors(cursors, index, nextPagination))
       requestAnimationFrame(() => {
         resultsRef.current?.focus({preventScroll: true})
         resultsRef.current?.scrollIntoView({block: 'start'})
@@ -153,9 +158,13 @@ const MyDeclarationsList = ({initialEntries = [], initialMeta = {}, showDeclaran
   }
 
   const toggleKind = kind => {
-    const kinds = selectedKindSet.has(kind)
-      ? filters.kinds.filter(value => value !== kind)
-      : declarationTypeFilterValues.filter(value => [...filters.kinds, kind].includes(value))
+    const visibleKinds = filters.kinds.filter(value => value !== 'NONE' || showOtherKind)
+    let kinds = selectedKindSet.has(kind)
+      ? visibleKinds.filter(value => value !== kind)
+      : availableTypeOptions.map(option => option.value).filter(value => [...visibleKinds, kind].includes(value))
+    if (kinds.length === availableTypeOptions.length) {
+      kinds = declarationTypeFilterValues
+    }
     setFilters(previous => ({
       ...previous,
       kinds,
@@ -179,10 +188,13 @@ const MyDeclarationsList = ({initialEntries = [], initialMeta = {}, showDeclaran
     }
   }
 
-  const navigate = index => {
-    const cursors = index > pageIndex ? [...pageCursors, pagination.nextCursor] : pageCursors
-    loadPage({nextFilters: appliedFilters, cursor: cursors[index], index, cursors})
+  const navigate = page => {
+    const index = page - 1
+    if (index !== pageIndex && index >= 0 && index < pageCursors.length) {
+      loadPage({nextFilters: appliedFilters, cursor: pageCursors[index], index, cursors: pageCursors})
+    }
   }
+  const visiblePagination = {page: pageIndex + 1, pageSize: pagination.limit, total: null, totalPages: pageCursors.length}
 
   return (
     <div className='flex flex-col gap-3'>
@@ -260,7 +272,7 @@ const MyDeclarationsList = ({initialEntries = [], initialMeta = {}, showDeclaran
             <div className='min-w-0' role='group' aria-labelledby='my-declaration-types-filter-label'>
               <div className='fr-label fr-mb-1w min-h-6' id='my-declaration-types-filter-label'>Types de déclaration</div>
               <div className='flex flex-wrap gap-2'>
-                {declarationTypeFilterOptions.map(option => {
+                {availableTypeOptions.map(option => {
                   const checked = selectedKindSet.has(option.value)
                   return (
                     <label
@@ -309,76 +321,58 @@ const MyDeclarationsList = ({initialEntries = [], initialMeta = {}, showDeclaran
         </fieldset>
       </form>
 
-      <div className='flex flex-wrap items-center justify-between gap-3'>
-        <p ref={resultsRef} tabIndex={-1} className='fr-text--sm fr-mb-0 text-gray-600' aria-live='polite'>
-          {loading ? 'Chargement des déclarations…' : paginationError ? 'Déclarations indisponibles' : `${entries.length} ${entries.length === 1 ? 'élément affiché' : 'éléments affichés'}`}
-        </p>
-        <div className='flex items-center gap-2'>
-          <label className='fr-label fr-mb-0 text-sm' htmlFor='my-declarations-page-size'>Par page</label>
-          <select
-            className='fr-select w-24'
-            id='my-declarations-page-size'
-            disabled={loading}
-            value={pagination.limit}
-            onChange={event => loadPage({nextFilters: appliedFilters, limit: Number(event.target.value)})}
-          >
-            {[25, 50, 100].map(limit => <option key={limit} value={limit}>{limit}</option>)}
-          </select>
-        </div>
-      </div>
+      <div className='fr-mb-4w' aria-busy={loading}>
+        <DeclarationResultsToolbar
+          isLoading={loading}
+          error={paginationError}
+          itemsLength={entries.length}
+          pagination={visiblePagination}
+          pageSizeId='my-declarations-page-size'
+          resultsRef={resultsRef}
+          onPageChange={navigate}
+          onPageSizeChange={limit => loadPage({nextFilters: appliedFilters, limit})}
+        />
 
-      {loading ? (
-        <div className='border border-gray-200 bg-white p-5 text-center text-sm text-gray-700' aria-busy='true'>
-          Chargement des déclarations…
-        </div>
-      ) : paginationError ? (
-        <div className='flex flex-col gap-3'>
-          <Alert severity='error' title='Déclarations indisponibles' description={paginationError} />
-          <div>
-            <Button priority='secondary' iconId='fr-icon-refresh-line' onClick={() => loadPage(requestRef.current)}>
-              Réessayer
-            </Button>
+        {loading ? (
+          <div className='border border-gray-200 bg-white p-5 text-center text-sm text-gray-700' aria-busy='true'>
+            Chargement des déclarations…
           </div>
-        </div>
-      ) : entries.length === 0 ? (
-        <div className='border border-dashed border-gray-300 bg-white p-4 text-center text-sm text-gray-600'>
-          Aucune déclaration ne correspond à ces filtres.
-        </div>
-      ) : (
-        <div className='divide-y divide-gray-200 border border-gray-300 bg-white'>
-          <DeclarationSummaryListHeader showDeclarant={showDeclarant} />
-          {entries.map(entry => (
-            <DeclarationSummaryItem
-              key={entry.id}
-              preferUsageName
-              declaration={entry.declaration}
-              source={entry.source}
-              url={entry.url}
-              showDeclarant={showDeclarant}
-            />
-          ))}
-        </div>
-      )}
+        ) : paginationError ? (
+          <div className='flex flex-col gap-3'>
+            <Alert severity='error' title='Déclarations indisponibles' description={paginationError} />
+            <div>
+              <Button priority='secondary' iconId='fr-icon-refresh-line' onClick={() => loadPage(requestRef.current)}>
+                Réessayer
+              </Button>
+            </div>
+          </div>
+        ) : entries.length === 0 ? (
+          <div className='border border-dashed border-gray-300 bg-white p-4 text-center text-sm text-gray-600'>
+            Aucune déclaration ne correspond à ces filtres.
+          </div>
+        ) : (
+          <div className='divide-y divide-gray-200 border border-gray-300 bg-white'>
+            <DeclarationSummaryListHeader showDeclarant={showDeclarant} />
+            {entries.map(entry => (
+              <DeclarationSummaryItem
+                key={entry.id}
+                preferUsageName
+                declaration={entry.declaration}
+                source={entry.source}
+                url={entry.url}
+                showDeclarant={showDeclarant}
+              />
+            ))}
+          </div>
+        )}
 
-      <nav className='flex flex-wrap items-center justify-end gap-2' aria-label='Pagination des déclarations'>
-        <Button
-          priority='tertiary no outline'
-          size='small'
-          disabled={loading || pageIndex === 0}
-          onClick={() => navigate(pageIndex - 1)}
-        >
-          Précédent
-        </Button>
-        <span className='text-sm' aria-current='page'>Page {pageIndex + 1}</span>
-        <Button
-          priority='tertiary no outline'
-          size='small'
-          disabled={loading || Boolean(paginationError) || !pagination.hasNext}
-          onClick={() => navigate(pageIndex + 1)}
-        >
-          Suivant
-        </Button>
-      </nav>
+        <DeclarationsPagination
+          className='fr-mt-3w'
+          disabled={loading || Boolean(paginationError)}
+          pagination={visiblePagination}
+          onPageChange={navigate}
+        />
+      </div>
     </div>
   )
 }
