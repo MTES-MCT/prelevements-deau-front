@@ -8,26 +8,13 @@ import {useRouter} from 'next/navigation'
 
 import PointReconciliationPanel from '@/components/declarations/point-reconciliation-panel.js'
 import SourceDataDetails from '@/components/declarations/source-data-details.js'
-import {isPointReconciliationRelevant, sourceStateLabels} from '@/lib/declaration.js'
+import {getDeclarationProcessingStatus, isDeclarationTreatmentPending, isPointReconciliationRelevant, sourceStateLabels} from '@/lib/declaration.js'
 
 const REFRESH_INTERVAL = 3000
 
-function isTreatmentPending(source) {
-  return source?.status === 'PENDING' || source?.status === 'PROCESSING'
-}
-
-function isTreatmentFailed(source) {
-  return source?.status === 'FAILED'
-}
-
-function getSourceProcessingError(source) {
-  return source?.declaration?.processingError || source?.metadata?.processingError || null
-}
-
-const ProcessingState = ({source}) => {
-  const statusLabel = sourceStateLabels[source?.status] ?? sourceStateLabels.PROCESSING
-  const hasFailed = isTreatmentFailed(source)
-  const processingError = getSourceProcessingError(source)
+const ProcessingState = ({status}) => {
+  const statusLabel = sourceStateLabels[status] ?? sourceStateLabels.PROCESSING
+  const hasFailed = status === 'FAILED'
 
   return (
     <div className='fr-mt-3w fr-mb-6w'>
@@ -41,11 +28,6 @@ const ProcessingState = ({source}) => {
                 ? 'Le traitement automatique n’a pas abouti. Les fichiers déposés restent disponibles.'
                 : 'Le retraitement de la déclaration est en cours. Les données seront réaffichées dès que l’orchestrateur aura terminé.'}
             </span>
-            {hasFailed && processingError && (
-              <span className='fr-text--sm fr-mb-0 text-red-700'>
-                {processingError}
-              </span>
-            )}
             {!hasFailed && (
               <div className='flex items-center gap-2'>
                 <CircularProgress aria-label='Traitement en cours' size={20} />
@@ -71,8 +53,9 @@ const DeclarationDetails = ({
 }) => {
   const router = useRouter()
   const showReconciliation = isPointReconciliationRelevant(declaration, source)
-  const isPending = isTreatmentPending(source)
-  const hasFailed = isTreatmentFailed(source)
+  const processingStatus = getDeclarationProcessingStatus(declaration, source)
+  const isPending = isDeclarationTreatmentPending(declaration, source)
+  const hasFailed = processingStatus === 'FAILED'
   const canReconcilePoints = typeof canReconcile === 'boolean'
     ? canReconcile
     : !isInstructor
@@ -101,7 +84,7 @@ const DeclarationDetails = ({
   )
 
   if (isPending || hasFailed) {
-    content = <ProcessingState source={source} />
+    content = <ProcessingState status={processingStatus} />
   } else if (showReconciliation) {
     content = (
       <PointReconciliationPanel

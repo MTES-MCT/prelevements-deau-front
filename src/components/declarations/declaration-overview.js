@@ -10,6 +10,7 @@ import {getDeclarationTypeLabel} from '@/lib/declaration-types.js'
 import {
   dataSourceTypeLabels,
   formatFullAddress,
+  getDeclarationProcessingStatus,
   getSourcePeriodLabel,
   getSourceReadingDateLabel,
   isDeclarationTreatmentPending,
@@ -192,6 +193,13 @@ function isSpreadsheetTreatmentPending(declaration, source) {
 }
 
 function getProcessingAwareOverviewLabels({declaration, periodLabel, preferUsageName, source}) {
+  if (declaration?.dataSourceType === 'SPREADSHEET' && getDeclarationProcessingStatus(declaration, source) === 'FAILED') {
+    return {
+      pointSummary: 'Analyse des points interrompue',
+      periodLabel: 'Traitement du fichier en erreur'
+    }
+  }
+
   if (isSpreadsheetTreatmentPending(declaration, source)) {
     return {
       pointSummary: 'Analyse des points en cours',
@@ -338,7 +346,9 @@ function getDepositDetail({declaration, kind, source}) {
 
 function getNatureDetails({declaration, kind, source}) {
   const declarationType = getDeclarationTypeLabel(declaration?.type, declaration?.declarationType)
-  const volumeLabel = getVolumeLabel(source)
+  const volumeLabel = kind !== 'SPREADSHEET' || getDeclarationProcessingStatus(declaration, source) === 'COMPLETED'
+    ? getVolumeLabel(source)
+    : null
 
   if (kind === 'MANUAL') {
     const count = getQuickDeclarationEntriesCount(source)

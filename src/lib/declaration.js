@@ -101,7 +101,7 @@ export function shouldLoadAvailablePointsForDeclaration({currentRole, declaratio
     || (source?.chunks?.some(chunk => chunk.canReconcile) ?? false)
 
   return canViewAvailablePoints
-    && source?.status === 'COMPLETED'
+    && getDeclarationProcessingStatus(declaration, source) === 'COMPLETED'
     && isPointReconciliationRelevant(declaration, source)
 }
 
@@ -140,24 +140,32 @@ export function getDeclarationEntryKind(declaration, source = declaration?.sourc
   return declaration?.dataSourceType ?? 'NONE'
 }
 
+export function getDeclarationProcessingStatus(declaration, source = declaration?.source) {
+  const processingStatus = declaration?.processingStatus
+
+  // The source may still describe a previous attempt, or a failed preparation.
+  if (processingStatus === 'FAILED') {
+    return 'FAILED'
+  }
+
+  if (pendingDeclarationProcessingStatuses.has(processingStatus)) {
+    return source?.status === 'PROCESSING' ? 'PROCESSING' : processingStatus
+  }
+
+  return source?.status ?? processingStatus ?? 'PROCESSING'
+}
+
 export function getDeclarationDisplayStatus(declaration, source = declaration?.source) {
-  if (source?.status === 'COMPLETED') {
-    return source.globalInstructionStatus
+  const status = getDeclarationProcessingStatus(declaration, source)
+  if (status === 'COMPLETED') {
+    return source?.globalInstructionStatus ?? status
   }
 
-  if (source?.status) {
-    return source.status
-  }
-
-  return declaration?.processingStatus ?? 'PROCESSING'
+  return status
 }
 
 export function isDeclarationTreatmentPending(declaration, source = declaration?.source) {
-  if (source) {
-    return source.status === 'PENDING' || source.status === 'PROCESSING'
-  }
-
-  return pendingDeclarationProcessingStatuses.has(declaration?.processingStatus ?? 'PROCESSING')
+  return pendingDeclarationProcessingStatuses.has(getDeclarationProcessingStatus(declaration, source))
 }
 
 export function getSourcePeriod(source) {

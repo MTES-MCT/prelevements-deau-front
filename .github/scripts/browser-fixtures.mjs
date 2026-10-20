@@ -15,6 +15,7 @@ import {isZoneResourceFixture, handleZoneResourceFixtureRequest} from './zone-re
 import {isQuickExclusionFixture, handleQuickExclusionFixtureRequest} from './quick-exclusion-fixtures.mjs'
 import {isCollectorPointFixture, handleCollectorPointFixture} from './collector-point-fixtures.mjs'
 import {isExploitationUsageFixture, handleExploitationUsageFixture} from './exploitation-usages-fixtures.mjs'
+import {isDeclarationProcessingFixture, handleDeclarationProcessingFixture} from './declaration-processing-fixtures.mjs'
 
 // Synthetic backend: deliberately no database, outbound HTTP, mail or jobs.
 const zoneId = '11111111-1111-4111-8111-111111111111'
@@ -90,7 +91,7 @@ const api = createServer(async (request, response) => {
       : /^Bearer browser-test-meter-declarant(?:-|$)/.test(request.headers.authorization) ? 'DECLARANT' : null
   const dashboardRole = getDashboardFixtureRole(request.headers.authorization)
   const pointWaterBodyRole = getPointWaterBodyFixtureRole(request.headers.authorization)
-  if (request.headers.authorization !== 'Bearer browser-test-api-token' && !meterRole && !dashboardRole && !pointWaterBodyRole && !isChartSeriesFixture(request.headers.authorization) && !isCountingFixture(request.headers.authorization) && !isCampaignFixture(request.headers.authorization) && !isZoneResourceFixture(request.headers.authorization) && !isQuickExclusionFixture(request.headers.authorization) && !isCollectorPointFixture(request.headers.authorization) && !isExploitationUsageFixture(request.headers.authorization)) {
+  if (request.headers.authorization !== 'Bearer browser-test-api-token' && !meterRole && !dashboardRole && !pointWaterBodyRole && !isChartSeriesFixture(request.headers.authorization) && !isCountingFixture(request.headers.authorization) && !isCampaignFixture(request.headers.authorization) && !isZoneResourceFixture(request.headers.authorization) && !isQuickExclusionFixture(request.headers.authorization) && !isCollectorPointFixture(request.headers.authorization) && !isExploitationUsageFixture(request.headers.authorization) && !isDeclarationProcessingFixture(request.headers.authorization)) {
     return send(401, {message: 'Unauthorized'})
   }
 
@@ -103,6 +104,7 @@ const api = createServer(async (request, response) => {
   if (await handleQuickExclusionFixtureRequest(request, send)) return
   if (await handleCollectorPointFixture(request, send)) return
   if (await handleExploitationUsageFixture(request, send)) return
+  if (await handleDeclarationProcessingFixture(request, send)) return
 
   if (pathname === '/api/campaigns/summary') return send(200, {success: true, data: {hasCampaigns: false, items: []}})
 

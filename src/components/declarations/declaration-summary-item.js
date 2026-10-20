@@ -6,6 +6,7 @@ import {getDeclarationTypeLabel} from '@/lib/declaration-types.js'
 import {
   dataSourceTypeLabels,
   getDeclarationDisplayStatus,
+  getDeclarationProcessingStatus,
   getSourcePeriodLabel,
   getSourceReadingDateLabel,
   isDeclarationTreatmentPending,
@@ -490,7 +491,7 @@ function getNatureSection({declaration, isManual, isTelemetry, kind, periodLabel
           label: declarationType
         }
         : null,
-      tertiary: getVolumeLabel(source)
+      tertiary: getDeclarationProcessingStatus(declaration, source) === 'COMPLETED' ? getVolumeLabel(source) : null
     }
   }
 
@@ -515,11 +516,14 @@ function getSummarySections({
   const isTelemetry = isTelemetrySource(source, declaration)
   const kind = getSourceKind(source, declaration)
   const isWaitingForFileProcessing = isSpreadsheetTreatmentPending(declaration, source)
+  const hasFileProcessingFailed = kind === 'SPREADSHEET' && getDeclarationProcessingStatus(declaration, source) === 'FAILED'
   const periodLabel = (isManual
     ? getManualQuickDeclarationPeriodLabel(source)
     : getSourceExactPeriodLabel(source) ?? getSourcePeriodLabel(source))
   ?? 'Période non renseignée'
-  const displayedPeriodLabel = isWaitingForFileProcessing ? 'Analyse du fichier en cours' : periodLabel
+  const displayedPeriodLabel = isWaitingForFileProcessing
+    ? 'Analyse du fichier en cours'
+    : hasFileProcessingFailed ? 'Traitement du fichier en erreur' : periodLabel
 
   return [
     getTypeSection({
@@ -532,7 +536,9 @@ function getSummarySections({
     getContextSection({
       declaration,
       isTelemetry,
-      pointSummary: isWaitingForFileProcessing ? 'Analyse des points en cours' : null,
+      pointSummary: isWaitingForFileProcessing
+        ? 'Analyse des points en cours'
+        : hasFileProcessingFailed ? 'Analyse des points interrompue' : null,
       preferUsageName,
       showDeclarant,
       source

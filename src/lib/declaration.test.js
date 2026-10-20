@@ -7,6 +7,7 @@ import {
   formatFullAddress,
   getDeclarationEntryKind,
   getDeclarationDisplayStatus,
+  getDeclarationProcessingStatus,
   getPointsPrelevementIdsFromDeclaration,
   getPointsPrelevementIdsFromSource,
   getSourcePeriod,
@@ -118,7 +119,7 @@ test('getDeclarationEntryKind classe télémétrie, manuel, fichier et absence',
   t.is(getDeclarationEntryKind({}, {type: 'DECLARATION'}), 'NONE')
 })
 
-test('getDeclarationDisplayStatus privilégie la source puis le statut de traitement', t => {
+test('getDeclarationDisplayStatus combine le traitement et le statut d’association de la source', t => {
   t.is(getDeclarationDisplayStatus({
     processingStatus: 'QUEUED',
     source: null
@@ -143,6 +144,36 @@ test('isDeclarationTreatmentPending couvre les statuts sans source', t => {
     processingStatus: 'COMPLETED',
     source: {status: 'COMPLETED'}
   }))
+})
+
+test('un échec de déclaration prévaut sur une source restée en attente ou issue du précédent essai', t => {
+  for (const sourceStatus of ['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED']) {
+    const source = {status: sourceStatus, globalInstructionStatus: 'VALIDATED', type: 'DECLARATION'}
+    const declaration = {processingStatus: 'FAILED', dataSourceType: 'SPREADSHEET', source}
+    t.is(getDeclarationProcessingStatus(declaration), 'FAILED')
+    t.is(getDeclarationDisplayStatus(declaration), 'FAILED')
+    t.false(isDeclarationTreatmentPending(declaration))
+    t.false(shouldLoadAvailablePointsForDeclaration({currentRole: 'ADMIN', declaration, source}))
+  }
+})
+
+test('une nouvelle tentative prévaut sur les données ou l’échec de la source précédente', t => {
+  for (const processingStatus of ['CREATED', 'UPLOADED', 'QUEUED', 'PROCESSING']) {
+    for (const sourceStatus of ['PENDING', 'COMPLETED', 'FAILED']) {
+      const source = {status: sourceStatus, globalInstructionStatus: 'VALIDATED', type: 'DECLARATION'}
+      const declaration = {processingStatus, dataSourceType: 'SPREADSHEET', source}
+      t.is(getDeclarationDisplayStatus(declaration), processingStatus)
+      t.true(isDeclarationTreatmentPending(declaration))
+      t.false(shouldLoadAvailablePointsForDeclaration({currentRole: 'ADMIN', declaration, source}))
+    }
+  }
+})
+
+test('les sources sans déclaration conservent leur état et ne pollent pas après un échec', t => {
+  t.is(getDeclarationDisplayStatus(null, {status: 'FAILED'}), 'FAILED')
+  t.false(isDeclarationTreatmentPending(null, {status: 'FAILED'}))
+  t.true(isDeclarationTreatmentPending(null, {status: 'PROCESSING'}))
+  t.is(getDeclarationDisplayStatus(null, {status: 'COMPLETED', globalInstructionStatus: 'VALIDATED'}), 'VALIDATED')
 })
 
 test('getSourcePeriod calcule les bornes sur tous les chunks', t => {

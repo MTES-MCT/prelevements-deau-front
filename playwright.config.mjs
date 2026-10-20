@@ -20,6 +20,7 @@ const browserTests = [
   'chart-axes.spec.js',
   'declaration-charts.spec.js',
   'declaration-file-selection.spec.js',
+  'declaration-processing.spec.js',
   'point-water-body.spec.js',
   'admin-chart-labels.spec.js',
   'zone-resource-settings.spec.js'

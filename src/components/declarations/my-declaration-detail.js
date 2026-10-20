@@ -11,6 +11,7 @@ import DeclarationPointsChangeRequestAction from '@/components/declarations/decl
 import DeclarationSubmissionFlash from '@/components/declarations/declaration-submission-flash.js'
 import {
   getDeclarationDisplayStatus,
+  getDeclarationProcessingStatus,
   getSourceReadingDateLabel,
   getSourcePeriodLabel,
   isDeclarationTreatmentPending,
@@ -64,8 +65,7 @@ const ProcessingState = ({declaration}) => {
   const isPending = isDeclarationTreatmentPending(declaration, source)
   const latestEvent = declaration?.processingEvents?.[0]
   const latestEventDate = formatProcessingEventDate(latestEvent?.createdAt)
-  const processingError = declaration?.processingError || latestEvent?.message
-  const hasProcessingFailed = source?.status === 'FAILED' || declaration?.processingStatus === 'FAILED'
+  const hasProcessingFailed = displayStatus === 'FAILED'
 
   return (
     <div className='fr-mb-6w'>
@@ -80,16 +80,9 @@ const ProcessingState = ({declaration}) => {
                 : 'Les fichiers ont bien été déposés. Le traitement peut prendre quelques minutes pour les fichiers volumineux.'}
             </span>
 
-            {processingError && displayStatus === 'FAILED' && (
-              <span className='fr-text--sm fr-mb-0 text-red-700'>
-                {processingError}
-              </span>
-            )}
-
-            {latestEvent && (
+            {latestEventDate && (
               <span className='fr-text--xs fr-text-mention--grey fr-mb-0'>
-                Dernier événement : {latestEvent.message || statusLabel.label}
-                {latestEventDate ? `, ${latestEventDate}` : ''}
+                Dernière mise à jour : {latestEventDate}
               </span>
             )}
 
@@ -118,8 +111,9 @@ const MyDeclarationDetail = ({availablePoints = [], currentRole = null, initialD
   )
   const source = declaration?.source
   const displayStatus = getDeclarationDisplayStatus(declaration, source)
+  const isCompleted = getDeclarationProcessingStatus(declaration, source) === 'COMPLETED'
   const shouldRefresh = isDeclarationTreatmentPending(declaration, source)
-  const shouldLoadAvailablePoints = source?.status === 'COMPLETED'
+  const shouldLoadAvailablePoints = isCompleted
     && isPointReconciliationRelevant(declaration, source)
   const availablePointsKey = shouldLoadAvailablePoints && declaration?.id && source?.id
     ? `${declaration.id}:${source.id}`
@@ -200,7 +194,7 @@ const MyDeclarationDetail = ({availablePoints = [], currentRole = null, initialD
 
   let declarationDetailsContent
 
-  if (source?.status === 'COMPLETED' && !isAvailablePointsPending) {
+  if (isCompleted && !isAvailablePointsPending) {
     declarationDetailsContent = (
       <DeclarationDetails
         preferUsageName
@@ -212,7 +206,7 @@ const MyDeclarationDetail = ({availablePoints = [], currentRole = null, initialD
         onDeclarationChange={setDeclaration}
       />
     )
-  } else if (source?.status === 'COMPLETED' && isAvailablePointsPending) {
+  } else if (isCompleted && isAvailablePointsPending) {
     declarationDetailsContent = <AvailablePointsLoadingState />
   } else {
     declarationDetailsContent = <ProcessingState declaration={declaration} />
