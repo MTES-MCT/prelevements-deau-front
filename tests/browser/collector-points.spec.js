@@ -391,11 +391,22 @@ test('types autorisés : le retrait exige toujours une confirmation', async ({pa
   const token = await authenticate(context, 'admin')
   await page.goto(`${frontUrl}/declarants/${ids.collector}/gestion`)
   const card = page.getByRole('region', {name: 'Types de déclaration autorisés', exact: true})
-  page.once('dialog', dialog => dialog.dismiss())
-  await card.getByRole('button', {name: 'Retirer', exact: true}).click()
+  // Wait for client-side DSFR initialization, not only the server-rendered buttons.
+  await expect(page.getByRole('button', {name: "Paramètres d'affichage", exact: true}))
+    .toHaveAttribute('data-fr-js-modal-button', 'true')
+  const confirmRemoval = async decision => {
+    const handled = page.waitForEvent('dialog').then(async dialog => {
+      expect(dialog.type()).toBe('confirm')
+      expect(dialog.message()).toBe('Retirer l’autorisation « Déclaration annuelle des volumes prélevés » de ce déclarant ?')
+      await dialog[decision]()
+    })
+    await Promise.all([handled, card.getByRole('button', {name: 'Retirer', exact: true}).click()])
+  }
+  // Finish the first decision before registering the next dialog handler.
+  await confirmRemoval('dismiss')
+  await expect(card.getByRole('heading', {name: 'Déclaration annuelle des volumes prélevés', exact: true})).toBeVisible()
   expect(await writes(context, token)).toEqual([])
-  page.once('dialog', dialog => dialog.accept())
-  await card.getByRole('button', {name: 'Retirer', exact: true}).click()
+  await confirmRemoval('accept')
   await expect(card.getByText('Autorisation retirée.', {exact: true})).toBeVisible()
   await expect(card.getByRole('heading', {name: 'Déclaration annuelle des volumes prélevés', exact: true})).toHaveCount(0)
   expect(await writes(context, token)).toEqual([{
