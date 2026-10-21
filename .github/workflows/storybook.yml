@@ -21,8 +21,10 @@ jobs:
       # Set up Node
       - uses: actions/setup-node@v4
         with:
-          node-version: '24.x'
+          node-version-file: .nvmrc
           cache: npm
+      - name: Use locked npm version
+        run: npm install --global "$(node -p 'require("./package.json").packageManager')" --ignore-scripts --no-audit --no-fund
       #👇 Add Storybook build and deploy to GitHub Pages as a step in the workflow
       - uses: bitovi/github-actions-storybook-to-github-pages@v1.0.3
         with:

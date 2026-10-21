@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import {readFileSync} from 'node:fs'
 import test from 'node:test'
 import {assertConfigurationPreserved, assertImmutableImage, ciConfiguration, deployContainer, deployment, deploymentTarget, healthEndpoint} from './deploy-container.mjs'
 
@@ -15,6 +16,18 @@ const container = {id: containerId, name: deployment.targets.prod.containerName,
   command: ['node', 'worker.js'], private_network_id: 'network', status: 'ready'}
 const options = {containerId, image, repository, region: 'fr-par', projectId, organizationId, healthPath: '/healthz',
   githubRepository: 'MTES-MCT/' + deployment.application, refName: 'prod', refType: 'branch'}
+
+test('Node est verrouillé de façon cohérente pour les installations et l’image', () => {
+  const read = name => readFileSync(new URL(`../../${name}`, import.meta.url), 'utf8')
+  const nodeVersion = read('.nvmrc').trim()
+  const packageJson = JSON.parse(read('package.json'))
+  const lockfile = JSON.parse(read('package-lock.json'))
+  assert.match(nodeVersion, /^\d+\.\d+\.\d+$/)
+  assert.ok(read('deploy/Dockerfile').startsWith(`FROM node:${nodeVersion}-alpine`))
+  assert.match(read('deploy/Dockerfile').split('\n')[0], /@sha256:[a-f0-9]{64} AS base$/)
+  assert.equal(packageJson.engines.node, `>= ${nodeVersion} < ${Number(nodeVersion.split('.')[0]) + 1}`)
+  assert.deepEqual(lockfile.packages[''].engines, packageJson.engines)
+})
 
 test('sonde HTTPS sur un endpoint Scaleway, sans redirection ni identifiants', () => {
   assert.equal(healthEndpoint('service.containers.fnc.fr-par.scw.cloud'), 'https://service.containers.fnc.fr-par.scw.cloud')
