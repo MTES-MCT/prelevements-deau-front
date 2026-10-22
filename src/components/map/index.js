@@ -4,10 +4,11 @@ import {useEffect, useRef} from 'react'
 
 import {fr} from '@codegouvfr/react-dsfr'
 import {Box} from '@mui/material'
-import maplibre from 'maplibre-gl'
+import * as maplibre from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import {createRoot} from 'react-dom/client'
 
+import {createMap} from './create-map.js'
 import Popup from './popup.js'
 import photo from './styles/photo.json'
 import planIGN from './styles/plan-ign.json'
@@ -225,7 +226,11 @@ const Map = ({points, filteredPoints, selectedPoint, handleSelectedPoint, mapSty
       }
     }
 
-    const map = new maplibre.Map(mapConfig)
+    const map = createMap(maplibre, mapConfig)
+    if (!map) {
+      return
+    }
+
     mapRef.current = map
 
     // Apply bounds after map creation if needed

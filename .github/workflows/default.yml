@@ -6,29 +6,45 @@ on:
   pull_request:
     branches: [ "main" ]
 
+permissions:
+  contents: read
+
 jobs:
   build:
 
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     environment: production
     env:
       NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
       TZ: Europe/Paris
 
-    strategy:
-      matrix:
-        node-version: [22.x]
-
     steps:
-    - uses: actions/checkout@v4
-    - name: Enable corepack
-      run: corepack enable
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'yarn'
-    - run: yarn --immutable
+        persist-credentials: false
+    - name: Use the production Node.js version
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version-file: .nvmrc
+    - name: Enable the locked Yarn version
+      run: corepack enable
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.yarn/berry/cache
+        key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock', '.nvmrc') }}
+        restore-keys: ${{ runner.os }}-yarn-
+    - run: node --test .github/scripts/*.test.mjs
+    - run: yarn install --immutable
+    - run: node .github/scripts/audit-policy.mjs
+    - name: Preserve complete security reports
+      if: always()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: security-reports-main
+        path: .artifacts/security/
+        if-no-files-found: error
+        retention-days: 14
     - run: yarn lint
     - run: yarn test
     - run: yarn build

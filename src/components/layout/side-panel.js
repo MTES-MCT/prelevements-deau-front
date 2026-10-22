@@ -57,7 +57,7 @@ const SidePanel = ({header, isOpen, panelContent, handleOpen, children}) => {
         // Mode desktop / tablette
         // --------------------------------
         <div className='flex w-full h-full absolute'>
-          <aside className='flex-shrink-0 min-w-[300px] max-w-[600px] basis-1/3 overflow-auto shadow-lg z-10'>
+          <aside className='shrink-0 min-w-[300px] max-w-[600px] basis-1/3 overflow-auto shadow-lg z-10'>
             <Box
               className='sticky top-0 z-20 p-4 shadow-md'
               sx={{

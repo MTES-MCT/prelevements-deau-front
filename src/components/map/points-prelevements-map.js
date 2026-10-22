@@ -3,9 +3,10 @@ import {useEffect, useRef} from 'react'
 import {fr} from '@codegouvfr/react-dsfr'
 import {useIsDark} from '@codegouvfr/react-dsfr/useIsDark'
 import {Box} from '@mui/system'
-import maplibre from 'maplibre-gl'
+import * as maplibre from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
+import {createMap} from './create-map.js'
 import photo from './styles/photo.json'
 import planIGN from './styles/plan-ign.json'
 import vectorIGN from './styles/vector-ign.json'
@@ -44,13 +45,17 @@ const PointsPrelevementsMap = ({pointsPrelevement, handleClick, style = 'vector'
       lats.reduce((sum, v) => sum + v, 0) / lats.length
     ]
 
-    const map = new maplibre.Map({
+    const map = createMap(maplibre, {
       container: mapContainerRef.current,
       style: stylesMap[style],
       center,
       attributionControl: {compact: true},
       zoom: 10
     })
+    if (!map) {
+      return
+    }
+
     mapRef.current = map
 
     map.on('load', () => {

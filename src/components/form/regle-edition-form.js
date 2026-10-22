@@ -107,7 +107,7 @@ const RegleEditionForm = ({preleveur, regle, exploitations, documents}) => {
         validationErrors={validationErrors}
       />
 
-      <div className='border border-red-500 rounded-sm p-5 mt-6'>
+      <div className='border border-red-500 rounded-xs p-5 mt-6'>
         <div className='text-red-500'>
           <InfoOutlined className='mr-3' />
           Action sensible : Supprimer la règle

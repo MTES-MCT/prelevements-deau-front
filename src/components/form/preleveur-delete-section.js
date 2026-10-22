@@ -40,7 +40,7 @@ const PreleveurDeleteSection = ({preleveur}) => {
 
   return (
     <div className='fr-container mb-8'>
-      <div className='border border-red-500 rounded-sm p-5'>
+      <div className='border border-red-500 rounded-xs p-5'>
         <div className='text-red-500'>
           <InfoOutlined className='mr-3' />
           Action sensible : Supprimer le préleveur

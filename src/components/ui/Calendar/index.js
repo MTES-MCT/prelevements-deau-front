@@ -35,7 +35,7 @@ const BaseCell = ({label, ariaLabel, interactive, color, size, onActivate, toolt
   }
 
   if (interactive) {
-    classes += ' cursor-pointer group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1'
+    classes += ' cursor-pointer group focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:ring-offset-1'
   }
 
   // Hover darkening effect (interactive only)

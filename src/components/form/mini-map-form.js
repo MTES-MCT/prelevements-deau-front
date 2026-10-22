@@ -5,9 +5,10 @@ import {useEffect, useRef, useState} from 'react'
 import Input from '@codegouvfr/react-dsfr/Input'
 import Select from '@codegouvfr/react-dsfr/SelectNext'
 import {Box} from '@mui/system'
-import maplibre from 'maplibre-gl'
+import * as maplibre from 'maplibre-gl'
 
 import 'maplibre-gl/dist/maplibre-gl.css'
+import {createMap} from '@/components/map/create-map.js'
 import photo from '@/components/map/styles/photo.json'
 import planIGN from '@/components/map/styles/plan-ign.json'
 
@@ -78,13 +79,16 @@ const MiniMapForm = ({geom, setGeom}) => {
       return
     }
 
-    const map = new maplibre.Map({
+    const map = createMap(maplibre, {
       container: mapContainerRef.current,
       style: stylesMap[style],
       center: geom ? geom.coordinates : [55.55, -21.13],
       zoom: 11,
       attributionControl: {compact: true}
     })
+    if (!map) {
+      return
+    }
 
     const canvas = map.getCanvasContainer()
 

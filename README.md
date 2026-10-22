@@ -49,11 +49,21 @@ NEXTAUTH_SECRET=votre_secret_genere_avec_openssl
 
 ## Scripts disponibles
 
+- Node est verrouillé par `.nvmrc` et `engines.node` ; Scalingo utilise le même runtime. Yarn reste verrouillé dans `packageManager` (un seul lockfile : `yarn.lock`).
 - `yarn dev` : met à jour les icônes DSFR puis lance le serveur de développement.
 - `yarn build` : génère la version de production.
 - `yarn start` : démarre l'application Next.js construite via `yarn build`.
 - `yarn update-icons` : force la mise à jour des icônes DSFR.
 - `yarn lint` : vérifie la qualité du code avec XO.
+
+### Dépendances de sécurité
+
+- Next reste sur la branche 15 et React sur la branche 18. La résolution ciblée `next/postcss: 8.5.31` remplace le PostCSS 8.4.31 figé par Next 15.5.28, vulnérable. C'est une mise à jour dans la même majeure ; retirer cette résolution lorsque Next fournit directement une version corrigée.
+- MapLibre 6 corrige la faille XSS sans correctif 5.x. `prepare-maplibre` copie les modules worker de la version installée dans `public/maplibre/<version>` ; ne pas modifier ces fichiers générés. Les listes et formulaires restent accessibles en l'absence de WebGL 2.
+- Storybook utilise son intégration officielle Next/Vite, compatible avec Next 15 et React 18. Cela évite les anciens polyfills Node du builder Webpack.
+- Tailwind 4 remplace le compilateur 3, dont le parseur de sélecteurs n'est plus corrigé. La palette et les valeurs visuelles de la version 3 sont conservées dans `src/app/tailwind-theme.css`, avec des tests de compatibilité. Les navigateurs minimums sont Safari 16.4, Chrome 111 et Firefox 128.
+- DSFR et MUI sont des dépendances de production : les audits couvrent aussi les composants réellement embarqués dans l'interface.
+- `yarn audit:gate` conserve les audits complets et de production dans `.artifacts/security`. Production doit rester à zéro ; seules les deux exceptions de développement explicitement autorisées (`braces`, `sprintf-js`) peuvent passer jusqu'au 27 octobre 2026 inclus. L'audit brut reste non nul et toute nouvelle faille, chaîne de production, erreur réseau ou expiration bloque la CI. `yarn test:security` vérifie cette politique.
 
 ## Démarrer en développement
 

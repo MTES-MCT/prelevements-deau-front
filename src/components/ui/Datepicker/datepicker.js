@@ -111,7 +111,7 @@ const Datepicker = ({
   const availablePeriodsForView = getAvailablePeriodsForView(zoomLevel, selectablePeriods)
 
   return (
-    <Box className='bg-white border rounded-sm shadow-md p-4'>
+    <Box className='bg-white border rounded-xs shadow-md p-4'>
       <Box className='flex flex-col gap-3'>
         {typeof maxSelectablePeriods === 'number' && maxSelectablePeriods > 0 && (
           <CompactAlert

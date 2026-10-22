@@ -398,7 +398,7 @@ const ChartAnnotations = ({annotations, onPointClick}) => {
         return (
           <g
             key={`${annotation.seriesId}-${annotation.index}`}
-            className={onPointClick ? 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500' : undefined}
+            className={onPointClick ? 'cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-blue-500' : undefined}
             role={onPointClick ? 'button' : 'presentation'}
             tabIndex={onPointClick ? 0 : undefined}
             transform={`translate(${x}, ${y})`}

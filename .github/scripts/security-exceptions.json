@@ -1,0 +1,18 @@
+[
+  {
+    "packageName": "braces",
+    "version": "3.0.3",
+    "advisoryUrl": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+    "developmentRoots": ["ava", "xo", "eslint-config-xo-nextjs"],
+    "expiresAt": "2026-10-27T23:00:00Z",
+    "reason": "Exception autorisée le 22 octobre 2026 jusqu'à la fin du 27 octobre (Paris), exclusivement pour les outils de développement. Aucun correctif officiel disponible."
+  },
+  {
+    "packageName": "sprintf-js",
+    "version": "1.0.3",
+    "advisoryUrl": "https://github.com/advisories/GHSA-hp3w-g68c-fv3c",
+    "developmentRoots": ["ava"],
+    "expiresAt": "2026-10-27T23:00:00Z",
+    "reason": "Exception autorisée le 22 octobre 2026 jusqu'à la fin du 27 octobre (Paris), uniquement dans les dépendances du testeur AVA. Aucun correctif officiel disponible."
+  }
+]
