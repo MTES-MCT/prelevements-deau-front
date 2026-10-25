@@ -4,6 +4,7 @@
 
 // Possible frequencies (specification) => French labels
 export const FREQUENCY_LABELS = new Map([
+  ['instant', 'Mesure ponctuelle'],
   ['1 second', '1 seconde'],
   ['1 minute', '1 minute'],
   ['15 minutes', '15 minutes'],

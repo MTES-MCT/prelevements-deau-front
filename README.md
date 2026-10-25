@@ -96,6 +96,31 @@ npm run build
 npm start
 ```
 
+## Recette locale de La Réunion
+
+Les configurations privées sont générées par `scripts/reunion/prepare-local.js`
+dans le dépôt API. Après préparation de l'API locale sur le port 5500 et de son
+compte de service, lancer le front depuis ce dépôt :
+
+```sh
+reunion_runtime="$HOME/.local/share/preservonsleau/imports/reunion-local-20261025/runtime"
+npm run prepare-maplibre
+npx --no-install react-dsfr update-icons
+node --env-file="$reunion_runtime/front-local.env" node_modules/next/dist/bin/next \
+  dev --webpack --hostname 127.0.0.1 --port 3300
+```
+
+La recette utilise `http://127.0.0.1:3300` et NextAuth sous `/auth/nextauth`.
+Les liens de connexion arrivent dans Mailpit sur `http://127.0.0.1:8026` ;
+Crisp, Matomo et Sentry sont désactivés par cette configuration.
+Les deux formats Réunion passent par le dépôt de déclaration existant. Leur
+ouverture aux 244 préleveurs se fait côté API via `enable-local-formats.js`,
+indépendamment du statut des dossiers historiques. Les valeurs natives sont
+consultables par pages, avec leurs heures et périodes d'origine. Aucun nouveau
+parcours d'instruction n'est ajouté. Le déploiement et le décommissionnement
+restent à valider séparément de cette recette locale.
+
+
 ## Vérifications et maintenance
 
 ```bash

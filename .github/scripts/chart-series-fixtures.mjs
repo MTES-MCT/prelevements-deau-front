@@ -36,6 +36,11 @@ export async function handleChartSeriesFixtureRequest(request, send) {
     role: 'ADMIN', permissions: [], user: {id: chartSeriesIds.collecteur, email: 'chart@example.test'}, expiresAt: new Date(Date.now() + 3_600_000).toISOString()
   })
   if (pathname === '/api/users/me/zones') return respond(200, [])
+  if (pathname === '/api/declarants/search') return respond(200, {
+    items: [{id: chartSeriesIds.collecteur, declarantRole: 'COLLECTEUR', declarantType: 'LEGAL_PERSON',
+      socialReason: 'Collecteur du graphique synthétique', canReadDetail: true}],
+    page: 1, pageSize: 25, total: 1, totalPages: 1, facets: {}
+  })
   if (pathname === `/api/declarants/${chartSeriesIds.collecteur}/overview`) return respond(200, {
     id: chartSeriesIds.collecteur, userId: chartSeriesIds.collecteur, declarantRole: 'COLLECTEUR',
     declarantType: 'LEGAL_PERSON', socialReason: 'Collecteur du graphique synthétique',

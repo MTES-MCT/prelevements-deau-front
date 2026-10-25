@@ -8,6 +8,7 @@ import {Tag} from '@codegouvfr/react-dsfr/Tag'
 import {Upload} from '@codegouvfr/react-dsfr/Upload'
 
 import DeclarationTemplateDownload from '@/components/declarations/declaration-template-download.js'
+import {REUNION_FILE_TYPES} from '@/lib/native-declaration.js'
 
 import styles from './form.module.css'
 
@@ -46,6 +47,11 @@ const FileValidateurForm = ({
     }
 
     const oversizedFile = selectedFiles.find(file => file.size > MAX_FILE_SIZE)
+    if (REUNION_FILE_TYPES.has(selectedDeclarationTypeCode) && selectedFiles.some(file => !/\.(xlsx|xls|ods)$/i.test(file.name))) {
+      resetForm()
+      setFileInputError('Ce type de déclaration accepte uniquement les fichiers XLSX, XLS et ODS.')
+      return
+    }
     if (oversizedFile) {
       resetForm()
       setFileInputError(`Le fichier ${oversizedFile.name} dépasse la taille maximale autorisée (50 Mo).`)
@@ -55,7 +61,7 @@ const FileValidateurForm = ({
     resetForm()
     setFileInputError(null)
     handleSubmit(selectedFiles)
-  }, [handleSubmit, resetForm])
+  }, [handleSubmit, resetForm, selectedDeclarationTypeCode])
 
   const handleDeclarationTypeChange = event => {
     setFileInputError(null)
@@ -110,7 +116,7 @@ const FileValidateurForm = ({
         stateRelatedMessage={inputError}
         nativeInputProps={{
           onChange: handleFileChange,
-          accept: SPREADSHEET_ACCEPT
+          accept: REUNION_FILE_TYPES.has(selectedDeclarationTypeCode) ? '.xlsx, .xls, .ods' : SPREADSHEET_ACCEPT
         }}
       />
 

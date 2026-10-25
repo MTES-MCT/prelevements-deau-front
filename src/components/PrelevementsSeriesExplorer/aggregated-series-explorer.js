@@ -597,6 +597,8 @@ const AggregatedSeriesExplorer = ({
     [currentParameters]
   )
 
+  const nativeWarnings = [...new Set(currentParameters.map(parameter => seriesMap.get(parameter)?.metadata?.warning).filter(Boolean))]
+
   const hasDistributedData = useMemo(
     () => currentParameters.some(parameter =>
       seriesMap.get(parameter)?.metadata?.distribution?.applied === true),
@@ -852,6 +854,7 @@ const AggregatedSeriesExplorer = ({
               )}
             </Box>
           )}
+          {nativeWarnings.map(warning => <p key={warning} className='fr-text--sm fr-mt-1w'>{warning}</p>)}
           <ChartWithRangeSlider
             allDates={allDates}
             frequency={smallestFrequency}
