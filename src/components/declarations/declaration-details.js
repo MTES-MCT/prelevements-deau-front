@@ -9,6 +9,7 @@ import {useRouter} from 'next/navigation'
 import PointReconciliationPanel from '@/components/declarations/point-reconciliation-panel.js'
 import SourceDataDetails from '@/components/declarations/source-data-details.js'
 import {getDeclarationProcessingStatus, isDeclarationTreatmentPending, isPointReconciliationRelevant, sourceStateLabels} from '@/lib/declaration.js'
+import {isNativeDeclaration} from '@/lib/native-declaration.js'
 
 const REFRESH_INTERVAL = 3000
 
@@ -100,6 +101,7 @@ const DeclarationDetails = ({
   return (
     <div className='fr-mb-4w'>
       {content}
+      {isNativeDeclaration(source) && showReconciliation && !isPending && !hasFailed && <SourceDataDetails currentRole={currentRole} declaration={declaration} preferUsageName={preferUsageName} source={source} />}
     </div>
   )
 }

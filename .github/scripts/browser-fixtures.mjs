@@ -18,6 +18,7 @@ import {isExploitationUsageFixture, handleExploitationUsageFixture} from './expl
 import {isDeclarationProcessingFixture, handleDeclarationProcessingFixture} from './declaration-processing-fixtures.mjs'
 
 import {isDeclarationFeedFixture, handleDeclarationFeedFixture} from './declaration-feed-fixtures.mjs'
+import {isNativeDeclarationFixture, handleNativeDeclarationFixture} from './native-declaration-fixtures.mjs'
 
 // Synthetic backend: deliberately no database, outbound HTTP, mail or jobs.
 const zoneId = '11111111-1111-4111-8111-111111111111'
@@ -93,7 +94,7 @@ const api = createServer(async (request, response) => {
       : /^Bearer browser-test-meter-declarant(?:-|$)/.test(request.headers.authorization) ? 'DECLARANT' : null
   const dashboardRole = getDashboardFixtureRole(request.headers.authorization)
   const pointWaterBodyRole = getPointWaterBodyFixtureRole(request.headers.authorization)
-  if (request.headers.authorization !== 'Bearer browser-test-api-token' && !meterRole && !dashboardRole && !pointWaterBodyRole && !isChartSeriesFixture(request.headers.authorization) && !isCountingFixture(request.headers.authorization) && !isCampaignFixture(request.headers.authorization) && !isZoneResourceFixture(request.headers.authorization) && !isQuickExclusionFixture(request.headers.authorization) && !isCollectorPointFixture(request.headers.authorization) && !isExploitationUsageFixture(request.headers.authorization) && !isDeclarationProcessingFixture(request.headers.authorization) && !isDeclarationFeedFixture(request.headers.authorization)) {
+  if (request.headers.authorization !== 'Bearer browser-test-api-token' && !meterRole && !dashboardRole && !pointWaterBodyRole && !isChartSeriesFixture(request.headers.authorization) && !isCountingFixture(request.headers.authorization) && !isCampaignFixture(request.headers.authorization) && !isZoneResourceFixture(request.headers.authorization) && !isQuickExclusionFixture(request.headers.authorization) && !isCollectorPointFixture(request.headers.authorization) && !isExploitationUsageFixture(request.headers.authorization) && !isDeclarationProcessingFixture(request.headers.authorization) && !isDeclarationFeedFixture(request.headers.authorization) && !isNativeDeclarationFixture(request.headers.authorization)) {
     return send(401, {message: 'Unauthorized'})
   }
 
@@ -108,6 +109,7 @@ const api = createServer(async (request, response) => {
   if (await handleExploitationUsageFixture(request, send)) return
   if (await handleDeclarationProcessingFixture(request, send)) return
   if (await handleDeclarationFeedFixture(request, send)) return
+  if (await handleNativeDeclarationFixture(request, send)) return
 
   if (pathname === '/api/campaigns/summary') return send(200, {success: true, data: {hasCampaigns: false, items: []}})
 

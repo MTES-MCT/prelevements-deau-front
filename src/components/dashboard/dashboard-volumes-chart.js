@@ -280,6 +280,9 @@ const DashboardVolumesChart = ({
 
   return (
     <section className='mt-6 border border-gray-200 bg-white p-5 md:p-6'>
+      {chart?.volumesWithoutMonthlyDetail > 0 && <p className='fr-notice fr-p-2w fr-mb-2w'>
+        {formatExactVolume(chart.volumesWithoutMonthlyDetail)} couvrent plusieurs mois. Ils sont inclus dans les totaux par usage, sans répartition mensuelle estimée.
+      </p>}
       <div className='mb-3 flex flex-col gap-4 md:flex-row md:items-start md:justify-between'>
         <div>
           <h3 className='fr-h3 fr-mb-1v'>{chart?.title}</h3>

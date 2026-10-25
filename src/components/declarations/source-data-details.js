@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 
+import NativeValuesPreview from '@/components/declarations/native-values-preview.js'
 import {campaignResponseHref} from '@/lib/campaigns.js'
 import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
 import {
@@ -20,6 +21,7 @@ import {
   getUsageTextColor
 } from '@/lib/water-uses.js'
 import {formatNumber, coerceNumericValue} from '@/utils/number.js'
+import {formatFrequencyLabel} from '@/utils/frequency.js'
 
 const MAX_VISIBLE_VALUES = 20
 
@@ -231,6 +233,7 @@ function getMetricType(chunk) {
   return getLastIndexValue(chunk)?.metricTypeCode
     ?? getLastValue(chunk)?.metricTypeCode
     ?? chunk.chunkValues?.[0]?.metricTypeCode
+    ?? chunk.metadata?.parameter
 }
 
 function getReadingDate(chunk, source) {
@@ -403,7 +406,7 @@ function getChunkDisplayContext(chunk, source) {
 
   return {
     countLabel: getChunkCountLabel({displayAsIndex, displayAsVolume, isQuickDeclaration}),
-    countValue: displayAsIndex || (isQuickDeclaration && displayAsVolume)
+    countValue: chunk.metadata?.nativeTemporal ? chunk._count?.chunkValues ?? 0 : displayAsIndex || (isQuickDeclaration && displayAsVolume)
       ? visibleValues.length
       : chunk.chunkValues?.length ?? 0,
     dateLabel: getChunkDateLabel({displayAsIndex, displayAsVolume, isQuickDeclaration}),
@@ -419,7 +422,7 @@ function getChunkDisplayContext(chunk, source) {
     metricType,
     flowType,
     usageLabel: formatUsageReference(chunk.usage),
-    valueLabel: getValueDetailsLabel({
+    valueLabel: chunk.metadata?.nativeTemporal ? 'Fréquence' : getValueDetailsLabel({
       displayAsIndex,
       displayAsVolume,
       flowType,
@@ -681,7 +684,9 @@ const SourceDataDetails = ({currentRole = null, declaration, preferUsageName = f
                 <div>
                   <div className='text-xs text-gray-500'>{valueLabel}</div>
                   <div className='text-sm'>
-                    <DeclaredValueDisplay value={displayValue} />
+                    {chunk.metadata?.nativeTemporal
+                      ? formatFrequencyLabel(chunk.metadata.frequency) || 'Non renseignée'
+                      : <DeclaredValueDisplay value={displayValue} />}
                   </div>
                 </div>
 
@@ -693,7 +698,7 @@ const SourceDataDetails = ({currentRole = null, declaration, preferUsageName = f
                 </div>
               </div>
 
-              {shouldShowValuesPreview(chunk, source) && (
+              {chunk.metadata?.nativeTemporal ? <NativeValuesPreview key={`${chunk.id}-${chunk.updatedAt || ''}`} sourceId={source.id} chunkId={chunk.id} /> : shouldShowValuesPreview(chunk, source) && (
                 <ValuesPreview chunk={chunk} source={source} />
               )}
             </article>

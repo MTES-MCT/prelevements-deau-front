@@ -22,6 +22,7 @@ const browserTests = [
   'declaration-file-selection.spec.js',
   'declaration-processing.spec.js',
   'declaration-feed.spec.js',
+  'native-declaration.spec.js',
   'point-water-body.spec.js',
   'admin-chart-labels.spec.js',
   'zone-resource-settings.spec.js'

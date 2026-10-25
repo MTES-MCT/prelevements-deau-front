@@ -100,6 +100,9 @@ function getChunkSourceFlowType(chunk) {
 }
 
 function getRawPointName(chunk) {
+  if (chunk?.metadata?.nativeTemporal) {
+    return chunk.pointPrelevement?.name || chunk.metadata.originalPoint || chunk.pointPrelevementName || 'Nom non identifié'
+  }
   return chunk?.pointPrelevementName || 'Nom non identifié'
 }
 
@@ -985,7 +988,9 @@ const PointReconciliationPanel = ({
             <>
               <h2 className='fr-h4 fr-mb-1v'>Points de prélèvement déclarés</h2>
               <p className='fr-text--sm fr-mb-0 text-gray-600'>
-                {totalCount} point{totalCount > 1 ? 's' : ''} détecté{totalCount > 1 ? 's' : ''} dans le fichier.
+                {source?.metadata?.nativeTemporal
+                  ? `${totalCount} série${totalCount > 1 ? 's' : ''} de mesures dans le fichier.`
+                  : `${totalCount} point${totalCount > 1 ? 's' : ''} détecté${totalCount > 1 ? 's' : ''} dans le fichier.`}
               </p>
             </>
           )}

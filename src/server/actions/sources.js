@@ -71,6 +71,15 @@ export async function getMySourceAction(sourceId) {
   return getCachedMySource(sourceId)
 }
 
+export async function getChunkValuesAction({sourceId, chunkId, cursor}) {
+  return withErrorHandling(async () => {
+    const search = new URLSearchParams({limit: '50'})
+    if (cursor) search.set('cursor', cursor)
+    const response = await fetchJSON(`api/sources/${encodeURIComponent(sourceId)}/chunks/${encodeURIComponent(chunkId)}/values?${search}`)
+    return response.data
+  })
+}
+
 /**
  * Revalidate source paths after mutations
  * @param {string} [sourceId] - Optional source ID

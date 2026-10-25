@@ -30,6 +30,33 @@ async function controlFixture(context, apiToken, params) {
   expect(response.ok()).toBe(true)
 }
 
+test('DSFR reste actif après navigation client vers une fiche déclarant', async ({page, context}) => {
+  await authenticate(context)
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+  await page.route('**/*', route => [frontUrl, 'http://127.0.0.1:3417'].includes(new URL(route.request().url()).origin)
+    ? route.continue() : route.abort())
+  await page.goto(`${frontUrl}/declarants`)
+  await expect(page.getByRole('heading', {name: 'Déclarants', exact: true})).toBeVisible()
+  await page.evaluate(() => { window.dsfrNavigationMarker = true })
+  await page.getByRole('link', {name: 'Consulter', exact: true}).click()
+  await expect(page).toHaveURL(`${frontUrl}/declarants/${chartSeriesIds.collecteur}`)
+  await expect(page.getByRole('link', {name: 'Gérer le déclarant', exact: true})).toBeVisible()
+  expect(await page.evaluate(() => window.dsfrNavigationMarker)).toBe(true)
+  const settings = page.getByRole('button', {name: "Paramètres d'affichage", exact: true})
+  await expect(settings).toHaveAttribute('data-fr-js-modal-button', 'true')
+  await settings.click()
+  const modal = page.locator('#fr-theme-modal')
+  await expect(modal).toBeVisible()
+  await modal.getByRole('button', {name: 'Fermer', exact: true}).click()
+  await expect(modal).not.toBeVisible()
+  const revealBreadcrumb = page.getByRole('button', {name: 'Voir le fil d’Ariane', exact: true})
+  if (await revealBreadcrumb.isVisible()) await revealBreadcrumb.click()
+  await page.getByRole('link', {name: 'Déclarants', exact: true}).last().click()
+  await expect(page.getByRole('heading', {name: 'Déclarants', exact: true})).toBeVisible()
+  expect(errors.filter(error => /dsfr|start is not a function/i.test(error))).toEqual([])
+})
+
 test('le volume SSR arrive avant le débit et les index ne chargent qu’à l’ouverture du sélecteur', async ({page, context}) => {
   const apiToken = await authenticate(context)
   await controlFixture(context, apiToken, {holdMetric: 'débit'})

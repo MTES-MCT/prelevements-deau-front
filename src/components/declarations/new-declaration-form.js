@@ -11,6 +11,7 @@ import 'moment/locale/fr'
 
 import FileValidationResult from '@/components/declarations/validateur/file-validation-result.js'
 import ValidateurForm from '@/components/declarations/validateur/form.js'
+import {REUNION_FILE_TYPES} from '@/lib/native-declaration.js'
 import {createLocalSeriesRegistry} from '@/lib/local-series-registry.js'
 import {getMyDeclarationSubmissionSuccessURL} from '@/lib/urls.js'
 import {createDeclarationAction, revalidateDeclarationPaths} from '@/server/actions/declarations.js'
@@ -118,7 +119,7 @@ const validateFiles = async (files, declarationTypeCode) => {
 
   return {
     errors: [],
-    validationStatus: 'success'
+    validationStatus: REUNION_FILE_TYPES.has(declarationTypeCode) ? 'pending' : 'success'
   }
 }
 
@@ -293,11 +294,13 @@ const NewDeclarationForm = ({allowedDeclarationTypes = []}) => {
 
       {validationResult && files.length > 0 && (
         <div className='fr-mt-2w fr-mb-2w'>
-          <FileValidationResult
+          {validationResult.validationStatus === 'pending' ? (
+            <Alert severity='info' title='Fichiers prêts à être déposés' description='Le contenu sera vérifié après le dépôt.' />
+          ) : <FileValidationResult
             fileName={getDisplayFileName(files)}
             validationStatus={validationResult.validationStatus}
             errors={validationResult.errors}
-          />
+          />}
 
           <div className='fr-mt-2w flex gap-2 items-center'>
             <Button
