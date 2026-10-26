@@ -3,7 +3,6 @@ import {Suspense} from 'react'
 import {notFound, redirect} from 'next/navigation'
 
 import {buildPageTitle} from '@/app/metadata-utils.js'
-import ResourceMutationHistory from '@/components/audit/resource-mutation-history.js'
 import ExploitationsList from '@/components/exploitations/exploitations-list.js'
 import PointIdentification from '@/components/points-prelevement/point-identification.js'
 import PointLocalisation from '@/components/points-prelevement/point-localisation.js'
@@ -11,26 +10,9 @@ import SeriesOptionsLoader from '@/components/points-prelevement/series-options-
 import ResourceDeleteAction from '@/components/ui/resource-delete-action.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getNewExploitationURL, getPointPrelevementURL} from '@/lib/urls.js'
-import {getResourceAuditHistoryAction} from '@/server/actions/audit-events.js'
 import {getPointPrelevementAction, getExploitationsByPointIdAction} from '@/server/actions/points-prelevement.js'
 import {getCurrentSessionInfo} from '@/server/actions/user.js'
 import {getPointPrelevementLabel} from '@/utils/point-prelevement.js'
-
-const PointHistory = async ({historyPromise, pointId}) => {
-  const historyResult = await historyPromise
-
-  if (!historyResult.success) {
-    return null
-  }
-
-  return (
-    <ResourceMutationHistory
-      initialData={historyResult.data?.data}
-      resourceId={pointId}
-      resourceType='POINT'
-    />
-  )
-}
 
 const PointExploitations = async ({exploitationsPromise, pointId, canCreate}) => {
   const result = await exploitationsPromise
@@ -84,9 +66,6 @@ const Page = async ({params, searchParams}) => {
   const exploitationsPromise = can('exploitation.list')
     ? getExploitationsByPointIdAction(pointPrelevement.id)
     : null
-  const historyPromise = can('pp.update')
-    ? getResourceAuditHistoryAction('POINT', pointPrelevement.id)
-    : null
 
   return (
     <>
@@ -111,14 +90,6 @@ const Page = async ({params, searchParams}) => {
               exploitationsPromise={exploitationsPromise}
               pointId={pointPrelevement.id}
               canCreate={can('exploitation.create')}
-            />
-          </Suspense>
-        )}
-        {historyPromise && (
-          <Suspense fallback={null}>
-            <PointHistory
-              historyPromise={historyPromise}
-              pointId={pointPrelevement.id}
             />
           </Suspense>
         )}
