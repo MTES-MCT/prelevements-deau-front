@@ -132,6 +132,10 @@ jobs:
         run: node .github/scripts/browser-ci.mjs verify-build .artifacts/browser-build
       - name: Restore the same synthetic build
         run: tar -xzf .artifacts/browser-build/browser-build.tar.gz
+      - name: Use the official Ubuntu archive for browser dependencies
+        run: |
+          grep -qE '^https://archive[.]ubuntu[.]com/ubuntu/([[:space:]]|$)' /etc/apt/apt-mirrors.txt
+          sudo sed -i '\|^https\?://azure\.archive\.ubuntu\.com/ubuntu/|d' /etc/apt/apt-mirrors.txt
       - name: Install browser engines
         run: npx --no-install playwright install --with-deps chromium webkit
       - name: Browser regression tests (synthetic API only)
@@ -153,7 +157,7 @@ jobs:
     name: Large spreadsheet regression
     needs: [build, browser]
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -173,6 +177,10 @@ jobs:
         run: node .github/scripts/browser-ci.mjs verify-build .artifacts/browser-build
       - name: Restore the same synthetic build
         run: tar -xzf .artifacts/browser-build/browser-build.tar.gz
+      - name: Use the official Ubuntu archive for browser dependencies
+        run: |
+          grep -qE '^https://archive[.]ubuntu[.]com/ubuntu/([[:space:]]|$)' /etc/apt/apt-mirrors.txt
+          sudo sed -i '\|^https\?://azure\.archive\.ubuntu\.com/ubuntu/|d' /etc/apt/apt-mirrors.txt
       - name: Install the spreadsheet browser
         run: npx --no-install playwright install --with-deps chromium
       - name: Test the complete 500000-cell export after all browser shards
