@@ -70,13 +70,30 @@ for (const modifier of ['Control', 'Meta']) {
   test(`${modifier}-clic directement sur le point ouvre sa fiche sans quitter la carte`, async ({page, context, isMobile}) => {
     test.skip(isMobile, 'Interaction clavier/souris sur ordinateur')
     await authenticate(context)
+    // Exercise a canvas that becomes visible before its map data is ready.
+    const tiles = Promise.withResolvers()
+    await page.route(url => url.hostname === 'data.geopf.fr', async route => {
+      await tiles.promise
+      await route.fulfill({contentType: 'image/png', body: mapTile})
+    })
     await page.goto(frontUrl + '/points-prelevement')
     const canvas = page.locator('.maplibregl-canvas')
     await expect(canvas).toBeVisible({timeout: 20_000})
     const box = await canvas.boundingBox()
-    const position = {x: box.width / 2, y: box.height / 2}
-    await canvas.hover({position})
-    await expect(page.locator('.maplibregl-popup').getByRole('heading', {name: 'PP-SYNTHETIQUE', exact: true})).toBeVisible({timeout: 20_000})
+    let position = {x: box.width / 2, y: box.height / 2}
+    try {
+      await canvas.hover({position})
+    } finally {
+      tiles.resolve()
+    }
+    // A hover before marker rendering is not replayed by MapLibre. Wait for a
+    // real point interaction, then perform the modified click exactly once.
+    await expect(async () => {
+      const currentBox = await canvas.boundingBox()
+      position = {x: currentBox.width / 2, y: currentBox.height / 2}
+      await canvas.hover({position})
+      await expect(page.locator('.maplibregl-popup').getByRole('heading', {name: 'PP-SYNTHETIQUE', exact: true})).toBeVisible({timeout: 250})
+    }).toPass({timeout: 20_000})
     const opened = context.waitForEvent('page')
     await canvas.click({position, modifiers: [modifier]})
     const detail = await opened
