@@ -1,11 +1,17 @@
 'use client'
 
-import {useState, useTransition} from 'react'
+import {useState, useSyncExternalStore, useTransition} from 'react'
 
 import {formatNativeDate} from '@/lib/native-declaration.js'
 import {getChunkValuesAction} from '@/server/actions/sources.js'
 
+const subscribeToHydration = () => () => {}
+const getClientSnapshot = () => true
+const getServerSnapshot = () => false
+
 const NativeValuesPreview = ({sourceId, chunkId}) => {
+  // Native details can toggle before React attaches the handler that loads values.
+  const hydrated = useSyncExternalStore(subscribeToHydration, getClientSnapshot, getServerSnapshot)
   const [payload, setPayload] = useState(null)
   const [error, setError] = useState(null)
   const [cursors, setCursors] = useState([undefined])
@@ -25,10 +31,10 @@ const NativeValuesPreview = ({sourceId, chunkId}) => {
   })
 
   return (
-    <details className='mt-2' onToggle={event => {
+    <details className='mt-2' inert={!hydrated} onToggle={event => {
       if (event.currentTarget.open && !payload && !busy && !error) load(undefined, 0)
     }}>
-      <summary className='cursor-pointer text-sm font-medium text-[#000091]'>Voir les valeurs</summary>
+      <summary className='cursor-pointer text-sm font-medium text-[#000091]' aria-disabled={!hydrated}>Voir les valeurs</summary>
       <div className='mt-2' aria-busy={busy}>
         {busy ? <p role='status'>Chargement des valeurs…</p> : error ? <div>
           <p className='fr-error-text' role='alert'>{error.message}</p>
