@@ -11,7 +11,8 @@ import {
 
 // FREQUENCY_LABELS tests
 test('FREQUENCY_LABELS contains all expected frequency mappings', t => {
-  t.is(FREQUENCY_LABELS.size, 11)
+  t.is(FREQUENCY_LABELS.size, 12)
+  t.is(FREQUENCY_LABELS.get('instant'), 'Mesure ponctuelle')
   t.is(FREQUENCY_LABELS.get('1 second'), '1 seconde')
   t.is(FREQUENCY_LABELS.get('1 minute'), '1 minute')
   t.is(FREQUENCY_LABELS.get('15 minutes'), '15 minutes')
@@ -48,6 +49,7 @@ test('FREQUENCY_ORDER maintains ascending order', t => {
 
 // FormatFrequencyLabel tests
 test('formatFrequencyLabel formats known frequencies to French labels', t => {
+  t.is(formatFrequencyLabel('instant'), 'Mesure ponctuelle')
   t.is(formatFrequencyLabel('1 second'), '1 seconde')
   t.is(formatFrequencyLabel('1 minute'), '1 minute')
   t.is(formatFrequencyLabel('15 minutes'), '15 minutes')
