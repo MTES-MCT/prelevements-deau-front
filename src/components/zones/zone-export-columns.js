@@ -47,14 +47,15 @@ function formatList(values, mapper = value => value) {
     .join(', ')
 }
 
-function formatCoordinates(coordinates) {
-  const pointCoordinates = coordinates?.coordinates || coordinates
+function getCoordinate(coordinates, index) {
+  const pointCoordinates = coordinates?.coordinates ?? coordinates
 
   if (!Array.isArray(pointCoordinates) || pointCoordinates.length < 2) {
     return ''
   }
 
-  return `${pointCoordinates[1]}, ${pointCoordinates[0]}`
+  const value = pointCoordinates[index]
+  return typeof value === 'number' && Number.isFinite(value) ? value : ''
 }
 
 function getDeclarantId(declarant) {
@@ -218,7 +219,8 @@ export const ZONE_POINTS_EXPORT_COLUMNS = [
   {label: 'Code BNPE', value: point => point.codeBNPE},
   {label: 'Code AIOT', value: point => point.codeAIOT},
   {label: 'Code PTP', value: point => point.codePTP},
-  {label: 'Coordonnées', value: point => formatCoordinates(point.coordinates)},
+  {label: 'X (longitude)', value: point => getCoordinate(point.coordinates, 0)},
+  {label: 'Y (latitude)', value: point => getCoordinate(point.coordinates, 1)},
   {label: 'Déclarants', value: point => formatList(getPointDeclarants(point), getDeclarantTitleFromDeclarant)},
   {label: 'Nombre de déclarants', value: point => getPointDeclarants(point).length},
   {label: 'Usages', value: point => formatUsages(point.usages)},
