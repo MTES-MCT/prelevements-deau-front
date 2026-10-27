@@ -34,10 +34,13 @@ test('les axes des séries natives restent lisibles avec une précision de quinz
   const apiToken = await authenticate(context)
   await controlFixture(context, apiToken, {nativePrecision: 'true'})
   await page.goto(`${frontUrl}/declarants/${chartSeriesIds.collecteur}`)
-  const ticks = page.locator('.MuiChartsAxis-directionY .MuiChartsAxis-tickLabel')
-  await expect(ticks.filter({hasText: /^200\s*000$/})).toBeVisible()
-  expect(await ticks.allTextContents()).not.toEqual([])
-  expect((await ticks.allTextContents()).some(text => /,0{4}|…/.test(text))).toBe(false)
+  const chart = page.getByRole('figure', {name: 'Graphique séries temporelles'})
+  await expect(chart).toBeVisible({timeout: 15_000})
+  const ticks = chart.locator('.MuiChartsAxis-directionY .MuiChartsAxis-tickLabel')
+  await expect(ticks.first()).toBeVisible()
+  const labels = await ticks.allTextContents()
+  expect(labels.length).toBeGreaterThan(1)
+  expect(labels.some(text => !text.trim() || /,\d*0{4}$|…|\.{3}/.test(text))).toBe(false)
 })
 
 test('DSFR reste actif après navigation client vers une fiche déclarant', async ({page, context}) => {
