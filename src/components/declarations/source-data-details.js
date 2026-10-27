@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
 
 import NativeValuesPreview from '@/components/declarations/native-values-preview.js'
 import {campaignResponseHref} from '@/lib/campaigns.js'
@@ -12,6 +13,7 @@ import {
 import {getDeclarationTypeLabel} from '@/lib/declaration-types.js'
 import {isMeterTelemetrySource} from '@/lib/declaration.js'
 import {formatMeterExactPeriod, getMeterPeriod, getMeterValuePeriod, isMeterPeriodSource} from '@/lib/meter-period.js'
+import {getNativeAssociationWarnings} from '@/lib/native-declaration.js'
 import {getPointFlowTypeLabel, POINT_FLOW_TYPES} from '@/lib/point-flow-types.js'
 import {getPointPrelevementURL} from '@/lib/urls.js'
 import {
@@ -609,6 +611,7 @@ const SourceDataDetails = ({currentRole = null, declaration, preferUsageName = f
   const chunks = source?.chunks ?? []
   const isTelemetry = source?.type === 'API'
   const campaignHref = campaignResponseHref(source, currentRole)
+  const associationWarnings = getNativeAssociationWarnings(chunks)
 
   if (chunks.length === 0) {
     return (
@@ -636,6 +639,21 @@ const SourceDataDetails = ({currentRole = null, declaration, preferUsageName = f
           </p>
         )}
       </div>
+
+      {associationWarnings.length > 0 && (
+        <Alert
+          severity='warning'
+          title='Points reconnus, données à vérifier'
+          className='fr-mb-3w'
+          description={(
+            <ul className='fr-mb-0'>
+              {associationWarnings.map(warning => (
+                <li key={warning.key}><strong>{warning.pointName}</strong> : {warning.message}</li>
+              ))}
+            </ul>
+          )}
+        />
+      )}
 
       <div className='divide-y divide-gray-200 border border-gray-300 bg-white'>
         {chunks.map(chunk => {

@@ -17,6 +17,15 @@ export async function handleNativeDeclarationFixture(request, send) {
     chunks: ['volume', 'température'].map((parameter, index) => ({id: `native-${index}`, instructionStatus: 'AUTOMATICALLY_VALIDATED', canReconcile: false,
       pointPrelevementId: 'synthetic-point', pointPrelevement: {id: 'synthetic-point', name: 'Forage synthétique', flowType: 'PRELEVEMENT'},
       metadata: {nativeTemporal: true, parameter, frequency: index ? 'instant' : '1 month', unit: index ? 'degrés Celsius' : 'm³'}, minDate: '2026-01-01', maxDate: '2026-01-31', _count: {chunkValues: index ? 51 : 1}, chunkValues: []}))}
+  if (authorization.includes('-association-warning-')) {
+    for (const chunk of source.chunks) {
+      chunk.instructionStatus = 'PENDING'
+      chunk.exploitationId = null
+      chunk.parsingInfo = {issues: [{code: 'EXPLOITATION_PERIOD_NOT_COVERED', severity: 'warning'}]}
+    }
+    source.chunks[1].instructionStatus = 'REJECTED'
+    source.chunks[1].parsingInfo.issues.push({code: 'OVERLAPPING_SERIES', severity: 'error'})
+  }
   if (pathname === `/api/sources/${nativeIds.source}`) return respond({success: true, data: {...source, declaration}})
   if (pathname === `/api/declarations/${nativeIds.declaration}`) return respond({success: true, data: {...declaration, source}})
   if (pathname === `/api/declarations/${nativeIds.declaration}/available-points-prelevements`) return respond({success: true, data: []})
