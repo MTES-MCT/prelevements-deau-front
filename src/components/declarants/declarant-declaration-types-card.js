@@ -1,6 +1,6 @@
 'use client'
 
-import {useEffect, useId, useRef, useState} from 'react'
+import {useEffect, useId, useRef, useState, useSyncExternalStore} from 'react'
 
 import Badge from '@codegouvfr/react-dsfr/Badge'
 import {Button} from '@codegouvfr/react-dsfr/Button'
@@ -34,6 +34,10 @@ const emptyForm = {
   startDate: '',
   endDate: ''
 }
+
+const subscribeToHydration = () => () => {}
+const getClientSnapshot = () => true
+const getServerSnapshot = () => false
 
 function formatDate(date) {
   return new Date(date).toLocaleDateString('fr-FR', {timeZone: 'UTC'})
@@ -143,6 +147,7 @@ const PeriodFields = ({form, onChange, disabled}) => {
 }
 
 const DeclarantDeclarationTypesCard = ({declarantId, initialPayload}) => {
+  const hydrated = useSyncExternalStore(subscribeToHydration, getClientSnapshot, getServerSnapshot)
   const [links, setLinks] = useState(initialPayload?.data ?? [])
   const [options, setOptions] = useState(initialPayload?.meta?.availableDeclarationTypes ?? [])
   const [canManage, setCanManage] = useState(Boolean(initialPayload?.meta?.canManage))
@@ -351,7 +356,7 @@ const DeclarantDeclarationTypesCard = ({declarantId, initialPayload}) => {
                           }}
                           priority='secondary'
                           size='small'
-                          disabled={isSubmitting || isAdding || Boolean(editingId)}
+                          disabled={!hydrated || isSubmitting || isAdding || Boolean(editingId)}
                           onClick={() => startEditing(link)}
                         >
                           Modifier
@@ -359,7 +364,7 @@ const DeclarantDeclarationTypesCard = ({declarantId, initialPayload}) => {
                         <Button
                           priority='tertiary no outline'
                           size='small'
-                          disabled={isSubmitting || isAdding || Boolean(editingId)}
+                          disabled={!hydrated || isSubmitting || isAdding || Boolean(editingId)}
                           onClick={() => removeLink(link)}
                         >
                           Retirer
@@ -464,7 +469,7 @@ const DeclarantDeclarationTypesCard = ({declarantId, initialPayload}) => {
                 priority='secondary'
                 size='small'
                 iconId='fr-icon-add-line'
-                disabled={isSubmitting || options.length === 0 || Boolean(editingId)}
+                disabled={!hydrated || isSubmitting || options.length === 0 || Boolean(editingId)}
                 onClick={() => {
                   setIsAdding(true)
                   setError(null)

@@ -312,12 +312,25 @@ test('gestion du déclarant : un agent en lecture seule ne voit aucune action de
 
 test('types autorisés : liste simple et ajout sans limite de dates', async ({page, context}) => {
   const token = await authenticate(context, 'admin')
-  await page.goto(`${frontUrl}/declarants/${ids.collector}/gestion`)
+  const scripts = Promise.withResolvers()
+  await page.route('**/_next/static/**/*.js', async route => {
+    await scripts.promise
+    await route.continue()
+  })
+  await page.goto(`${frontUrl}/declarants/${ids.collector}/gestion`, {waitUntil: 'commit'})
   const card = page.getByRole('region', {name: 'Types de déclaration autorisés', exact: true})
+  const add = card.getByRole('button', {name: 'Ajouter un type', exact: true})
+  try {
+    for (const name of ['Ajouter un type', 'Modifier', 'Retirer']) {
+      await expect(card.getByRole('button', {name, exact: true})).toBeDisabled()
+    }
+  } finally {
+    scripts.resolve()
+  }
+  await expect(add).toBeEnabled()
   await expect(card.getByText('À partir du 01/01/2026', {exact: true})).toBeVisible()
   await expect(card.getByText(/VOLUMES_ANNUELS|Version|Non bornée/)).toHaveCount(0)
   await expect(card.getByLabel('Type de déclaration', {exact: true})).toHaveCount(0)
-  const add = card.getByRole('button', {name: 'Ajouter un type', exact: true})
   await add.click()
   const select = card.getByLabel('Type de déclaration', {exact: true})
   await expect(select).toBeFocused()
