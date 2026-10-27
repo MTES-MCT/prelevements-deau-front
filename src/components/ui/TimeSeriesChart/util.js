@@ -38,10 +38,11 @@ export const getNumberFormatter = locale => new Intl.NumberFormat(locale, {
  * Returns a number formatter with specific precision (decimal places).
  * @param {string} locale - Locale string
  * @param {number} precision - Number of decimal places (default: 0 for integers)
+ * @param {number} minimumFractionDigits - Optional padding, without reducing precision
  * @returns {Intl.NumberFormat}
  */
-export const getNumberFormatterWithPrecision = (locale, precision = 0) => new Intl.NumberFormat(locale, {
-  minimumFractionDigits: precision,
+export const getNumberFormatterWithPrecision = (locale, precision = 0, minimumFractionDigits = precision) => new Intl.NumberFormat(locale, {
+  minimumFractionDigits,
   maximumFractionDigits: precision
 })
 
@@ -868,6 +869,7 @@ export const processInputSeries = (inputSeries, options = {}) => {
     threshold: thresholdConfig,
     chartType,
     precision: inputSeries.precision ?? 0,
+    minimumFractionDigits: inputSeries.minimumFractionDigits ?? inputSeries.precision ?? 0,
     connectNulls: Boolean(inputSeries.connectNulls),
     ...(inputSeries.curve && {curve: inputSeries.curve}),
     ...(inputSeries.area && {area: true}),
@@ -1229,7 +1231,7 @@ export const buildSegments = (alignedData, xValues, options) => {
   for (const data of alignedData) {
     const {values, thresholds, pointsWithMeta} = data
     // Create per-series formatter with appropriate precision
-    const seriesFormatter = getNumberFormatterWithPrecision(locale, data.precision ?? 0)
+    const seriesFormatter = getNumberFormatterWithPrecision(locale, data.precision ?? 0, data.minimumFractionDigits)
     let currentSegment = null
     const segments = []
     let previousSegmentLastIndex = null
@@ -1361,7 +1363,7 @@ export const buildPlainSeries = (alignedData, options) => {
   for (const data of alignedData) {
     const seriesId = `${data.id}__plain`
     // Create per-series formatter with appropriate precision
-    const seriesFormatter = getNumberFormatterWithPrecision(locale, data.precision ?? 0)
+    const seriesFormatter = getNumberFormatterWithPrecision(locale, data.precision ?? 0, data.minimumFractionDigits)
 
     plainSeries.push({
       id: seriesId,
@@ -1435,7 +1437,7 @@ export const buildStubSeries = (processedSeries, xValuesLength) => processedSeri
 
 const buildSingleYAxis = (axisId, stats, locale, precision, label = null, options = {}) => {
   const hasData = stats.min !== Number.POSITIVE_INFINITY
-  const numberFormatter = getNumberFormatterWithPrecision(locale, precision)
+  const numberFormatter = getNumberFormatterWithPrecision(locale, precision, options.minimumFractionDigits)
   const reverse = Boolean(options.reverse && axisId === AXIS_LEFT_ID)
 
   // Create a default axis even if no data to prevent useYScale errors
@@ -1513,6 +1515,7 @@ export const buildYAxisConfigurations = (
   {
     axisLabels = {},
     axisPrecision = {},
+    axisMinimumFractionDigits = {},
     includeZero = true,
     reverse = false,
     minimum = null,
@@ -1531,7 +1534,7 @@ export const buildYAxisConfigurations = (
         locale,
         axisPrecision[axisId] ?? 0,
         axisLabels[axisId] ?? null,
-        options
+        {...options, minimumFractionDigits: axisMinimumFractionDigits[axisId]}
       )
     )
   )
@@ -1800,6 +1803,7 @@ const processSeriesWithDecimation = (series, options) => {
       points: pointMap,
       chartType: processed.chartType || 'line',
       precision: processed.precision,
+      minimumFractionDigits: processed.minimumFractionDigits,
       connectNulls: processed.connectNulls,
       nativeFrequency, // Store for later resampling
       ...(processed.curve && {curve: processed.curve}),
@@ -1823,6 +1827,10 @@ const extractAxisMetadata = processedSeries => {
     [AXIS_LEFT_ID]: 0,
     [AXIS_RIGHT_ID]: 0
   }
+  const axisMinimumFractionDigits = {
+    [AXIS_LEFT_ID]: 0,
+    [AXIS_RIGHT_ID]: 0
+  }
 
   for (const processed of processedSeries) {
     const {axisId, label, precision} = processed
@@ -1834,9 +1842,10 @@ const extractAxisMetadata = processedSeries => {
 
     // Track max precision per axis
     axisPrecision[axisId] = Math.max(axisPrecision[axisId], precision ?? 0)
+    axisMinimumFractionDigits[axisId] = Math.max(axisMinimumFractionDigits[axisId], processed.minimumFractionDigits ?? precision ?? 0)
   }
 
-  return {axisLabels, axisPrecision}
+  return {axisLabels, axisPrecision, axisMinimumFractionDigits}
 }
 
 /**
@@ -1970,7 +1979,7 @@ export const buildSeriesModel = ({
   const staticThresholds = enableThresholds ? extractStaticThresholds(processedSeries) : []
 
   // Step 8: Extract axis metadata
-  const {axisLabels, axisPrecision} = extractAxisMetadata(processedSeries)
+  const {axisLabels, axisPrecision, axisMinimumFractionDigits} = extractAxisMetadata(processedSeries)
   if (yAxisLabel) {
     axisLabels[AXIS_LEFT_ID] = yAxisLabel
   }
@@ -1979,6 +1988,7 @@ export const buildSeriesModel = ({
   const yAxis = buildYAxisConfigurations(axisStats, locale, {
     axisLabels,
     axisPrecision,
+    axisMinimumFractionDigits,
     includeZero,
     reverse: reverseYAxis,
     minimum: yAxisMin,

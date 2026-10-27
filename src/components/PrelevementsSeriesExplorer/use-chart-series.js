@@ -242,6 +242,7 @@ export function useChartSeries({
         area: isCumulative,
         nativeResolution,
         frequency: nativeFrequency,
+        minimumFractionDigits: param.minimumFractionDigits,
         precision: param.precision ?? 0
       }
     }).filter(Boolean)

@@ -585,6 +585,8 @@ const AggregatedSeriesExplorer = ({
           ?? resolvedMetadataValueType
           ?? null,
         readingSeries: meta.readingSeries === true,
+        // Native precision is a maximum, not a request to pad every label with zeros.
+        minimumFractionDigits: meta.nativeTemporal === true ? 0 : undefined,
         precision: meta.precision ?? metadata?.precision ?? 0
       })
     }

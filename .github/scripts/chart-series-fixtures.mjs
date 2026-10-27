@@ -29,6 +29,7 @@ export async function handleChartSeriesFixtureRequest(request, send) {
     if (searchParams.has('failDetails')) control.failDetails = Number(searchParams.get('failDetails'))
     if (searchParams.has('emptyVolume')) control.emptyVolume = searchParams.get('emptyVolume') === 'true'
     if (searchParams.has('failDebit')) control.failDebit = searchParams.get('failDebit') === 'true'
+    if (searchParams.has('nativePrecision')) control.nativePrecision = searchParams.get('nativePrecision') === 'true'
     controls.set(authorization, control)
     return respond(200, {ok: true})
   }
@@ -75,10 +76,11 @@ export async function handleChartSeriesFixtureRequest(request, send) {
     const isVolume = searchParams.get('metricTypeCode') === 'volume'
     if (control?.failDebit && searchParams.get('metricTypeCode') === 'débit') return respond(500, {message: 'Débit indisponible'})
     return respond(200, {
-      metadata: {frequency: searchParams.get('aggregationFrequency'), unit: isVolume ? 'm³' : 'm³/h', valueType: isVolume ? 'cumulative' : 'instantaneous', exactVolumesEstimated: isVolume},
+      metadata: {frequency: searchParams.get('aggregationFrequency'), unit: isVolume ? 'm³' : 'm³/h', valueType: isVolume ? 'cumulative' : 'instantaneous', exactVolumesEstimated: isVolume,
+        ...(control?.nativePrecision ? {nativeTemporal: true, precision: 15} : {})},
       values: control?.emptyVolume && isVolume ? [] : isTotal
         ? [{date: searchParams.get('startDate'), value: 77}]
-        : [{date: '2020-01-01', value: isVolume ? 100 : 10}, {date: '2026-09-01', value: isVolume ? 200 : 20}]
+        : [{date: '2020-01-01', value: isVolume ? (control?.nativePrecision ? 100000 : 100) : 10}, {date: '2026-09-01', value: isVolume ? (control?.nativePrecision ? 200000 : 200) : 20}]
     })
   }
   return false

@@ -30,6 +30,16 @@ async function controlFixture(context, apiToken, params) {
   expect(response.ok()).toBe(true)
 }
 
+test('les axes des séries natives restent lisibles avec une précision de quinze décimales', async ({page, context}) => {
+  const apiToken = await authenticate(context)
+  await controlFixture(context, apiToken, {nativePrecision: 'true'})
+  await page.goto(`${frontUrl}/declarants/${chartSeriesIds.collecteur}`)
+  const ticks = page.locator('.MuiChartsAxis-directionY .MuiChartsAxis-tickLabel')
+  await expect(ticks.filter({hasText: /^200\s*000$/})).toBeVisible()
+  expect(await ticks.allTextContents()).not.toEqual([])
+  expect((await ticks.allTextContents()).some(text => /,0{4}|…/.test(text))).toBe(false)
+})
+
 test('DSFR reste actif après navigation client vers une fiche déclarant', async ({page, context}) => {
   await authenticate(context)
   const errors = []

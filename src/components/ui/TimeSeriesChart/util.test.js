@@ -1307,6 +1307,28 @@ test('getNumberFormatter formats numbers with max 2 decimal places', t => {
   t.is(formatter.format(10), '10')
 })
 
+for (const enableThresholds of [true, false]) {
+  test(`les décimales natives restent précises sans zéros de remplissage (seuils ${enableThresholds})`, t => {
+    const values = [200000, 0.000000123456789, 12.340123456789, 0]
+    const data = values.map((y, index) => ({x: new Date(Date.UTC(2026, 0, index + 1)), y}))
+    const model = buildSeriesModel({
+      series: [
+        {id: 'native', label: 'Volume prélevé (m³)', precision: 15, minimumFractionDigits: 0, data},
+        {id: 'legacy', label: 'Index (m³)', precision: 4, axis: 'right', data}
+      ],
+      locale: 'fr-FR', theme: baseTheme, enableThresholds, enableDecimation: false
+    })
+    const native = model.segmentSeries.find(series => series.originalId === 'native')
+    const axis = model.yAxis.find(item => item.id === AXIS_LEFT_ID)
+    const expected = ['200\u202f000', '0,000000123456789', '12,340123456789', '0']
+    t.deepEqual(values.map(value => axis.valueFormatter(value)), expected)
+    t.deepEqual(values.map(value => native.valueFormatter(value)), expected)
+    t.deepEqual(native.data, values)
+    t.is(model.yAxis.find(item => item.id === AXIS_RIGHT_ID).valueFormatter(12), '12,0000')
+    t.is(model.segmentSeries.find(series => series.originalId === 'legacy').valueFormatter(12), '12,0000')
+  })
+}
+
 test('getNumberFormatter handles undefined locale', t => {
   const formatter = getNumberFormatter(undefined)
   t.true(formatter instanceof Intl.NumberFormat)
