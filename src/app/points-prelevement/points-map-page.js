@@ -348,6 +348,7 @@ const PointsMapPage = ({initialPointsResult, canCreateCollectorPoint = false}) =
                   showNavigationControls
                   centerSelectedPointOnChange={false}
                   filteredPoints={filteredPointIds}
+                  getPointHref={getPointPrelevementURL}
                   handleSelectedPoint={handleSelectedPoint}
                   highlightedPoint={highlightedPointId
                     ? mappablePointsById.get(highlightedPointId)

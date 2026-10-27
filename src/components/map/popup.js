@@ -32,6 +32,7 @@ const DeclarantGroup = ({declarants, pluralLabel, singularLabel}) => {
 }
 
 const Popup = ({
+  actionHref,
   actionLabel,
   declarantsError = false,
   declarantsLoading = false,
@@ -55,6 +56,7 @@ const Popup = ({
 
   return (
     <MapPopupCard
+      actionHref={actionHref}
       actionLabel={actionLabel}
       dismissable={dismissable}
       subtitle={alternateName && (

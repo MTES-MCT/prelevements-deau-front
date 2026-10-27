@@ -4,6 +4,7 @@ const frontUrl = 'http://127.0.0.1:3417'
 const browserTests = [
   'exploitation-usages.spec.js',
   'collector-points.spec.js',
+  'map-point-navigation.spec.js',
   'campaigns.spec.js',
   'campaigns-theme.spec.js',
   'campaign-navigation.spec.js',

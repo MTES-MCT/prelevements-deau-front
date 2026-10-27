@@ -110,6 +110,7 @@ export async function handleCollectorPointFixture(request, send) {
       }
     } else send(405, {message: 'Méthode interdite.'})
   } else if (pathname === '/api/points-prelevement/options') send(200, [state.point])
+  else if (pathname === '/api/points-prelevement/map') send(200, [{...state.point, canReadDetail: !auth.includes('-map-restricted-')}])
   else if (pathname === '/api/referentiels/usages-eau') send(200, {items: hierarchicalWaterUses.map(usage => usage.id === usageIds.root
     ? {...usage, id: collectorPointIds.usage, children: usage.children.map(child => ({...child, parentId: collectorPointIds.usage}))} : usage)})
   else if (pathname === '/api/referentiels/communes') send(200, [{code: '33353', name: 'Rimons'}])

@@ -1,4 +1,5 @@
 const MapPopupCard = ({
+  actionHref,
   actionLabel,
   children,
   dismissable = false,
@@ -29,15 +30,27 @@ const MapPopupCard = ({
       {children}
     </div>
 
-    {actionLabel && onAction && (
+    {actionLabel && (actionHref || onAction) && (
       <footer className='border-t border-gray-200 bg-gray-50 px-3 py-2.5'>
-        <button
+        {actionHref ? <a
+          className='fr-btn fr-btn--sm w-full justify-center'
+          href={actionHref}
+          onClick={event => {
+            if (onAction && !event.defaultPrevented && event.button === 0
+              && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+              event.preventDefault()
+              onAction(event)
+            }
+          }}
+        >
+          {actionLabel}
+        </a> : <button
           className='fr-btn fr-btn--sm w-full justify-center'
           type='button'
           onClick={onAction}
         >
           {actionLabel}
-        </button>
+        </button>}
       </footer>
     )}
   </article>

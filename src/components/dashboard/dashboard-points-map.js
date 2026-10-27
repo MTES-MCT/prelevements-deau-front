@@ -829,6 +829,7 @@ const DashboardPointsMap = ({
 
           root.render(
             <Popup
+              actionHref={persistent && options.readPointDetails ? getPointPrelevementURL(point) : undefined}
               actionLabel={persistent && options.readPointDetails ? 'Voir la fiche du point' : undefined}
               declarantsError={actorsError}
               declarantsLoading={canLoadActors && !actors && !actorsError}
@@ -953,6 +954,10 @@ const DashboardPointsMap = ({
         const point = pointsByIdRef.current.get(String(pointId))
 
         if (point) {
+          if (popupOptionsRef.current.readPointDetails && (event.originalEvent?.ctrlKey || event.originalEvent?.metaKey)) {
+            window.open(getPointPrelevementURL(point), '_blank', 'noopener,noreferrer')
+            return
+          }
           openPointPopup(point, {persistent: true})
         }
       }

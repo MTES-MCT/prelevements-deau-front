@@ -218,6 +218,7 @@ const MapView = ({
   highlightedPoint,
   selectedPoint,
   handleSelectedPoint,
+  getPointHref,
   loadPointDetails,
   onPointHover,
   onPointPopupAction,
@@ -245,6 +246,7 @@ const MapView = ({
   const popupRootRef = useRef(null)
   const closeSelectedPointPopupRef = useRef(null)
   const handleSelectedPointRef = useRef(handleSelectedPoint)
+  const getPointHrefRef = useRef(getPointHref)
   const handledRecenterRequestKeyRef = useRef(0)
   const handledSelectedPointRequestKeyRef = useRef(0)
   const hasFittedInitialPointsRef = useRef(false)
@@ -279,6 +281,7 @@ const MapView = ({
 
   pointsRef.current = points
   handleSelectedPointRef.current = handleSelectedPoint
+  getPointHrefRef.current = getPointHref
   loadPointDetailsRef.current = loadPointDetails
   onPointHoverRef.current = onPointHover
   onPointPopupActionRef.current = onPointPopupAction
@@ -471,6 +474,7 @@ const MapView = ({
       const renderPopup = ({details = detailedPoint, detailsError = false} = {}) => {
         root.render(
           <Popup
+            actionHref={persistent && canReadDetail ? getPointHrefRef.current?.(details ?? point) : undefined}
             actionLabel={persistent && canReadDetail ? pointPopupActionLabelRef.current : undefined}
             declarantsError={detailsError}
             declarantsLoading={canLoadDetails && !details && !detailsError}
@@ -576,6 +580,12 @@ const MapView = ({
         const feature = e.features[0]
         const point = pointsByIdRef.current.get(feature.properties.id)
         if (!point) {
+          return
+        }
+
+        const href = point.canReadDetail !== false ? getPointHrefRef.current?.(point) : null
+        if (href && (e.originalEvent?.ctrlKey || e.originalEvent?.metaKey)) {
+          window.open(href, '_blank', 'noopener,noreferrer')
           return
         }
 
