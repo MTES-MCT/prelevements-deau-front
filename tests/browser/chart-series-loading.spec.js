@@ -30,6 +30,18 @@ async function controlFixture(context, apiToken, params) {
   expect(response.ok()).toBe(true)
 }
 
+function getChartModulePath() {
+  // Resolve the actual dynamic module from the production build. UI strings
+  // are escaped by minification and cannot reliably identify its bundle.
+  const buildRoot = new URL('../../.next/', import.meta.url)
+  const manifest = JSON.parse(readFileSync(new URL('react-loadable-manifest.json', buildRoot), 'utf8'))
+  const chartModule = manifest['components/points-prelevement/series-explorer.js -> ./series-explorer-content.js']
+  const chartFiles = chartModule.files.filter(file => file.endsWith('.js')
+    && readFileSync(new URL(file, buildRoot), 'utf8').includes(`${chartModule.id}:`))
+  expect(chartFiles).toHaveLength(1)
+  return `/_next/${chartFiles[0]}`
+}
+
 test('les axes des séries natives restent lisibles avec une précision de quinze décimales', async ({page, context}) => {
   const apiToken = await authenticate(context)
   await controlFixture(context, apiToken, {nativePrecision: 'true'})
@@ -47,8 +59,18 @@ test('DSFR reste actif après navigation client vers une fiche déclarant', asyn
   await authenticate(context)
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
-  await page.route('**/*', route => [frontUrl, 'http://127.0.0.1:3417'].includes(new URL(route.request().url()).origin)
-    ? route.continue() : route.abort())
+  const chartPath = getChartModulePath()
+  const chartGate = Promise.withResolvers()
+  let chartModuleWaiting = false
+  await page.route('**/*', async route => {
+    const url = new URL(route.request().url())
+    if (![frontUrl, 'http://127.0.0.1:3417'].includes(url.origin)) return route.abort()
+    if (url.pathname === chartPath) {
+      chartModuleWaiting = true
+      await chartGate.promise
+    }
+    return route.continue()
+  })
   await page.goto(`${frontUrl}/declarants`)
   await expect(page.getByRole('heading', {name: 'Déclarants', exact: true})).toBeVisible()
   await page.evaluate(() => { window.dsfrNavigationMarker = true })
@@ -58,8 +80,21 @@ test('DSFR reste actif après navigation client vers une fiche déclarant', asyn
   expect(await page.evaluate(() => window.dsfrNavigationMarker)).toBe(true)
   const settings = page.getByRole('button', {name: "Paramètres d'affichage", exact: true})
   await expect(settings).toHaveAttribute('data-fr-js-modal-button', 'true')
-  await settings.click()
   const modal = page.locator('#fr-theme-modal')
+  // Check DSFR while the chart is still loading, then after its layout is
+  // rendered. The async chart must not move the footer during the test click.
+  try {
+    await expect.poll(() => chartModuleWaiting).toBe(true)
+    await expect(page.getByRole('figure', {name: 'Graphique séries temporelles'})).toHaveCount(0)
+    await settings.click()
+    await expect(modal).toBeVisible()
+    await modal.getByRole('button', {name: 'Fermer', exact: true}).click()
+    await expect(modal).not.toBeVisible()
+  } finally {
+    chartGate.resolve()
+  }
+  await expect(page.getByRole('figure', {name: 'Graphique séries temporelles'})).toBeVisible({timeout: 15_000})
+  await settings.click()
   await expect(modal).toBeVisible()
   await modal.getByRole('button', {name: 'Fermer', exact: true}).click()
   await expect(modal).not.toBeVisible()
@@ -157,15 +192,7 @@ for (const mode of ['indexOnly', 'legacyOptions']) {
 
 test('charge les agrégats en parallèle avant le module graphique et conserve tout l’historique', async ({page, context}) => {
   const apiToken = await authenticate(context)
-  // Resolve the actual dynamic module from the production build. UI strings
-  // are escaped by minification and cannot reliably identify its bundle.
-  const buildRoot = new URL('../../.next/', import.meta.url)
-  const manifest = JSON.parse(readFileSync(new URL('react-loadable-manifest.json', buildRoot), 'utf8'))
-  const chartModule = manifest['components/points-prelevement/series-explorer.js -> ./series-explorer-content.js']
-  const chartFiles = chartModule.files.filter(file => file.endsWith('.js')
-    && readFileSync(new URL(file, buildRoot), 'utf8').includes(`${chartModule.id}:`))
-  expect(chartFiles).toHaveLength(1)
-  const chartPath = `/_next/${chartFiles[0]}`
+  const chartPath = getChartModulePath()
   let releaseChart
   let chartModuleWaiting = false
   const chartGate = new Promise(resolve => { releaseChart = resolve })
