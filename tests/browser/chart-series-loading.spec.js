@@ -247,6 +247,7 @@ test('le zoom au clavier conserve l’historique et demande un total exact de la
   const apiToken = await authenticate(context)
   await page.route('**/*', route => [frontUrl, 'http://127.0.0.1:3417'].includes(new URL(route.request().url()).origin) ? route.continue() : route.abort())
   await page.goto(`${frontUrl}/declarants/${chartSeriesIds.collecteur}`)
+  await expect(page.getByRole('figure', {name: 'Graphique séries temporelles'})).toBeVisible({timeout: 15_000})
   const totals = page.getByLabel('Totaux sur la période affichée')
   await expect(totals).toContainText(/300\s*m³/)
   await page.getByRole('slider').nth(1).press('ArrowLeft')
