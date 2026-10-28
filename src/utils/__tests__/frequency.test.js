@@ -11,7 +11,7 @@ import {
 
 // FREQUENCY_LABELS tests
 test('FREQUENCY_LABELS contains all expected frequency mappings', t => {
-  t.is(FREQUENCY_LABELS.size, 12)
+  t.is(FREQUENCY_LABELS.size, 13)
   t.is(FREQUENCY_LABELS.get('instant'), 'Mesure ponctuelle')
   t.is(FREQUENCY_LABELS.get('1 second'), '1 seconde')
   t.is(FREQUENCY_LABELS.get('1 minute'), '1 minute')
