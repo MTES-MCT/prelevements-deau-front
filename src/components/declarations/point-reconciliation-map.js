@@ -391,7 +391,8 @@ function createPopupNode({
   onReconcilePoint
 }) {
   const container = document.createElement('div')
-  container.className = 'w-[300px] p-1'
+  container.className = 'w-full max-w-[300px] p-1'
+  canReconcile = canReconcile && point.canReconcile !== false
   const alreadyAssociated = isChunkAssociatedWithPoint(selectedChunk, point)
   const hasConflict = Boolean(conflict && !alreadyAssociated)
   const statusData = getPopupStatus({alreadyAssociated, canReconcile, hasConflict})
@@ -504,7 +505,7 @@ function openPointPopup({
   popupRef.current = new maplibre.Popup({
     closeButton: true,
     closeOnClick: true,
-    maxWidth: '340px'
+    maxWidth: `${Math.max(160, Math.min(340, map.getContainer().clientWidth - 32))}px`
   })
     .setLngLat(coordinates)
     .setDOMContent(createPopupNode({

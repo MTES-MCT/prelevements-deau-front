@@ -25,6 +25,7 @@ import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
 import {getDeclarationPointDisplayName} from '@/lib/declaration-point-name.js'
 import {getCountingCodeLabel, withCountingCode} from '@/lib/exploitation-identity.js'
 import {
+  getDeclarationMapPoints,
   getDeclarationDisplayStatus,
   getSourcePeriodLabel
 } from '@/lib/declaration.js'
@@ -565,9 +566,9 @@ const PointReconciliationPanel = ({
   const [chunkSearch, setChunkSearch] = useState('')
   const [pointSearch, setPointSearch] = useState('')
   const [showOnlyUnmatched, setShowOnlyUnmatched] = useState(remainingCount > 0)
-  const [isAssociationMode, setIsAssociationMode] = useState(remainingCount > 0)
-  const [showUnmatchedMapPoints, setShowUnmatchedMapPoints] = useState(remainingCount > 0)
-  const [showMatchedMapPoints, setShowMatchedMapPoints] = useState(remainingCount === 0)
+  const [isAssociationMode, setIsAssociationMode] = useState(canReconcile && remainingCount > 0)
+  const [showUnmatchedMapPoints, setShowUnmatchedMapPoints] = useState(canReconcile && remainingCount > 0)
+  const [showMatchedMapPoints, setShowMatchedMapPoints] = useState(!canReconcile || remainingCount === 0)
   const previousRemainingCountRef = useRef(remainingCount)
   const previousSourceIdRef = useRef(null)
 
@@ -599,7 +600,7 @@ const PointReconciliationPanel = ({
       return
     }
 
-    const shouldEditAssociations = remainingCount > 0
+    const shouldEditAssociations = canReconcile && remainingCount > 0
 
     previousSourceIdRef.current = source?.id
     setIsAssociationMode(shouldEditAssociations)
@@ -610,12 +611,12 @@ const PointReconciliationPanel = ({
     setCompletionSuccess(null)
     setSubmitError(null)
     setSubmitSuccess(null)
-  }, [remainingCount, source?.id])
+  }, [canReconcile, remainingCount, source?.id])
 
   useEffect(() => {
     const previousRemainingCount = previousRemainingCountRef.current
 
-    if (remainingCount > 0 && previousRemainingCount === 0) {
+    if (canReconcile && remainingCount > 0 && previousRemainingCount === 0) {
       setIsAssociationMode(true)
       setShowOnlyUnmatched(true)
       setShowUnmatchedMapPoints(true)
@@ -630,7 +631,7 @@ const PointReconciliationPanel = ({
     }
 
     previousRemainingCountRef.current = remainingCount
-  }, [remainingCount])
+  }, [canReconcile, remainingCount])
 
   useEffect(() => {
     selectedChunkItemRef.current?.scrollIntoView({
@@ -646,6 +647,10 @@ const PointReconciliationPanel = ({
   const matchedPointIdSet = useMemo(
     () => new Set(matchedPointIds.map(String)),
     [matchedPointIds]
+  )
+  const mapPoints = useMemo(
+    () => getDeclarationMapPoints(chunks, availablePoints),
+    [chunks, availablePoints]
   )
   const selectedChunk = useMemo(
     () => chunks.find(chunk => chunk.id === selectedChunkId) ?? null,
@@ -694,26 +699,30 @@ const PointReconciliationPanel = ({
     )), [chunkSearch, searchableChunkItems])
   const visibleChunkCounterLabel = `${visibleChunkItems.length}/${totalCount} ligne${totalCount > 1 ? 's' : ''}`
   const totalChunkCounterLabel = `${totalCount} ligne${totalCount > 1 ? 's' : ''}`
-  const filteredAvailablePoints = useMemo(() => {
+  const filteredMapPoints = useMemo(() => {
     const sourceFlowType = getChunkSourceFlowType(selectedChunk)
 
-    return availablePoints.filter(point => {
+    return mapPoints.filter(point => {
       const hasCompatibleFlowType = !sourceFlowType || getPointFlowType(point) === sourceFlowType
       const matchesSearch = matchesSearchTerms(getPointSearchText(point), pointSearch)
 
       return hasCompatibleFlowType && matchesSearch
     })
-  }, [availablePoints, pointSearch, selectedChunk])
+  }, [mapPoints, pointSearch, selectedChunk])
+  const filteredAvailablePoints = useMemo(
+    () => filteredMapPoints.filter(point => point.canReconcile),
+    [filteredMapPoints]
+  )
   const visibleAvailablePoints = useMemo(() => {
-    const pointOptions = isAssociationMode ? filteredAvailablePoints : availablePoints
+    const pointOptions = isAssociationMode ? filteredMapPoints : mapPoints
 
     return pointOptions.filter(point => {
       const matched = matchedPointIdSet.has(String(point.id))
       return matched ? showMatchedMapPoints : showUnmatchedMapPoints
     })
   }, [
-    availablePoints,
-    filteredAvailablePoints,
+    mapPoints,
+    filteredMapPoints,
     isAssociationMode,
     matchedPointIdSet,
     showMatchedMapPoints,
@@ -845,6 +854,10 @@ const PointReconciliationPanel = ({
     }
 
     const point = availablePoints.find(candidate => candidate.id === pointPrelevementId) ?? null
+    if (!point) {
+      setSubmitError('Ce point est consultable mais ne peut pas être associé à cette ligne.')
+      return
+    }
     const exploitations = point?.exploitations ?? []
     if (exploitations.length > 1 && !requestedExploitationId) {
       setPendingPoint(point)
@@ -965,12 +978,12 @@ const PointReconciliationPanel = ({
     mapEmptyMessage = 'Aucun type de point sélectionné.'
   } else if (!isAssociationMode) {
     mapEmptyMessage = 'Aucun point associé géolocalisé.'
-  } else if (pointSearch.trim() && filteredAvailablePoints.length === 0) {
+  } else if (pointSearch.trim() && filteredMapPoints.length === 0) {
     mapEmptyMessage = 'Aucun point ne correspond à la recherche.'
   }
 
   const pointCounterLabel = isAssociationMode
-    ? `${visibleAvailablePoints.length}/${filteredAvailablePoints.length}`
+    ? `${visibleAvailablePoints.length}/${filteredMapPoints.length}`
     : `${visibleAvailablePoints.length} point${visibleAvailablePoints.length > 1 ? 's' : ''}`
   const mapLegendMode = isAssociationMode ? 'association' : 'readonly'
   const pointsChangeStatus = getDeclarationDisplayStatus(declaration, source)

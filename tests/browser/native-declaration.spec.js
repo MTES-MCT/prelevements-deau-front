@@ -96,3 +96,28 @@ for (const role of ['INSTRUCTOR', 'DECLARANT']) {
     }
   })
 }
+
+for (const missingPoint of [false, true]) {
+  test(`un agent sans droit de rapprochement voit le point sur la carte${missingPoint ? ' même si une autre ligne reste sans point' : ''}`, async ({page, context, request}, testInfo) => {
+    const apiToken = await authenticate(context, 'INSTRUCTOR', `readonly-map-${missingPoint ? 'missing-point' : 'associated'}`)
+    const mapTile = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGN49+kXAAWsAttzkl10AAAAAElFTkSuQmCC', 'base64')
+    await page.route(url => url.hostname === 'data.geopf.fr', route => route.fulfill({contentType: 'image/png', body: mapTile}))
+    await page.goto(`${frontUrl}/declarations/${nativeIds.source}`)
+    const canvas = page.locator('.declaration-reconciliation-map-shell .maplibregl-canvas')
+    await expect(canvas).toBeVisible({timeout: 20_000})
+    await expect(page.getByText('Aucun point associé géolocalisé.', {exact: true})).toHaveCount(0)
+    await expect(page.getByRole('button', {name: /Associer|Modifier les associations/})).toHaveCount(0)
+    await expect(async () => {
+      const box = await canvas.boundingBox()
+      await canvas.click({position: {x: box.width / 2, y: box.height / 2}})
+      await expect(page.locator('.maplibregl-popup').getByText('Forage synthétique', {exact: true})).toBeVisible({timeout: 300})
+    }).toPass({timeout: 20_000})
+    await expect(page.locator('.maplibregl-popup').getByRole('button', {name: /Associer|Remplacer/})).toHaveCount(0)
+    const popupBox = await page.locator('.maplibregl-popup').boundingBox()
+    expect(popupBox.x).toBeGreaterThanOrEqual(0)
+    expect(popupBox.x + popupBox.width).toBeLessThanOrEqual(page.viewportSize().width)
+    const mapRequests = await request.get('http://127.0.0.1:3431/api/__native-map-requests', {headers: {Authorization: `Bearer ${apiToken}`}})
+    expect(await mapRequests.json()).toEqual([])
+    await canvas.screenshot({path: testInfo.outputPath('readonly-declaration-map.png')})
+  })
+}

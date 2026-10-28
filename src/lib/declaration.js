@@ -107,6 +107,24 @@ export function shouldLoadAvailablePointsForDeclaration({currentRole, declaratio
     && isPointReconciliationRelevant(declaration, source)
 }
 
+export function getDeclarationMapPoints(chunks = [], availablePoints = []) {
+  const pointsById = new Map()
+
+  // Source points have already passed the declaration read permissions, not reconciliation permissions.
+  for (const chunk of chunks) {
+    const point = chunk.pointPrelevement
+    if (point?.id && point.id === chunk.pointPrelevementId) {
+      pointsById.set(point.id, {...point, canReconcile: false})
+    }
+  }
+
+  for (const point of availablePoints) {
+    pointsById.set(point.id, {...point, canReconcile: true})
+  }
+
+  return [...pointsById.values()]
+}
+
 export function getTelemetrySourceTitle(source) {
   const connector = source?.metadata?.connector
   return connector ? `Télérelève ${connector}` : 'Données télérelevées'

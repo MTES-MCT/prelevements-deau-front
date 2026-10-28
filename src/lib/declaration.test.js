@@ -3,6 +3,7 @@ import test from 'ava'
 import {
   buildDeclarationViewFromSource,
   getDeclarationAdminCapabilities,
+  getDeclarationMapPoints,
   isMeterTelemetrySource,
   formatFullAddress,
   getDeclarationEntryKind,
@@ -92,6 +93,40 @@ test('shouldLoadAvailablePointsForDeclaration conserve la carte en lecture seule
       chunks: [{canReconcile: true}]
     }
   }))
+})
+
+test('la carte conserve les points lus dans la déclaration sans droit de rapprochement', t => {
+  const point = {id: 'known-point', name: 'Point connu', coordinates: {type: 'Point', coordinates: [55.5, -21]}}
+  const chunks = [
+    {pointPrelevementId: point.id, pointPrelevement: point, canReconcile: false},
+    {pointPrelevementId: point.id, pointPrelevement: point, exploitationId: null},
+    {pointPrelevementId: null, metadata: {originalPoint: 'Point non reconnu'}}
+  ]
+  t.deepEqual(getDeclarationMapPoints(chunks), [{...point, canReconcile: false}])
+  t.false(Object.hasOwn(point, 'canReconcile'))
+})
+
+test('les candidats associables restent distincts des points consultables', t => {
+  const readOnlyPoint = {id: 'readonly-point', name: 'Point historique'}
+  const linkedPoint = {id: 'linked-point', name: 'Point lié'}
+  const candidate = {...linkedPoint, exploitations: [{id: 'allowed-exploitation'}]}
+  const newCandidate = {id: 'candidate-point', name: 'Autre point'}
+  t.deepEqual(getDeclarationMapPoints([
+    {pointPrelevementId: readOnlyPoint.id, pointPrelevement: readOnlyPoint},
+    {pointPrelevementId: linkedPoint.id, pointPrelevement: linkedPoint}
+  ], [candidate, newCandidate]), [
+    {...readOnlyPoint, canReconcile: false},
+    {...candidate, canReconcile: true},
+    {...newCandidate, canReconcile: true}
+  ])
+})
+
+test('la carte ne reconstruit pas de point depuis une référence masquée ou incohérente', t => {
+  t.deepEqual(getDeclarationMapPoints([
+    {pointPrelevementId: 'redacted-point'},
+    {pointPrelevementId: 'known-point', pointPrelevement: {id: 'other-point'}},
+    {pointPrelevementId: null, pointPrelevement: {id: 'orphan-point'}}
+  ]), [])
 })
 
 test('getTelemetrySourceTitle décrit le connecteur si disponible', t => {
