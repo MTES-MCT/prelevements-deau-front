@@ -9,7 +9,7 @@ import {transformSync} from 'next/dist/build/swc/index.js'
 
 const require = createRequire(import.meta.url)
 
-function harness({role = 'INSTRUCTOR', permissions = ['exploitation.list'], exploitations = Promise.resolve({data: []}), pointId = 'point'} = {}) {
+function harness({role = 'INSTRUCTOR', permissions = ['exploitation.list'], exploitations = Promise.resolve({success: true, data: []}), pointId = 'point'} = {}) {
   const calls = []
   const components = new Map()
   const componentRequire = specifier => {
@@ -28,6 +28,7 @@ function harness({role = 'INSTRUCTOR', permissions = ['exploitation.list'], expl
     if (specifier === '@/utils/point-prelevement.js') return {getPointPrelevementLabel: () => 'Point'}
     if (specifier === '@/app/metadata-utils.js') return {buildPageTitle: () => ({title: 'Point'})}
     if (specifier === '@/dsfr-bootstrap/index.js') return {StartDsfrOnHydration: () => null}
+    if (specifier === '@codegouvfr/react-dsfr/Alert') return {Alert: () => null}
     if (specifier === 'next/navigation') return {notFound: () => { throw new Error('notFound') }, redirect: url => { throw new Error(`redirect:${url}`) }}
     return require(specifier)
   }
@@ -57,7 +58,7 @@ test('la fiche rend son identité et sa localisation pendant le chargement des e
   t.is(boundary.props.fallback.props.role, 'status')
   t.deepEqual(flow.calls, ['point'])
   const pendingList = boundary.props.children.type(boundary.props.children.props)
-  deferred.resolve({data: [{id: 'exploitation'}]})
+  deferred.resolve({success: true, data: [{id: 'exploitation'}]})
   const list = await pendingList
   t.deepEqual(list.props.exploitations, [{id: 'exploitation'}])
   t.true(list.props.canCreate)
@@ -65,13 +66,45 @@ test('la fiche rend son identité et sa localisation pendant le chargement des e
   await page
 })
 
-test('un rôle sans droit de liste ne charge et ne rend aucune exploitation', async t => {
-  for (const role of ['INSTRUCTOR', 'DECLARANT']) {
+test('un agent sans droit de liste et un utilisateur non identifié ne chargent aucune exploitation', async t => {
+  for (const role of ['INSTRUCTOR', null]) {
     const flow = harness({role, permissions: [], exploitations: new Promise(() => {})})
     const rendered = elements(await flow.page())
     t.deepEqual(flow.calls, [])
     t.false(rendered.some(element => element.type === React.Suspense))
   }
+})
+
+test('un déclarant consulte les exploitations autorisées par l’API sans droit de création', async t => {
+  const authorized = [{id: 'delegated-exploitation'}, {id: 'other-delegated-exploitation'}]
+  for (const permissions of [[], ['exploitation.create']]) {
+    const flow = harness({role: 'DECLARANT', permissions, exploitations: Promise.resolve({success: true, data: authorized})})
+    const boundary = elements(await flow.page()).find(element => element.type === React.Suspense)
+    t.deepEqual(flow.calls, ['point'])
+    const list = await boundary.props.children.type(boundary.props.children.props)
+    t.deepEqual(list.props.exploitations, authorized)
+    t.false(list.props.canCreate)
+    t.is(list.props.createHref, undefined)
+  }
+})
+
+test('un administrateur conserve la liste et la création sans permission territoriale explicite', async t => {
+  const flow = harness({role: 'ADMIN', permissions: []})
+  const boundary = elements(await flow.page()).find(element => element.type === React.Suspense)
+  const list = await boundary.props.children.type(boundary.props.children.props)
+  t.deepEqual(flow.calls, ['point'])
+  t.true(list.props.canCreate)
+  t.is(list.props.createHref, '/exploitations/new?point=point')
+})
+
+test('une erreur de chargement ne devient pas une liste vide d’exploitations', async t => {
+  const flow = harness({exploitations: Promise.resolve({success: false, error: 'Erreur interne', code: 500})})
+  const boundary = elements(await flow.page()).find(element => element.type === React.Suspense)
+  const result = await boundary.props.children.type(boundary.props.children.props)
+  t.is(result.props.severity, 'error')
+  t.is(result.props.title, 'Exploitations indisponibles')
+  t.false(Object.hasOwn(result.props, 'exploitations'))
+  t.false(result.props.description.includes('Erreur interne'))
 })
 
 test('un droit de lecture seul ne propose pas de création après le chargement différé', async t => {

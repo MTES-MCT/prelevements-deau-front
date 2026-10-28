@@ -49,6 +49,30 @@ async function assertNoHorizontalOverflow(page) {
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
 }
 
+test('fiche PP : un collecteur voit ses exploitations partagées même sans gestion des points', async ({page, context}) => {
+  const token = await authenticate(context, 'multi-disabled')
+  await page.goto(`${frontUrl}/points-prelevement/${ids.point}`)
+  await expect(page.getByRole('heading', {name: 'Exploitations', exact: true})).toBeVisible()
+  const first = page.locator(`a[href="/exploitations/${ids.firstExploitation}"]`)
+  const second = page.locator(`a[href="/exploitations/${ids.secondExploitation}"]`)
+  await expect(first).toContainText('Ferme synthétique A')
+  await expect(second).toContainText('Camille Test')
+  await expect(first).toContainText('001')
+  await expect(second).toContainText('002')
+  await expect(page.getByRole('link', {name: 'Ajouter une exploitation', exact: true})).toHaveCount(0)
+  await expect(page.getByRole('link', {name: 'Modifier le point de prélèvement', exact: true})).toHaveCount(0)
+  await assertNoHorizontalOverflow(page)
+  expect(await writes(context, token)).toEqual([])
+})
+
+test('fiche PP : une erreur de lecture des exploitations affiche une erreur explicite', async ({page, context}) => {
+  await authenticate(context, 'multi-list-error')
+  await page.goto(`${frontUrl}/points-prelevement/${ids.point}`)
+  await expect(page.getByText('Exploitations indisponibles', {exact: true})).toBeVisible()
+  await expect(page.getByText('Impossible de charger les exploitations de ce point. Rechargez la page pour réessayer.', {exact: true})).toBeVisible()
+  await expect(page.getByText('Aucune exploitation renseignée pour le moment.', {exact: true})).toHaveCount(0)
+})
+
 test('édition partagée : champs protégés absents et version transmise', async ({page, context}, testInfo) => {
   const token = await authenticate(context)
   await page.goto(`${frontUrl}/points-prelevement/${ids.point}/edit`)

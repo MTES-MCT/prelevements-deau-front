@@ -146,7 +146,16 @@ export async function handleCollectorPointFixture(request, send) {
   else if (pathname === `/api/declarants/${collectorPointIds.collector}/zones`) send(200, {items: [{zoneId: zone.id, zone}]})
   else if (pathname === '/api/zones/options') send(200, [zone])
   else if (pathname.startsWith('/api/points-prelevement/')) {
-    if (pathname.endsWith('/exploitations')) send(200, [])
+    if (pathname.endsWith('/exploitations')) {
+      if (auth.includes('-list-error-')) send(503, {message: 'Liste indisponible.'})
+      else send(200, state.exploitations.map(exploitation => ({
+        ...exploitation,
+        status: 'EN_ACTIVITE',
+        declarant: exploitation.preleveur,
+        pointPrelevement: state.point,
+        right: {canRead: true, canEdit: false, permissions: []}
+      })))
+    }
     else if (request.method === 'PUT') {
       const body = await readBody()
       state.writes.push({path: pathname, body})
