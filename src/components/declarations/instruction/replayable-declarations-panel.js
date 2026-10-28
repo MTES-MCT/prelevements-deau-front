@@ -8,6 +8,7 @@ import Link from 'next/link'
 import DeclarationAdminActions from '@/components/declarations/declaration-admin-actions.js'
 import DeclarationSummaryItem from '@/components/declarations/declaration-summary-item.js'
 import {useAuth} from '@/contexts/auth-context.js'
+import {getDeclarationAdminCapabilities} from '@/lib/declaration.js'
 import {getDeclarationTypeLabel} from '@/lib/declaration-types.js'
 import {getReplayableDeclarationsAction} from '@/server/actions/declarations.js'
 
@@ -79,7 +80,7 @@ const ReplayableDeclarationActions = ({
   <div className='flex max-w-xs flex-col items-end gap-2'>
     <ReplayableDeclarationDownloads declaration={declaration} />
     <DeclarationAdminActions
-      canReplay
+      canReplay={getDeclarationAdminCapabilities({declaration}, 'ADMIN').canReplay}
       declarationCode={declaration.code}
       declarationId={declaration.id}
       redirectOnDelete={false}

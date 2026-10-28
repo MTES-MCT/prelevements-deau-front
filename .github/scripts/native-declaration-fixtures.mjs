@@ -8,7 +8,7 @@ export async function handleNativeDeclarationFixture(request, send) {
   if (!isNativeDeclarationFixture(authorization)) return false
   const {pathname, searchParams} = new URL(request.url, 'http://127.0.0.1:3431')
   const respond = data => {send(200, data); return true}
-  const role = authorization.includes('-DECLARANT-') ? 'DECLARANT' : 'INSTRUCTOR'
+  const role = authorization.includes('-ADMIN-') ? 'ADMIN' : authorization.includes('-DECLARANT-') ? 'DECLARANT' : 'INSTRUCTOR'
   if (!requests.has(authorization)) requests.set(authorization, [])
   if (pathname === '/api/__native-values-requests') return respond(requests.get(authorization))
   if (pathname === '/info' || pathname === '/api/info') return respond({role, declarantRole: 'PRELEVEUR', permissions: ['declaration.list', 'declaration.read'], user: {id: 'synthetic-user', email: 'native@example.test'}, expiresAt: new Date(Date.now() + 3600000).toISOString()})
@@ -17,6 +17,10 @@ export async function handleNativeDeclarationFixture(request, send) {
     chunks: ['volume', 'température'].map((parameter, index) => ({id: `native-${index}`, instructionStatus: 'AUTOMATICALLY_VALIDATED', canReconcile: false,
       pointPrelevementId: 'synthetic-point', pointPrelevement: {id: 'synthetic-point', name: 'Forage synthétique', flowType: 'PRELEVEMENT'},
       metadata: {nativeTemporal: true, parameter, frequency: index ? 'instant' : '1 month', unit: index ? 'degrés Celsius' : 'm³'}, minDate: '2026-01-01', maxDate: '2026-01-31', _count: {chunkValues: index ? 51 : 1}, chunkValues: []}))}
+  if (authorization.includes('-historical-replay-') || authorization.includes('-ordinary-replay-')) {
+    declaration.files = [{id: 'synthetic-file', filename: 'Mesures.xlsx', url: 'https://127.0.0.1:3443/synthetic-file.xlsx'}]
+    if (authorization.includes('-historical-replay-')) Object.assign(source.metadata, {provenance: 'DN', historicalAccepted: true})
+  }
   if (authorization.includes('-association-warning-')) {
     for (const chunk of source.chunks) {
       chunk.instructionStatus = 'PENDING'

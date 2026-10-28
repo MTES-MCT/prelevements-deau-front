@@ -32,6 +32,16 @@ test('les télérelèves compteur restent en lecture seule même pour un adminis
   t.deepEqual(getDeclarationAdminCapabilities({declaration}, 'DECLARANT'), {canDelete: false, canReplay: false})
 })
 
+test('le rejeu générique est masqué pour les dossiers DN historiques, sans retirer les autres actions', t => {
+  const declaration = {id: 'historical-declaration', files: [{id: 'original-file'}]}
+  const metadata = {provenance: 'DN', historicalAccepted: true}
+  t.deepEqual(getDeclarationAdminCapabilities({declaration, metadata}, 'ADMIN'), {canDelete: true, canReplay: false})
+  t.deepEqual(getDeclarationAdminCapabilities({declaration, metadata, canReplay: true}, 'ADMIN'), {canDelete: true, canReplay: false})
+  t.deepEqual(getDeclarationAdminCapabilities({declaration: {...declaration, importSourceId: 'reunion:DN:80149:12345'}}, 'ADMIN'), {canDelete: true, canReplay: false})
+  t.deepEqual(getDeclarationAdminCapabilities({declaration, metadata: {provenance: 'PE', historicalAccepted: true}}, 'ADMIN'), {canDelete: true, canReplay: true})
+  t.deepEqual(getDeclarationAdminCapabilities({declaration, metadata: {provenance: 'DN', historicalAccepted: false}}, 'ADMIN'), {canDelete: true, canReplay: true})
+})
+
 test('isTelemetrySource détecte les sources API et les déclarations API', t => {
   t.true(isTelemetrySource({type: 'API'}))
   t.true(isTelemetrySource({type: 'DECLARATION'}, {dataSourceType: 'API'}))

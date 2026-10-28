@@ -86,9 +86,11 @@ export function isMeterTelemetrySource(source) {
 export function getDeclarationAdminCapabilities(source, role) {
   const canManage = role === 'ADMIN' && Boolean(source?.declaration?.id)
     && source?.readOnly !== true && !isMeterTelemetrySource(source)
+  const historicalDn = source?.declaration?.importSourceId?.startsWith('reunion:DN:')
+    || (source?.metadata?.provenance === 'DN' && source?.metadata?.historicalAccepted === true)
   return {
     canDelete: canManage && source?.canDelete !== false,
-    canReplay: canManage && source?.canReplay !== false && (source.declaration.files?.length ?? 0) > 0
+    canReplay: canManage && !historicalDn && source?.canReplay !== false && (source.declaration.files?.length ?? 0) > 0
   }
 }
 

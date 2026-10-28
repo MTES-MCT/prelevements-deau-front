@@ -17,6 +17,16 @@ async function authenticate(context, role, scenario = '') {
   return apiToken
 }
 
+for (const historical of [true, false]) {
+  test(`ADMIN ${historical ? 'ne peut pas rejouer un dossier DN historique' : 'peut toujours rejouer un fichier PE ordinaire'}`, async ({page, context}) => {
+    await authenticate(context, 'ADMIN', historical ? 'historical-replay' : 'ordinary-replay')
+    await page.goto(`${frontUrl}/declarations/${nativeIds.source}`)
+    await expect(page.getByRole('heading', {name: 'Données déclarées', exact: true})).toBeVisible()
+    await expect(page.getByRole('button', {name: 'Supprimer', exact: true})).toBeVisible()
+    await expect(page.getByRole('button', {name: 'Rejouer', exact: true})).toHaveCount(historical ? 0 : 1)
+  })
+}
+
 test("l'agent attend les gestionnaires React avant d'ouvrir les valeurs natives", async ({page, context}) => {
   await authenticate(context, 'INSTRUCTOR')
   let releaseScripts
