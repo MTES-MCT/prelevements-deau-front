@@ -38,3 +38,17 @@ export function formatNativeDate(value) {
     timeZone: 'Indian/Reunion', dateStyle: 'short', timeStyle: 'medium'
   }).format(date)
 }
+
+export function formatNativeReadingDate(exactValue, calendarDate) {
+  if (exactValue && !/^\d{4}-\d{2}-\d{2}$/.test(String(exactValue))) {
+    return formatNativeDate(exactValue)
+  }
+
+  // Chunk bounds are business dates, not instants: do not invent an hour from them.
+  const value = exactValue || calendarDate
+  if (!value) return 'Non renseignée'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? 'Non renseignée' : new Intl.DateTimeFormat('fr-FR', {
+    timeZone: 'UTC', dateStyle: 'short'
+  }).format(date)
+}

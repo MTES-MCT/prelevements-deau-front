@@ -3,6 +3,12 @@ export const nativeIds = {source: '16161616-1616-4616-8616-161616161601', declar
 export const isNativeDeclarationFixture = (authorization = '') => authorization.startsWith('Bearer browser-test-native-declaration-')
 const requests = new Map()
 const mapRequests = new Map()
+export const nativeReadingScenarios = [
+  {name: 'summer-midnight', day: '2026-08-01', instant: '2026-07-31T20:00:00.000Z', dateLabel: '01/08/2026', exactLabel: '01/08/2026 00:00:00'},
+  {name: 'winter-midnight', day: '2026-01-01', instant: '2025-12-31T20:00:00.000Z', dateLabel: '01/01/2026', exactLabel: '01/01/2026 00:00:00'},
+  {name: 'summer-time', day: '2026-08-01', instant: '2026-08-01T00:01:23.000Z', dateLabel: '01/08/2026', exactLabel: '01/08/2026 04:01:23'},
+  {name: 'winter-time', day: '2026-01-01', instant: '2026-01-01T00:01:23.000Z', dateLabel: '01/01/2026', exactLabel: '01/01/2026 04:01:23'}
+]
 
 export async function handleNativeDeclarationFixture(request, send) {
   const authorization = request.headers.authorization
@@ -10,6 +16,7 @@ export async function handleNativeDeclarationFixture(request, send) {
   const {pathname, searchParams} = new URL(request.url, 'http://127.0.0.1:3431')
   const respond = data => {send(200, data); return true}
   const role = authorization.includes('-ADMIN-') ? 'ADMIN' : authorization.includes('-DECLARANT-') ? 'DECLARANT' : 'INSTRUCTOR'
+  const readingScenario = nativeReadingScenarios.find(scenario => authorization.includes(`-reading-${scenario.name}-`))
   if (!requests.has(authorization)) requests.set(authorization, [])
   if (!mapRequests.has(authorization)) mapRequests.set(authorization, [])
   if (pathname === '/api/__native-values-requests') return respond(requests.get(authorization))
@@ -20,6 +27,10 @@ export async function handleNativeDeclarationFixture(request, send) {
     chunks: ['volume', 'température'].map((parameter, index) => ({id: `native-${index}`, instructionStatus: 'AUTOMATICALLY_VALIDATED', canReconcile: false,
       pointPrelevementId: 'synthetic-point', pointPrelevement: {id: 'synthetic-point', name: 'Forage synthétique', flowType: 'PRELEVEMENT'},
       metadata: {nativeTemporal: true, parameter, frequency: index ? 'instant' : '1 month', unit: index ? 'degrés Celsius' : 'm³'}, minDate: '2026-01-01', maxDate: '2026-01-31', _count: {chunkValues: index ? 51 : 1}, chunkValues: []}))}
+  if (readingScenario) {
+    source.chunks = [{...source.chunks[0], minDate: `${readingScenario.day}T00:00:00.000Z`, maxDate: `${readingScenario.day}T00:00:00.000Z`,
+      metadata: {nativeTemporal: true, parameter: 'index', frequency: 'instant', unit: 'm³'}, _count: {chunkValues: 1}}]
+  }
   if (authorization.includes('-historical-replay-') || authorization.includes('-ordinary-replay-')) {
     declaration.files = [{id: 'synthetic-file', filename: 'Mesures.xlsx', url: 'https://127.0.0.1:3443/synthetic-file.xlsx'}]
     if (authorization.includes('-historical-replay-')) Object.assign(source.metadata, {provenance: 'DN', historicalAccepted: true})
@@ -51,6 +62,7 @@ export async function handleNativeDeclarationFixture(request, send) {
   if (pathname === '/api/sources/me') return respond({success: true, data: {items: [{...source, declaration}], pagination: {page: 1, pageSize: 25, total: 1}}})
   if (pathname.endsWith('/values') && pathname.startsWith(`/api/sources/${nativeIds.source}/chunks/`)) {
     requests.get(authorization).push(Object.fromEntries(searchParams))
+    if (readingScenario) return respond({success: true, data: {total: 1, nextCursor: null, data: [{id: 'synthetic-index', periodStart: readingScenario.instant, periodEnd: readingScenario.instant, value: '1234', unit: 'm³'}]}})
     const volume = pathname.includes('/native-0/')
     const offset = searchParams.get('cursor') ? 50 : 0
     return respond({success: true, data: {total: volume ? 1 : 51, nextCursor: volume || offset ? null : 'last-49',

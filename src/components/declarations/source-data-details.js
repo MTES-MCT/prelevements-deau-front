@@ -13,7 +13,7 @@ import {
 import {getDeclarationTypeLabel} from '@/lib/declaration-types.js'
 import {isMeterTelemetrySource} from '@/lib/declaration.js'
 import {formatMeterExactPeriod, getMeterPeriod, getMeterValuePeriod, isMeterPeriodSource} from '@/lib/meter-period.js'
-import {getNativeAssociationWarnings} from '@/lib/native-declaration.js'
+import {formatNativeReadingDate, getNativeAssociationWarnings} from '@/lib/native-declaration.js'
 import {getPointFlowTypeLabel, POINT_FLOW_TYPES} from '@/lib/point-flow-types.js'
 import {getPointPrelevementURL} from '@/lib/urls.js'
 import {
@@ -238,13 +238,17 @@ function getMetricType(chunk) {
     ?? chunk.metadata?.parameter
 }
 
-function getReadingDate(chunk, source) {
+function getExactReadingDate(chunk, source) {
   return chunk?.metadata?.readingDate
     ?? source?.metadata?.readingDate
     ?? getLastIndexValue(chunk)?.periodEnd
     ?? getLastIndexValue(chunk)?.periodStart
     ?? getLastValue(chunk)?.periodEnd
     ?? getLastValue(chunk)?.periodStart
+}
+
+function getReadingDate(chunk, source) {
+  return getExactReadingDate(chunk, source)
     ?? chunk?.maxDate
     ?? chunk?.minDate
 }
@@ -375,6 +379,9 @@ function getChunkDateLabel({displayAsIndex, displayAsVolume, isQuickDeclaration}
 function getChunkDateValue({chunk, displayAsIndex, displayAsVolume, isQuickDeclaration, shouldShowIndexTime, source}) {
   if (isMeterPeriodSource(source, chunk)) return formatMeterExactPeriod(getMeterPeriod(source, chunk))
   if (displayAsIndex) {
+    if (chunk.metadata?.nativeTemporal) {
+      return formatNativeReadingDate(getExactReadingDate(chunk, source), chunk.maxDate ?? chunk.minDate)
+    }
     return formatReadingDate(getReadingDate(chunk, source), shouldShowIndexTime)
   }
 

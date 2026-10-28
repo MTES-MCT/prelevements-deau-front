@@ -1,7 +1,7 @@
 import {randomUUID} from 'node:crypto'
 import {test, expect} from '@playwright/test'
 import {encode} from 'next-auth/jwt'
-import {nativeIds} from '../../.github/scripts/native-declaration-fixtures.mjs'
+import {nativeIds, nativeReadingScenarios} from '../../.github/scripts/native-declaration-fixtures.mjs'
 
 const frontUrl = 'https://127.0.0.1:3443'
 test.use({ignoreHTTPSErrors: true})
@@ -119,5 +119,17 @@ for (const missingPoint of [false, true]) {
     const mapRequests = await request.get('http://127.0.0.1:3431/api/__native-map-requests', {headers: {Authorization: `Bearer ${apiToken}`}})
     expect(await mapRequests.json()).toEqual([])
     await canvas.screenshot({path: testInfo.outputPath('readonly-declaration-map.png')})
+  })
+}
+
+for (const scenario of nativeReadingScenarios) {
+  test(`le résumé d’index ne crée pas d’heure depuis la date métier : ${scenario.name}`, async ({page, context}) => {
+    await authenticate(context, 'INSTRUCTOR', `reading-${scenario.name}`)
+    await page.goto(`${frontUrl}/declarations/${nativeIds.source}`)
+    const dateSummary = page.getByText('Date de relevé', {exact: true}).locator('..').locator('div').nth(1)
+    await expect(dateSummary).toHaveText(scenario.dateLabel)
+    await page.getByText('Voir les valeurs', {exact: true}).click()
+    await expect(page.getByRole('cell', {name: scenario.exactLabel, exact: true}).first()).toBeVisible()
+    await expect(dateSummary).toHaveText(scenario.dateLabel)
   })
 }
