@@ -1,5 +1,6 @@
 import {Suspense} from 'react'
 
+import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {notFound, redirect} from 'next/navigation'
 
 import {buildPageTitle} from '@/app/metadata-utils.js'
@@ -16,6 +17,16 @@ import {getPointPrelevementLabel} from '@/utils/point-prelevement.js'
 
 const PointExploitations = async ({exploitationsPromise, pointId, canCreate}) => {
   const result = await exploitationsPromise
+  if (!result.success) {
+    return (
+      <Alert
+        severity='error'
+        title='Exploitations indisponibles'
+        description='Impossible de charger les exploitations de ce point. Rechargez la page pour réessayer.'
+      />
+    )
+  }
+
   return (
     <ExploitationsList
       exploitations={result.data || []}
@@ -63,7 +74,7 @@ const Page = async ({params, searchParams}) => {
     || (role === 'INSTRUCTOR' && permissions.has(permission))
   const isDeclarantViewer = role === 'DECLARANT'
 
-  const exploitationsPromise = can('exploitation.list')
+  const exploitationsPromise = (isDeclarantViewer || can('exploitation.list'))
     ? getExploitationsByPointIdAction(pointPrelevement.id)
     : null
 
