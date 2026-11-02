@@ -1,5 +1,23 @@
 # Exceptions de sécurité des dépendances
 
+## Versions corrigées de minimatch et glob (2 novembre 2026)
+
+Les overrides `minimatch@10.2.6 → 11.0.1` et `glob@13.0.6 → 14.0.2`
+retirent respectivement [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249)
+et [GHSA-3g3m-2fjr-6pw4](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4).
+Ils ciblent uniquement les versions transitives de développement présentes dans
+le lockfile ; les dépendances d’exécution ne changent pas.
+
+Les parents n’autorisent pas encore ces versions majeures. Leurs usages de
+`minimatch`, `Minimatch.match`, `Minimatch.pattern`, `glob` et `globSync` sont
+conservés. Glob 14 utilise la nouvelle API interne de minimatch 11 et entraîne
+path-scurry 3. L’installation verrouillée et les audits complet et production
+passent sans exception. Les builds, le lint et les tests restent bloquants.
+
+Retirer ces overrides quand les parents acceptent les versions corrigées,
+puis vérifier de nouveau le lockfile, les audits et les builds. L’ancienne
+exception braces ci-dessous reste expirée et n’est pas prolongée.
+
 ## Exception temporaire pour les outils de développement (5 octobre 2026)
 
 L’extension de cette exception au front a été autorisée le 5 octobre 2026.
