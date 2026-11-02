@@ -69,6 +69,29 @@ test('les dates ISO de l’exploitation chargent le graphique avec des bornes AP
   expect(errors).toEqual([])
 })
 
+for (const [period, boundary, label] of [['after', '2026-10-26', 'commençant après'], ['before', '2019-12-31', 'terminée avant']]) {
+  test(`une exploitation ${label} les relevés historiques conserve sa borne et affiche l’absence de données`, async ({page, context}) => {
+    const apiToken = await authenticate(context)
+    await controlFixture(context, apiToken, {exploitationPeriod: period})
+    const errors = []
+    page.on('pageerror', error => errors.push(error.message))
+    await page.route('**/*', route => [frontUrl, 'http://127.0.0.1:3417'].includes(new URL(route.request().url()).origin) ? route.continue() : route.abort())
+    await page.goto(`${frontUrl}/exploitations/${chartSeriesIds.exploitation}`)
+    await page.getByText('Ressources', {exact: true}).scrollIntoViewIfNeeded()
+    await expect(page.getByText(/Aucune donnée.*(?:disponible|période)/).first()).toBeVisible({timeout: 15_000})
+    const requests = await getRequests(context, apiToken)
+    expect(requests.filter(request => request.path.endsWith('/options'))).toHaveLength(2)
+    expect(aggregates(requests)).toHaveLength(1)
+    expect(aggregates(requests)[0].query).toMatchObject({
+      exploitationId: chartSeriesIds.exploitation, meterId: chartSeriesIds.meter,
+      startDate: boundary, endDate: boundary, aggregationFrequency: 'instantaneous', temporalOperator: 'raw'
+    })
+    await expect(page.getByRole('alert').filter({hasText: /\S/})).toHaveCount(0)
+    await expect(page.getByLabel('Totaux sur la période affichée')).toHaveCount(0)
+    expect(errors).toEqual([])
+  })
+}
+
 test('les axes des séries natives restent lisibles avec une précision de quinze décimales', async ({page, context}) => {
   const apiToken = await authenticate(context)
   await controlFixture(context, apiToken, {nativePrecision: 'true'})

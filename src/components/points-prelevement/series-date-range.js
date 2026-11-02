@@ -55,8 +55,17 @@ export const resolveSelectedParametersDateRange = ({
     ? selectedBounds
     : collectBounds(false)
 
-  return {
+  const range = {
     start: startDate ?? fallbackBounds.start,
     end: endDate ?? fallbackBounds.end
   }
+  const startTimestamp = toTimestamp(range.start)
+  const endTimestamp = toTimestamp(range.end)
+  if (startTimestamp !== null && endTimestamp !== null && startTimestamp > endTimestamp) {
+    // Metadata can describe readings entirely outside the exploitation period.
+    // Keep its explicit boundary and only bring the automatic one back inside.
+    if (startDate !== null && endDate === null) range.end = range.start
+    if (endDate !== null && startDate === null) range.start = range.end
+  }
+  return range
 }

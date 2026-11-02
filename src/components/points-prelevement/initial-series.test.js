@@ -40,6 +40,18 @@ test('le préchargement accepte les dates ISO d’une exploitation sans élargir
   }
 })
 
+for (const [bound, date] of [['startDate', '2026-10-26T00:00:00.000Z'], ['endDate', '2019-12-31T00:00:00.000Z']]) {
+  test(`le préchargement garde ${bound} quand les métadonnées sont entièrement hors de l’exploitation`, t => {
+    const requests = buildInitialChartRequests({parameters, exploitationId: 'exploitation', [bound]: date})
+    t.is(requests.length, 2)
+    for (const {query} of requests) {
+      t.like(Object.fromEntries(new URLSearchParams(query)), {
+        exploitationId: 'exploitation', startDate: date.slice(0, 10), endDate: date.slice(0, 10)
+      })
+    }
+  })
+}
+
 test('les index ajoutés ne changent ni la sélection par défaut ni les bornes déjà chargées', t => {
   const initial = {parameters, detailsDeferred: true, initialSeries: []}
   const merged = mergeDetailedSeriesOptions(initial, {parameters: [{...parameters[0], minDate: '2014-01-01'}, {id: 'index:one', name: 'index', minDate: '2010-01-01'}]})

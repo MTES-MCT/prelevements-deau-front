@@ -4,7 +4,12 @@ export const chartSeriesIds = {
   forbidden: '92222222-2222-4222-8222-222222222222',
   exploitation: '93333333-3333-4333-8333-333333333333',
   point: '94444444-4444-4444-8444-444444444444',
-  preleveur: '95555555-5555-4555-8555-555555555555'
+  preleveur: '95555555-5555-4555-8555-555555555555',
+  meter: '96666666-6666-4666-8666-666666666666'
+}
+const exploitationPeriods = {
+  after: {startDate: '2026-10-26T00:00:00.000Z', endDate: null},
+  before: {startDate: null, endDate: '2019-12-31T00:00:00.000Z'}
 }
 const requests = new Map()
 const controls = new Map()
@@ -33,6 +38,7 @@ export async function handleChartSeriesFixtureRequest(request, send) {
     if (searchParams.has('emptyVolume')) control.emptyVolume = searchParams.get('emptyVolume') === 'true'
     if (searchParams.has('failDebit')) control.failDebit = searchParams.get('failDebit') === 'true'
     if (searchParams.has('nativePrecision')) control.nativePrecision = searchParams.get('nativePrecision') === 'true'
+    if (searchParams.has('exploitationPeriod')) control.exploitationPeriod = searchParams.get('exploitationPeriod')
     controls.set(authorization, control)
     return respond(200, {ok: true})
   }
@@ -53,6 +59,7 @@ export async function handleChartSeriesFixtureRequest(request, send) {
   if (pathname === `/api/exploitations/${chartSeriesIds.exploitation}`) return respond(200, {
     id: chartSeriesIds.exploitation, countingCode: '001', status: 'TERMINEE',
     startDate: '2020-01-01T00:00:00.000Z', endDate: '2026-09-01T00:00:00.000Z',
+    ...exploitationPeriods[controls.get(authorization)?.exploitationPeriod],
     declarantUserId: chartSeriesIds.preleveur,
     declarant: {id: chartSeriesIds.preleveur, userId: chartSeriesIds.preleveur, declarantRole: 'PRELEVEUR', declarantType: 'LEGAL_PERSON', socialReason: 'Préleveur du graphique synthétique'},
     pointPrelevementId: chartSeriesIds.point,
@@ -75,6 +82,14 @@ export async function handleChartSeriesFixtureRequest(request, send) {
       {id: 'débit:PRELEVEMENT', name: 'débit', metricTypeCode: 'débit', label: 'Débit prélevé', flowType: 'PRELEVEMENT', unit: 'm³/h', valueType: 'instantaneous', temporalOperators: ['mean'], defaultTemporalOperator: 'mean'}
     ]
     const indexes = [{id: 'index:PRELEVEMENT:exploitation:test', name: 'index', metricTypeCode: 'index', label: 'Index déclaré du compteur synthétique', flowType: 'PRELEVEMENT', unit: 'm³', valueType: 'instantaneous', temporalOperators: ['max'], defaultTemporalOperator: 'max', exploitationId: chartSeriesIds.exploitation}]
+    if (control.exploitationPeriod) return respond(200, {
+      ...(summary ? {detailsDeferred: true} : {}),
+      parameters: summary ? [] : [{
+        id: `index:meter:${chartSeriesIds.meter}`, meterId: chartSeriesIds.meter, readingSeries: true,
+        name: 'index', metricTypeCode: 'index', label: 'Index — compteur synthétique historique', unit: 'm³', valueType: 'instantaneous',
+        minDate: '2020-01-01', maxDate: '2026-09-01', temporalOperators: ['raw'], defaultTemporalOperator: 'raw', availableFrequencies: ['instantaneous']
+      }]
+    })
     return respond(200, {...(summary ? {detailsDeferred: true} : {}), parameters: [
       ...(control.indexOnly ? [] : parameters), ...(!summary ? indexes : [])
     ].map(parameter => ({...parameter, minDate: '2020-01-01', maxDate: '2026-09-01', availableFrequencies: ['1 day', '1 week', '1 year']}))})
@@ -86,10 +101,19 @@ export async function handleChartSeriesFixtureRequest(request, send) {
       && ['startDate', 'endDate'].some(key => searchParams.has(key) && !/^\d{4}-\d{2}-\d{2}$/.test(searchParams.get(key)))) {
       return respond(400, {message: 'Les dates doivent respecter le format YYYY-MM-DD'})
     }
+    if (searchParams.has('startDate') && searchParams.has('endDate') && searchParams.get('startDate') > searchParams.get('endDate')) {
+      return respond(400, {message: 'Le paramètre startDate doit être antérieur ou égal à endDate'})
+    }
     const control = controls.get(authorization)
     if (control?.heldMetric === searchParams.get('metricTypeCode')) await control.gate.promise
     await new Promise(resolve => setTimeout(resolve, 100))
     entry.completedAt = Date.now()
+    if (control?.exploitationPeriod && searchParams.get('meterId') === chartSeriesIds.meter) return respond(200, {
+      metadata: {readingSeries: true, meterId: chartSeriesIds.meter, frequency: 'instantaneous', unit: 'm³', valueType: 'instantaneous'},
+      values: ['2020-01-01', '2026-09-01']
+        .filter(date => date >= searchParams.get('startDate') && date <= searchParams.get('endDate'))
+        .map(date => ({date, values: [{date: `${date}T12:00:00Z`, value: 100, admissible: true}]}))
+    })
     const isTotal = searchParams.get('aggregationFrequency') === '1 year'
     const isVolume = searchParams.get('metricTypeCode') === 'volume'
     if (control?.failDebit && searchParams.get('metricTypeCode') === 'débit') return respond(500, {message: 'Débit indisponible'})
