@@ -24,6 +24,22 @@ test('les bornes explicites et les séries par exploitation sont conservées', t
   t.deepEqual(buildInitialChartRequests({parameters: [{...indexed[0], readingSeries: true}]}), [])
 })
 
+test('le préchargement accepte les dates ISO d’une exploitation sans élargir sa période', t => {
+  const requests = buildInitialChartRequests({
+    parameters,
+    preleveurId: 'owner',
+    exploitationId: 'exploitation',
+    startDate: '2026-10-26T00:00:00.000Z',
+    endDate: '2026-12-31T00:00:00.000Z'
+  })
+  t.is(requests.length, 2)
+  for (const {query} of requests) {
+    t.like(Object.fromEntries(new URLSearchParams(query)), {
+      exploitationId: 'exploitation', preleveurId: 'owner', startDate: '2026-10-26', endDate: '2026-12-31'
+    })
+  }
+})
+
 test('les index ajoutés ne changent ni la sélection par défaut ni les bornes déjà chargées', t => {
   const initial = {parameters, detailsDeferred: true, initialSeries: []}
   const merged = mergeDetailedSeriesOptions(initial, {parameters: [{...parameters[0], minDate: '2014-01-01'}, {id: 'index:one', name: 'index', minDate: '2010-01-01'}]})

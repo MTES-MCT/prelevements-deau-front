@@ -26,6 +26,19 @@ test('normalizeDate retourne YYYY-MM-DD pour une Date locale', t => {
   t.is(normalizeDate(null), undefined)
 })
 
+test('normalizeDate conserve le jour des dates ISO renvoyées par l’API', t => {
+  t.is(normalizeDate('2026-10-26T00:00:00.000Z'), '2026-10-26')
+  t.is(normalizeDate('2026-12-31T23:59:59Z'), '2026-12-31')
+  t.is(normalizeDate('2026-10-26T00:00:00+04:00'), '2026-10-26')
+  t.is(normalizeDate('2026-10-26T23:30:00-03:00'), '2026-10-26')
+})
+
+test('normalizeDate laisse les dates malformées à la validation API', t => {
+  t.is(normalizeDate('not-a-date'), 'not-a-date')
+  t.is(normalizeDate('2026-10-26Tinvalid'), '2026-10-26Tinvalid')
+  t.is(normalizeDate('2026-02-31T00:00:00.000Z'), '2026-02-31')
+})
+
 test('parseLocalDateTime parse dates seules et dates avec heure explicite', t => {
   const dateOnly = parseLocalDateTime('2026-06-30')
   t.is(dateOnly.getFullYear(), 2026)

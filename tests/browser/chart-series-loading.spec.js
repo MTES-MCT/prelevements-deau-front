@@ -42,6 +42,33 @@ function getChartModulePath() {
   return `/_next/${chartFiles[0]}`
 }
 
+test('les dates ISO de l’exploitation chargent le graphique avec des bornes API sans heure', async ({page, context}) => {
+  const apiToken = await authenticate(context)
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+  await page.route('**/*', route => [frontUrl, 'http://127.0.0.1:3417'].includes(new URL(route.request().url()).origin) ? route.continue() : route.abort())
+  await page.goto(`${frontUrl}/exploitations/${chartSeriesIds.exploitation}`)
+  await expect(page.getByText(/^Exploitation - Point du graphique synthétique x /)).toBeVisible()
+  // The exploitation header can place the deferred chart below the viewport.
+  await page.getByText('Ressources', {exact: true}).scrollIntoViewIfNeeded()
+  await expect(page.getByRole('figure', {name: 'Graphique séries temporelles'})).toBeVisible({timeout: 15_000})
+  await expect(page.getByLabel('Totaux sur la période affichée')).toContainText(/300\s*m³/)
+  await expect.poll(async () => aggregates(await getRequests(context, apiToken)).filter(request => request.completedAt).length).toBe(2)
+  const requests = await getRequests(context, apiToken)
+  expect(requests.filter(request => request.path.endsWith('/options'))).toHaveLength(1)
+  expect(aggregates(requests)).toHaveLength(2)
+  for (const request of aggregates(requests)) {
+    expect(request.query).toMatchObject({
+      exploitationId: chartSeriesIds.exploitation, preleveurId: chartSeriesIds.preleveur, pointIds: chartSeriesIds.point,
+      startDate: '2020-01-01', endDate: '2026-09-01', aggregationFrequency: '1 week'
+    })
+  }
+  // Next keeps an empty route announcer with role=alert in the document.
+  await expect(page.getByRole('alert').filter({hasText: /\S/})).toHaveCount(0)
+  await expect(page.getByText(/fails to match|required pattern|YYYY-MM-DD/)).toHaveCount(0)
+  expect(errors).toEqual([])
+})
+
 test('les axes des séries natives restent lisibles avec une précision de quinze décimales', async ({page, context}) => {
   const apiToken = await authenticate(context)
   await controlFixture(context, apiToken, {nativePrecision: 'true'})

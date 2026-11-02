@@ -1,7 +1,10 @@
 // Synthetic chart scope, independent of real points and timeseries.
 export const chartSeriesIds = {
   collecteur: '91111111-1111-4111-8111-111111111111',
-  forbidden: '92222222-2222-4222-8222-222222222222'
+  forbidden: '92222222-2222-4222-8222-222222222222',
+  exploitation: '93333333-3333-4333-8333-333333333333',
+  point: '94444444-4444-4444-8444-444444444444',
+  preleveur: '95555555-5555-4555-8555-555555555555'
 }
 const requests = new Map()
 const controls = new Map()
@@ -47,6 +50,17 @@ export async function handleChartSeriesFixtureRequest(request, send) {
     declarantType: 'LEGAL_PERSON', socialReason: 'Collecteur du graphique synthétique',
     pointPrelevements: [], collecteurExploitations: [], right: {permissions: []}
   })
+  if (pathname === `/api/exploitations/${chartSeriesIds.exploitation}`) return respond(200, {
+    id: chartSeriesIds.exploitation, countingCode: '001', status: 'TERMINEE',
+    startDate: '2020-01-01T00:00:00.000Z', endDate: '2026-09-01T00:00:00.000Z',
+    declarantUserId: chartSeriesIds.preleveur,
+    declarant: {id: chartSeriesIds.preleveur, userId: chartSeriesIds.preleveur, declarantRole: 'PRELEVEUR', declarantType: 'LEGAL_PERSON', socialReason: 'Préleveur du graphique synthétique'},
+    pointPrelevementId: chartSeriesIds.point,
+    pointPrelevement: {id: chartSeriesIds.point, name: 'Point du graphique synthétique', flowType: 'PRELEVEMENT'},
+    connectors: [], collecteurs: [], secondaryUsages: [], right: {canEdit: false, permissions: []}
+  })
+  if (pathname === `/api/exploitations/${chartSeriesIds.exploitation}/meter-allocations`) return respond(200, {meterAllocations: []})
+  if (pathname === `/api/exploitations/${chartSeriesIds.exploitation}/documents` || pathname === `/api/preleveurs/${chartSeriesIds.preleveur}/regles`) return respond(200, [])
   if (pathname.startsWith('/api/audit-history/')) return respond(200, {data: [], meta: {total: 0}})
   if (pathname === '/api/aggregated-series/options') {
     record({path: pathname, query: Object.fromEntries(searchParams), method: request.method})
@@ -60,7 +74,7 @@ export async function handleChartSeriesFixtureRequest(request, send) {
       {id: 'volume:PRELEVEMENT', name: 'volume', metricTypeCode: 'volume', label: 'Volume prélevé', flowType: 'PRELEVEMENT', unit: 'm³', valueType: 'cumulative', temporalOperators: ['sum', 'max'], defaultTemporalOperator: 'sum'},
       {id: 'débit:PRELEVEMENT', name: 'débit', metricTypeCode: 'débit', label: 'Débit prélevé', flowType: 'PRELEVEMENT', unit: 'm³/h', valueType: 'instantaneous', temporalOperators: ['mean'], defaultTemporalOperator: 'mean'}
     ]
-    const indexes = [{id: 'index:PRELEVEMENT:exploitation:test', name: 'index', metricTypeCode: 'index', label: 'Index déclaré du compteur synthétique', flowType: 'PRELEVEMENT', unit: 'm³', valueType: 'instantaneous', temporalOperators: ['max'], defaultTemporalOperator: 'max', exploitationId: '93333333-3333-4333-8333-333333333333'}]
+    const indexes = [{id: 'index:PRELEVEMENT:exploitation:test', name: 'index', metricTypeCode: 'index', label: 'Index déclaré du compteur synthétique', flowType: 'PRELEVEMENT', unit: 'm³', valueType: 'instantaneous', temporalOperators: ['max'], defaultTemporalOperator: 'max', exploitationId: chartSeriesIds.exploitation}]
     return respond(200, {...(summary ? {detailsDeferred: true} : {}), parameters: [
       ...(control.indexOnly ? [] : parameters), ...(!summary ? indexes : [])
     ].map(parameter => ({...parameter, minDate: '2020-01-01', maxDate: '2026-09-01', availableFrequencies: ['1 day', '1 week', '1 year']}))})
@@ -68,6 +82,10 @@ export async function handleChartSeriesFixtureRequest(request, send) {
   if (pathname === '/api/aggregated-series') {
     const entry = record({path: pathname, query: Object.fromEntries(searchParams), method: request.method, startedAt: Date.now()})
     if (searchParams.get('collecteurId') === chartSeriesIds.forbidden) return respond(403, {message: 'Périmètre interdit'})
+    if (searchParams.get('exploitationId') === chartSeriesIds.exploitation
+      && ['startDate', 'endDate'].some(key => searchParams.has(key) && !/^\d{4}-\d{2}-\d{2}$/.test(searchParams.get(key)))) {
+      return respond(400, {message: 'Les dates doivent respecter le format YYYY-MM-DD'})
+    }
     const control = controls.get(authorization)
     if (control?.heldMetric === searchParams.get('metricTypeCode')) await control.gate.promise
     await new Promise(resolve => setTimeout(resolve, 100))
