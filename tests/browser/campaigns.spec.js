@@ -1,4 +1,5 @@
 import {randomUUID} from 'node:crypto'
+import {readFile} from 'node:fs/promises'
 
 import {expect, test} from '@playwright/test'
 import {encode} from 'next-auth/jwt'
@@ -898,7 +899,11 @@ test('collecteur : navigation, export des résultats envoyés et correction de l
   await expect(page.getByText(/volumes en attente|Non calculé/i)).toHaveCount(0)
   const downloaded = page.waitForEvent('download')
   await page.getByRole('button', {name: 'Exporter tous les résultats (CSV)', exact: true}).click()
-  expect((await downloaded).suggestedFilename()).toBe('resultats-campagne.csv')
+  const download = await downloaded
+  expect(download.suggestedFilename()).toBe('resultats-campagne.csv')
+  const csv = await readFile(await download.path())
+  expect([...csv.subarray(0, 3)]).toEqual([0xEF, 0xBB, 0xBF])
+  expect(csv.toString('utf8')).toBe('\uFEFFPréleveur;Code comptage;Volume demandé\r\nFerme synthétique;001;120\r\n')
   expect((await requests())[0].path.endsWith('/export')).toBe(true)
   await expect(page.getByRole('link', {name: 'Modifier la réponse', exact: true})).toHaveAttribute('href', `/campagnes/${campaignIds.campaign}/reponses/${campaignIds.response}?modifier=1`)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)

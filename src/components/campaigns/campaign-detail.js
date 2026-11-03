@@ -10,6 +10,7 @@ import {CampaignPagination, CampaignProgress, CampaignShell, CampaignStatus, Cam
 import CampaignPointIdentity from '@/components/campaigns/campaign-point-identity.js'
 import CampaignRequesterPoints from '@/components/campaigns/campaign-requester-points.js'
 import {CAMPAIGN_REQUESTER_DESCRIPTION, CAMPAIGN_REQUESTER_TITLE, campaignData, campaignDate, campaignPersonLabel, campaignState, formatCampaignVolume, isCampaignRequester} from '@/lib/campaigns.js'
+import {createCsvBlob} from '@/lib/export-csv.js'
 import {changeCampaignStateAction, deleteCampaignAction, getCampaignResponsesAction, getCampaignResultsAction} from '@/server/actions/campaigns.js'
 import {exportCampaignResultsAction} from '@/server/actions/exports.js'
 
@@ -72,7 +73,7 @@ export default function CampaignDetail({initialData, initialResponses, initialEr
     setError(null)
     try {
       const exported = campaignData(await exportCampaignResultsAction(campaign.id))
-      const url = URL.createObjectURL(new Blob([exported.content], {type: 'text/csv;charset=utf-8'}))
+      const url = URL.createObjectURL(createCsvBlob(exported.content))
       const anchor = document.createElement('a')
       anchor.href = url
       anchor.download = exported.fileName
