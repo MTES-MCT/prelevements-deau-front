@@ -10,6 +10,7 @@ import {renderToStaticMarkup} from 'react-dom/server'
 
 import * as campaignHelpers from '../../lib/campaigns.js'
 import * as campaignPointHelpers from '../../lib/campaign-points.js'
+import * as csvHelpers from '../../lib/export-csv.js'
 
 const require = createRequire(import.meta.url)
 
@@ -33,6 +34,7 @@ function harness({tab = 'results', response = {}, permissions = {canReadResults:
     if (specifier === '@/components/campaigns/campaign-common.js') return Object.fromEntries(['CampaignPagination', 'CampaignProgress', 'CampaignShell', 'CampaignStatus', 'CampaignVolumes', 'CampaignReplenishmentNotice', 'CampaignMeterChanges'].map(name => [name, ({children}) => React.createElement('div', null, children)]))
     if (specifier === '@/lib/campaigns.js') return campaignHelpers
     if (specifier === '@/lib/campaign-points.js') return campaignPointHelpers
+    if (specifier === '@/lib/export-csv.js') return csvHelpers
     if (specifier === '@/server/actions/campaigns.js') return Object.fromEntries(['getCampaignResponsesAction', 'getCampaignResultsAction'].map(name => [name, async (id, options) => {
       calls.push({name, id, options})
       return {success: true, data: {items: [], total: 0}}
