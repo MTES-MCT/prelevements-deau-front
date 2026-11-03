@@ -52,9 +52,14 @@ function getValueByPath(obj, path) {
   return current
 }
 
+export function createCsvBlob(content) {
+  // Excel needs the UTF-8 BOM in the file itself. Response.text() strips it.
+  const csvContent = content.startsWith('\uFEFF') ? content : `\uFEFF${content}`
+  return new Blob([csvContent], {type: 'text/csv;charset=utf-8;'})
+}
+
 export function downloadCsv(data, filename) {
-  const csvContent = jsonToCsv(data)
-  const blob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'})
+  const blob = createCsvBlob(jsonToCsv(data))
   const url = URL.createObjectURL(blob)
 
   const link = document.createElement('a')
