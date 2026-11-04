@@ -156,4 +156,7 @@ test('l’adresse principale explicite est affichée sans rétablir une adresse 
   t.is(getPrimaryDeclarantContactEmail({...previous, principalEmail: null}), null)
   t.is(getPrimaryDeclarantContactEmail({...previous, principalEmail: 'cache@import.local'}), null)
   t.is(getPrimaryDeclarantContactEmail(previous), 'contact@example.test')
+  t.is(getPrimaryDeclarantContactEmail({...previous, declarant: {declarantRole: 'PRELEVEUR', email: null}}), null)
+  t.is(getPrimaryDeclarantContactEmail({...previous, declarant: {declarantRole: 'PRELEVEUR', email: 'partage@example.test'}}), 'partage@example.test')
+  t.is(getPrimaryDeclarantContactEmail({...previous, userId: 'preleveur', declarantRole: 'PRELEVEUR', email: null}), null)
 })
