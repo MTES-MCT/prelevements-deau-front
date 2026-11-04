@@ -118,6 +118,11 @@ export function getPrimaryDeclarantContactEmail(declarant) {
     return isSyntheticImportEmail(declarant.principalEmail) ? null : declarant.principalEmail || null
   }
 
+  const profile = declarant?.declarant ?? (declarant?.userId ? declarant : null)
+  if (profile?.declarantRole === 'PRELEVEUR' && Object.hasOwn(profile, 'email')) {
+    return isSyntheticImportEmail(profile.email) ? null : profile.email || null
+  }
+
   return getEffectiveDeclarantContactEmails(declarant)[0] ?? null
 }
 
