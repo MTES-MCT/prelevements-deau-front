@@ -62,7 +62,8 @@ export async function handleCollectorPointFixture(request, send) {
   }
   const management = {enabled, zoneIds: [zone.id], zones: [zone]}
   const user = {id: admin || readOnly ? collectorPointIds.preleveur : collectorPointIds.collector,
-    email: admin || readOnly ? 'agent@example.test' : 'collector@example.test', declarant: {declarantRole: 'COLLECTEUR'}}
+    email: admin || readOnly ? 'agent@example.test' : 'collector@example.test',
+    ...(role === 'DECLARANT' ? {declarantRole: 'COLLECTEUR'} : {})}
   const declarationType = {id: collectorPointIds.declarationType, code: 'VOLUMES_ANNUELS',
     name: 'Déclaration annuelle des volumes prélevés', version: 1}
   const availableDeclarationTypes = [declarationType, {id: collectorPointIds.secondDeclarationType,
@@ -80,7 +81,8 @@ export async function handleCollectorPointFixture(request, send) {
   state.campaignOptionReads ??= []
   const campaigns = [{id: collectorPointIds.campaign, name: 'Volumes 2026', eligible: enabled},
     ...(auth.includes('-campaign-multiple-') ? [{id: collectorPointIds.secondCampaign, name: 'Besoins 2027', eligible: enabled}] : [])]
-  if (pathname === '/info' || pathname === '/api/info') send(200, {role, user, declarantRole: 'COLLECTEUR', permissions, expiresAt: new Date(Date.now() + 3600000).toISOString()})
+  if (pathname === '/info' || pathname === '/api/info') send(200, {role, user,
+    ...(role === 'DECLARANT' ? {} : {permissions}), expiresAt: new Date(Date.now() + 3600000).toISOString()})
   else if (pathname === '/api/__collector-point-writes') send(200, state.writes)
   else if (pathname === '/api/__collector-campaign-option-reads') send(200, state.campaignOptionReads)
   else if (pathname === '/api/collecteurs/me/point-management') {
