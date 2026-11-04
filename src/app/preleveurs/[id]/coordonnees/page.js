@@ -5,7 +5,7 @@ import CollectorContactDetailsForm from '@/components/form/collector-contact-det
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getCollectorContactDetailsAction} from '@/server/actions/collector-points.js'
 
-export const metadata = {title: 'Coordonnées du préleveur'}
+export const metadata = {title: 'Modifier le préleveur'}
 
 export default async function Page({params}) {
   const {id} = await params
@@ -15,6 +15,6 @@ export default async function Page({params}) {
   return <div className='fr-container mt-5'>
     <StartDsfrOnHydration />
     {result.success ? <CollectorContactDetailsForm form={result.data} />
-      : <Alert severity='error' title='Les coordonnées ne peuvent pas être chargées.' description='Rechargez la page pour réessayer.' />}
+      : <Alert severity='error' title='Les informations du préleveur ne peuvent pas être chargées.' description='Rechargez la page pour réessayer.' />}
   </div>
 }

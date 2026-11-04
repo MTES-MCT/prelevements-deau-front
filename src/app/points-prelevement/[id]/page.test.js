@@ -122,12 +122,11 @@ test('une redirection canonique ne lance pas la lecture des exploitations du mau
   t.deepEqual(flow.calls, [])
 })
 
-test('une capacité collecteur ouvre la création ciblée et les formulaires de campagne sans droit agent', async t => {
+test('une capacité collecteur ouvre la création ciblée sans droit agent', async t => {
   const flow = harness({role: 'DECLARANT', permissions: [], collectorRight: {canCreateExploitation: true, editScope: 'COLLECTOR'}})
   const boundary = elements(await flow.page()).find(element => element.type === React.Suspense)
   const rendered = elements(await boundary.props.children.type(boundary.props.children.props))
   const list = rendered.find(element => element.type === flow.components.get('@/components/exploitations/exploitations-list.js'))
   t.true(list.props.canCreate)
   t.is(list.props.createHref, '/exploitations/new?point=point')
-  t.true(rendered.some(element => element.type === flow.components.get('@/components/collectors/campaign-participation-loader.js')))
 })

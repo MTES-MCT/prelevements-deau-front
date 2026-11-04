@@ -149,3 +149,11 @@ test('les adresses techniques d’import ne sont jamais utilisées comme contact
   }), ['metier@example.test'])
   t.false(hasDeclarantContactInfo({email: 'reunion-42@import.local'}))
 })
+
+test('l’adresse principale explicite est affichée sans rétablir une adresse retirée', t => {
+  const previous = {loginEmail: 'ancien@example.test', contactEmails: [{email: 'contact@example.test', isPrimary: true}]}
+  t.is(getPrimaryDeclarantContactEmail({...previous, principalEmail: 'partage@example.test'}), 'partage@example.test')
+  t.is(getPrimaryDeclarantContactEmail({...previous, principalEmail: null}), null)
+  t.is(getPrimaryDeclarantContactEmail({...previous, principalEmail: 'cache@import.local'}), null)
+  t.is(getPrimaryDeclarantContactEmail(previous), 'contact@example.test')
+})

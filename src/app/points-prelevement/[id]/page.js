@@ -5,7 +5,6 @@ import {notFound, redirect} from 'next/navigation'
 
 import {buildPageTitle} from '@/app/metadata-utils.js'
 import ExploitationsList from '@/components/exploitations/exploitations-list.js'
-import CollectorCampaignParticipationLoader from '@/components/collectors/campaign-participation-loader.js'
 import CollectorManagementUnavailable from '@/components/collectors/management-unavailable.js'
 import PointIdentification from '@/components/points-prelevement/point-identification.js'
 import PointLocalisation from '@/components/points-prelevement/point-localisation.js'
@@ -18,7 +17,7 @@ import {getCurrentSessionInfo} from '@/server/actions/user.js'
 import {getMyCollectorPointManagementAction} from '@/server/actions/collector-points.js'
 import {getPointPrelevementLabel} from '@/utils/point-prelevement.js'
 
-const PointExploitations = async ({exploitationsPromise, pointId, canCreate, canManageCampaign}) => {
+const PointExploitations = async ({exploitationsPromise, pointId, canCreate}) => {
   const result = await exploitationsPromise
   if (!result.success) {
     return (
@@ -37,7 +36,6 @@ const PointExploitations = async ({exploitationsPromise, pointId, canCreate, can
         createHref={canCreate ? getNewExploitationURL({idPoint: pointId}) : undefined}
         canCreate={canCreate}
       />
-      {canManageCampaign && <CollectorCampaignParticipationLoader exploitations={result.data || []} />}
     </>
   )
 }
@@ -110,7 +108,6 @@ const Page = async ({params, searchParams}) => {
               exploitationsPromise={exploitationsPromise}
               pointId={pointPrelevement.id}
               canCreate={can('exploitation.create') || pointPrelevement.right?.canCreateExploitation === true}
-              canManageCampaign={collectorManagement?.data?.enabled === true}
             />
           </Suspense>
         )}

@@ -11,8 +11,9 @@ import {getCurrentUser} from '@/server/actions/user.js'
 import {getCollectorCampaignParticipationOptionsAction, getCollectorPointCreationPreleveursAction, getMyCollectorPointManagementAction} from '@/server/actions/collector-points.js'
 import {getPointsPrelevementOptionsAction} from '@/server/actions/points-prelevement.js'
 
-export const metadata = {
-  title: 'Nouveau point de prélèvement'
+export async function generateMetadata({searchParams}) {
+  const query = await searchParams
+  return {title: query?.mode === 'new' ? 'Ajouter un préleveur' : 'Nouveau point de prélèvement'}
 }
 
 const Page = async ({searchParams}) => {
@@ -41,7 +42,8 @@ const Page = async ({searchParams}) => {
           priority='secondary'
           iconId='fr-icon-close-line'
           linkProps={{
-            href: '/points-prelevement'
+            href: query?.mode === 'new' ? '/preleveurs'
+              : typeof query?.preleveurId === 'string' ? `/preleveurs/${encodeURIComponent(query.preleveurId)}` : '/points-prelevement'
           }}
         >
           Annuler

@@ -101,21 +101,21 @@ export default function CollectorPointCreationForm({preleveurs, accessiblePoints
     return <div className='fr-container mb-8'>
       <Alert severity='success' title={existingPoint ? 'L’exploitation a été créée.' : 'Le point et son exploitation ont été créés.'} />
       {created.notification?.status === 'failed' && <Alert className='mt-4' severity='warning' title='L’email d’accès n’a pas pu être envoyé.'
-        description='Le préleveur et le point sont bien enregistrés. Un administrateur peut renvoyer l’email d’accès.' />}
+        description='Les informations sont bien enregistrées. Un administrateur peut renvoyer l’email d’accès.' />}
       {created.notification?.status === 'pending' && <Alert className='mt-4' severity='info' title='L’envoi de l’email d’accès n’est pas encore confirmé.'
-        description='Le point est bien enregistré. Ne recréez pas la demande.' />}
+        description='Les informations sont bien enregistrées. Ne recréez pas la demande.' />}
       <div className='mt-5 flex flex-wrap gap-3'>
         <Button priority='secondary' linkProps={{href: `/points-prelevement/${created.point.id}`}}>Voir le point</Button>
         {created.campaignParticipation && <Button linkProps={{href: `/campagnes/${created.campaignParticipation.campaignId}/reponses/${created.campaignParticipation.responseId}`}}>
           Ouvrir le formulaire
         </Button>}
       </div>
-      {!created.campaignParticipation && <p className='mt-4'>Aucun formulaire de campagne n’a été ajouté. Vous pourrez le faire depuis la fiche du point ou de l’exploitation.</p>}
     </div>
   }
 
   return <div className='fr-container mb-8'>
-    <h1 className='fr-h3'>{existingPoint ? `Ajouter une exploitation — ${existingPoint.usageName || existingPoint.name}` : 'Ajouter un point'}</h1>
+    <h1 className='fr-h3'>{existingPoint ? `Ajouter une exploitation — ${existingPoint.usageName || existingPoint.name}` : initialMode === 'new' ? 'Ajouter un préleveur' : 'Ajouter un point'}</h1>
+    {!existingPoint && initialMode === 'new' && <p>Renseignez le préleveur et son premier point de prélèvement.</p>}
     {!existingPoint && <p className='fr-text--sm' style={{color: 'var(--text-mention-grey)'}}>
       Zones autorisées : {zones.map(zone => zone.name).join(', ')}.
     </p>}
@@ -141,8 +141,8 @@ export default function CollectorPointCreationForm({preleveurs, accessiblePoints
             {label: 'Personne morale', nativeInputProps: {checked: !isNaturalPerson, onChange: () => setPreleveur(previous => ({...previous, declarantType: 'LEGAL_PERSON'}))}}
           ]} />
           {isNaturalPerson
-            ? <PreleveurPhysiqueForm preleveur={preleveur} setPreleveur={setPreleveur} />
-            : <PreleveurMoralForm preleveur={preleveur} setPreleveur={setPreleveur} />}
+            ? <PreleveurPhysiqueForm simpleEmail preleveur={preleveur} setPreleveur={setPreleveur} />
+            : <PreleveurMoralForm simpleEmail preleveur={preleveur} setPreleveur={setPreleveur} />}
           <FormControlLabel label='Envoyer un email d’accès' control={<Checkbox
             checked={Boolean(preleveur.email?.trim()) && notifyAccountCreation} disabled={!preleveur.email?.trim()}
             onChange={event => setNotifyAccountCreation(event.target.checked)} />} />
