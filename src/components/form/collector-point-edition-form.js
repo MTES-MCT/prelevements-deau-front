@@ -78,6 +78,9 @@ export default function CollectorPointEditionForm({form}) {
                 : <p>Code comptage Agence de l’eau : {exploitation.countingCode || 'Non renseigné'}</p>}
               <CollectorMeterFields meters={exploitation.meters} canAddMeter={exploitation.capabilities.canAddMeter}
                 onChange={meters => updateExploitation(exploitation.id, {meters})} />
+              <Button className='mt-4' priority='tertiary' linkProps={{href: `/exploitations/${exploitation.id}/edit`}}>
+                Modifier les usages, les dates ou le statut
+              </Button>
             </div>
           </SectionCard>
         </section>)}

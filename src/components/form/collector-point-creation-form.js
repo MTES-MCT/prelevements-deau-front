@@ -2,7 +2,6 @@
 
 import {useRef, useState, useSyncExternalStore} from 'react'
 
-import {useRouter} from '@bprogress/next/app'
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {Input} from '@codegouvfr/react-dsfr/Input'
@@ -17,14 +16,17 @@ import CollectorMeterFields from '@/components/form/collector-meter-fields.js'
 import PreleveurMoralForm from '@/components/form/preleveur-moral-form.js'
 import PreleveurPhysiqueForm from '@/components/form/preleveur-physique-form.js'
 import WaterUseSelect from '@/components/form/water-use-select.js'
+import CollectorCampaignChoice from '@/components/form/collector-campaign-choice.js'
 import SectionCard from '@/components/ui/SectionCard/index.js'
 import {
   buildCollectorPointCreationPayload,
+  collectorCreationNeedsRetry,
+  collectorToday,
   COLLECTOR_POINT_CREATION_FIELDS,
   findSimilarAccessiblePoints
 } from '@/lib/collector-point-creation.js'
 import {getDeclarantTitleFromDeclarant, PRELEVEUR_TYPE_OPTIONS} from '@/lib/declarants.js'
-import {createCollectorPointAction} from '@/server/actions/collector-points.js'
+import {createCollectorExploitationAction, createCollectorPointAction} from '@/server/actions/collector-points.js'
 
 const CreationSection = ({number, title, children}) => (
   <SectionCard title={`${number}. ${title}`}>
@@ -32,22 +34,15 @@ const CreationSection = ({number, title, children}) => (
   </SectionCard>
 )
 
-function getMinimumEndDate() {
-  const tomorrow = new Date()
-  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
-  return tomorrow.toISOString().slice(0, 10)
-}
-
 const subscribeToHydration = () => () => {}
 const getClientSnapshot = () => true
 const getServerSnapshot = () => false
 
-export default function CollectorPointCreationForm({preleveurs, accessiblePoints = [], zones = [], initialPreleveurId = ''}) {
-  const router = useRouter()
+export default function CollectorPointCreationForm({preleveurs, accessiblePoints = [], zones = [], initialPreleveurId = '', initialMode, existingPoint, campaignsResult}) {
   const hydrated = useSyncExternalStore(subscribeToHydration, getClientSnapshot, getServerSnapshot)
-  const requestId = useRef(null)
+  const attempt = useRef(null)
   const submitting = useRef(false)
-  const [mode, setMode] = useState(preleveurs.length ? 'existing' : 'new')
+  const [mode, setMode] = useState(initialMode === 'new' || !preleveurs.length ? 'new' : 'existing')
   const [preleveurId, setPreleveurId] = useState(preleveurs.some(item => item.id === initialPreleveurId) ? initialPreleveurId : '')
   const [preleveur, setPreleveur] = useState({declarantType: 'NATURAL_PERSON', preleveurType: '', firstName: '', lastName: '', email: ''})
   const [point, setPoint] = useState({name: '', usageName: '', flowType: '', waterBodyType: '', geometryPrecision: ''})
@@ -57,11 +52,17 @@ export default function CollectorPointCreationForm({preleveurs, accessiblePoints
   const [error, setError] = useState(null)
   const [validationErrors, setValidationErrors] = useState([])
   const [created, setCreated] = useState(null)
+  const [mustRetry, setMustRetry] = useState(false)
+  const [includeCampaign, setIncludeCampaign] = useState(false)
+  const [selectedCampaignId, setSelectedCampaignId] = useState('')
+  const eligibleCampaigns = (campaignsResult?.data?.campaigns ?? []).filter(item => item.eligible)
+  const campaignId = eligibleCampaigns.length === 1 ? eligibleCampaigns[0].id : selectedCampaignId
   const isNaturalPerson = preleveur.declarantType === 'NATURAL_PERSON'
   const similarPoints = findSimilarAccessiblePoints(point, accessiblePoints)
   const hasIdentity = mode === 'existing' ? Boolean(preleveurId) : Boolean(preleveur.preleveurType
     && (isNaturalPerson ? preleveur.firstName?.trim() && preleveur.lastName?.trim() : preleveur.socialReason?.trim()))
-  const canSubmit = hasIdentity && point.name?.trim() && point.flowType && point.waterBodyType && point.coordinates && exploitation.usageId
+  const canSubmit = hasIdentity && (existingPoint || (point.name?.trim() && point.flowType && point.waterBodyType && point.coordinates))
+    && exploitation.usageId && (!includeCampaign || campaignId)
 
   async function handleSubmit() {
     if (submitting.current || created) return
@@ -69,24 +70,27 @@ export default function CollectorPointCreationForm({preleveurs, accessiblePoints
     setPending(true)
     setError(null)
     setValidationErrors([])
-    requestId.current ??= globalThis.crypto.randomUUID()
+    attempt.current ??= JSON.parse(JSON.stringify(buildCollectorPointCreationPayload({
+      requestId: globalThis.crypto.randomUUID(), point: existingPoint ? null : point, preleveur, preleveurId,
+      mode, exploitation, notifyAccountCreation, campaignId: includeCampaign ? campaignId : undefined
+    })))
     try {
-      const result = await createCollectorPointAction(buildCollectorPointCreationPayload({
-        requestId: requestId.current, point, preleveur, preleveurId, mode, exploitation, notifyAccountCreation
-      }))
+      const result = existingPoint
+        ? await createCollectorExploitationAction(existingPoint.id, attempt.current)
+        : await createCollectorPointAction(attempt.current)
       if (!result.success) {
         setError(result.error || 'Le point n’a pas pu être enregistré.')
         setValidationErrors(result.validationErrors || [])
+        const uncertain = collectorCreationNeedsRetry(result)
+        setMustRetry(uncertain)
+        if (!uncertain) attempt.current = null
         return
       }
 
       setCreated(result.data)
-      if (!['failed', 'pending'].includes(result.data.notification.status)) {
-        router.push(`/points-prelevement/${result.data.point.id}`)
-        router.refresh()
-      }
     } catch {
       setError('La connexion a été interrompue. Réessayez sans fermer ce formulaire : votre demande ne sera pas créée en double.')
+      setMustRetry(true)
     } finally {
       submitting.current = false
       setPending(false)
@@ -95,21 +99,27 @@ export default function CollectorPointCreationForm({preleveurs, accessiblePoints
 
   if (created) {
     return <div className='fr-container mb-8'>
-      <Alert severity='success' title='Le point et son exploitation ont été créés.' />
-      {created.notification.status === 'failed' && <Alert className='mt-4' severity='warning' title='L’email d’accès n’a pas pu être envoyé.'
+      <Alert severity='success' title={existingPoint ? 'L’exploitation a été créée.' : 'Le point et son exploitation ont été créés.'} />
+      {created.notification?.status === 'failed' && <Alert className='mt-4' severity='warning' title='L’email d’accès n’a pas pu être envoyé.'
         description='Le préleveur et le point sont bien enregistrés. Un administrateur peut renvoyer l’email d’accès.' />}
-      {created.notification.status === 'pending' && <Alert className='mt-4' severity='info' title='L’envoi de l’email d’accès n’est pas encore confirmé.'
+      {created.notification?.status === 'pending' && <Alert className='mt-4' severity='info' title='L’envoi de l’email d’accès n’est pas encore confirmé.'
         description='Le point est bien enregistré. Ne recréez pas la demande.' />}
-      <Button className='mt-5' linkProps={{href: `/points-prelevement/${created.point.id}`}}>Voir le point</Button>
+      <div className='mt-5 flex flex-wrap gap-3'>
+        <Button priority='secondary' linkProps={{href: `/points-prelevement/${created.point.id}`}}>Voir le point</Button>
+        {created.campaignParticipation && <Button linkProps={{href: `/campagnes/${created.campaignParticipation.campaignId}/reponses/${created.campaignParticipation.responseId}`}}>
+          Ouvrir le formulaire
+        </Button>}
+      </div>
+      {!created.campaignParticipation && <p className='mt-4'>Aucun formulaire de campagne n’a été ajouté. Vous pourrez le faire depuis la fiche du point ou de l’exploitation.</p>}
     </div>
   }
 
   return <div className='fr-container mb-8'>
-    <h1 className='fr-h3'>Ajouter un point</h1>
-    <p className='fr-text--sm' style={{color: 'var(--text-mention-grey)'}}>
+    <h1 className='fr-h3'>{existingPoint ? `Ajouter une exploitation — ${existingPoint.usageName || existingPoint.name}` : 'Ajouter un point'}</h1>
+    {!existingPoint && <p className='fr-text--sm' style={{color: 'var(--text-mention-grey)'}}>
       Zones autorisées : {zones.map(zone => zone.name).join(', ')}.
-    </p>
-    <fieldset disabled={!hydrated || pending} className='m-0 min-w-0 border-0 p-0 flex flex-col gap-5' aria-busy={!hydrated || pending}>
+    </p>}
+    <fieldset disabled={!hydrated || pending || mustRetry} className='m-0 min-w-0 border-0 p-0 flex flex-col gap-5' aria-busy={!hydrated || pending}>
       <legend className='sr-only'>Création d’un point et de son exploitation</legend>
       <CreationSection number={1} title='Préleveur'>
         <SegmentedControl legend='Associer le point à' segments={[
@@ -138,14 +148,14 @@ export default function CollectorPointCreationForm({preleveurs, accessiblePoints
             onChange={event => setNotifyAccountCreation(event.target.checked)} />} />
         </div>}
       </CreationSection>
-      <CreationSection number={2} title='Point'>
+      {!existingPoint && <CreationSection number={2} title='Point'>
         <PointForm point={point} setPoint={setPoint} editableFields={COLLECTOR_POINT_CREATION_FIELDS}
           handleSetGeom={coordinates => setPoint(previous => ({...previous, coordinates}))} />
         {similarPoints.length > 0 && <Alert small severity='info' title='Un point du même nom existe déjà dans vos données.' description={<ul>
           {similarPoints.map(item => <li key={item.id}><Link href={`/points-prelevement/${item.id}`} target='_blank' rel='noopener noreferrer'>{item.usageName || item.name}</Link></li>)}
         </ul>} />}
-      </CreationSection>
-      <CreationSection number={3} title='Exploitation'>
+      </CreationSection>}
+      <CreationSection number={existingPoint ? 2 : 3} title='Exploitation'>
         <CountingCodeField label='Code comptage Agence de l’eau' value={exploitation.countingCode}
           onChange={countingCode => setExploitation(previous => ({...previous, countingCode}))} />
         <WaterUseSelect value={exploitation.usageId} secondaryValues={exploitation.secondaryUsageIds}
@@ -153,19 +163,26 @@ export default function CollectorPointCreationForm({preleveurs, accessiblePoints
           onSecondaryChange={secondaryUsageIds => setExploitation(previous => ({...previous, secondaryUsageIds}))} />
         <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-5'>
           <Input label='Début d’activité' hintText='Facultatif' nativeInputProps={{type: 'date', value: exploitation.startDate,
-            max: new Date().toISOString().slice(0, 10), onChange: event => setExploitation(previous => ({...previous, startDate: event.target.value}))}} />
+            max: collectorToday(), onChange: event => setExploitation(previous => ({...previous, startDate: event.target.value}))}} />
           <Input label='Fin d’activité' hintText='À laisser vide si l’exploitation se poursuit' nativeInputProps={{type: 'date', value: exploitation.endDate,
-            min: getMinimumEndDate(), onChange: event => setExploitation(previous => ({...previous, endDate: event.target.value}))}} />
+            min: collectorToday(), onChange: event => setExploitation(previous => ({...previous, endDate: event.target.value}))}} />
         </div>
         <CollectorMeterFields meters={exploitation.meters} canAddMeter
           onChange={meters => setExploitation(previous => ({...previous, meters}))} />
       </CreationSection>
-      {error && <Alert severity='error' title={error} description={validationErrors.length > 0 ? <ul>
-        {validationErrors.map((item, index) => <li key={`${item.path}-${index}`}>{item.message}</li>)}
-      </ul> : undefined} />}
-      <div className='flex justify-end'>
-        <Button disabled={!canSubmit || pending} onClick={handleSubmit}>{pending ? 'Enregistrement…' : 'Créer le point et son exploitation'}</Button>
-      </div>
+      <CreationSection number={existingPoint ? 3 : 4} title='Campagne'>
+        <CollectorCampaignChoice result={campaignsResult} checked={includeCampaign} campaignId={campaignId}
+          onCheckedChange={setIncludeCampaign} onCampaignChange={setSelectedCampaignId} />
+      </CreationSection>
     </fieldset>
+    {error && <Alert severity='error' title={error} description={validationErrors.length > 0 ? <ul>
+      {validationErrors.map((item, index) => <li key={`${item.path}-${index}`}>{item.message}</li>)}
+    </ul> : undefined} />}
+    {mustRetry && <p role='status' className='mt-4'>L’enregistrement n’est pas confirmé. La saisie est conservée et verrouillée pour renvoyer exactement la même demande sans doublon.</p>}
+    <div className='flex justify-end mt-5'>
+      <Button disabled={!hydrated || (!mustRetry && !canSubmit) || pending} onClick={handleSubmit}>
+        {pending ? 'Enregistrement…' : mustRetry ? 'Réessayer la même demande' : existingPoint ? 'Créer l’exploitation' : 'Créer le point et son exploitation'}
+      </Button>
+    </div>
   </div>
 }

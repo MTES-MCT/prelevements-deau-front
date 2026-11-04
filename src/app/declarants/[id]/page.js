@@ -10,6 +10,8 @@ import PreleveurMap from '@/components/declarants/preleveur-map.js'
 import DocumentsList from '@/components/documents/documents-list.js'
 import CollecteurExploitationsList from '@/components/exploitations/collecteur-exploitations-list.js'
 import ExploitationsList from '@/components/exploitations/exploitations-list.js'
+import CollectorManagementUnavailable from '@/components/collectors/management-unavailable.js'
+import CollectorCampaignParticipationLoader from '@/components/collectors/campaign-participation-loader.js'
 import SeriesExplorer from '@/components/points-prelevement/series-explorer.js'
 import ReglesListCard from '@/components/regles/regles-list-card.js'
 import CopyableEmail from '@/components/ui/CopyableEmail/index.js'
@@ -246,6 +248,7 @@ const DeclarantSeries = async ({seriesPromise, seriesScope}) => {
 
 const DeclarantExploitations = async ({
   canCreate,
+  canManageCampaign,
   declarantId,
   isCollecteur,
   pointDataPromise
@@ -257,11 +260,15 @@ const DeclarantExploitations = async ({
   }
 
   return (
-    <ExploitationsList
-      hidePreleveur
-      exploitations={exploitations}
-      createHref={canCreate ? getExploitationCreateHref(false, declarantId) : undefined}
-    />
+    <>
+      <ExploitationsList
+        hidePreleveur
+        canCreate={canCreate}
+        exploitations={exploitations}
+        createHref={canCreate ? getExploitationCreateHref(false, declarantId) : undefined}
+      />
+      {canManageCampaign && <CollectorCampaignParticipationLoader exploitations={exploitations} />}
+    </>
   )
 }
 
@@ -352,6 +359,7 @@ const Page = async ({params}) => {
   const collectorManagement = !isCollecteur && currentUserResult?.data?.declarantRole === 'COLLECTEUR'
     ? await getMyCollectorPointManagementAction()
     : null
+  const canCreateForPreleveur = collectorManagement?.data?.enabled === true && declarant.right?.canEditContactDetails === true
   const preleveurTypeLabel = getPreleveurTypeLabel(getPreleveurType(declarant))
   const exploitations = getDeclarantDetailExploitations(declarant)
   const pointIds = getExploitationPointIds(exploitations)
@@ -408,11 +416,17 @@ const Page = async ({params}) => {
         ].filter(Boolean)}
         hrefButtons={[
           {
+            label: 'Modifier les coordonnées',
+            icon: 'fr-icon-edit-line',
+            href: `/preleveurs/${declarantId}/coordonnees`,
+            hidden: !declarant.right?.canEditContactDetails
+          },
+          {
             label: 'Ajouter un point',
             icon: 'fr-icon-add-line',
             priority: 'secondary',
             href: `/points-prelevement/new?preleveurId=${declarantId}`,
-            hidden: collectorManagement?.data?.enabled !== true
+            hidden: !canCreateForPreleveur
           },
           {
             label: 'Gérer les exploitations',
@@ -454,6 +468,8 @@ const Page = async ({params}) => {
         ].filter(Boolean)}
       />
 
+      <CollectorManagementUnavailable result={collectorManagement} />
+
       {(hasInfoCard || mayHaveMap) && (
         <div className={overviewClassName}>
           {hasInfoCard && <InfoCard declarant={declarant} />}
@@ -478,7 +494,8 @@ const Page = async ({params}) => {
       {canReadExploitations && (
         <Suspense fallback={<SectionLoading label='Chargement des exploitations…' />}>
           <DeclarantExploitations
-            canCreate={can('exploitation.create')}
+            canCreate={can('exploitation.create') || canCreateForPreleveur}
+            canManageCampaign={collectorManagement?.data?.enabled === true}
             declarantId={declarantId}
             isCollecteur={isCollecteur}
             pointDataPromise={pointDataPromise}

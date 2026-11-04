@@ -1,7 +1,9 @@
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
+import {Button} from '@codegouvfr/react-dsfr/Button'
 import {redirect} from 'next/navigation'
 
 import DeclarantsList from '@/components/declarants/declarants-list.js'
+import CollectorManagementUnavailable from '@/components/collectors/management-unavailable.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {
   buildDeclarantsPathname,
@@ -11,6 +13,7 @@ import {
   readDeclarantsSearchOptions
 } from '@/lib/declarant-search.js'
 import {searchCollecteurPreleveursAction} from '@/server/actions/declarants.js'
+import {getMyCollectorPointManagementAction} from '@/server/actions/collector-points.js'
 
 export const metadata = {
   title: 'Préleveurs'
@@ -41,7 +44,7 @@ const Page = async ({searchParams}) => {
     role: null,
     collecteurStatus: null
   }
-  const result = await searchCollecteurPreleveursAction(options)
+  const [result, management] = await Promise.all([searchCollecteurPreleveursAction(options), getMyCollectorPointManagementAction()])
   const hasSearchError = !result.success || !isDeclarantsSearchResult(result.data)
   const searchResult = hasSearchError ? null : result.data
 
@@ -65,6 +68,9 @@ const Page = async ({searchParams}) => {
               Retrouvez les préleveurs dont votre compte collecteur suit au moins un point.
             </p>
           </div>
+          <CollectorManagementUnavailable result={management} />
+          {management?.data?.enabled && <Button className='mb-6' priority='secondary' iconId='fr-icon-add-line'
+            linkProps={{href: '/points-prelevement/new?mode=new'}}>Ajouter un préleveur et son premier point</Button>}
 
           {hasSearchError
             ? (
