@@ -255,12 +255,21 @@ const HeaderComponent = () => {
       })
     }
 
-    if (user.preleveurProfiles?.selectionRequired || user.preleveurProfiles?.canSwitch === true) {
+    if (pathname !== '/choisir-preleveur' && (user.preleveurProfiles?.selectionRequired || user.preleveurProfiles?.canSwitch === true)) {
       items.push({
         iconId: 'ri-user-shared-line',
         text: user.preleveurProfiles.selectionRequired ? 'Choisir un préleveur' : 'Changer de préleveur',
         linkProps: {href: '/choisir-preleveur'}
       })
+    }
+
+    if (!canManageAccount) {
+      items.push({
+        iconId: 'ri-logout-box-r-line',
+        text: 'Se déconnecter',
+        buttonProps: {onClick: handleLogout}
+      })
+      return items
     }
 
     items.push(
@@ -269,13 +278,13 @@ const HeaderComponent = () => {
         active={pathname.startsWith('/mon-compte')}
         iconClassName='ri-account-circle-fill'
         items={[
-          ...(canManageAccount ? [{
+          {
             key: 'account',
             label: 'Mon compte',
             href: '/mon-compte',
             iconClassName: 'ri-account-circle-line',
             active: pathname.startsWith('/mon-compte')
-          }] : []),
+          },
           {
             key: 'logout',
             label: 'Se déconnecter',
@@ -283,7 +292,7 @@ const HeaderComponent = () => {
             onSelect: handleLogout
           }
         ]}
-        label={canManageAccount ? 'Mon compte' : 'Connexion'}
+        label='Mon compte'
       />
     )
 

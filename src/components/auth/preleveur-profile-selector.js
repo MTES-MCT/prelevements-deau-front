@@ -65,7 +65,7 @@ export default function PreleveurProfileSelector({preleveurs, currentPreleveurId
       {error && <Alert className='fr-mb-3w' severity='error' title='Sélection impossible' description={error} />}
       {reconnect ? <Button linkProps={{href: '/login'}}>Se reconnecter</Button> : (
         <div className='flex flex-wrap gap-3'>
-          <Button disabled={pending || !selectedId} type='submit'>{pending ? 'Ouverture en cours…' : 'Continuer avec ce préleveur'}</Button>
+          <Button disabled={pending || !selectedId} type='submit'>{pending ? 'Ouverture en cours…' : 'Continuer'}</Button>
           {!selectionRequired && <Button priority='secondary' disabled={pending} linkProps={{href: '/'}}>Annuler</Button>}
         </div>
       )}

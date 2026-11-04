@@ -4,7 +4,8 @@ import {
   createContext,
   useContext,
   useMemo,
-  useCallback
+  useCallback,
+  useState
 } from 'react'
 
 import {useSession, signIn, signOut} from 'next-auth/react'
@@ -20,6 +21,7 @@ const AuthContext = createContext({
   user: null,
   isAuthenticated: false,
   isLoading: true,
+  isLoggingOut: false,
   async login() {},
   async loginWithPassword() {},
   async logout() {},
@@ -31,6 +33,7 @@ const AuthContext = createContext({
 
 export const AuthProvider = ({children}) => {
   const {data: session, status, update} = useSession()
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const user = useMemo(() => {
     if (!session?.user) {
@@ -92,6 +95,7 @@ export const AuthProvider = ({children}) => {
   }, [])
 
   const logout = useCallback(async () => {
+    setIsLoggingOut(true)
     if (session?.user?.token) {
       try {
         await logoutAction()
@@ -100,8 +104,13 @@ export const AuthProvider = ({children}) => {
       }
     }
 
-    await signOut({redirect: false, callbackUrl: '/login'})
-    window.location.assign('/login')
+    try {
+      await signOut({redirect: false, callbackUrl: '/login'})
+      window.location.assign('/login')
+    } catch (error) {
+      setIsLoggingOut(false)
+      throw error
+    }
   }, [session])
 
   const refreshUser = useCallback(async () => {
@@ -159,6 +168,7 @@ export const AuthProvider = ({children}) => {
       user,
       isAuthenticated: Boolean(session?.user),
       isLoading: status === 'loading',
+      isLoggingOut,
       login,
       loginWithPassword,
       logout,
@@ -167,7 +177,7 @@ export const AuthProvider = ({children}) => {
       startImpersonation,
       stopImpersonation
     }),
-    [user, session, status, login, loginWithPassword, logout, refreshUser, selectPreleveurProfile, startImpersonation, stopImpersonation]
+    [user, session, status, isLoggingOut, login, loginWithPassword, logout, refreshUser, selectPreleveurProfile, startImpersonation, stopImpersonation]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
