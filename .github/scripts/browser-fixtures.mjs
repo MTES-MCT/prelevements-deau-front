@@ -19,6 +19,7 @@ import {isDeclarationProcessingFixture, handleDeclarationProcessingFixture} from
 
 import {isDeclarationFeedFixture, handleDeclarationFeedFixture} from './declaration-feed-fixtures.mjs'
 import {isNativeDeclarationFixture, handleNativeDeclarationFixture} from './native-declaration-fixtures.mjs'
+import {handlePreleveurProfilesFixture} from './preleveur-profiles-fixtures.mjs'
 
 // Synthetic backend: deliberately no database, outbound HTTP, mail or jobs.
 const zoneId = '11111111-1111-4111-8111-111111111111'
@@ -54,6 +55,8 @@ const api = createServer(async (request, response) => {
   if (pathname === '/auth/request' && request.method === 'POST') {
     return send(200, {success: true})
   }
+
+  if (await handlePreleveurProfilesFixture(request, send)) return
 
   if (pathname === '/__public-stats-fixture-requests' && request.method === 'GET') {
     const month = new URL(request.url, 'http://127.0.0.1:3431').searchParams.get('month')

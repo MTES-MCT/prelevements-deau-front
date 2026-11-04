@@ -11,6 +11,7 @@ import {useSession, signIn, signOut} from 'next-auth/react'
 
 import {
   logoutAction,
+  selectPreleveurProfileAction,
   startImpersonationAction,
   stopImpersonationAction
 } from '@/server/actions/auth.js'
@@ -23,6 +24,7 @@ const AuthContext = createContext({
   async loginWithPassword() {},
   async logout() {},
   async refreshUser() {},
+  async selectPreleveurProfile() {},
   async startImpersonation() {},
   async stopImpersonation() {}
 })
@@ -46,7 +48,8 @@ export const AuthProvider = ({children}) => {
       declarantRole: session.user.declarantRole || null,
       socialReason: session.user.socialReason || null,
       permissions: session.user.permissions || [],
-      impersonation: session.user.impersonation || null
+      impersonation: session.user.impersonation || null,
+      preleveurProfiles: session.user.preleveurProfiles || null
     }
   }, [session])
 
@@ -129,6 +132,28 @@ export const AuthProvider = ({children}) => {
     return result
   }, [update])
 
+  const selectPreleveurProfile = useCallback(async preleveurId => {
+    const result = await selectPreleveurProfileAction(preleveurId)
+    if (!result.success) return result
+    if (!result.data?.token) {
+      return {success: false, reconnect: true, error: 'La nouvelle session n’a pas pu être récupérée. Veuillez vous reconnecter.'}
+    }
+
+    // The API revoked the previous session. Install and verify the replacement
+    // before leaving the chooser; never navigate with the former identity.
+    try {
+      const nextSession = await update({token: result.data.token})
+      if (nextSession?.user?.token === result.data.token
+        && !nextSession.user.preleveurProfiles?.selectionRequired) {
+        return {success: true}
+      }
+    } catch {
+      // A failed cookie refresh requires a new login, not a second selection.
+    }
+
+    return {success: false, reconnect: true, error: 'Le préleveur a été sélectionné, mais votre session n’a pas pu être actualisée. Veuillez vous reconnecter.'}
+  }, [update])
+
   const value = useMemo(
     () => ({
       user,
@@ -138,10 +163,11 @@ export const AuthProvider = ({children}) => {
       loginWithPassword,
       logout,
       refreshUser,
+      selectPreleveurProfile,
       startImpersonation,
       stopImpersonation
     }),
-    [user, session, status, login, loginWithPassword, logout, refreshUser, startImpersonation, stopImpersonation]
+    [user, session, status, login, loginWithPassword, logout, refreshUser, selectPreleveurProfile, startImpersonation, stopImpersonation]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

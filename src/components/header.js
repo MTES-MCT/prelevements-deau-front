@@ -154,7 +154,7 @@ const HeaderComponent = () => {
   }, [logout])
 
   const navigation = useMemo(() => {
-    if (isLoadingUser) {
+    if (isLoadingUser || user?.preleveurProfiles?.selectionRequired) {
       return null
     }
 
@@ -218,13 +218,14 @@ const HeaderComponent = () => {
     }
 
     const items = []
+    const canManageAccount = !user.preleveurProfiles?.selectionRequired && user.preleveurProfiles?.canManageAccount !== false
     const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.socialReason
     const roleLabel = user.declarantRole
       ? DECLARANT_ROLE_LABELS[user.declarantRole]
       : (user.role ? ROLE_LABELS[user.role] : null)
     const roleColor = user.role ? ROLE_COLORS[user.role] : null
 
-    if (userName) {
+    if (userName && !user.preleveurProfiles?.selectionRequired) {
       items.push(
         <span key='user' className='fr-btn flex items-center gap-2' style={{cursor: 'default', pointerEvents: 'none'}}>
           {userName}
@@ -254,19 +255,27 @@ const HeaderComponent = () => {
       })
     }
 
+    if (user.preleveurProfiles?.selectionRequired || user.preleveurProfiles?.canSwitch === true) {
+      items.push({
+        iconId: 'ri-user-shared-line',
+        text: user.preleveurProfiles.selectionRequired ? 'Choisir un préleveur' : 'Changer de préleveur',
+        linkProps: {href: '/choisir-preleveur'}
+      })
+    }
+
     items.push(
       <HeaderDropdownMenu
         key='account'
         active={pathname.startsWith('/mon-compte')}
         iconClassName='ri-account-circle-fill'
         items={[
-          {
+          ...(canManageAccount ? [{
             key: 'account',
             label: 'Mon compte',
             href: '/mon-compte',
             iconClassName: 'ri-account-circle-line',
             active: pathname.startsWith('/mon-compte')
-          },
+          }] : []),
           {
             key: 'logout',
             label: 'Se déconnecter',
@@ -274,7 +283,7 @@ const HeaderComponent = () => {
             onSelect: handleLogout
           }
         ]}
-        label='Mon compte'
+        label={canManageAccount ? 'Mon compte' : 'Connexion'}
       />
     )
 

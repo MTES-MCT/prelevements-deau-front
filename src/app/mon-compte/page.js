@@ -23,7 +23,7 @@ const MonComptePage = async ({searchParams}) => {
     return (
       <>
         <StartDsfrOnHydration />
-        <AccountUnavailable />
+        <AccountUnavailable requiresAccountSelection={account.requiresAccountSelection} canSwitchPreleveur={account.canSwitchPreleveur} />
       </>
     )
   }

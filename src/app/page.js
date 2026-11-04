@@ -10,6 +10,10 @@ const Home = async () => {
   const userResult = await getCurrentUser()
   const role = userResult?.data?.role
 
+  if (userResult?.data?.preleveurProfiles?.selectionRequired) {
+    redirect('/choisir-preleveur')
+  }
+
   if (role === 'ADMIN') {
     redirect('/administration')
   }

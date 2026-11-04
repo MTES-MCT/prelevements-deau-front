@@ -16,7 +16,7 @@ const AccountEmailAddressesPage = async () => {
     return (
       <>
         <StartDsfrOnHydration />
-        <AccountUnavailable />
+        <AccountUnavailable requiresAccountSelection={account.requiresAccountSelection} canSwitchPreleveur={account.canSwitchPreleveur} />
       </>
     )
   }

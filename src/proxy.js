@@ -1,8 +1,17 @@
 import {withAuth} from 'next-auth/middleware'
+import {NextResponse} from 'next/server'
 
+import {getPreleveurSelectionRedirect} from './lib/preleveur-profiles.js'
 import {isMiddlewarePublicPath} from './lib/public-paths.js'
 
-export default withAuth({
+export default withAuth(function proxy(req) {
+  const destination = getPreleveurSelectionRedirect(req.nextUrl.pathname, req.nextauth.token?.preleveurProfiles)
+  if (destination) return NextResponse.redirect(new URL(destination, req.url))
+}, {
+  // Match auth.js explicitly; NEXTAUTH_URL can use HTTP behind the TLS proxy.
+  cookies: {
+    sessionToken: {name: `${process.env.NODE_ENV === 'production' ? '__Secure-' : ''}next-auth.session-token`}
+  },
   callbacks: {
     authorized({req, token}) {
       // These read routes authenticate the server session and return JSON 401.

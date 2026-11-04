@@ -144,16 +144,17 @@ const RootLayout = async ({children}) => {
                 <AppRouterCacheProvider>
                   <DsfrProvider>
                     <MuiDsfrThemeProvider>
-                      <AuthSessionGuard />
                       <UserActivityTracker />
                       <ImpersonationBanner />
                       <Header />
                       <MatomoTracker enabled={matomoConfig.enabled} />
                       <WebVitalsReporter enabled={matomoConfig.enabled} />
                       <CrispChat disabled={IS_CRISP_DISABLED} />
-                      <main role='main' id='content'>
-                        {children}
-                      </main>
+                      <AuthSessionGuard>
+                        <main role='main' id='content'>
+                          {children}
+                        </main>
+                      </AuthSessionGuard>
                       <Footer />
                     </MuiDsfrThemeProvider>
                   </DsfrProvider>

@@ -35,13 +35,20 @@ const AccountRouteLayout = ({
   </div>
 )
 
-export const AccountUnavailable = () => (
+export const AccountUnavailable = ({requiresAccountSelection = false, canSwitchPreleveur = false}) => (
   <AccountRouteLayout title='Mon compte'>
     <Alert
-      severity='error'
-      title='Compte indisponible'
-      description='Vos informations n’ont pas pu être chargées. Réessayez dans quelques instants.'
+      severity={requiresAccountSelection ? 'info' : 'error'}
+      title={requiresAccountSelection ? 'La gestion du compte n’est pas disponible pour ce préleveur' : 'Compte indisponible'}
+      description={requiresAccountSelection
+        ? undefined
+        : 'Vos informations n’ont pas pu être chargées. Réessayez dans quelques instants.'}
     />
+    {requiresAccountSelection && (
+      <Link className='fr-btn fr-mt-3w' href={canSwitchPreleveur ? '/choisir-preleveur' : '/tableau-de-bord'}>
+        {canSwitchPreleveur ? 'Choisir un préleveur' : 'Retour au tableau de bord'}
+      </Link>
+    )}
   </AccountRouteLayout>
 )
 

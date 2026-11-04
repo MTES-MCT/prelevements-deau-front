@@ -44,3 +44,14 @@ export async function stopImpersonationAction() {
     method: 'DELETE'
   }))
 }
+
+export async function getPreleveurProfilesAction() {
+  return withErrorHandling(async () => fetchJSON('auth/preleveurs'))
+}
+
+export async function selectPreleveurProfileAction(preleveurId) {
+  return withErrorHandling(async () => fetchJSON('auth/preleveurs/select', {
+    method: 'POST',
+    body: {preleveurId}
+  }), {forbiddenOnAccessDenied: false, redirectOnUnauthorized: false})
+}

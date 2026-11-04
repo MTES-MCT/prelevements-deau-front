@@ -18,7 +18,7 @@ const tracker = createUserActivityTracker({sendActivity: sendUserActivity})
 const UserActivityTracker = () => {
   const {user, isAuthenticated} = useAuth()
   const pathname = usePathname()
-  const actorId = isAuthenticated ? getActivityActorId(user) : null
+  const actorId = isAuthenticated && !user?.preleveurProfiles?.selectionRequired ? getActivityActorId(user) : null
 
   useEffect(() => {
     if (!shouldTrackUserActivity({actorId, pathname})) {

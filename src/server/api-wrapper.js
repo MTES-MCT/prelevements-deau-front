@@ -235,6 +235,10 @@ export async function withErrorHandling(fn, {
     const result = await fn()
     return successResult(result)
   } catch (error) {
+    if (error.code === 409 && error.data?.code === 'PRELEVEUR_SELECTION_REQUIRED') {
+      redirect('/choisir-preleveur')
+    }
+
     // Log server errors for debugging
     if (error.code >= 500) {
       console.error('[API] Server error:', {

@@ -3,6 +3,7 @@ import {randomUUID} from 'node:crypto'
 import {getServerSession} from 'next-auth'
 
 import {AUTH_METHODS} from '@/lib/auth-methods.js'
+import {compactPreleveurProfiles} from '@/lib/preleveur-profiles.js'
 import {getSignedAuditContextHeaders} from '@/server/audit-context.js'
 import {getAuthConfig} from '@/server/auth-config.js'
 import {cachePerRequest} from '@/server/request-cache.js'
@@ -43,6 +44,7 @@ const SESSION_CALLBACKS = {
     // header limits. Zone-scoped rights are returned by the relevant API routes.
     delete token.zoneAssignments
     token.userInfo = compactSessionUserInfo(token.userInfo)
+    token.preleveurProfiles = compactPreleveurProfiles(token.preleveurProfiles)
 
     if (user) {
       token.token = user.token
@@ -51,6 +53,7 @@ const SESSION_CALLBACKS = {
       token.userInfo = compactSessionUserInfo(user.userInfo)
       token.permissions = user.permissions || []
       token.impersonation = user.impersonation || null
+      token.preleveurProfiles = compactPreleveurProfiles(user.preleveurProfiles)
       token.infoRefreshedAt = Date.now()
     }
 
@@ -69,6 +72,7 @@ const SESSION_CALLBACKS = {
       token.userInfo = compactSessionUserInfo(info.user)
       token.permissions = info.permissions || []
       token.impersonation = info.impersonation || null
+      token.preleveurProfiles = compactPreleveurProfiles(info.preleveurProfiles)
       token.infoRefreshedAt = Date.now()
     }
 
@@ -81,6 +85,7 @@ const SESSION_CALLBACKS = {
     session.user.role = token.role
     session.user.permissions = token.permissions || []
     session.user.impersonation = token.impersonation || null
+    session.user.preleveurProfiles = compactPreleveurProfiles(token.preleveurProfiles)
     if (token.apiExpiresAt) {
       session.expires = token.apiExpiresAt
     }
@@ -194,7 +199,8 @@ async function buildSessionUser(token) {
     role: info.role,
     userInfo: info.user || null,
     permissions: info.permissions || [],
-    impersonation: info.impersonation || null
+    impersonation: info.impersonation || null,
+    preleveurProfiles: compactPreleveurProfiles(info.preleveurProfiles)
   }
 }
 

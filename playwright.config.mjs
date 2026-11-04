@@ -2,6 +2,7 @@ import {defineConfig, devices} from '@playwright/test'
 
 const frontUrl = 'http://127.0.0.1:3417'
 const browserTests = [
+  'preleveur-profiles.spec.js',
   'exploitation-usages.spec.js',
   'collector-points.spec.js',
   'map-point-navigation.spec.js',

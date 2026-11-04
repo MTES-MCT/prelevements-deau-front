@@ -15,8 +15,13 @@ export async function getAccountPageData({callbackUrl = '/mon-compte'} = {}) {
     redirect(`/login?${parameters}`)
   }
 
+  if (result?.data?.preleveurProfiles?.selectionRequired) redirect('/choisir-preleveur')
+  const requiresAccountSelection = result?.data?.preleveurProfiles?.canManageAccount === false
+
   return {
-    available: Boolean(result?.success && user && role),
+    available: Boolean(result?.success && user && role && !requiresAccountSelection),
+    requiresAccountSelection,
+    canSwitchPreleveur: result?.data?.preleveurProfiles?.canSwitch === true,
     isImpersonating: Boolean(result?.data?.impersonation?.active),
     role,
     user
