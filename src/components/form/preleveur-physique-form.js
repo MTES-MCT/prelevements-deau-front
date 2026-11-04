@@ -13,6 +13,7 @@ import OptionalPreleveurFieldsForm from './optional-preleveur-fields-form.js'
 
 const PreleveurPhysiqueForm = ({
   emailRequired = false,
+  simpleEmail = false,
   preleveur,
   showCopyEmail = false,
   setPreleveur
@@ -65,11 +66,13 @@ const PreleveurPhysiqueForm = ({
       <div className='group'>
         <Input
           action={showCopyEmail ? <CopyEmailButton revealOnHover email={preleveur?.email} /> : undefined}
-          hintText={emailRequired ? 'Obligatoire pour permettre la connexion ou l’envoi de notification.' : 'Facultative pour un préleveur non déclarant.'}
-          label={`Adresse e-mail de connexion${emailRequired ? ' *' : ''}`}
+          hintText={simpleEmail ? (emailRequired ? 'Obligatoire.' : 'Facultative.')
+            : emailRequired ? 'Obligatoire pour permettre la connexion ou l’envoi de notification.' : 'Facultative pour un préleveur non déclarant.'}
+          label={`${simpleEmail ? 'Adresse email' : 'Adresse e-mail de connexion'}${emailRequired ? ' *' : ''}`}
           nativeInputProps={{
+            ...(simpleEmail ? {type: 'email', autoComplete: 'email'} : {}),
             defaultValue: preleveur?.email || '',
-            placeholder: 'Entrez l’adresse e-mail de connexion',
+            placeholder: simpleEmail ? 'nom@exemple.fr' : 'Entrez l’adresse e-mail de connexion',
             onChange: e => setPreleveur(prev => ({...prev, email: e.target.value}))
           }}
         />

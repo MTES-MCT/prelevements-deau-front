@@ -62,15 +62,17 @@ const Page = async ({searchParams}) => {
 
       <main className='min-h-screen bg-[#f7f7fb] pb-12'>
         <div className='fr-container pt-8 md:pt-10'>
-          <div className='mb-6'>
-            <h1 className='fr-h2 fr-mb-1w'>Préleveurs</h1>
-            <p className='fr-text--sm fr-mb-0 max-w-3xl'>
-              Retrouvez les préleveurs dont votre compte collecteur suit au moins un point.
-            </p>
+          <div className='mb-6 flex flex-wrap items-start justify-between gap-4'>
+            <div>
+              <h1 className='fr-h2 fr-mb-1w'>Préleveurs</h1>
+              <p className='fr-text--sm fr-mb-0 max-w-3xl'>
+                Retrouvez les préleveurs dont vous suivez les points de prélèvement.
+              </p>
+            </div>
+            {management?.data?.enabled && <Button iconId='fr-icon-add-line'
+              linkProps={{href: '/points-prelevement/new?mode=new'}}>Ajouter un préleveur</Button>}
           </div>
           <CollectorManagementUnavailable result={management} />
-          {management?.data?.enabled && <Button className='mb-6' priority='secondary' iconId='fr-icon-add-line'
-            linkProps={{href: '/points-prelevement/new?mode=new'}}>Ajouter un préleveur et son premier point</Button>}
 
           {hasSearchError
             ? (

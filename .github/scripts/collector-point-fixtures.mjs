@@ -76,7 +76,7 @@ export async function handleCollectorPointFixture(request, send) {
     declarant: {...exploitation.preleveur, declarantRole: 'PRELEVEUR'}, pointPrelevement: state.point,
     right: {canRead: true, canEdit: false, canEditCollectorDetails: enabled, permissions: []}})
   state.contactDetails ??= {phoneNumber: '0600000000', addressLine1: '1 rue du Test', addressLine2: null, poBox: null,
-    postalCode: '33000', city: 'Bordeaux', contactEmails: [{email: 'contact@example.test', isPrimary: true}]}
+    postalCode: '33000', city: 'Bordeaux', email: 'contact@example.test'}
   state.participations ??= {}
   state.campaignOptionReads ??= []
   const campaigns = [{id: collectorPointIds.campaign, name: 'Volumes 2026', eligible: enabled},
@@ -123,7 +123,8 @@ export async function handleCollectorPointFixture(request, send) {
     else if (request.method === 'PATCH') {
       const body = await readBody()
       state.writes.push({path: pathname, method: 'PATCH', body})
-      if (auth.includes('-conflict-')) send(409, {message: 'Les coordonnées ont été modifiées. Rechargez la fiche.'})
+      if (auth.includes('-conflict-')) send(409, {message: 'Les informations ont été modifiées. Rechargez la fiche.', code: 'COLLECTOR_RESOURCE_CHANGED'})
+      else if (auth.includes('-email-refused-')) send(409, {message: 'Cette adresse email ne peut pas être utilisée pour ce préleveur.'})
       else {
         state.contactDetails = {...state.contactDetails, ...body.details}
         send(200, {preleveurId: collectorPointIds.preleveur, details: state.contactDetails, version: 'contacts-2', capabilities: {canEdit: true}})
@@ -172,8 +173,10 @@ export async function handleCollectorPointFixture(request, send) {
     else if (auth.includes('-campaign-closed-') && body.campaignId) send(409, {message: 'Cette campagne est fermée. Choisissez une autre campagne ou décochez son ajout.'})
     else {
       state.point = {...state.point, ...body.point, id: body.point ? collectorPointIds.created : collectorPointIds.point}
+      const notificationStatus = !body.notifyAccountCreation ? 'not_requested'
+        : auth.includes('-shared-email-') ? 'already_registered' : 'failed'
       const result = {point: state.point, preleveurId: body.preleveurId ?? collectorPointIds.preleveur,
-        exploitationId: collectorPointIds.firstExploitation, replayed: false, notification: {status: body.notifyAccountCreation ? 'failed' : 'not_requested'},
+        exploitationId: collectorPointIds.firstExploitation, replayed: false, notification: {status: notificationStatus},
         ...(body.campaignId ? {campaignParticipation: {campaignId: body.campaignId, responseId: collectorPointIds.response, created: true}} : {})}
       if (auth.includes('-retry-') && !state.uncertainCreation) {
         state.uncertainCreation = result

@@ -14,6 +14,7 @@ import {CopyEmailButton} from '@/components/ui/CopyableEmail/index.js'
 
 const PreleveurMoralForm = ({
   emailRequired = false,
+  simpleEmail = false,
   preleveur,
   showCopyEmail = false,
   setPreleveur
@@ -114,10 +115,12 @@ const PreleveurMoralForm = ({
       <div className='group'>
         <Input
           action={showCopyEmail ? <CopyEmailButton revealOnHover email={preleveur?.email} /> : undefined}
-          hintText={emailRequired ? 'Obligatoire pour permettre la connexion ou l’envoi de notification.' : 'Facultative pour un préleveur non déclarant.'}
-          label={`Adresse e-mail de connexion${emailRequired ? ' *' : ''}`}
+          hintText={simpleEmail ? (emailRequired ? 'Obligatoire.' : 'Facultative.')
+            : emailRequired ? 'Obligatoire pour permettre la connexion ou l’envoi de notification.' : 'Facultative pour un préleveur non déclarant.'}
+          label={`${simpleEmail ? 'Adresse email' : 'Adresse e-mail de connexion'}${emailRequired ? ' *' : ''}`}
           nativeInputProps={{
-            placeholder: 'Entrer l’adresse e-mail de connexion',
+            ...(simpleEmail ? {type: 'email', autoComplete: 'email'} : {}),
+            placeholder: simpleEmail ? 'nom@exemple.fr' : 'Entrer l’adresse e-mail de connexion',
             value: preleveur?.email || '',
             onChange: e => setPreleveur(prev => ({...prev, email: e.target.value}))
           }}

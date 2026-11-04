@@ -6,9 +6,9 @@ import {Checkbox, FormControlLabel} from '@mui/material'
 
 export default function CollectorCampaignChoice({result, checked, campaignId, onCheckedChange, onCampaignChange}) {
   if (!result?.success) return <Alert small severity='warning' title='Les campagnes ne peuvent pas être chargées.'
-    description='Vous pouvez enregistrer la fiche puis ajouter son exploitation à une campagne depuis sa fiche.' />
+    description='Vous pouvez enregistrer les informations sans les ajouter à une campagne.' />
   const campaigns = (result.data?.campaigns ?? []).filter(item => item.eligible)
-  if (!campaigns.length) return <p className='fr-text--sm'>Aucune campagne ouverte disponible. La fiche sera enregistrée sans formulaire de campagne.</p>
+  if (!campaigns.length) return <p className='fr-text--sm'>Aucune campagne ouverte pour le moment.</p>
   return <div>
     <FormControlLabel label={campaigns.length === 1
       ? `Ajouter cette exploitation à la campagne « ${campaigns[0].name} »`
@@ -17,6 +17,6 @@ export default function CollectorCampaignChoice({result, checked, campaignId, on
     {checked && campaigns.length > 1 && <Select label='Campagne' placeholder='Choisir une campagne'
       options={campaigns.map(item => ({value: item.id, label: item.name}))}
       nativeSelectProps={{value: campaignId, onChange: event => onCampaignChange(event.target.value)}} />}
-    <p className='fr-text--sm'>Cette option crée un formulaire à compléter. Elle n’envoie pas la déclaration.</p>
+    <p className='fr-text--sm'>Vous pourrez ensuite compléter la déclaration pour cette campagne.</p>
   </div>
 }

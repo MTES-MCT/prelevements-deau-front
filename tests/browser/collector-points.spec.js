@@ -55,13 +55,16 @@ async function chooseCollectorUsage(page) {
   await page.getByRole('option', {name: '2A — Aspersion — 2 — Irrigation', exact: true}).click()
 }
 
-test('préleveurs : nouveau préleveur présélectionné et création sur un point existant depuis la fiche', async ({page, context}) => {
+test('préleveurs : nouveau préleveur présélectionné et création sur un point existant depuis la fiche', async ({page, context}, testInfo) => {
   const token = await authenticate(context, 'multi')
   await page.goto(`${frontUrl}/preleveurs`)
-  await page.getByRole('link', {name: 'Ajouter un préleveur et son premier point', exact: true}).click()
+  await assertNoHorizontalOverflow(page)
+  await page.screenshot({path: testInfo.outputPath('preleveur-list.png'), fullPage: true})
+  await page.getByRole('link', {name: 'Ajouter un préleveur', exact: true}).click()
   await expect(page.getByLabel('Un nouveau préleveur', {exact: true})).toBeChecked()
+  await expect(page.getByRole('heading', {name: 'Ajouter un préleveur', exact: true})).toBeVisible()
   await page.goto(`${frontUrl}/preleveurs/${ids.preleveur}`)
-  await expect(page.getByRole('link', {name: 'Modifier les coordonnées', exact: true})).toBeVisible()
+  await expect(page.getByRole('link', {name: 'Modifier le préleveur', exact: true})).toBeVisible()
   await assertNoHorizontalOverflow(page)
   await page.getByRole('link', {name: 'Ajouter une exploitation', exact: true}).click()
   await page.getByLabel('Point de prélèvement', {exact: true}).selectOption(ids.point)
@@ -128,20 +131,19 @@ test('campagne fermée après chargement : saisie conservée et création possib
   expect(requests[1].body.requestId).not.toBe(requests[0].body.requestId)
 })
 
-test('exploitation : navigation, édition encadrée et rattrapage du formulaire', async ({page, context}) => {
+test('exploitation : navigation et édition sans section formulaires', async ({page, context}) => {
   const token = await authenticate(context, 'multi')
   await page.goto(`${frontUrl}/exploitations/${ids.firstExploitation}`)
   await expect(page.locator(`a[href="/points-prelevement/${ids.point}"]`).first()).toBeVisible()
   await expect(page.locator(`a[href="/preleveurs/${ids.preleveur}"]`).first()).toBeVisible()
-  await page.getByRole('button', {name: 'Ajouter à la campagne', exact: true}).click()
-  await expect(page.getByRole('link', {name: 'Voir le formulaire — Volumes 2026', exact: true})).toHaveAttribute('href', `/campagnes/${ids.campaign}/reponses/${ids.response}`)
+  await expect(page.getByRole('region', {name: /Formulaires/})).toHaveCount(0)
   await page.getByRole('link', {name: 'Modifier l\'exploitation', exact: true}).click()
   await expect(page.getByLabel(/^Numéro de série du compteur 2/)).toHaveAttribute('readonly', '')
   await page.getByLabel(/^Fin d’activité/).fill('2026-12-31')
   await page.getByLabel(/^Code comptage Agence de l’eau/).fill('000CORRIGE')
   await page.getByRole('button', {name: 'Enregistrer les modifications', exact: true}).click()
   await expect(page).toHaveURL(`${frontUrl}/exploitations/${ids.firstExploitation}`)
-  expect((await writes(context, token))[1].body).toEqual({version: 'exploitation-version', changes: {countingCode: '000CORRIGE', endDate: '2026-12-31'}})
+  expect((await writes(context, token))[0].body).toEqual({version: 'exploitation-version', changes: {countingCode: '000CORRIGE', endDate: '2026-12-31'}})
 })
 
 test('clôture bloquée : ouvrir le formulaire en cours sans perdre les dates saisies', async ({page, context}) => {
@@ -154,50 +156,53 @@ test('clôture bloquée : ouvrir le formulaire en cours sans perdre les dates sa
   await expect(page.getByLabel(/^Fin d’activité/)).toHaveValue('2026-10-31')
 })
 
-test('coordonnées : téléphone et emails de contact, sans modifier le compte de connexion', async ({page, context}) => {
+test('préleveur : une seule adresse email et enregistrement des informations', async ({page, context}) => {
   const token = await authenticate(context)
   await page.goto(`${frontUrl}/preleveurs/${ids.preleveur}/coordonnees`)
-  await expect(page.getByText(/Son adresse de connexion reste inchangée/)).toBeVisible()
+  await expect(page.getByRole('heading', {name: 'Modifier le préleveur', exact: true})).toBeVisible()
+  await expect(page.locator('input[type=email]')).toHaveCount(1)
   await page.getByLabel('Téléphone', {exact: true}).fill('0612345678')
-  await page.getByLabel('Email de contact 1', {exact: true}).fill('nouveau@example.test')
-  await page.getByRole('button', {name: 'Enregistrer les coordonnées', exact: true}).click()
-  await expect(page.getByText('Les coordonnées ont été mises à jour.', {exact: true})).toBeVisible()
+  await page.getByLabel('Adresse email', {exact: true}).fill('nouveau@example.test')
+  await page.getByRole('button', {name: 'Enregistrer les modifications', exact: true}).click()
+  await expect(page.getByText('Les informations du préleveur ont été mises à jour.', {exact: true})).toBeVisible()
   const request = (await writes(context, token))[0]
   expect(request.body.version).toBe('contacts-1')
-  expect(request.body.details).toMatchObject({phoneNumber: '0612345678', contactEmails: [{email: 'nouveau@example.test', isPrimary: true}]})
-  expect(request.body.details).not.toHaveProperty('email')
+  expect(request.body.details).toMatchObject({phoneNumber: '0612345678', email: 'nouveau@example.test'})
+  expect(request.body.details).not.toHaveProperty('contactEmails')
 })
 
 test('une erreur d’habilitation est visible et ne ressemble pas à une désactivation', async ({page, context}) => {
   const token = await authenticate(context, 'management-error')
   await page.goto(`${frontUrl}/preleveurs`)
   await expect(page.getByText('Vos autorisations de gestion ne peuvent pas être chargées.', {exact: true})).toBeVisible()
-  await expect(page.getByRole('link', {name: 'Ajouter un préleveur et son premier point', exact: true})).toHaveCount(0)
+  await expect(page.getByRole('link', {name: 'Ajouter un préleveur', exact: true})).toHaveCount(0)
   expect(await writes(context, token)).toEqual([])
 })
 
-test('plusieurs exploitations : campagnes chargées au clic et formulaire existant retrouvé sans écriture', async ({page, context}) => {
+test('fiches point et préleveur : aucune section formulaires ni lecture des campagnes', async ({page, context}) => {
   const token = await authenticate(context, 'multi-existing-response')
   const reads = async () => (await context.request.get('http://127.0.0.1:3431/api/__collector-campaign-option-reads', {
     headers: {authorization: `Bearer ${token}`}
   })).json()
   await page.goto(`${frontUrl}/points-prelevement/${ids.point}`)
-  const open = page.getByRole('button', {name: /Formulaires de campagne — Forage partagé — Ferme synthétique A/})
-  await expect(open).toBeVisible()
+  await expect(page.getByRole('heading', {name: 'Exploitations', exact: true})).toBeVisible()
+  await expect(page.getByRole('button', {name: /Formulaires/})).toHaveCount(0)
+  await expect(page.getByRole('region', {name: /Formulaires/})).toHaveCount(0)
+  await page.goto(`${frontUrl}/preleveurs/${ids.preleveur}`)
+  await expect(page.getByRole('link', {name: 'Modifier le préleveur', exact: true})).toBeVisible()
+  await expect(page.getByRole('button', {name: /Formulaires/})).toHaveCount(0)
+  await expect(page.getByRole('region', {name: /Formulaires/})).toHaveCount(0)
   expect(await reads()).toEqual([])
-  await open.click()
-  await expect(page.getByRole('link', {name: 'Voir le formulaire — Volumes 2026', exact: true})).toHaveAttribute('href', `/campagnes/${ids.campaign}/reponses/${ids.response}`)
-  expect(await reads()).toEqual([ids.firstExploitation])
   expect(await writes(context, token)).toEqual([])
 })
 
 test('préleveur suivi seulement historiquement : aucune création ou modification proposée', async ({page, context}) => {
   await authenticate(context, 'multi-historical-existing-response')
   await page.goto(`${frontUrl}/preleveurs/${ids.preleveur}`)
-  for (const name of ['Ajouter un point', 'Ajouter une exploitation', 'Modifier les coordonnées']) {
+  for (const name of ['Ajouter un point', 'Ajouter une exploitation', 'Modifier le préleveur']) {
     await expect(page.getByRole('link', {name, exact: true})).toHaveCount(0)
   }
-  await expect(page.getByRole('button', {name: /Formulaires de campagne/})).toHaveCount(2)
+  await expect(page.getByRole('button', {name: /Formulaires de campagne/})).toHaveCount(0)
 })
 
 test('fiche PP : un collecteur voit ses exploitations partagées même sans gestion des points', async ({page, context}) => {

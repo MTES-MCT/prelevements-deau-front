@@ -62,17 +62,6 @@ export async function getCollectorCampaignParticipationOptionsAction(exploitatio
   }, {forbiddenOnAccessDenied: false})
 }
 
-export async function createCollectorCampaignParticipationAction(campaignId, exploitationId) {
-  return withErrorHandling(async () => {
-    const result = await fetchJSON(`api/campaigns/${encodeURIComponent(campaignId)}/responses`, {
-      method: 'POST', body: {exploitationId}
-    })
-    revalidatePath(`/campagnes/${campaignId}`)
-    revalidatePath(`/exploitations/${exploitationId}`)
-    return result
-  }, {forbiddenOnAccessDenied: false})
-}
-
 export async function createCollectorExploitationAction(pointId, payload) {
   return withErrorHandling(async () => {
     const result = await fetchJSON(`api/collecteurs/me/points-prelevement/${pointId}/exploitations`, {method: 'POST', body: payload})

@@ -11,7 +11,6 @@ import DocumentsList from '@/components/documents/documents-list.js'
 import CollecteurExploitationsList from '@/components/exploitations/collecteur-exploitations-list.js'
 import ExploitationsList from '@/components/exploitations/exploitations-list.js'
 import CollectorManagementUnavailable from '@/components/collectors/management-unavailable.js'
-import CollectorCampaignParticipationLoader from '@/components/collectors/campaign-participation-loader.js'
 import SeriesExplorer from '@/components/points-prelevement/series-explorer.js'
 import ReglesListCard from '@/components/regles/regles-list-card.js'
 import CopyableEmail from '@/components/ui/CopyableEmail/index.js'
@@ -19,7 +18,7 @@ import EntityHeader from '@/components/ui/EntityHeader/index.js'
 import Icon from '@/components/ui/Icon/index.js'
 import SectionCard from '@/components/ui/SectionCard/index.js'
 import {
-  getDeclarantContactEmails,
+  getPrimaryDeclarantContactEmail,
   getDeclarantDetailExploitations,
   getDeclarantRole,
   getDeclarantSeriesScope,
@@ -160,10 +159,7 @@ const InfoCard = ({declarant}) => {
     return null
   }
 
-  const contactEmails = getDeclarantContactEmails(declarant)
-  const displayedEmails = contactEmails.length > 0
-    ? contactEmails
-    : [{email: declarant.loginEmail || declarant.email, isPrimary: true}].filter(contact => contact.email)
+  const email = getPrimaryDeclarantContactEmail(declarant)
 
   return (
     <SectionCard>
@@ -176,17 +172,8 @@ const InfoCard = ({declarant}) => {
         </li>
         <li className='items-start'>
           <Icon iconId='ri-at-line' style={iconColorStyle} />
-          {displayedEmails.length > 0
-            ? (
-              <span className='flex flex-col gap-1'>
-                {displayedEmails.map(contact => (
-                  <span key={contact.email} className='flex items-center gap-1'>
-                    <CopyableEmail email={contact.email} />
-                    {contact.isPrimary && contactEmails.length > 1 && <small>(principal)</small>}
-                  </span>
-                ))}
-              </span>
-            )
+          {email
+            ? <CopyableEmail email={email} />
             : <span>Non renseigné</span>}
         </li>
         <li>
@@ -248,7 +235,6 @@ const DeclarantSeries = async ({seriesPromise, seriesScope}) => {
 
 const DeclarantExploitations = async ({
   canCreate,
-  canManageCampaign,
   declarantId,
   isCollecteur,
   pointDataPromise
@@ -267,7 +253,6 @@ const DeclarantExploitations = async ({
         exploitations={exploitations}
         createHref={canCreate ? getExploitationCreateHref(false, declarantId) : undefined}
       />
-      {canManageCampaign && <CollectorCampaignParticipationLoader exploitations={exploitations} />}
     </>
   )
 }
@@ -416,7 +401,7 @@ const Page = async ({params}) => {
         ].filter(Boolean)}
         hrefButtons={[
           {
-            label: 'Modifier les coordonnées',
+            label: 'Modifier le préleveur',
             icon: 'fr-icon-edit-line',
             href: `/preleveurs/${declarantId}/coordonnees`,
             hidden: !declarant.right?.canEditContactDetails
@@ -495,7 +480,6 @@ const Page = async ({params}) => {
         <Suspense fallback={<SectionLoading label='Chargement des exploitations…' />}>
           <DeclarantExploitations
             canCreate={can('exploitation.create') || canCreateForPreleveur}
-            canManageCampaign={collectorManagement?.data?.enabled === true}
             declarantId={declarantId}
             isCollecteur={isCollecteur}
             pointDataPromise={pointDataPromise}

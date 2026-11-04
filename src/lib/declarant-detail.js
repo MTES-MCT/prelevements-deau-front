@@ -114,6 +114,10 @@ export function getEffectiveDeclarantContactEmails(declarant) {
 }
 
 export function getPrimaryDeclarantContactEmail(declarant) {
+  if (declarant && Object.hasOwn(declarant, 'principalEmail')) {
+    return isSyntheticImportEmail(declarant.principalEmail) ? null : declarant.principalEmail || null
+  }
+
   return getEffectiveDeclarantContactEmails(declarant)[0] ?? null
 }
 
