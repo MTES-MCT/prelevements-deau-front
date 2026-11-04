@@ -6,6 +6,7 @@ import PointCreationForm from '@/components/form/point-creation-form.js'
 import CollectorPointCreationForm from '@/components/form/collector-point-creation-form.js'
 import CollectorManagementUnavailable from '@/components/collectors/management-unavailable.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
+import {getDeclarantRole} from '@/lib/declarant-detail.js'
 import {getCurrentUser} from '@/server/actions/user.js'
 import {getCollectorCampaignParticipationOptionsAction, getCollectorPointCreationPreleveursAction, getMyCollectorPointManagementAction} from '@/server/actions/collector-points.js'
 import {getPointsPrelevementOptionsAction} from '@/server/actions/points-prelevement.js'
@@ -17,6 +18,7 @@ export const metadata = {
 const Page = async ({searchParams}) => {
   const currentUserResult = await getCurrentUser()
   const isDeclarant = currentUserResult?.data?.role === 'DECLARANT'
+  if (isDeclarant && getDeclarantRole(currentUserResult.data.user) !== 'COLLECTEUR') forbidden()
   const management = isDeclarant ? await getMyCollectorPointManagementAction() : null
   if (management && !management.success) return <div className='fr-container'><CollectorManagementUnavailable result={management} /></div>
   if (!currentUserResult?.data?.permissions?.includes('pp.create') && !management?.data?.enabled) {
