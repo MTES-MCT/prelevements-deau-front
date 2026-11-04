@@ -50,7 +50,7 @@ const EntityHeader = ({
           </Box>
 
           {(uniqRightBadges.length > 0 || visibleButtons.length > 0) && (
-            <Box className='flex items-start sm:items-center content-between sm:w-fill gap-4'>
+            <Box className='flex max-w-full flex-wrap items-start sm:items-center content-between sm:w-fill gap-4'>
               {uniqRightBadges.length > 0 && (
                 <Box className='flex items-center w-fit gap-1 flex-wrap'>
                   {uniqRightBadges.map(({icon, iconId, label}) => (
@@ -70,7 +70,7 @@ const EntityHeader = ({
               )}
 
               {visibleButtons.length > 0 && (
-                <Box className='flex items-center w-fit gap-2'>
+                <Box className='flex max-w-full flex-wrap items-center w-fit gap-2'>
                   {visibleButtons.map(
                     ({label, icon, alt, priority = 'secondary', href}) => (
                       <Button

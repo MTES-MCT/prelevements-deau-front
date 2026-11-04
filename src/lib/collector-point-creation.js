@@ -18,7 +18,7 @@ const pickFilled = (value, fields) => Object.fromEntries(fields
   .filter(field => value[field] !== undefined && value[field] !== null && value[field] !== '')
   .map(field => [field, typeof value[field] === 'string' ? value[field].trim() : value[field]]))
 
-export function buildCollectorPointCreationPayload({requestId, point, preleveur, preleveurId, mode, exploitation, notifyAccountCreation}) {
+export function buildCollectorPointCreationPayload({requestId, point, preleveur, preleveurId, mode, exploitation, notifyAccountCreation, campaignId}) {
   const identityFields = preleveur.declarantType === 'LEGAL_PERSON'
     ? IDENTITY_FIELDS
     : IDENTITY_FIELDS.filter(field => !['socialReason', 'siret'].includes(field))
@@ -26,7 +26,7 @@ export function buildCollectorPointCreationPayload({requestId, point, preleveur,
   const countingCode = normalizeCountingCode(exploitation.countingCode)
   return {
     requestId,
-    point: pickFilled(point, COLLECTOR_POINT_CREATION_FIELDS),
+    ...(point ? {point: pickFilled(point, COLLECTOR_POINT_CREATION_FIELDS)} : {}),
     ...(mode === 'new'
       ? {preleveur: pickFilled(preleveur, identityFields)}
       : {preleveurId}),
@@ -35,8 +35,18 @@ export function buildCollectorPointCreationPayload({requestId, point, preleveur,
       ...(countingCode ? {countingCode} : {}),
       ...(meters.length ? {meters} : {})
     },
-    notifyAccountCreation: mode === 'new' && Boolean(preleveur.email?.trim()) && notifyAccountCreation === true
+    notifyAccountCreation: mode === 'new' && Boolean(preleveur.email?.trim()) && notifyAccountCreation === true,
+    ...(campaignId ? {campaignId} : {})
   }
+}
+
+// Preserve the exact request after an uncertain response: both creations are idempotent.
+export function collectorCreationNeedsRetry(result) {
+  return !result?.success && (!result?.code || result.code >= 500)
+}
+
+export function collectorToday(now = new Date()) {
+  return new Intl.DateTimeFormat('sv-SE', {timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit'}).format(now)
 }
 
 function normalizedName(value) {

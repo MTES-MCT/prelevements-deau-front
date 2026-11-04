@@ -9,7 +9,7 @@ import {transformSync} from 'next/dist/build/swc/index.js'
 
 const require = createRequire(import.meta.url)
 
-function harness({role = 'INSTRUCTOR', permissions = ['exploitation.list'], exploitations = Promise.resolve({success: true, data: []}), pointId = 'point'} = {}) {
+function harness({role = 'INSTRUCTOR', permissions = ['exploitation.list'], exploitations = Promise.resolve({success: true, data: []}), pointId = 'point', collectorRight = {}} = {}) {
   const calls = []
   const components = new Map()
   const componentRequire = specifier => {
@@ -19,10 +19,11 @@ function harness({role = 'INSTRUCTOR', permissions = ['exploitation.list'], expl
       return {__esModule: true, default: component}
     }
     if (specifier === '@/server/actions/points-prelevement.js') return {
-      getPointPrelevementAction: async () => ({success: true, data: {id: pointId, right: {permissions}}}),
+      getPointPrelevementAction: async () => ({success: true, data: {id: pointId, right: {permissions, ...collectorRight}}}),
       getExploitationsByPointIdAction: async id => { calls.push(id); return exploitations }
     }
-    if (specifier === '@/server/actions/user.js') return {getCurrentSessionInfo: async () => ({data: {role}})}
+    if (specifier === '@/server/actions/user.js') return {getCurrentSessionInfo: async () => ({data: {role, declarantRole: collectorRight.editScope === 'COLLECTOR' ? 'COLLECTEUR' : undefined}})}
+    if (specifier === '@/server/actions/collector-points.js') return {getMyCollectorPointManagementAction: async () => ({success: true, data: {enabled: true}})}
     if (specifier === '@/server/actions/audit-events.js') return {getResourceAuditHistoryAction: async () => ({success: false})}
     if (specifier === '@/lib/urls.js') return {getNewExploitationURL: ({idPoint}) => `/exploitations/new?point=${idPoint}`, getPointPrelevementURL: point => `/points-prelevement/${point.id}`}
     if (specifier === '@/utils/point-prelevement.js') return {getPointPrelevementLabel: () => 'Point'}
@@ -59,7 +60,7 @@ test('la fiche rend son identité et sa localisation pendant le chargement des e
   t.deepEqual(flow.calls, ['point'])
   const pendingList = boundary.props.children.type(boundary.props.children.props)
   deferred.resolve({success: true, data: [{id: 'exploitation'}]})
-  const list = await pendingList
+  const list = elements(await pendingList).find(element => element.type === flow.components.get('@/components/exploitations/exploitations-list.js'))
   t.deepEqual(list.props.exploitations, [{id: 'exploitation'}])
   t.true(list.props.canCreate)
   t.is(list.props.createHref, '/exploitations/new?point=point')
@@ -81,7 +82,7 @@ test('un déclarant consulte les exploitations autorisées par l’API sans droi
     const flow = harness({role: 'DECLARANT', permissions, exploitations: Promise.resolve({success: true, data: authorized})})
     const boundary = elements(await flow.page()).find(element => element.type === React.Suspense)
     t.deepEqual(flow.calls, ['point'])
-    const list = await boundary.props.children.type(boundary.props.children.props)
+    const list = elements(await boundary.props.children.type(boundary.props.children.props)).find(element => element.type === flow.components.get('@/components/exploitations/exploitations-list.js'))
     t.deepEqual(list.props.exploitations, authorized)
     t.false(list.props.canCreate)
     t.is(list.props.createHref, undefined)
@@ -91,7 +92,7 @@ test('un déclarant consulte les exploitations autorisées par l’API sans droi
 test('un administrateur conserve la liste et la création sans permission territoriale explicite', async t => {
   const flow = harness({role: 'ADMIN', permissions: []})
   const boundary = elements(await flow.page()).find(element => element.type === React.Suspense)
-  const list = await boundary.props.children.type(boundary.props.children.props)
+  const list = elements(await boundary.props.children.type(boundary.props.children.props)).find(element => element.type === flow.components.get('@/components/exploitations/exploitations-list.js'))
   t.deepEqual(flow.calls, ['point'])
   t.true(list.props.canCreate)
   t.is(list.props.createHref, '/exploitations/new?point=point')
@@ -110,7 +111,7 @@ test('une erreur de chargement ne devient pas une liste vide d’exploitations',
 test('un droit de lecture seul ne propose pas de création après le chargement différé', async t => {
   const flow = harness()
   const boundary = elements(await flow.page()).find(element => element.type === React.Suspense)
-  const list = await boundary.props.children.type(boundary.props.children.props)
+  const list = elements(await boundary.props.children.type(boundary.props.children.props)).find(element => element.type === flow.components.get('@/components/exploitations/exploitations-list.js'))
   t.false(list.props.canCreate)
   t.is(list.props.createHref, undefined)
 })
@@ -119,4 +120,14 @@ test('une redirection canonique ne lance pas la lecture des exploitations du mau
   const flow = harness({pointId: 'canonical'})
   await t.throwsAsync(flow.page(), {message: 'redirect:/points-prelevement/canonical'})
   t.deepEqual(flow.calls, [])
+})
+
+test('une capacité collecteur ouvre la création ciblée et les formulaires de campagne sans droit agent', async t => {
+  const flow = harness({role: 'DECLARANT', permissions: [], collectorRight: {canCreateExploitation: true, editScope: 'COLLECTOR'}})
+  const boundary = elements(await flow.page()).find(element => element.type === React.Suspense)
+  const rendered = elements(await boundary.props.children.type(boundary.props.children.props))
+  const list = rendered.find(element => element.type === flow.components.get('@/components/exploitations/exploitations-list.js'))
+  t.true(list.props.canCreate)
+  t.is(list.props.createHref, '/exploitations/new?point=point')
+  t.true(rendered.some(element => element.type === flow.components.get('@/components/collectors/campaign-participation-loader.js')))
 })

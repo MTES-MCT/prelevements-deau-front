@@ -4,9 +4,10 @@ import {forbidden} from 'next/navigation'
 
 import PointCreationForm from '@/components/form/point-creation-form.js'
 import CollectorPointCreationForm from '@/components/form/collector-point-creation-form.js'
+import CollectorManagementUnavailable from '@/components/collectors/management-unavailable.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getCurrentUser} from '@/server/actions/user.js'
-import {getCollectorPointCreationPreleveursAction, getMyCollectorPointManagementAction} from '@/server/actions/collector-points.js'
+import {getCollectorCampaignParticipationOptionsAction, getCollectorPointCreationPreleveursAction, getMyCollectorPointManagementAction} from '@/server/actions/collector-points.js'
 import {getPointsPrelevementOptionsAction} from '@/server/actions/points-prelevement.js'
 
 export const metadata = {
@@ -17,14 +18,16 @@ const Page = async ({searchParams}) => {
   const currentUserResult = await getCurrentUser()
   const isDeclarant = currentUserResult?.data?.role === 'DECLARANT'
   const management = isDeclarant ? await getMyCollectorPointManagementAction() : null
+  if (management && !management.success) return <div className='fr-container'><CollectorManagementUnavailable result={management} /></div>
   if (!currentUserResult?.data?.permissions?.includes('pp.create') && !management?.data?.enabled) {
     forbidden()
   }
 
-  const [preleveurs, points, query] = await Promise.all([
+  const [preleveurs, points, query, campaignsResult] = await Promise.all([
     management?.data?.enabled ? getCollectorPointCreationPreleveursAction() : null,
     management?.data?.enabled ? getPointsPrelevementOptionsAction() : null,
-    searchParams
+    searchParams,
+    management?.data?.enabled ? getCollectorCampaignParticipationOptionsAction() : null
   ])
 
   return (
@@ -46,7 +49,8 @@ const Page = async ({searchParams}) => {
       {management?.data?.enabled
         ? preleveurs?.success && points?.success
           ? <CollectorPointCreationForm preleveurs={preleveurs.data} accessiblePoints={points.data}
-            zones={management.data.zones} initialPreleveurId={typeof query?.preleveurId === 'string' ? query.preleveurId : ''} />
+            zones={management.data.zones} initialPreleveurId={typeof query?.preleveurId === 'string' ? query.preleveurId : ''}
+            initialMode={query?.mode === 'new' ? 'new' : undefined} campaignsResult={campaignsResult} />
           : <div className='fr-container'><Alert severity='error' title='Le formulaire n’a pas pu être chargé.' description='Rechargez la page pour réessayer.' /></div>
         : <PointCreationForm />}
     </>

@@ -13,7 +13,10 @@ export const collectorPointIds = {
   manualMeter: '12121212-1212-4212-8212-121212121231',
   sharedMeter: '12121212-1212-4212-8212-121212121232',
   externalMeter: '12121212-1212-4212-8212-121212121233',
-  historicalMeter: '12121212-1212-4212-8212-121212121234'
+  historicalMeter: '12121212-1212-4212-8212-121212121234',
+  campaign: '12121212-1212-4212-8212-121212121241',
+  secondCampaign: '12121212-1212-4212-8212-121212121242',
+  response: '12121212-1212-4212-8212-121212121243'
 }
 const sessions = new Map()
 const editableFields = ['usageName', 'coordinates', 'communeCode', 'communeName', 'geometryPrecision', 'waterBodyType',
@@ -24,7 +27,7 @@ export const isCollectorPointFixture = (authorization = '') => authorization.sta
 export async function handleCollectorPointFixture(request, send) {
   const auth = request.headers.authorization
   if (!isCollectorPointFixture(auth)) return false
-  const {pathname} = new URL(request.url, 'http://127.0.0.1:3431')
+  const {pathname, searchParams} = new URL(request.url, 'http://127.0.0.1:3431')
   const enabled = !auth.includes('-disabled-')
   const admin = auth.includes('-admin-')
   const readOnly = auth.includes('-readonly-')
@@ -39,7 +42,7 @@ export async function handleCollectorPointFixture(request, send) {
       communeCode: '33353', communeName: 'Rimons',
       updatedAt: '2026-10-07T12:00:00.000Z', coordinates: {type: 'Point', coordinates: [2.2, 46.2]},
       declarants: [], preleveurs: [], collecteurs: [], usages: [],
-      right: {canRead: true, canEdit: enabled, canEditUsageName: true, editScope: 'COLLECTOR',
+      right: {canRead: true, canEdit: enabled, canCreateExploitation: enabled, canEditUsageName: true, editScope: enabled ? 'COLLECTOR' : undefined,
         editableFields, canEditLocation: !auth.includes('-exception-'), isShared: true, permissions: []}}}
   sessions.set(auth, state)
   state.exploitations ??= auth.includes('-multi-') ? [
@@ -68,9 +71,90 @@ export async function handleCollectorPointFixture(request, send) {
     declarationType, status: 'ACTIVE', startDate: '2026-01-01', endDate: null}]
   const declarationTypesPath = `/api/declarants/${collectorPointIds.collector}/declaration-types`
   const declarationTypesPayload = () => ({data: state.declarationLinks, meta: {canManage: admin, availableDeclarationTypes}})
+  const decorateExploitation = exploitation => ({...exploitation, status: exploitation.status || 'EN_ACTIVITE', secondaryUsages: [],
+    declarant: {...exploitation.preleveur, declarantRole: 'PRELEVEUR'}, pointPrelevement: state.point,
+    right: {canRead: true, canEdit: false, canEditCollectorDetails: enabled, permissions: []}})
+  state.contactDetails ??= {phoneNumber: '0600000000', addressLine1: '1 rue du Test', addressLine2: null, poBox: null,
+    postalCode: '33000', city: 'Bordeaux', contactEmails: [{email: 'contact@example.test', isPrimary: true}]}
+  state.participations ??= {}
+  state.campaignOptionReads ??= []
+  const campaigns = [{id: collectorPointIds.campaign, name: 'Volumes 2026', eligible: enabled},
+    ...(auth.includes('-campaign-multiple-') ? [{id: collectorPointIds.secondCampaign, name: 'Besoins 2027', eligible: enabled}] : [])]
   if (pathname === '/info' || pathname === '/api/info') send(200, {role, user, declarantRole: 'COLLECTEUR', permissions, expiresAt: new Date(Date.now() + 3600000).toISOString()})
   else if (pathname === '/api/__collector-point-writes') send(200, state.writes)
-  else if (pathname === '/api/collecteurs/me/point-management') send(200, management)
+  else if (pathname === '/api/__collector-campaign-option-reads') send(200, state.campaignOptionReads)
+  else if (pathname === '/api/collecteurs/me/point-management') {
+    if (auth.includes('-management-error-')) send(503, {message: 'Autorisation indisponible.'})
+    else send(200, management)
+  }
+  else if (pathname === '/api/collecteurs/me/campaign-participation-options') {
+    const exploitationId = searchParams.get('exploitationId')
+    state.campaignOptionReads.push(exploitationId)
+    send(200, {campaigns: auth.includes('-no-campaign-') ? [] : campaigns.map(campaign => {
+      const responseId = state.participations[`${campaign.id}:${exploitationId}`]
+        || (auth.includes('-existing-response-') && exploitationId ? collectorPointIds.response : null)
+      return {...campaign, ...(responseId ? {responseId, responseStatus: 'DRAFT', eligible: false} : {})}
+    })})
+  }
+  else if (/^\/api\/campaigns\/[^/]+\/responses$/.test(pathname) && request.method === 'POST') {
+    const body = await readBody()
+    state.writes.push({path: pathname, method: 'POST', body})
+    if (auth.includes('-campaign-closed-')) send(409, {message: 'Cette campagne est fermée.'})
+    else {
+      const campaignId = pathname.split('/')[3]
+      const key = `${campaignId}:${body.exploitationId}`
+      const created = !state.participations[key]
+      state.participations[key] = collectorPointIds.response
+      send(201, {campaignParticipation: {campaignId, responseId: collectorPointIds.response, created}})
+    }
+  }
+  else if (pathname === '/api/collecteurs/me/preleveurs/search') send(200, {items: [{id: collectorPointIds.preleveur,
+    socialReason: 'Préleveur synthétique', declarantRole: 'PRELEVEUR', declarantType: 'LEGAL_PERSON', preleveurType: 'IRRIGANT'}],
+  total: 1, page: 1, pageSize: 10, totalPages: 1, facets: {}})
+  else if (pathname === `/api/declarants/${collectorPointIds.preleveur}/overview`) send(200, {
+    id: collectorPointIds.preleveur, role: 'DECLARANT', socialReason: 'Préleveur synthétique', declarantRole: 'PRELEVEUR',
+    declarantType: 'LEGAL_PERSON', preleveurType: 'IRRIGANT', ...state.contactDetails,
+    pointPrelevements: state.exploitations.map(decorateExploitation), right: {canRead: true, canEditContactDetails: enabled && !auth.includes('-historical-'), permissions: []}
+  })
+  else if (pathname === `/api/collecteurs/me/preleveurs/${collectorPointIds.preleveur}/contact-details`) {
+    if (!enabled) send(403, {message: 'Gestion désactivée.'})
+    else if (request.method === 'PATCH') {
+      const body = await readBody()
+      state.writes.push({path: pathname, method: 'PATCH', body})
+      if (auth.includes('-conflict-')) send(409, {message: 'Les coordonnées ont été modifiées. Rechargez la fiche.'})
+      else {
+        state.contactDetails = {...state.contactDetails, ...body.details}
+        send(200, {preleveurId: collectorPointIds.preleveur, details: state.contactDetails, version: 'contacts-2', capabilities: {canEdit: true}})
+      }
+    } else send(200, {preleveurId: collectorPointIds.preleveur, details: state.contactDetails, version: 'contacts-1', capabilities: {canEdit: true}})
+  }
+  else if (/^\/api\/collecteurs\/me\/exploitations\/[^/]+\/form$/.test(pathname)) {
+    const exploitation = state.exploitations.find(item => item.id === pathname.split('/')[5])
+    if (!enabled || !exploitation) send(403, {message: 'Exploitation non modifiable.'})
+    else {
+      if (request.method === 'PATCH') {
+        const body = await readBody()
+        state.writes.push({path: pathname, method: 'PATCH', body})
+        if (auth.includes('-pending-campaign-')) {
+          send(409, {message: 'Terminez le formulaire de campagne avant de clôturer cette exploitation.', pendingCampaignResponses: [
+            {campaignId: collectorPointIds.campaign, responseId: collectorPointIds.response, campaignName: 'Volumes 2026'}
+          ]})
+          return true
+        }
+        Object.assign(exploitation, body.changes)
+      }
+      send(200, {exploitation: decorateExploitation(exploitation), meters: exploitation.meters, version: 'exploitation-version', capabilities: {canEdit: true, canAddMeter: true}})
+    }
+  }
+  else if (/^\/api\/exploitations\/[^/]+$/.test(pathname)) {
+    const exploitation = state.exploitations.find(item => item.id === pathname.split('/')[3])
+    if (exploitation) send(200, decorateExploitation(exploitation))
+    else send(404, {message: 'Exploitation introuvable.'})
+  }
+  else if (/^\/api\/exploitations\/[^/]+\/meter-allocations$/.test(pathname)) send(200, {meterAllocations: []})
+  else if (pathname === '/api/aggregated-series/options') send(200, {parameters: []})
+  else if (pathname === '/api/points-prelevement/batch') send(200, [state.point])
+  else if (pathname.endsWith('/documents') || pathname.endsWith('/regles')) send(200, [])
   else if (pathname === '/api/collecteurs/me/point-management/preleveurs') send(200, [{id: collectorPointIds.preleveur, socialReason: 'Préleveur synthétique', declarantType: 'LEGAL_PERSON', preleveurType: 'IRRIGANT'}])
   else if (pathname === `/api/collecteurs/${collectorPointIds.collector}/point-management`) {
     if (request.method === 'PATCH') {
@@ -79,14 +163,20 @@ export async function handleCollectorPointFixture(request, send) {
       state.management = {...body, zones: body.zoneIds.length ? [zone] : []}
     }
     send(200, state.management)
-  } else if (pathname === '/api/collecteurs/me/points-prelevement') {
+  } else if (pathname === '/api/collecteurs/me/points-prelevement' || pathname === `/api/collecteurs/me/points-prelevement/${collectorPointIds.point}/exploitations`) {
     const body = await readBody()
     state.writes.push({path: pathname, body})
     if (!enabled) send(403, {message: 'Gestion désactivée.'})
+    else if (auth.includes('-campaign-closed-') && body.campaignId) send(409, {message: 'Cette campagne est fermée. Choisissez une autre campagne ou décochez son ajout.'})
     else {
-      state.point = {...state.point, ...body.point, id: collectorPointIds.created}
-      send(201, {point: state.point, preleveurId: body.preleveurId ?? collectorPointIds.preleveur,
-        exploitationId: collectorPointIds.usage, replayed: false, notification: {status: body.notifyAccountCreation ? 'failed' : 'not_requested'}})
+      state.point = {...state.point, ...body.point, id: body.point ? collectorPointIds.created : collectorPointIds.point}
+      const result = {point: state.point, preleveurId: body.preleveurId ?? collectorPointIds.preleveur,
+        exploitationId: collectorPointIds.firstExploitation, replayed: false, notification: {status: body.notifyAccountCreation ? 'failed' : 'not_requested'},
+        ...(body.campaignId ? {campaignParticipation: {campaignId: body.campaignId, responseId: collectorPointIds.response, created: true}} : {})}
+      if (auth.includes('-retry-') && !state.uncertainCreation) {
+        state.uncertainCreation = result
+        send(503, {message: 'La réponse a été interrompue.'})
+      } else send(201, state.uncertainCreation || result)
     }
   } else if (pathname === `/api/collecteurs/me/points-prelevement/${state.point.id}/form`) {
     if (!enabled) send(403, {message: 'Gestion désactivée.'})

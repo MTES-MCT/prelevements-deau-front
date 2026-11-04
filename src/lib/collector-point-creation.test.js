@@ -1,6 +1,6 @@
 import test from 'ava'
 
-import {buildCollectorPointCreationPayload, findSimilarAccessiblePoints} from './collector-point-creation.js'
+import {buildCollectorPointCreationPayload, collectorCreationNeedsRetry, collectorToday, findSimilarAccessiblePoints} from './collector-point-creation.js'
 
 const input = () => ({
   requestId: 'request',
@@ -73,4 +73,25 @@ test('un compteur nouveau vide et un code vide ne sont pas créés', t => {
   const {exploitation} = buildCollectorPointCreationPayload(value)
   t.false(Object.hasOwn(exploitation, 'meters'))
   t.false(Object.hasOwn(exploitation, 'countingCode'))
+})
+
+test('la campagne est facultative et la création sur un point existant ne transmet pas de point', t => {
+  const value = input()
+  t.false(Object.hasOwn(buildCollectorPointCreationPayload(value), 'campaignId'))
+  const result = buildCollectorPointCreationPayload({...value, point: null, campaignId: 'chosen'})
+  t.is(result.campaignId, 'chosen')
+  t.false(Object.hasOwn(result, 'point'))
+  t.is(result.exploitation.usageId, 'usage')
+})
+
+test('seules les réponses incertaines imposent de réessayer la même demande figée', t => {
+  t.true(collectorCreationNeedsRetry({success: false}))
+  t.true(collectorCreationNeedsRetry({success: false, code: 503}))
+  for (const code of [400, 403, 409]) t.false(collectorCreationNeedsRetry({success: false, code}))
+  t.false(collectorCreationNeedsRetry({success: true}))
+})
+
+test('les bornes des dates de création utilisent le jour français, y compris autour de minuit', t => {
+  t.is(collectorToday(new Date('2026-07-01T22:30:00Z')), '2026-07-02')
+  t.is(collectorToday(new Date('2026-01-01T23:30:00Z')), '2026-01-02')
 })
