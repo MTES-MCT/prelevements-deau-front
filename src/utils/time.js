@@ -38,7 +38,7 @@ export const normalizeTime = time => {
 }
 
 /**
- * Normalize a date parameter. Accepts string or Date.
+ * Normalize a calendar-date parameter. Accepts date-only/ISO strings or Date.
  * @param {string|Date|undefined|null} date
  * @returns {string|undefined}
  */
@@ -54,7 +54,11 @@ export function normalizeDate(date) {
     return `${year}-${month}-${day}`
   }
 
-  return String(date)
+  const value = String(date)
+  // API dates can arrive as ISO strings after JSON serialization. Keep their
+  // calendar day without a timezone conversion (these are not meter instants).
+  const isoDate = /^(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$/.exec(value)
+  return isoDate ? isoDate[1] : value
 }
 
 /**

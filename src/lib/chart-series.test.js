@@ -4,6 +4,21 @@ import {buildChartSeriesQuery, fetchChartSeries, loadChartSeries} from './chart-
 
 const parameters = {preleveurId: 'preleveur', metricTypeCode: 'volume', aggregationFrequency: '1 week', temporalOperator: 'sum'}
 
+test('les bornes ISO d’une exploitation deviennent des dates calendaires dans la requête', t => {
+  const query = buildChartSeriesQuery({
+    ...parameters,
+    exploitationId: 'exploitation',
+    startDate: '2026-10-26T00:00:00.000Z',
+    endDate: '2026-12-31T00:00:00.000Z'
+  })
+  t.like(Object.fromEntries(new URLSearchParams(query)), {
+    exploitationId: 'exploitation', startDate: '2026-10-26', endDate: '2026-12-31'
+  })
+  t.is(query, buildChartSeriesQuery({
+    ...parameters, exploitationId: 'exploitation', startDate: '2026-10-26', endDate: '2026-12-31'
+  }))
+})
+
 test('la clé ignore ordre des champs, doublons de points et paramètres hors contrat', t => {
   const query = buildChartSeriesQuery({...parameters, pointIds: ['b', 'a', 'a'], view: 'full', token: 'secret'})
   t.is(query, buildChartSeriesQuery({pointIds: 'a,b', ...parameters}))

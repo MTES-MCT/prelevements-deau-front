@@ -11,8 +11,8 @@ export default function CollectorCampaignChoice({result, checked, campaignId, on
   if (!campaigns.length) return <p className='fr-text--sm'>Aucune campagne ouverte pour le moment.</p>
   return <div>
     <FormControlLabel label={campaigns.length === 1
-      ? `Ajouter cette exploitation à la campagne « ${campaigns[0].name} »`
-      : 'Ajouter cette exploitation à une campagne'} control={<Checkbox checked={checked}
+      ? `Ajouter à la campagne « ${campaigns[0].name} »`
+      : 'Ajouter à une campagne'} control={<Checkbox checked={checked}
       onChange={event => onCheckedChange(event.target.checked)} />} />
     {checked && campaigns.length > 1 && <Select label='Campagne' placeholder='Choisir une campagne'
       options={campaigns.map(item => ({value: item.id, label: item.name}))}

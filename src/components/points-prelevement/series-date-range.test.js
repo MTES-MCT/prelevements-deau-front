@@ -47,6 +47,26 @@ test('resolveSelectedParametersDateRange gives each explicit bound priority', t 
   )
 })
 
+test('resolveSelectedParametersDateRange keeps an exploitation start after the last known reading', t => {
+  const startDate = '2026-10-26T00:00:00.000Z'
+  t.deepEqual(resolveSelectedParametersDateRange({parameters, selectedParameters: ['index'], startDate}), {
+    start: startDate, end: startDate
+  })
+})
+
+test('resolveSelectedParametersDateRange keeps an exploitation end before the first known reading', t => {
+  const endDate = '2026-01-01T00:00:00.000Z'
+  t.deepEqual(resolveSelectedParametersDateRange({parameters, selectedParameters: ['index'], endDate}), {
+    start: endDate, end: endDate
+  })
+})
+
+test('resolveSelectedParametersDateRange leaves two reversed explicit bounds for validation', t => {
+  t.deepEqual(resolveSelectedParametersDateRange({parameters, startDate: '2026-10-26', endDate: '2026-01-01'}), {
+    start: '2026-10-26', end: '2026-01-01'
+  })
+})
+
 test('resolveSelectedParametersDateRange falls back to all parameters for an unknown selection', t => {
   t.deepEqual(
     resolveSelectedParametersDateRange({
