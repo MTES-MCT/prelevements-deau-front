@@ -50,6 +50,7 @@ export const AuthProvider = ({children}) => {
       declarantType: session.user.declarantType || null,
       declarantRole: session.user.declarantRole || null,
       socialReason: session.user.socialReason || null,
+      siret: session.user.siret || null,
       permissions: session.user.permissions || [],
       impersonation: session.user.impersonation || null,
       preleveurProfiles: session.user.preleveurProfiles || null
@@ -160,7 +161,7 @@ export const AuthProvider = ({children}) => {
       // A failed cookie refresh requires a new login, not a second selection.
     }
 
-    return {success: false, reconnect: true, error: 'Le préleveur a été sélectionné, mais votre session n’a pas pu être actualisée. Veuillez vous reconnecter.'}
+    return {success: false, reconnect: true, error: 'L’établissement a été sélectionné, mais votre session n’a pas pu être actualisée. Veuillez vous reconnecter.'}
   }, [update])
 
   const value = useMemo(

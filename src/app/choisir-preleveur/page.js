@@ -5,7 +5,7 @@ import PreleveurProfileSelector from '@/components/auth/preleveur-profile-select
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getPreleveurProfilesAction} from '@/server/actions/auth.js'
 
-export const metadata = {title: 'Choisir un préleveur'}
+export const metadata = {title: 'Choisissez votre établissement'}
 export const dynamic = 'force-dynamic'
 
 export default async function ChoosePreleveurPage() {
@@ -15,10 +15,10 @@ export default async function ChoosePreleveurPage() {
   return (
     <div className='fr-container fr-py-5w max-w-3xl'>
       <StartDsfrOnHydration />
-      <h1>Choisir un préleveur</h1>
+      <h1>Choisissez votre établissement</h1>
       {result.success ? <PreleveurProfileSelector {...result.data} /> : (
         <>
-          <Alert severity='error' title='Impossible de charger les préleveurs' description={result.error} />
+          <Alert severity='error' title='Impossible de charger les établissements' description={result.error} />
           <Button className='fr-mt-3w' linkProps={{href: '/choisir-preleveur'}}>Réessayer</Button>
         </>
       )}

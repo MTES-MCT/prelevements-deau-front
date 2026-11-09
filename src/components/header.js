@@ -8,6 +8,7 @@ import {usePathname} from 'next/navigation'
 
 import HeaderDropdownMenu from '@/components/admin/header-dropdown-menu.js'
 import {useAuth} from '@/contexts/auth-context.js'
+import {getPreleveurProfileLabel} from '@/lib/preleveur-profiles.js'
 import {getCampaignSummaryAction} from '@/server/actions/campaigns.js'
 
 const ROLE_LABELS = {
@@ -219,7 +220,9 @@ const HeaderComponent = () => {
 
     const items = []
     const canManageAccount = !user.preleveurProfiles?.selectionRequired && user.preleveurProfiles?.canManageAccount !== false
-    const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.socialReason
+    const userName = user.declarantRole === 'PRELEVEUR'
+      ? getPreleveurProfileLabel(user)
+      : `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.socialReason
     const roleLabel = user.declarantRole
       ? DECLARANT_ROLE_LABELS[user.declarantRole]
       : (user.role ? ROLE_LABELS[user.role] : null)
@@ -227,8 +230,8 @@ const HeaderComponent = () => {
 
     if (userName && !user.preleveurProfiles?.selectionRequired) {
       items.push(
-        <span key='user' className='fr-btn flex items-center gap-2' style={{cursor: 'default', pointerEvents: 'none'}}>
-          {userName}
+        <span key='user' className='fr-btn flex max-w-full flex-wrap items-center gap-2' style={{cursor: 'default', pointerEvents: 'none'}}>
+          <span className='min-w-0 whitespace-normal break-words text-left'>{userName}</span>
           {roleLabel && (
             <Chip
               label={roleLabel}
@@ -255,10 +258,10 @@ const HeaderComponent = () => {
       })
     }
 
-    if (pathname !== '/choisir-preleveur' && (user.preleveurProfiles?.selectionRequired || user.preleveurProfiles?.canSwitch === true)) {
+    if (pathname !== '/choisir-preleveur' && !user.preleveurProfiles?.selectionRequired && user.preleveurProfiles?.canSwitch === true) {
       items.push({
         iconId: 'ri-user-shared-line',
-        text: user.preleveurProfiles.selectionRequired ? 'Choisir un préleveur' : 'Changer de préleveur',
+        text: 'Changer d’établissement',
         linkProps: {href: '/choisir-preleveur'}
       })
     }

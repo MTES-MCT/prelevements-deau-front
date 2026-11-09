@@ -3,8 +3,8 @@ import {randomUUID} from 'node:crypto'
 // Isolated authentication fixture: no real account, mail, database or network.
 const sessions = new Map()
 const preleveurs = [
-  {id: 'eeeeeeee-1111-4111-8111-111111111111', firstName: null, lastName: null, socialReason: 'Ferme du Dropt', city: 'Eymet'},
-  {id: 'eeeeeeee-2222-4222-8222-222222222222', firstName: 'Camille', lastName: 'Martin', socialReason: null, city: 'Duras'}
+  {id: 'eeeeeeee-1111-4111-8111-111111111111', firstName: 'Alice', lastName: 'Dupont', socialReason: 'Ferme du Dropt', siret: '12345678900012', city: 'Eymet'},
+  {id: 'eeeeeeee-2222-4222-8222-222222222222', firstName: 'Camille', lastName: 'Martin', socialReason: null, siret: null, city: 'Duras'}
 ]
 const expiresAt = () => new Date(Date.now() + 3_600_000).toISOString()
 

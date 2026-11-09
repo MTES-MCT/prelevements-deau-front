@@ -26,7 +26,9 @@ export function getPreleveurSelectionRedirect(pathname, profiles) {
 }
 
 export function getPreleveurProfileLabel(preleveur) {
-  return preleveur.socialReason
+  const name = preleveur.socialReason
     || [preleveur.firstName, preleveur.lastName].filter(Boolean).join(' ')
-    || 'Préleveur'
+    || 'Établissement'
+
+  return preleveur.siret ? `${name} — SIRET ${preleveur.siret}` : name
 }

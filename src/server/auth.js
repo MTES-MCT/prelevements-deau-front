@@ -25,7 +25,8 @@ function compactSessionUserInfo(userInfo) {
     structure: userInfo.structure,
     declarantType: userInfo.declarantType,
     declarantRole: userInfo.declarantRole,
-    socialReason: userInfo.socialReason
+    socialReason: userInfo.socialReason,
+    siret: userInfo.siret
   }
 }
 
@@ -99,6 +100,7 @@ const SESSION_CALLBACKS = {
       session.user.declarantType = token.userInfo.declarantType
       session.user.declarantRole = token.userInfo.declarantRole
       session.user.socialReason = token.userInfo.socialReason
+      session.user.siret = token.userInfo.siret
     }
 
     return session
