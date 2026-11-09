@@ -31,7 +31,8 @@ test('n’expose pas les habilitations détaillées dans le JWT NextAuth', async
     structure: undefined,
     declarantType: undefined,
     declarantRole: undefined,
-    socialReason: undefined
+    socialReason: undefined,
+    siret: undefined
   })
 
   const session = await authOptions.callbacks.session({
@@ -92,18 +93,23 @@ test.serial('la rotation vérifie le nouveau jeton auprès de l’API et remplac
   globalThis.fetch = async (_url, options) => {
     requests.push(options.headers.Authorization)
     return Response.json({
-      role: 'DECLARANT', user: {id: 'new-profile', socialReason: 'Nouveau préleveur', declarantRole: 'PRELEVEUR'},
+      role: 'DECLARANT', user: {id: 'new-profile', socialReason: 'Nouvel établissement', siret: '12345678900012', declarantRole: 'PRELEVEUR'},
       preleveurProfiles: {enabled: true, selectionRequired: false}, expiresAt: '2026-12-01T00:00:00Z'
     })
   }
   const token = await authOptions.callbacks.jwt({
     token: {token: 'old-token', userInfo: {id: 'old-profile'}, preleveurProfiles: {enabled: true, selectionRequired: true}},
     trigger: 'update',
-    session: {token: 'new-token', userInfo: {id: 'forged-profile'}, preleveurProfiles: {enabled: true, selectionRequired: true}}
+    session: {token: 'new-token', userInfo: {id: 'forged-profile', siret: 'forged-siret'}, preleveurProfiles: {enabled: true, selectionRequired: true}}
   })
   t.deepEqual(requests, ['Bearer new-token'])
   t.is(token.token, 'new-token')
   t.is(token.userInfo.id, 'new-profile')
+  t.is(token.userInfo.socialReason, 'Nouvel établissement')
+  t.is(token.userInfo.siret, '12345678900012')
+  const session = await authOptions.callbacks.session({session: {user: {}}, token})
+  t.is(session.user.socialReason, 'Nouvel établissement')
+  t.is(session.user.siret, '12345678900012')
   t.deepEqual(token.preleveurProfiles, {enabled: true, selectionRequired: false})
   t.is(token.apiExpiresAt, '2026-12-01T00:00:00Z')
 })
@@ -113,9 +119,10 @@ test.serial('un rafraîchissement sans option multi-préleveur supprime les anci
   t.teardown(() => { globalThis.fetch = originalFetch })
   globalThis.fetch = async () => Response.json({role: 'ADMIN', user: {id: 'admin'}})
   const token = await authOptions.callbacks.jwt({
-    token: {token: 'api-token', preleveurProfiles: {enabled: true, selectionRequired: true}},
+    token: {token: 'api-token', userInfo: {siret: '12345678900012'}, preleveurProfiles: {enabled: true, selectionRequired: true}},
     trigger: 'update', session: {preleveurProfiles: {enabled: true, selectionRequired: false}}
   })
   t.is(token.preleveurProfiles, null)
   t.is(token.role, 'ADMIN')
+  t.is(token.userInfo.siret, undefined)
 })
