@@ -131,8 +131,9 @@ const DocumentUploadForm = ({preleveur, exploitations = []}) => {
     <div>
       <div className='my-5'>
         {isSubmitting ? (
-          <div className='flex p-5 justify-center'>
+          <div className='flex flex-col items-center gap-3 p-5' role='status' aria-live='polite'>
             <SimpleLoading />
+            <p className='fr-mb-0'>Vérification du fichier en cours…</p>
           </div>
         ) : (
           <FileDropzone

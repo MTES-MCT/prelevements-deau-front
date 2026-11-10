@@ -302,6 +302,12 @@ const NewDeclarationForm = ({allowedDeclarationTypes = []}) => {
             errors={validationResult.errors}
           />}
 
+          {isSubmitting && (
+            <p className='fr-mt-2w fr-mb-0' role='status' aria-live='polite'>
+              Vérification des fichiers en cours…
+            </p>
+          )}
+
           <div className='fr-mt-2w flex gap-2 items-center'>
             <Button
               priority='primary'
