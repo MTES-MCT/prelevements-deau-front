@@ -102,11 +102,7 @@ const DocumentUploadForm = ({preleveur, exploitations = []}) => {
       })
       const response = await createDocumentAction(declarantId, cleanedDocument, filesList[0])
 
-      if (!response.success) {
-        throw response
-      }
-
-      return response.data
+      return response.success ? response.data : response
     },
     {
       successIndicator: 'id',

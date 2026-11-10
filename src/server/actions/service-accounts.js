@@ -1,5 +1,7 @@
 'use server'
 
+import {createValidationError} from '@/lib/action-errors.js'
+
 import {revalidatePath} from 'next/cache'
 
 import {fetchJSON, withErrorHandling} from '@/server/api-wrapper.js'
@@ -38,7 +40,7 @@ export async function listServiceAccountsAction(options = {}) {
 
 const getCachedServiceAccount = cachePerRequest(async serviceAccountId => withErrorHandling(async () => {
   if (!serviceAccountId) {
-    throw new Error('serviceAccountId est requis.')
+    throw createValidationError('serviceAccountId est requis.')
   }
 
   return fetchAdminServiceAccountData(`api/admin/service-accounts/${serviceAccountId}`)

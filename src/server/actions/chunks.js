@@ -1,5 +1,7 @@
 'use server'
 
+import {createValidationError} from '@/lib/action-errors.js'
+
 import {revalidatePath} from 'next/cache'
 
 import {fetchJSON, withErrorHandling} from '@/server/api-wrapper.js'
@@ -13,14 +15,14 @@ export async function instructChunkAction({
 } = {}) {
   return withErrorHandling(async () => {
     if (!chunkId || typeof chunkId !== 'string') {
-      throw new Error('chunkId est requis.')
+      throw createValidationError('chunkId est requis.')
     }
 
     const normalizedStatus = typeof status === 'string' ? status.trim() : ''
     const allowedStatuses = ['PENDING', 'REJECTED', 'VALIDATED']
 
     if (!allowedStatuses.includes(normalizedStatus)) {
-      throw new Error('Statut invalide.')
+      throw createValidationError('Statut invalide.')
     }
 
     const payload = {

@@ -11,6 +11,7 @@ import 'moment/locale/fr'
 
 import FileValidationResult from '@/components/declarations/validateur/file-validation-result.js'
 import ValidateurForm from '@/components/declarations/validateur/form.js'
+import {createValidationError, getErrorMessage} from '@/lib/action-errors.js'
 import {REUNION_FILE_TYPES} from '@/lib/native-declaration.js'
 import {createLocalSeriesRegistry} from '@/lib/local-series-registry.js'
 import {getMyDeclarationSubmissionSuccessURL} from '@/lib/urls.js'
@@ -66,11 +67,11 @@ const buildUploadPayload = (files, declarationTypeCode) => {
   const normalizedDeclarationTypeCode = String(declarationTypeCode ?? '').trim().toLocaleLowerCase('fr-FR')
 
   if (!normalizedDeclarationTypeCode) {
-    throw new Error('Type de déclaration manquant.')
+    throw createValidationError('Type de déclaration manquant.')
   }
 
   if (selectedFiles.length === 0) {
-    throw new Error('Fichier manquant.')
+    throw createValidationError('Fichier manquant.')
   }
 
   return {
@@ -186,11 +187,11 @@ const NewDeclarationForm = ({allowedDeclarationTypes = []}) => {
 
     try {
       if (!declarationTypeCode) {
-        throw new Error('Sélectionne un type de déclaration avant d’ajouter des fichiers.')
+        throw createValidationError('Sélectionne un type de déclaration avant d’ajouter des fichiers.')
       }
 
       if (selectedFiles.length === 0) {
-        throw new Error('Aucun fichier sélectionné.')
+        throw createValidationError('Aucun fichier sélectionné.')
       }
 
       const result = await validateFiles(selectedFiles, declarationTypeCode)
@@ -201,7 +202,7 @@ const NewDeclarationForm = ({allowedDeclarationTypes = []}) => {
       setValidationResult({
         errors: [
           {
-            message: error?.message || 'Une erreur est survenue lors de la validation des fichiers.',
+            message: getErrorMessage(error),
             severity: 'error'
           }
         ],
@@ -226,15 +227,15 @@ const NewDeclarationForm = ({allowedDeclarationTypes = []}) => {
 
     try {
       if (files.length === 0) {
-        throw new Error('Aucun fichier à soumettre.')
+        throw createValidationError('Aucun fichier à soumettre.')
       }
 
       if (!selectedDeclarationType) {
-        throw new Error('Type de déclaration non autorisé ou indisponible.')
+        throw createValidationError('Type de déclaration non autorisé ou indisponible.')
       }
 
       if (!validationResult || validationResult.validationStatus === 'error') {
-        throw new Error('La sélection n’est pas valide. Corrige les erreurs avant de soumettre.')
+        throw createValidationError('La sélection n’est pas valide. Corrige les erreurs avant de soumettre.')
       }
 
       const {files: filesToUpload, fileTypes} = buildUploadPayload(files, selectedDeclarationType.code)
@@ -247,10 +248,14 @@ const NewDeclarationForm = ({allowedDeclarationTypes = []}) => {
       })
 
       if (!result?.success) {
-        throw new Error(result?.error || 'Erreur lors de la création de la déclaration.')
+        throw result
       }
 
-      await revalidateDeclarationPaths(result?.data?.data?.id)
+      if (!result?.data?.data?.id) {
+        throw {code: 'INVALID_RESPONSE'}
+      }
+
+      await revalidateDeclarationPaths(result.data.data.id)
 
       setSubmitResult({
         status: 'success',
@@ -262,7 +267,7 @@ const NewDeclarationForm = ({allowedDeclarationTypes = []}) => {
       console.error(error)
       setSubmitResult({
         status: 'error',
-        message: error?.message || 'Erreur lors de la soumission.'
+        message: getErrorMessage(error)
       })
     } finally {
       setIsSubmitting(false)

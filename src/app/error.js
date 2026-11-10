@@ -31,17 +31,16 @@ const Error = ({error}) => {
         <Box className='fr-container w-full flex flex-col gap-5'>
           <Box className='fr-container w-full flex flex-col gap-2'>
             <Typography variant='h3' className='fr-mt-3w'>
-              Erreur inattendue
+              Cette page n’a pas pu être affichée
             </Typography>
-            <p> Erreur 500</p>
           </Box>
 
           <Box className='fr-container w-full flex flex-col gap-2'>
             <Typography variant='h6'>
-              Désolé, le service rencontre un problème. Nous travaillons pour le résoudre le plus rapidement possible.
+              Le service rencontre un problème.
             </Typography>
             <p className='fr-text--sm fr-mb-5w'>
-              Essayez de rafraîchir la page ou bien ressayez plus tard.
+              Réessayez dans quelques instants. Si le problème persiste, contactez l’assistance.
             </p>
             <div className='fr-container w-full flex flex-row gap-5 fr-pl-0'>
               <Button

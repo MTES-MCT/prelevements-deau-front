@@ -23,6 +23,7 @@ const browserTests = [
   'chart-axes.spec.js',
   'declaration-charts.spec.js',
   'declaration-file-selection.spec.js',
+  'document-upload-errors.spec.js',
   'declaration-processing.spec.js',
   'declaration-feed.spec.js',
   'native-declaration.spec.js',

@@ -1,5 +1,7 @@
 'use server'
 
+import {createValidationError} from '@/lib/action-errors.js'
+
 import {revalidatePath} from 'next/cache'
 
 import {buildDeclarationFeedSearchParams} from '@/lib/declaration-feed.js'
@@ -8,7 +10,7 @@ import {cachePerRequest} from '@/server/request-cache.js'
 
 const getCachedMyTelemetrySource = cachePerRequest(async sourceId => withErrorHandling(async () => {
   if (!sourceId) {
-    throw new Error('sourceId est requis.')
+    throw createValidationError('sourceId est requis.')
   }
 
   return fetchJSON(`api/declarations/telemetry-sources/${sourceId}`)
@@ -16,7 +18,7 @@ const getCachedMyTelemetrySource = cachePerRequest(async sourceId => withErrorHa
 
 const getCachedDeclaration = cachePerRequest(async declarationId => withErrorHandling(async () => {
   if (!declarationId) {
-    throw new Error('declarationId est requis.')
+    throw createValidationError('declarationId est requis.')
   }
 
   return fetchJSON(`api/declarations/${declarationId}`)
@@ -31,25 +33,25 @@ export async function createDeclarationAction({
 } = {}) {
   return withErrorHandling(async () => {
     if (!Array.isArray(files) || files.length === 0) {
-      throw new Error('Aucun fichier fourni.')
+      throw createValidationError('Aucun fichier fourni.')
     }
 
     const normalizedType = (type || '').trim().toLocaleLowerCase('fr-FR')
     if (!normalizedType) {
-      throw new Error('Type de déclaration requis.')
+      throw createValidationError('Type de déclaration requis.')
     }
 
     if (!Array.isArray(fileTypes) || fileTypes.length !== files.length) {
-      throw new Error('fileTypes doit contenir exactement un type par fichier.')
+      throw createValidationError('fileTypes doit contenir exactement un type par fichier.')
     }
 
     const normalizedTypes = fileTypes.map(t => (t || '').trim().toLocaleLowerCase('fr-FR'))
     if (normalizedTypes.some(t => !t)) {
-      throw new Error('Chaque fichier doit avoir un type non vide.')
+      throw createValidationError('Chaque fichier doit avoir un type non vide.')
     }
 
     if (normalizedTypes.some(t => t !== normalizedType)) {
-      throw new Error('Tous les fichiers doivent être du type de déclaration sélectionné.')
+      throw createValidationError('Tous les fichiers doivent être du type de déclaration sélectionné.')
     }
 
     const formData = new FormData()
@@ -136,15 +138,15 @@ function buildQuickDeclarationPayload({
   const normalizedMeasurementType = measurementType || 'INDEX'
 
   if (normalizedMeasurementType === 'INDEX' && !readingDate) {
-    throw new Error('Date de relevé requise.')
+    throw createValidationError('Date de relevé requise.')
   }
 
   if (normalizedMeasurementType !== 'INDEX' && (!periodStartDate || !periodEndDate)) {
-    throw new Error('Période requise.')
+    throw createValidationError('Période requise.')
   }
 
   if (!Array.isArray(entries) || entries.length === 0) {
-    throw new Error('Aucune valeur saisie.')
+    throw createValidationError('Aucune valeur saisie.')
   }
 
   const payload = {
@@ -206,7 +208,7 @@ export async function getDeclarationAction(declarationId) {
 export async function getAvailablePointsPrelevementsForDeclarationAction(declarationId) {
   return withErrorHandling(async () => {
     if (!declarationId) {
-      throw new Error('declarationId est requis.')
+      throw createValidationError('declarationId est requis.')
     }
 
     return fetchJSON(`api/declarations/${declarationId}/available-points-prelevements`)
@@ -222,15 +224,15 @@ export async function reconcileDeclarationChunkAction({
 } = {}) {
   return withErrorHandling(async () => {
     if (!declarationId) {
-      throw new Error('declarationId est requis.')
+      throw createValidationError('declarationId est requis.')
     }
 
     if (!chunkId) {
-      throw new Error('chunkId est requis.')
+      throw createValidationError('chunkId est requis.')
     }
 
     if (pointPrelevementId === undefined) {
-      throw new Error('pointPrelevementId est requis.')
+      throw createValidationError('pointPrelevementId est requis.')
     }
 
     const data = await fetchJSON(`api/declarations/${declarationId}/chunks/${chunkId}/reconcile`, {
@@ -267,7 +269,7 @@ export async function deleteDeclarationAction(input) {
     const {declarationId, sourceId} = normalizeDeclarationActionInput(input)
 
     if (!declarationId) {
-      throw new Error('declarationId est requis.')
+      throw createValidationError('declarationId est requis.')
     }
 
     const data = await fetchJSON(`api/admin/declarations/${declarationId}`, {
@@ -292,7 +294,7 @@ export async function replayDeclarationAction(input) {
     const {declarationId, sourceId} = normalizeDeclarationActionInput(input)
 
     if (!declarationId) {
-      throw new Error('declarationId est requis.')
+      throw createValidationError('declarationId est requis.')
     }
 
     const data = await fetchJSON(`api/admin/declarations/${declarationId}/replay`, {
@@ -314,13 +316,13 @@ export async function requestDeclarationPointsChangeAction({
 } = {}) {
   return withErrorHandling(async () => {
     if (!declarationId) {
-      throw new Error('declarationId est requis.')
+      throw createValidationError('declarationId est requis.')
     }
 
     const normalizedMessage = String(message ?? '').trim()
 
     if (!normalizedMessage) {
-      throw new Error('Le message est requis.')
+      throw createValidationError('Le message est requis.')
     }
 
     return fetchJSON(`api/declarations/${declarationId}/points-change-request`, {

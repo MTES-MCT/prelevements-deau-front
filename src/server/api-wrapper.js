@@ -2,6 +2,8 @@ import {randomUUID} from 'node:crypto'
 
 import {forbidden, redirect} from 'next/navigation'
 
+import {toErrorResult} from '@/lib/action-errors.js'
+import {readApiResponse} from '@/server/api-response.js'
 import {handleAccessDenied} from '@/server/access-denied.js'
 import {
   getApiPerformancePath,
@@ -148,28 +150,7 @@ export async function authenticatedFetch(url, options = {}) {
  */
 export async function fetchJSON(url, options = {}) {
   const response = await authenticatedFetch(url, options)
-
-  // Handle empty responses (204 No Content, etc.)
-  const text = await response.text()
-  let data = null
-
-  if (text) {
-    try {
-      data = JSON.parse(text)
-    } catch {
-      data = {message: text}
-    }
-  }
-
-  if (!response.ok) {
-    const error = new Error(data?.message || `Request failed with status ${response.status}`)
-    error.code = response.status
-    error.validationErrors = data?.validationErrors
-    error.data = data
-    throw error
-  }
-
-  return data
+  return readApiResponse(response)
 }
 
 /**
@@ -182,14 +163,7 @@ export async function fetchJSON(url, options = {}) {
  */
 export async function fetchBlob(url, options = {}) {
   const response = await authenticatedFetch(url, options)
-
-  if (!response.ok) {
-    const error = new Error(`Request failed with status ${response.status}`)
-    error.code = response.status
-    throw error
-  }
-
-  return response.blob()
+  return readApiResponse(response, {blob: true})
 }
 
 /**
@@ -210,13 +184,7 @@ export function successResult(data) {
  * @returns {Object} - Error result object
  */
 export function errorResult(error) {
-  return {
-    success: false,
-    error: error.message,
-    code: error.code,
-    validationErrors: error.validationErrors,
-    data: error.data
-  }
+  return toErrorResult(error)
 }
 
 /**

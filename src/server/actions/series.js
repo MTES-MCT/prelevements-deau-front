@@ -1,5 +1,7 @@
 'use server'
 
+import {createValidationError} from '@/lib/action-errors.js'
+
 import {
   fetchJSON,
   withErrorHandling
@@ -159,15 +161,15 @@ export async function buildAggregatedSeriesQuery(params = {}) {
   const normalizedSourceId = normalizeIdentifier(sourceId)
 
   if (!normalizedPointIds && !normalizedCollecteurId && !normalizedPreleveurId && !normalizedSourceId && !normalizedExploitationId) {
-    throw new Error('La récupération de séries agrégées nécessite au moins un identifiant de point (pointIds), un identifiant de préleveur (preleveurId), un identifiant de collecteur (collecteurId) ou un identifiant de source (sourceId).')
+    throw createValidationError('La récupération de séries agrégées nécessite au moins un identifiant de point (pointIds), un identifiant de préleveur (preleveurId), un identifiant de collecteur (collecteurId) ou un identifiant de source (sourceId).')
   }
 
   if (!metricTypeCode) {
-    throw new Error('Le paramètre "metricTypeCode" est obligatoire pour l\'agrégation.')
+    throw createValidationError('Le paramètre "metricTypeCode" est obligatoire pour l\'agrégation.')
   }
 
   if (!aggregationFrequency) {
-    throw new Error('Le paramètre "aggregationFrequency" est obligatoire pour l\'agrégation.')
+    throw createValidationError('Le paramètre "aggregationFrequency" est obligatoire pour l\'agrégation.')
   }
 
   if (normalizedPointIds) {

@@ -1,98 +1,6 @@
 import {useCallback, useState} from 'react'
 
-/**
- * Parse API response and extract error information
- * @param {Object} response - API response object
- * @returns {Object} Parsed error info with { isError, errorMessage, validationErrors }
- */
-const parseApiResponse = response => {
-  // Check for HTTP error codes
-  const statusCode = response.code || response.status
-
-  if (statusCode >= 500) {
-    return {
-      isError: true,
-      errorMessage: 'Une erreur serveur est survenue. Veuillez réessayer ultérieurement.',
-      validationErrors: []
-    }
-  }
-
-  if (statusCode === 401) {
-    return {
-      isError: true,
-      errorMessage: 'Votre session a expiré. Veuillez vous reconnecter.',
-      validationErrors: []
-    }
-  }
-
-  if (statusCode === 403) {
-    return {
-      isError: true,
-      errorMessage: 'Vous n\'avez pas les droits nécessaires pour effectuer cette action.',
-      validationErrors: []
-    }
-  }
-
-  if (statusCode === 404) {
-    return {
-      isError: true,
-      errorMessage: 'La ressource demandée n\'existe pas ou a été supprimée.',
-      validationErrors: []
-    }
-  }
-
-  if (statusCode === 409) {
-    return {
-      isError: true,
-      errorMessage: response.message || 'Un conflit est survenu. La ressource existe peut-être déjà.',
-      validationErrors: []
-    }
-  }
-
-  if (statusCode === 400) {
-    return {
-      isError: true,
-      errorMessage: response.validationErrors ? null : (response.message || 'Données invalides.'),
-      validationErrors: response.validationErrors || []
-    }
-  }
-
-  // Generic error for other 4xx codes
-  if (statusCode >= 400) {
-    return {
-      isError: true,
-      errorMessage: response.message || 'Une erreur est survenue.',
-      validationErrors: []
-    }
-  }
-
-  // No error
-  return {
-    isError: false,
-    errorMessage: null,
-    validationErrors: []
-  }
-}
-
-/**
- * Check if response indicates success
- * @param {Object} response - API response object
- * @param {string} successIndicator - Property name that indicates success (e.g., '_id')
- * @returns {boolean}
- */
-const isSuccessResponse = (response, successIndicator = '_id') => {
-  const {isError} = parseApiResponse(response)
-  if (isError) {
-    return false
-  }
-
-  // If a success indicator is specified, check for it
-  if (successIndicator && !response[successIndicator]) {
-    return false
-  }
-
-  return true
-}
+import {ERROR_MESSAGES, getErrorMessage, getValidationErrors, parseApiResponse, isSuccessResponse} from '@/lib/action-errors.js'
 
 /**
  * Hook for handling form submissions with consistent error handling
@@ -138,12 +46,12 @@ const useFormSubmit = () => {
 
     // Check success indicator
     if (successIndicator && !response[successIndicator]) {
-      setError('Réponse inattendue du serveur.')
+      setError(ERROR_MESSAGES.invalidResponse)
       onError?.(response)
       return false
     }
 
-    onSuccess?.(response)
+    await onSuccess?.(response)
     return true
   }, [])
 
@@ -159,9 +67,10 @@ const useFormSubmit = () => {
 
     try {
       const response = await submitFn(...args)
-      return handleResponse(response, options)
+      return await handleResponse(response, options)
     } catch (error_) {
-      setError(error_.message || 'Une erreur inattendue est survenue.')
+      setError(getErrorMessage(error_))
+      setValidationErrors(getValidationErrors(error_))
       options.onError?.(error_)
       return false
     } finally {

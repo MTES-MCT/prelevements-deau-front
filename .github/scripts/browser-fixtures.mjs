@@ -21,6 +21,7 @@ import {isDeclarationFeedFixture, handleDeclarationFeedFixture} from './declarat
 import {isNativeDeclarationFixture, handleNativeDeclarationFixture} from './native-declaration-fixtures.mjs'
 import {handlePreleveurProfilesFixture} from './preleveur-profiles-fixtures.mjs'
 import {handleLoginSessionFixture} from './login-session-fixtures.mjs'
+import {isDocumentUploadFixture, handleDocumentUploadFixture} from './document-upload-fixtures.mjs'
 
 // Synthetic backend: deliberately no database, outbound HTTP, mail or jobs.
 const zoneId = '11111111-1111-4111-8111-111111111111'
@@ -59,6 +60,7 @@ const api = createServer(async (request, response) => {
 
   if (await handlePreleveurProfilesFixture(request, send)) return
   if (await handleLoginSessionFixture(request, response, send)) return
+  if (await handleDocumentUploadFixture(request, send)) return
 
   if (pathname === '/__public-stats-fixture-requests' && request.method === 'GET') {
     const month = new URL(request.url, 'http://127.0.0.1:3431').searchParams.get('month')
@@ -99,7 +101,7 @@ const api = createServer(async (request, response) => {
       : /^Bearer browser-test-meter-declarant(?:-|$)/.test(request.headers.authorization) ? 'DECLARANT' : null
   const dashboardRole = getDashboardFixtureRole(request.headers.authorization)
   const pointWaterBodyRole = getPointWaterBodyFixtureRole(request.headers.authorization)
-  if (request.headers.authorization !== 'Bearer browser-test-api-token' && !meterRole && !dashboardRole && !pointWaterBodyRole && !isChartSeriesFixture(request.headers.authorization) && !isCountingFixture(request.headers.authorization) && !isCampaignFixture(request.headers.authorization) && !isZoneResourceFixture(request.headers.authorization) && !isQuickExclusionFixture(request.headers.authorization) && !isCollectorPointFixture(request.headers.authorization) && !isExploitationUsageFixture(request.headers.authorization) && !isDeclarationProcessingFixture(request.headers.authorization) && !isDeclarationFeedFixture(request.headers.authorization) && !isNativeDeclarationFixture(request.headers.authorization)) {
+  if (request.headers.authorization !== 'Bearer browser-test-api-token' && !meterRole && !dashboardRole && !pointWaterBodyRole && !isChartSeriesFixture(request.headers.authorization) && !isCountingFixture(request.headers.authorization) && !isCampaignFixture(request.headers.authorization) && !isZoneResourceFixture(request.headers.authorization) && !isQuickExclusionFixture(request.headers.authorization) && !isCollectorPointFixture(request.headers.authorization) && !isExploitationUsageFixture(request.headers.authorization) && !isDeclarationProcessingFixture(request.headers.authorization) && !isDeclarationFeedFixture(request.headers.authorization) && !isNativeDeclarationFixture(request.headers.authorization) && !isDocumentUploadFixture(request.headers.authorization)) {
     return send(401, {message: 'Unauthorized'})
   }
 
