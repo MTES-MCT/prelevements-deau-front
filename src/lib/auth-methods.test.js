@@ -2,12 +2,21 @@ import test from 'ava'
 
 import {
   AUTH_METHODS,
+  getLoginDestination,
   getSafeCallbackUrl,
   getPasswordLength,
   hasAuthMethod,
   parseAuthConfig,
   validateNewPassword
 } from './auth-methods.js'
+
+test('une connexion ne redirige pas vers un autre parcours de connexion', t => {
+  for (const path of [undefined, '/login', '/login?error=session_expired', '/login/', '/%6cogin', '/%256cogin', '/auth/callback?token=unused', '/auth/nextauth/signout', '/activation-mot-de-passe', '/validation-email', '//example.test', 'https://example.test', '/%']) {
+    t.is(getLoginDestination(path), '/')
+  }
+  t.is(getLoginDestination('/declarations?query=foo#resultats'), '/declarations?query=foo#resultats')
+  t.is(getLoginDestination('/choisir-preleveur'), '/choisir-preleveur')
+})
 
 test('parseAuthConfig conserve l’ordre annoncé par l’API', t => {
   const config = parseAuthConfig({methods: ['password', 'magic_link', 'oidc']})

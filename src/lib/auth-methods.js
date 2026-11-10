@@ -120,3 +120,19 @@ export function getSafeCallbackUrl(value) {
     return '/'
   }
 }
+
+export function getLoginDestination(value) {
+  const destination = getSafeCallbackUrl(value)
+  let decoded = destination
+  for (let index = 0; index < 3; index += 1) {
+    const next = decodeURIComponent(decoded)
+    if (next === decoded) break
+    decoded = next
+  }
+
+  const pathname = new URL(decoded, 'https://partageonsleau.invalid').pathname
+  const authPaths = ['/login', '/auth', '/activation-mot-de-passe', '/validation-email']
+  return authPaths.some(path => pathname === path || pathname.startsWith(`${path}/`))
+    ? '/'
+    : destination
+}
