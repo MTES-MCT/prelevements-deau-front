@@ -8,8 +8,6 @@ import test from 'ava'
 import {transformSync} from 'next/dist/build/swc/index.js'
 import {renderToStaticMarkup} from 'react-dom/server'
 
-import {singleCampaignResponseHref} from '../../../lib/campaigns.js'
-
 const require = createRequire(import.meta.url)
 const campaign = {success: true, data: {data: {campaign: {id: 'campaign'}, permissions: {canManage: true}}}}
 const responses = {success: true, data: {data: {items: [{id: 'response'}], total: 1}}}
@@ -24,7 +22,6 @@ function harness({admin = false, user = {role: 'ADMIN'}, campaignResult = campai
       getCampaignResponsesAction: async (_id, options) => { calls.push(options?.view === 'summary' ? 'summary-responses' : 'responses'); return responseResult }
     }
     if (specifier === '@/server/actions/user.js') return {getCurrentSessionInfo: async () => ({data: user})}
-    if (specifier === '@/lib/campaigns.js') return {singleCampaignResponseHref}
     if (specifier === 'next/navigation') return Object.fromEntries(['forbidden', 'notFound', 'redirect'].map(name => [name, value => { throw new Error(`${name}:${value ?? ''}`) }]))
     if (specifier === '@codegouvfr/react-dsfr/Alert') return {Alert: ({title}) => React.createElement('div', {role: 'alert'}, title)}
     return require(specifier)
@@ -69,7 +66,7 @@ test('un échec de liste reste une erreur visible et ne devient pas un résultat
   t.true(renderToStaticMarkup(await flow.page()).includes('Réponses indisponibles'))
 })
 
-test('le préleveur conserve la redirection vers sa seule réponse', async t => {
+test('le préleveur reste sur la vue campagne même avec une seule réponse', async t => {
   const flow = harness({campaignResult: {success: true, data: {data: {campaign: {id: 'campaign'}, permissions: {canRespond: true, canManage: false, canReadResults: false}}}}})
-  await t.throwsAsync(flow.page(), {message: 'redirect:/campagnes/campaign/reponses/response'})
+  t.true(renderToStaticMarkup(await flow.page()).includes('Réponses : 1'))
 })

@@ -49,11 +49,6 @@ export function campaignParticipation(campaign) {
   }
 }
 
-export function singleCampaignResponseHref(campaignId, permissions, responses) {
-  if (!isCampaignRequester(permissions) || responses?.total !== 1 || responses.items?.length !== 1) return null
-  return `/campagnes/${campaignId}/reponses/${responses.items[0].id}`
-}
-
 export function campaignExploitationLabel(item) {
   const point = item?.point || item?.pointPrelevement || item?.exploitation?.pointPrelevement
   const code = item?.countingCode || item?.exploitation?.countingCode

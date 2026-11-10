@@ -2,7 +2,7 @@ import test from 'ava'
 
 import {
   campaignData, campaignDate, campaignExploitationLabel, campaignParticipation, campaignRequiresIrrigationDetails, campaignResponseHref, campaignSelectableUsageOptions, campaignState, campaignUsageOptions,
-  normalizeCampaignMeterChanges, emptyCampaignMeter, formatCampaignVolume, getCampaignField, initialCampaignAnswer, isCampaignRequester, setCampaignField, singleCampaignResponseHref, validateCampaignAnswer, validateCampaignIndices
+  normalizeCampaignMeterChanges, emptyCampaignMeter, formatCampaignVolume, getCampaignField, initialCampaignAnswer, isCampaignRequester, setCampaignField, validateCampaignAnswer, validateCampaignIndices
 } from './campaigns.js'
 
 test('un code comptage distingue deux exploitations sur le même point', t => {
@@ -310,18 +310,12 @@ test('plusieurs codes comptage conservent un suivi de toutes les réponses ; une
   t.is(campaignParticipation({status: 'OPEN', permissions: {canRespond: false}, progress: {total: 1}}).action, 'Consulter ma déclaration')
 })
 
-test('le formulaire unique est direct uniquement pour le demandeur et un résultat complet', t => {
+test('la vue préleveur reste distincte des vues collecteur et administrateur', t => {
   const permissions = {canManage: false, canReadResults: false, canRespond: false}
-  const responses = {items: [{id: 'response'}], total: 1}
   t.true(isCampaignRequester(permissions))
   t.false(isCampaignRequester({canManage: false, canReadResults: true}))
+  t.false(isCampaignRequester({canManage: true, canReadResults: true}))
   t.false(isCampaignRequester())
-  t.is(singleCampaignResponseHref('campaign', permissions, responses), '/campagnes/campaign/reponses/response')
-  t.is(singleCampaignResponseHref('campaign', {canManage: true, canReadResults: true}, responses), null)
-  t.is(singleCampaignResponseHref('campaign', {canManage: false, canReadResults: true}, responses), null)
-  t.is(singleCampaignResponseHref('campaign', permissions, {...responses, total: 2}), null)
-  t.is(singleCampaignResponseHref('campaign', permissions, {...responses, items: []}), null)
-  t.is(singleCampaignResponseHref('campaign', permissions, undefined), null)
 })
 
 

@@ -195,7 +195,7 @@ for (const sourceSerial of [null, 'SYNTH-SOURCE-001']) {
   })
 }
 
-test('Mon activité ouvre directement la réponse unique, avec un retour clair et sans filtres', async ({page, context}, testInfo) => {
+test('Mon activité ouvre la campagne avec sa seule fiche avant la réponse, sans filtres', async ({page, context}, testInfo) => {
   await authenticate(context)
   await page.goto(`${frontUrl}/tableau-de-bord`)
   const invitation = page.getByRole('region', {name: 'Déclarer mes prélèvements et mes besoins', exact: true})
@@ -207,6 +207,10 @@ test('Mon activité ouvre directement la réponse unique, avec un retour clair e
   await expect(invitation).toContainText('0 point déclaré sur 1')
   await page.screenshot({path: testInfo.outputPath('mon-activite-campagne.png'), fullPage: true})
   await invitation.getByRole('link', {name: 'Commencer ma déclaration', exact: true}).click()
+  await expect(page).toHaveURL(`${frontUrl}/campagnes/${campaignIds.campaign}`)
+  await expect(page.getByRole('region', {name: 'Localisation des points de prélèvement', exact: true}).getByText('Aucun point géolocalisé.', {exact: true})).toBeVisible()
+  await expect(page.getByRole('searchbox')).toHaveCount(0)
+  await page.getByRole('link', {name: 'Commencer ma déclaration', exact: true}).click()
   await expect(page).toHaveURL(responseUrl)
   await expect(page.getByRole('searchbox')).toHaveCount(0)
   await expect(page.getByText(/Vous pouvez préparer votre réponse en brouillon/)).toHaveCount(0)
@@ -227,12 +231,15 @@ test('plusieurs comptages : une liste simple sans recherche, sans confondre deux
   await expect(page).toHaveURL(responseUrl)
 })
 
-test('une collecte clôturée ouvre la réponse en lecture seule avec une explication', async ({page, context}) => {
+test('une collecte clôturée présente sa fiche puis ouvre la réponse en lecture seule', async ({page, context}) => {
   const requests = await authenticate(context, 'ended')
   await page.goto(`${frontUrl}/tableau-de-bord`)
   const invitation = page.getByRole('region', {name: 'Déclarer mes prélèvements et mes besoins', exact: true})
   await expect(invitation).toContainText('0 point déclaré sur 1')
   await invitation.getByRole('link', {name: 'Consulter ma déclaration', exact: true}).click()
+  await expect(page).toHaveURL(`${frontUrl}/campagnes/${campaignIds.campaign}`)
+  await expect(page.getByRole('region', {name: 'Localisation des points de prélèvement', exact: true})).toBeVisible()
+  await page.getByRole('link', {name: 'Consulter ma déclaration', exact: true}).click()
   await expect(page).toHaveURL(responseUrl)
   await expect(page.getByText('Cette collecte est clôturée. Votre réponse reste consultable.', {exact: true})).toBeVisible()
   await expect(page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true})).toHaveCount(0)

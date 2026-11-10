@@ -33,6 +33,36 @@ test.beforeEach(async ({page}) => {
   await page.clock.setFixedTime(new Date('2026-11-01T12:00:00Z'))
 })
 
+test('la campagne avec un seul point conserve sa carte centrée et permet d’ouvrir sa déclaration', async ({page, context}, testInfo) => {
+  await authenticate(context, 'map')
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+  await page.goto(`${frontUrl}/campagnes/${campaignIds.campaign}`)
+  await expect(page).toHaveURL(`${frontUrl}/campagnes/${campaignIds.campaign}`)
+  const map = page.getByRole('region', {name: 'Localisation des points de prélèvement', exact: true})
+  await map.scrollIntoViewIfNeeded()
+  await expect(map.locator('[data-map-ready="true"]')).toBeVisible({timeout: 20_000})
+  await expect(map.locator('[data-map-unavailable]')).toHaveCount(0)
+  await expect(page.getByRole('link', {name: 'Commencer ma déclaration', exact: true})).toHaveCount(1)
+  await expect(page.getByRole('searchbox')).toHaveCount(0)
+  await expect(page.getByRole('navigation', {name: 'Pagination', exact: true})).toHaveCount(0)
+  const point = page.getByRole('button', {name: /Point synthétique.*001/})
+  await expect(point).toHaveAttribute('aria-pressed', 'false')
+  await map.screenshot({path: testInfo.outputPath('campagne-point-unique.png')})
+  // Selecting the marker at the canvas centre proves that the sole point is
+  // already framed on arrival, without zooming or moving the map.
+  const canvas = map.locator('canvas')
+  const box = await canvas.boundingBox()
+  await expect(async () => {
+    await canvas.click({position: {x: box.width / 2, y: box.height / 2}})
+    await expect(point).toHaveAttribute('aria-pressed', 'true')
+  }).toPass()
+  await page.getByRole('link', {name: 'Commencer ma déclaration', exact: true}).click()
+  await expect(page).toHaveURL(`${frontUrl}/campagnes/${campaignIds.campaign}/reponses/${campaignIds.response}`)
+  await expect(page.getByRole('region', {name: 'Enregistrement de la réponse', exact: true})).toBeVisible()
+  expect(errors).toEqual([])
+})
+
 test('la carte préleveur ouvre une vue d’ensemble sans sélection et conserve chaque fiche d’un point partagé', async ({page, context}, testInfo) => {
   await authenticate(context, 'map-many')
   const errors = []
