@@ -40,7 +40,10 @@ for (const [scenario, error] of Object.entries(documentUploadErrors)) {
     await page.goto(frontUrl + pagePath)
     await expect(page.getByRole('heading', {name: 'Ajouter un document', exact: true})).toBeVisible()
     const file = {name: 'autorisation-synthetique.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\nDocument synthétique pour test navigateur.\n%%EOF')}
-    await page.locator('input[type="file"]').setInputFiles(file)
+    // The native chooser opens only once the React button handler is ready.
+    const chooserReady = page.waitForEvent('filechooser')
+    await page.getByRole('button', {name: 'Parcourir les fichiers', exact: true}).click()
+    await (await chooserReady).setFiles(file)
     await expect(page.getByLabel('Titre', {exact: true})).toHaveValue(file.name)
     await page.getByLabel('Titre', {exact: true}).fill('Autorisation à conserver')
     await page.getByLabel('Référence', {exact: true}).fill('REF-SYNTHETIQUE')
