@@ -96,7 +96,7 @@ test('erreur visible près du bouton et choix conservé pour réessayer', async 
   const select = page.getByRole('combobox', {name: 'Type de ressource gérée', exact: true})
   await select.selectOption('SOUTERRAIN')
   await page.getByRole('button', {name: 'Enregistrer', exact: true}).click()
-  await expect(settings.getByRole('alert')).toContainText('Enregistrement temporairement indisponible.')
+  await expect(settings.getByRole('alert')).toContainText('Le service est temporairement indisponible. Réessayez dans quelques instants. Si le problème persiste, contactez l’assistance.')
   await expect(select).toHaveValue('SOUTERRAIN')
   await expect(page.getByRole('status')).toHaveCount(0)
   await page.getByRole('button', {name: 'Enregistrer', exact: true}).click()
