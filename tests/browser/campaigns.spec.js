@@ -1156,6 +1156,7 @@ test('un changement automatique conserve le motif et la période calculable, san
   await expect(changed).toBeChecked()
   await expect(changed).toBeDisabled()
   await page.getByRole('button', {name: 'Enregistrer le brouillon', exact: true}).click()
+  await expect(page.getByRole('region', {name: 'Enregistrement de la réponse', exact: true}).getByRole('status')).toHaveText(/^Brouillon enregistré\./)
   await page.reload()
   await expect(changed).toBeChecked()
   await expect(reason).toHaveValue('')
