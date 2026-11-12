@@ -175,7 +175,7 @@
     }
   },
   "engines": {
-    "node": "22.23.4"
+    "node": "22.23.5"
   },
   "packageManager": "yarn@4.6.0",
   "author": "Théophile Merlière <theophile.merliere@gmail.com>",

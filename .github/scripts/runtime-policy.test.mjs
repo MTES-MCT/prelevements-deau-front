@@ -7,8 +7,8 @@ const read = file => readFileSync(new URL(file, root), 'utf8')
 const manifest = JSON.parse(read('package.json'))
 
 test('Scalingo, local development and CI use the same patched Node and Yarn', () => {
-  assert.equal(read('.nvmrc').trim(), '22.23.4')
-  assert.equal(manifest.engines.node, '22.23.4')
+  assert.equal(read('.nvmrc').trim(), '22.23.5')
+  assert.equal(manifest.engines.node, '22.23.5')
   assert.equal(manifest.packageManager, 'yarn@4.6.0')
   assert.equal(manifest.engines.npm, undefined)
   assert.equal(existsSync(new URL('package-lock.json', root)), false)
