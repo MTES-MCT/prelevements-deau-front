@@ -1,3 +1,13 @@
+const sourceLabels = new Map([
+  ['orange_live_objects', 'Orange Live Objects'],
+  ['willie', 'Willie'],
+  ['aquasys', 'Aquasys'],
+  ['manual-collection', 'Campagne de collecte']
+])
+
+export const getSynchronizationSourceLabel = source => sourceLabels.get(source)
+  ?? (source ? String(source).replaceAll(/[_-]+/g, ' ').replace(/^./, letter => letter.toUpperCase()) : 'Non renseignée')
+
 export function getMeterSynchronizationStatus(allocation) {
   if (allocation.status === 'ENDED') {
     return {status: 'Affectation terminée', severity: 'info'}

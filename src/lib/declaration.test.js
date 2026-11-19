@@ -11,6 +11,8 @@ import {
   getDeclarationProcessingStatus,
   getPointsPrelevementIdsFromDeclaration,
   getPointsPrelevementIdsFromSource,
+  getQuickDeclarationEntriesCount,
+  getQuickDeclarationEntriesLabel,
   getSourcePeriod,
   getSourcePeriodLabel,
   getSourceReadingDateLabel,
@@ -41,6 +43,15 @@ test('le rejeu générique est masqué pour les dossiers DN historiques, sans re
   t.deepEqual(getDeclarationAdminCapabilities({declaration: {...declaration, importSourceId: 'reunion:DN:80149:12345'}}, 'ADMIN'), {canDelete: true, canReplay: false})
   t.deepEqual(getDeclarationAdminCapabilities({declaration, metadata: {provenance: 'PE', historicalAccepted: true}}, 'ADMIN'), {canDelete: true, canReplay: true})
   t.deepEqual(getDeclarationAdminCapabilities({declaration, metadata: {provenance: 'DN', historicalAccepted: false}}, 'ADMIN'), {canDelete: true, canReplay: true})
+})
+
+test('la période d’un lot télérelevé inclut la fenêtre du volume calculé qui précède le jour de remise', t => {
+  const volume = {metricTypeCode: 'volume', valueKind: 'COMPUTED', periodStart: '2026-11-16T23:30:00Z', periodEnd: '2026-11-18T08:00:00Z'}
+  const chunk = {minDate: '2026-11-18', maxDate: '2026-11-18', chunkValues: [volume]}
+  const period = getSourcePeriod({type: 'API', chunks: [chunk]})
+  t.is(period.start.toISOString().slice(0, 10), '2026-11-17')
+  t.is(period.end.toISOString().slice(0, 10), '2026-11-18')
+  t.is(getSourcePeriod({type: 'MANUAL', chunks: [chunk]}).start.toISOString().slice(0, 10), '2026-11-18')
 })
 
 test('isTelemetrySource détecte les sources API et les déclarations API', t => {
@@ -130,6 +141,7 @@ test('la carte ne reconstruit pas de point depuis une référence masquée ou in
 })
 
 test('getTelemetrySourceTitle décrit le connecteur si disponible', t => {
+  t.is(getTelemetrySourceTitle({metadata: {connector: 'orange_live_objects'}}), 'Télérelève Orange Live Objects')
   t.is(getTelemetrySourceTitle({metadata: {connector: 'Murgat'}}), 'Télérelève Murgat')
   t.is(getTelemetrySourceTitle({metadata: {}}), 'Données télérelevées')
 })
@@ -251,6 +263,92 @@ test('getSourceReadingDateLabel retrouve la meilleure date de relevé', t => {
   }), '15/05/2026')
 
   t.is(getSourceReadingDateLabel({metadata: {}}), null)
+})
+
+test('la période des relevés couvre toutes les dates de campagne, en détail et en liste', t => {
+  const dates = ['2026-05-31', '2026-10-31', '2025-11-01']
+  const source = {
+    createdAt: '2026-11-18',
+    metadata: {manualQuickDeclaration: true, measurementType: 'INDEX', readingDate: dates[0]},
+    chunks: dates.map(readingDate => ({metadata: {readingDate}}))
+  }
+  const detail = {...source, chunks: source.chunks.map(chunk => ({
+    ...chunk,
+    chunkValues: [{metricTypeCode: 'index', valueKind: 'DECLARED', periodStart: chunk.metadata.readingDate}],
+    latestIndexReadings: [{periodStart: '2024-01-01'}]
+  }))}
+  for (const data of [source, detail]) {
+    t.is(getSourceReadingDateLabel(data, {singleDatePrefix: 'Le '}), 'Du 01/11/2025 au 31/10/2026')
+    t.is(getSourcePeriodLabel(data), 'Relevés du 01/11/2025 au 31/10/2026')
+  }
+})
+
+test('les dates des index déclarés dans un même lot excluent les volumes calculés et les fins exclusives', t => {
+  const source = {
+    metadata: {manualQuickDeclaration: true, measurementType: 'INDEX'},
+    chunks: [{
+      metadata: {readingDate: '2026-05-01'},
+      chunkValues: [
+        {metricTypeCode: 'index', periodStart: '2026-07-01', periodEnd: '2026-07-02'},
+        {metricTypeCode: 'index', periodStart: '2026-05-01', periodEnd: '2026-05-02'},
+        {metricTypeCode: 'volume prélevé', valueKind: 'COMPUTED', periodStart: '2026-02-01'}
+      ]
+    }]
+  }
+  t.is(getSourceReadingDateLabel(source), 'Du 01/05/2026 au 01/07/2026')
+})
+
+test('plusieurs compteurs relevés le même jour conservent une date unique', t => {
+  const source = {metadata: {manualQuickDeclaration: true}, chunks: [
+    {minDate: '2026-06-30', maxDate: '2026-06-30'},
+    {metadata: {readingDate: '2026-06-30'}}
+  ]}
+  t.is(getSourceReadingDateLabel(source, {singleDatePrefix: 'Le '}), 'Le 30/06/2026')
+  t.is(getSourcePeriodLabel(source), 'Relevé du 30/06/2026')
+})
+
+test('les saisies rapides de volume conservent leur date affichée', t => {
+  const source = {
+    metadata: {manualQuickDeclaration: true, measurementType: 'VOLUME'},
+    chunks: [{minDate: '2026-06-01', maxDate: '2026-06-30'}]
+  }
+  t.is(getSourceReadingDateLabel(source), '30/06/2026')
+})
+
+test('le volume directement saisi affiche sa période métier inclusive dans la liste et dans le titre', t => {
+  const period = {periodStartDate: '2026-09-01', periodEndDate: '2026-09-30'}
+  const metadata = {manualQuickDeclaration: true, measurementType: 'VOLUME'}
+  const chunk = {metadata: period, chunkValues: [{metricTypeCode: 'volume', valueKind: 'DECLARED', periodEnd: '2026-10-01'}]}
+  for (const source of [{metadata: {...metadata, ...period}}, {metadata, chunks: [chunk]}]) {
+    t.is(getSourceReadingDateLabel(source, {singleDatePrefix: 'Le '}), 'Du 01/09/2026 au 30/09/2026')
+    t.is(getSourcePeriodLabel(source), 'Du 01/09/2026 au 30/09/2026')
+  }
+  t.is(getSourcePeriodLabel({metadata: {...metadata, ...period, periodEndDate: period.periodStartDate}}), 'Le 01/09/2026')
+})
+
+test('le nombre de relevés exclut les volumes calculés et conserve les saisies des listes sans valeurs détaillées', t => {
+  const source = {metadata: {measurementType: 'INDEX'}, chunks: [{chunkValues: [
+    {metricTypeCode: 'index', valueKind: 'DECLARED'}, {metricTypeCode: 'volume', valueKind: 'COMPUTED'}
+  ]}]}
+  t.is(getQuickDeclarationEntriesCount(source), 1)
+  t.is(getQuickDeclarationEntriesCount({...source, chunks: [{chunkValues: [{metricTypeCode: 'volume', valueKind: 'COMPUTED'}]}]}), 0)
+  t.is(getQuickDeclarationEntriesCount({...source, chunks: [{}, {}]}), 2)
+  t.is(getQuickDeclarationEntriesCount({...source, metadata: {entriesCount: 0}}), 0)
+})
+
+test('le résumé d’une saisie rapide de volume compte les volumes saisis, même pour un volume nul', t => {
+  for (const measurementType of ['VOLUME', 'VOLUME_PRELEVE', 'VOLUME_REJETE']) {
+    const metadata = {manualQuickDeclaration: true, measurementType}
+    const source = {metadata, chunks: [{chunkValues: [{metricTypeCode: 'volume', valueKind: 'DECLARED', value: 0}]}]}
+    t.is(getQuickDeclarationEntriesLabel(source), '1 volume saisi')
+    t.is(getQuickDeclarationEntriesLabel({metadata: {...metadata, entriesCount: 3}}), '3 volumes saisis')
+    t.is(getQuickDeclarationEntriesLabel({metadata: {...metadata, entriesCount: 0}}), null)
+    for (const key of ['collectionCampaignId', 'collectionResponseId']) {
+      t.is(getQuickDeclarationEntriesLabel({...source, metadata: {...metadata, [key]: 'campagne'}}), '1 relevé')
+    }
+  }
+  t.is(getQuickDeclarationEntriesLabel({metadata: {measurementType: 'INDEX', entriesCount: 2}}), '2 relevés')
+  t.is(getQuickDeclarationEntriesLabel({chunks: [{}]}), '1 relevé')
 })
 
 test('getSourcePeriodLabel privilégie les relevés rapides puis les périodes', t => {

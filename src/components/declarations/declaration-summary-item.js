@@ -7,8 +7,11 @@ import {
   dataSourceTypeLabels,
   getDeclarationDisplayStatus,
   getDeclarationProcessingStatus,
+  getQuickDeclarationEntriesLabel,
+  getSourceDisplayDates,
   getSourcePeriodLabel,
   getSourceReadingDateLabel,
+  getTelemetryConnectorName,
   isDeclarationTreatmentPending,
   isManualQuickDeclarationSource,
   isMeterTelemetrySource,
@@ -173,10 +176,6 @@ function getDeclarationCodeLabel(declaration, source, kind) {
   return sourceCode ? `N° ${sourceCode}` : null
 }
 
-function getTelemetryConnectorName(source, declaration) {
-  return source?.metadata?.connector ?? declaration?.declarationType?.name ?? null
-}
-
 function getTelemetryConnectorLabel(source, declaration) {
   const connector = getTelemetryConnectorName(source, declaration)
   return connector ? `Source ${connector}` : null
@@ -246,9 +245,7 @@ function getVolumeLabel(source) {
 
 function getSourceExactPeriodLabel(source) {
   if (isMeterTelemetrySource(source)) return getSourcePeriodLabel(source)
-  const dates = (source?.chunks ?? [])
-    .flatMap(chunk => [chunk.minDate, chunk.maxDate])
-    .filter(Boolean)
+  const dates = getSourceDisplayDates(source)
     .map(value => new Date(value))
     .filter(date => Number.isFinite(date.getTime()))
 
@@ -270,21 +267,8 @@ function getSourceExactPeriodLabel(source) {
   return `Du ${formatShortDate(start)} au ${formatShortDate(end)}`
 }
 
-function getQuickDeclarationEntriesCount(source) {
-  const entriesCount = Number(source?.metadata?.entriesCount)
-  const chunks = source?.chunks ?? []
-  const chunkValuesCount = chunks.reduce((sum, chunk) => sum + (chunk.chunkValues?.length ?? 0), 0)
-
-  if (Number.isFinite(entriesCount)) {
-    return entriesCount
-  }
-
-  return chunkValuesCount > 0 ? chunkValuesCount : chunks.length
-}
-
 function getQuickDeclarationNature(source, periodLabel) {
   const measurementType = source?.metadata?.measurementType ?? 'INDEX'
-  const count = getQuickDeclarationEntriesCount(source)
   const volumeLabel = getVolumeLabel(source)
   const presentation = quickDeclarationMeasurementPresentation[measurementType]
     ?? quickDeclarationMeasurementPresentation.INDEX
@@ -292,7 +276,7 @@ function getQuickDeclarationNature(source, periodLabel) {
   return {
     iconClassName: null,
     primary: periodLabel,
-    secondary: joinDetails([count > 0 ? formatCount(count, 'relevé') : null, volumeLabel]),
+    secondary: joinDetails([getQuickDeclarationEntriesLabel(source), volumeLabel]),
     tag: {
       color: presentation.color,
       iconClassName: presentation.iconClassName,
@@ -302,19 +286,16 @@ function getQuickDeclarationNature(source, periodLabel) {
 }
 
 function getManualQuickDeclarationPeriodLabel(source) {
-  const readingDateLabel = getSourceReadingDateLabel(source)
-
-  if (readingDateLabel) {
-    return `Le ${readingDateLabel}`
-  }
+  const readingDateLabel = getSourceReadingDateLabel(source, {singleDatePrefix: 'Le '})
+  if (readingDateLabel) return readingDateLabel
 
   return getSourceExactPeriodLabel(source) ?? getSourcePeriodLabel(source)
 }
 
 function getTelemetryReadingsLabel(source) {
   const chunks = source?.chunks ?? []
-  const singular = isMeterTelemetrySource(source) ? 'volume calculé' : 'relevé'
-  const plural = isMeterTelemetrySource(source) ? 'volumes calculés' : 'relevés'
+  const singular = isMeterTelemetrySource(source) ? 'volume calculé' : 'valeur'
+  const plural = isMeterTelemetrySource(source) ? 'volumes calculés' : 'valeurs'
   const countedChunks = chunks.filter(chunk => Number.isFinite(Number(chunk?._count?.chunkValues)))
 
   if (countedChunks.length > 0) {
@@ -355,7 +336,7 @@ function getTelemetryPreleveurNames(source, declaration) {
 
 function getDeclarationType(source, declaration) {
   if (isTelemetrySource(source, declaration)) {
-    return source?.metadata?.connector ?? declaration?.declarationType?.name ?? 'Télérelève'
+    return getTelemetryConnectorName(source, declaration) ?? 'Télérelève'
   }
 
   return getDeclarationTypeLabel(declaration?.type, declaration?.declarationType)

@@ -1,5 +1,8 @@
 import moment from 'moment'
 import 'moment/locale/fr.js'
+import {formatNumber} from '../utils/number.js'
+import {getDeclaredIndexDate, isDeclaredIndexValue, isVolumeMetricType} from './declaration-index-readings.js'
+import {getSynchronizationSourceLabel} from './meter-synchronization.js'
 import {formatMeterCoveredPeriod, getMeterPeriod, isMeterPeriodSource} from './meter-period.js'
 
 moment.locale('fr')
@@ -125,9 +128,13 @@ export function getDeclarationMapPoints(chunks = [], availablePoints = []) {
   return [...pointsById.values()]
 }
 
-export function getTelemetrySourceTitle(source) {
+export function getTelemetryConnectorName(source, declaration = source?.declaration) {
   const connector = source?.metadata?.connector
-  return connector ? `Télérelève ${connector}` : 'Données télérelevées'
+  return connector ? getSynchronizationSourceLabel(connector) : declaration?.declarationType?.name ?? null
+}
+
+export function getTelemetrySourceTitle(source) {
+  return source?.metadata?.connector ? `Télérelève ${getTelemetryConnectorName(source)}` : 'Données télérelevées'
 }
 
 export function buildDeclarationViewFromSource(source) {
@@ -141,7 +148,7 @@ export function buildDeclarationViewFromSource(source) {
     title: getTelemetrySourceTitle(source),
     type: 'telemetry',
     declarationType: {
-      name: source?.metadata?.connector ?? 'Télérelève'
+      name: getTelemetryConnectorName(source) ?? 'Télérelève'
     },
     dataSourceType: 'API',
     createdAt: source?.createdAt,
@@ -188,11 +195,27 @@ export function isDeclarationTreatmentPending(declaration, source = declaration?
   return pendingDeclarationProcessingStatuses.has(getDeclarationProcessingStatus(declaration, source))
 }
 
+// Legacy telemetry chunks can be dated on the day their closing reading arrived.
+// The receipt also covers the actual interval of each computed volume it contains.
+const telemetryDay = new Intl.DateTimeFormat('en-CA', {timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit'})
+
+export function getSourceDisplayDates(source) {
+  return (source?.chunks ?? []).flatMap(chunk => {
+    const dates = [chunk?.minDate, chunk?.maxDate].filter(Boolean)
+    if (source.type !== 'API' || chunk?.metadata?.nativeTemporal) return dates
+    for (const value of chunk?.chunkValues ?? []) {
+      if (value.valueKind !== 'COMPUTED' || !isVolumeMetricType(value.metricTypeCode) || value.isOverwritten || value.valueStatus === 'OVERWRITTEN') continue
+      const start = Date.parse(value.periodStart)
+      const end = Date.parse(value.periodEnd)
+      if (end > start) dates.push(telemetryDay.format(start), telemetryDay.format(end - 1))
+    }
+    return dates
+  })
+}
+
 export function getSourcePeriod(source) {
   if (isMeterPeriodSource(source)) return getMeterPeriod(source) ?? {start: null, end: null}
-  const chunks = source?.chunks ?? []
-
-  const dates = chunks.flatMap(c => [c?.minDate, c?.maxDate].filter(Boolean))
+  const dates = getSourceDisplayDates(source)
 
   if (dates.length === 0) {
     return {start: null, end: null}
@@ -211,39 +234,82 @@ export function isManualQuickDeclarationSource(source) {
     || source?.metadata?.manualQuickDeclaration === true
 }
 
-function formatDateLabel(value) {
-  if (!value) {
-    return null
-  }
+export function getQuickDeclarationEntriesCount(source) {
+  const entriesCount = source?.metadata?.entriesCount
+  if (entriesCount != null && Number.isInteger(Number(entriesCount))) return Number(entriesCount)
 
-  const date = moment.utc(value)
-
-  if (!date.isValid()) {
-    return null
-  }
-
-  return date.format('L')
+  const isIndex = (source?.metadata?.measurementType ?? 'INDEX') === 'INDEX'
+  return (source?.chunks ?? []).reduce((sum, chunk) => {
+    if (!Array.isArray(chunk.chunkValues)) return sum + 1
+    return sum + chunk.chunkValues.filter(value => isIndex ? isDeclaredIndexValue(value) : value.valueKind !== 'COMPUTED').length
+  }, 0)
 }
 
-export function getSourceReadingDateLabel(source) {
-  if (!isManualQuickDeclarationSource(source)) {
-    return null
+export function getQuickDeclarationEntriesLabel(source) {
+  const count = getQuickDeclarationEntriesCount(source)
+  if (count < 1) return null
+
+  const {measurementType, collectionCampaignId, collectionResponseId} = source.metadata ?? {}
+  const directVolume = !collectionCampaignId && !collectionResponseId
+    && ['VOLUME', 'VOLUME_PRELEVE', 'VOLUME_REJETE'].includes(measurementType)
+  if (directVolume) return `${formatNumber(count)} ${count === 1 ? 'volume saisi' : 'volumes saisis'}`
+  return `${formatNumber(count)} ${count === 1 ? 'relevé' : 'relevés'}`
+}
+
+function getDeclaredVolumePeriodLabel(source) {
+  if (source.metadata?.measurementType === 'INDEX') return null
+  const metadata = source.metadata?.periodStartDate && source.metadata?.periodEndDate
+    ? [source.metadata]
+    : (source.chunks ?? []).map(chunk => chunk.metadata)
+  const periods = metadata.filter(value => value?.periodStartDate && value?.periodEndDate).map(value => ({
+    start: moment.utc(value.periodStartDate, 'YYYY-MM-DD', true),
+    end: moment.utc(value.periodEndDate, 'YYYY-MM-DD', true)
+  })).filter(({start, end}) => start.isValid() && end.isValid() && !end.isBefore(start))
+  if (!periods.length) return null
+  const start = moment.min(periods.map(period => period.start))
+  const end = moment.max(periods.map(period => period.end))
+  return start.isSame(end, 'day') ? `Le ${start.format('L')}` : `Du ${start.format('L')} au ${end.format('L')}`
+}
+
+function getQuickReadingDates(source) {
+  const chunks = source.chunks ?? []
+  const readingDate = source.metadata?.readingDate
+  if (source.metadata?.measurementType && source.metadata.measurementType !== 'INDEX') {
+    const chunkWithDates = chunks.find(chunk => chunk?.maxDate || chunk?.minDate)
+    return [readingDate ?? chunks.find(chunk => chunk?.metadata?.readingDate)?.metadata.readingDate
+      ?? chunkWithDates?.maxDate ?? chunkWithDates?.minDate]
   }
 
-  const readingDate = source?.metadata?.readingDate
-    ?? source?.chunks?.find(chunk => chunk?.metadata?.readingDate)?.metadata?.readingDate
-    ?? source?.chunks?.find(chunk => chunk?.maxDate || chunk?.minDate)?.maxDate
-    ?? source?.chunks?.find(chunk => chunk?.maxDate || chunk?.minDate)?.minDate
+  const dates = chunks.flatMap(chunk => {
+    const indexValues = (chunk.chunkValues ?? []).filter(isDeclaredIndexValue)
+    if (indexValues.length) return indexValues.map(value => getDeclaredIndexDate(value, chunk, source, indexValues.length))
+    // List responses contain chunk metadata and bounds but omit individual readings.
+    if (chunk.metadata?.readingDate) return [chunk.metadata.readingDate]
+    if (chunk.chunkValues?.length) return []
+    return readingDate ? [readingDate] : [chunk.minDate, chunk.maxDate]
+  }).filter(Boolean)
+  return dates.length ? dates : [readingDate]
+}
 
-  return formatDateLabel(readingDate)
+export function getSourceReadingDateLabel(source, {singleDatePrefix = '', rangePrefix = 'Du '} = {}) {
+  if (!isManualQuickDeclarationSource(source)) return null
+  const volumePeriod = getDeclaredVolumePeriodLabel(source)
+  if (volumePeriod) return volumePeriod
+  const dates = getQuickReadingDates(source).filter(Boolean)
+    .map(value => moment.utc(value, moment.ISO_8601, true))
+    .filter(date => date.isValid())
+  if (!dates.length) return null
+
+  const start = moment.min(dates)
+  const end = moment.max(dates)
+  if (start.isSame(end, 'day')) return `${singleDatePrefix}${start.format('L')}`
+  return `${rangePrefix}${start.format('L')} au ${end.format('L')}`
 }
 
 export function getSourcePeriodLabel(source) {
   if (isMeterPeriodSource(source)) return formatMeterCoveredPeriod(getMeterPeriod(source))
-  const readingDateLabel = getSourceReadingDateLabel(source)
-  if (readingDateLabel) {
-    return `Relevé du ${readingDateLabel}`
-  }
+  const readingDateLabel = getSourceReadingDateLabel(source, {singleDatePrefix: 'Relevé du ', rangePrefix: 'Relevés du '})
+  if (readingDateLabel) return readingDateLabel
 
   const {start, end} = getSourcePeriod(source)
   if (!start && !end) {

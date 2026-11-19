@@ -109,7 +109,7 @@ export async function handleCampaignFixtureRequest(request, send, response) {
     const source = {id: 'synthetic-source', type: 'DECLARATION', status: 'COMPLETED', globalInstructionStatus: 'VALIDATED', metadata: {manualQuickDeclaration: true, measurementType: 'INDEX', collectionCampaignId: campaignIds.campaign, collectionResponseId: campaignIds.response}, chunks: [campaignIds.meter, campaignIds.secondMeter].map((compteurId, index) => ({
       id: `synthetic-chunk-${index}`, pointPrelevement: point, pointPrelevementId: point.id, exploitationId: campaignIds.exploitation, exploitation: {countingCode: '001'}, compteurId, metadata: {serialNumber: `SYNTH-M${index + 1}`, readingDate: '2026-10-31'}, usage: uses[0], flowType: 'PRELEVEMENT', minDate: '2026-10-31', maxDate: '2026-10-31',
       chunkValues: [{id: `synthetic-value-${index}`, value: 30 + index, metricTypeCode: 'index', unit: 'm³', periodStart: '2026-10-31', periodEnd: '2026-10-31', valueKind: 'DECLARED'}],
-      latestIndexReadings: [{id: `synthetic-history-${index}`, value: 30 + index, metricTypeCode: 'index', unit: 'm³', periodStart: '2026-10-31', periodEnd: '2026-10-31', compteurId, serialNumber: `SYNTH-M${index + 1}`}]
+      latestIndexReadings: [{id: `synthetic-value-${index}`, value: 30 + index, metricTypeCode: 'index', unit: 'm³', periodStart: '2026-10-31', periodEnd: '2026-10-31', compteurId, serialNumber: `SYNTH-M${index + 1}`}]
     }))}
     const declaration = {id: campaignIds.declaration, code: 'SYNTH', type: 'quick-declaration', dataSourceType: 'MANUAL', createdAt: '2026-11-01', files: [], canReconcile: false}
     return ok(pathname.startsWith('/api/sources/') ? {...source, declaration} : {...declaration, source})

@@ -1128,9 +1128,11 @@ test('la déclaration générée distingue ses compteurs et renvoie vers la rép
   await expect(page.getByText('Compteur : SYNTH-M1', {exact: true})).toBeVisible()
   await expect(page.getByText('Compteur : SYNTH-M2', {exact: true})).toBeVisible()
   await expect(page.getByRole('link', {name: 'Consulter la réponse et les volumes calculés', exact: true})).toHaveAttribute('href', `/campagnes/${campaignIds.campaign}/reponses/${campaignIds.response}`)
-  await page.getByText('Voir les derniers index connus', {exact: true}).first().click()
-  await expect(page.getByRole('columnheader', {name: 'Compteur', exact: true}).first()).toBeVisible()
-  await expect(page.getByRole('cell', {name: 'SYNTH-M1', exact: true})).toBeVisible()
+  for (const [meter, value] of [['SYNTH-M1', '30 m³'], ['SYNTH-M2', '31 m³']]) {
+    const article = page.getByRole('article').filter({hasText: 'Compteur : ' + meter})
+    await expect(article.getByRole('cell')).toHaveText(['31/10/2026', value])
+    await expect(article.locator('details')).toHaveCount(0)
+  }
 })
 
 test('le reçu conserve la notice pour l’instructeur et oriente l’admin vers la gestion de campagne', async ({page, context}) => {
