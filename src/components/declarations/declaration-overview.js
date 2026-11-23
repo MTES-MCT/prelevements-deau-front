@@ -18,6 +18,7 @@ import {
   getTelemetryConnectorName,
   isDeclarationTreatmentPending,
   isManualQuickDeclarationSource,
+  isQuickDeclarationWithdrawn,
   isMeterTelemetrySource,
   isTelemetrySource,
   sourceStateLabels
@@ -277,6 +278,7 @@ function getSourceExactPeriodLabel(source) {
 }
 
 function getOverviewPeriodLabel(source, fallbackLabel) {
+  if (isQuickDeclarationWithdrawn(source)) return 'Sans mesure active'
   const readingDateLabel = getSourceReadingDateLabel(source, {singleDatePrefix: 'Le '})
   if (readingDateLabel) return readingDateLabel
 
@@ -606,6 +608,9 @@ const DeclarationOverview = ({
               {displayedAotDecreeNumber && <Tag> AOT {displayedAotDecreeNumber}</Tag>}
             </div>
             <h1 className='fr-h3 fr-mb-1v'>{title}</h1>
+            {source?.metadata?.quickModifiedAt && (
+              <p className='fr-text--sm fr-mb-0'>Modifiée le {formatShortDate(new Date(source.metadata.quickModifiedAt))}</p>
+            )}
           </div>
           {actions && (
             <div className='shrink-0'>

@@ -132,33 +132,34 @@ function buildQuickDeclarationPayload({
   periodEndDate,
   entries = [],
   pointUsageNames = [],
+  previewToken,
+  revision,
   comment
-} = {}) {
+} = {}, editing = false) {
   const normalizedType = (type || '').trim().toLocaleLowerCase('fr-FR')
   const normalizedMeasurementType = measurementType || 'INDEX'
 
-  if (normalizedMeasurementType === 'INDEX' && !readingDate) {
-    throw createValidationError('Date de relevé requise.')
-  }
-
-  if (normalizedMeasurementType !== 'INDEX' && (!periodStartDate || !periodEndDate)) {
-    throw createValidationError('Période requise.')
-  }
-
-  if (!Array.isArray(entries) || entries.length === 0) {
+  if (!Array.isArray(entries) || (!editing && entries.length === 0)) {
     throw createValidationError('Aucune valeur saisie.')
   }
 
-  const payload = {
-    measurementType: normalizedMeasurementType,
-    entries
-  }
+  const payload = {measurementType: normalizedMeasurementType, entries}
+  if (previewToken) payload.previewToken = previewToken
+  if (revision != null) payload.revision = revision
 
   if (normalizedMeasurementType === 'INDEX') {
-    payload.readingDate = readingDate
+    if (entries.some(entry => !(entry.readingDate || readingDate))) {
+      throw createValidationError('Date de relevé requise.')
+    }
+
+    if (readingDate) payload.readingDate = readingDate
   } else {
-    payload.periodStartDate = periodStartDate
-    payload.periodEndDate = periodEndDate
+    if (entries.some(entry => !(entry.periodStartDate || periodStartDate) || !(entry.periodEndDate || periodEndDate))) {
+      throw createValidationError('Période requise.')
+    }
+
+    if (periodStartDate) payload.periodStartDate = periodStartDate
+    if (periodEndDate) payload.periodEndDate = periodEndDate
   }
 
   if (normalizedType) {
@@ -186,6 +187,35 @@ export async function previewQuickDeclarationConflictsAction(payload) {
       method: 'POST',
       body: buildQuickDeclarationPayload(payload)
     }))
+}
+
+export async function getEditableQuickDeclarationAction(declarationId) {
+  return withErrorHandling(() => fetchJSON(`api/declarations/${encodeURIComponent(declarationId)}/quick`), {forbiddenOnAccessDenied: false})
+}
+
+export async function previewQuickDeclarationAction(payload, declarationId = null) {
+  const base = declarationId ? `api/declarations/${encodeURIComponent(declarationId)}/quick` : 'api/declarations/quick'
+  return withErrorHandling(() => fetchJSON(`${base}/preview`, {
+    method: 'POST',
+    body: buildQuickDeclarationPayload(payload, Boolean(declarationId))
+  }), {forbiddenOnAccessDenied: false})
+}
+
+export async function updateQuickDeclarationAction(declarationId, payload) {
+  return withErrorHandling(async () => {
+    const data = await fetchJSON(`api/declarations/${encodeURIComponent(declarationId)}/quick`, {
+      method: 'PATCH',
+      body: buildQuickDeclarationPayload(payload, true)
+    })
+    await revalidateDeclarationPaths(declarationId)
+    const sourceId = data?.data?.sourceId ?? data?.data?.source?.id
+    if (sourceId) revalidatePath(`/declarations/${sourceId}`)
+    return data
+  }, {forbiddenOnAccessDenied: false})
+}
+
+export async function contactQuickDeclarationAction(body) {
+  return withErrorHandling(() => fetchJSON('api/declarations/quick/contact', {method: 'POST', body}), {forbiddenOnAccessDenied: false})
 }
 
 export async function createQuickDeclarationAction(payload) {

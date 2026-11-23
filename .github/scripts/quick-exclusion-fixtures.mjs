@@ -61,14 +61,14 @@ export async function handleQuickExclusionFixtureRequest(request, send) {
       lastReading: {value: 100, date: '2026-09-01', unit: 'm³'}
     })), usageOptions: [usage]}})
   }
-  if (pathname === '/api/declarations/quick' || pathname === '/api/declarations/quick/conflicts') {
+  if (pathname === '/api/declarations/quick' || pathname === '/api/declarations/quick/preview') {
     const body = await readBody()
     state.requests.push({path: pathname, method: request.method, body})
     if (state.excludeFromQuickDeclaration && body.entries.some(entry => entry.exploitationId === quickExclusionIds.first)) {
       return respond(400, {message: 'Cette exploitation est exclue de la saisie rapide.'})
     }
-    return pathname.endsWith('/conflicts')
-      ? respond(200, {success: true, data: {conflicts: []}})
+    return pathname.endsWith('/preview')
+      ? respond(200, {success: true, data: {previewToken: 'checked', changes: [], warnings: []}})
       : respond(409, {message: 'Soumission synthétique sans donnée métier.'})
   }
   const globalDetail = `/api/exploitations/${quickExclusionIds.first}`

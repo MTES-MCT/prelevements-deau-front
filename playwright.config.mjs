@@ -15,6 +15,7 @@ const browserTests = [
   'meter-synchronization.spec.js',
   'counting-code.spec.js',
   'quick-exclusion.spec.js',
+  'quick-correction.spec.js',
   'security-modernisation.spec.js',
   'selected-volume-totals.spec.js',
   'public-stats.spec.js',

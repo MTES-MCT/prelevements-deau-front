@@ -2,6 +2,7 @@
 
 import {useEffect, useMemo, useState} from 'react'
 
+import Link from 'next/link'
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {CircularProgress} from '@mui/material'
 
@@ -15,6 +16,7 @@ import {
   getSourceReadingDateLabel,
   getSourcePeriodLabel,
   isDeclarationTreatmentPending,
+  isOnlineDeclaration,
   isPointReconciliationRelevant,
   sourceStateLabels
 } from '@/lib/declaration.js'
@@ -101,7 +103,7 @@ const ProcessingState = ({declaration}) => {
   )
 }
 
-const MyDeclarationDetail = ({availablePoints = [], currentRole = null, initialDeclaration, showDeclarant = false}) => {
+const MyDeclarationDetail = ({canEditQuick = false, availablePoints = [], currentRole = null, initialDeclaration, showDeclarant = false}) => {
   const [declaration, setDeclaration] = useState(initialDeclaration)
   const [availableDeclarationPoints, setAvailableDeclarationPoints] = useState(availablePoints)
   const [loadedAvailablePointsKey, setLoadedAvailablePointsKey] = useState(
@@ -218,12 +220,12 @@ const MyDeclarationDetail = ({availablePoints = [], currentRole = null, initialD
 
       <DeclarationOverview
         preferUsageName
-        actions={(
-          <DeclarationPointsChangeRequestAction
-            declaration={declaration}
-            periodLabel={periodLabel}
-            status={displayStatus}
-          />
+        actions={canEditQuick ? (
+          <Link className='fr-btn fr-btn--secondary fr-btn--sm fr-icon-edit-line fr-btn--icon-left' href={`/saisie-en-ligne/${declaration.id}/modifier`}>
+            Modifier ma déclaration
+          </Link>
+        ) : !isOnlineDeclaration(declaration) && !source?.metadata?.collectionCampaignId && (
+          <DeclarationPointsChangeRequestAction declaration={declaration} periodLabel={periodLabel} status={displayStatus} />
         )}
         declaration={declaration}
         showDeclarant={showDeclarant}

@@ -77,14 +77,14 @@ export async function handleCountingFixtureRequest(request, send) {
     })), usageOptions: [usage]}})
   }
 
-  if (pathname === '/api/declarations/quick' || pathname === '/api/declarations/quick/conflicts') {
+  if (pathname === '/api/declarations/quick' || pathname === '/api/declarations/quick/preview') {
     const parts = []
     for await (const part of request) parts.push(part)
     record({path: pathname, body: JSON.parse(Buffer.concat(parts).toString())})
     // The safe synthetic error keeps the filled-in form visible for assertions.
-    return pathname.endsWith('/conflicts')
-      ? respond(200, {success: true, data: {conflicts: []}})
-      : respond(409, {message: 'Soumission synthétique enregistrée sans donnée métier.'})
+    return pathname.endsWith('/preview')
+      ? respond(200, {success: true, data: {previewToken: 'checked', changes: [], warnings: []}})
+      : respond(422, {message: 'Soumission synthétique enregistrée sans donnée métier.'})
   }
 
   if (pathname === `/api/exploitations/${countingIds.first}`) {

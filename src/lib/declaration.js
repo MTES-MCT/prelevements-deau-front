@@ -245,6 +245,16 @@ export function getQuickDeclarationEntriesCount(source) {
   }, 0)
 }
 
+export function isOnlineDeclaration(declaration, source = declaration?.source) {
+  return declaration?.dataSourceType === 'MANUAL'
+    && source?.metadata?.manualQuickDeclaration === true
+    && !source.metadata.collectionCampaignId && !source.metadata.collectionResponseId
+}
+
+export function isQuickDeclarationWithdrawn(source) {
+  return Boolean(source?.metadata?.quickModifiedAt) && source.metadata.entriesCount === 0
+}
+
 export function getQuickDeclarationEntriesLabel(source) {
   const count = getQuickDeclarationEntriesCount(source)
   if (count < 1) return null
@@ -307,6 +317,7 @@ export function getSourceReadingDateLabel(source, {singleDatePrefix = '', rangeP
 }
 
 export function getSourcePeriodLabel(source) {
+  if (isQuickDeclarationWithdrawn(source)) return 'Sans mesure active'
   if (isMeterPeriodSource(source)) return formatMeterCoveredPeriod(getMeterPeriod(source))
   const readingDateLabel = getSourceReadingDateLabel(source, {singleDatePrefix: 'Relevé du ', rangePrefix: 'Relevés du '})
   if (readingDateLabel) return readingDateLabel

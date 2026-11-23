@@ -1,8 +1,10 @@
+import Link from 'next/link'
 import {notFound} from 'next/navigation'
 
 import {buildPageTitle} from '@/app/metadata-utils.js'
 import DeclarationAdminActions from '@/components/declarations/declaration-admin-actions.js'
 import DeclarationDetails from '@/components/declarations/declaration-details.js'
+import DeclarationSubmissionFlash from '@/components/declarations/declaration-submission-flash.js'
 import DeclarationOverview from '@/components/declarations/declaration-overview.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
 import {getDeclarantTitleFromDeclarant} from '@/lib/declarants.js'
@@ -11,10 +13,11 @@ import {
   getDeclarationAdminCapabilities,
   getDeclarationDisplayStatus,
   getSourcePeriodLabel,
+  isOnlineDeclaration,
   getPointsPrelevementIdsFromSource,
   shouldLoadAvailablePointsForDeclaration
 } from '@/lib/declaration.js'
-import {getAvailablePointsPrelevementsForDeclarationAction} from '@/server/actions/declarations.js'
+import {getAvailablePointsPrelevementsForDeclarationAction, getEditableQuickDeclarationAction} from '@/server/actions/declarations.js'
 import {getMySourceAction} from '@/server/actions/sources.js'
 import {getCurrentUser} from '@/server/actions/user.js'
 
@@ -60,6 +63,11 @@ const SourcePage = async ({params}) => {
   })
   const {canDelete, canReplay} = getDeclarationAdminCapabilities(source, currentRole)
 
+  const editable = currentRole === 'ADMIN' && isOnlineDeclaration(declaration, source)
+    ? await getEditableQuickDeclarationAction(declaration.id)
+    : null
+  const canEditQuick = editable?.success === true && editable.data?.data?.entries?.length > 0
+
   const availablePointsResult = shouldLoadAvailablePoints
     ? await getAvailablePointsPrelevementsForDeclarationAction(declaration.id)
     : null
@@ -72,6 +80,7 @@ const SourcePage = async ({params}) => {
   return (
     <>
       <StartDsfrOnHydration />
+      <DeclarationSubmissionFlash />
 
       <DeclarationOverview
         showDeclarant
@@ -80,9 +89,14 @@ const SourcePage = async ({params}) => {
         status={displayStatus}
         periodLabel={periodLabel}
         declarantName={declaration.declarant ? getDeclarantTitleFromDeclarant(declaration.declarant) : null}
-        actions={
-          canDelete || canReplay
-            ? (
+        actions={(canEditQuick || canDelete || canReplay) && (
+          <div className='flex flex-wrap items-center gap-2'>
+            {canEditQuick && (
+              <Link className='fr-btn fr-btn--secondary fr-btn--sm fr-icon-edit-line fr-btn--icon-left' href={`/saisie-en-ligne/${declaration.id}/modifier`}>
+                Modifier la déclaration
+              </Link>
+            )}
+            {(canDelete || canReplay) && (
               <DeclarationAdminActions
                 canDelete={canDelete}
                 canReplay={canReplay}
@@ -90,9 +104,9 @@ const SourcePage = async ({params}) => {
                 declarationId={declaration.id}
                 sourceId={source.id}
               />
-            )
-            : null
-        }
+            )}
+          </div>
+        )}
       />
 
       <DeclarationDetails

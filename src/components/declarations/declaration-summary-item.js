@@ -14,6 +14,7 @@ import {
   getTelemetryConnectorName,
   isDeclarationTreatmentPending,
   isManualQuickDeclarationSource,
+  isQuickDeclarationWithdrawn,
   isMeterTelemetrySource,
   isTelemetrySource,
   sourceStateLabels
@@ -286,6 +287,7 @@ function getQuickDeclarationNature(source, periodLabel) {
 }
 
 function getManualQuickDeclarationPeriodLabel(source) {
+  if (isQuickDeclarationWithdrawn(source)) return 'Sans mesure active'
   const readingDateLabel = getSourceReadingDateLabel(source, {singleDatePrefix: 'Le '})
   if (readingDateLabel) return readingDateLabel
 

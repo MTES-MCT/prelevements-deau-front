@@ -3,10 +3,11 @@ import {notFound} from 'next/navigation'
 import {buildPageTitle} from '@/app/metadata-utils.js'
 import MyDeclarationDetail from '@/components/declarations/my-declaration-detail.js'
 import {StartDsfrOnHydration} from '@/dsfr-bootstrap/index.js'
-import {getDeclarationProcessingStatus, isPointReconciliationRelevant} from '@/lib/declaration.js'
+import {getDeclarationProcessingStatus, isOnlineDeclaration, isPointReconciliationRelevant} from '@/lib/declaration.js'
 import {
   getAvailablePointsPrelevementsForDeclarationAction,
-  getDeclarationAction
+  getDeclarationAction,
+  getEditableQuickDeclarationAction
 } from '@/server/actions/declarations.js'
 import {getCurrentUser} from '@/server/actions/user.js'
 
@@ -30,6 +31,9 @@ const Page = async ({params}) => {
   }
 
   const declaration = result.data.data
+  const editable = isOnlineDeclaration(declaration) && userResult?.data?.role === 'DECLARANT'
+    ? await getEditableQuickDeclarationAction(id)
+    : null
   const showDeclarant = userResult?.data?.declarantRole === 'COLLECTEUR'
   const shouldLoadAvailablePoints = getDeclarationProcessingStatus(declaration) === 'COMPLETED'
     && isPointReconciliationRelevant(declaration, declaration.source)
@@ -42,6 +46,7 @@ const Page = async ({params}) => {
     <>
       <StartDsfrOnHydration />
       <MyDeclarationDetail
+        canEditQuick={editable?.success === true && editable.data?.data?.entries?.length > 0}
         currentRole={userResult?.data?.role ?? null}
         initialDeclaration={declaration}
         availablePoints={availablePoints}

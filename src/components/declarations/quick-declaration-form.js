@@ -5,10 +5,8 @@ import {
 } from 'react'
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
-import {Button} from '@codegouvfr/react-dsfr/Button'
 import {SegmentedControl} from '@codegouvfr/react-dsfr/SegmentedControl'
 import dynamic from 'next/dynamic'
-import Link from 'next/link'
 
 import UsageCombobox, {compareUsageOptions, findUsageOptionById, formatUsageOptionLabel} from '@/components/form/usage-combobox.js'
 import DateRangePicker from '@/components/ui/date-range-picker.js'
@@ -31,18 +29,14 @@ import {
   normalizePointUsageName,
   replacePointUsageName
 } from '@/lib/quick-declaration-point-name.js'
-import {
-  getMyDeclarationSubmissionSuccessURL,
-  getMyDeclarationURL
-} from '@/lib/urls.js'
+import {getQuickDateErrors, getQuickMeasurementDates, switchQuickRowValue} from '@/lib/quick-declaration-draft.js'
+import {getMyDeclarationSubmissionSuccessURL} from '@/lib/urls.js'
 import {getUsageParent, normalizeUsageOption} from '@/lib/water-uses.js'
-import {
-  createQuickDeclarationAction,
-  getQuickDeclarationContextAction,
-  previewQuickDeclarationConflictsAction
-} from '@/server/actions/declarations.js'
+import {getQuickDeclarationContextAction} from '@/server/actions/declarations.js'
 import {editPointUsageNameAction} from '@/server/actions/points-prelevement.js'
 import {formatNumber} from '@/utils/number.js'
+
+import QuickDeclarationReview, {formatQuickDate} from './quick-declaration-review.js'
 
 const QuickDeclarationMap = dynamic(
   () => import('./quick-declaration-map.js'),
@@ -135,10 +129,6 @@ function todayISO() {
   return today.toISOString().slice(0, 10)
 }
 
-function isFutureDate(value, maxDate) {
-  return Boolean(value && maxDate && value > maxDate)
-}
-
 function formatDate(value) {
   if (!value) {
     return null
@@ -222,6 +212,7 @@ function getRowState(rows, pointId) {
 
   return {
     value: row.value ?? row.index ?? '',
+    valueDrafts: row.valueDrafts,
     usageId: row.usageId ?? '',
     usageName: row.usageName ?? '',
     usageSearch: row.usageSearch
@@ -311,41 +302,6 @@ function getLastVolumePeriodLabel(point) {
   ].filter(Boolean).join(' · ')
 }
 
-function getWarning({
-  measurementType,
-  point,
-  readingDate,
-  row
-}) {
-  if (!isIndexMeasurementType(measurementType) || !point?.lastReading || row.value === '' || !readingDate) {
-    return null
-  }
-
-  const value = Number(row.value)
-  const previousValue = Number(point.lastReading.value)
-
-  if (!Number.isFinite(value) || !Number.isFinite(previousValue)) {
-    return null
-  }
-
-  const readingTime = Date.parse(`${readingDate}T00:00:00.000Z`)
-  const previousTime = Date.parse(point.lastReading.date)
-
-  if (!Number.isFinite(readingTime) || !Number.isFinite(previousTime)) {
-    return null
-  }
-
-  if (readingTime >= previousTime && value < previousValue) {
-    return `⚠ inférieur au dernier index (${formatNumber(previousValue)} m³ au ${formatDate(point.lastReading.date)})`
-  }
-
-  if (readingTime < previousTime && value > previousValue) {
-    return `⚠ date antérieure au dernier index (${formatNumber(previousValue)} m³ au ${formatDate(point.lastReading.date)})`
-  }
-
-  return null
-}
-
 function buildUsageOptionsForPoint(point, globalUsageOptions) {
   const byValue = new Map()
 
@@ -409,189 +365,23 @@ function canSubmitQuickDeclaration({
   context,
   entries,
   isContextLoading,
-  isSubmitting,
   isUsageNameSaving,
   validationErrors
 }) {
-  return !isSubmitting
-    && !isContextLoading
+  return !isContextLoading
     && !isUsageNameSaving
     && Boolean(context)
     && entries.length > 0
     && validationErrors.length === 0
 }
 
-function getSubmitButtonLabel(isSubmitting, entriesCount, measurementType) {
-  if (isSubmitting) {
-    return 'Soumission…'
-  }
-
+function getSubmitButtonLabel(entriesCount, measurementType) {
   if (entriesCount > 0) {
     const noun = getMeasurementEntryNoun(measurementType)
     return `Soumettre ${entriesCount} ${noun}${entriesCount > 1 ? 's' : ''}`
   }
 
   return 'Soumettre'
-}
-
-function getOverwriteSubmitButtonLabel(submitButtonLabel, overwriteWarning) {
-  if (overwriteWarning?.needsConfirmation) {
-    return 'Confirmer l’écrasement et soumettre'
-  }
-
-  return submitButtonLabel
-}
-
-function getQuickDeclarationSubmitSignature({
-  declarantUserId,
-  entries,
-  measurementType,
-  periodEndDate,
-  periodStartDate,
-  readingDate
-}) {
-  return JSON.stringify({
-    declarantUserId: declarantUserId ?? null,
-    entries: [...entries]
-      .map(entry => ({
-        exploitationId: entry.exploitationId,
-        pointPrelevementId: entry.pointPrelevementId,
-        usageId: entry.usageId,
-        value: entry.value ?? entry.index ?? null
-      }))
-      .sort((a, b) => (a.exploitationId || a.pointPrelevementId).localeCompare(b.exploitationId || b.pointPrelevementId)),
-    measurementType,
-    periodEndDate,
-    periodStartDate,
-    readingDate
-  })
-}
-
-function getConflictMetricLabel(conflict) {
-  if (conflict?.flowType === POINT_FLOW_TYPES.REJET || conflict?.metricTypeCode === 'volume rejeté') {
-    return 'volume rejeté'
-  }
-
-  return 'volume prélevé'
-}
-
-function getConflictValueLabel(conflict) {
-  const value = formatNumber(conflict.value, {maximumFractionDigits: 2})
-
-  return `${value} ${conflict.unit || 'm³'}`
-}
-
-function getConflictDeclarationURL(conflict) {
-  if (conflict.declarationId) {
-    return getMyDeclarationURL({id: conflict.declarationId})
-  }
-
-  return null
-}
-
-function getConflictDeclarationLabel(conflict) {
-  if (conflict.declarationCode) {
-    return `Déclaration n°${conflict.declarationCode}`
-  }
-
-  if (conflict.declarationId) {
-    return 'Déclaration source'
-  }
-
-  if (conflict.sourceId) {
-    return 'Source sans déclaration associée'
-  }
-
-  return 'Origine non renseignée'
-}
-
-function groupOverwriteConflictsByPoint(conflicts = []) {
-  const groupsByPoint = new Map()
-
-  for (const conflict of conflicts) {
-    const pointKey = conflict.exploitationId || conflict.pointPrelevementId || conflict.pointPrelevementName || conflict.chunkValueId
-
-    if (!groupsByPoint.has(pointKey)) {
-      groupsByPoint.set(pointKey, {
-        key: pointKey,
-        pointName: withCountingCode(conflict.pointPrelevementName || 'Point de prélèvement', conflict),
-        conflicts: []
-      })
-    }
-
-    groupsByPoint.get(pointKey).conflicts.push(conflict)
-  }
-
-  return [...groupsByPoint.values()]
-}
-
-function getOverwriteWarningTitle(conflicts = []) {
-  if (conflicts.length === 1) {
-    const [conflict] = conflicts
-    const period = getPeriodLabel(conflict)
-    const pointName = withCountingCode(conflict.pointPrelevementName || 'ce point', conflict)
-    const metricLabel = getConflictMetricLabel(conflict)
-
-    if (period) {
-      return `Le ${metricLabel} de ${pointName} sur ${period} sera écrasé`
-    }
-
-    return `Le ${metricLabel} de ${pointName} sera écrasé`
-  }
-
-  return `${conflicts.length} volumes existants seront écrasés`
-}
-
-function getOverwriteWarningDescription(conflicts = []) {
-  if (conflicts.length === 1) {
-    return 'En confirmant, ce volume existant sera remplacé par votre nouvelle saisie.'
-  }
-
-  return 'En confirmant, les volumes suivants seront remplacés par votre nouvelle saisie.'
-}
-
-function getMeasurementDateValidationErrors({
-  maxReadingDate,
-  measurementType,
-  periodEndDate,
-  periodStartDate,
-  readingDate
-}) {
-  const validationErrors = []
-
-  if (isIndexMeasurementType(measurementType)) {
-    if (!readingDate) {
-      validationErrors.push('La date de relevé est obligatoire.')
-    }
-
-    if (isFutureDate(readingDate, maxReadingDate)) {
-      validationErrors.push('La date de relevé ne peut pas être dans le futur.')
-    }
-
-    return validationErrors
-  }
-
-  if (!periodStartDate) {
-    validationErrors.push('La date de début est obligatoire.')
-  }
-
-  if (!periodEndDate) {
-    validationErrors.push('La date de fin est obligatoire.')
-  }
-
-  if (isFutureDate(periodStartDate, maxReadingDate)) {
-    validationErrors.push('La date de début ne peut pas être dans le futur.')
-  }
-
-  if (isFutureDate(periodEndDate, maxReadingDate)) {
-    validationErrors.push('La date de fin ne peut pas être dans le futur.')
-  }
-
-  if (periodStartDate && periodEndDate && periodEndDate < periodStartDate) {
-    validationErrors.push('La date de fin doit être postérieure ou égale à la date de début.')
-  }
-
-  return validationErrors
 }
 
 function getEntryRowClassName({hasHistory, hasValue, isHighlighted}) {
@@ -812,7 +602,6 @@ const QuickDeclarationEntryRow = ({
   onUsageNameSaved,
   onUsageNameSavingChange,
   point,
-  readingDate,
   row,
   setActivePointId,
   setHoveredPointId,
@@ -822,12 +611,6 @@ const QuickDeclarationEntryRow = ({
   const hasValue = row.value !== ''
   const hasHistory = hasDeclarationHistory(point)
   const isIndexMeasurement = isIndexMeasurementType(measurementType)
-  const warning = getWarning({
-    measurementType,
-    point,
-    readingDate,
-    row
-  })
   const lastReadingLabel = isIndexMeasurement ? getLastReadingLabel(point) : null
   const lastVolumePeriodLabel = isIndexMeasurement ? null : getLastVolumePeriodLabel(point)
   const isHighlighted = isPointIdEqual(pointId, hoveredPointId) || isPointIdEqual(pointId, activePointId)
@@ -1088,11 +871,6 @@ const QuickDeclarationEntryRow = ({
             }}
           />
         </div>
-        {warning && (
-          <p className='fr-hint-text fr-mb-0 mt-2 text-[0.72rem] leading-tight text-orange-700'>
-            {warning}
-          </p>
-        )}
       </div>
 
       <div className='fr-input-group fr-mb-0 cursor-default'>
@@ -1124,7 +902,6 @@ const QuickDeclarationEntryList = ({
   measurementType,
   onUsageNameSaved,
   onUsageNameSavingChange,
-  readingDate,
   rows,
   setActivePointId,
   setHoveredPointId,
@@ -1182,7 +959,6 @@ const QuickDeclarationEntryList = ({
                       inputRefs={inputRefs}
                       measurementType={measurementType}
                       point={point}
-                      readingDate={readingDate}
                       row={getRowState(rows, pointId)}
                       setActivePointId={setActivePointId}
                       setHoveredPointId={setHoveredPointId}
@@ -1201,138 +977,10 @@ const QuickDeclarationEntryList = ({
   )
 }
 
-const OverwriteConflictListItem = ({conflict}) => {
-  const period = getPeriodLabel(conflict)
-  const declarationURL = getConflictDeclarationURL(conflict)
-  const declarationLabel = getConflictDeclarationLabel(conflict)
-
-  return (
-    <li className='border-t border-gray-200 py-2 first:border-t-0'>
-      <div className='flex flex-col gap-1 md:flex-row md:items-start md:justify-between md:gap-4'>
-        <div className='min-w-0'>
-          <p className='fr-mb-0 text-sm font-medium text-gray-900'>
-            {getConflictMetricLabel(conflict)} - {getConflictValueLabel(conflict)}
-          </p>
-          {period && (
-            <p className='fr-hint-text fr-mb-0 text-sm'>
-              Période : {period}
-            </p>
-          )}
-        </div>
-        {declarationURL ? (
-          <Link prefetch={false} className='fr-link shrink-0 text-sm' href={declarationURL}>
-            {declarationLabel}
-          </Link>
-        ) : (
-          <span className='shrink-0 text-sm text-gray-600'>{declarationLabel}</span>
-        )}
-      </div>
-    </li>
-  )
-}
-
-const OverwriteConflictPointGroup = ({group}) => (
-  <section className='border-b border-gray-200 p-3 last:border-b-0'>
-    <div className='fr-mb-1v flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between'>
-      <p className='fr-mb-0 font-semibold text-gray-900'>{group.pointName}</p>
-      <p className='fr-mb-0 text-xs uppercase tracking-wide text-gray-500'>
-        {group.conflicts.length} volume{group.conflicts.length > 1 ? 's' : ''}
-      </p>
-    </div>
-    <ul className='fr-mb-0 list-none pl-0'>
-      {group.conflicts.map(conflict => (
-        <OverwriteConflictListItem key={conflict.chunkValueId} conflict={conflict} />
-      ))}
-    </ul>
-  </section>
-)
-
-const OverwriteConflictsList = ({conflicts}) => {
-  const groups = groupOverwriteConflictsByPoint(conflicts)
-
-  return (
-    <div className='fr-mt-2w max-h-80 overflow-y-auto border border-gray-200 bg-white'>
-      {groups.map(group => (
-        <OverwriteConflictPointGroup key={group.key} group={group} />
-      ))}
-    </div>
-  )
-}
-
-const QuickDeclarationSubmission = ({
-  canSubmit,
-  entries,
-  hasAnyValue,
-  measurementType,
-  overwriteWarning,
-  submit,
-  submitButtonLabel,
-  submitResult,
-  validationErrors
-}) => (
-  <>
-    {validationErrors.length > 0 && hasAnyValue && (
-      <Alert
-        className='fr-mb-2w'
-        severity='error'
-        title='Saisie incomplète'
-        description={validationErrors[0]}
-      />
-    )}
-
-    {overwriteWarning?.needsConfirmation && (
-      <Alert
-        className='fr-mb-2w'
-        severity='warning'
-        title={getOverwriteWarningTitle(overwriteWarning.conflicts)}
-        description={(
-          <>
-            <p className='fr-mb-1w'>
-              {getOverwriteWarningDescription(overwriteWarning.conflicts)}
-            </p>
-            <OverwriteConflictsList conflicts={overwriteWarning.conflicts} />
-          </>
-        )}
-      />
-    )}
-
-    <div className='fr-mt-2w flex flex-col gap-2 md:flex-row md:items-center'>
-      <Button priority='primary' disabled={!canSubmit} onClick={submit}>
-        {getOverwriteSubmitButtonLabel(submitButtonLabel, overwriteWarning)}
-      </Button>
-      {entries.length === 0 && (
-        <p className='fr-hint-text fr-mb-0'>
-          Saisissez au moins {isIndexMeasurementType(measurementType) ? 'un index' : 'un volume'} pour soumettre.
-        </p>
-      )}
-    </div>
-
-    {submitResult?.status === 'success' && (
-      <Alert
-        className='fr-mt-2w'
-        severity='success'
-        title='Déclaration créée'
-        description={submitResult.message}
-      />
-    )}
-
-    {submitResult?.status === 'error' && (
-      <Alert
-        className='fr-mt-2w'
-        severity='error'
-        title='Soumission impossible'
-        description={submitResult.message}
-      />
-    )}
-  </>
-)
-
 const QuickDeclarationEntriesPanel = ({
   activePointId,
-  canSubmit,
   comment,
   context,
-  entries,
   entryPoints,
   focusNextPoint,
   focusPoint,
@@ -1344,16 +992,12 @@ const QuickDeclarationEntriesPanel = ({
   measurementType,
   onUsageNameSaved,
   onUsageNameSavingChange,
-  overwriteWarning,
+  review,
   pointsCount,
-  readingDate,
   rows,
   setActivePointId,
   setComment,
   setHoveredPointId,
-  submit,
-  submitButtonLabel,
-  submitResult,
   updateRow,
   validationErrors
 }) => {
@@ -1373,7 +1017,6 @@ const QuickDeclarationEntriesPanel = ({
         hoveredPointId={hoveredPointId}
         inputRefs={inputRefs}
         measurementType={measurementType}
-        readingDate={readingDate}
         rows={rows}
         setActivePointId={setActivePointId}
         setHoveredPointId={setHoveredPointId}
@@ -1393,17 +1036,11 @@ const QuickDeclarationEntriesPanel = ({
         />
       </div>
 
-      <QuickDeclarationSubmission
-        canSubmit={canSubmit}
-        entries={entries}
-        hasAnyValue={hasAnyValue}
-        measurementType={measurementType}
-        overwriteWarning={overwriteWarning}
-        submit={submit}
-        submitButtonLabel={submitButtonLabel}
-        submitResult={submitResult}
-        validationErrors={validationErrors}
-      />
+      {hasAnyValue && validationErrors.length > 0 && (
+        <Alert className='fr-mb-2w' severity='error' title='Saisie incomplète' description={validationErrors[0]} />
+      )}
+      {review}
+      {!hasAnyValue && <p className='fr-hint-text fr-mt-1w'>Saisissez au moins {isIndexMeasurementType(measurementType) ? 'un index' : 'un volume'} pour soumettre.</p>}
     </>
   )
 }
@@ -1488,10 +1125,7 @@ const QuickDeclarationForm = ({
   const [activePointId, setActivePointId] = useState(null)
   const [focusRequestId, setFocusRequestId] = useState(0)
   const [hoveredPointId, setHoveredPointId] = useState(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [usageNameSavingPointIds, setUsageNameSavingPointIds] = useState([])
-  const [submitResult, setSubmitResult] = useState(null)
-  const [overwriteWarning, setOverwriteWarning] = useState(null)
   const [pendingPreleveurId, setPendingPreleveurId] = useState(null)
   const [preleveurChangeModalOpen, setPreleveurChangeModalOpen] = useState(false)
   const inputRefs = useRef({})
@@ -1539,6 +1173,9 @@ const QuickDeclarationForm = ({
     () => buildPointDisplayNames(points, rows),
     [points, rows]
   )
+  const seriesLabels = useMemo(() => Object.fromEntries(entryPoints.map(point => [
+    getPointId(point), withCountingCode(pointDisplayNames[getPointId(point)], point)
+  ])), [entryPoints, pointDisplayNames])
 
   useEffect(() => {
     let ignore = false
@@ -1547,7 +1184,6 @@ const QuickDeclarationForm = ({
       setIsContextLoading(false)
       setContext(null)
       setContextError(null)
-      setSubmitResult(null)
       setActivePointId(null)
       setHoveredPointId(null)
 
@@ -1687,7 +1323,6 @@ const QuickDeclarationForm = ({
   const {entries, validationErrors} = useMemo(() => {
     const nextEntries = []
     const nextValidationErrors = []
-    const isIndexMeasurement = isIndexMeasurementType(measurementType)
     const valueValidationLabel = getMeasurementValueValidationLabel(measurementType)
 
     for (const point of entryPoints) {
@@ -1713,20 +1348,14 @@ const QuickDeclarationForm = ({
           nextEntries.push({
             pointPrelevementId: getQuickDeclarationPointId(point),
             ...(point.exploitationId ? {exploitationId: point.exploitationId} : {}),
-            ...(isIndexMeasurement ? {index: numericValue} : {value: numericValue}),
+            value: numericValue,
             usageId: row.usageId
           })
         }
       }
     }
 
-    nextValidationErrors.push(...getMeasurementDateValidationErrors({
-      maxReadingDate,
-      measurementType,
-      periodEndDate,
-      periodStartDate,
-      readingDate
-    }))
+    nextValidationErrors.push(...getQuickDateErrors(measurementType, {periodEndDate, periodStartDate, readingDate}, maxReadingDate))
 
     return {
       entries: nextEntries,
@@ -1788,101 +1417,30 @@ const QuickDeclarationForm = ({
     context,
     entries,
     isContextLoading,
-    isSubmitting,
     isUsageNameSaving,
     validationErrors
   })
-  const submitButtonLabel = getSubmitButtonLabel(isSubmitting, entries.length, measurementType)
-  const submitSignature = useMemo(() => getQuickDeclarationSubmitSignature({
+  const submitButtonLabel = getSubmitButtonLabel(entries.length, measurementType)
+  const payload = useMemo(() => canSubmit ? {
     declarantUserId: targetDeclarantUserId,
-    entries,
     measurementType,
-    periodEndDate,
-    periodStartDate,
-    readingDate
-  }), [entries, measurementType, periodEndDate, periodStartDate, readingDate, targetDeclarantUserId])
-  const activeOverwriteWarning = overwriteWarning?.signature === submitSignature
-    ? overwriteWarning
-    : null
-
-  const submit = useCallback(async () => {
-    setIsSubmitting(true)
-    setSubmitResult(null)
-
-    try {
-      if (!canSubmit) {
-        throw new Error(validationErrors[0] || 'Saisie incomplète.')
-      }
-
-      const datePayload = isIndexMeasurementType(measurementType)
-        ? {readingDate}
-        : {periodStartDate, periodEndDate}
-
-      if (!isIndexMeasurementType(measurementType) && activeOverwriteWarning?.confirmed !== true) {
-        const previewResult = await previewQuickDeclarationConflictsAction({
-          declarantUserId: targetDeclarantUserId,
-          measurementType,
-          ...datePayload,
-          comment,
-          entries
-        })
-
-        if (!previewResult?.success || previewResult.data?.success !== true) {
-          throw new Error(previewResult?.error || previewResult?.data?.message || 'Impossible de vérifier les écrasements.')
-        }
-
-        const conflicts = previewResult.data?.data?.conflicts ?? []
-
-        if (conflicts.length > 0) {
-          setOverwriteWarning({
-            signature: submitSignature,
-            conflicts,
-            needsConfirmation: true,
-            confirmed: true
-          })
-          return
-        }
-      }
-
-      const result = await createQuickDeclarationAction({
-        declarantUserId: targetDeclarantUserId,
-        measurementType,
-        ...datePayload,
-        comment,
-        entries
-      })
-
-      if (!result?.success || !result.data?.success) {
-        throw new Error(result?.error || result?.data?.message || 'Erreur lors de la création de la déclaration.')
-      }
-
-      setOverwriteWarning(null)
-      setSubmitResult({status: 'success', message: 'Déclaration créée avec succès.'})
-      onSubmitted?.()
-      window.location.href = getMyDeclarationSubmissionSuccessURL(result.data.data)
-    } catch (error) {
-      console.error(error)
-      setSubmitResult({
-        status: 'error',
-        message: error?.message || 'Erreur lors de la soumission.'
-      })
-    } finally {
-      setIsSubmitting(false)
-    }
-  }, [
-    canSubmit,
+    ...getQuickMeasurementDates(measurementType, {readingDate, periodStartDate, periodEndDate}),
     comment,
-    entries,
-    activeOverwriteWarning,
-    measurementType,
-    periodEndDate,
-    periodStartDate,
-    readingDate,
-    onSubmitted,
-    submitSignature,
-    targetDeclarantUserId,
-    validationErrors
-  ])
+    entries
+  } : null, [canSubmit, comment, entries, measurementType, periodEndDate, periodStartDate, readingDate, targetDeclarantUserId])
+
+  const changeMeasurementType = nextType => {
+    if (measurementType === nextType) return
+    setRows(previous => Object.fromEntries(Object.entries(previous).map(([id, row]) => [
+      id, switchQuickRowValue(row, measurementType, nextType)
+    ])))
+    setMeasurementType(nextType)
+  }
+
+  const showSubmittedDeclaration = declaration => {
+    onSubmitted?.()
+    window.location.assign(getMyDeclarationSubmissionSuccessURL(declaration))
+  }
 
   return (
     <div className='fr-mt-1w fr-mb-2w'>
@@ -1898,7 +1456,7 @@ const QuickDeclarationForm = ({
               periodStartDate={periodStartDate}
               readingDate={readingDate}
               selectedPreleveurId={selectedPreleveurId}
-              setMeasurementType={setMeasurementType}
+              setMeasurementType={changeMeasurementType}
               setPeriodEndDate={setPeriodEndDate}
               setPeriodStartDate={setPeriodStartDate}
               setReadingDate={setReadingDate}
@@ -1920,10 +1478,8 @@ const QuickDeclarationForm = ({
           <section className='order-3 min-w-0'>
             <QuickDeclarationEntriesPanel
               activePointId={activePointId}
-              canSubmit={canSubmit}
               comment={comment}
               context={context}
-              entries={entries}
               entryPoints={entryPoints}
               focusNextPoint={focusNextPoint}
               focusPoint={focusPoint}
@@ -1933,16 +1489,30 @@ const QuickDeclarationForm = ({
               hoveredPointId={hoveredPointId}
               inputRefs={inputRefs}
               measurementType={measurementType}
-              overwriteWarning={activeOverwriteWarning}
               pointsCount={pointsCount}
-              readingDate={readingDate}
               rows={rows}
               setActivePointId={setActivePointId}
               setComment={setComment}
               setHoveredPointId={setHoveredPointId}
-              submit={submit}
-              submitButtonLabel={submitButtonLabel}
-              submitResult={submitResult}
+              review={(
+                <QuickDeclarationReview
+                  payload={payload}
+                  seriesLabels={seriesLabels}
+                  submitLabel={submitButtonLabel}
+                  summary={(
+                    <>
+                      <p>{measurementType === 'INDEX'
+                        ? `Relevés d’index du ${formatQuickDate(readingDate)}`
+                        : `Volumes du ${formatQuickDate(periodStartDate)} au ${formatQuickDate(periodEndDate)}`}</p>
+                      <ul>{entries.map(entry => {
+                        const entryId = entry.exploitationId || entry.pointPrelevementId
+                        return <li key={entryId}>{seriesLabels[entryId]} — {formatNumberInput(entry.value)} m³</li>
+                      })}</ul>
+                    </>
+                  )}
+                  onSaved={showSubmittedDeclaration}
+                />
+              )}
               updateRow={updateRow}
               validationErrors={validationErrors}
               onUsageNameSaved={handleUsageNameSaved}

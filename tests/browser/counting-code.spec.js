@@ -43,12 +43,17 @@ test('deux comptages du même PP gardent index, saisies et payloads indépendant
   await expect(second).toBeFocused()
   await second.fill('940')
   await page.getByRole('button', {name: 'Soumettre 2 relevés', exact: true}).click()
+  const review = page.getByRole('dialog', {name: 'Vérifiez votre déclaration'})
+  await expect(review).toContainText('Code comptage : 001')
+  await expect(review).toContainText('Code comptage : 002')
+  await review.getByRole('button', {name: 'Confirmer la déclaration'}).click()
   await expect(page.getByText('Soumission synthétique enregistrée sans donnée métier.', {exact: true})).toBeVisible()
   let writes = await getRequests(context, apiToken)
   expect(writes.at(-1).body.entries).toEqual([
-    {pointPrelevementId: countingIds.point, exploitationId: countingIds.first, index: 120, usageId: countingIds.usage},
-    {pointPrelevementId: countingIds.point, exploitationId: countingIds.second, index: 940, usageId: countingIds.usage}
+    {pointPrelevementId: countingIds.point, exploitationId: countingIds.first, value: 120, usageId: countingIds.usage},
+    {pointPrelevementId: countingIds.point, exploitationId: countingIds.second, value: 940, usageId: countingIds.usage}
   ])
+  await review.getByRole('button', {name: 'Revenir à la saisie'}).click()
   await page.getByRole('radio', {name: 'Volume', exact: true}).focus()
   await page.getByRole('radio', {name: 'Volume', exact: true}).press('Space')
   await page.getByRole('button', {name: /^Période déclarée/}).click()
@@ -57,9 +62,10 @@ test('deux comptages du même PP gardent index, saisies et payloads indépendant
   await calendar.getByRole('button', {name: '21', exact: true}).click()
   await calendar.getByRole('button', {name: 'Valider', exact: true}).click()
   await page.getByRole('button', {name: 'Soumettre 2 volumes', exact: true}).click()
+  await review.getByRole('button', {name: 'Confirmer la déclaration'}).click()
   await expect.poll(async () => (await getRequests(context, apiToken)).filter(request => request.path === '/api/declarations/quick').length).toBe(2)
   writes = await getRequests(context, apiToken)
-  expect(writes.at(-2).path).toBe('/api/declarations/quick/conflicts')
+  expect(writes.at(-2).path).toBe('/api/declarations/quick/preview')
   expect(writes.at(-2).body.entries).toEqual(writes.at(-1).body.entries)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
   await page.screenshot({path: testInfo.outputPath('comptages-distincts.png'), animations: 'disabled'})
