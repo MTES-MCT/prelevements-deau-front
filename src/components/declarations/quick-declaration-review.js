@@ -7,7 +7,7 @@ import {Button} from '@codegouvfr/react-dsfr/Button'
 import {createModal} from '@codegouvfr/react-dsfr/Modal'
 
 import {
-  describeQuickMeasure, describeQuickVolumes, formatReviewPeriod, formatReviewVolume, getReviewLabel, groupQuickReview
+  describeQuickMeasure, describeQuickReviewDates, describeQuickVolumes, formatReviewPeriod, formatReviewVolume, getReviewLabel, groupQuickReview
 } from '@/lib/quick-declaration-review.js'
 import {getMyDeclarationURL} from '@/lib/urls.js'
 import {
@@ -107,7 +107,7 @@ function PreviewWarnings({warnings, seriesLabels, payload, declarationId}) {
   )
 }
 
-function ReviewPoints({groups}) {
+function ReviewPoints({groups, originalDates}) {
   return groups.map(group => {
     const impact = describeQuickVolumes(group)
     const [name, code] = group.label.split(' — Code comptage : ')
@@ -117,7 +117,7 @@ function ReviewPoints({groups}) {
           {name}{code && <small className='fr-text--sm !mb-0 ml-2 inline-block font-normal text-[var(--text-mention-grey)]'>Code comptage {code}</small>}
         </h3>
         {group.measures.map(row => {
-          const {action, detail} = describeQuickMeasure(row, group.measures.length === 1 ? group.warnings : [])
+          const {action, detail} = describeQuickMeasure(row, group.measures.length === 1 ? group.warnings : [], originalDates)
           return <p key={row.id || group.key} className='!mb-1'><strong>{action}</strong> · {detail}</p>
         })}
         {impact && <p className='!mb-1'>{impact}</p>}
@@ -137,7 +137,7 @@ function ReviewPoints({groups}) {
   })
 }
 
-export default function QuickDeclarationReview({declarationId = null, payload, submitLabel, onSaved, reviewEntries = [], seriesLabels = {}}) {
+export default function QuickDeclarationReview({declarationId = null, payload, submitLabel, onSaved, reviewEntries = [], seriesLabels = {}, originalDates = null}) {
   const instanceId = useId().replaceAll(':', '')
   const modal = useMemo(() => createModal({id: `quick-review-${instanceId}`, isOpenedByDefault: false}), [instanceId])
   const [attempt, setAttempt] = useState(0)
@@ -149,6 +149,7 @@ export default function QuickDeclarationReview({declarationId = null, payload, s
   // Identity changes immediately for a new draft, including returning to a previous date.
   // An older response must neither be displayed nor authorize confirmation.
   const preview = result?.payload === payload && result.attempt === attempt ? result : null
+  const dates = payload && describeQuickReviewDates(payload, originalDates)
   const data = preview?.data
   const error = saveError?.payload === payload ? saveError : null
   const isEditing = Boolean(declarationId)
@@ -241,7 +242,13 @@ export default function QuickDeclarationReview({declarationId = null, payload, s
         {checkStatus}
         {data && (
           <>
-            <ReviewPoints groups={groupQuickReview(reviewEntries, data.changes || [], data.warnings || [], seriesLabels)} />
+            {dates && (
+              <div className='fr-mb-2w'>
+                <p className='fr-mb-0'><strong>{dates.title}</strong> · {dates.detail}</p>
+                {dates.previous && <p className='fr-hint-text fr-mb-0'>{dates.previous}</p>}
+              </div>
+            )}
+            <ReviewPoints originalDates={originalDates} groups={groupQuickReview(reviewEntries, data.changes || [], data.warnings || [], seriesLabels)} />
             {data.warnings?.length > 0 && <p className='fr-mt-2w fr-mb-0'>Vous pouvez confirmer cette saisie.</p>}
           </>
         )}

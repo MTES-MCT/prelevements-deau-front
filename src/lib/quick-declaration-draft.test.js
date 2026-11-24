@@ -1,12 +1,12 @@
 import test from 'ava'
 
 import {
-  addQuickEditorRow, buildQuickEditorDraft, createQuickEditorRows, getQuickDateErrors, getQuickEditorOptions,
-  getQuickEditorRowKey, switchQuickRowValue
+  buildQuickEditorDraft, createQuickEditorRows, getQuickDateErrors, getQuickEditorInitialDates, getQuickEditorMapPoints,
+  getQuickEditorRowKey, getQuickMeasureBadge, hasQuickEditorMeasure, switchQuickRowValue
 } from './quick-declaration-draft.js'
 
 const declaration = {
-  revision: 'revision',
+  revision: 2,
   measurementType: 'INDEX',
   entries: [
     {id: 'a', exploitationId: 'one', pointPrelevementId: 'point', pointName: 'Prise A', usageId: 'usage', value: 10, readingDate: '2026-01-15'},
@@ -14,142 +14,221 @@ const declaration = {
   ]
 }
 
-test('une modification de date conserve les dates et exploitations des autres lignes', t => {
-  const rows = createQuickEditorRows(declaration)
-  const build = () => buildQuickEditorDraft(declaration, rows, 'INDEX', '2026-01-30')
-  t.is(build().payload, null)
-  rows[0].readingDate = '2026-01-14'
-  t.deepEqual(build().payload.entries.map(entry => [entry.readingDate, entry.value, entry.exploitationId]), [
-    ['2026-01-14', 10, 'one'], ['2026-01-15', 0, 'two']
-  ])
-})
-
-test('la conversion reprend la valeur et restaure chaque brouillon lors des allers-retours', t => {
-  const [row] = createQuickEditorRows(declaration)
-  const volume = switchQuickRowValue(row, 'INDEX', 'VOLUME')
-  t.is(volume.value, '10')
-  t.is(volume.periodStartDate, '')
-  const editedVolume = {...volume, value: '0', periodStartDate: '2026-01-02', periodEndDate: '2026-01-02'}
-  const index = switchQuickRowValue(editedVolume, 'VOLUME', 'INDEX')
-  t.is(index.value, '10')
-  t.is(index.readingDate, '2026-01-15')
-  const restored = switchQuickRowValue(index, 'INDEX', 'VOLUME')
-  t.is(restored.value, '0')
-  t.is(restored.periodStartDate, '2026-01-02')
-  const {payload} = buildQuickEditorDraft(declaration, [restored], 'VOLUME', '2026-01-30')
-  t.is(payload.entries[0].value, 0)
-  t.false('readingDate' in payload.entries[0])
-})
-
-test('les contrôles utilisent chaque borne et ignorent les dates du mode inactif', t => {
-  const row = {periodStartDate: '2026-01-10', periodEndDate: '2026-01-11', readingDate: '2026-02-31'}
-  t.deepEqual(getQuickDateErrors('VOLUME', row, '2026-01-11'), [])
-  t.is(getQuickDateErrors('INDEX', row, '2026-01-11').length, 1)
-  t.is(getQuickDateErrors('VOLUME', {...row, periodStartDate: '2026-01-12'}, '2026-01-30').length, 1)
-  t.is(getQuickDateErrors('VOLUME', {...row, periodEndDate: '2026-01-31'}, '2026-01-30').length, 1)
-})
-
-test('supprimer la dernière ligne crée un brouillon vide explicite, annuler restaure les lignes', t => {
-  const rows = createQuickEditorRows(declaration)
-  const removed = rows.map(row => ({...row, removed: true, value: ''}))
-  t.deepEqual(buildQuickEditorDraft(declaration, removed, 'INDEX').payload, {
-    measurementType: 'INDEX', revision: 'revision', entries: []
-  })
-  t.is(buildQuickEditorDraft(declaration, rows, 'INDEX').payload, null)
-})
-
-test('une déclaration initialement en volumes peut être convertie en index datés indépendamment', t => {
-  const volumes = {...declaration, measurementType: 'VOLUME', entries: declaration.entries.map(({readingDate, ...entry}) => ({
-    ...entry, periodStartDate: '2026-01-01', periodEndDate: readingDate
-  }))}
-  const indexRows = createQuickEditorRows(volumes).map(row => switchQuickRowValue(row, 'VOLUME', 'INDEX'))
-  t.is(buildQuickEditorDraft(volumes, indexRows, 'INDEX').payload, null)
-  indexRows[0].readingDate = '2026-01-15'
-  indexRows[1].readingDate = '2026-01-13'
-  const {payload} = buildQuickEditorDraft(volumes, indexRows, 'INDEX', '2026-01-31')
-  t.deepEqual(payload.entries.map(entry => [entry.readingDate, entry.value]), [['2026-01-15', 10], ['2026-01-13', 0]])
-  t.true(payload.entries.every(entry => !('periodStartDate' in entry) && !('periodEndDate' in entry)))
-})
-
-test('une seule borne de volume peut changer sur une seule ligne', t => {
-  const volumes = {...declaration, measurementType: 'VOLUME', entries: declaration.entries.map(({readingDate, ...entry}) => ({
-    ...entry, periodStartDate: '2026-01-01', periodEndDate: readingDate
-  }))}
-  const rows = createQuickEditorRows(volumes)
-  const build = () => buildQuickEditorDraft(volumes, rows, 'VOLUME', '2026-01-31')
-  t.is(build().payload, null)
-  rows[0].periodStartDate = '2026-01-05'
-  t.deepEqual(build().payload.entries.map(entry => [entry.periodStartDate, entry.periodEndDate]), [
-    ['2026-01-05', '2026-01-15'], ['2026-01-01', '2026-01-15']
-  ])
-  rows[1].periodEndDate = '2026-01-01'
-  t.is(build().payload.entries[1].periodEndDate, '2026-01-01')
-})
-
+const volumes = {...declaration, measurementType: 'VOLUME', entries: declaration.entries.map(({readingDate, ...entry}) =>
+  ({...entry, periodStartDate: '2026-01-01', periodEndDate: readingDate}))}
 const otherCounting = {pointPrelevementId: 'point', exploitationId: 'three', pointName: 'Prise A', countingCode: '003', usageId: 'usage'}
+const build = (record, rows, type = record.measurementType, dates = getQuickEditorInitialDates(record).dates) =>
+  buildQuickEditorDraft(record, rows, type, dates, '2026-01-31')
 
-test('ajouter un autre comptage du même point et retirer une ligne forment une seule correction', t => {
-  const originals = createQuickEditorRows(declaration)
-  const available = [declaration.entries[0], otherCounting, {...otherCounting}]
-  const [option] = getQuickEditorOptions(available, originals)
-  t.deepEqual(getQuickEditorOptions(available, originals), [{entry: otherCounting, restoreId: null}])
-  const rows = addQuickEditorRow(originals, option)
-  t.is(getQuickEditorRowKey(rows[2]), 'new:three')
-  t.deepEqual(getQuickEditorOptions(available, rows), [])
-  t.is(addQuickEditorRow(rows, option), rows)
-  t.is(buildQuickEditorDraft(declaration, rows, 'INDEX').payload, null)
+test('le badge décrit la mesure, garde le type supprimé et laisse la date commune au niveau du dossier', t => {
+  const original = declaration.entries[0]
+  const row = {...original, value: '10', readingDate: '2026-01-20'}
+  t.is(getQuickMeasureBadge(original, row, 'INDEX', 'INDEX'), null)
+  t.is(getQuickMeasureBadge(null, {...row, value: ''}, 'INDEX', 'INDEX'), null)
+  t.is(getQuickMeasureBadge(null, {...row, value: '0'}, 'INDEX', 'VOLUME'), 'Index ajouté')
+  t.is(getQuickMeasureBadge(null, row, 'VOLUME', 'INDEX'), 'Volume ajouté')
+  t.is(getQuickMeasureBadge(original, {...row, value: '0'}, 'VOLUME', 'VOLUME'), 'Volume modifié')
+  t.is(getQuickMeasureBadge(original, row, 'VOLUME', 'INDEX'), 'Index converti en volume')
+  t.is(getQuickMeasureBadge(original, {...row, removed: true}, 'INDEX', 'VOLUME'), 'Volume supprimé')
+  t.is(getQuickMeasureBadge(original, {...row, value: ''}, 'VOLUME', 'INDEX'), 'Index supprimé')
+})
+
+test('une seule date modifiée déplace tous les index, garde les zéros et produit un nouveau brouillon de vérification', t => {
+  const rows = createQuickEditorRows(declaration)
+  const {dates, requiresDateSelection} = getQuickEditorInitialDates(declaration)
+  t.false(requiresDateSelection)
+  t.is(dates.readingDate, '2026-01-15')
+  t.is(build(declaration, rows).payload, null)
+  for (const day of ['2026-01-14', '2026-01-12']) {
+    const {payload, reviewEntries} = build(declaration, rows, 'INDEX', {...dates, readingDate: day})
+    t.deepEqual(payload, {
+      measurementType: 'INDEX', revision: 2, readingDate: day,
+      entries: [
+        {id: 'a', pointPrelevementId: 'point', exploitationId: 'one', usageId: 'usage', value: 10},
+        {id: 'b', pointPrelevementId: 'point', exploitationId: 'two', usageId: 'usage', value: 0}
+      ]
+    })
+    t.deepEqual(reviewEntries.map(({before, after}) => [before.readingDate, after.readingDate, after.value]), [
+      ['2026-01-15', day, 10], ['2026-01-15', day, 0]
+    ])
+  }
+  t.is(build(declaration, rows, 'INDEX', dates).payload, null)
+})
+
+test('un changement de valeur seul garde la date commune et ne récapitule que le comptage touché', t => {
+  const rows = createQuickEditorRows(declaration)
+  rows[0].value = '3'
+  const {payload, reviewEntries} = build(declaration, rows)
+  t.is(payload.readingDate, '2026-01-15')
+  t.is(reviewEntries.length, 1)
+  t.is(reviewEntries[0].id, 'a')
+})
+
+test('changer une borne applique la période à chaque volume et ne transmet aucune date sur les lignes', t => {
+  const {dates} = getQuickEditorInitialDates(volumes)
+  const rows = createQuickEditorRows(volumes)
+  t.is(build(volumes, rows).payload, null)
+  for (const periodEndDate of ['2026-01-10', '2026-01-01']) {
+    const {payload, reviewEntries} = build(volumes, rows, 'VOLUME', {...dates, periodEndDate})
+    t.is(payload.periodStartDate, '2026-01-01')
+    t.is(payload.periodEndDate, periodEndDate)
+    t.false(Object.hasOwn(payload, 'readingDate'))
+    t.deepEqual(reviewEntries.map(({before, after}) => [before.periodEndDate, after.periodEndDate]), [
+      ['2026-01-15', periodEndDate], ['2026-01-15', periodEndDate]
+    ])
+    t.true(payload.entries.every(entry => !Object.keys(entry).some(field => field.endsWith('Date'))))
+  }
+})
+
+test('la validation des dates communes ne répète pas une erreur par point et ignore le mode inactif', t => {
+  const dates = {periodStartDate: '2026-01-10', periodEndDate: '2026-01-11', readingDate: '2026-02-31'}
+  t.deepEqual(getQuickDateErrors('VOLUME', dates, '2026-01-11'), [])
+  t.is(build(declaration, createQuickEditorRows(declaration), 'INDEX', dates).errors.length, 1)
+  t.is(build(volumes, createQuickEditorRows(volumes), 'VOLUME', {...dates, periodEndDate: '2026-01-09'}).errors.length, 1)
+  t.is(getQuickDateErrors('VOLUME', {...dates, periodEndDate: '2026-02-01'}, '2026-01-31').length, 1)
+})
+
+test('un historique aux dates différentes requiert un choix explicite, et conserve les dates initiales dans chaque avant', t => {
+  const mixed = {...declaration, entries: [declaration.entries[0], {...declaration.entries[1], readingDate: '2026-01-20'}]}
+  const rows = createQuickEditorRows(mixed)
+  const {dates, requiresDateSelection} = getQuickEditorInitialDates(mixed)
+  t.true(requiresDateSelection)
+  t.is(dates.readingDate, '')
+  t.is(build(mixed, rows).payload, null)
+  t.deepEqual(build(mixed, rows).reviewEntries, [])
+  rows[0].value = '5'
+  t.is(build(mixed, rows).payload, null)
+  const {reviewEntries, payload} = build(mixed, rows, 'INDEX', {...dates, readingDate: '2026-01-25'})
+  t.is(payload.readingDate, '2026-01-25')
+  t.deepEqual(reviewEntries.map(({before, after}) => [before.readingDate, after.readingDate]), [
+    ['2026-01-15', '2026-01-25'], ['2026-01-20', '2026-01-25']
+  ])
+})
+
+test('une seule borne historique divergente demande une période complète ; le retrait total reste disponible', t => {
+  const mixed = {...volumes, entries: [volumes.entries[0], {...volumes.entries[1], periodEndDate: '2026-01-20'}]}
+  const rows = createQuickEditorRows(mixed)
+  const {dates, requiresDateSelection} = getQuickEditorInitialDates(mixed)
+  t.true(requiresDateSelection)
+  t.deepEqual(dates, {readingDate: '', periodStartDate: '', periodEndDate: ''})
+  t.true(getQuickEditorInitialDates({...volumes, requiresDateSelection: true}).requiresDateSelection)
   rows[0].removed = true
-  rows[2].readingDate = '2026-01-11'
+  t.is(build(mixed, rows).payload, null)
+  const period = {periodStartDate: '2026-01-01', periodEndDate: '2026-01-20'}
+  const {reviewEntries} = build(mixed, rows, 'VOLUME', period)
+  t.deepEqual(reviewEntries.map(({before, after}) => [before.periodEndDate, after]), [['2026-01-15', null]])
+  rows[1].removed = true
+  const empty = build(mixed, rows)
+  t.deepEqual(empty.payload, {measurementType: 'VOLUME', revision: 2, entries: []})
+  t.deepEqual(empty.errors, [])
+  t.true(empty.reviewEntries.every(entry => entry.after === null))
+})
+
+test('le périmètre fixe affiche le comptage vide dès le départ et ignore les exploitations extérieures', t => {
+  const fixed = {...declaration, emptyEntries: [otherCounting, otherCounting, declaration.entries[0]],
+    availableEntries: [{...otherCounting, exploitationId: 'hors-perimetre'}]}
+  const rows = createQuickEditorRows(fixed)
+  t.deepEqual(rows.map(row => row.exploitationId), ['one', 'two', 'three'])
+  t.is(getQuickEditorRowKey(rows[2]), 'new:three')
+  t.false(hasQuickEditorMeasure(rows[2]))
+  t.is(build(fixed, rows).payload, null)
+  rows[0].removed = true
   rows[2].value = '0'
-  const {payload, reviewEntries} = buildQuickEditorDraft(declaration, rows, 'INDEX', '2026-01-30')
+  const {payload, reviewEntries} = build(fixed, rows)
   t.deepEqual(payload.entries.map(row => row.exploitationId), ['two', 'three'])
   t.false(Object.hasOwn(payload.entries[1], 'id'))
+  t.false(Object.hasOwn(payload.entries[1], 'readingDate'))
   t.deepEqual(reviewEntries.map(({exploitationId, before, after}) => [exploitationId, before, after]), [
     ['one', {type: 'INDEX', value: 10, readingDate: '2026-01-15'}, null],
-    ['three', null, {type: 'INDEX', value: 0, readingDate: '2026-01-11'}]
+    ['three', null, {type: 'INDEX', value: 0, readingDate: '2026-01-15'}]
   ])
   t.is(reviewEntries[1].label, 'Prise A — Code comptage : 003')
-  t.deepEqual(buildQuickEditorDraft(declaration, rows.slice(0, 2), 'INDEX').reviewEntries.map(row => row.exploitationId), ['one'])
+  rows[2].value = ''
+  t.is(rows.length, 3)
+  t.deepEqual(build(fixed, rows).reviewEntries.map(row => row.exploitationId), ['one'])
+  rows[0].removed = false
+  t.is(build(fixed, rows).payload, null)
 })
 
-test('un ancien comptage rétabli par le sélecteur garde son identifiant et ses valeurs en brouillon', t => {
+test('effacer un ancien comptage puis le rétablir garde son identité et sa date initiale', t => {
   const old = {...declaration, entries: [{...declaration.entries[0], exploitationId: null, effectiveExploitationId: 'one',
-    countingCode: '001', compteurId: 'meter', compteurName: 'M-100'}]}
-  const originals = createQuickEditorRows(old)
-  const available = [declaration.entries[0], otherCounting]
-  t.is(getQuickEditorOptions(available, originals).length, 1)
-  const removed = [{...originals[0], removed: true, value: '12'}]
-  const [option] = getQuickEditorOptions(available, removed)
-  const restored = addQuickEditorRow(removed, option)
-  t.is(restored.length, 1)
-  const {payload, reviewEntries} = buildQuickEditorDraft(old, restored, 'INDEX', '2026-01-30')
+    countingCode: '001', compteurId: 'meter', compteurName: 'M-100'}], emptyEntries: [declaration.entries[0]]}
+  const rows = createQuickEditorRows(old)
+  t.is(rows.length, 1)
+  rows[0].value = ''
+  t.deepEqual(build(old, rows).payload.entries, [])
+  t.is(build(old, rows).reviewEntries[0].after, null)
+  rows[0].value = '12'
+  const {payload, reviewEntries} = build(old, rows, 'INDEX', {readingDate: '2026-01-21'})
   t.is(payload.entries[0].id, 'a')
   t.is(payload.entries[0].exploitationId, null)
   t.is(reviewEntries[0].exploitationId, 'one')
   t.is(reviewEntries[0].compteurId, 'meter')
   t.is(reviewEntries[0].label, 'Prise A — Code comptage : 001 · compteur M-100')
-  t.is(reviewEntries[0].after.value, 12)
-  t.is(reviewEntries[0].before.value, 10)
-  const untouched = addQuickEditorRow([{...originals[0], removed: true}], option)
-  t.is(buildQuickEditorDraft(old, untouched, 'INDEX').payload, null)
+  t.deepEqual(reviewEntries[0].after, {type: 'INDEX', value: 12, readingDate: '2026-01-21'})
+  t.deepEqual(reviewEntries[0].before, {type: 'INDEX', value: 10, readingDate: '2026-01-15'})
 })
 
-test('la conversion récapitule tous les index initiaux, les retraits et les ajouts avec leurs propres périodes', t => {
-  const originals = createQuickEditorRows(declaration)
-  const [option] = getQuickEditorOptions([otherCounting], originals)
-  const rows = addQuickEditorRow(originals, option)
+test('la carte déduplique les points physiques et limite ses géométries au périmètre fixé', t => {
+  const geometry = {type: 'Point', coordinates: [2.139, 46.37]}
+  const fixed = {...declaration, emptyEntries: [otherCounting, {...otherCounting, exploitationId: 'four', pointPrelevementId: 'other', pointName: 'Source'}],
+    mapPoints: [
+      {id: 'point', name: 'Nom autorisé', coordinates: geometry},
+      {id: 'invisible', name: 'Hors périmètre', coordinates: geometry}
+    ]}
+  t.deepEqual(getQuickEditorMapPoints(fixed), [
+    {pointPrelevementId: 'point', name: 'Nom autorisé', coordinates: geometry},
+    {pointPrelevementId: 'other', name: 'Source', coordinates: null}
+  ])
+  const historical = {...declaration, availableEntries: [otherCounting]}
+  t.is(createQuickEditorRows(historical).length, 2)
+  t.deepEqual(getQuickEditorMapPoints(historical), [{pointPrelevementId: 'point', name: 'Prise A', coordinates: null}])
+})
+
+test('convertir préserve les brouillons de chaque type, y compris un ajout à zéro et un retrait', t => {
+  const rows = createQuickEditorRows({...declaration, emptyEntries: [otherCounting]})
   rows[1].removed = true
-  Object.assign(rows[2], {readingDate: '2026-01-10', value: '3'})
+  rows[2].value = '3'
+  const dates = {...getQuickEditorInitialDates(declaration).dates, readingDate: '2026-01-16'}
   const converted = rows.map(row => switchQuickRowValue(row, 'INDEX', 'VOLUME'))
-  Object.assign(converted[0], {periodStartDate: '2026-01-01', periodEndDate: '2026-01-14'})
-  Object.assign(converted[2], {value: '0', periodStartDate: '2026-01-05', periodEndDate: '2026-01-05'})
-  const {payload, reviewEntries} = buildQuickEditorDraft(declaration, converted, 'VOLUME', '2026-01-30')
-  t.deepEqual(payload.entries.map(row => [row.value, row.periodStartDate]), [[10, '2026-01-01'], [0, '2026-01-05']])
+  t.is(build(declaration, converted, 'VOLUME', dates).payload, null)
+  converted[2].value = '0'
+  Object.assign(dates, {periodStartDate: '2026-01-05', periodEndDate: '2026-01-07'})
+  const {payload, reviewEntries} = build(declaration, converted, 'VOLUME', dates)
+  t.is(payload.periodStartDate, '2026-01-05')
+  t.false(Object.hasOwn(payload, 'readingDate'))
+  t.deepEqual(payload.entries.map(row => row.value), [10, 0])
   t.deepEqual(reviewEntries.map(row => [row.before?.type, row.after?.type]), [['INDEX', 'VOLUME'], ['INDEX', undefined], [undefined, 'VOLUME']])
-  t.false(Object.hasOwn(reviewEntries[2].after, 'readingDate'))
+  t.is(reviewEntries[2].after.periodEndDate, dates.periodEndDate)
   t.is(reviewEntries[1].before.value, 0)
   const restored = converted.map(row => switchQuickRowValue(row, 'VOLUME', 'INDEX'))
-  const draft = buildQuickEditorDraft(declaration, restored, 'INDEX', '2026-01-30')
-  t.deepEqual(draft.reviewEntries.map(row => row.exploitationId), ['two', 'three'])
-  t.deepEqual(draft.reviewEntries[1].after, {type: 'INDEX', readingDate: '2026-01-10', value: 3})
+  const draft = build(declaration, restored, 'INDEX', dates)
+  t.is(draft.payload.readingDate, '2026-01-16')
+  t.false(Object.hasOwn(draft.payload, 'periodStartDate'))
+  t.deepEqual(draft.reviewEntries[2].after, {type: 'INDEX', readingDate: '2026-01-16', value: 3})
+  t.deepEqual(build(declaration, restored.map(row => switchQuickRowValue(row, 'INDEX', 'VOLUME')), 'VOLUME', dates).payload, payload)
+})
+
+test('une déclaration en volumes convertie en index utilise une seule nouvelle date', t => {
+  const rows = createQuickEditorRows(volumes).map(row => switchQuickRowValue(row, 'VOLUME', 'INDEX'))
+  const dates = getQuickEditorInitialDates(volumes).dates
+  t.is(build(volumes, rows, 'INDEX', dates).payload, null)
+  const {payload, reviewEntries} = build(volumes, rows, 'INDEX', {...dates, readingDate: '2026-01-18'})
+  t.is(payload.readingDate, '2026-01-18')
+  t.false(Object.hasOwn(payload, 'periodEndDate'))
+  t.deepEqual(reviewEntries.map(row => [row.before.type, row.after.type, row.after.readingDate]), [
+    ['VOLUME', 'INDEX', '2026-01-18'], ['VOLUME', 'INDEX', '2026-01-18']
+  ])
+})
+
+test('vider une ligne au clavier puis changer de type efface tous ses brouillons, dans les deux sens', t => {
+  for (const [from, to] of [['INDEX', 'VOLUME'], ['VOLUME', 'INDEX']]) {
+    const switched = switchQuickRowValue({...otherCounting, value: '20'}, from, to)
+    const cleared = switchQuickRowValue({...switched, value: ''}, to, from)
+    t.is(cleared.value, '')
+    t.false(hasQuickEditorMeasure(cleared))
+    t.is(switchQuickRowValue(cleared, from, to).value, '')
+    // A later value starts a new measurement and is carried across, including zero.
+    t.is(switchQuickRowValue({...cleared, value: '0'}, from, to).value, '0')
+  }
 })

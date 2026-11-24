@@ -24,9 +24,9 @@ const QuickDeclarationContact = ({payload, declarationId, warning}) => {
 
   const open = () => {
     const index = payload.measurementType === 'INDEX'
-    const date = formatDate(entry?.readingDate ?? payload.readingDate)
-    const start = formatDate(entry?.periodStartDate ?? payload.periodStartDate)
-    const end = formatDate(entry?.periodEndDate ?? payload.periodEndDate)
+    const date = formatDate(payload.readingDate)
+    const start = formatDate(payload.periodStartDate)
+    const end = formatDate(payload.periodEndDate)
     const details = [
       warning.pointName && `Point : ${warning.pointName}`,
       warning.compteurName && `Compteur : ${warning.compteurName}`,

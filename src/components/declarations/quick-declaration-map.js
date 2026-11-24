@@ -145,12 +145,13 @@ function fitAllPoints(map, points, {duration = 0} = {}) {
   }
 }
 
-function getInitialMapPoints(points, activePointId, selectedPointIdSet) {
+function getInitialMapPoints(points, activePointId, selectedPointIdSet, fitAllInitially) {
   const activePoint = getPointById(points, activePointId)
 
   if (activePoint) {
     return [activePoint]
   }
+  if (fitAllInitially) return points
 
   const selectedPoints = points.filter(point => selectedPointIdSet.has(normalizePointId(getPointId(point))))
 
@@ -215,6 +216,7 @@ const QuickDeclarationMap = ({
   pointDisplayNames = {},
   selectedPointIds = [],
   declaredPointIds = [],
+  fitAllInitially = false,
   focusRequestId = 0,
   onHoverPoint,
   onFocusPoint
@@ -467,7 +469,12 @@ const QuickDeclarationMap = ({
       map.on('idle', () => {
         // A canvas alone is not proof that the worker and point layers rendered.
         const rendered = map.queryRenderedFeatures({layers: ['quick-declaration-pins', 'quick-declaration-clusters']})
-        map.getContainer().dataset.mapReady = rendered.length > 0 ? 'true' : 'false'
+        const visible = new Map(rendered.map(({properties}) => properties.cluster
+          ? [`cluster:${properties.cluster_id}`, Number(properties.point_count)]
+          : [`point:${properties.id}`, 1]))
+        const {dataset} = map.getContainer()
+        dataset.mapVisibleCount = String([...visible.values()].reduce((sum, count) => sum + count, 0))
+        dataset.mapReady = rendered.length > 0 ? 'true' : 'false'
       })
 
       moveToPoints(
@@ -475,7 +482,8 @@ const QuickDeclarationMap = ({
         getInitialMapPoints(
           pointsWithCoordinates,
           stateRef.current.activePointId,
-          stateRef.current.selectedPointIdSet
+          stateRef.current.selectedPointIdSet,
+          fitAllInitially
         )
       )
 
@@ -586,7 +594,7 @@ const QuickDeclarationMap = ({
       map.remove()
       mapRef.current = null
     }
-  }, [pointsWithCoordinates])
+  }, [fitAllInitially, pointsWithCoordinates])
 
   useEffect(() => {
     const map = mapRef.current
@@ -659,7 +667,7 @@ const QuickDeclarationMap = ({
           Recentrer la carte
         </button>
       )}
-      <div ref={containerRef} className='h-full min-h-[220px] w-full' />
+      <div ref={containerRef} data-map-points={pointsWithCoordinates.length} className='h-full min-h-[220px] w-full' />
     </div>
   )
 }

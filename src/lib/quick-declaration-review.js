@@ -33,33 +33,50 @@ function measureDate(measure) {
   return `du ${label(first, fromFormat)} au ${label(last, fullDay)}`
 }
 
-export function describeQuickMeasure({before, after}, warnings = []) {
+function hasMeasureDates(measure) {
+  return Boolean(measure?.readingDate || (measure?.periodStartDate && measure?.periodEndDate))
+}
+
+export function describeQuickReviewDates(payload, originalDates) {
+  const empty = !payload.entries.length
+  const current = empty ? originalDates : payload
+  if (!hasMeasureDates(current)) return null
+  const isIndex = Boolean(current.readingDate)
+  const title = empty
+    ? (isIndex ? 'Date des relevés supprimés' : 'Période des volumes supprimés')
+    : (isIndex ? 'Date de relevé commune' : 'Période commune')
+  const date = measureDate(current)
+  if (empty || !hasMeasureDates(originalDates) || measureDate(originalDates) === date && originalDates.type === payload.measurementType) {
+    return {title, detail: date}
+  }
+  if (originalDates.type !== payload.measurementType) {
+    const previous = originalDates.type === 'INDEX' ? 'Relevés précédents' : 'Volumes précédents'
+    return {title, detail: date, previous: `${previous} ${measureDate(originalDates)}`}
+  }
+  return {title, detail: `${measureDate(originalDates)} → ${date}`}
+}
+
+export function describeQuickMeasure({before, after}, warnings = [], originalDates = null) {
   const measure = after ?? before
   const name = measure.type === 'INDEX' ? 'Index' : 'Volume'
-  const describe = entry => `${formatReviewVolume(entry.value)} ${measureDate(entry)}`
+  // Old declarations may contain several original dates. Keep those original values identifiable.
+  const previous = before && (hasMeasureDates(originalDates)
+    ? formatReviewVolume(before.value) : `${formatReviewVolume(before.value)} ${measureDate(before)}`)
+  const value = after && formatReviewVolume(after.value)
   if (!before && after.type === 'INDEX' && warnings.some(w => w.code === 'INDEX_SAME_DATE' && w.readingDate === after.readingDate)) {
-    return {action: 'Nouvel index retenu', detail: describe(after)}
+    return {action: 'Nouvel index retenu', detail: value}
   }
   if (!before && after.type === 'VOLUME' && warnings.some(w => w.code === 'VOLUME_OVERLAP' || w.code === 'DIRECT_VOLUME_PRIORITY')) {
-    return {action: 'Volume déclaré retenu', detail: describe(after)}
+    return {action: 'Volume déclaré retenu', detail: value}
   }
-  if (!before || !after) return {action: `${name} ${after ? 'ajouté' : 'supprimé'}`, detail: describe(measure)}
+  if (!before || !after) return {action: `${name} ${after ? 'ajouté' : 'supprimé'}`, detail: after ? value : previous}
   if (before.type !== after.type) {
     const action = after.type === 'INDEX' ? 'Volume remplacé par un index' : 'Index remplacé par un volume'
-    return {action, detail: `${describe(before)} → ${describe(after)}`}
+    return {action, detail: `${previous} → ${value}`}
   }
-
-  const dateChanged = measureDate(before) !== measureDate(after)
-  const valueChanged = Number(before.value) !== Number(after.value)
-  if (!dateChanged) {
-    return {action: `${name} modifié`, detail: `${formatReviewVolume(before.value)} → ${describe(after)}`}
-  }
-
-  const isIndex = measure.type === 'INDEX'
-  const action = valueChanged
-    ? (isIndex ? 'Index et date modifiés' : 'Volume et période modifiés')
-    : (isIndex ? 'Date du relevé modifiée' : 'Période modifiée')
-  return {action, detail: valueChanged ? `${describe(before)} → ${describe(after)}` : `${describe(before)} → ${measureDate(after)}`}
+  if (Number(before.value) !== Number(after.value)) return {action: `${name} modifié`, detail: `${previous} → ${value}`}
+  if (!hasMeasureDates(originalDates)) return {action: `${name} d’origine`, detail: previous}
+  return {action: name, detail: value}
 }
 
 function seriesKey(row) {

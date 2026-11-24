@@ -1,22 +1,34 @@
 import test from 'ava'
-import {describeQuickMeasure, describeQuickVolumes, formatReviewVolume, groupQuickReview} from './quick-declaration-review.js'
+import {describeQuickMeasure, describeQuickReviewDates, describeQuickVolumes, formatReviewVolume, groupQuickReview} from './quick-declaration-review.js'
 
 const period = {periodStartDate: '2026-11-01', periodEndDate: '2026-11-10'}
 const index = {type: 'INDEX', readingDate: '2026-11-10', value: 135}
 const volume = {type: 'VOLUME', ...period, value: 35}
 
-test('le libellé distingue les dix opérations et les changements de date et de valeur simultanés', t => {
+test('la date ou la période de la déclaration apparaît une seule fois, même si toutes les valeurs sont affectées', t => {
+  const original = {type: 'INDEX', readingDate: index.readingDate}
+  const date = {measurementType: 'INDEX', readingDate: '2026-11-11', entries: [{}, {}]}
+  t.deepEqual(describeQuickReviewDates(date, original), {title: 'Date de relevé commune', detail: 'le 10 nov. 2026 → le 11 nov. 2026'})
+  t.deepEqual(describeQuickMeasure({before: index, after: {...index, readingDate: date.readingDate}}, [], original),
+    {action: 'Index', detail: '135 m³'})
+  t.deepEqual(describeQuickReviewDates({measurementType: 'VOLUME', ...period, entries: [{}, {}]}, null),
+    {title: 'Période commune', detail: 'du 1er au 10 nov. 2026'})
+  t.deepEqual(describeQuickReviewDates({measurementType: 'VOLUME', ...period, entries: [{}]}, original),
+    {title: 'Période commune', detail: 'du 1er au 10 nov. 2026', previous: 'Relevés précédents le 10 nov. 2026'})
+  t.deepEqual(describeQuickReviewDates({...date, entries: []}, original), {title: 'Date des relevés supprimés', detail: 'le 10 nov. 2026'})
+})
+
+test('les opérations par comptage portent sur les valeurs, avec rappel des anciennes dates hétérogènes si nécessaire', t => {
   const cases = [
     [null, index, 'Index ajouté'], [index, null, 'Index supprimé'], [index, {...index, value: 0}, 'Index modifié'],
-    [index, {...index, readingDate: '2026-11-11'}, 'Date du relevé modifiée'],
     [null, volume, 'Volume ajouté'], [volume, null, 'Volume supprimé'], [volume, {...volume, value: 0}, 'Volume modifié'],
-    [volume, {...volume, periodEndDate: '2026-12-01'}, 'Période modifiée'],
-    [index, volume, 'Index remplacé par un volume'], [volume, index, 'Volume remplacé par un index'],
-    [index, {...index, value: 0, readingDate: '2026-12-01'}, 'Index et date modifiés'],
-    [volume, {...volume, value: 0, periodStartDate: '2025-12-01'}, 'Volume et période modifiés']
+    [index, volume, 'Index remplacé par un volume'], [volume, index, 'Volume remplacé par un index']
   ]
-  for (const [before, after, action] of cases) t.is(describeQuickMeasure({before, after}).action, action)
-  t.is(describeQuickMeasure({before: null, after: volume}).detail, '35 m³ du 1er au 10 nov. 2026')
+  for (const [before, after, action] of cases) t.is(describeQuickMeasure({before, after}, [], before).action, action)
+  t.is(describeQuickMeasure({before: null, after: volume}).detail, '35 m³')
+  t.deepEqual(describeQuickMeasure({before: index, after: null}), {action: 'Index supprimé', detail: '135 m³ le 10 nov. 2026'})
+  t.deepEqual(describeQuickMeasure({before: index, after: {...index, readingDate: '2026-11-11'}}),
+    {action: 'Index d’origine', detail: '135 m³ le 10 nov. 2026'})
 })
 
 test('le récapitulatif sépare deux comptages et deux compteurs avec le même nom de point', t => {

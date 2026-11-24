@@ -8,7 +8,9 @@ export const ids = {
   usage: '26000000-0000-4000-8000-000000000005',
   point: '26000000-0000-4000-8000-000000000006',
   exploitation: '26000000-0000-4000-8000-000000000007',
-  secondExploitation: '26000000-0000-4000-8000-000000000008'
+  secondExploitation: '26000000-0000-4000-8000-000000000008',
+  secondPoint: '26000000-0000-4000-8000-000000000009',
+  secondRow: '26000000-0000-4000-8000-000000000010'
 }
 
 const sessions = new Map()
@@ -16,7 +18,7 @@ export const isQuickCorrectionFixture = (authorization = '') => authorization.st
 const pointName = 'Forage des Prés'
 const original = {id: ids.row, pointName, countingCode: '001', compteurName: 'C-101', usageId: ids.usage, value: 125, readingDate: '2026-09-12',
   pointPrelevementId: ids.point, exploitationId: ids.exploitation}
-const availableEntries = [ids.exploitation, ids.secondExploitation].map((exploitationId, index) => ({
+const countings = [ids.exploitation, ids.secondExploitation].map((exploitationId, index) => ({
   pointPrelevementId: ids.point, exploitationId, pointName, countingCode: index ? '002' : '001', usageId: ids.usage,
   usageLabel: 'Irrigation', compteurName: null, compteurId: null
 }))
@@ -26,7 +28,12 @@ export async function handleQuickCorrectionFixture(request, send) {
   if (!isQuickCorrectionFixture(authorization)) return false
   const {pathname} = new URL(request.url, 'http://localhost')
   const role = authorization.includes('-ADMIN-') ? 'ADMIN' : authorization.includes('-INSTRUCTOR-') ? 'INSTRUCTOR' : 'DECLARANT'
-  const state = sessions.get(authorization) ?? {revision: 0, measurementType: 'INDEX', entries: [original], requests: []}
+  const multipoint = authorization.includes('-multi-')
+  const mixedDates = authorization.includes('-legacy-')
+  const formEntries = multipoint ? [countings[0], {...countings[1], pointPrelevementId: ids.secondPoint, pointName: 'Puits du Moulin'}] : authorization.includes('-fixed-') ? countings : [countings[0]]
+  const initialEntries = multipoint ? [original, {...formEntries[1], id: ids.secondRow, value: 230,
+    readingDate: mixedDates ? '2026-09-13' : original.readingDate}] : [original]
+  const state = sessions.get(authorization) ?? {revision: 0, measurementType: 'INDEX', entries: initialEntries, requests: []}
   sessions.set(authorization, state)
   const respond = (status, value) => {send(status, value); return true}
   if (pathname === '/api/__quick-correction') return respond(200, state)
@@ -44,26 +51,42 @@ export async function handleQuickCorrectionFixture(request, send) {
   }
   if (pathname !== `${base}/quick` && pathname !== `${base}/quick/preview` && pathname !== '/api/declarations/quick/contact') return false
   if (role === 'INSTRUCTOR') return respond(403, {message: 'Droits insuffisants.'})
-  if (request.method === 'GET') return respond(200, {success: true, data: {...common, revision: state.revision,
-    measurementType: state.measurementType, entries: state.entries, availableEntries}})
+  if (request.method === 'GET') {
+    const emptyEntries = state.entries.length ? formEntries.filter(slot => !state.entries.some(row => row.exploitationId === slot.exploitationId)) : []
+    const mapPoints = state.entries.length ? [...new Map(formEntries.map(slot => [slot.pointPrelevementId, {
+      id: slot.pointPrelevementId, pointPrelevementId: slot.pointPrelevementId, name: slot.pointName, flowType: 'PRELEVEMENT',
+      coordinates: {type: 'Point', coordinates: slot.pointPrelevementId === ids.point ? [2.02, 46.12] : [2.06, 46.11]}
+    }])).values()] : []
+    return respond(200, {success: true, data: {...common, revision: state.revision,
+      measurementType: state.measurementType, entries: state.entries, emptyEntries, mapPoints}})
+  }
   const parts = []
   for await (const part of request) parts.push(part)
   const body = JSON.parse(Buffer.concat(parts))
   state.requests.push({path: pathname, body})
   if (pathname.endsWith('/contact')) return respond(200, {success: true})
   const {previewToken: supplied, ...draft} = body
+  if (draft.entries.some(input => !formEntries.some(slot => slot.exploitationId === input.exploitationId && slot.pointPrelevementId === input.pointPrelevementId))) {
+    return respond(403, {message: 'Ce comptage ne figure pas sur le formulaire initial.'})
+  }
   const previewToken = createHash('sha256').update(JSON.stringify(draft)).digest('hex')
+  const dates = draft.measurementType === 'INDEX' ? {readingDate: draft.readingDate}
+    : {periodStartDate: draft.periodStartDate, periodEndDate: draft.periodEndDate}
+  if (draft.entries.length && Object.values(dates).some(date => !date)
+    || draft.entries.some(row => ['readingDate', 'periodStartDate', 'periodEndDate'].some(key => key in row))) {
+    return respond(400, {message: 'Les dates sont attendues sur la déclaration.'})
+  }
   if (pathname.endsWith('/preview')) {
-    const day = draft.entries[0]?.readingDate
+    const day = draft.readingDate
     const warning = {pointName, exploitationId: ids.exploitation, pointPrelevementId: ids.point, message: 'Index supérieur au relevé suivant du 11/09/2026.'}
     if (day === '2026-09-09') await new Promise(resolve => setTimeout(resolve, 700))
     const changes = []
-    for (const available of availableEntries) {
+    for (const available of formEntries) {
       const previous = state.entries.find(row => row.exploitationId === available.exploitationId)
       const current = draft.entries.find(row => row.exploitationId === available.exploitationId)
       if (!previous && !current) continue
-      const measurement = current ?? previous
-      changes.push({pointName, exploitationId: available.exploitationId, pointPrelevementId: ids.point,
+      const measurement = current ? dates : previous
+      changes.push({pointName: available.pointName, exploitationId: available.exploitationId, pointPrelevementId: available.pointPrelevementId,
         periodStartDate: measurement.readingDate ?? measurement.periodStartDate,
         periodEndDate: measurement.readingDate ?? measurement.periodEndDate,
         before: previous ? 25 : null, after: current?.value ?? null})
@@ -72,9 +95,9 @@ export async function handleQuickCorrectionFixture(request, send) {
   }
   if (supplied !== previewToken) return respond(409, {message: 'Aperçu périmé.'})
   const entries = draft.entries.map(row => {
-    const available = availableEntries.find(entry => entry.exploitationId === row.exploitationId)
+    const available = formEntries.find(entry => entry.exploitationId === row.exploitationId)
     const originalRow = state.entries.find(entry => entry.id === row.id)
-    return {...available, ...row, compteurName: originalRow?.compteurName ?? null, id: row.id ?? randomUUID()}
+    return {...available, ...row, ...dates, compteurName: originalRow?.compteurName ?? null, id: row.id ?? randomUUID()}
   })
   Object.assign(state, {entries, measurementType: draft.measurementType, revision: state.revision + 1})
   return respond(200, {success: true, data: {...common, revision: state.revision}})

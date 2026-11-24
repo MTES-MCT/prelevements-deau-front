@@ -49,6 +49,7 @@ test('deux comptages du même PP gardent index, saisies et payloads indépendant
   await review.getByRole('button', {name: 'Confirmer la déclaration'}).click()
   await expect(page.getByText('Soumission synthétique enregistrée sans donnée métier.', {exact: true})).toBeVisible()
   let writes = await getRequests(context, apiToken)
+  expect(writes.at(-1).body.formExploitationIds.toSorted()).toEqual([countingIds.first, countingIds.second].toSorted())
   expect(writes.at(-1).body.entries).toEqual([
     {pointPrelevementId: countingIds.point, exploitationId: countingIds.first, value: 120, usageId: countingIds.usage},
     {pointPrelevementId: countingIds.point, exploitationId: countingIds.second, value: 940, usageId: countingIds.usage}

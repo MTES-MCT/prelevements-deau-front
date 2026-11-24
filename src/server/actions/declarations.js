@@ -132,6 +132,7 @@ function buildQuickDeclarationPayload({
   periodEndDate,
   entries = [],
   pointUsageNames = [],
+  formExploitationIds,
   previewToken,
   revision,
   comment
@@ -144,6 +145,7 @@ function buildQuickDeclarationPayload({
   }
 
   const payload = {measurementType: normalizedMeasurementType, entries}
+  if (!editing && Array.isArray(formExploitationIds)) payload.formExploitationIds = formExploitationIds
   if (previewToken) payload.previewToken = previewToken
   if (revision != null) payload.revision = revision
 

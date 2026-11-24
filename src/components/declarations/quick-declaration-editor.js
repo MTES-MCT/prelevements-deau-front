@@ -4,18 +4,19 @@ import {useEffect, useMemo, useRef, useState, useSyncExternalStore} from 'react'
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {Button} from '@codegouvfr/react-dsfr/Button'
-import {Select} from '@codegouvfr/react-dsfr/Select'
 import {SegmentedControl} from '@codegouvfr/react-dsfr/SegmentedControl'
 
+import DateRangePicker from '@/components/ui/date-range-picker.js'
 import {formatDateInput} from '@/lib/date-range.js'
 import {formatNumberInput, normalizeNumberInput} from '@/lib/decimal-input.js'
 import {withCountingCode} from '@/lib/exploitation-identity.js'
 import {
-  addQuickEditorRow, buildQuickEditorDraft, createQuickEditorRows, getQuickEditorLabel, getQuickEditorOptions,
-  getQuickEditorRowKey, hasQuickEntryChanged, switchQuickRowValue
+  buildQuickEditorDraft, createQuickEditorRows, getQuickEditorInitialDates, getQuickEditorLabel, getQuickEditorMapPoints,
+  getQuickEditorRowKey, getQuickMeasureBadge, getQuickMeasurementDates, hasQuickEditorMeasure, hasQuickEntryChanged, switchQuickRowValue
 } from '@/lib/quick-declaration-draft.js'
 import {getMyDeclarationURL} from '@/lib/urls.js'
 
+import QuickDeclarationMapPanel, {QuickDeclarationLayout} from './quick-declaration-map-panel.js'
 import QuickDeclarationReview, {formatQuickDate} from './quick-declaration-review.js'
 
 const subscribeToHydration = () => () => {}
@@ -29,54 +30,46 @@ function RowReading({row, measurementType}) {
   return <>{formatNumberInput(row.value)} m³ {dates}</>
 }
 
-function EditorRow({row, original, originalType, measurementType, maxDate, editing, onEdit, onChange, onRemove}) {
-  const firstDate = useRef(null)
-  const focusRequested = useRef(!original)
+function EditorRow({row, original, originalType, measurementType, dates, showOriginalDates, editing, hydrated,
+  highlighted, onFocusPoint, onHoverPoint, onLocate, onEdit, onChange, onRemove}) {
+  const valueInput = useRef(null)
+  const focusRequested = useRef(false)
   useEffect(() => {
     if (editing && focusRequested.current) {
-      firstDate.current?.focus()
+      valueInput.current?.focus()
       focusRequested.current = false
     }
   }, [editing])
 
-  const changed = hasQuickEntryChanged(original, row, measurementType, originalType)
+  const changed = hasQuickEntryChanged(original, row, measurementType, originalType, dates)
   const point = withCountingCode(row.pointName || 'Point de prélèvement', row)
   const isIndex = measurementType === 'INDEX'
-  const dateFields = isIndex
-    ? [['readingDate', 'Date du relevé d’index']]
-    : [['periodStartDate', 'Début de période'], ['periodEndDate', 'Fin de période']]
+  const hasMeasure = hasQuickEditorMeasure(row)
+  const removed = original && !hasMeasure
+  const badge = getQuickMeasureBadge(original, row, measurementType, originalType)
+  const showInitial = original && (showOriginalDates || badge)
 
   return (
-    <fieldset className='border border-[var(--border-default-grey)] px-4 pb-4'>
+    <fieldset tabIndex={-1} data-point-id={row.pointPrelevementId} data-map-highlighted={highlighted}
+      className={`scroll-mt-4 border px-4 pb-4 ${highlighted ? 'border-[var(--border-action-high-blue-france)] bg-[var(--background-alt-blue-france)]' : 'border-[var(--border-default-grey)]'}`}
+      onMouseEnter={() => onHoverPoint(row.pointPrelevementId)} onMouseLeave={() => onHoverPoint(null)} onFocus={() => onFocusPoint(row.pointPrelevementId)}>
       <legend className='px-1 font-bold'>{point}</legend>
       <div className='mb-2 flex flex-wrap items-center gap-3'>
         {(row.compteurName || row.serialNumber) && <span>Compteur {row.compteurName || row.serialNumber}</span>}
-        {changed && <span className='fr-badge fr-badge--info fr-badge--no-icon'>{row.removed ? 'Supprimé' : original ? 'Modifié' : 'Ajouté'}</span>}
+        {badge && <span className='fr-badge fr-badge--info fr-badge--no-icon'>{badge}</span>}
       </div>
 
       {editing && !row.removed ? (
-        <div className='grid gap-3 md:grid-cols-3'>
-          {dateFields.map(([field, label], index) => (
-            <label className='fr-label' key={field}>
-              {label}
-              <input
-                ref={index === 0 ? firstDate : undefined}
-                className='fr-input' type='date' required max={maxDate} value={row[field]}
-                onChange={event => onChange({[field]: event.target.value})}
-              />
-            </label>
-          ))}
-          <label className='fr-label'>
-            {isIndex ? 'Index (m³)' : 'Volume (m³)'}
-            <input className='fr-input' type='text' inputMode='decimal' required value={formatNumberInput(row.value)} onChange={event => onChange({value: normalizeNumberInput(event.target.value)})} />
-          </label>
-        </div>
+        <label className='fr-label max-w-xs'>
+          {isIndex ? 'Index (m³)' : 'Volume (m³)'}
+          <input ref={valueInput} className='fr-input' type='text' inputMode='decimal' disabled={!hydrated} value={formatNumberInput(row.value)} onChange={event => onChange({value: normalizeNumberInput(event.target.value)})} />
+        </label>
       ) : !row.removed && (
-        <p className='fr-mb-1w'><RowReading row={row} measurementType={measurementType} /></p>
+        <p className='fr-mb-1w'>{formatNumberInput(row.value)} m³</p>
       )}
-      {changed && original && <p className='fr-hint-text fr-mt-1w'>Valeur saisie initialement — <RowReading row={original} measurementType={originalType} /></p>}
+      {showInitial && <p className='fr-hint-text fr-mt-1w'>Saisie initiale · {showOriginalDates || removed ? <RowReading row={original} measurementType={originalType} /> : <>{formatNumberInput(original.value)} m³</>}</p>}
       {isIndex && row.previousReading?.date && row.previousReading.value != null && !changed && (
-        <p className='fr-hint-text'>Index précédent — {formatNumberInput(row.previousReading.value)} m³ le {formatQuickDate(row.previousReading.date)}</p>
+        <p className='fr-hint-text'>Index précédent · {formatNumberInput(row.previousReading.value)} m³ le {formatQuickDate(row.previousReading.date)}</p>
       )}
       <div className='fr-mt-2w flex flex-wrap items-center gap-2'>
         {!editing && !row.removed && (
@@ -91,14 +84,16 @@ function EditorRow({row, original, originalType, measurementType, maxDate, editi
             Modifier
           </Button>
         )}
-        <Button
+        {(original || hasMeasure) && <Button
           size='small' priority='tertiary no outline'
-          iconId={row.removed ? 'fr-icon-arrow-go-back-line' : 'fr-icon-delete-line'}
-          nativeButtonProps={{'aria-label': original ? `${row.removed ? 'Rétablir' : 'Supprimer'} la saisie de ${point}` : `Annuler l’ajout de ${point}`}}
+          iconId={removed ? 'fr-icon-arrow-go-back-line' : 'fr-icon-delete-line'}
+          nativeButtonProps={{'aria-label': `${removed ? 'Rétablir' : original ? 'Supprimer' : 'Effacer'} la saisie de ${point}`}}
           onClick={onRemove}
         >
-          {row.removed ? 'Rétablir' : original ? 'Supprimer' : 'Annuler l’ajout'}
-        </Button>
+          {removed ? 'Rétablir' : original ? 'Supprimer' : 'Effacer'}
+        </Button>}
+        {onLocate && <Button size='small' priority='tertiary no outline' iconId='fr-icon-focus-3-line'
+          nativeButtonProps={{'aria-label': `Localiser ${point} sur la carte`}} onClick={onLocate}>Localiser sur la carte</Button>}
       </div>
     </fieldset>
   )
@@ -108,14 +103,22 @@ export default function QuickDeclarationEditor({declaration, returnHref = getMyD
   const hydrated = useSyncExternalStore(subscribeToHydration, getClientSnapshot, getServerSnapshot)
   const [rows, setRows] = useState(() => createQuickEditorRows(declaration))
   const [measurementType, setMeasurementType] = useState(declaration.measurementType)
+  const initial = useMemo(() => getQuickEditorInitialDates(declaration), [declaration])
+  const [draftDates, setDraftDates] = useState(initial.dates)
+  const dates = getQuickMeasurementDates(measurementType, draftDates)
   const [editingIds, setEditingIds] = useState(() => new Set())
-  const [selectedExploitation, setSelectedExploitation] = useState('')
-  const availableOptions = useMemo(() => getQuickEditorOptions(declaration.availableEntries, rows), [declaration.availableEntries, rows])
-  const selectedOption = availableOptions.find(({entry}) => entry.exploitationId === selectedExploitation)
+  const mapPoints = useMemo(() => getQuickEditorMapPoints(declaration), [declaration])
+  const locatedIds = useMemo(() => new Set(mapPoints.filter(point => point.coordinates).map(point => point.pointPrelevementId)), [mapPoints])
+  const selectedPointIds = useMemo(() => [...new Set(rows.filter(hasQuickEditorMeasure).map(row => row.pointPrelevementId))], [rows])
+  const declaredPointIds = useMemo(() => [...new Set(declaration.entries.map(row => row.pointPrelevementId))], [declaration.entries])
+  const [activePointId, setActivePointId] = useState(null)
+  const [hoveredPointId, setHoveredPointId] = useState(null)
+  const [focusRequestId, setFocusRequestId] = useState(0)
+  const rowList = useRef(null)
   const maxDate = formatDateInput(new Date())
   const draft = useMemo(
-    () => buildQuickEditorDraft(declaration, rows, measurementType, maxDate),
-    [declaration, rows, measurementType, maxDate]
+    () => buildQuickEditorDraft(declaration, rows, measurementType, draftDates, maxDate),
+    [declaration, rows, measurementType, draftDates, maxDate]
   )
   const originalEntries = useMemo(() => new Map(declaration.entries.map(entry => [entry.id, entry])), [declaration.entries])
   const seriesLabels = useMemo(() => Object.fromEntries(rows.map(row => {
@@ -124,7 +127,11 @@ export default function QuickDeclarationEditor({declaration, returnHref = getMyD
     return [key, getQuickEditorLabel(row)]
   })), [rows])
   const isConverting = measurementType !== declaration.measurementType
-  const removedAll = rows.length > 0 && rows.every(row => row.removed)
+  const removedAll = selectedPointIds.length === 0
+  const needsCommonDate = initial.requiresDateSelection && !isConverting && !removedAll && Object.values(dates).some(value => !value)
+  const dateHint = measurementType === 'INDEX'
+    ? needsCommonDate ? 'Les relevés initiaux ont des dates différentes. Choisissez la date commune à tous les points.' : 'Cette date s’applique à tous les relevés de la déclaration.'
+    : needsCommonDate ? 'Les volumes initiaux couvrent des périodes différentes. Choisissez la période commune à tous les points.' : 'Cette période s’applique à tous les volumes de la déclaration.'
 
   function changeType(nextType) {
     if (nextType === measurementType) return
@@ -137,11 +144,16 @@ export default function QuickDeclarationEditor({declaration, returnHref = getMyD
     setRows(previous => previous.map(row => getQuickEditorRowKey(row) === id ? {...row, ...changes} : row))
   }
 
-  function addSelectedPoint() {
-    if (!selectedOption) return
-    setRows(previous => addQuickEditorRow(previous, selectedOption))
-    setSelectedExploitation('')
-    if (selectedOption.restoreId) setEditingIds(previous => new Set([...previous, selectedOption.restoreId]))
+  function locatePoint(pointId) {
+    setActivePointId(pointId)
+    setFocusRequestId(previous => previous + 1)
+  }
+
+  function focusFromMap(pointId) {
+    locatePoint(pointId)
+    const fieldsets = [...rowList.current.querySelectorAll('fieldset[data-point-id]')].filter(node => node.dataset.pointId === pointId)
+    // A marker can represent several countings. Highlight them all without choosing one for the user.
+    if (fieldsets.length === 1) fieldsets[0].focus({preventScroll: true})
   }
 
   function showUpdatedDeclaration() {
@@ -153,47 +165,68 @@ export default function QuickDeclarationEditor({declaration, returnHref = getMyD
   if (declaration.entries.length === 0) return <p>Cette déclaration ne contient plus de mesure active.</p>
 
   return (
-    <div>
-      <p>Déclaration n°{declaration.code} · saisie le {formatQuickDate(declaration.createdAt?.slice(0, 10))}</p>
-      <SegmentedControl
-        legend='Type de mesure de la déclaration'
-        segments={[['INDEX', 'Relevé d’index'], ['VOLUME', 'Volume']].map(([type, label]) => ({
-          label,
-          nativeInputProps: {checked: measurementType === type, onChange: () => changeType(type)}
-        }))}
-      />
-      {isConverting && (
-        <Alert className='fr-my-2w' severity='info' title='Changement de type pour toute la déclaration'
-          description='Les chiffres sont repris pour chaque point. Vérifiez leur valeur et renseignez les dates du nouveau type de mesure.' />
+    <QuickDeclarationLayout
+      toolbar={(
+        <>
+          <p>Déclaration n°{declaration.code} · saisie le {formatQuickDate(declaration.createdAt?.slice(0, 10))}</p>
+          <div className='border border-gray-200 bg-white p-3 shadow-xs md:p-4'>
+            <SegmentedControl className='quick-declaration-measurement-segmented'
+              legend='Type de mesure de la déclaration'
+              segments={[['INDEX', 'Relevé d’index'], ['VOLUME', 'Volume']].map(([type, label]) => ({
+                label,
+                nativeInputProps: {checked: measurementType === type, onChange: () => changeType(type)}
+              }))}
+            />
+            {isConverting && (
+              <Alert className='fr-my-2w' severity='info' title='Changement de type pour toute la déclaration'
+                description='Les chiffres sont repris pour chaque point. Vérifiez les valeurs et choisissez la date ou la période commune.' />
+            )}
+            <div className='fr-mt-2w max-w-sm'>
+              {measurementType === 'INDEX' ? (
+                <div className='fr-input-group fr-mb-0'>
+                  <label className='fr-label' htmlFor='quick-reading-date'>Date du relevé d’index</label>
+                  <input id='quick-reading-date' className='fr-input' type='date' required aria-describedby='quick-reading-date-hint' disabled={!hydrated || removedAll}
+                    max={maxDate} value={draftDates.readingDate} onChange={event => {
+                      const readingDate = event.target.value
+                      setDraftDates(previous => ({...previous, readingDate}))
+                    }} />
+                  <p id='quick-reading-date-hint' className='fr-hint-text fr-mt-1v'>{dateHint}</p>
+                </div>
+              ) : (
+                <DateRangePicker startDate={draftDates.periodStartDate} endDate={draftDates.periodEndDate} maxDate={maxDate} hint={dateHint} disabled={!hydrated || removedAll}
+                  onChange={({startDate, endDate}) => setDraftDates(previous => ({...previous, periodStartDate: startDate, periodEndDate: endDate}))} />
+              )}
+            </div>
+          </div>
+        </>
       )}
-      <div className='fr-my-3w grid gap-4'>
+      map={(
+        <QuickDeclarationMapPanel fitAllInitially points={mapPoints} activePointId={activePointId} hoveredPointId={hoveredPointId}
+          selectedPointIds={selectedPointIds} declaredPointIds={declaredPointIds} focusRequestId={focusRequestId}
+          onHoverPoint={setHoveredPointId} onFocusPoint={focusFromMap} />
+      )}
+    >
+      <div ref={rowList} className='fr-my-3w grid gap-4'>
         {rows.map(row => {
           const key = getQuickEditorRowKey(row)
           return <EditorRow key={key}
-            row={row} original={originalEntries.get(row.id)} originalType={declaration.measurementType} measurementType={measurementType} maxDate={maxDate}
+            row={row} original={originalEntries.get(row.id)} originalType={declaration.measurementType} measurementType={measurementType}
+            dates={dates} showOriginalDates={initial.requiresDateSelection} hydrated={hydrated}
+            highlighted={row.pointPrelevementId === hoveredPointId || row.pointPrelevementId === activePointId}
+            onHoverPoint={setHoveredPointId} onFocusPoint={setActivePointId}
+            onLocate={locatedIds.has(row.pointPrelevementId) ? () => locatePoint(row.pointPrelevementId) : null}
             editing={!row.id || editingIds.has(key)}
             onEdit={() => setEditingIds(previous => new Set([...previous, key]))}
             onChange={changes => updateRow(key, changes)}
             onRemove={() => {
-              if (row.id) updateRow(key, {removed: !row.removed})
-              else setRows(previous => previous.filter(existing => getQuickEditorRowKey(existing) !== key))
+              if (!row.id) updateRow(key, {value: '', valueDrafts: {}})
+              else if (hasQuickEditorMeasure(row)) updateRow(key, {removed: true})
+              else updateRow(key, {removed: false, value: row.value || String(originalEntries.get(row.id).value)})
             }}
           />
         })}
       </div>
-      {declaration.availableEntries?.length > 0 && (
-        <div className='fr-mb-3w flex flex-wrap items-end gap-3'>
-          <Select label='Point de prélèvement à ajouter' className='fr-mb-0' disabled={!hydrated || !availableOptions.length}
-            nativeSelectProps={{value: selectedOption ? selectedExploitation : '', onChange: event => setSelectedExploitation(event.target.value)}}>
-            <option value=''>{availableOptions.length ? 'Sélectionner un comptage' : 'Tous les comptages sont déjà dans la déclaration'}</option>
-            {availableOptions.map(({entry, restoreId}) => (
-              <option key={entry.exploitationId} value={entry.exploitationId}>{getQuickEditorLabel(entry)}{restoreId ? ' (à rétablir)' : ''}</option>
-            ))}
-          </Select>
-          <Button disabled={!selectedOption} priority='secondary' iconId='fr-icon-add-line' onClick={addSelectedPoint}>Ajouter le point</Button>
-        </div>
-      )}
-      {removedAll && <p role='status'>Toutes les lignes seront supprimées de cette déclaration.</p>}
+      {removedAll && <p role='status'>Toutes les mesures seront retirées de cette déclaration.</p>}
       {draft.errors.length > 0 && <Alert severity='error' className='fr-mb-2w' title='Saisie à compléter' description={<ul>{draft.errors.map(message => <li key={message}>{message}</li>)}</ul>} />}
       <div className='fr-mb-2w'>
         <QuickDeclarationReview
@@ -202,10 +235,11 @@ export default function QuickDeclarationEditor({declaration, returnHref = getMyD
           payload={draft.payload}
           submitLabel='Vérifier les modifications'
           reviewEntries={draft.reviewEntries}
+          originalDates={{type: declaration.measurementType, ...getQuickMeasurementDates(declaration.measurementType, initial.dates)}}
           onSaved={showUpdatedDeclaration}
         />
       </div>
       <Button linkProps={{href: returnHref}} priority='secondary'>Annuler</Button>
-    </div>
+    </QuickDeclarationLayout>
   )
 }

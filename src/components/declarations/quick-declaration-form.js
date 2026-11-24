@@ -6,14 +6,13 @@ import {
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
 import {SegmentedControl} from '@codegouvfr/react-dsfr/SegmentedControl'
-import dynamic from 'next/dynamic'
 
 import UsageCombobox, {compareUsageOptions, findUsageOptionById, formatUsageOptionLabel} from '@/components/form/usage-combobox.js'
 import DateRangePicker from '@/components/ui/date-range-picker.js'
 import {useAuth} from '@/contexts/auth-context.js'
 import {getDeclarantTitleFromUser} from '@/lib/declarants.js'
 import {countEditableNumberCharacters, formatNumberInput, getFormattedCaretPosition, normalizeNumberInput} from '@/lib/decimal-input.js'
-import {getCountingCodeLabel, getExploitationEntryId, withCountingCode} from '@/lib/exploitation-identity.js'
+import {getCountingCodeLabel, getExploitationEntryId, getQuickFormExploitationIds, withCountingCode} from '@/lib/exploitation-identity.js'
 import {
   getPointFlowType,
   getPointFlowTypeColors,
@@ -36,19 +35,8 @@ import {getQuickDeclarationContextAction} from '@/server/actions/declarations.js
 import {editPointUsageNameAction} from '@/server/actions/points-prelevement.js'
 import {formatNumber} from '@/utils/number.js'
 
+import QuickDeclarationMapPanel, {QuickDeclarationLayout} from './quick-declaration-map-panel.js'
 import QuickDeclarationReview from './quick-declaration-review.js'
-
-const QuickDeclarationMap = dynamic(
-  () => import('./quick-declaration-map.js'),
-  {
-    loading: () => (
-      <div className='flex h-full items-center justify-center bg-gray-100' role='status'>
-        Chargement de la carte…
-      </div>
-    ),
-    ssr: false
-  }
-)
 
 const POINTS_CONTACT_EMAIL = 'contact@partageonsleau.beta.gouv.fr'
 const POINTS_CONTACT_SUBJECT_SUFFIX = 'Modification sur mes points de prélèvements'
@@ -1045,7 +1033,7 @@ const QuickDeclarationEntriesPanel = ({
   )
 }
 
-const QuickDeclarationMapPanel = ({
+const CreationMapPanel = ({
   activePointId,
   context,
   declaredPointIds,
@@ -1059,13 +1047,11 @@ const QuickDeclarationMapPanel = ({
   selectedPointIds,
   setHoveredPointId
 }) => {
-  if (!context || pointsCount === 0) {
-    return null
-  }
+  const mapPoints = useMemo(() => [...new Map(entryPoints.map(point => [getQuickDeclarationPointId(point), point])).values()], [entryPoints])
+  if (!context || pointsCount === 0) return null
 
   const pointsContactMailto = buildPointsContactMailto(declarantName)
   const getPhysicalPointId = entryId => getQuickDeclarationPointId(entryPoints.find(point => getPointId(point) === entryId))
-  const mapPoints = [...new Map(entryPoints.map(point => [getQuickDeclarationPointId(point), point])).values()]
   const mapDisplayNames = Object.fromEntries(entryPoints.map(point => [getQuickDeclarationPointId(point), pointDisplayNames[getPointId(point)]]))
   const getEntryIdForPoint = pointId => {
     const current = entryPoints.find(point => getPointId(point) === activePointId && getQuickDeclarationPointId(point) === pointId)
@@ -1073,31 +1059,18 @@ const QuickDeclarationMapPanel = ({
   }
 
   return (
-    <aside className='sticky top-0 z-20 order-2 self-start bg-white pb-2 shadow-xs xl:order-none xl:col-start-2 xl:row-start-1 xl:top-3 xl:pb-0 xl:shadow-none'>
-      <div className='fr-mb-1v text-center'>
-        <a
-          className='fr-link text-xs'
-          href={pointsContactMailto}
-          rel='noreferrer'
-          target='_blank'
-        >
-          Signaler une modification sur mes points
-        </a>
-      </div>
-      <div className='h-[220px] sm:h-[260px] md:h-[300px] xl:h-[calc(100vh-4rem)]'>
-        <QuickDeclarationMap
-          points={mapPoints}
-          activePointId={getPhysicalPointId(activePointId)}
-          hoveredPointId={getPhysicalPointId(hoveredPointId)}
-          pointDisplayNames={mapDisplayNames}
-          selectedPointIds={[...new Set(selectedPointIds.map(getPhysicalPointId).filter(Boolean))]}
-          declaredPointIds={[...new Set(declaredPointIds.map(getPhysicalPointId).filter(Boolean))]}
-          focusRequestId={focusRequestId}
-          onHoverPoint={pointId => setHoveredPointId(pointId ? getEntryIdForPoint(pointId) : null)}
-          onFocusPoint={pointId => focusPoint(getEntryIdForPoint(pointId))}
-        />
-      </div>
-    </aside>
+    <QuickDeclarationMapPanel
+      contactHref={pointsContactMailto}
+      points={mapPoints}
+      activePointId={getPhysicalPointId(activePointId)}
+      hoveredPointId={getPhysicalPointId(hoveredPointId)}
+      pointDisplayNames={mapDisplayNames}
+      selectedPointIds={[...new Set(selectedPointIds.map(getPhysicalPointId).filter(Boolean))]}
+      declaredPointIds={[...new Set(declaredPointIds.map(getPhysicalPointId).filter(Boolean))]}
+      focusRequestId={focusRequestId}
+      onHoverPoint={pointId => setHoveredPointId(pointId ? getEntryIdForPoint(pointId) : null)}
+      onFocusPoint={pointId => focusPoint(getEntryIdForPoint(pointId))}
+    />
   )
 }
 
@@ -1426,8 +1399,9 @@ const QuickDeclarationForm = ({
     measurementType,
     ...getQuickMeasurementDates(measurementType, {readingDate, periodStartDate, periodEndDate}),
     comment,
+    formExploitationIds: getQuickFormExploitationIds(entryPoints),
     entries
-  } : null, [canSubmit, comment, entries, measurementType, periodEndDate, periodStartDate, readingDate, targetDeclarantUserId])
+  } : null, [canSubmit, comment, entries, entryPoints, measurementType, periodEndDate, periodStartDate, readingDate, targetDeclarantUserId])
 
   const changeMeasurementType = nextType => {
     if (measurementType === nextType) return
@@ -1444,9 +1418,9 @@ const QuickDeclarationForm = ({
 
   return (
     <div className='fr-mt-1w fr-mb-2w'>
-      <div className='grid grid-cols-1 gap-x-3 gap-y-3 xl:grid-cols-[minmax(0,1fr)_minmax(300px,0.72fr)] xl:items-start xl:gap-y-0'>
-        <div className='contents xl:col-start-1 xl:row-start-1 xl:block xl:min-w-0'>
-          <div className='order-1'>
+      <QuickDeclarationLayout
+        toolbar={(
+          <>
             <QuickDeclarationToolbar
               availablePreleveurs={availablePreleveurs}
               isUsageNameSaving={isUsageNameSaving}
@@ -1473,64 +1447,63 @@ const QuickDeclarationForm = ({
               selectedPreleveurId={selectedPreleveurId}
               shouldSelectPreleveur={shouldSelectPreleveur}
             />
-          </div>
-
-          <section className='order-3 min-w-0'>
-            <QuickDeclarationEntriesPanel
-              activePointId={activePointId}
-              comment={comment}
-              context={context}
-              entryPoints={entryPoints}
-              focusNextPoint={focusNextPoint}
-              focusPoint={focusPoint}
-              globalUsageOptions={globalUsageOptions}
-              handleValueChange={handleValueChange}
-              hasAnyValue={hasAnyValue}
-              hoveredPointId={hoveredPointId}
-              inputRefs={inputRefs}
-              measurementType={measurementType}
-              pointsCount={pointsCount}
-              rows={rows}
-              setActivePointId={setActivePointId}
-              setComment={setComment}
-              setHoveredPointId={setHoveredPointId}
-              review={(
-                <QuickDeclarationReview
-                  payload={payload}
-                  seriesLabels={seriesLabels}
-                  submitLabel={submitButtonLabel}
-                  reviewEntries={entries.map(entry => ({
-                    pointPrelevementId: entry.pointPrelevementId,
-                    exploitationId: entry.exploitationId,
-                    before: null,
-                    after: {type: measurementType, value: entry.value, ...getQuickMeasurementDates(measurementType, {readingDate, periodStartDate, periodEndDate})}
-                  }))}
-                  onSaved={showSubmittedDeclaration}
-                />
-              )}
-              updateRow={updateRow}
-              validationErrors={validationErrors}
-              onUsageNameSaved={handleUsageNameSaved}
-              onUsageNameSavingChange={handleUsageNameSavingChange}
-            />
-          </section>
-        </div>
-
-        <QuickDeclarationMapPanel
+          </>
+        )}
+        map={(
+          <CreationMapPanel
+            activePointId={activePointId}
+            context={context}
+            declaredPointIds={declaredPointIds}
+            declarantName={contactDeclarantName}
+            entryPoints={entryPoints}
+            focusRequestId={focusRequestId}
+            focusPoint={focusPoint}
+            hoveredPointId={hoveredPointId}
+            pointDisplayNames={pointDisplayNames}
+            pointsCount={pointsCount}
+            selectedPointIds={selectedPointIds}
+            setHoveredPointId={setHoveredPointId}
+          />
+        )}
+      >
+        <QuickDeclarationEntriesPanel
           activePointId={activePointId}
+          comment={comment}
           context={context}
-          declaredPointIds={declaredPointIds}
-          declarantName={contactDeclarantName}
           entryPoints={entryPoints}
-          focusRequestId={focusRequestId}
+          focusNextPoint={focusNextPoint}
           focusPoint={focusPoint}
+          globalUsageOptions={globalUsageOptions}
+          handleValueChange={handleValueChange}
+          hasAnyValue={hasAnyValue}
           hoveredPointId={hoveredPointId}
-          pointDisplayNames={pointDisplayNames}
+          inputRefs={inputRefs}
+          measurementType={measurementType}
           pointsCount={pointsCount}
-          selectedPointIds={selectedPointIds}
+          rows={rows}
+          setActivePointId={setActivePointId}
+          setComment={setComment}
           setHoveredPointId={setHoveredPointId}
+          review={(
+            <QuickDeclarationReview
+              payload={payload}
+              seriesLabels={seriesLabels}
+              submitLabel={submitButtonLabel}
+              reviewEntries={entries.map(entry => ({
+                pointPrelevementId: entry.pointPrelevementId,
+                exploitationId: entry.exploitationId,
+                before: null,
+                after: {type: measurementType, value: entry.value, ...getQuickMeasurementDates(measurementType, {readingDate, periodStartDate, periodEndDate})}
+              }))}
+              onSaved={showSubmittedDeclaration}
+            />
+          )}
+          updateRow={updateRow}
+          validationErrors={validationErrors}
+          onUsageNameSaved={handleUsageNameSaved}
+          onUsageNameSavingChange={handleUsageNameSavingChange}
         />
-      </div>
+      </QuickDeclarationLayout>
 
       <UnsavedPreleveurChangeModal
         open={preleveurChangeModalOpen}

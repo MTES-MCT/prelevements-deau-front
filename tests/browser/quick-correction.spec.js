@@ -4,7 +4,8 @@ import {encode} from 'next-auth/jwt'
 import {ids} from '../../.github/scripts/quick-correction-fixtures.mjs'
 
 const front = 'https://127.0.0.1:3443'
-test.use({ignoreHTTPSErrors: true})
+const mapTile = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGN49+kXAAWsAttzkl10AAAAAElFTkSuQmCC', 'base64')
+test.use({ignoreHTTPSErrors: true, reducedMotion: 'reduce'})
 
 const correctionReview = page => page.getByRole('dialog', {name: 'Vérifiez vos modifications'})
 const reviewPoint = (review, code) => review.getByRole('region', {name: new RegExp(`Forage des Prés.*${code}`)})
@@ -19,8 +20,16 @@ async function openPeriods(point) {
   return table
 }
 
-async function session(context, role) {
-  const apiToken = `browser-test-quick-correction-${role}-${randomUUID()}`
+async function chooseSeptemberPeriod(page, start, end) {
+  await page.getByRole('button', {name: /^Période déclarée/}).click()
+  const calendar = page.getByRole('dialog', {name: 'Choisir une période'})
+  await calendar.getByRole('button', {name: String(start), exact: true}).first().click()
+  await calendar.getByRole('button', {name: String(end), exact: true}).first().click()
+  await calendar.getByRole('button', {name: 'Valider'}).click()
+}
+
+async function session(context, role, scenario = 'simple') {
+  const apiToken = `browser-test-quick-correction-${role}-${scenario}-${randomUUID()}`
   const value = await encode({secret: 'browser-tests-only-never-a-real-secret', maxAge: 3600, token: {
     sub: ids.user, token: apiToken, role, declarantRole: 'PRELEVEUR', permissions: [],
     apiExpiresAt: new Date(Date.now() + 3600000).toISOString(), infoRefreshedAt: Date.now(), userInfo: {id: ids.user}
@@ -35,14 +44,21 @@ async function session(context, role) {
 
 test.beforeEach(async ({page}) => {
   await page.clock.setFixedTime(new Date('2026-09-22T12:00:00Z'))
-  await page.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort())
+  await page.route('**/*', route => {
+    const url = new URL(route.request().url())
+    if (url.hostname === '127.0.0.1') return route.continue()
+    if (url.hostname === 'data.geopf.fr' || (url.hostname === 'openmaptiles.github.io' && url.pathname.endsWith('.png'))) {
+      return route.fulfill({contentType: 'image/png', body: mapTile})
+    }
+    if (url.hostname === 'openmaptiles.github.io' && url.pathname.endsWith('.json')) return route.fulfill({json: {}})
+    return route.abort()
+  })
 })
 
 test('le préleveur déplace son index, contacte PE et confirme uniquement la dernière date', async ({page, context}) => {
   const state = await session(context, 'DECLARANT')
   await page.goto(`${front}/mes-declarations/${ids.declaration}`)
   await page.getByRole('link', {name: 'Modifier ma déclaration'}).click()
-  await page.getByRole('button', {name: 'Modifier la saisie de Forage des Prés'}).click()
   const day = page.getByLabel('Date du relevé d’index')
   await day.fill('2026-09-10')
   await page.getByRole('button', {name: 'Contacter l’équipe PE'}).click()
@@ -81,15 +97,14 @@ test('l’administrateur peut convertir et retirer la dernière ligne, l’agent
   await volume.focus()
   await volume.press('Space')
   await expect(page.getByLabel('Volume (m³)', {exact: true})).toHaveValue('125')
-  await page.getByLabel('Début de période').fill('2026-09-01')
-  await page.getByLabel('Fin de période').fill('2026-09-16')
+  await chooseSeptemberPeriod(page, 1, 16)
   const verify = page.getByRole('button', {name: 'Vérifier les modifications'})
   await verify.click()
   const review = correctionReview(page)
   const point = reviewPoint(review, '001')
   await expect((await openPeriods(point)).getByText(/01\/09\/2026 au 16\/09\/2026/)).toBeVisible()
   await review.getByRole('button', {name: 'Revenir à la saisie'}).click()
-  await page.getByLabel('Fin de période').fill('2026-09-20')
+  await chooseSeptemberPeriod(page, 1, 20)
   await verify.click()
   await expect((await openPeriods(point)).getByText(/01\/09\/2026 au 20\/09\/2026/)).toBeVisible()
   await review.getByRole('button', {name: 'Confirmer la modification'}).click()
@@ -110,46 +125,34 @@ test('l’administrateur peut convertir et retirer la dernière ligne, l’agent
   await expect(page.getByRole('link', {name: 'Modifier la déclaration'})).toHaveCount(0)
 })
 
-test('un ajout à zéro remplace un comptage retiré du même point après validation du brouillon', async ({page, context}) => {
-  const state = await session(context, 'DECLARANT')
-  const select = page.getByRole('combobox', {name: 'Point de prélèvement à ajouter'})
-  const add = page.getByRole('button', {name: 'Ajouter le point'})
+test('une valeur à zéro se saisit sur un comptage déjà présent, sans modifier la liste des points', async ({page, context}) => {
+  const state = await session(context, 'DECLARANT', 'fixed')
+  await page.goto(`${front}/saisie-en-ligne/${ids.declaration}/modifier`)
   const verify = page.getByRole('button', {name: 'Vérifier les modifications'})
   const original = page.getByRole('group', {name: /Forage des Prés.*001/})
-  const added = page.getByRole('group', {name: /Forage des Prés.*002/})
-
-  const scripts = Promise.withResolvers()
-  await page.route('**/_next/static/**/*.js*', async route => {
-    await scripts.promise
-    await route.fallback()
-  })
-  try {
-    await page.goto(`${front}/saisie-en-ligne/${ids.declaration}/modifier`, {waitUntil: 'commit'})
-    await expect(select).toBeVisible()
-    await expect(select).toBeDisabled()
-  } finally {
-    scripts.resolve()
-  }
-  await expect(select).toBeEnabled()
-  await select.selectOption(ids.secondExploitation)
-  await expect(add).toBeEnabled()
-  await add.click()
-  await expect(added.getByLabel('Date du relevé d’index')).toHaveValue('')
+  const blank = page.getByRole('group', {name: /Forage des Prés.*002/})
+  const blankValue = blank.getByRole('textbox', {name: 'Index (m³)', exact: true})
+  await expect(page.getByRole('combobox', {name: 'Point de prélèvement à ajouter'})).toHaveCount(0)
+  await expect(page.getByRole('button', {name: 'Ajouter le point'})).toHaveCount(0)
+  await expect(blankValue).toHaveValue('')
+  const pointMap = page.getByRole('complementary', {name: 'Carte des points de la déclaration'})
+  await expect(pointMap.locator('[data-map-points]')).toHaveAttribute('data-map-points', '1')
   await expect(verify).toBeDisabled()
-  await added.getByRole('button', {name: /Annuler l’ajout/}).click()
-  await expect(added).toHaveCount(0)
+  await blankValue.fill('5')
+  await expect(verify).toBeEnabled()
+  await page.getByRole('radio', {name: 'Volume', exact: true}).press('Space')
+  const blankVolume = blank.getByRole('textbox', {name: 'Volume (m³)', exact: true})
+  await expect(blankVolume).toHaveValue('5')
+  await blankVolume.fill('')
+  await page.getByRole('radio', {name: 'Relevé d’index', exact: true}).press('Space')
+  await expect(blankValue).toHaveValue('')
+  await expect(blank).toBeVisible()
   await expect(verify).toBeDisabled()
-
   await original.getByRole('button', {name: /Supprimer la saisie/}).click()
-  await select.selectOption(ids.exploitation)
-  await add.click()
-  await expect(original.getByLabel('Index (m³)', {exact: true})).toHaveValue('125')
+  await original.getByRole('button', {name: /Rétablir la saisie/}).click()
   await expect(verify).toBeDisabled()
-
-  await select.selectOption(ids.secondExploitation)
-  await add.click()
-  await added.getByLabel('Index (m³)', {exact: true}).fill('0')
-  await added.getByLabel('Date du relevé d’index').fill('2026-09-18')
+  await blankValue.fill('0')
+  await page.getByLabel('Date du relevé d’index').fill('2026-09-18')
   await original.getByRole('button', {name: /Supprimer la saisie/}).click()
   await verify.click()
   const review = correctionReview(page)
@@ -181,10 +184,9 @@ test('un ajout à zéro remplace un comptage retiré du même point après valid
 test('une vérification encore en cours ne peut confirmer la date précédente', async ({page, context}) => {
   const state = await session(context, 'DECLARANT')
   await page.goto(`${front}/saisie-en-ligne/${ids.declaration}/modifier`)
-  await page.getByRole('button', {name: 'Modifier la saisie de Forage des Prés'}).click()
   const date = page.getByLabel('Date du relevé d’index')
   await date.fill('2026-09-09')
-  await expect.poll(async () => (await state()).requests.at(-1)?.body.entries?.[0].readingDate).toBe('2026-09-09')
+  await expect.poll(async () => (await state()).requests.at(-1)?.body.readingDate).toBe('2026-09-09')
   await date.fill('2026-09-14')
   await page.getByRole('button', {name: 'Vérifier les modifications'}).click()
   const review = correctionReview(page)
@@ -195,4 +197,60 @@ test('une vérification encore en cours ne peut confirmer la date précédente',
   await confirm.click()
   await expect(page.getByText('La déclaration a été modifiée.')).toBeVisible()
   expect((await state()).entries[0].readingDate).toBe('2026-09-14')
+})
+
+test('une date puis une période déplacent ensemble les mesures de deux points', async ({page, context}) => {
+  const state = await session(context, 'DECLARANT', 'multi')
+  const edit = `${front}/saisie-en-ligne/${ids.declaration}/modifier`
+  const verify = page.getByRole('button', {name: 'Vérifier les modifications'})
+  const review = correctionReview(page)
+  await page.goto(edit)
+  const date = page.getByLabel('Date du relevé d’index', {exact: true})
+  await expect(date).toHaveValue('2026-09-12')
+  await expect(page.getByRole('group', {name: /Forage des Prés|Puits du Moulin/})).toHaveCount(2)
+  const map = page.getByRole('complementary', {name: 'Carte des points de la déclaration'})
+  await expect(map).toBeVisible()
+  await expect(map.locator('[data-map-points]')).toHaveAttribute('data-map-points', '2')
+  await expect(map.locator('[data-map-ready="true"]')).toHaveAttribute('data-map-visible-count', '2', {timeout: 20_000})
+  await expect(page.getByRole('group', {name: /Forage des Prés|Puits du Moulin/}).locator('input[type=date]')).toHaveCount(0)
+  await date.fill('2026-09-19')
+  await verify.click()
+  await expect(review.getByText('Date de relevé commune', {exact: true})).toHaveCount(1)
+  await expect(review.getByRole('region')).toHaveCount(2)
+  for (const point of await review.getByRole('region').all()) {
+    await expect((await openPeriods(point)).getByText('19/09/2026')).toBeVisible()
+  }
+  await review.getByRole('button', {name: 'Confirmer la modification'}).click()
+  await expect(page.getByText('La déclaration a été modifiée.')).toBeVisible()
+  expect((await state()).entries.map(row => row.readingDate)).toEqual(['2026-09-19', '2026-09-19'])
+  await page.goto(edit)
+  await page.getByRole('radio', {name: 'Volume', exact: true}).press('Space')
+  await chooseSeptemberPeriod(page, 3, 18)
+  await verify.click()
+  await expect(review.getByText('Période commune', {exact: true})).toHaveCount(1)
+  await expect(review.getByRole('region')).toHaveCount(2)
+  await review.getByRole('button', {name: 'Confirmer la modification'}).click()
+  await expect(page.getByText('La déclaration a été modifiée.')).toBeVisible()
+  expect((await state()).entries.map(row => [row.periodStartDate, row.periodEndDate])).toEqual([
+    ['2026-09-03', '2026-09-18'], ['2026-09-03', '2026-09-18']
+  ])
+})
+
+test('un dossier historique avec des dates différentes attend un choix commun explicite', async ({page, context}) => {
+  const state = await session(context, 'DECLARANT', 'multi-legacy')
+  await page.goto(`${front}/saisie-en-ligne/${ids.declaration}/modifier`)
+  const date = page.getByLabel('Date du relevé d’index', {exact: true})
+  await expect(date).toHaveValue('')
+  const verify = page.getByRole('button', {name: 'Vérifier les modifications'})
+  await expect(verify).toBeDisabled()
+  await page.getByRole('button', {name: /Modifier la saisie de Forage des Prés/}).click()
+  await page.getByRole('textbox', {name: 'Index (m³)', exact: true}).fill('140')
+  await expect(verify).toBeDisabled()
+  expect((await state()).entries.map(row => row.readingDate)).toEqual(['2026-09-12', '2026-09-13'])
+  await date.fill('2026-09-20')
+  await verify.click()
+  const review = correctionReview(page)
+  await expect(review.getByRole('button', {name: 'Confirmer la modification'})).toBeEnabled()
+  expect((await state()).requests.at(-1).body.readingDate).toBe('2026-09-20')
+  expect((await state()).revision).toBe(0)
 })
