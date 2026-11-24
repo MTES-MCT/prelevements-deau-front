@@ -1,4 +1,4 @@
-import {createHash} from 'node:crypto'
+import {createHash, randomUUID} from 'node:crypto'
 
 export const ids = {
   declaration: '26000000-0000-4000-8000-000000000001',
@@ -7,14 +7,19 @@ export const ids = {
   row: '26000000-0000-4000-8000-000000000004',
   usage: '26000000-0000-4000-8000-000000000005',
   point: '26000000-0000-4000-8000-000000000006',
-  exploitation: '26000000-0000-4000-8000-000000000007'
+  exploitation: '26000000-0000-4000-8000-000000000007',
+  secondExploitation: '26000000-0000-4000-8000-000000000008'
 }
 
 const sessions = new Map()
 export const isQuickCorrectionFixture = (authorization = '') => authorization.startsWith('Bearer browser-test-quick-correction-')
 const pointName = 'Forage des Prés'
-const original = {id: ids.row, pointName, compteurName: 'C-101', usageId: ids.usage, value: 125, readingDate: '2026-09-12',
+const original = {id: ids.row, pointName, countingCode: '001', compteurName: 'C-101', usageId: ids.usage, value: 125, readingDate: '2026-09-12',
   pointPrelevementId: ids.point, exploitationId: ids.exploitation}
+const availableEntries = [ids.exploitation, ids.secondExploitation].map((exploitationId, index) => ({
+  pointPrelevementId: ids.point, exploitationId, pointName, countingCode: index ? '002' : '001', usageId: ids.usage,
+  usageLabel: 'Irrigation', compteurName: null, compteurId: null
+}))
 
 export async function handleQuickCorrectionFixture(request, send) {
   const authorization = request.headers.authorization
@@ -40,7 +45,7 @@ export async function handleQuickCorrectionFixture(request, send) {
   if (pathname !== `${base}/quick` && pathname !== `${base}/quick/preview` && pathname !== '/api/declarations/quick/contact') return false
   if (role === 'INSTRUCTOR') return respond(403, {message: 'Droits insuffisants.'})
   if (request.method === 'GET') return respond(200, {success: true, data: {...common, revision: state.revision,
-    measurementType: state.measurementType, entries: state.entries}})
+    measurementType: state.measurementType, entries: state.entries, availableEntries}})
   const parts = []
   for await (const part of request) parts.push(part)
   const body = JSON.parse(Buffer.concat(parts))
@@ -49,15 +54,28 @@ export async function handleQuickCorrectionFixture(request, send) {
   const {previewToken: supplied, ...draft} = body
   const previewToken = createHash('sha256').update(JSON.stringify(draft)).digest('hex')
   if (pathname.endsWith('/preview')) {
-    const entry = draft.entries[0]
-    const day = entry?.readingDate ?? draft.readingDate ?? entry?.periodStartDate ?? draft.periodStartDate
+    const day = draft.entries[0]?.readingDate
     const warning = {pointName, exploitationId: ids.exploitation, pointPrelevementId: ids.point, message: 'Index supérieur au relevé suivant du 11/09/2026.'}
     if (day === '2026-09-09') await new Promise(resolve => setTimeout(resolve, 700))
-    return respond(200, {success: true, data: {previewToken, changes: [{pointName, exploitationId: ids.exploitation,
-      pointPrelevementId: ids.point, periodStartDate: day ?? '2026-09-12', periodEndDate: entry?.periodEndDate ?? draft.periodEndDate ?? '2026-09-16',
-      before: 25, after: entry ? entry.value : null}], warnings: ['2026-09-09', '2026-09-10'].includes(day) ? [warning] : []}})
+    const changes = []
+    for (const available of availableEntries) {
+      const previous = state.entries.find(row => row.exploitationId === available.exploitationId)
+      const current = draft.entries.find(row => row.exploitationId === available.exploitationId)
+      if (!previous && !current) continue
+      const measurement = current ?? previous
+      changes.push({pointName, exploitationId: available.exploitationId, pointPrelevementId: ids.point,
+        periodStartDate: measurement.readingDate ?? measurement.periodStartDate,
+        periodEndDate: measurement.readingDate ?? measurement.periodEndDate,
+        before: previous ? 25 : null, after: current?.value ?? null})
+    }
+    return respond(200, {success: true, data: {previewToken, changes, warnings: ['2026-09-09', '2026-09-10'].includes(day) ? [warning] : []}})
   }
   if (supplied !== previewToken) return respond(409, {message: 'Aperçu périmé.'})
-  Object.assign(state, {entries: draft.entries.map(row => ({...row, pointName})), measurementType: draft.measurementType, revision: state.revision + 1})
+  const entries = draft.entries.map(row => {
+    const available = availableEntries.find(entry => entry.exploitationId === row.exploitationId)
+    const originalRow = state.entries.find(entry => entry.id === row.id)
+    return {...available, ...row, compteurName: originalRow?.compteurName ?? null, id: row.id ?? randomUUID()}
+  })
+  Object.assign(state, {entries, measurementType: draft.measurementType, revision: state.revision + 1})
   return respond(200, {success: true, data: {...common, revision: state.revision}})
 }

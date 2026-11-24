@@ -36,7 +36,7 @@ import {getQuickDeclarationContextAction} from '@/server/actions/declarations.js
 import {editPointUsageNameAction} from '@/server/actions/points-prelevement.js'
 import {formatNumber} from '@/utils/number.js'
 
-import QuickDeclarationReview, {formatQuickDate} from './quick-declaration-review.js'
+import QuickDeclarationReview from './quick-declaration-review.js'
 
 const QuickDeclarationMap = dynamic(
   () => import('./quick-declaration-map.js'),
@@ -1499,17 +1499,12 @@ const QuickDeclarationForm = ({
                   payload={payload}
                   seriesLabels={seriesLabels}
                   submitLabel={submitButtonLabel}
-                  summary={(
-                    <>
-                      <p>{measurementType === 'INDEX'
-                        ? `Relevés d’index du ${formatQuickDate(readingDate)}`
-                        : `Volumes du ${formatQuickDate(periodStartDate)} au ${formatQuickDate(periodEndDate)}`}</p>
-                      <ul>{entries.map(entry => {
-                        const entryId = entry.exploitationId || entry.pointPrelevementId
-                        return <li key={entryId}>{seriesLabels[entryId]} — {formatNumberInput(entry.value)} m³</li>
-                      })}</ul>
-                    </>
-                  )}
+                  reviewEntries={entries.map(entry => ({
+                    pointPrelevementId: entry.pointPrelevementId,
+                    exploitationId: entry.exploitationId,
+                    before: null,
+                    after: {type: measurementType, value: entry.value, ...getQuickMeasurementDates(measurementType, {readingDate, periodStartDate, periodEndDate})}
+                  }))}
                   onSaved={showSubmittedDeclaration}
                 />
               )}

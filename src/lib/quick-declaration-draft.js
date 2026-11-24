@@ -1,4 +1,5 @@
 import {formatDateInput, parseDateInput} from './date-range.js'
+import {withCountingCode} from './exploitation-identity.js'
 
 export function switchQuickRowValue(row, from, to) {
   const valueDrafts = {...row.valueDrafts, [from]: row.value}
@@ -16,6 +17,38 @@ export function createQuickEditorRows(declaration) {
   }))
 }
 
+export function getQuickEditorRowKey(row) {
+  return row.id ?? `new:${row.exploitationId}`
+}
+
+export function getQuickEditorLabel(row) {
+  const point = withCountingCode(row.pointName || 'Point de prélèvement', row)
+  const meter = row.compteurName || row.serialNumber
+  return meter ? `${point} · compteur ${meter}` : point
+}
+
+function rowExploitationId(row) {
+  return row.exploitationId ?? row.effectiveExploitationId ?? null
+}
+
+export function getQuickEditorOptions(availableEntries = [], rows) {
+  const options = new Map()
+  for (const entry of availableEntries) {
+    const id = entry.exploitationId
+    if (!id || options.has(id)) continue
+    const existing = rows.filter(row => rowExploitationId(row) === id)
+    if (existing.some(row => !row.removed) || existing.length > 1) continue
+    options.set(id, {entry, restoreId: existing[0]?.id ?? null})
+  }
+  return [...options.values()]
+}
+
+export function addQuickEditorRow(rows, option) {
+  if (option.restoreId) return rows.map(row => row.id === option.restoreId ? {...row, removed: false} : row)
+  if (rows.some(row => rowExploitationId(row) === option.entry.exploitationId)) return rows
+  return [...rows, {...option.entry, readingDate: '', periodStartDate: '', periodEndDate: '', value: '', removed: false}]
+}
+
 export function getQuickMeasurementDates(measurementType, row) {
   return measurementType === 'INDEX'
     ? {readingDate: row.readingDate}
@@ -23,7 +56,7 @@ export function getQuickMeasurementDates(measurementType, row) {
 }
 
 export function hasQuickEntryChanged(entry, row, measurementType, originalType) {
-  if (measurementType !== originalType || row.removed || row.value === '' || Number(row.value) !== Number(entry.value)) {
+  if (!entry || measurementType !== originalType || row.removed || row.value === '' || Number(row.value) !== Number(entry.value)) {
     return true
   }
 
@@ -55,19 +88,32 @@ export function getQuickDateErrors(measurementType, row, maxDate) {
 export function buildQuickEditorDraft(declaration, rows, measurementType, maxDate = formatDateInput(new Date())) {
   const entries = []
   const errors = []
+  const reviewEntries = []
   const originalRows = new Map(declaration.entries.map(entry => [entry.id, entry]))
-  const changed = rows.some(row => hasQuickEntryChanged(originalRows.get(row.id), row, measurementType, declaration.measurementType))
   for (const row of rows) {
-    if (row.removed) continue
     const dates = getQuickMeasurementDates(measurementType, row)
-    const rowErrors = getQuickDateErrors(measurementType, dates, maxDate)
     const value = Number(row.value)
+    const original = originalRows.get(row.id)
+    const label = getQuickEditorLabel(row)
+    if ((original || !row.removed) && hasQuickEntryChanged(original, row, measurementType, declaration.measurementType)) {
+      reviewEntries.push({
+        id: row.id,
+        pointPrelevementId: row.pointPrelevementId,
+        exploitationId: rowExploitationId(row),
+        compteurId: row.compteurId ?? null,
+        label,
+        before: original ? {type: declaration.measurementType, value: original.value, ...getQuickMeasurementDates(declaration.measurementType, original)} : null,
+        after: row.removed ? null : {type: measurementType, value, ...dates}
+      })
+    }
+    if (row.removed) continue
+    const rowErrors = getQuickDateErrors(measurementType, dates, maxDate)
     if (row.value === '' || String(row.value).endsWith('.') || !Number.isFinite(value) || value < 0) {
       rowErrors.push('Renseignez une valeur positive ou nulle.')
     }
-    errors.push(...rowErrors.map(message => `${row.pointName || 'Point'} — ${message}`))
+    errors.push(...rowErrors.map(message => `${label} — ${message}`))
     entries.push({
-      id: row.id,
+      ...(row.id ? {id: row.id} : {}),
       pointPrelevementId: row.pointPrelevementId,
       exploitationId: row.exploitationId,
       usageId: row.usageId,
@@ -76,9 +122,11 @@ export function buildQuickEditorDraft(declaration, rows, measurementType, maxDat
     })
   }
 
+  const changed = reviewEntries.length > 0
   return {
     changed,
     errors,
+    reviewEntries,
     payload: changed && errors.length === 0 ? {measurementType, revision: declaration.revision, entries} : null
   }
 }
