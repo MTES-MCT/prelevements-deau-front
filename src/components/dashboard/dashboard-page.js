@@ -378,51 +378,29 @@ const DashboardBlock = ({
   )
 }
 
-const DashboardZoneFilter = ({
-  disabled,
-  hideLabel = false,
-  label,
-  onChange,
-  options,
-  placeholder = 'Sélectionner des zones',
-  value
-}) => (
-  <div className='w-full md:w-[380px]'>
-    <GroupedMultiselect
-      searchable
-      confirmSelection
-      showSelectionActions
-      minSelected={1}
-      minSelectionMessage='Sélectionnez au moins une zone.'
-      hideLabel={hideLabel}
-      disabled={disabled}
-      label={label}
-      options={options}
-      placeholder={placeholder}
-      value={value}
-      onChange={onChange}
-    />
-  </div>
-)
-
 const subscribeToHydration = () => () => {}
 const getClientSnapshot = () => true
 const getServerSnapshot = () => false
 
-const SingleZoneFilter = ({label, zones, value, onChange}) => {
+const DashboardZoneFilter = ({disabled, label, multiple, onChange, options, value}) => {
   const hydrated = useSyncExternalStore(subscribeToHydration, getClientSnapshot, getServerSnapshot)
-  const zoneType = zones.find(zone => zone.id === value)?.type
-  const presentation = zoneTypePresentations[zoneType]
   return (
-    <div className='fr-select-group w-full md:w-[380px]'>
-      <label className='fr-label' htmlFor='dashboard-zone'>
-        {presentation && <span aria-hidden='true' className={`mr-2 inline-block h-2.5 w-2.5 rounded-full bg-current ${presentation.colorClassName}`} />}
-        {label}
-      </label>
-      <select className='fr-select' id='dashboard-zone' disabled={!hydrated || zones.length === 1}
-        value={value ?? ''} onChange={event => onChange(event.target.value)}>
-        {zones.map(zone => <option key={zone.id} value={zone.id}>{formatZoneLabel(zone)}</option>)}
-      </select>
+    <div className='w-full md:w-[380px]'>
+      <GroupedMultiselect
+        searchable
+        id={multiple ? undefined : 'dashboard-zone'}
+        multiple={multiple}
+        confirmSelection={multiple}
+        showSelectionActions={multiple}
+        minSelected={1}
+        minSelectionMessage='Sélectionnez au moins une zone.'
+        disabled={disabled || (!multiple && !hydrated)}
+        label={label}
+        options={options}
+        placeholder={multiple ? 'Sélectionner des zones' : 'Sélectionner un territoire'}
+        value={value}
+        onChange={onChange}
+      />
     </div>
   )
 }
@@ -755,7 +733,7 @@ const DashboardPage = ({
       }
 
       return {
-        value: zone.code,
+        value: multiZone ? zone.code : zone.id,
         label,
         content: (
           <span className='flex min-w-0 flex-1 items-center justify-between gap-2'>
@@ -769,9 +747,9 @@ const DashboardPage = ({
             </span>
           </span>
         ),
-        title: label
+        title: multiZone || !zone.code ? label : `${label} (${zone.code})`
       }
-    }), [zones])
+    }), [zones, multiZone])
 
   const normalizeZoneCodes = useCallback(codes => {
     const selectedSet = new Set(codes)
@@ -1002,7 +980,7 @@ const DashboardPage = ({
     await reloadDashboard({zoneCodes: nextZoneCodes})
   }, [normalizeZoneCodes, reloadDashboard, selectedZoneCodes])
 
-  function handleSingleZoneChange(zoneId) {
+  function handleSingleZoneChange([zoneId]) {
     if (!zoneId || zoneId === (pendingZoneId ?? selectedZoneId)) return
     setPendingZoneId(zoneId)
     reloadDashboard({zoneId})
@@ -1041,9 +1019,16 @@ const DashboardPage = ({
         : {stations, zoneCodesKey})
   }, [])
 
-  const singleFilter = hasSelectableZones && (
-    <SingleZoneFilter label={isDeclarant ? 'Territoire' : 'Filtrer le contenu de la page par :'}
-      zones={zones} value={pendingZoneId ?? selectedZoneId} onChange={handleSingleZoneChange} />
+  const currentZoneId = pendingZoneId ?? selectedZoneId
+  const zoneFilter = (multiZone || hasSelectableZones) && (
+    <DashboardZoneFilter
+      disabled={multiZone ? isZoneFilterDisabled : zones.length === 1}
+      label={isDeclarant ? 'Territoire' : 'Filtrer le contenu de la page par :'}
+      multiple={multiZone}
+      options={zoneOptions}
+      value={multiZone ? selectedZoneCodes : [currentZoneId]}
+      onChange={multiZone ? handleZoneChange : handleSingleZoneChange}
+    />
   )
   const statistics = hasStatistics ? (
     <>
@@ -1097,15 +1082,7 @@ const DashboardPage = ({
             {greetingName ? `Bonjour ${greetingName},` : 'Bonjour,'}
           </h1>
 
-          {multiZone ? (
-            <DashboardZoneFilter
-              disabled={isZoneFilterDisabled}
-              label='Filtrer le contenu de la page par :'
-              options={zoneOptions}
-              value={selectedZoneCodes}
-              onChange={handleZoneChange}
-            />
-          ) : !isDeclarant && singleFilter}
+          {!isDeclarant && zoneFilter}
         </div>
 
 
@@ -1142,7 +1119,7 @@ const DashboardPage = ({
             {selectedZoneId && (
               <DashboardBlock
                 boxed
-                actions={singleFilter}
+                actions={zoneFilter}
                 title='Chiffres clés de mon territoire'
               >
                 <div hidden={Boolean(pendingZoneId)}>

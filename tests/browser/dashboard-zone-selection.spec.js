@@ -16,6 +16,12 @@ const dep33 = '00000000-0000-4000-8000-000000000033'
 const sage = '00000000-0000-4000-8000-000000000101'
 const ptge = '00000000-0000-4000-8000-000000000102'
 
+async function chooseZone(page, trigger, name) {
+  await trigger.click()
+  await page.getByRole('listbox').getByRole('option', {name}).click()
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false')
+}
+
 async function openDashboard(page, context, role, {stations = false, holdCampaign = false, holdStatistics = false, search = '', noZones = false, onlyOne = false, collector = false} = {}) {
   const declarantRole = role === 'DECLARANT' ? (collector ? 'COLLECTEUR' : 'PRELEVEUR') : null
   const apiToken = `browser-test-dashboard-${role.toLowerCase()}-${collector ? 'collector-' : ''}${randomUUID()}`
@@ -48,16 +54,14 @@ async function openDashboard(page, context, role, {stations = false, holdCampaig
   }
   if (stations || holdCampaign || holdStatistics || noZones || onlyOne) await control({stations, holdCampaign, holdStatistics, noZones, onlyOne})
   await page.goto(noZones ? `${frontUrl}/` : `${frontUrl}/tableau-de-bord${search}`, {waitUntil: 'commit'})
-  const trigger = role === 'ADMIN'
-    ? page.getByRole('button', {name: 'Filtrer le contenu de la page par :', exact: true})
-    : page.getByRole('combobox', {name: role === 'DECLARANT' ? 'Territoire' : 'Filtrer le contenu de la page par :', exact: true})
+  const trigger = page.getByRole('button', {name: role === 'DECLARANT' ? 'Territoire' : 'Filtrer le contenu de la page par :', exact: true})
   if (noZones) return {trigger, requests, control}
   await expect(trigger).toBeVisible()
   if (role === 'ADMIN') {
     await expect(trigger).toContainText('Gironde')
     if (!holdStatistics) await expect(page).toHaveURL(/zones=DEP-33/)
   } else {
-    await expect(trigger).toHaveValue(role === 'DECLARANT' ? sage : dep33)
+    await expect(trigger.getByText(role === 'DECLARANT' ? 'Dropt' : 'Gironde', {exact: true})).toBeVisible()
   }
   await expect.poll(async () => (await requests()).length).toBe(1)
   return {trigger, requests, control}
@@ -112,7 +116,7 @@ test('les invitations lentes ne bloquent ni les chiffres ni les filtres du décl
     await expect(page.getByRole('heading', {name: 'Chiffres clés de mon territoire'})).toBeVisible()
     await expect(page.getByRole('status').filter({hasText: 'Chargement de vos déclarations…'})).toBeVisible()
     await expect.poll(async () => (await requests(true)).some(item => item.pathname === '/api/campaigns/summary')).toBe(true)
-    await trigger.selectOption(ptge)
+    await chooseZone(page, trigger, /PTGE/)
     await expect(page.getByRole('img', {name: 'Volumes prélevés par usage', exact: true})).toContainText('80 m³')
   } finally {
     await control({releaseCampaign: true})
@@ -334,7 +338,7 @@ test('une URL query est restaurée dès la première lecture des indicateurs, le
 for (const profile of ['INSTRUCTOR', 'PRELEVEUR', 'COLLECTEUR']) {
   test(`${profile} : un seul territoire, du choix au retour sur le tableau de bord`, async ({page, context}, testInfo) => {
     const agent = profile === 'INSTRUCTOR'
-    const initial = agent ? dep33 : sage
+    const initial = agent ? 'Gironde' : 'Dropt'
     const {trigger, requests} = await openDashboard(page, context, agent ? 'INSTRUCTOR' : 'DECLARANT', {
       collector: profile === 'COLLECTEUR', stations: true,
       search: `?zoneId=${ptge}&zones=DEP-47&year=2025#dashboard?zones=DEP-47&flowPeriod=month`
@@ -343,21 +347,27 @@ for (const profile of ['INSTRUCTOR', 'PRELEVEUR', 'COLLECTEUR']) {
     const mapReads = list => list.filter(item => item.pathname === '/api/dashboard/map')
     const activityReads = list => list.filter(item => item.parameters.scope === 'activity')
     await expect(chart).toContainText(agent ? '10 m³' : '30 m³')
-    await expect(trigger).toHaveValue(initial)
+    await expect(trigger.getByText(initial, {exact: true})).toBeVisible()
     await expect(page).not.toHaveURL(/[?&](?:zones|zoneId)=/)
     const bootstrap = (await requests(true)).find(item => item.parameters.sections?.includes('context'))
     expect(bootstrap.parameters).not.toHaveProperty('zoneId')
     expect(bootstrap.parameters).not.toHaveProperty('zones')
     if (!agent) {
-      await expect(trigger.locator('option')).toHaveText(['SAGE Dropt', 'PTGE Vallée du Dropt'])
+      await trigger.click()
+      const options = page.getByRole('listbox').getByRole('option')
+      await expect(options).toHaveCount(2)
+      await expect(options.nth(0)).toHaveAccessibleName(/Dropt.*SAGE/)
+      await expect(options.nth(1)).toHaveAccessibleName(/Vallée du Dropt.*PTGE/)
+      await page.keyboard.press('Escape')
       await expect.poll(async () => activityReads(await requests(true)).length).toBe(3)
     }
-    const dot = page.locator('label[for="dashboard-zone"] [aria-hidden="true"]')
-    const initialColor = await dot.evaluate(element => getComputedStyle(element).backgroundColor)
-    await trigger.selectOption(ptge)
+    const initialBadge = trigger.getByText(agent ? 'Département' : 'SAGE', {exact: true})
+    const initialColor = await initialBadge.evaluate(element => getComputedStyle(element).backgroundColor)
+    await chooseZone(page, trigger, /PTGE/)
     await expect(chart).toContainText('40 m³')
-    await expect(dot).toBeVisible()
-    const ptgeColor = await dot.evaluate(element => getComputedStyle(element).backgroundColor)
+    const ptgeBadge = trigger.getByText('PTGE', {exact: true})
+    await expect(ptgeBadge).toBeVisible()
+    const ptgeColor = await ptgeBadge.evaluate(element => getComputedStyle(element).backgroundColor)
     expect(ptgeColor).not.toBe(initialColor)
     expect(ptgeColor).not.toBe('rgba(0, 0, 0, 0)')
     if (agent) await trigger.locator('..').screenshot({path: testInfo.outputPath('selecteur-ptge.png')})
@@ -374,36 +384,76 @@ for (const profile of ['INSTRUCTOR', 'PRELEVEUR', 'COLLECTEUR']) {
     await expect.poll(async () => (await requests(true)).filter(item => item.pathname.includes('/water-resources/') && item.parameters.zoneId === ptge).length).toBe(2)
     expect(new URL(page.url()).hash).toContain('flowPeriod=month')
     await page.reload()
-    await expect(trigger).toHaveValue(initial)
+    await expect(trigger.getByText(initial, {exact: true})).toBeVisible()
     await expect(chart).toContainText(agent ? '10 m³' : '30 m³')
-    await trigger.selectOption(ptge)
+    await chooseZone(page, trigger, /PTGE/)
     await expect(chart).toContainText('40 m³')
     await page.goto(`${frontUrl}/healthz`)
     await page.goBack()
-    await expect(trigger).toHaveValue(initial)
+    await expect(trigger.getByText(initial, {exact: true})).toBeVisible()
   })
 }
+
+test('le choix simple permet de rechercher au clavier et applique uniquement un changement de territoire', async ({page, context}) => {
+  const {trigger, requests} = await openDashboard(page, context, 'INSTRUCTOR')
+  const listbox = page.getByRole('listbox')
+  const search = trigger.locator('..').getByRole('textbox', {name: /Rechercher/})
+
+  await trigger.press('Enter')
+  await expect(listbox).toBeVisible()
+  await expect(listbox).not.toHaveAttribute('aria-multiselectable', 'true')
+  await expect(listbox.getByRole('option', {selected: true})).toHaveAccessibleName(/Gironde/)
+  await expect(page.getByRole('button', {name: /Appliquer|Tout sélectionner|Tout désélectionner/})).toHaveCount(0)
+  await expect(search).toBeFocused()
+  await search.fill('ptge')
+  await expect(listbox.getByRole('option')).toHaveCount(1)
+  await search.press('Escape')
+  await expect(listbox).toBeHidden()
+  await expect(trigger).toBeFocused()
+  await expect(trigger).toContainText('Gironde')
+
+  await trigger.press('ArrowDown')
+  await expect(search).toHaveValue('')
+  await listbox.getByRole('option', {selected: true}).click()
+  await expect(listbox).toBeHidden()
+  expect(await requests()).toHaveLength(1)
+
+  await trigger.press('Enter')
+  await search.fill('ptge')
+  await search.press('ArrowDown')
+  const matchingZone = listbox.getByRole('option', {name: /Vallée du Dropt/})
+  await expect(matchingZone).toBeFocused()
+  await matchingZone.press('Enter')
+  await expect(listbox).toBeHidden()
+  await expect(trigger).toBeFocused()
+  await expect(trigger).toContainText('Vallée du Dropt')
+  await expect.poll(async () => (await requests()).length).toBe(2)
+  expect((await requests()).at(-1)).toMatchObject({zoneId: ptge})
+  await trigger.click()
+  await expect(listbox.getByRole('option', {selected: true})).toHaveAccessibleName(/Vallée du Dropt/)
+  await expect(listbox.getByRole('option', {selected: false})).toHaveCount(3)
+})
 
 test('deux changements rapides gardent les derniers chiffres même si les codes de zone coïncident', async ({page, context}) => {
   const {trigger, control, requests} = await openDashboard(page, context, 'INSTRUCTOR')
   const chart = page.getByRole('img', {name: 'Volumes prélevés par usage', exact: true})
   await control({holdNext: true})
   try {
-    await trigger.selectOption(sage)
+    await chooseZone(page, trigger, /SAGE/)
     await expect.poll(async () => (await requests()).at(-1)?.zoneId).toBe(sage)
-    await trigger.selectOption(ptge)
+    await chooseZone(page, trigger, /PTGE/)
     await expect(chart).toContainText('80 m³')
   } finally {
     await control({releaseStatus: 200})
   }
-  await expect(trigger).toHaveValue(ptge)
+  await expect(trigger.getByText('Vallée du Dropt', {exact: true})).toBeVisible()
   await expect(chart).toContainText('80 m³')
   await control({holdNext: true})
-  await trigger.selectOption(sage)
+  await chooseZone(page, trigger, /SAGE/)
   await expect.poll(async () => (await requests()).at(-1)?.zoneId).toBe(sage)
   await control({releaseStatus: 503})
   await expect(page.getByText('Erreur synthétique de chargement du territoire', {exact: true})).toBeVisible()
-  await expect(trigger).toHaveValue(ptge)
+  await expect(trigger.getByText('Vallée du Dropt', {exact: true})).toBeVisible()
   await expect(chart).toContainText('80 m³')
 })
 
@@ -428,8 +478,8 @@ for (const role of ['INSTRUCTOR', 'DECLARANT']) {
 
 test('le mandat par défaut est visible avant hydratation et un agent mono-zone ne peut pas le désélectionner', async ({page, context}) => {
   const {trigger, control} = await openDashboard(page, context, 'INSTRUCTOR', {onlyOne: true})
-  await expect(trigger.locator('option')).toHaveCount(1)
   await expect(trigger).toBeDisabled()
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false')
   await control({onlyOne: false})
   const release = Promise.withResolvers()
   await page.route(/\/_next\/static\/.*\.js(?:\?.*)?$/, async route => {
@@ -438,26 +488,31 @@ test('le mandat par défaut est visible avant hydratation et un agent mono-zone 
   })
   try {
     await page.goto(`${frontUrl}/tableau-de-bord?zoneId=${ptge}`, {waitUntil: 'commit'})
-    await expect(trigger).toHaveValue(dep33)
-    await expect(trigger.locator('option')).toHaveCount(4)
+    await expect(trigger.getByText('Gironde', {exact: true})).toBeVisible()
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false')
     await expect(trigger).toBeDisabled()
   } finally {
     release.resolve()
   }
   await expect(trigger).toBeEnabled()
-  await trigger.selectOption(ptge)
+  await trigger.click()
+  await expect(page.getByRole('listbox').getByRole('option')).toHaveCount(4)
+  await page.getByRole('option', {name: /PTGE/}).click()
   await expect(page.getByRole('img', {name: 'Volumes prélevés par usage', exact: true})).toContainText('80 m³')
 })
 
 test('un mandat retiré entre deux lectures recharge les indicateurs et le sélecteur sur la zone autorisée', async ({page, context}) => {
   const {trigger, control} = await openDashboard(page, context, 'INSTRUCTOR')
   const chart = page.getByRole('img', {name: 'Volumes prélevés par usage', exact: true})
-  await trigger.selectOption(ptge)
+  await chooseZone(page, trigger, /PTGE/)
   await expect(chart).toContainText('80 m³')
   await control({revokeZone: ptge})
   await page.locator('#withdrawn-year').selectOption('2025')
-  await expect(trigger).toHaveValue(dep33)
-  await expect(trigger.locator(`option[value="${ptge}"]`)).toHaveCount(0)
+  await expect(trigger.getByText('Gironde', {exact: true})).toBeVisible()
+  await trigger.click()
+  await expect(page.getByRole('listbox')).toBeVisible()
+  await expect(page.getByRole('option', {name: /PTGE/})).toHaveCount(0)
+  await page.keyboard.press('Escape')
   await expect(chart).toContainText('10 m³')
   await expect(page.getByText('10 points de prélèvement', {exact: true})).toBeVisible()
 })
@@ -466,7 +521,7 @@ test('un ancien lien agent conserve ses filtres statistiques et rouvre le mandat
   const {trigger, requests} = await openDashboard(page, context, 'INSTRUCTOR')
   const currentReads = (await requests(true)).length
   await page.goto(`${frontUrl}/tableau-de-bord?zones=DEP-47#dashboard?zones=SAGE-DROPT&zoneId=${ptge}&periodType=month&period=2026-08&year=2025&waterBodyType=SOUTERRAIN&flowPeriod=month`)
-  await expect(trigger).toHaveValue(dep33)
+  await expect(trigger.getByText('Gironde', {exact: true})).toBeVisible()
   await expect(page.locator('#withdrawn-year')).toHaveValue('2025')
   await expect(page.locator('#dashboard-declaration-period')).toHaveValue('2026-08')
   await expect.poll(() => new URL(page.url()).searchParams.get('waterBodyTypes')).toBe('SOUTERRAIN')
@@ -481,6 +536,6 @@ test('un ancien lien agent conserve ses filtres statistiques et rouvre le mandat
     zoneId: dep33, period: '2026-08', year: '2025', waterBodyTypes: 'SOUTERRAIN'
   })
   await page.reload()
-  await expect(trigger).toHaveValue(dep33)
+  await expect(trigger.getByText('Gironde', {exact: true})).toBeVisible()
   await expect(page.locator('#withdrawn-year')).toHaveValue('2025')
 })

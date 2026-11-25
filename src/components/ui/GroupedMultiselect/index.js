@@ -41,9 +41,10 @@ const GroupedMultiselect = ({
   popupHeader,
   disabled,
   searchable = false,
+  multiple = true,
   showCheckboxes = false,
   required = false,
-  confirmSelection = false,
+  confirmSelection: confirmChanges = false,
   showSelectionActions = false,
   minSelected = 0,
   minSelectionMessage,
@@ -52,10 +53,12 @@ const GroupedMultiselect = ({
   state = 'default',
   stateRelatedMessage = null
 }) => {
+  const confirmSelection = multiple && confirmChanges
   const generatedId = useId()
   const selectId = id ?? `grouped-multiselect-${generatedId}`
   const listboxId = `${selectId}-listbox`
   const stateDescriptionId = `${selectId}-desc`
+  const selectedContentId = `${selectId}-value`
   const selectionDescriptionId = `${selectId}-selection-desc`
   const searchLabel = label
     ? `Rechercher dans ${label.toLocaleLowerCase('fr-FR')}`
@@ -92,24 +95,21 @@ const GroupedMultiselect = ({
     }
 
     setDraftValue([...value])
-    if (confirmSelection) {
+    if (confirmSelection || !multiple) {
       setSearch('')
     }
 
     setOpen(true)
     setFocusedIndex(searchable ? -1 : 0)
     onOpen?.()
-  }, [disabled, value, confirmSelection, searchable, onOpen])
+  }, [disabled, value, confirmSelection, multiple, searchable, onOpen])
 
-  const valueLabelMap = useMemo(() => {
+  const optionsByValue = useMemo(() => {
     const map = new Map()
 
     for (const group of normalizedOptions) {
       for (const option of group.options || []) {
-        map.set(
-          getOptionValue(option),
-          getOptionLabel(option) || getOptionValue(option)
-        )
+        map.set(getOptionValue(option), option)
       }
     }
 
@@ -117,9 +117,11 @@ const GroupedMultiselect = ({
   }, [normalizedOptions])
 
   const selectedDisplayValues = useMemo(
-    () => value.map(selectedValue => valueLabelMap.get(selectedValue) ?? selectedValue),
-    [value, valueLabelMap]
+    () => value.map(selectedValue => getOptionLabel(optionsByValue.get(selectedValue)) || selectedValue),
+    [value, optionsByValue]
   )
+
+  const selectedOption = multiple ? undefined : optionsByValue.get(value[0])
 
   const filteredOptions = useMemo(() => {
     if (!searchable) {
@@ -222,12 +224,18 @@ const GroupedMultiselect = ({
     }
 
     const optionValue = getOptionValue(option)
+    if (!multiple) {
+      closeSelect(true)
+      if (optionValue !== value[0]) onChange?.([optionValue])
+      return
+    }
+
     if (confirmSelection) {
       setDraftValue(current => xor(current, [optionValue]))
     } else {
       onChange?.(xor(value, [optionValue]))
     }
-  }, [disabled, confirmSelection, value, onChange])
+  }, [disabled, multiple, closeSelect, confirmSelection, value, onChange])
 
   const flatOptions = useMemo(() =>
     filteredOptions.flatMap(group =>
@@ -385,15 +393,22 @@ const GroupedMultiselect = ({
 
       <Box
         ref={selectRef}
+        component={multiple ? 'div' : 'button'}
+        type={multiple ? undefined : 'button'}
+        disabled={!multiple && disabled ? true : undefined}
         id={selectId}
         className={`fr-select${hideLabel ? '' : ' mt-2'}${disabled ? ' fr-bg-disabled-grey' : ''}`}
         aria-disabled={disabled}
         aria-invalid={state === 'error'}
         aria-controls={listboxId}
-        aria-describedby={state !== 'default' && stateRelatedMessage ? stateDescriptionId : undefined}
+        aria-describedby={[
+          !multiple && selectedContentId,
+          state !== 'default' && stateRelatedMessage && stateDescriptionId
+        ].filter(Boolean).join(' ') || undefined}
         aria-label={label || placeholder || 'Sélection multiple'}
         sx={{
-          cursor: disabled ? 'not-allowed' : 'pointer'
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          textAlign: 'start'
         }}
         aria-haspopup='listbox'
         aria-expanded={open}
@@ -402,8 +417,10 @@ const GroupedMultiselect = ({
         onClick={disabled ? undefined : () => open ? closeSelect(true) : openSelect()}
         onKeyDown={disabled ? undefined : handleKeyDown}
       >
-        <Box sx={{overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
-          {renderSelectedText(selectedDisplayValues, placeholder, showMore, hiddenCount)}
+        <Box component='span' id={multiple ? undefined : selectedContentId} sx={{display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+          {selectedOption === undefined
+            ? renderSelectedText(selectedDisplayValues, placeholder, showMore, hiddenCount)
+            : getOptionContent(selectedOption)}
         </Box>
       </Box>
 
@@ -467,7 +484,7 @@ const GroupedMultiselect = ({
             </Box>
           )}
 
-          {showSelectionActions && (
+          {multiple && showSelectionActions && (
             <div className='grouped-multiselect-actions'>
               <button
                 type='button'
@@ -493,7 +510,7 @@ const GroupedMultiselect = ({
             id={listboxId}
             role='listbox'
             aria-label={label || placeholder || 'Sélection multiple'}
-            aria-multiselectable='true'
+            aria-multiselectable={multiple || undefined}
             aria-required={required}
             tabIndex={-1}
             sx={{padding: 0, minHeight: 0, overflowY: 'auto', maxHeight: 300}}
@@ -549,7 +566,7 @@ const GroupedMultiselect = ({
                       onClick={isDisabled ? undefined : () => toggleOption(option)}
                       onKeyDown={handleKeyDown}
                     >
-                      {showCheckboxes ? (
+                      {multiple && showCheckboxes ? (
                         <span aria-hidden='true' data-selection-indicator='checkbox' data-checked={isSelected} className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-xs border text-xs ${isSelected ? 'border-[var(--border-active-blue-france)] bg-[var(--background-active-blue-france)] text-[var(--text-inverted-blue-france)]' : 'border-[var(--border-plain-grey)] bg-[var(--background-default-grey)]'}`}>
                           {isSelected ? '✓' : ''}
                         </span>
