@@ -1,8 +1,9 @@
 const NO_WATER_BODY_TYPES_SENTINEL = '__none__'
 const DASHBOARD_MAP_SCOPES = new Set(['activity', 'territory'])
 
-function appendZoneCodes(parameters, zoneCodes) {
-  if (Array.isArray(zoneCodes) && zoneCodes.length > 0) {
+function appendZoneSelection(parameters, {zoneCodes, zoneId}) {
+  if (zoneId) parameters.set('zoneId', zoneId)
+  else if (Array.isArray(zoneCodes) && zoneCodes.length > 0) {
     parameters.set('zones', zoneCodes.join(','))
   }
 }
@@ -10,7 +11,7 @@ function appendZoneCodes(parameters, zoneCodes) {
 export function buildDashboardTerritorySearch(options = {}) {
   const parameters = new URLSearchParams()
 
-  appendZoneCodes(parameters, options.zoneCodes)
+  appendZoneSelection(parameters, options)
 
   if (options.periodType) {
     parameters.set('periodType', options.periodType)
@@ -53,14 +54,14 @@ export function buildDashboardTerritorySearch(options = {}) {
   return search ? `?${search}` : ''
 }
 
-export function buildDashboardMapSearch({scope, zoneCodes} = {}) {
+export function buildDashboardMapSearch({scope, zoneCodes, zoneId} = {}) {
   if (!DASHBOARD_MAP_SCOPES.has(scope)) {
     throw new Error('scope doit valoir territory ou activity.')
   }
 
   const parameters = new URLSearchParams({scope})
   if (scope === 'territory') {
-    appendZoneCodes(parameters, zoneCodes)
+    appendZoneSelection(parameters, {zoneCodes, zoneId})
   }
 
   return `?${parameters.toString()}`
@@ -68,7 +69,8 @@ export function buildDashboardMapSearch({scope, zoneCodes} = {}) {
 
 export function buildDashboardWaterResourceSearch(options = {}) {
   const parameters = new URLSearchParams()
-  appendZoneCodes(parameters, options.zoneCodes)
+  if (options.scope === 'activity') parameters.set('scope', 'activity')
+  else appendZoneSelection(parameters, options)
   if (options.period) parameters.set('period', options.period)
   if (options.includeIps) parameters.set('includeIps', 'true')
   const search = parameters.toString()

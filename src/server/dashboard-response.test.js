@@ -60,3 +60,21 @@ test('annulation propagée et panne réseau sans détail interne', async t => {
   t.is(failed.status, 502)
   t.false((await failed.text()).includes('internal-secret-hostname'))
 })
+
+test('le proxy transmet la zone unique aux données territoriales et le périmètre activité aux ressources', async t => {
+  const zoneId = '11111111-1111-4111-8111-111111111111'
+  for (const [path, scope] of [['territory'], ['map', 'territory'], ['water-resources/flows'], ['water-resources/piezometry'], ['map', 'activity'], ['water-resources/flows', 'activity']]) {
+    const query = new URLSearchParams()
+    if (scope) query.set('scope', scope)
+    if (scope !== 'activity') query.set('zoneId', zoneId)
+    const response = await getDashboardResponse(new Request(`https://app.example.test/api/dashboard/${path}?${query}`), {
+      path, session, fetchUpstream: async upstream => {
+        const params = new URL(upstream, 'https://api.example.test').searchParams
+        t.is(params.get('zoneId'), scope === 'activity' ? null : zoneId)
+        t.is(params.get('scope'), scope ?? null)
+        return Response.json({})
+      }
+    })
+    t.is(response.status, 200)
+  }
+})

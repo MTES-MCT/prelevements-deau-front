@@ -12,7 +12,8 @@ import {updateDeclarantZonesAction} from '@/server/actions/declarants.js'
 const ZONE_TYPE_LABELS = {
   REGION: 'Régions',
   DEPARTEMENT: 'Départements',
-  SAGE: 'SAGE'
+  SAGE: 'SAGE',
+  PTGE: 'PTGE'
 }
 
 const DeclarantZonesCard = ({availableZones, declarantId, initialItems}) => {

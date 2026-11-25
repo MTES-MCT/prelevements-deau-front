@@ -17,7 +17,7 @@ function compile(file, stubs) {
   return compiled.exports.default
 }
 
-function harness({role = 'DECLARANT', declarantRole = 'PRELEVEUR', permissions = [], canCreate = true} = {}) {
+function harness({role = 'DECLARANT', declarantRole = 'PRELEVEUR', permissions = [], canCreate = true, sessionError = false, user = {id: 'user'}} = {}) {
   const summary = Promise.withResolvers()
   const calls = []
   const territoryOptions = []
@@ -36,7 +36,7 @@ function harness({role = 'DECLARANT', declarantRole = 'PRELEVEUR', permissions =
     '@/components/dashboard/dashboard-page.js': {__esModule: true, default: () => null},
     '@/components/dashboard/dashboard-declaration-actions.js': {__esModule: true, default: actions},
     '@/dsfr-bootstrap/index.js': {StartDsfrOnHydration: () => null},
-    '@/server/actions/user.js': {getCurrentSessionInfo: async () => ({success: true, data: {role, declarantRole, permissions, user: {id: 'user'}}})},
+    '@/server/actions/user.js': {getCurrentSessionInfo: async () => sessionError ? {success: false, error: 'Indisponible', code: 503} : {success: true, data: {role, declarantRole, permissions, user}}},
     '@/server/actions/dashboard.js': {getDashboardTerritoryAction: async options => {
       territoryOptions.push(options)
       calls.push('territory')
@@ -74,13 +74,13 @@ test('un rafraîchissement du même utilisateur et de la même URL réinitialise
 })
 
 test('le rendu initial ne calcule pas les agrégations et transmet les filtres pour leur lecture différée', async t => {
-  for (const role of ['ADMIN', 'DECLARANT']) {
-    const flow = harness({role})
-    const dashboard = (await flow.page({period: '2025-08', year: '2025', waterBodyTypes: 'SOUTERRAIN', zones: 'sage-1'})).props.children[1]
+  for (const role of ['ADMIN', 'DECLARANT', 'INSTRUCTOR']) {
+    const flow = harness({role, permissions: ['zone.dashboard.read']})
+    const dashboard = (await flow.page({period: '2025-08', year: '2025', waterBodyTypes: 'SOUTERRAIN', zones: 'sage-1,sage-2', zoneId: 'ancienne-zone'})).props.children[1]
     t.deepEqual(flow.territoryOptions[0].sections, role === 'DECLARANT' ? ['context'] : ['context', 'metrics'])
     t.deepEqual(dashboard.props.initialFilters, {
       includePoints: false, period: '2025-08', periodType: undefined, year: '2025',
-      waterBodyTypes: 'SOUTERRAIN', waterBodyType: undefined, zoneCodes: ['sage-1']
+      waterBodyTypes: 'SOUTERRAIN', waterBodyType: undefined, ...(role === 'ADMIN' && {zoneCodes: ['sage-1', 'sage-2']})
     })
   }
 })
@@ -123,11 +123,12 @@ test('le collecteur ne déclenche pas de lecture des invitations préleveur', as
   t.false(html.includes('Autres déclarations'))
 })
 
-test('le tableau de bord conserve les permissions et ne charge pas les actions déclarant pour un agent', async t => {
-  const forbidden = harness({role: 'INSTRUCTOR'})
+test('un instructeur sans mandat accède au contexte vide et les autres rôles restent filtrés', async t => {
+  const forbidden = harness({role: 'PUBLIC'})
   await t.throwsAsync(forbidden.page(), {message: 'forbidden'})
   t.deepEqual(forbidden.calls, [])
-  const allowed = harness({role: 'INSTRUCTOR', permissions: ['zone.dashboard.read']})
+  const allowed = harness({role: 'INSTRUCTOR', permissions: []})
+  allowed.setDashboard({scope: 'TERRITORY', zones: [], selectedZoneCodes: [], selectedZoneId: null})
   const dashboard = (await allowed.page()).props.children[1]
   t.is(dashboard.props.declarationActions, null)
   t.deepEqual(allowed.calls, ['territory'])
@@ -137,4 +138,14 @@ test('les déclarations impossibles ne deviennent pas une action cliquable penda
   const flow = harness({canCreate: false})
   flow.summary.resolve({success: false, error: 'Indisponible'})
   t.is(renderToStaticMarkup(await flow.actions({isPreleveur: true})), '')
+})
+
+test('une session indisponible affiche un lien de reprise sans demander de données territoriales', async t => {
+  for (const flow of [harness({sessionError: true}), harness({role: 'ADMIN', user: null})]) {
+    const body = renderToStaticMarkup(await flow.page())
+    t.regex(body, /Votre session n’a pas pu être vérifiée/)
+    t.regex(body, /href="\/tableau-de-bord">Réessayer/)
+    t.notRegex(body, /Mon activité|Chiffres clés/)
+    t.deepEqual(flow.calls, [])
+  }
 })

@@ -46,6 +46,7 @@ test('getAgentCurrentAndFutureZoneIds exclut les accès terminés', t => {
 test('groupZoneOptions groupe et trie les zones par libellé métier', t => {
   t.deepEqual(groupZoneOptions([
     {id: 's', type: 'SAGE', name: 'Zorn'},
+    {id: 'p', type: 'PTGE', name: 'Lys'},
     {id: 'r', type: 'REGION', name: 'Bretagne'},
     {id: 's2', type: 'SAGE', name: 'Adour'}
   ]), [
@@ -59,6 +60,10 @@ test('groupZoneOptions groupe et trie les zones par libellé métier', t => {
         {value: 's2', label: 'Adour', content: 'Adour'},
         {value: 's', label: 'Zorn', content: 'Zorn'}
       ]
+    },
+    {
+      label: 'PTGE',
+      options: [{value: 'p', label: 'Lys', content: 'Lys'}]
     }
   ])
 })

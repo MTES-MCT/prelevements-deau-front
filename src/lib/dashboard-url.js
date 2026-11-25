@@ -1,4 +1,4 @@
-const FILTER_KEYS = ['zones', 'periodType', 'period', 'year', 'waterBodyTypes', 'waterBodyType']
+const FILTER_KEYS = ['zoneId', 'zones', 'periodType', 'period', 'year', 'waterBodyTypes', 'waterBodyType']
 
 export function readLegacyDashboardHash(location) {
   if (!location.hash.startsWith('#dashboard?')) return null
@@ -21,6 +21,20 @@ export function buildDashboardLocation(location, {period, periodType, waterBodyT
   if (hash.startsWith('#dashboard?')) {
     const parameters = new URLSearchParams(hash.slice('#dashboard?'.length))
     for (const key of FILTER_KEYS) parameters.delete(key)
+    hash = parameters.size ? `#dashboard?${parameters}` : ''
+  }
+  return `${location.pathname}${query.size ? `?${query}` : ''}${hash}`
+}
+
+export function removeDashboardZoneFromLocation(location) {
+  const query = new URLSearchParams(location.search)
+  query.delete('zoneId')
+  query.delete('zones')
+  let hash = location.hash
+  if (hash.startsWith('#dashboard?')) {
+    const parameters = new URLSearchParams(hash.slice('#dashboard?'.length))
+    parameters.delete('zoneId')
+    parameters.delete('zones')
     hash = parameters.size ? `#dashboard?${parameters}` : ''
   }
   return `${location.pathname}${query.size ? `?${query}` : ''}${hash}`

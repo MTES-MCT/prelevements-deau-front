@@ -10,7 +10,8 @@ import {formatUsages, getUsageLabel} from '@/lib/water-uses.js'
 const ZONE_TYPE_LABELS = {
   REGION: 'Région',
   DEPARTEMENT: 'Département',
-  SAGE: 'SAGE'
+  SAGE: 'SAGE',
+  PTGE: 'PTGE'
 }
 
 const EXPLOITATION_STATUS_LABELS = {

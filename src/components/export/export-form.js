@@ -12,6 +12,7 @@ import Input from '@codegouvfr/react-dsfr/Input'
 
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
+import {zoneTypePresentations} from '@/components/zones/zone-types.js'
 import {
   buildSandreZoneOptions,
   getSandreZoneFilterLabels
@@ -27,24 +28,6 @@ const REFRESH_INTERVAL_MS = 4000
 const subscribeToHydration = () => () => {}
 const getClientSnapshot = () => true
 const getServerSnapshot = () => false
-
-const zoneTypePresentations = {
-  REGION: {
-    className: 'border-[#000091] bg-[#eeeeff] text-[#000091]',
-    iconClassName: ZONE_ICONS.mapPin2,
-    label: 'Région'
-  },
-  DEPARTEMENT: {
-    className: 'border-[#18753c] bg-[#e6f4ea] text-[#18753c]',
-    iconClassName: ZONE_ICONS.mapPin,
-    label: 'Département'
-  },
-  SAGE: {
-    className: 'border-[#8d533e] bg-[#fff4f0] text-[#8d533e]',
-    iconClassName: ZONE_ICONS.water,
-    label: 'SAGE'
-  }
-}
 
 const statusConfig = {
   PENDING: {

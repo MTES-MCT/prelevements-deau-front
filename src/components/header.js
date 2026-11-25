@@ -35,8 +35,7 @@ const NAV_ITEMS = [
       target: '_self'
     },
     text: 'Tableau de bord',
-    roles: ['DECLARANT', 'INSTRUCTOR', 'ADMIN'],
-    permission: 'zone.dashboard.read'
+    roles: ['DECLARANT', 'INSTRUCTOR', 'ADMIN']
   },
   {
     linkProps: {

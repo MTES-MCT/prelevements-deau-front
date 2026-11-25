@@ -79,6 +79,7 @@ const FIELD_LABELS = {
   notificationType: 'Type de notification',
   periodType: 'Périodicité',
   permissions: 'Droits',
+  isDashboardDefault: 'Zone par défaut du tableau de bord',
   phoneNumber: 'Téléphone',
   pointKind: 'Nature du point',
   pointPrelevementId: 'Point de prélèvement',

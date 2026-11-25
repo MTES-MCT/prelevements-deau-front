@@ -76,7 +76,8 @@ export const PRELEVEUR_TYPE_LABELS = Object.freeze({
 const MANAGEMENT_ZONE_GROUPS = Object.freeze([
   Object.freeze({type: 'REGION', label: 'Régions'}),
   Object.freeze({type: 'DEPARTEMENT', label: 'Départements'}),
-  Object.freeze({type: 'SAGE', label: 'SAGE'})
+  Object.freeze({type: 'SAGE', label: 'SAGE'}),
+  Object.freeze({type: 'PTGE', label: 'PTGE'})
 ])
 
 const MISSING_USAGE_OPTION = Object.freeze({

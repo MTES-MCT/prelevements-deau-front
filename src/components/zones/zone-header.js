@@ -6,7 +6,8 @@ import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
 const ZONE_TYPE_LABELS = {
   REGION: 'Région',
   DEPARTEMENT: 'Département',
-  SAGE: 'SAGE'
+  SAGE: 'SAGE',
+  PTGE: 'PTGE'
 }
 
 function pluralize(count, singular, plural = `${singular}s`) {
@@ -25,7 +26,8 @@ const ZoneHeader = ({zone, currentSection = 'overview'}) => (
     tags={[
       {
         label: ZONE_TYPE_LABELS[zone.type] || zone.type,
-        severity: 'info'
+        severity: zone.type === 'PTGE' ? undefined : 'info',
+        className: zone.type === 'PTGE' ? 'fr-badge--purple-glycine' : undefined
       }
     ]}
     rightBadges={[

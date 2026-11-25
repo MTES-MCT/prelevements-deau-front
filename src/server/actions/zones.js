@@ -352,6 +352,18 @@ export async function updateZoneInstructorAction(zoneId, instructorUserId, paylo
   })
 }
 
+export async function setInstructorDashboardDefaultAction(zoneId, instructorUserId, isDashboardDefault) {
+  return withErrorHandling(async () => {
+    const result = await fetchJSON(`api/zones/${zoneId}/instructeurs/${instructorUserId}/dashboard-default`, {
+      method: 'PUT', body: {isDashboardDefault}
+    })
+    revalidatePath(`/agents/${instructorUserId}`)
+    revalidatePath(`/zones/${zoneId}/agents/${instructorUserId}`)
+    revalidatePath('/tableau-de-bord')
+    return result
+  })
+}
+
 export async function sendZoneInstructorAccountCreationNotificationAction(zoneId, instructor) {
   return withErrorHandling(async () => {
     const result = await fetchJSON(`api/zones/${zoneId}/instructeurs/${instructor.id}/notifications/account-creation`, {

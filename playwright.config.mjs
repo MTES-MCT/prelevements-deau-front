@@ -20,6 +20,7 @@ const browserTests = [
   'selected-volume-totals.spec.js',
   'public-stats.spec.js',
   'dashboard-zone-selection.spec.js',
+  'agent-dashboard-default.spec.js',
   'grouped-multiselect.spec.js',
   'chart-axes.spec.js',
   'declaration-charts.spec.js',

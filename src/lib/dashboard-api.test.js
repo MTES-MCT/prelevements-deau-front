@@ -49,3 +49,12 @@ test('la carte refuse un périmètre inconnu', t => {
     message: 'scope doit valoir territory ou activity.'
   })
 })
+
+test('la sélection simple est identifiée même lorsque deux types de zone partagent un code', t => {
+  const selection = {zoneId: '22222222-2222-4222-8222-222222222222', zoneCodes: ['DROPT']}
+  t.is(buildDashboardTerritorySearch(selection), `?zoneId=${selection.zoneId}`)
+  t.is(buildDashboardMapSearch({scope: 'territory', ...selection}), `?scope=territory&zoneId=${selection.zoneId}`)
+  t.is(buildDashboardWaterResourceSearch({...selection, period: 'week'}), `?zoneId=${selection.zoneId}&period=week`)
+  t.is(buildDashboardMapSearch({scope: 'activity', ...selection}), '?scope=activity')
+  t.is(buildDashboardWaterResourceSearch({scope: 'activity', ...selection}), '?scope=activity')
+})

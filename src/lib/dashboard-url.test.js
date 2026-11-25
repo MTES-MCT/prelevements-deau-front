@@ -1,6 +1,6 @@
 import test from 'ava'
 
-import {buildDashboardLocation, readLegacyDashboardHash} from './dashboard-url.js'
+import {buildDashboardLocation, readLegacyDashboardHash, removeDashboardZoneFromLocation} from './dashboard-url.js'
 
 const filters = {zoneCodes: ['DEP-47'], periodType: 'month', period: '2026-08', year: 2025, waterBodyTypes: ['SOUTERRAIN']}
 
@@ -34,4 +34,10 @@ test('aucun milieu et ancre ordinaire sont conservés sans ancien alias ambigu',
   t.is(result.hash, '#ressources')
   t.is(result.searchParams.get('waterBodyTypes'), '__none__')
   t.false(result.searchParams.has('waterBodyType'))
+})
+
+test('le retour au territoire par défaut efface les deux formats de zone et préserve les autres paramètres', t => {
+  const url = new URL('https://app.example.test/tableau-de-bord?source=lien&zones=33,47&zoneId=123#dashboard?zones=33&zoneId=123&flowPeriod=month')
+  t.is(removeDashboardZoneFromLocation(url), '/tableau-de-bord?source=lien#dashboard?flowPeriod=month')
+  t.is(removeDashboardZoneFromLocation(new URL('https://app.example.test/tableau-de-bord#ressources')), '/tableau-de-bord#ressources')
 })

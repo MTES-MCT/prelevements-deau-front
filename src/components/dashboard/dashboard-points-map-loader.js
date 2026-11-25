@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useMemo,
   useRef,
   useState
 } from 'react'
@@ -11,7 +12,8 @@ import {
   DEFAULT_DASHBOARD_MAP_CAPABILITIES,
   normalizeDashboardMapCapabilities
 } from '@/lib/dashboard-map-popups.js'
-import {loadDashboardMap} from '@/lib/dashboard-client.js'
+import {loadDashboardMap, loadDashboardPiezometry, loadDashboardRiverFlows} from '@/lib/dashboard-client.js'
+import {getMonitoringStationMapSummary} from '@/lib/monitoring-stations.js'
 
 const EMPTY_ARRAY = []
 
@@ -24,8 +26,48 @@ const MapLoadingState = () => (
   </div>
 )
 
+// The individual map covers the user's points across all eligible catchments.
+function useActivityStations(scope) {
+  const [sources, setSources] = useState({})
+  useEffect(() => {
+    if (scope !== 'activity') return
+    const controller = new AbortController()
+    let lastRead = 0
+    const refresh = () => {
+      if (document.visibilityState === 'hidden') return
+      const read = ++lastRead
+      const updateSource = async (name, promise) => {
+        let result
+        try {
+          const data = await promise
+          result = {stations: (data.stations ?? []).map(getMonitoringStationMapSummary)}
+        } catch {
+          result = {stations: [], unavailable: true}
+        }
+        if (!controller.signal.aborted && lastRead === read) setSources(current => ({...current, [name]: result}))
+      }
+      updateSource('piezometry', loadDashboardPiezometry({scope, period: 'month'}, {signal: controller.signal}))
+      updateSource('flows', loadDashboardRiverFlows({scope, period: 'week'}, {signal: controller.signal}))
+    }
+    refresh()
+    const timer = window.setInterval(refresh, 15 * 60 * 1000)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      controller.abort()
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', refresh)
+    }
+  }, [scope])
+  return useMemo(() => ({
+    stations: Object.values(sources).flatMap(source => source.stations),
+    unavailable: Object.values(sources).some(source => source.unavailable)
+  }), [sources])
+}
+
 const DashboardPointsMapLoader = ({
   selectedZoneCodes = EMPTY_ARRAY,
+  selectedZoneId,
+  monitoringStations,
   scope,
   ...mapProps
 }) => {
@@ -36,7 +78,8 @@ const DashboardPointsMapLoader = ({
   const [error, setError] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const zoneCodesKey = selectedZoneCodes.join(',')
-  const scopeKey = `${scope}:${scope === 'territory' ? zoneCodesKey : ''}`
+  const scopeKey = `${scope}:${scope === 'territory' ? (selectedZoneId ?? zoneCodesKey) : ''}`
+  const activityStations = useActivityStations(scope)
   const [loadedScopeKey, setLoadedScopeKey] = useState(null)
 
   useEffect(() => {
@@ -52,14 +95,14 @@ const DashboardPointsMapLoader = ({
     async function loadPoints() {
       try {
         const data = await loadDashboardMap({
-          scope,
+          scope, zoneId: selectedZoneId,
           zoneCodes: scope === 'territory' ? zoneCodes : EMPTY_ARRAY
         }, {signal: controller.signal})
         if (requestIdRef.current !== requestId) return
         if (!Array.isArray(data?.points)) throw new Error('Impossible de charger les points de la carte.')
         setPoints(data.points)
         setCapabilities(normalizeDashboardMapCapabilities(data.capabilities))
-        setLoadedScopeKey(`${scope}:${scope === 'territory' ? zoneCodesKey : ''}`)
+        setLoadedScopeKey(scopeKey)
       } catch (error) {
         if (controller.signal.aborted || requestIdRef.current !== requestId) return
         setPoints(EMPTY_ARRAY)
@@ -79,7 +122,7 @@ const DashboardPointsMapLoader = ({
         requestIdRef.current += 1
       }
     }
-  }, [scope, zoneCodesKey])
+  }, [scope, scopeKey, selectedZoneId, zoneCodesKey])
 
   if (isLoading && !hasLoadedOnceRef.current) {
     return <MapLoadingState />
@@ -92,6 +135,7 @@ const DashboardPointsMapLoader = ({
           <p>{error}</p>
         </div>
       )}
+      {activityStations.unavailable && <p role='status'>Certaines stations de suivi n’ont pas pu être chargées.</p>}
       {isLoading && (
         <span className='absolute left-2 top-2 z-20 bg-white px-2 py-1 text-xs font-medium text-[#000091] shadow-sm' role='status'>
           Actualisation de la carte…
@@ -99,6 +143,7 @@ const DashboardPointsMapLoader = ({
       )}
       <DashboardPointsMap
         {...mapProps}
+        monitoringStations={scope === 'activity' ? activityStations.stations : monitoringStations}
         capabilities={loadedScopeKey === scopeKey ? capabilities : DEFAULT_DASHBOARD_MAP_CAPABILITIES}
         points={loadedScopeKey === scopeKey ? points : EMPTY_ARRAY}
       />

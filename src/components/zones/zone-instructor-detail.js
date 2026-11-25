@@ -8,6 +8,7 @@ import {
 } from '@mui/material'
 
 import ImpersonateUserButton from '@/components/auth/impersonate-user-button.js'
+import DashboardDefaultControl from '@/components/agents/dashboard-default-control.js'
 import SectionCard from '@/components/ui/SectionCard/index.js'
 import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
 import ZoneInstructorNotificationActions from '@/components/zones/zone-instructor-notification-actions.js'
@@ -157,6 +158,8 @@ const PermissionDetails = ({catalog, permissions = []}) => {
 
 const ZoneInstructorDetail = ({zone, instructor, permissionCatalog}) => {
   const currentHabilitation = instructor.habilitations?.find(habilitation => habilitation.isCurrentZone) || {
+    zoneId: zone.id,
+    isDashboardDefault: instructor.isDashboardDefault,
     isAdmin: instructor.isAdmin,
     permissions: instructor.permissions,
     startDate: instructor.startDate,
@@ -189,6 +192,11 @@ const ZoneInstructorDetail = ({zone, instructor, permissionCatalog}) => {
           </Box>
 
           <HabilitationStatusChip habilitation={currentHabilitation} />
+          <DashboardDefaultControl
+            agentId={instructor.id}
+            habilitation={currentHabilitation}
+            canManage={['zone.agent.create', 'zone.agent.update', 'zone.agent.remove'].every(permission => zone.permissions?.includes(permission))}
+          />
 
           <PermissionDetails
             catalog={permissionCatalog}

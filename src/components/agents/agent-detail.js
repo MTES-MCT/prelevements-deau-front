@@ -17,6 +17,7 @@ import {
   DialogTitle
 } from '@mui/material'
 import Link from 'next/link'
+import DashboardDefaultControl from './dashboard-default-control.js'
 
 import ImpersonateUserButton from '@/components/auth/impersonate-user-button.js'
 import CopyableEmail from '@/components/ui/CopyableEmail/index.js'
@@ -85,7 +86,8 @@ const MESSAGE_CONTENT = {
 const ZONE_TYPE_LABELS = {
   REGION: 'Région',
   DEPARTEMENT: 'Département',
-  SAGE: 'SAGE'
+  SAGE: 'SAGE',
+  PTGE: 'PTGE'
 }
 
 function formatDateTime(value, fallback = 'Jamais') {
@@ -307,6 +309,7 @@ const AgentHabilitations = ({agent, permissionCatalog}) => {
                       {formatAccessPeriod(habilitation.startDate, habilitation.endDate)}
                     </p>
                     <HabilitationPermissions catalog={permissionCatalog} habilitation={habilitation} />
+                    <DashboardDefaultControl agentId={agent.id} habilitation={habilitation} canManage={accountActive} />
                   </div>
 
                   {accountActive && (

@@ -8,6 +8,7 @@ import Link from 'next/link'
 import ZoneExportButton from '@/components/zones/zone-export-button.js'
 import {ZONES_EXPORT_COLUMNS} from '@/components/zones/zone-export-columns.js'
 import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
+import {zoneTypeFilterOptions, zoneTypePresentations} from '@/components/zones/zone-types.js'
 import useDebouncedValue from '@/hook/use-debounced-value.js'
 import {matchesSearchTerms} from '@/lib/search-options.js'
 
@@ -19,34 +20,6 @@ const activityFilterOptions = [
 const defaultPageSize = 25
 const pageSizeOptions = [25, 50, 100]
 const zoneRowGridClassName = 'md:grid-cols-[minmax(12rem,1.15fr)_minmax(8.5rem,.55fr)_minmax(17rem,1fr)_minmax(6.5rem,6.5rem)]'
-const zoneTypeFilterOptions = [
-  {
-    checkboxClassName: 'accent-[#000091]',
-    checkedClassName: 'border-[#000091] bg-[#eeeeff] text-[#000091]',
-    colorClassName: 'text-[#000091]',
-    iconClassName: ZONE_ICONS.mapPin2,
-    label: 'Région',
-    value: 'REGION'
-  },
-  {
-    checkboxClassName: 'accent-[#18753c]',
-    checkedClassName: 'border-[#18753c] bg-[#e6f4ea] text-[#18753c]',
-    colorClassName: 'text-[#18753c]',
-    iconClassName: ZONE_ICONS.mapPin,
-    label: 'Département',
-    value: 'DEPARTEMENT'
-  },
-  {
-    checkboxClassName: 'accent-[#8d533e]',
-    checkedClassName: 'border-[#8d533e] bg-[#fff4f0] text-[#8d533e]',
-    colorClassName: 'text-[#8d533e]',
-    iconClassName: ZONE_ICONS.water,
-    label: 'SAGE',
-    value: 'SAGE'
-  }
-]
-const zoneTypePresentations = Object.fromEntries(zoneTypeFilterOptions.map(option => [option.value, option]))
-
 function pluralize(count, singular, plural = `${singular}s`) {
   return `${count} ${count > 1 ? plural : singular}`
 }
@@ -96,14 +69,14 @@ function buildPaginationItems(page, totalPages) {
 
 const ZoneTypeChip = ({type}) => {
   const presentation = zoneTypePresentations[type] || {
-    checkedClassName: 'border-gray-300 bg-gray-100 text-gray-700',
+    className: 'border-gray-300 bg-gray-100 text-gray-700',
     colorClassName: 'text-gray-600',
     iconClassName: ZONE_ICONS.mapPin2,
     label: type
   }
 
   return (
-    <span className={`inline-flex w-fit items-center gap-1 border px-1.5 py-0.5 text-xs font-medium ${presentation.checkedClassName}`}>
+    <span className={`inline-flex w-fit items-center gap-1 border px-1.5 py-0.5 text-xs font-medium ${presentation.className}`}>
       <span
         className={`${presentation.iconClassName} ${presentation.colorClassName} [&::after]:![--icon-size:0.72rem] [&::before]:![--icon-size:0.72rem]`}
         aria-hidden='true'
@@ -370,7 +343,7 @@ const ZonesList = ({isGlobalAdmin, zones}) => {
               return (
                 <label
                   key={option.value}
-                  className={`inline-flex cursor-pointer items-center gap-1.5 border px-2 py-1 text-sm font-medium transition-colors ${checked ? option.checkedClassName : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'}`}
+                  className={`inline-flex cursor-pointer items-center gap-1.5 border px-2 py-1 text-sm font-medium transition-colors ${checked ? option.className : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'}`}
                   htmlFor={`zone-type-filter-${option.value}`}
                 >
                   <input

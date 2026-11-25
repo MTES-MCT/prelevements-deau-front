@@ -33,30 +33,36 @@ function getSearchParamValue(value) {
 
 const Page = async ({searchParams}) => {
   const resolvedSearchParams = await searchParams
-  const requestedZoneCodes = splitZoneCodes(resolvedSearchParams?.zones)
   const requestedPeriodType = getSearchParamValue(resolvedSearchParams?.periodType)
   const requestedPeriod = getSearchParamValue(resolvedSearchParams?.period)
   const requestedYear = getSearchParamValue(resolvedSearchParams?.year)
   const requestedWaterBodyTypes = getSearchParamValue(resolvedSearchParams?.waterBodyTypes)
   const requestedWaterBodyType = getSearchParamValue(resolvedSearchParams?.waterBodyType)
   const userResult = await getCurrentSessionInfo()
-  const role = userResult.success ? userResult.data?.role : null
-  if (role === 'INSTRUCTOR' && !userResult.data?.permissions?.includes('zone.dashboard.read')) {
+  const sessionUser = userResult.data?.user
+  if (!userResult.success || !sessionUser?.id) {
+    return (
+      <main className='fr-container fr-py-6w'>
+        <h1>Tableau de bord</h1>
+        <p role='alert'>Votre session n’a pas pu être vérifiée. Réessayez dans un instant.</p>
+        <a className='fr-btn fr-btn--secondary' href='/tableau-de-bord'>Réessayer</a>
+      </main>
+    )
+  }
+  const role = userResult.data?.role
+  if (!['INSTRUCTOR', 'ADMIN', 'DECLARANT'].includes(role)) {
     forbidden()
   }
 
-  const sessionUser = userResult.success ? userResult.data?.user : null
-  const user = sessionUser
-    ? {
-      id: sessionUser.id,
-      declarantRole: userResult.data?.declarantRole ?? sessionUser.declarantRole,
-      firstName: sessionUser.firstName,
-      lastName: sessionUser.lastName,
-      name: sessionUser.name,
-      socialReason: sessionUser.socialReason,
-      role
-    }
-    : null
+  const user = {
+    id: sessionUser.id,
+    declarantRole: userResult.data.declarantRole ?? sessionUser.declarantRole,
+    firstName: sessionUser.firstName,
+    lastName: sessionUser.lastName,
+    name: sessionUser.name,
+    socialReason: sessionUser.socialReason,
+    role
+  }
   const isDeclarant = role === 'DECLARANT'
   const initialFilters = {
     includePoints: false,
@@ -65,7 +71,7 @@ const Page = async ({searchParams}) => {
     waterBodyType: requestedWaterBodyType,
     waterBodyTypes: requestedWaterBodyTypes,
     year: requestedYear,
-    zoneCodes: requestedZoneCodes
+    ...(role === 'ADMIN' && {zoneCodes: splitZoneCodes(resolvedSearchParams?.zones)})
   }
   // The map and declaration actions must not wait for historical aggregations.
   // Declarants do not display the territorial point-count/usage tiles either.

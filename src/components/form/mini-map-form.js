@@ -197,6 +197,9 @@ const MiniMapForm = ({geom, setGeom, boundaryFeature = null}) => {
   const [coordinateError, setCoordinateError] = useState(null)
   const geojson = useRef(createPointFeatureCollection(geom, coordinates))
   const boundaryGeojson = useRef(createBoundaryFeatureCollection(boundaryFeature))
+  const isPtge = boundaryFeature?.properties?.type === 'PTGE'
+  // MapLibre paint values use concrete palette colors, independent of the page theme.
+  const boundaryColor = isPtge ? '#a558a0' : '#000091'
 
   const addBoundaryLayer = map => {
     if (!boundaryGeojson.current) {
@@ -216,7 +219,7 @@ const MiniMapForm = ({geom, setGeom, boundaryFeature = null}) => {
         type: 'fill',
         source: 'zone-boundary',
         paint: {
-          'fill-color': '#000091',
+          'fill-color': boundaryColor,
           'fill-opacity': 0.08
         }
       })
@@ -228,7 +231,7 @@ const MiniMapForm = ({geom, setGeom, boundaryFeature = null}) => {
         type: 'line',
         source: 'zone-boundary',
         paint: {
-          'line-color': '#000091',
+          'line-color': boundaryColor,
           'line-width': 2,
           'line-opacity': 0.9
         }
@@ -425,9 +428,9 @@ const MiniMapForm = ({geom, setGeom, boundaryFeature = null}) => {
   return (
     <Box className='flex flex-col h-full w-full relative border'>
       <div ref={mapContainerRef} className='flex h-full w-full' />
-      {boundaryFeature && (
-        <div className='absolute top-3 right-3 fr-badge fr-badge--info fr-badge--no-icon'>
-          Limite de zone affichée
+      {boundaryFeature?.geometry && (
+        <div className={`absolute top-3 right-3 fr-badge fr-badge--no-icon ${isPtge ? 'fr-badge--purple-glycine' : 'fr-badge--info'}`}>
+          {isPtge ? 'Limite du PTGE' : 'Limite de zone affichée'}
         </div>
       )}
       <Select

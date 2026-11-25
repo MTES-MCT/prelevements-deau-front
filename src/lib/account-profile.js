@@ -38,7 +38,8 @@ const CIVILITY_LABELS = Object.freeze({
 export const ZONE_TYPE_LABELS = Object.freeze({
   REGION: 'Région',
   DEPARTEMENT: 'Département',
-  SAGE: 'Schéma d’aménagement et de gestion des eaux'
+  SAGE: 'Schéma d’aménagement et de gestion des eaux',
+  PTGE: 'Projet de territoire pour la gestion de l’eau'
 })
 
 function cleanOptionalText(value) {

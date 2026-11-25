@@ -1,9 +1,9 @@
 const headers = {'Cache-Control': 'private, no-store'}
 const queries = {
-  territory: ['zones', 'period', 'periodType', 'year', 'waterBodyType', 'waterBodyTypes', 'sections'],
-  map: ['scope', 'zones'],
-  'water-resources/piezometry': ['zones', 'period', 'includeIps'],
-  'water-resources/flows': ['zones', 'period']
+  territory: ['zoneId', 'zones', 'period', 'periodType', 'year', 'waterBodyType', 'waterBodyTypes', 'sections'],
+  map: ['scope', 'zoneId', 'zones'],
+  'water-resources/piezometry': ['scope', 'zoneId', 'zones', 'period', 'includeIps'],
+  'water-resources/flows': ['scope', 'zoneId', 'zones', 'period']
 }
 
 export async function getDashboardResponse(request, {path, session, fetchUpstream}) {

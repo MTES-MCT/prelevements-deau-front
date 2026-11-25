@@ -64,7 +64,8 @@ export function groupZoneOptions(zones = []) {
   const labels = {
     REGION: 'Régions',
     DEPARTEMENT: 'Départements',
-    SAGE: 'SAGE'
+    SAGE: 'SAGE',
+    PTGE: 'PTGE'
   }
   const groups = new Map()
 
@@ -83,7 +84,7 @@ export function groupZoneOptions(zones = []) {
     })
   }
 
-  const groupOrder = ['Régions', 'Départements', 'SAGE', 'Autres zones']
+  const groupOrder = ['Régions', 'Départements', 'SAGE', 'PTGE', 'Autres zones']
 
   return [...groups.entries()]
     .sort(([left], [right]) => groupOrder.indexOf(left) - groupOrder.indexOf(right))

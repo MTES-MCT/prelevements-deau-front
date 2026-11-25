@@ -16,7 +16,7 @@ export function collectorManagementHasChanges(current, saved) {
 
 export function collectorManagementZoneOptions(availableZones, selectedZones = []) {
   const zones = new Map([...availableZones, ...selectedZones].map(zone => [zone.id, zone]))
-  return [['REGION', 'Régions'], ['DEPARTEMENT', 'Départements'], ['SAGE', 'SAGE']]
+  return [['REGION', 'Régions'], ['DEPARTEMENT', 'Départements'], ['SAGE', 'SAGE'], ['PTGE', 'PTGE']]
     .map(([type, label]) => ({
       label,
       options: [...zones.values()].filter(zone => zone.type === type)

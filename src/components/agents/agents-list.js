@@ -76,9 +76,10 @@ function getZoneGroups(facet, selectedZoneIds) {
   const typeLabels = {
     REGION: 'Régions',
     DEPARTEMENT: 'Départements',
-    SAGE: 'SAGE'
+    SAGE: 'SAGE',
+    PTGE: 'PTGE'
   }
-  const typeOrder = ['REGION', 'DEPARTEMENT', 'SAGE', 'AUTRE']
+  const typeOrder = ['REGION', 'DEPARTEMENT', 'SAGE', 'PTGE', 'AUTRE']
   const items = normalizeFacetItems(facet).map(item => ({
     value: String(item.value ?? item.id ?? ''),
     label: item.label ?? item.name ?? item.code ?? String(item.value ?? item.id ?? ''),

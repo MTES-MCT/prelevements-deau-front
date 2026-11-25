@@ -22,6 +22,7 @@ import {isDeclarationFeedFixture, handleDeclarationFeedFixture} from './declarat
 import {isNativeDeclarationFixture, handleNativeDeclarationFixture} from './native-declaration-fixtures.mjs'
 import {handlePreleveurProfilesFixture} from './preleveur-profiles-fixtures.mjs'
 import {handleLoginSessionFixture} from './login-session-fixtures.mjs'
+import {handleAgentDashboardDefaultFixture} from './agent-dashboard-default-fixtures.mjs'
 import {isDocumentUploadFixture, handleDocumentUploadFixture} from './document-upload-fixtures.mjs'
 
 // Synthetic backend: deliberately no database, outbound HTTP, mail or jobs.
@@ -61,6 +62,7 @@ const api = createServer(async (request, response) => {
 
   if (await handlePreleveurProfilesFixture(request, send)) return
   if (await handleLoginSessionFixture(request, response, send)) return
+  if (await handleAgentDashboardDefaultFixture(request, send)) return
   if (await handleDocumentUploadFixture(request, send)) return
 
   if (pathname === '/__public-stats-fixture-requests' && request.method === 'GET') {

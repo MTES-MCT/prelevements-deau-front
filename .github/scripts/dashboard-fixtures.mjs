@@ -1,30 +1,39 @@
 // Isolated synthetic dashboard API: no database or external requests.
 const sessions = new Map()
 const zones = [
-  {code: 'DEP-33', type: 'DEPARTEMENT', name: 'Gironde'},
-  {code: 'DEP-47', type: 'DEPARTEMENT', name: 'Lot-et-Garonne'},
-  {code: 'SAGE-DROPT', type: 'SAGE', name: 'Dropt'}
+  {id: '00000000-0000-4000-8000-000000000033', code: 'DEP-33', type: 'DEPARTEMENT', name: 'Gironde'},
+  {id: '00000000-0000-4000-8000-000000000047', code: 'DEP-47', type: 'DEPARTEMENT', name: 'Lot-et-Garonne'},
+  {id: '00000000-0000-4000-8000-000000000101', code: 'SAGE-DROPT', type: 'SAGE', name: 'Dropt'},
+  {id: '00000000-0000-4000-8000-000000000102', code: 'SAGE-DROPT', type: 'PTGE', name: 'Vallée du Dropt'}
 ]
 
 export function getDashboardFixtureRole(authorization = '') {
-  const role = /^Bearer browser-test-dashboard-(admin|declarant)-/.exec(authorization)?.[1]
+  const role = /^Bearer browser-test-dashboard-(admin|instructor|declarant)-/.exec(authorization)?.[1]
   return role?.toUpperCase() ?? null
 }
 
-function createDashboard(role, parameters) {
+function createDashboard(role, parameters, {noZones, onlyOne, collector, revokedZoneId}) {
+  const multiZone = role === 'ADMIN'
+  let accessible = multiZone ? zones.slice(0, 3) : role === 'DECLARANT' ? zones.slice(2) : zones
+  if (revokedZoneId) accessible = accessible.filter(zone => zone.id !== revokedZoneId)
+  if (noZones) accessible = []
+  if (onlyOne) accessible = accessible.slice(0, 1)
   const requested = parameters.get('zones')?.split(',') ?? ['DEP-33']
-  const selectedZoneCodes = zones.map(zone => zone.code).filter(code => requested.includes(code))
-  const totalPoints = selectedZoneCodes.length * 10
+  const selected = multiZone ? accessible.filter(zone => requested.includes(zone.code))
+    : [accessible.find(zone => zone.id === parameters.get('zoneId')) ?? accessible[0]].filter(Boolean)
+  const selectedZoneCodes = selected.map(zone => zone.code)
+  const totalPoints = multiZone ? selected.length * 10 : (zones.indexOf(selected[0]) + 1) * 10
   const periodType = parameters.get('periodType') || 'month'
   const period = parameters.get('period') || (periodType === 'week' ? '2026-W39' : '2026-09')
   const year = Number(parameters.get('year')) || 2026
   const usage = {id: 'synthetic-irrigation', code: '2', label: 'Irrigation'}
-  const volume = year === 2026 ? 20 : 10
+  const volume = (year === 2026 ? 20 : 10) * (multiZone ? 1 : totalPoints / 10)
   const waterBodyTypes = parameters.get('waterBodyTypes')
 
   const result = {
-    scope: role === 'DECLARANT' ? 'DECLARANT' : 'ADMIN',
-    zones,
+    scope: role === 'DECLARANT' ? (collector ? 'COLLECTOR' : 'DECLARANT') : 'TERRITORY',
+    zones: accessible,
+    ...(multiZone ? {} : {selectedZoneId: selected[0]?.id ?? null}),
     selectedZoneCodes,
     unknownZoneCodes: [],
     metrics: {totalPoints, usageDistribution: []},
@@ -82,14 +91,16 @@ export async function handleDashboardFixtureRequest(request, send) {
   const url = new URL(request.url, 'http://127.0.0.1:3431')
   const {pathname} = url
   const state = sessions.get(request.headers.authorization) ?? {requests: [], allRequests: [], stations: false, holdNext: false, release: null}
+  state.collector = request.headers.authorization.includes('dashboard-declarant-collector-')
+  const declarantRole = role === 'DECLARANT' ? (state.collector ? 'COLLECTEUR' : 'PRELEVEUR') : null
   sessions.set(request.headers.authorization, state)
   if (pathname.startsWith('/api/dashboard/') || pathname === '/api/campaigns/summary') state.allRequests.push({pathname, parameters: Object.fromEntries(url.searchParams)})
 
   if (pathname === '/info' || pathname === '/api/info') {
     send(200, {
-      role, declarantRole: role === 'DECLARANT' ? 'PRELEVEUR' : null,
-      permissions: ['zone.dashboard.read'],
-      user: {id: '11111111-1111-4111-8111-111111111111', firstName: 'Camille', email: 'dashboard@example.test', declarantRole: role === 'DECLARANT' ? 'PRELEVEUR' : null},
+      role, declarantRole,
+      permissions: state.noZones ? [] : ['zone.dashboard.read'],
+      user: {id: '11111111-1111-4111-8111-111111111111', firstName: 'Camille', email: 'dashboard@example.test', declarantRole},
       expiresAt: new Date(Date.now() + 3_600_000).toISOString()
     })
   } else if (pathname === '/api/__dashboard-requests') {
@@ -102,6 +113,9 @@ export async function handleDashboardFixtureRequest(request, send) {
     if (command.holdStatistics) state.holdStatistics = true
     if (command.holdCampaign) state.holdCampaign = true
     if (command.releaseCampaign && state.releaseCampaign) state.releaseCampaign()
+    if (command.revokeZone) state.revokedZoneId = command.revokeZone
+    if (typeof command.noZones === 'boolean') state.noZones = command.noZones
+    if (typeof command.onlyOne === 'boolean') state.onlyOne = command.onlyOne
     if (typeof command.stations === 'boolean') state.stations = command.stations
     if (command.releaseStatus && state.release) state.release(command.releaseStatus)
     send(200, {ok: true})
@@ -116,7 +130,8 @@ export async function handleDashboardFixtureRequest(request, send) {
       status = await pending.promise
       state.release = null
     }
-    send(status, status === 200 ? createDashboard(role, url.searchParams) : {message: 'Erreur synthétique de chargement du territoire'})
+    if (url.searchParams.get('zoneId') && url.searchParams.get('zoneId') === state.revokedZoneId) status = 403
+    send(status, status === 200 ? createDashboard(role, url.searchParams, state) : {message: 'Erreur synthétique de chargement du territoire'})
   } else if (pathname === '/api/dashboard/map') {
     send(200, {points: [], capabilities: {}})
   } else if (pathname.startsWith('/api/dashboard/water-resources/')) {

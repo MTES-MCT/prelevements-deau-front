@@ -29,7 +29,7 @@ const Home = async () => {
       ['export.volumes', '/exports']
     ].find(([permission]) => permissions.has(permission))?.[1]
 
-    redirect(firstAccessibleRoute || '/mon-compte')
+    redirect(firstAccessibleRoute || '/tableau-de-bord')
   }
 
   if (role === 'DECLARANT') {

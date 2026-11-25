@@ -5,7 +5,8 @@ import {
   useEffect,
   useMemo,
   useRef,
-  useState
+  useState,
+  useSyncExternalStore
 } from 'react'
 
 import {SegmentedControl} from '@codegouvfr/react-dsfr/SegmentedControl'
@@ -17,6 +18,7 @@ import DashboardVolumesChart from '@/components/dashboard/dashboard-volumes-char
 import DeferredRender from '@/components/ui/deferred-render.js'
 import GroupedMultiselect from '@/components/ui/GroupedMultiselect/index.js'
 import {ZONE_ICONS} from '@/components/zones/zone-icons.js'
+import {zoneTypePresentations} from '@/components/zones/zone-types.js'
 import {
   getDeclarationsURL,
   getMyDeclarationsURL,
@@ -28,7 +30,7 @@ import {
   isDashboardVisibleUsage
 } from '@/lib/water-uses.js'
 import {loadDashboardTerritory} from '@/lib/dashboard-client.js'
-import {buildDashboardLocation, readLegacyDashboardHash} from '@/lib/dashboard-url.js'
+import {buildDashboardLocation, readLegacyDashboardHash, removeDashboardZoneFromLocation} from '@/lib/dashboard-url.js'
 
 const DeferredDashboardContent = ({children, minHeight}) => (
   <DeferredRender
@@ -73,23 +75,6 @@ const DynamicDashboardSeries = dynamic(
   {ssr: false}
 )
 
-const ZONE_TYPE_PRESENTATIONS = {
-  REGION: {
-    className: 'border-[#000091] bg-[#eeeeff] text-[#000091]',
-    iconClassName: ZONE_ICONS.mapPin2,
-    label: 'Région'
-  },
-  DEPARTEMENT: {
-    className: 'border-[#18753c] bg-[#e6f4ea] text-[#18753c]',
-    iconClassName: ZONE_ICONS.mapPin,
-    label: 'Département'
-  },
-  SAGE: {
-    className: 'border-[#8d533e] bg-[#fff4f0] text-[#8d533e]',
-    iconClassName: ZONE_ICONS.water,
-    label: 'SAGE'
-  }
-}
 const WATER_BODY_TYPE_OPTIONS = [
   {value: 'SUPERFICIELLE', label: 'Eau superficielle'},
   {value: 'SOUTERRAIN', label: 'Eau souterraine'},
@@ -118,7 +103,7 @@ const EMPTY_FILTERS = {}
 const DASHBOARD_HASH_PREFIX = 'dashboard?'
 
 function formatZoneLabel(zone) {
-  const typeLabel = ZONE_TYPE_PRESENTATIONS[zone.type]?.label ?? zone.type
+  const typeLabel = zoneTypePresentations[zone.type]?.label ?? zone.type
   return `${typeLabel} ${zone.name}`
 }
 
@@ -181,18 +166,19 @@ function parseDashboardHash(hash) {
   return {
     period: params.get('period') ?? '',
     periodType: params.get('periodType') ?? '',
-    waterBodyTypes: parseDashboardHashWaterBodyTypes(params.get('waterBodyTypes')),
+    waterBodyTypes: parseDashboardHashWaterBodyTypes(params.get('waterBodyTypes') ?? params.get('waterBodyType')),
     year: Number.isFinite(parsedYear) ? parsedYear : '',
     zoneCodes: splitDashboardHashValues(params.get('zones'))
   }
 }
 
-function replaceDashboardUrl(options) {
+function replaceDashboardUrl(options, multiZone) {
   if (typeof window === 'undefined') {
     return
   }
 
-  window.history.replaceState(window.history.state, '', buildDashboardLocation(window.location, options))
+  const url = buildDashboardLocation(window.location, multiZone ? options : {...options, zoneCodes: []})
+  window.history.replaceState(window.history.state, '', url)
 }
 
 function isSameDashboardFilterState(current, next) {
@@ -373,6 +359,7 @@ const DashboardBlock = ({
   boxed = false,
   children,
   className = 'mt-8',
+  hidden = false,
   title
 }) => {
   const blockClassName = boxed
@@ -380,7 +367,7 @@ const DashboardBlock = ({
     : className
 
   return (
-    <section className={blockClassName}>
+    <section className={blockClassName} hidden={hidden}>
       <div className='mb-4 flex flex-col gap-4 md:flex-row md:items-start md:justify-between'>
         <h2 className='fr-h2 fr-mb-0 text-[#000091]'>{title}</h2>
         {actions}
@@ -418,6 +405,28 @@ const DashboardZoneFilter = ({
   </div>
 )
 
+const subscribeToHydration = () => () => {}
+const getClientSnapshot = () => true
+const getServerSnapshot = () => false
+
+const SingleZoneFilter = ({label, zones, value, onChange}) => {
+  const hydrated = useSyncExternalStore(subscribeToHydration, getClientSnapshot, getServerSnapshot)
+  const zoneType = zones.find(zone => zone.id === value)?.type
+  const presentation = zoneTypePresentations[zoneType]
+  return (
+    <div className='fr-select-group w-full md:w-[380px]'>
+      <label className='fr-label' htmlFor='dashboard-zone'>
+        {presentation && <span aria-hidden='true' className={`mr-2 inline-block h-2.5 w-2.5 rounded-full bg-current ${presentation.colorClassName}`} />}
+        {label}
+      </label>
+      <select className='fr-select' id='dashboard-zone' disabled={!hydrated || zones.length === 1}
+        value={value ?? ''} onChange={event => onChange(event.target.value)}>
+        {zones.map(zone => <option key={zone.id} value={zone.id}>{formatZoneLabel(zone)}</option>)}
+      </select>
+    </div>
+  )
+}
+
 const PointsMapSection = ({
   className = 'mt-6',
   description,
@@ -430,6 +439,7 @@ const PointsMapSection = ({
   pointsURL,
   preferUsageName = false,
   selectedZoneCodes,
+  selectedZoneId,
   showCollecteurs,
   showPreleveurs
 }) => (
@@ -452,6 +462,7 @@ const PointsMapSection = ({
       pointsLegendLabel={pointsLegendLabel}
       preferUsageName={preferUsageName}
       selectedZoneCodes={selectedZoneCodes}
+      selectedZoneId={selectedZoneId}
       showCollecteurs={showCollecteurs}
       showPreleveurs={showPreleveurs}
     />
@@ -649,6 +660,26 @@ const DashboardVolumeCharts = ({
   </>
 )
 
+function selectionFilters(dashboard, multiZone) {
+  return multiZone ? {zoneCodes: dashboard?.selectedZoneCodes} : {zoneId: dashboard?.selectedZoneId}
+}
+
+function sameDashboardScope(left, right, multiZone) {
+  return left?.scope === right?.scope && (multiZone
+    ? areSameValues(left?.selectedZoneCodes ?? [], right?.selectedZoneCodes ?? [])
+    : left?.selectedZoneId === right?.selectedZoneId)
+}
+
+async function readTerritory(filters, options) {
+  try {
+    return await loadDashboardTerritory(filters, options)
+  } catch (error) {
+    if (error.code !== 403 || !filters.zoneId || options.signal.aborted) throw error
+    // A mandate may have expired since the server rendered the page.
+    return loadDashboardTerritory({...filters, zoneId: undefined}, options)
+  }
+}
+
 const DashboardPage = ({
   declarationActions = null,
   initialDashboard,
@@ -660,7 +691,10 @@ const DashboardPage = ({
   const territoryReloadRequestIdRef = useRef(0)
   const territoryControllerRef = useRef(null)
   const [dashboard, setDashboard] = useState(initialDashboard)
-  const [selectedZoneCodes, setSelectedZoneCodes] = useState(initialDashboard?.selectedZoneCodes ?? [])
+  const multiZone = user?.role === 'ADMIN'
+  const selectedZoneCodes = dashboard?.selectedZoneCodes ?? EMPTY_ARRAY
+  const selectedZoneId = dashboard?.selectedZoneId ?? null
+  const [pendingZoneId, setPendingZoneId] = useState(null)
   const [selectedPeriodType, setSelectedPeriodType] = useState(
     initialDashboard?.registeredPrelevements?.selectedPeriodType ?? initialFilters.periodType ?? 'month'
   )
@@ -679,7 +713,7 @@ const DashboardPage = ({
   const [isInitialStatisticsLoading, setIsInitialStatisticsLoading] = useState(Boolean(initialDashboard)
     && (!initialDashboard.registeredPrelevements || !initialDashboard.volumesByUsage))
   const [monitoringState, setMonitoringState] = useState({zoneCodesKey: null, stations: EMPTY_ARRAY})
-  const monitoringStations = monitoringState.zoneCodesKey === selectedZoneCodes.join(',') ? monitoringState.stations : EMPTY_ARRAY
+  const monitoringStations = monitoringState.zoneCodesKey === (selectedZoneId ?? selectedZoneCodes.join(',')) ? monitoringState.stations : EMPTY_ARRAY
 
   const zones = dashboard?.zones ?? EMPTY_ARRAY
   const usageDistribution = (dashboard?.metrics?.usageDistribution ?? EMPTY_ARRAY)
@@ -714,7 +748,7 @@ const DashboardPage = ({
   const zoneOptions = useMemo(() =>
     zones.map(zone => {
       const label = formatZoneLabel(zone)
-      const presentation = ZONE_TYPE_PRESENTATIONS[zone.type] ?? {
+      const presentation = zoneTypePresentations[zone.type] ?? {
         className: 'border-gray-300 bg-gray-100 text-gray-700',
         iconClassName: ZONE_ICONS.mapPin2,
         label: zone.type
@@ -749,7 +783,8 @@ const DashboardPage = ({
   // A lightweight server-rendered context lets the map and actions load first.
   // This read is fresh, cancellable and never cached across identities/scopes.
   useEffect(() => {
-    if (!initialDashboard || (initialDashboard.registeredPrelevements && initialDashboard.volumesByUsage)) return
+    if (!initialDashboard || (!multiZone && !initialDashboard.selectedZoneId)
+      || (initialDashboard.registeredPrelevements && initialDashboard.volumesByUsage)) return
     const controller = new AbortController()
     territoryControllerRef.current = controller
     const requestId = ++territoryReloadRequestIdRef.current
@@ -757,29 +792,28 @@ const DashboardPage = ({
 
     async function loadInitialStatistics() {
       try {
-        let data = await loadDashboardTerritory({
+        let data = await readTerritory({
           ...initialFilters,
-          zoneCodes: initialDashboard.selectedZoneCodes,
+          ...selectionFilters(initialDashboard, multiZone),
           includePoints: false,
           sections: ['registeredPrelevements', 'volumesByUsage']
         }, {signal: controller.signal})
-        const sameScope = data?.scope === initialDashboard.scope
-          && areSameValues(data?.selectedZoneCodes ?? [], initialDashboard.selectedZoneCodes ?? [])
+        const sameScope = sameDashboardScope(data, initialDashboard, multiZone)
         if (!sameScope) {
           data = await loadDashboardTerritory({
-            ...initialFilters, includePoints: false, zoneCodes: data?.selectedZoneCodes ?? []
+            ...initialFilters, includePoints: false, ...selectionFilters(data, multiZone)
           }, {signal: controller.signal})
         }
         if (controller.signal.aborted || territoryReloadRequestIdRef.current !== requestId) return
         if (!data?.registeredPrelevements || !data?.volumesByUsage) throw new Error('Impossible de charger les indicateurs du territoire.')
         setDashboard(sameScope ? {...initialDashboard, ...data} : data)
-        setSelectedZoneCodes(data.selectedZoneCodes ?? [])
         setSelectedPeriodType(data.registeredPrelevements.selectedPeriodType)
         setSelectedPeriod(data.registeredPrelevements.selectedPeriod)
         setSelectedVolumeYear(data.volumesByUsage.selectedYear)
         setSelectedWaterBodyTypes(data.volumesByUsage.selectedWaterBodyTypes)
       } catch (error) {
         if (!controller.signal.aborted && territoryReloadRequestIdRef.current === requestId) {
+          if (error.code === 401 || error.code === 403) setDashboard(null)
           setError(error.message || 'Impossible de charger les indicateurs du territoire.')
         }
       } finally {
@@ -791,7 +825,7 @@ const DashboardPage = ({
 
     loadInitialStatistics()
     return () => controller.abort()
-  }, [initialDashboard, initialFilters])
+  }, [initialDashboard, initialFilters, multiZone])
 
   const reloadDashboard = useCallback(async ({
     period = selectedPeriod,
@@ -799,6 +833,7 @@ const DashboardPage = ({
     waterBodyTypes = selectedWaterBodyTypes,
     year = selectedVolumeYear,
     zoneCodes = selectedZoneCodes,
+    zoneId = selectedZoneId,
     sections
   } = {}) => {
     const requestId = territoryReloadRequestIdRef.current + 1
@@ -812,21 +847,21 @@ const DashboardPage = ({
     setError(null)
 
     try {
-      let data = await loadDashboardTerritory({
+      let data = await readTerritory({
         includePoints: false,
         period,
         periodType,
         waterBodyTypes,
         year,
-        zoneCodes,
+        ...(multiZone ? {zoneCodes} : {zoneId}),
         sections
       }, {signal: controller.signal})
 
       // A permission/scope change can normalize the selected zones. Never merge
       // a partial response into figures that belonged to the previous scope.
       let partial = Boolean(sections)
-      if (partial && (data?.scope !== dashboard?.scope || !areSameValues(data?.selectedZoneCodes ?? [], selectedZoneCodes))) {
-        data = await loadDashboardTerritory({includePoints: false, period, periodType, waterBodyTypes, year, zoneCodes: data?.selectedZoneCodes ?? zoneCodes}, {signal: controller.signal})
+      if (partial && !sameDashboardScope(data, dashboard, multiZone)) {
+        data = await loadDashboardTerritory({includePoints: false, period, periodType, waterBodyTypes, year, ...selectionFilters(data, multiZone)}, {signal: controller.signal})
         partial = false
       }
 
@@ -842,7 +877,6 @@ const DashboardPage = ({
         const nextSelectedWaterBodyTypes = data.volumesByUsage?.selectedWaterBodyTypes ?? waterBodyTypes
 
         setDashboard(current => partial ? {...current, ...data} : data)
-        setSelectedZoneCodes(nextSelectedZoneCodes)
         setSelectedPeriodType(nextSelectedPeriodType)
         setSelectedPeriod(nextSelectedPeriod)
         setSelectedVolumeYear(nextSelectedYear)
@@ -853,21 +887,25 @@ const DashboardPage = ({
           waterBodyTypes: nextSelectedWaterBodyTypes,
           year: nextSelectedYear,
           zoneCodes: nextSelectedZoneCodes
-        })
+        }, multiZone)
       } else {
         setError('Impossible de charger le tableau de bord.')
       }
     } catch (error) {
       if (!controller.signal.aborted && territoryReloadRequestIdRef.current === requestId) {
+        if (error.code === 401 || error.code === 403) setDashboard(null)
         setError(error.message || 'Impossible de charger le tableau de bord.')
       }
     } finally {
       if (territoryReloadRequestIdRef.current === requestId) {
         setIsTerritoryLoading(false)
+        setPendingZoneId(null)
       }
     }
   }, [
-    dashboard?.scope,
+    dashboard,
+    multiZone,
+    selectedZoneId,
     selectedPeriod,
     selectedPeriodType,
     selectedVolumeYear,
@@ -876,6 +914,17 @@ const DashboardPage = ({
   ])
 
   useEffect(() => () => territoryControllerRef.current?.abort(), [])
+
+  useEffect(() => {
+    if (multiZone) return
+    const cleaned = removeDashboardZoneFromLocation(window.location)
+    if (cleaned !== window.location.pathname + window.location.search + window.location.hash) {
+      window.history.replaceState(window.history.state, '', cleaned)
+    }
+    const restoreDefault = event => { if (event.persisted) window.location.reload() }
+    window.addEventListener('pageshow', restoreDefault)
+    return () => window.removeEventListener('pageshow', restoreDefault)
+  }, [multiZone])
 
   useEffect(() => {
     if (
@@ -900,11 +949,11 @@ const DashboardPage = ({
         waterBodyTypes: selectedWaterBodyTypes,
         year: selectedVolumeYear,
         zoneCodes: selectedZoneCodes
-      })
+      }, multiZone)
       return
     }
 
-    const nextZoneCodes = hashFilters.zoneCodes.length > 0
+    const nextZoneCodes = multiZone && hashFilters.zoneCodes.length > 0
       ? normalizeZoneCodes(hashFilters.zoneCodes)
       : selectedZoneCodes
     const nextFilters = {
@@ -923,7 +972,7 @@ const DashboardPage = ({
     }
 
     if (isSameDashboardFilterState(currentFilters, nextFilters)) {
-      replaceDashboardUrl(nextFilters)
+      replaceDashboardUrl(nextFilters, multiZone)
       return
     }
 
@@ -933,6 +982,7 @@ const DashboardPage = ({
 
     reloadHashDashboard()
   }, [
+    multiZone,
     normalizeZoneCodes,
     reloadDashboard,
     selectedPeriod,
@@ -951,6 +1001,12 @@ const DashboardPage = ({
 
     await reloadDashboard({zoneCodes: nextZoneCodes})
   }, [normalizeZoneCodes, reloadDashboard, selectedZoneCodes])
+
+  function handleSingleZoneChange(zoneId) {
+    if (!zoneId || zoneId === (pendingZoneId ?? selectedZoneId)) return
+    setPendingZoneId(zoneId)
+    reloadDashboard({zoneId})
+  }
 
   const handlePeriodTypeChange = useCallback(async nextPeriodType => {
     if (nextPeriodType === selectedPeriodType) {
@@ -985,6 +1041,10 @@ const DashboardPage = ({
         : {stations, zoneCodesKey})
   }, [])
 
+  const singleFilter = hasSelectableZones && (
+    <SingleZoneFilter label={isDeclarant ? 'Territoire' : 'Filtrer le contenu de la page par :'}
+      zones={zones} value={pendingZoneId ?? selectedZoneId} onChange={handleSingleZoneChange} />
+  )
   const statistics = hasStatistics ? (
     <>
       <RegisteredPrelevementsSection
@@ -1037,7 +1097,7 @@ const DashboardPage = ({
             {greetingName ? `Bonjour ${greetingName},` : 'Bonjour,'}
           </h1>
 
-          {!isDeclarant && (
+          {multiZone ? (
             <DashboardZoneFilter
               disabled={isZoneFilterDisabled}
               label='Filtrer le contenu de la page par :'
@@ -1045,7 +1105,7 @@ const DashboardPage = ({
               value={selectedZoneCodes}
               onChange={handleZoneChange}
             />
-          )}
+          ) : !isDeclarant && singleFilter}
         </div>
 
 
@@ -1064,7 +1124,6 @@ const DashboardPage = ({
                   : undefined}
                 isLoading={false}
                 mapScope='activity'
-                monitoringStations={monitoringStations}
                 pointsLegendLabel={pointsLegendLabel}
                 pointsSectionTitle={pointsSectionTitle}
                 pointsURL={pointsURL}
@@ -1080,33 +1139,27 @@ const DashboardPage = ({
               )}
             </DashboardBlock>
 
-            {hasSelectableZones && (
+            {selectedZoneId && (
               <DashboardBlock
                 boxed
-                actions={(
-                  <DashboardZoneFilter
-                    hideLabel
-                    disabled={isZoneFilterDisabled}
-                    label='Zones'
-                    options={zoneOptions}
-                    value={selectedZoneCodes}
-                    onChange={handleZoneChange}
-                  />
-                )}
+                actions={singleFilter}
                 title='Chiffres clés de mon territoire'
               >
-                {statistics}
-
-                <DashboardWaterResources
-                  selectedZoneCodes={selectedZoneCodes}
-                  showTitle={showWaterResourcesTitle}
-                  onStationsChange={handleMonitoringStationsChange}
-                />
+                <div hidden={Boolean(pendingZoneId)}>
+                  {statistics}
+                  <DashboardWaterResources
+                    selectedZoneCodes={selectedZoneCodes}
+                    selectedZoneId={selectedZoneId}
+                    showTitle={showWaterResourcesTitle}
+                  />
+                </div>
               </DashboardBlock>
             )}
           </>
+        ) : !multiZone && !selectedZoneId ? (
+          dashboard && <p role='status'>Vous n’avez accès à aucune zone sur ce tableau de bord.</p>
         ) : (
-          <DashboardBlock className='mt-0' title='Chiffres clés du territoire'>
+          <DashboardBlock hidden={Boolean(pendingZoneId)} className='mt-0' title='Chiffres clés du territoire'>
             <KeyFiguresSection
               showUsageDistribution
               pointsURL={pointsURL}
@@ -1123,6 +1176,7 @@ const DashboardPage = ({
               pointsSectionTitle={pointsSectionTitle}
               pointsURL={pointsURL}
               selectedZoneCodes={selectedZoneCodes}
+              selectedZoneId={selectedZoneId}
               showCollecteurs={!isCollector}
             />
 
@@ -1130,6 +1184,7 @@ const DashboardPage = ({
 
             <DashboardWaterResources
               selectedZoneCodes={selectedZoneCodes}
+              selectedZoneId={selectedZoneId}
               showTitle={showWaterResourcesTitle}
               onStationsChange={handleMonitoringStationsChange}
             />

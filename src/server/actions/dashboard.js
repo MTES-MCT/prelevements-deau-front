@@ -2,7 +2,8 @@
 
 import {
   buildDashboardMapSearch,
-  buildDashboardTerritorySearch
+  buildDashboardTerritorySearch,
+  buildDashboardWaterResourceSearch
 } from '@/lib/dashboard-api.js'
 import {fetchJSON, withErrorHandling} from '@/server/api-wrapper.js'
 
@@ -21,31 +22,12 @@ export async function getDashboardPointActorsAction(pointId) {
     fetchJSON(`api/dashboard/map/points/${encodeURIComponent(pointId)}/actors`))
 }
 
-function buildWaterResourceSearch(options = {}) {
-  const parameters = new URLSearchParams()
-
-  if (Array.isArray(options.zoneCodes) && options.zoneCodes.length > 0) {
-    parameters.set('zones', options.zoneCodes.join(','))
-  }
-
-  if (options.period) {
-    parameters.set('period', options.period)
-  }
-
-  if (options.includeIps) {
-    parameters.set('includeIps', 'true')
-  }
-
-  const search = parameters.toString()
-  return search ? `?${search}` : ''
-}
-
 export async function getDashboardPiezometryAction(options = {}) {
   return withErrorHandling(async () =>
-    fetchJSON(`api/dashboard/water-resources/piezometry${buildWaterResourceSearch(options)}`))
+    fetchJSON(`api/dashboard/water-resources/piezometry${buildDashboardWaterResourceSearch(options)}`))
 }
 
 export async function getDashboardRiverFlowsAction(options = {}) {
   return withErrorHandling(async () =>
-    fetchJSON(`api/dashboard/water-resources/flows${buildWaterResourceSearch(options)}`))
+    fetchJSON(`api/dashboard/water-resources/flows${buildDashboardWaterResourceSearch(options)}`))
 }

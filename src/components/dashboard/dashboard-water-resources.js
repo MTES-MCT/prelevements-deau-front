@@ -486,12 +486,14 @@ const DashboardWaterResources = ({
   initialRiverFlowsError = null,
   onStationsChange,
   selectedZoneCodes,
+  selectedZoneId,
   showTitle = true
 }) => {
   const [piezometryData, setPiezometry] = useState(initialPiezometry)
   const [riverFlowsData, setRiverFlows] = useState(initialRiverFlows)
-  const [piezometryScope, setPiezometryScope] = useState(selectedZoneCodes.join(','))
-  const [flowScope, setFlowScope] = useState(selectedZoneCodes.join(','))
+  const zoneCodesKey = selectedZoneId ?? selectedZoneCodes.join(',')
+  const [piezometryScope, setPiezometryScope] = useState(zoneCodesKey)
+  const [flowScope, setFlowScope] = useState(zoneCodesKey)
   const [piezometryPeriod, setPiezometryPeriod] = useState(DEFAULT_PIEZOMETRY_PERIOD)
   const [flowPeriod, setFlowPeriod] = useState(DEFAULT_FLOW_PERIOD)
   const [piezometryMode, setPiezometryMode] = useState(DEFAULT_PIEZOMETRY_MODE)
@@ -507,7 +509,6 @@ const DashboardWaterResources = ({
   const lastIpsPiezometryPeriod = useRef(DEFAULT_PIEZOMETRY_PERIOD)
   const flowLoadingRef = useRef(false)
   const didMountZoneEffect = useRef(false)
-  const zoneCodesKey = selectedZoneCodes.join(',')
   const piezometry = piezometryScope === zoneCodesKey ? piezometryData : null
   const riverFlows = flowScope === zoneCodesKey ? riverFlowsData : null
   const piezometryStations = piezometry?.stations ?? EMPTY_ARRAY
@@ -551,6 +552,7 @@ const DashboardWaterResources = ({
   }, [flowStations, riverFlows])
 
   useEffect(() => {
+    if (!onStationsChange) return
     const stations = [...piezometryStations, ...flowStations]
       .map(station => getMonitoringStationMapSummary(station))
     onStationsChange(stations, zoneCodesKey)
@@ -567,12 +569,12 @@ const DashboardWaterResources = ({
     const controller = new AbortController()
     controllers.current.piezometry = controller
     setPiezometry(null)
-    setPiezometryScope(zoneCodes.join(','))
+    setPiezometryScope(selectedZoneId ?? zoneCodes.join(','))
     setIsPiezometryLoading(true)
     setPiezometryError(null)
     try {
-      const data = await loadDashboardPiezometry({period, zoneCodes, includeIps}, {signal: controller.signal})
-      if (requestIds.current.piezometry === requestId) setPiezometry(data)
+      const data = await loadDashboardPiezometry({period, zoneCodes, zoneId: selectedZoneId, includeIps}, {signal: controller.signal})
+      if (!controller.signal.aborted && requestIds.current.piezometry === requestId) setPiezometry(data)
     } catch (error) {
       if (!controller.signal.aborted && requestIds.current.piezometry === requestId) {
         setPiezometryError(error.message || 'Impossible de charger les niveaux piézométriques.')
@@ -580,7 +582,7 @@ const DashboardWaterResources = ({
     } finally {
       if (!controller.signal.aborted && requestIds.current.piezometry === requestId) setIsPiezometryLoading(false)
     }
-  }, [selectedZoneCodes])
+  }, [selectedZoneCodes, selectedZoneId])
 
   const loadRiverFlows = useCallback(async (
     period,
@@ -597,13 +599,13 @@ const DashboardWaterResources = ({
     const controller = new AbortController()
     controllers.current.flow = controller
     if (!skipIfLoading) setRiverFlows(null)
-    setFlowScope(zoneCodes.join(','))
+    setFlowScope(selectedZoneId ?? zoneCodes.join(','))
     flowLoadingRef.current = true
     setIsFlowLoading(true)
     setFlowError(null)
     try {
-      const data = await loadDashboardRiverFlows({period, zoneCodes}, {signal: controller.signal})
-      if (requestIds.current.flow === requestId) setRiverFlows(data)
+      const data = await loadDashboardRiverFlows({period, zoneCodes, zoneId: selectedZoneId}, {signal: controller.signal})
+      if (!controller.signal.aborted && requestIds.current.flow === requestId) setRiverFlows(data)
     } catch (error) {
       if (!controller.signal.aborted && requestIds.current.flow === requestId) {
         setFlowError(error.message || 'Impossible de charger les débits.')
@@ -614,7 +616,7 @@ const DashboardWaterResources = ({
         flowLoadingRef.current = false
       }
     }
-  }, [selectedZoneCodes])
+  }, [selectedZoneCodes, selectedZoneId])
 
   useEffect(() => {
     const pending = controllers.current
