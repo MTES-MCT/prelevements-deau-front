@@ -1,11 +1,16 @@
 'use client'
 
-import {useState, useTransition} from 'react'
+import {useState, useSyncExternalStore, useTransition} from 'react'
 import {Button} from '@codegouvfr/react-dsfr/Button'
 import {useAuth} from '@/contexts/auth-context.js'
 import {setInstructorDashboardDefaultAction} from '@/server/actions/zones.js'
 
+const subscribeToHydration = () => () => {}
+const getClientSnapshot = () => true
+const getServerSnapshot = () => false
+
 export default function DashboardDefaultControl({agentId, habilitation, canManage}) {
+  const hydrated = useSyncExternalStore(subscribeToHydration, getClientSnapshot, getServerSnapshot)
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState(null)
   const {user} = useAuth()
@@ -30,7 +35,7 @@ export default function DashboardDefaultControl({agentId, habilitation, canManag
     <div className='flex flex-wrap items-center gap-2'>
       {isDashboardDefault && eligible && <span className='fr-badge fr-badge--info fr-badge--no-icon'>Zone par défaut</span>}
       {canEdit && (
-        <Button priority='tertiary no outline' size='small' disabled={pending} onClick={changeDefault}>
+        <Button priority='tertiary no outline' size='small' disabled={!hydrated || pending} onClick={changeDefault}>
           {isDashboardDefault ? 'Ne plus utiliser cette zone par défaut' : 'Définir comme zone par défaut'}
         </Button>
       )}

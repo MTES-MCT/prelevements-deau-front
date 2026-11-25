@@ -58,6 +58,11 @@ export async function handleLoginSessionFixture(request, response, send) {
     send(200, {preleveurs: [profile], currentPreleveurId: null, selectionRequired: state.selectionRequired})
   } else if (pathname === '/users/me/zones') {
     send(200, [])
+  } else if (pathname === '/dashboard/territory' && request.method === 'GET') {
+    send(200, {
+      scope: 'TERRITORY', zones: [], selectedZoneId: null, selectedZoneCodes: [], unknownZoneCodes: [],
+      metrics: {totalPoints: 0, usageDistribution: []}
+    })
   } else if (pathname === '/users/me/activity') {
     send(200, {month: '2026-11'})
   } else if (pathname === '/auth/logout') {

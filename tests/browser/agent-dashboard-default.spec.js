@@ -41,8 +41,20 @@ test('équipe PE : définir la première zone, la remplacer par la deuxième pui
   await expect(second.getByText(badge, {exact: true})).toBeVisible()
   await expect(first.getByRole('button', {name: setDefault})).toBeVisible()
   await expect(badges).toHaveCount(1)
-  await page.reload()
-  await second.getByRole('button', {name: removeDefault}).click()
+  const remove = second.getByRole('button', {name: removeDefault})
+  const {promise: scriptsReady, resolve: releaseScripts} = Promise.withResolvers()
+  await page.route(/\/_next\/static\/chunks\/app\/agents\/[^/]+\/page-[^/]+\.js$/, async route => {
+    await scriptsReady
+    await route.fallback()
+  })
+  try {
+    await page.reload({waitUntil: 'commit'})
+    await expect(second.getByText(badge, {exact: true})).toBeVisible()
+    await expect(remove).toBeDisabled()
+  } finally {
+    releaseScripts()
+  }
+  await remove.click()
   await expect(second.getByRole('button', {name: setDefault})).toBeVisible()
   await page.reload()
   await expect(page.getByRole('button', {name: setDefault})).toHaveCount(2)

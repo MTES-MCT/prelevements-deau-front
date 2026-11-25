@@ -50,11 +50,11 @@ async function requests(context, token) {
   return (await response.json()).requests
 }
 
-test('une session déjà ouverte quitte /login pour son accueil', async ({page, context}) => {
+test('une session agent déjà ouverte quitte /login pour le tableau de bord même sans mandat', async ({page, context}) => {
   const token = await authenticate(context)
   await page.goto(`${frontUrl}/login`)
-  await expect(page).toHaveURL(`${frontUrl}/mon-compte`)
-  await expect(page.getByRole('heading', {name: 'Mon compte', exact: true})).toBeVisible()
+  await expect(page).toHaveURL(`${frontUrl}/tableau-de-bord`)
+  await expect(page.getByText('Vous n’avez accès à aucune zone sur ce tableau de bord.', {exact: true})).toBeVisible()
   await expect(page.getByRole('button', {name: 'Recevoir un lien de connexion'})).toHaveCount(0)
   expect((await currentSession(page)).user.token).toBe(token)
   expect((await requests(context, token)).some(item => item.pathname === '/info')).toBe(true)
@@ -72,7 +72,7 @@ test('les destinations de connexion ou externes ne provoquent aucune boucle', as
   await authenticate(context)
   for (const callbackUrl of ['/login?callbackUrl=%2Flogin', '/auth/callback?token=unused', '/activation-mot-de-passe', '/validation-email', 'https://outside.example.test']) {
     await page.goto(`${frontUrl}/login?callbackUrl=${encodeURIComponent(callbackUrl)}`)
-    await expect(page).toHaveURL(`${frontUrl}/mon-compte`)
+    await expect(page).toHaveURL(`${frontUrl}/tableau-de-bord`)
   }
 })
 

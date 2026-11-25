@@ -17,7 +17,10 @@ function render(habilitation, canManage, impersonating = false) {
   const calls = []
   const compiled = {exports: {}}
   const load = name => {
-    if (name === 'react') return {...React, useState: () => [null, () => {}], useTransition: () => [false, action => action()]}
+    if (name === 'react') return {
+      ...React, useState: () => [null, () => {}], useTransition: () => [false, action => action()],
+      useSyncExternalStore: (_, getSnapshot) => getSnapshot()
+    }
     if (name === '@codegouvfr/react-dsfr/Button') return {Button: 'button'}
     if (name === '@/contexts/auth-context.js') return {useAuth: () => ({user: {impersonation: {active: impersonating}}})}
     if (name === '@/server/actions/zones.js') return {setInstructorDashboardDefaultAction: async (...args) => {
