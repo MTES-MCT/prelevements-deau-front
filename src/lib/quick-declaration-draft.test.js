@@ -7,6 +7,7 @@ import {
 
 const declaration = {
   revision: 2,
+  supportsReceiptRowOrder: true,
   measurementType: 'INDEX',
   entries: [
     {id: 'a', exploitationId: 'one', pointPrelevementId: 'point', pointName: 'Prise A', usageId: 'usage', value: 10, readingDate: '2026-01-15'},
@@ -53,6 +54,7 @@ test('le formulaire partagé distingue les compteurs historiques et préremplit 
   rows['new:three'].value = '0'
   const {payload, reviewEntries} = build(fixed, points.map(point => ({...point, ...rows[point.formEntryId]})), 'INDEX', {readingDate: '2026-01-15'})
   t.deepEqual(payload.entries.map(entry => [entry.id, entry.exploitationId, entry.value]), [['a', 'one', 10], [undefined, 'three', 0]])
+  t.deepEqual(payload.receiptRowOrder, [{id: 'a'}, {id: 'b'}, {exploitationId: 'three'}])
   t.deepEqual(reviewEntries.map(entry => [entry.compteurId, entry.before?.value, entry.after?.value]), [['blue', 0, undefined], [null, undefined, 0]])
 })
 
@@ -158,7 +160,9 @@ test('une seule borne historique divergente demande une période complète ; le 
   t.deepEqual(reviewEntries.map(({before, after}) => [before.periodEndDate, after]), [['2026-01-15', null]])
   rows[1].removed = true
   const empty = build(mixed, rows)
-  t.deepEqual(empty.payload, {measurementType: 'VOLUME', revision: 2, entries: []})
+  t.deepEqual(empty.payload, {measurementType: 'VOLUME', revision: 2, entries: [], receiptRowOrder: [{id: 'a'}, {id: 'b'}]})
+  const olderServer = build({...mixed, supportsReceiptRowOrder: undefined}, rows)
+  t.deepEqual(olderServer.payload, {measurementType: 'VOLUME', revision: 2, entries: []})
   t.deepEqual(empty.errors, [])
   t.true(empty.reviewEntries.every(entry => entry.after === null))
 })

@@ -66,7 +66,7 @@ export async function handleQuickCorrectionFixture(request, send) {
       id: slot.pointPrelevementId, pointPrelevementId: slot.pointPrelevementId, name: slot.pointName, flowType: 'PRELEVEMENT',
       coordinates: {type: 'Point', coordinates: slot.pointPrelevementId === ids.point ? [2.02, 46.12] : [2.06, 46.11]}
     }])).values()] : []
-    return respond(200, {success: true, data: {...common, revision: state.revision,
+    return respond(200, {success: true, data: {...common, revision: state.revision, supportsReceiptRowOrder: true,
       measurementType: state.measurementType, entries: state.entries, emptyEntries, mapPoints}})
   }
   const parts = []

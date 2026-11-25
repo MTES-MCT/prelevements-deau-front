@@ -133,6 +133,7 @@ function buildQuickDeclarationPayload({
   entries = [],
   pointUsageNames = [],
   formExploitationIds,
+  receiptRowOrder,
   previewToken,
   revision,
   comment
@@ -146,6 +147,7 @@ function buildQuickDeclarationPayload({
 
   const payload = {measurementType: normalizedMeasurementType, entries}
   if (!editing && Array.isArray(formExploitationIds)) payload.formExploitationIds = formExploitationIds
+  if (editing && Array.isArray(receiptRowOrder)) payload.receiptRowOrder = receiptRowOrder
   if (previewToken) payload.previewToken = previewToken
   if (revision != null) payload.revision = revision
 

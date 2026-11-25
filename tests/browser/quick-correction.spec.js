@@ -322,6 +322,7 @@ test('une valeur à zéro se saisit sur un comptage déjà présent, sans modifi
   const submitted = updated.requests.filter(request => request.path.endsWith('/quick'))
   expect(submitted).toHaveLength(1)
   expect(submitted[0].body.entries[0]).not.toHaveProperty('id')
+  expect(submitted[0].body.receiptRowOrder).toEqual([{id: ids.row}, {exploitationId: ids.secondExploitation}])
 })
 
 test('une vérification encore en cours ne peut confirmer la date précédente', async ({page, context}) => {

@@ -173,10 +173,14 @@ export function buildQuickEditorDraft(declaration, rows, measurementType, draftD
   }
 
   const changed = reviewEntries.length > 0
+  // Removed measures have no entry in the submitted values. Keep their place in the receipt.
+  const receiptOrder = declaration.supportsReceiptRowOrder && reviewEntries.some(entry => !entry.after)
+    ? {receiptRowOrder: rows.filter(row => row.id || hasQuickEditorMeasure(row)).map(row => row.id ? {id: row.id} : {exploitationId: row.exploitationId})}
+    : {}
   return {
     changed,
     errors,
     reviewEntries,
-    payload: changed && errors.length === 0 ? {measurementType, revision: declaration.revision, ...(entries.length > 0 ? dates : {}), entries} : null
+    payload: changed && errors.length === 0 ? {measurementType, revision: declaration.revision, ...(entries.length > 0 ? dates : {}), entries, ...receiptOrder} : null
   }
 }
