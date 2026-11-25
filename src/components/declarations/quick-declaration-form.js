@@ -1,10 +1,11 @@
 'use client'
 
 import {
-  useCallback, useEffect, useMemo, useRef, useState
+  useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 } from 'react'
 
 import {Alert} from '@codegouvfr/react-dsfr/Alert'
+import {Button} from '@codegouvfr/react-dsfr/Button'
 import {SegmentedControl} from '@codegouvfr/react-dsfr/SegmentedControl'
 
 import UsageCombobox, {compareUsageOptions, findUsageOptionById, formatUsageOptionLabel} from '@/components/form/usage-combobox.js'
@@ -28,7 +29,11 @@ import {
   normalizePointUsageName,
   replacePointUsageName
 } from '@/lib/quick-declaration-point-name.js'
-import {getQuickDateErrors, getQuickMeasurementDates, switchQuickRowValue} from '@/lib/quick-declaration-draft.js'
+import {
+  buildQuickEditorDraft, getQuickCorrectionFormContext, getQuickDateErrors, getQuickEditorLabel,
+  getQuickMeasureBadge, getQuickMeasurementDates, switchQuickRowValue
+} from '@/lib/quick-declaration-draft.js'
+import {formatQuickDate} from '@/lib/quick-declaration-review.js'
 import {getMyDeclarationSubmissionSuccessURL} from '@/lib/urls.js'
 import {getUsageParent, normalizeUsageOption} from '@/lib/water-uses.js'
 import {getQuickDeclarationContextAction} from '@/server/actions/declarations.js'
@@ -38,9 +43,19 @@ import {formatNumber} from '@/utils/number.js'
 import QuickDeclarationMapPanel, {QuickDeclarationLayout} from './quick-declaration-map-panel.js'
 import QuickDeclarationReview from './quick-declaration-review.js'
 
+const subscribeToHydration = () => () => {}
+const getClientSnapshot = () => true
+const getServerSnapshot = () => false
+
 const POINTS_CONTACT_EMAIL = 'contact@partageonsleau.beta.gouv.fr'
 const POINTS_CONTACT_SUBJECT_SUFFIX = 'Modification sur mes points de prélèvements'
 const ENTRY_GRID_COLUMNS_CLASS_NAME = 'md:grid-cols-[minmax(190px,1fr)_96px_minmax(170px,220px)]'
+const CORRECTION_GRID_COLUMNS_CLASS_NAME = 'md:grid-cols-[minmax(148px,1fr)_minmax(96px,112px)_minmax(116px,170px)_5.25rem]'
+const MEASURE_BADGE_CLASSES = {
+  'Ajouté': 'fr-badge--success',
+  'Supprimé': 'fr-badge--error',
+  'Modifié': 'fr-badge--info'
+}
 
 const QUICK_DECLARATION_MEASUREMENT_TYPES = Object.freeze({
   INDEX: 'INDEX',
@@ -79,7 +94,7 @@ function getPreleveurId(preleveur) {
 }
 
 function getPointId(point) {
-  return getExploitationEntryId(point)
+  return point?.formEntryId ?? getExploitationEntryId(point)
 }
 
 function getDeclarantContactName(declarant) {
@@ -372,11 +387,11 @@ function getSubmitButtonLabel(entriesCount, measurementType) {
   return 'Soumettre'
 }
 
-function getEntryRowClassName({hasHistory, hasValue, isHighlighted}) {
+function getEntryRowClassName({hasHistory, hasValue, isHighlighted, isCorrection}) {
   return classNames(
     'grid cursor-pointer grid-cols-1 gap-2 border-b border-r border-l-4 px-2 py-1.5 transition md:items-start',
     'border-b-gray-200 border-r-gray-200',
-    ENTRY_GRID_COLUMNS_CLASS_NAME,
+    isCorrection ? CORRECTION_GRID_COLUMNS_CLASS_NAME : ENTRY_GRID_COLUMNS_CLASS_NAME,
     hasValue && 'border-l-green-600 bg-green-50 shadow-xs',
     !hasValue && isHighlighted && 'border-l-blue-500 bg-blue-50',
     !hasValue && !isHighlighted && hasHistory && 'border-l-gray-400 bg-gray-50 hover:bg-gray-100',
@@ -401,6 +416,9 @@ function isQuickDeclarationRowControl(target) {
 
 const QuickDeclarationToolbar = ({
   availablePreleveurs,
+  dateHint,
+  disableDates,
+  inputsDisabled,
   isUsageNameSaving,
   maxReadingDate,
   measurementType,
@@ -428,6 +446,7 @@ const QuickDeclarationToolbar = ({
             label: segment.label,
             nativeInputProps: {
               checked: measurementType === segment.value,
+              disabled: inputsDisabled,
               onChange: () => setMeasurementType(segment.value)
             }
           }))}
@@ -463,13 +482,18 @@ const QuickDeclarationToolbar = ({
                 id='quick-reading-date'
                 className='fr-input'
                 type='date'
+                aria-describedby={dateHint ? 'quick-reading-date-hint' : undefined}
+                disabled={disableDates}
                 value={readingDate}
                 max={maxReadingDate}
                 onChange={event => setReadingDate(event.target.value)}
               />
+              {dateHint && <p id='quick-reading-date-hint' className='fr-hint-text fr-mt-1v'>{dateHint}</p>}
             </div>
           ) : (
             <DateRangePicker
+              disabled={disableDates}
+              hint={dateHint}
               endDate={periodEndDate}
               maxDate={maxReadingDate}
               startDate={periodStartDate}
@@ -586,6 +610,7 @@ const QuickDeclarationEntryRow = ({
   handleValueChange,
   hoveredPointId,
   inputRefs,
+  inputsDisabled,
   measurementType,
   onUsageNameSaved,
   onUsageNameSavingChange,
@@ -599,9 +624,18 @@ const QuickDeclarationEntryRow = ({
   const hasValue = row.value !== ''
   const hasHistory = hasDeclarationHistory(point)
   const isIndexMeasurement = isIndexMeasurementType(measurementType)
-  const lastReadingLabel = isIndexMeasurement ? getLastReadingLabel(point) : null
+  const correction = point.correction
+  const [isEditingMeasure, setIsEditingMeasure] = useState(false)
+  const valueReadOnly = Boolean(correction) && !isEditingMeasure
+  const editLabel = correction && `Modifier la saisie de ${correction.label}`
+  const original = correction?.original
+  const badge = correction && getQuickMeasureBadge(original, row, measurementType, correction.originalType)
+  const showInitial = original && (badge || correction.showOriginalDates)
+  const meter = correction && (point.compteurName || point.serialNumber)
+  const lastReadingLabel = isIndexMeasurement && (!correction || !row.changed) ? getLastReadingLabel(point) : null
   const lastVolumePeriodLabel = isIndexMeasurement ? null : getLastVolumePeriodLabel(point)
-  const isHighlighted = isPointIdEqual(pointId, hoveredPointId) || isPointIdEqual(pointId, activePointId)
+  const physicalId = getQuickDeclarationPointId(point)
+  const isHighlighted = [hoveredPointId, activePointId].some(id => isPointIdEqual(pointId, id) || (correction && isPointIdEqual(physicalId, id)))
   const usageOptions = buildUsageOptionsForPoint(point, globalUsageOptions).sort(compareUsageOptions)
   const usageSearchValue = getUsageSearchValue(row, usageOptions)
   const usageName = getPointUsageNameDraft(point, row)
@@ -691,7 +725,9 @@ const QuickDeclarationEntryRow = ({
     <div
       key={pointId}
       role='listitem'
-      className={getEntryRowClassName({hasHistory, hasValue, isHighlighted})}
+      data-point-id={physicalId}
+      data-map-highlighted={isHighlighted}
+      className={getEntryRowClassName({hasHistory, hasValue, isHighlighted, isCorrection: Boolean(correction)})}
       onClick={event => {
         if (!isQuickDeclarationRowControl(event.target)) {
           focusPoint(pointId)
@@ -713,7 +749,7 @@ const QuickDeclarationEntryRow = ({
           >
             {pointName}
           </button>
-          {!isUsageNameEditing && hasDistinctUsageName && (
+          {!correction && !isUsageNameEditing && hasDistinctUsageName && (
             <button
               type='button'
               className='fr-icon-edit-line inline-flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-gray-500 hover:bg-[var(--background-alt-blue-france-hover)] hover:text-[#000091] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#0a76f6] [&::after]:![--icon-size:0.7rem] [&::before]:![--icon-size:0.7rem]'
@@ -723,7 +759,7 @@ const QuickDeclarationEntryRow = ({
             />
           )}
         </div>
-        {!isUsageNameEditing && (
+        {!correction && !isUsageNameEditing && (
           <div className='mt-0.5 flex min-h-5 min-w-0 items-center justify-between gap-2'>
             <div className='flex min-w-0 items-center gap-1'>
               {hasDistinctUsageName ? (
@@ -816,9 +852,20 @@ const QuickDeclarationEntryRow = ({
           </div>
         )}
         {point.countingCode && <p className='fr-text--xs fr-mb-0 mt-1'>{getCountingCodeLabel(point)}</p>}
+        {meter && <p className='fr-text--xs fr-mb-0 mt-1'>Compteur {meter}</p>}
+        {showInitial && (
+          <p className='fr-hint-text fr-mb-0 mt-1 text-[0.72rem] leading-tight'>
+            Saisie initiale · {formatNumberInput(original.value)} m³
+            {(correction.showOriginalDates || !hasValue) && (
+              correction.originalType === 'INDEX'
+                ? ` le ${formatQuickDate(original.readingDate)}`
+                : ` du ${formatQuickDate(original.periodStartDate)} au ${formatQuickDate(original.periodEndDate)}`
+            )}
+          </p>
+        )}
         {lastReadingLabel && (
           <p className='fr-hint-text fr-mb-0 mt-1 text-[0.72rem] leading-tight'>
-            Dernier index : {lastReadingLabel}
+            {correction ? 'Index précédent · ' : 'Dernier index : '}{lastReadingLabel}
           </p>
         )}
         {lastVolumePeriodLabel && (
@@ -840,17 +887,21 @@ const QuickDeclarationEntryRow = ({
               }
             }}
             id={valueInputId}
-            aria-label={`${valueLabel} — ${withCountingCode(pointName, point)}`}
+            aria-label={`${valueLabel} — ${correction?.label ?? withCountingCode(pointName, point)}`}
             className={classNames(
               'fr-input quick-declaration-control text-right text-xs font-semibold tabular-nums',
-              hasValue && 'bg-white'
+              hasValue && 'bg-white',
+              valueReadOnly && '!bg-transparent !bg-none !shadow-none'
             )}
             type='text'
             inputMode='decimal'
+            disabled={inputsDisabled}
+            readOnly={valueReadOnly}
             value={formatNumberInput(row.value)}
-            placeholder='0'
+            placeholder={correction ? 'Aucune' : '0'}
             onFocus={() => setActivePointId(pointId)}
-            onChange={event => handleValueChange(pointId, event)}
+            onBlur={correction ? () => setIsEditingMeasure(false) : undefined}
+            onChange={event => { if (!valueReadOnly) handleValueChange(pointId, event) }}
             onKeyDown={event => {
               if (event.key === 'Enter') {
                 event.preventDefault()
@@ -867,6 +918,8 @@ const QuickDeclarationEntryRow = ({
           <UsageCombobox
             id={usageInputId}
             options={usageOptions}
+            readOnly={Boolean(correction)}
+            placeholder={correction ? 'Non renseigné' : undefined}
             value={usageSearchValue}
             warning={usageSearchValue && !row.usageId ? 'Sélectionnez un usage proposé.' : null}
             onFocus={() => setActivePointId(pointId)}
@@ -874,12 +927,34 @@ const QuickDeclarationEntryRow = ({
           />
         </div>
       </div>
+      {correction && (
+        <div className='flex flex-wrap items-center justify-end gap-1 md:flex-col md:items-end'>
+          {badge && <span className={classNames('fr-badge fr-badge--sm fr-badge--no-icon', MEASURE_BADGE_CLASSES[badge])}>{badge}</span>}
+          <Button
+            type='button'
+            className={isEditingMeasure && badge ? 'fr-hidden' : 'shrink-0'}
+            size='small'
+            priority='tertiary no outline'
+            iconId='fr-icon-edit-line'
+            title={editLabel}
+            disabled={inputsDisabled}
+            nativeButtonProps={{'aria-label': editLabel, 'aria-controls': valueInputId}}
+            onClick={() => {
+              // Mobile keyboards need focus during this click, on an already editable input.
+              inputRefs.current[pointId].readOnly = false
+              setIsEditingMeasure(true)
+              focusPoint(pointId)
+            }}
+          />
+        </div>
+      )}
     </div>
   )
 }
 
 const QuickDeclarationEntryList = ({
   activePointId,
+  changedEntryIds,
   entryPoints,
   focusNextPoint,
   focusPoint,
@@ -887,6 +962,7 @@ const QuickDeclarationEntryList = ({
   handleValueChange,
   hoveredPointId,
   inputRefs,
+  inputsDisabled,
   measurementType,
   onUsageNameSaved,
   onUsageNameSavingChange,
@@ -923,12 +999,13 @@ const QuickDeclarationEntryList = ({
               <div
                 className={classNames(
                   'hidden sticky top-0 z-10 gap-2 border-y border-gray-200 bg-white px-2 py-1 text-xs font-bold text-gray-600 md:grid',
-                  ENTRY_GRID_COLUMNS_CLASS_NAME
+                  group.points[0].correction ? CORRECTION_GRID_COLUMNS_CLASS_NAME : ENTRY_GRID_COLUMNS_CLASS_NAME
                 )}
               >
                 <div>Point</div>
                 <div>{getMeasurementInputLabel(measurementType)}</div>
                 <div>Usage</div>
+                {group.points[0].correction && <div className='sr-only'>Action</div>}
               </div>
 
               <div role='list'>
@@ -945,9 +1022,10 @@ const QuickDeclarationEntryList = ({
                       handleValueChange={handleValueChange}
                       hoveredPointId={hoveredPointId}
                       inputRefs={inputRefs}
+                      inputsDisabled={inputsDisabled}
                       measurementType={measurementType}
                       point={point}
-                      row={getRowState(rows, pointId)}
+                      row={{...getRowState(rows, pointId), changed: changedEntryIds?.has(point.id)}}
                       setActivePointId={setActivePointId}
                       setHoveredPointId={setHoveredPointId}
                       updateRow={updateRow}
@@ -969,6 +1047,8 @@ const QuickDeclarationEntriesPanel = ({
   activePointId,
   comment,
   context,
+  changedEntryIds,
+  isCorrection,
   entryPoints,
   focusNextPoint,
   focusPoint,
@@ -977,6 +1057,7 @@ const QuickDeclarationEntriesPanel = ({
   hasAnyValue,
   hoveredPointId,
   inputRefs,
+  inputsDisabled,
   measurementType,
   onUsageNameSaved,
   onUsageNameSavingChange,
@@ -996,7 +1077,9 @@ const QuickDeclarationEntriesPanel = ({
   return (
     <>
       <QuickDeclarationEntryList
+        key={isCorrection ? measurementType : undefined}
         activePointId={activePointId}
+        changedEntryIds={changedEntryIds}
         entryPoints={entryPoints}
         focusNextPoint={focusNextPoint}
         focusPoint={focusPoint}
@@ -1004,6 +1087,7 @@ const QuickDeclarationEntriesPanel = ({
         handleValueChange={handleValueChange}
         hoveredPointId={hoveredPointId}
         inputRefs={inputRefs}
+        inputsDisabled={inputsDisabled}
         measurementType={measurementType}
         rows={rows}
         setActivePointId={setActivePointId}
@@ -1013,29 +1097,33 @@ const QuickDeclarationEntriesPanel = ({
         onUsageNameSavingChange={onUsageNameSavingChange}
       />
 
-      <div className='fr-input-group fr-mt-2w fr-mb-2w'>
-        <label className='fr-label' htmlFor='quick-comment'>Commentaire facultatif</label>
-        <textarea
-          id='quick-comment'
-          className='fr-input'
-          rows={2}
-          value={comment}
-          onChange={event => setComment(event.target.value)}
-        />
-      </div>
+      {!isCorrection && (
+        <div className='fr-input-group fr-mt-2w fr-mb-2w'>
+          <label className='fr-label' htmlFor='quick-comment'>Commentaire facultatif</label>
+          <textarea
+            id='quick-comment'
+            className='fr-input'
+            rows={2}
+            value={comment}
+            onChange={event => setComment(event.target.value)}
+          />
+        </div>
+      )}
 
       {hasAnyValue && validationErrors.length > 0 && (
         <Alert className='fr-mb-2w' severity='error' title='Saisie incomplète' description={validationErrors[0]} />
       )}
+      {isCorrection && !hasAnyValue && <p role='status'>Toutes les mesures seront retirées de cette déclaration.</p>}
       {review}
-      {!hasAnyValue && <p className='fr-hint-text fr-mt-1w'>Saisissez au moins {isIndexMeasurementType(measurementType) ? 'un index' : 'un volume'} pour soumettre.</p>}
+      {!isCorrection && !hasAnyValue && <p className='fr-hint-text fr-mt-1w'>Saisissez au moins {isIndexMeasurementType(measurementType) ? 'un index' : 'un volume'} pour soumettre.</p>}
     </>
   )
 }
 
-const CreationMapPanel = ({
+const DeclarationMapPanel = ({
   activePointId,
   context,
+  isCorrection,
   declaredPointIds,
   declarantName,
   entryPoints,
@@ -1051,16 +1139,19 @@ const CreationMapPanel = ({
   if (!context || pointsCount === 0) return null
 
   const pointsContactMailto = buildPointsContactMailto(declarantName)
-  const getPhysicalPointId = entryId => getQuickDeclarationPointId(entryPoints.find(point => getPointId(point) === entryId))
+  const getPhysicalPointId = entryId => getQuickDeclarationPointId(entryPoints.find(point => getPointId(point) === entryId || getQuickDeclarationPointId(point) === entryId))
   const mapDisplayNames = Object.fromEntries(entryPoints.map(point => [getQuickDeclarationPointId(point), pointDisplayNames[getPointId(point)]]))
   const getEntryIdForPoint = pointId => {
-    const current = entryPoints.find(point => getPointId(point) === activePointId && getQuickDeclarationPointId(point) === pointId)
-    return getPointId(current || entryPoints.find(point => getQuickDeclarationPointId(point) === pointId))
+    const countings = entryPoints.filter(point => getQuickDeclarationPointId(point) === pointId)
+    // A shared marker cannot designate one historical meter over another.
+    if (isCorrection && countings.length > 1) return pointId
+    return getPointId(countings.find(point => getPointId(point) === activePointId) || countings[0])
   }
 
   return (
     <QuickDeclarationMapPanel
-      contactHref={pointsContactMailto}
+      fitAllInitially={isCorrection}
+      contactHref={isCorrection ? undefined : pointsContactMailto}
       points={mapPoints}
       activePointId={getPhysicalPointId(activePointId)}
       hoveredPointId={getPhysicalPointId(hoveredPointId)}
@@ -1075,6 +1166,8 @@ const CreationMapPanel = ({
 }
 
 const QuickDeclarationForm = ({
+  declaration,
+  returnHref,
   availablePreleveurs = [],
   declarantRole,
   quickDeclarationEnabled = true,
@@ -1083,18 +1176,21 @@ const QuickDeclarationForm = ({
   onSubmitted
 }) => {
   const {user} = useAuth()
+  const correction = useMemo(() => declaration ? getQuickCorrectionFormContext(declaration) : null, [declaration])
+  const hydrated = useSyncExternalStore(subscribeToHydration, getClientSnapshot, getServerSnapshot)
+  const inputsDisabled = Boolean(correction) && !hydrated
   const initialPreleveurId = getInitialPreleveurId(availablePreleveurs)
   const [selectedPreleveurId, setSelectedPreleveurId] = useState(initialPreleveurId)
-  const [context, setContext] = useState(null)
+  const [context, setContext] = useState(correction?.context ?? null)
   const [contextError, setContextError] = useState(null)
   const [isContextLoading, setIsContextLoading] = useState(false)
   const maxReadingDate = useMemo(todayISO, [])
-  const [measurementType, setMeasurementType] = useState(QUICK_DECLARATION_MEASUREMENT_TYPES.INDEX)
-  const [readingDate, setReadingDate] = useState(maxReadingDate)
-  const [periodStartDate, setPeriodStartDate] = useState('')
-  const [periodEndDate, setPeriodEndDate] = useState('')
+  const [measurementType, setMeasurementType] = useState(declaration?.measurementType ?? QUICK_DECLARATION_MEASUREMENT_TYPES.INDEX)
+  const [readingDate, setReadingDate] = useState(correction?.initial.dates.readingDate ?? maxReadingDate)
+  const [periodStartDate, setPeriodStartDate] = useState(correction?.initial.dates.periodStartDate ?? '')
+  const [periodEndDate, setPeriodEndDate] = useState(correction?.initial.dates.periodEndDate ?? '')
   const [comment, setComment] = useState('')
-  const [rows, setRows] = useState({})
+  const [rows, setRows] = useState(correction?.rows ?? {})
   const [activePointId, setActivePointId] = useState(null)
   const [focusRequestId, setFocusRequestId] = useState(0)
   const [hoveredPointId, setHoveredPointId] = useState(null)
@@ -1108,7 +1204,7 @@ const QuickDeclarationForm = ({
     [availablePreleveurs, selectedPreleveurId]
   )
 
-  const shouldSelectPreleveur = declarantRole === 'COLLECTEUR'
+  const shouldSelectPreleveur = !correction && declarantRole === 'COLLECTEUR'
   const quickEnabledForCurrentDeclarant = isQuickDeclarationEnabledForCurrentDeclarant({
     declarantRole,
     quickDeclarationEnabled,
@@ -1125,6 +1221,11 @@ const QuickDeclarationForm = ({
     () => [...points].sort(comparePointsForEntry),
     [points]
   )
+  const seriesOrder = useMemo(() => entryPoints.map(point => ({
+    pointPrelevementId: getQuickDeclarationPointId(point),
+    exploitationId: point.exploitationId ?? point.effectiveExploitationId,
+    compteurId: point.compteurId
+  })), [entryPoints])
   const globalUsageOptions = useMemo(
     () => (context?.usageOptions?.length > 0 ? context.usageOptions : []),
     [context?.usageOptions]
@@ -1143,14 +1244,19 @@ const QuickDeclarationForm = ({
     [points]
   )
   const pointDisplayNames = useMemo(
-    () => buildPointDisplayNames(points, rows),
+    () => buildPointDisplayNames(points, rows, getPointId),
     [points, rows]
   )
-  const seriesLabels = useMemo(() => Object.fromEntries(entryPoints.map(point => [
-    getPointId(point), withCountingCode(pointDisplayNames[getPointId(point)], point)
-  ])), [entryPoints, pointDisplayNames])
+  const seriesLabels = useMemo(() => Object.fromEntries(entryPoints.map(point => {
+    if (point.correction) {
+      const series = point.exploitationId || point.effectiveExploitationId || point.pointPrelevementId
+      return [point.compteurId ? `${series}/${point.compteurId}` : series, getQuickEditorLabel(point)]
+    }
+    return [getPointId(point), withCountingCode(pointDisplayNames[getPointId(point)], point)]
+  })), [entryPoints, pointDisplayNames])
 
   useEffect(() => {
+    if (correction) return undefined
     let ignore = false
 
     const loadContext = async () => {
@@ -1204,6 +1310,7 @@ const QuickDeclarationForm = ({
       ignore = true
     }
   }, [
+    correction,
     canCreateQuickDeclaration,
     quickEnabledForCurrentDeclarant,
     selectedPreleveurId,
@@ -1293,9 +1400,14 @@ const QuickDeclarationForm = ({
     })
   }, [updateRow])
 
-  const {entries, validationErrors} = useMemo(() => {
+  const {entries, validationErrors, correctionDraft} = useMemo(() => {
+    if (correction) {
+      const fixedRows = entryPoints.map(point => ({...point, value: getRowState(rows, getPointId(point)).value}))
+      const draft = buildQuickEditorDraft(declaration, fixedRows, measurementType, {readingDate, periodStartDate, periodEndDate}, maxReadingDate)
+      return {entries: draft.payload?.entries ?? [], validationErrors: draft.errors, correctionDraft: draft}
+    }
     const nextEntries = []
-    const nextValidationErrors = []
+    const nextValidationErrors = getQuickDateErrors(measurementType, {periodEndDate, periodStartDate, readingDate}, maxReadingDate)
     const valueValidationLabel = getMeasurementValueValidationLabel(measurementType)
 
     for (const point of entryPoints) {
@@ -1328,13 +1440,11 @@ const QuickDeclarationForm = ({
       }
     }
 
-    nextValidationErrors.push(...getQuickDateErrors(measurementType, {periodEndDate, periodStartDate, readingDate}, maxReadingDate))
-
     return {
       entries: nextEntries,
       validationErrors: nextValidationErrors
     }
-  }, [entryPoints, maxReadingDate, measurementType, periodEndDate, periodStartDate, readingDate, rows])
+  }, [correction, declaration, entryPoints, maxReadingDate, measurementType, periodEndDate, periodStartDate, readingDate, rows])
 
   const hasAnyValue = useMemo(
     () => Object.values(rows).some(row => (row.value ?? row.index ?? '') !== ''),
@@ -1353,8 +1463,8 @@ const QuickDeclarationForm = ({
   ), [comment, hasAnyValue, isUsageNameSaving, maxReadingDate, measurementType, periodEndDate, periodStartDate, readingDate])
 
   useEffect(() => {
-    onDirtyChange?.(hasUnsavedQuickDeclarationData)
-  }, [hasUnsavedQuickDeclarationData, onDirtyChange])
+    onDirtyChange?.(correctionDraft?.changed ?? hasUnsavedQuickDeclarationData)
+  }, [correctionDraft?.changed, hasUnsavedQuickDeclarationData, onDirtyChange])
 
   const applyPreleveurChange = useCallback(nextPreleveurId => {
     setSelectedPreleveurId(nextPreleveurId)
@@ -1393,15 +1503,26 @@ const QuickDeclarationForm = ({
     isUsageNameSaving,
     validationErrors
   })
-  const submitButtonLabel = getSubmitButtonLabel(entries.length, measurementType)
-  const payload = useMemo(() => canSubmit ? {
+  const submitButtonLabel = correction ? 'Vérifier les modifications' : getSubmitButtonLabel(entries.length, measurementType)
+  const creationPayload = useMemo(() => !correction && canSubmit ? {
     declarantUserId: targetDeclarantUserId,
     measurementType,
     ...getQuickMeasurementDates(measurementType, {readingDate, periodStartDate, periodEndDate}),
     comment,
     formExploitationIds: getQuickFormExploitationIds(entryPoints),
     entries
-  } : null, [canSubmit, comment, entries, entryPoints, measurementType, periodEndDate, periodStartDate, readingDate, targetDeclarantUserId])
+  } : null, [correction, canSubmit, comment, entries, entryPoints, measurementType, periodEndDate, periodStartDate, readingDate, targetDeclarantUserId])
+  const payload = correction ? correctionDraft.payload : creationPayload
+  const changedEntryIds = useMemo(() => correctionDraft && new Set(correctionDraft.reviewEntries.map(entry => entry.id)), [correctionDraft])
+  const isConverting = correction && measurementType !== declaration.measurementType
+  const needsCommonDate = correction?.initial.requiresDateSelection && !isConverting && hasAnyValue
+    && (measurementType === 'INDEX' ? !readingDate : !periodStartDate || !periodEndDate)
+  let dateHint
+  if (needsCommonDate) {
+    dateHint = measurementType === 'INDEX'
+      ? 'Les relevés initiaux ont des dates différentes. Choisissez la date commune à tous les points.'
+      : 'Les volumes initiaux couvrent des périodes différentes. Choisissez la période commune à tous les points.'
+  }
 
   const changeMeasurementType = nextType => {
     if (measurementType === nextType) return
@@ -1411,10 +1532,18 @@ const QuickDeclarationForm = ({
     setMeasurementType(nextType)
   }
 
-  const showSubmittedDeclaration = declaration => {
+  const showSubmittedDeclaration = saved => {
+    if (correction) {
+      const url = new URL(returnHref, window.location.origin)
+      url.searchParams.set('updated', '1')
+      window.location.assign(url.toString())
+      return
+    }
     onSubmitted?.()
-    window.location.assign(getMyDeclarationSubmissionSuccessURL(declaration))
+    window.location.assign(getMyDeclarationSubmissionSuccessURL(saved))
   }
+
+  if (declaration?.entries.length === 0) return <p>Cette déclaration ne contient plus de mesure active.</p>
 
   return (
     <div className='fr-mt-1w fr-mb-2w'>
@@ -1423,6 +1552,9 @@ const QuickDeclarationForm = ({
           <>
             <QuickDeclarationToolbar
               availablePreleveurs={availablePreleveurs}
+              inputsDisabled={inputsDisabled}
+              disableDates={inputsDisabled || (Boolean(correction) && !hasAnyValue)}
+              dateHint={dateHint}
               isUsageNameSaving={isUsageNameSaving}
               maxReadingDate={maxReadingDate}
               measurementType={measurementType}
@@ -1438,6 +1570,10 @@ const QuickDeclarationForm = ({
               onPreleveurChange={handlePreleveurChange}
             />
 
+            {isConverting && (
+              <Alert className='fr-mb-2w' severity='info' title='Changement de type pour toute la déclaration'
+                description='Les chiffres sont repris pour chaque point. Vérifiez les valeurs et choisissez la date ou la période commune.' />
+            )}
             <QuickDeclarationStatusAlerts
               context={context}
               contextError={contextError}
@@ -1450,7 +1586,8 @@ const QuickDeclarationForm = ({
           </>
         )}
         map={(
-          <CreationMapPanel
+          <DeclarationMapPanel
+            isCorrection={Boolean(correction)}
             activePointId={activePointId}
             context={context}
             declaredPointIds={declaredPointIds}
@@ -1469,6 +1606,9 @@ const QuickDeclarationForm = ({
         <QuickDeclarationEntriesPanel
           activePointId={activePointId}
           comment={comment}
+          changedEntryIds={changedEntryIds}
+          isCorrection={Boolean(correction)}
+          inputsDisabled={inputsDisabled}
           context={context}
           entryPoints={entryPoints}
           focusNextPoint={focusNextPoint}
@@ -1486,10 +1626,13 @@ const QuickDeclarationForm = ({
           setHoveredPointId={setHoveredPointId}
           review={(
             <QuickDeclarationReview
+              declarationId={declaration?.id}
+              originalDates={correction ? {type: declaration.measurementType, ...getQuickMeasurementDates(declaration.measurementType, correction.initial.dates)} : null}
               payload={payload}
               seriesLabels={seriesLabels}
+              seriesOrder={seriesOrder}
               submitLabel={submitButtonLabel}
-              reviewEntries={entries.map(entry => ({
+              reviewEntries={correctionDraft?.reviewEntries ?? entries.map(entry => ({
                 pointPrelevementId: entry.pointPrelevementId,
                 exploitationId: entry.exploitationId,
                 before: null,
@@ -1503,6 +1646,7 @@ const QuickDeclarationForm = ({
           onUsageNameSaved={handleUsageNameSaved}
           onUsageNameSavingChange={handleUsageNameSavingChange}
         />
+        {correction && <a className='fr-btn fr-btn--secondary fr-mt-1w' href={returnHref}>Annuler</a>}
       </QuickDeclarationLayout>
 
       <UnsavedPreleveurChangeModal

@@ -88,7 +88,7 @@ export function getReviewLabel(row, labels) {
   return row.label || labels[`${exploitation}/${row.compteurId}`] || labels[exploitation] || row.pointName || 'Point de prélèvement'
 }
 
-export function groupQuickReview(entries, changes, warnings, labels = {}) {
+export function groupQuickReview(entries, changes, warnings, labels = {}, seriesOrder = []) {
   const groups = new Map()
   const groupFor = row => {
     const key = seriesKey(row)
@@ -99,7 +99,17 @@ export function groupQuickReview(entries, changes, warnings, labels = {}) {
   for (const row of entries) groupFor(row).measures.push(row)
   for (const row of changes) groupFor(row).changes.push(row)
   for (const row of warnings) groupFor(row).warnings.push(row)
-  return [...groups.values()].sort((a, b) => byLabel.compare(a.label, b.label))
+
+  const ordered = []
+  for (const row of seriesOrder) {
+    const key = seriesKey(row)
+    const group = groups.get(key)
+    if (group) {
+      ordered.push(group)
+      groups.delete(key)
+    }
+  }
+  return ordered.concat([...groups.values()].sort((a, b) => byLabel.compare(a.label, b.label)))
 }
 
 function isDirectChange(measure, change) {

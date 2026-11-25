@@ -44,9 +44,9 @@ export function replacePointUsageName(points = [], pointId, usageName) {
     : point)
 }
 
-export function buildPointDisplayNames(points = [], rows = {}) {
+export function buildPointDisplayNames(points = [], rows = {}, getEntryId = getExploitationEntryId) {
   return Object.fromEntries(points.flatMap(point => {
-    const pointId = getExploitationEntryId(point)
+    const pointId = getEntryId(point)
 
     if (!pointId) {
       return []

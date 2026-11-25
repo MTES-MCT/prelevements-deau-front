@@ -28,6 +28,8 @@ export async function handleQuickCorrectionFixture(request, send) {
   if (!isQuickCorrectionFixture(authorization)) return false
   const {pathname} = new URL(request.url, 'http://localhost')
   const role = authorization.includes('-ADMIN-') ? 'ADMIN' : authorization.includes('-INSTRUCTOR-') ? 'INSTRUCTOR' : 'DECLARANT'
+  const declarantRole = authorization.includes('-collector-') ? 'COLLECTEUR' : 'PRELEVEUR'
+  const isFile = authorization.includes('-file-')
   const multipoint = authorization.includes('-multi-')
   const mixedDates = authorization.includes('-legacy-')
   const formEntries = multipoint ? [countings[0], {...countings[1], pointPrelevementId: ids.secondPoint, pointName: 'Puits du Moulin'}] : authorization.includes('-fixed-') ? countings : [countings[0]]
@@ -37,12 +39,18 @@ export async function handleQuickCorrectionFixture(request, send) {
   sessions.set(authorization, state)
   const respond = (status, value) => {send(status, value); return true}
   if (pathname === '/api/__quick-correction') return respond(200, state)
-  if (['/info', '/api/info'].includes(pathname)) return respond(200, {role, declarantRole: 'PRELEVEUR', permissions: [],
+  if (['/info', '/api/info'].includes(pathname)) return respond(200, {role, declarantRole, permissions: [],
     user: {id: ids.user, email: 'correction@example.test'}, expiresAt: new Date(Date.now() + 3600000).toISOString()})
   const base = `/api/declarations/${ids.declaration}`
   const sourcePath = `/api/sources/${ids.source}`
   const common = {id: ids.declaration, sourceId: ids.source, code: 'PE-2026', createdAt: '2026-09-13T00:00:00Z'}
   if (pathname === base || pathname === sourcePath) {
+    if (isFile) {
+      const declaration = {...common, dataSourceType: 'SPREADSHEET', processingStatus: 'COMPLETED',
+        files: [{id: '26000000-0000-4000-8000-000000000011', name: 'declaration.xlsx'}]}
+      const source = {id: ids.source, type: 'DECLARATION', status: 'COMPLETED', metadata: {}, chunks: []}
+      return respond(200, {success: true, data: pathname === base ? {...declaration, source} : {...source, declaration}})
+    }
     const declaration = {...common, dataSourceType: 'MANUAL', type: 'quick-declaration', processingStatus: 'COMPLETED', files: []}
     const source = {id: ids.source, type: 'DECLARATION', status: 'COMPLETED', globalInstructionStatus: 'VALIDATED',
       metadata: {manualQuickDeclaration: true, measurementType: state.measurementType, entriesCount: state.entries.length,
@@ -50,7 +58,8 @@ export async function handleQuickCorrectionFixture(request, send) {
     return respond(200, {success: true, data: pathname === base ? {...declaration, source} : {...source, declaration}})
   }
   if (pathname !== `${base}/quick` && pathname !== `${base}/quick/preview` && pathname !== '/api/declarations/quick/contact') return false
-  if (role === 'INSTRUCTOR') return respond(403, {message: 'Droits insuffisants.'})
+  if (isFile) return respond(404, {message: 'Saisie en ligne introuvable.'})
+  if (role === 'INSTRUCTOR' || authorization.includes('-collector-denied-')) return respond(403, {message: 'Droits insuffisants.'})
   if (request.method === 'GET') {
     const emptyEntries = state.entries.length ? formEntries.filter(slot => !state.entries.some(row => row.exploitationId === slot.exploitationId)) : []
     const mapPoints = state.entries.length ? [...new Map(formEntries.map(slot => [slot.pointPrelevementId, {
@@ -78,20 +87,26 @@ export async function handleQuickCorrectionFixture(request, send) {
   }
   if (pathname.endsWith('/preview')) {
     const day = draft.readingDate
-    const warning = {pointName, exploitationId: ids.exploitation, pointPrelevementId: ids.point, message: 'Index supérieur au relevé suivant du 11/09/2026.'}
     if (day === '2026-09-09') await new Promise(resolve => setTimeout(resolve, 700))
     const changes = []
+    const warnings = []
     for (const available of formEntries) {
       const previous = state.entries.find(row => row.exploitationId === available.exploitationId)
       const current = draft.entries.find(row => row.exploitationId === available.exploitationId)
       if (!previous && !current) continue
+      if (current && ['2026-09-09', '2026-09-10'].includes(day)) {
+        warnings.push({code: 'INDEX_ABOVE_NEXT', pointName: available.pointName, pointPrelevementId: available.pointPrelevementId,
+          exploitationId: available.exploitationId, readingDate: day, value: current.value, neighborDate: '2026-09-11',
+          neighborValue: 100, message: 'Index supérieur au relevé suivant (100 m³ le 11/09/2026).'})
+      }
       const measurement = current ? dates : previous
       changes.push({pointName: available.pointName, exploitationId: available.exploitationId, pointPrelevementId: available.pointPrelevementId,
         periodStartDate: measurement.readingDate ?? measurement.periodStartDate,
         periodEndDate: measurement.readingDate ?? measurement.periodEndDate,
         before: previous ? 25 : null, after: current?.value ?? null})
     }
-    return respond(200, {success: true, data: {previewToken, changes, warnings: ['2026-09-09', '2026-09-10'].includes(day) ? [warning] : []}})
+    // The API can return the affected points in a different order from the form.
+    return respond(200, {success: true, data: {previewToken, changes, warnings: warnings.reverse()}})
   }
   if (supplied !== previewToken) return respond(409, {message: 'Aperçu périmé.'})
   const entries = draft.entries.map(row => {

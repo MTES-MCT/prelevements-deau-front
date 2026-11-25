@@ -9,29 +9,25 @@ function formatDate(day) {
   return day?.slice(0, 10).split('-').reverse().join('/') ?? ''
 }
 
-const QuickDeclarationContact = ({payload, declarationId, warning}) => {
+const QuickDeclarationContact = ({payload, declarationId, measure, warnings}) => {
   const id = useId()
   const modal = useMemo(() => createModal({id: `quick-contact-${id}`, isOpenedByDefault: false}), [id])
   const [message, setMessage] = useState('')
   const [pending, setPending] = useState(false)
   const [feedback, setFeedback] = useState(null)
-  const entry = warning.entryId
-    ? payload.entries.find(row => row.id === warning.entryId)
-    : payload.entries.find(row => row.pointPrelevementId === warning.pointPrelevementId && row.exploitationId === warning.exploitationId)
-  const exploitationId = warning.exploitationId ?? entry?.exploitationId
-  const entryId = declarationId ? entry?.id ?? warning.entryId : undefined
+  const [warning] = warnings
+  const exploitationId = warning.exploitationId ?? measure?.exploitationId
+  const entryId = declarationId ? warning.entryId ?? measure?.id : undefined
   if (!exploitationId && !entryId) return null
 
   const open = () => {
-    const index = payload.measurementType === 'INDEX'
-    const date = formatDate(payload.readingDate)
-    const start = formatDate(payload.periodStartDate)
-    const end = formatDate(payload.periodEndDate)
+    const date = formatDate(warning.readingDate ?? payload.readingDate)
+    const value = warning.value ?? measure?.after?.value
     const details = [
       warning.pointName && `Point : ${warning.pointName}`,
       warning.compteurName && `Compteur : ${warning.compteurName}`,
-      entry && (index ? `Index du ${date} : ${entry.value} m³` : `Volume du ${start} au ${end} : ${entry.value} m³`),
-      warning.message
+      value != null && `Index du ${date} : ${value} m³`,
+      ...warnings.map(item => item.message)
     ].filter(Boolean)
     setMessage(details.join('\n') + '\n\n')
     setFeedback(null)

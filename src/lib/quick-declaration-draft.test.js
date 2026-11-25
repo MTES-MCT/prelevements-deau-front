@@ -1,7 +1,7 @@
 import test from 'ava'
 
 import {
-  buildQuickEditorDraft, createQuickEditorRows, getQuickDateErrors, getQuickEditorInitialDates, getQuickEditorMapPoints,
+  buildQuickEditorDraft, createQuickEditorRows, getQuickCorrectionFormContext, getQuickDateErrors, getQuickEditorInitialDates, getQuickEditorMapPoints,
   getQuickEditorRowKey, getQuickMeasureBadge, hasQuickEditorMeasure, switchQuickRowValue
 } from './quick-declaration-draft.js'
 
@@ -20,17 +20,56 @@ const otherCounting = {pointPrelevementId: 'point', exploitationId: 'three', poi
 const build = (record, rows, type = record.measurementType, dates = getQuickEditorInitialDates(record).dates) =>
   buildQuickEditorDraft(record, rows, type, dates, '2026-01-31')
 
-test('le badge décrit la mesure, garde le type supprimé et laisse la date commune au niveau du dossier', t => {
+test('le formulaire partagé distingue les compteurs historiques et préremplit seulement les mesures du dépôt', t => {
+  const point = {...declaration.entries[0], flowType: 'REJET', countingCode: '001', usageLabel: 'Irrigation'}
+  const records = [
+    {...point, compteurId: 'red', compteurName: 'Rouge'},
+    {...point, id: 'b', compteurId: 'blue', compteurName: 'Bleu', value: 0, readingDate: '2026-01-16'}
+  ]
+  const shape = {type: 'Point', coordinates: [2.1, 46.2]}
+  const fixed = {...declaration, entries: records, emptyEntries: [otherCounting], mapPoints: [
+    {id: 'point', coordinates: shape}, {id: 'hors-formulaire', coordinates: shape}
+  ]}
+  const {initial, context: {points}, rows} = getQuickCorrectionFormContext(fixed)
+  t.deepEqual(Object.keys(rows), ['a', 'b', 'new:three'])
+  t.deepEqual(Object.values(rows).map(row => row.value), ['10', '0', ''])
+  t.deepEqual(points.map(point => [point.formEntryId, point.compteurId, point.flowType]), [
+    ['a', 'red', 'REJET'], ['b', 'blue', 'REJET'], ['new:three', undefined, undefined]
+  ])
+  t.is(points[0].name, 'Prise A')
+  t.is(points[0].correction.label, 'Prise A — Code comptage : 001 · compteur Rouge')
+  const ambiguous = {...fixed, entries: records.map(entry => ({...entry, compteurName: null}))}
+  const legacy = getQuickCorrectionFormContext(ambiguous).context.points
+  t.deepEqual(legacy.slice(0, 2).map(point => point.correction.label), [
+    'Prise A — Code comptage : 001 · ligne 1', 'Prise A — Code comptage : 001 · ligne 2'
+  ])
+  t.is(points[0].usage.label, 'Irrigation')
+  t.deepEqual(points.map(point => point.correction.original?.value), [10, 0, undefined])
+  t.true(points.every(point => point.pointPrelevementId === 'point' && point.coordinates === shape))
+  t.true(initial.requiresDateSelection)
+  t.is(initial.dates.readingDate, '')
+
+  rows.b.value = ''
+  rows['new:three'].value = '0'
+  const {payload, reviewEntries} = build(fixed, points.map(point => ({...point, ...rows[point.formEntryId]})), 'INDEX', {readingDate: '2026-01-15'})
+  t.deepEqual(payload.entries.map(entry => [entry.id, entry.exploitationId, entry.value]), [['a', 'one', 10], [undefined, 'three', 0]])
+  t.deepEqual(reviewEntries.map(entry => [entry.compteurId, entry.before?.value, entry.after?.value]), [['blue', 0, undefined], [null, undefined, 0]])
+})
+
+test('le badge signale les ajouts, retraits, conversions et vraies modifications de valeur', t => {
   const original = declaration.entries[0]
   const row = {...original, value: '10', readingDate: '2026-01-20'}
   t.is(getQuickMeasureBadge(original, row, 'INDEX', 'INDEX'), null)
+  t.is(getQuickMeasureBadge(original, {...row, value: '10.00'}, 'INDEX', 'INDEX'), null)
+  t.is(getQuickMeasureBadge(original, {...row, value: '30'}, 'INDEX', 'INDEX'), 'Modifié')
+  t.is(getQuickMeasureBadge({...original, value: 0}, {...row, value: ''}, 'INDEX', 'INDEX'), 'Supprimé')
   t.is(getQuickMeasureBadge(null, {...row, value: ''}, 'INDEX', 'INDEX'), null)
-  t.is(getQuickMeasureBadge(null, {...row, value: '0'}, 'INDEX', 'VOLUME'), 'Index ajouté')
-  t.is(getQuickMeasureBadge(null, row, 'VOLUME', 'INDEX'), 'Volume ajouté')
-  t.is(getQuickMeasureBadge(original, {...row, value: '0'}, 'VOLUME', 'VOLUME'), 'Volume modifié')
-  t.is(getQuickMeasureBadge(original, row, 'VOLUME', 'INDEX'), 'Index converti en volume')
-  t.is(getQuickMeasureBadge(original, {...row, removed: true}, 'INDEX', 'VOLUME'), 'Volume supprimé')
-  t.is(getQuickMeasureBadge(original, {...row, value: ''}, 'VOLUME', 'INDEX'), 'Index supprimé')
+  t.is(getQuickMeasureBadge(null, {...row, value: '0'}, 'INDEX', 'VOLUME'), 'Ajouté')
+  t.is(getQuickMeasureBadge(null, row, 'VOLUME', 'INDEX'), 'Ajouté')
+  t.is(getQuickMeasureBadge(original, {...row, value: '0'}, 'VOLUME', 'VOLUME'), 'Modifié')
+  t.is(getQuickMeasureBadge(original, row, 'VOLUME', 'INDEX'), 'Modifié')
+  t.is(getQuickMeasureBadge(original, {...row, removed: true}, 'INDEX', 'VOLUME'), 'Supprimé')
+  t.is(getQuickMeasureBadge(original, {...row, value: ''}, 'VOLUME', 'INDEX'), 'Supprimé')
 })
 
 test('une seule date modifiée déplace tous les index, garde les zéros et produit un nouveau brouillon de vérification', t => {

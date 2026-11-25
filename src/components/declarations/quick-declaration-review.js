@@ -7,7 +7,7 @@ import {Button} from '@codegouvfr/react-dsfr/Button'
 import {createModal} from '@codegouvfr/react-dsfr/Modal'
 
 import {
-  describeQuickMeasure, describeQuickReviewDates, describeQuickVolumes, formatReviewPeriod, formatReviewVolume, getReviewLabel, groupQuickReview
+  describeQuickMeasure, describeQuickReviewDates, describeQuickVolumes, formatReviewPeriod, formatReviewVolume, groupQuickReview
 } from '@/lib/quick-declaration-review.js'
 import {getMyDeclarationURL} from '@/lib/urls.js'
 import {
@@ -19,6 +19,12 @@ import QuickDeclarationContact from './quick-declaration-contact.js'
 const previewDelay = 300
 
 export {formatQuickDate} from '@/lib/quick-declaration-review.js'
+
+function changeTextClass(before, after) {
+  if (before == null) return 'text-[var(--text-default-success)]'
+  if (after == null) return 'text-[var(--text-default-error)]'
+  return undefined
+}
 
 function getDeltaLabel(before, after) {
   if (before == null) return 'Ajout'
@@ -54,7 +60,7 @@ function PeriodDetails({changes, label}) {
                 <td>{formatReviewPeriod(change.periodStartDate, change.periodEndDate)}</td>
                 <VolumeCell value={change.before} kind={change.beforeKind} breakdown={change.beforeBreakdown} showOrigin={change.afterKind && change.beforeKind !== change.afterKind} />
                 <VolumeCell value={change.after} kind={change.afterKind} breakdown={change.afterBreakdown} showOrigin={change.beforeKind && change.beforeKind !== change.afterKind} />
-                <td>{getDeltaLabel(change.before, change.after)}</td>
+                <td><span className={changeTextClass(change.before, change.after)}>{getDeltaLabel(change.before, change.after)}</span></td>
               </tr>
             ))}
           </tbody>
@@ -65,13 +71,13 @@ function PeriodDetails({changes, label}) {
 }
 
 function warningKey(warning) {
-  return [warning.pointPrelevementId, warning.exploitationId, warning.compteurId, warning.code, warning.readingDate, warning.periodStartDate, warning.periodEndDate, warning.value, warning.message].join(':')
+  return [warning.entryId, warning.declarationId ?? warning.declarationCode, warning.code, warning.readingDate, warning.periodStartDate, warning.periodEndDate, warning.value, warning.message].join(':')
 }
 
-function WarningMessage({warning}) {
+function WarningMessage({warning, showMessage = true}) {
   return (
     <>
-      {warning.message}
+      {showMessage && warning.message}
       {warning.code === 'VOLUME_OVERLAP' && warning.value != null && (
         <> Volume existant de {formatReviewVolume(warning.value)} ({formatReviewPeriod(warning.periodStartDate, warning.periodEndDate)}).</>
       )}
@@ -84,8 +90,61 @@ function WarningMessage({warning}) {
   )
 }
 
-function PreviewWarnings({warnings, seriesLabels, payload, declarationId}) {
-  if (!warnings?.length) return null
+function PreviewWarningList({warnings}) {
+  const items = []
+  const overlaps = new Map()
+  for (const warning of warnings) {
+    if (warning.code !== 'VOLUME_OVERLAP' || warning.value == null) {
+      items.push([warning])
+      continue
+    }
+
+    const key = [warning.entryId, warning.message].join('/')
+    if (!overlaps.has(key)) {
+      const volumes = []
+      overlaps.set(key, volumes)
+      items.push(volumes)
+    }
+
+    overlaps.get(key).push(warning)
+  }
+
+  return <ul className='!my-1'>
+    {items.map(([first, ...others]) => (
+      <li key={warningKey(first)}>
+        {others.length ? (
+          <>
+            La nouvelle période remplace en entier les {others.length + 1} volumes déclarés suivants.
+            <ul>{[first, ...others].map(warning => (
+              <li key={warningKey(warning)}><WarningMessage warning={warning} showMessage={false} /></li>
+            ))}</ul>
+          </>
+        ) : <WarningMessage warning={first} />}
+      </li>
+    ))}
+  </ul>
+}
+
+function IndexWarningContacts({group, payload, declarationId}) {
+  const byReading = new Map()
+  for (const warning of group.warnings) {
+    if (warning.code !== 'INDEX_BELOW_PREVIOUS' && warning.code !== 'INDEX_ABOVE_NEXT') continue
+    const key = [warning.entryId, warning.readingDate, warning.value].join('/')
+    if (!byReading.has(key)) byReading.set(key, [])
+    byReading.get(key).push(warning)
+  }
+
+  return [...byReading].map(([key, warnings]) => {
+    const [warning] = warnings
+    const measure = group.measures.find(row => row.after?.type === 'INDEX'
+      && row.after.readingDate === warning.readingDate && Number(row.after.value) === Number(warning.value))
+    return <QuickDeclarationContact key={key} declarationId={declarationId} payload={payload} measure={measure} warnings={warnings} />
+  })
+}
+
+function PreviewWarnings({groups, payload, declarationId, originalDates}) {
+  const affected = groups.filter(group => group.warnings.length > 0)
+  if (!affected.length) return null
   return (
     <Alert
       className='fr-my-2w'
@@ -93,13 +152,17 @@ function PreviewWarnings({warnings, seriesLabels, payload, declarationId}) {
       title='Saisie à vérifier'
       description={(
         <>
-          <ul>{warnings.map(warning => (
-            <li key={warningKey(warning)}>
-              <strong>{getReviewLabel(warning, seriesLabels).replace(' — ', ' · ')}</strong>{' '}
-              <WarningMessage warning={warning} />
-              <QuickDeclarationContact declarationId={declarationId} payload={payload} warning={warning} />
-            </li>
-          ))}</ul>
+          {affected.map(group => (
+            <section key={group.key} aria-label={group.label} className='fr-mb-2w'>
+              <strong>{group.label.replace(' — ', ' · ')}</strong>
+              {group.measures.filter(row => row.before == null || row.after == null).map(row => {
+                const {action, detail} = describeQuickMeasure(row, [], originalDates)
+                return <p key={row.id || group.key} className='!mb-0'><strong className={changeTextClass(row.before, row.after)}>{action}</strong> · {detail}</p>
+              })}
+              <PreviewWarningList warnings={group.warnings} />
+              <IndexWarningContacts group={group} payload={payload} declarationId={declarationId} />
+            </section>
+          ))}
           Vous pouvez confirmer cette saisie.
         </>
       )}
@@ -118,7 +181,7 @@ function ReviewPoints({groups, originalDates}) {
         </h3>
         {group.measures.map(row => {
           const {action, detail} = describeQuickMeasure(row, group.measures.length === 1 ? group.warnings : [], originalDates)
-          return <p key={row.id || group.key} className='!mb-1'><strong>{action}</strong> · {detail}</p>
+          return <p key={row.id || group.key} className='!mb-1'><strong className={changeTextClass(row.before, row.after)}>{action}</strong> · {detail}</p>
         })}
         {impact && <p className='!mb-1'>{impact}</p>}
         {group.warnings.length > 0 && (
@@ -137,7 +200,7 @@ function ReviewPoints({groups, originalDates}) {
   })
 }
 
-export default function QuickDeclarationReview({declarationId = null, payload, submitLabel, onSaved, reviewEntries = [], seriesLabels = {}, originalDates = null}) {
+export default function QuickDeclarationReview({declarationId = null, payload, submitLabel, onSaved, reviewEntries = [], seriesLabels = {}, seriesOrder, originalDates = null}) {
   const instanceId = useId().replaceAll(':', '')
   const modal = useMemo(() => createModal({id: `quick-review-${instanceId}`, isOpenedByDefault: false}), [instanceId])
   const [attempt, setAttempt] = useState(0)
@@ -151,6 +214,7 @@ export default function QuickDeclarationReview({declarationId = null, payload, s
   const preview = result?.payload === payload && result.attempt === attempt ? result : null
   const dates = payload && describeQuickReviewDates(payload, originalDates)
   const data = preview?.data
+  const groups = data ? groupQuickReview(reviewEntries, data.changes || [], data.warnings || [], seriesLabels, seriesOrder) : []
   const error = saveError?.payload === payload ? saveError : null
   const isEditing = Boolean(declarationId)
 
@@ -224,7 +288,7 @@ export default function QuickDeclarationReview({declarationId = null, payload, s
     <>
       <div aria-live='polite'>
         {checkStatus}
-        <PreviewWarnings seriesLabels={seriesLabels} warnings={data?.warnings} payload={payload} declarationId={declarationId} />
+        <PreviewWarnings groups={groups} payload={payload} declarationId={declarationId} originalDates={originalDates} />
       </div>
       <Button disabled={!payload || saving} nativeButtonProps={modal.buttonProps}>{submitLabel}</Button>
       <modal.Component
@@ -248,7 +312,7 @@ export default function QuickDeclarationReview({declarationId = null, payload, s
                 {dates.previous && <p className='fr-hint-text fr-mb-0'>{dates.previous}</p>}
               </div>
             )}
-            <ReviewPoints originalDates={originalDates} groups={groupQuickReview(reviewEntries, data.changes || [], data.warnings || [], seriesLabels)} />
+            <ReviewPoints originalDates={originalDates} groups={groups} />
             {data.warnings?.length > 0 && <p className='fr-mt-2w fr-mb-0'>Vous pouvez confirmer cette saisie.</p>}
           </>
         )}

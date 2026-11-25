@@ -44,6 +44,24 @@ test('le récapitulatif sépare deux comptages et deux compteurs avec le même n
   t.deepEqual(groups.find(g => g.measures.includes(meter)).warnings, [warning])
 })
 
+test('les retours suivent les lignes du formulaire, y compris les comptages avec seulement une alerte', t => {
+  const withdrawal = {pointPrelevementId: 'p', exploitationId: 'withdrawal', label: 'Vallon'}
+  const south = {...withdrawal, compteurId: 'south'}
+  const north = {...withdrawal, compteurId: 'north'}
+  const discharge = {pointPrelevementId: 'q', exploitationId: 'discharge', label: 'Aval'}
+  const untouched = {pointPrelevementId: 'r', exploitationId: 'untouched'}
+  const outside = {pointPrelevementId: 'previous', label: 'Ancien comptage'}
+  const change = {...north, before: 12, after: null}
+  const warning = {...south, code: 'INDEX_BELOW_PREVIOUS'}
+  const secondWarning = {...south, code: 'INDEX_ABOVE_NEXT'}
+  const groups = groupQuickReview([discharge, north], [change, outside], [warning, secondWarning], {},
+    [south, untouched, north, south, discharge])
+
+  t.deepEqual(groups.map(group => group.key), ['p/withdrawal/south', 'p/withdrawal/north', 'q/discharge/', 'previous//'])
+  t.deepEqual(groups[0].warnings, [warning, secondWarning])
+  t.deepEqual(groups[1].changes, [change])
+})
+
 test('un relevé isolé, un volume nul et une nouvelle période calculée ont des effets distincts', t => {
   const measures = [{before: null, after: index}]
   t.is(describeQuickVolumes({measures, changes: []}), 'Aucun nouveau volume calculé pour ce relevé.')

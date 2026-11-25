@@ -37,14 +37,9 @@ export function hasQuickEditorMeasure(row) {
 }
 
 export function getQuickMeasureBadge(original, row, measurementType, originalType) {
-  const name = measurementType === 'INDEX' ? 'Index' : 'Volume'
-  if (!hasQuickEditorMeasure(row)) {
-    if (!original) return null
-    return originalType === 'INDEX' ? 'Index supprimé' : 'Volume supprimé'
-  }
-  if (!original) return `${name} ajouté`
-  if (measurementType !== originalType) return measurementType === 'INDEX' ? 'Volume converti en index' : 'Index converti en volume'
-  return Number(row.value) !== Number(original.value) ? `${name} modifié` : null
+  if (!hasQuickEditorMeasure(row)) return original ? 'Supprimé' : null
+  if (!original) return 'Ajouté'
+  return measurementType !== originalType || Number(row.value) !== Number(original.value) ? 'Modifié' : null
 }
 
 export function getQuickEditorMapPoints(declaration) {
@@ -57,6 +52,39 @@ export function getQuickEditorMapPoints(declaration) {
     points.set(id, {pointPrelevementId: id, name: point?.name || row.pointName, coordinates: point?.coordinates ?? null})
   }
   return [...points.values()]
+}
+
+// The form stores values by row. A historical row can share both a point and
+// an exploitation with another meter, so its persisted entry ID is the row key.
+export function getQuickCorrectionFormContext(declaration) {
+  const fixedRows = createQuickEditorRows(declaration)
+  const geometry = new Map(getQuickEditorMapPoints(declaration).map(point => [point.pointPrelevementId, point.coordinates]))
+  const originals = new Map(declaration.entries.map(entry => [entry.id, entry]))
+  const initial = getQuickEditorInitialDates(declaration)
+  const labels = fixedRows.map(getQuickEditorLabel)
+  const repeatedLabels = new Set()
+  const knownLabels = new Set()
+  for (const label of labels) {
+    if (knownLabels.has(label)) repeatedLabels.add(label)
+    knownLabels.add(label)
+  }
+  const points = fixedRows.map((row, index) => ({
+    ...row,
+    formEntryId: getQuickEditorRowKey(row),
+    name: row.pointName,
+    coordinates: geometry.get(row.pointPrelevementId),
+    usage: {id: row.usageId, label: row.usageLabel},
+    lastReading: row.previousReading,
+    declarationsCount: row.id ? 1 : 0,
+    correction: {
+      label: repeatedLabels.has(labels[index]) ? `${labels[index]} · ligne ${index + 1}` : labels[index],
+      original: originals.get(row.id),
+      originalType: declaration.measurementType,
+      showOriginalDates: initial.requiresDateSelection
+    }
+  }))
+  const rows = Object.fromEntries(points.map(point => [point.formEntryId, {value: point.value, usageId: point.usageId}]))
+  return {context: {points}, rows, initial}
 }
 
 export function getQuickMeasurementDates(measurementType, row) {
