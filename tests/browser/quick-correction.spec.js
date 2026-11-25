@@ -334,6 +334,7 @@ test('une vérification encore en cours ne peut confirmer la date précédente',
   const review = correctionReview(page)
   const confirm = review.getByRole('button', {name: 'Confirmer la modification'})
   await date.fill('2026-09-10')
+  await expect(reviewPoint(page, '001').getByText(/Index supérieur au relevé suivant/)).toBeVisible()
   await verify.click()
   await expect(confirm).toBeEnabled()
   await review.getByRole('button', {name: 'Revenir à la saisie'}).click()
