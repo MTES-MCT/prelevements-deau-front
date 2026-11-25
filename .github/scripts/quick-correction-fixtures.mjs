@@ -87,7 +87,6 @@ export async function handleQuickCorrectionFixture(request, send) {
   }
   if (pathname.endsWith('/preview')) {
     const day = draft.readingDate
-    if (day === '2026-09-09') await new Promise(resolve => setTimeout(resolve, 700))
     const changes = []
     const warnings = []
     for (const available of formEntries) {

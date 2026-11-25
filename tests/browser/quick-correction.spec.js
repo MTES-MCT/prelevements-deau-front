@@ -326,15 +326,50 @@ test('une valeur à zéro se saisit sur un comptage déjà présent, sans modifi
 
 test('une vérification encore en cours ne peut confirmer la date précédente', async ({page, context}) => {
   const state = await session(context, 'DECLARANT')
-  await page.goto(`${front}/saisie-en-ligne/${ids.declaration}/modifier`)
+  const edit = `${front}/saisie-en-ligne/${ids.declaration}/modifier`
+  await page.goto(edit)
   const date = page.getByLabel('Date du relevé d’index')
-  await date.fill('2026-09-09')
-  await expect.poll(async () => (await state()).requests.at(-1)?.body.readingDate).toBe('2026-09-09')
-  await date.fill('2026-09-14')
-  await page.getByRole('button', {name: 'Vérifier les modifications'}).click()
+  const verify = page.getByRole('button', {name: 'Vérifier les modifications'})
   const review = correctionReview(page)
   const confirm = review.getByRole('button', {name: 'Confirmer la modification'})
-  await expect(confirm).toBeDisabled()
+  await date.fill('2026-09-10')
+  await verify.click()
+  await expect(confirm).toBeEnabled()
+  await review.getByRole('button', {name: 'Revenir à la saisie'}).click()
+
+  const previous = Promise.withResolvers()
+  const latest = Promise.withResolvers()
+  const heldPreviews = new Map([['2026-09-09', previous], ['2026-09-14', latest]])
+  await page.route(edit, async route => {
+    const request = route.request()
+    const [draft] = request.headers()['next-action'] ? request.postDataJSON() : []
+    const hold = !draft?.previewToken && heldPreviews.get(draft?.readingDate)
+    if (!hold) return route.fallback()
+    const response = await route.fetch()
+    await hold.promise
+    await route.fulfill({response})
+  })
+  const lastPreviewDate = async () => (await state()).requests.filter(request => request.path.endsWith('/preview')).at(-1)?.body.readingDate
+  try {
+    await date.fill('2026-09-09')
+    await expect.poll(lastPreviewDate).toBe('2026-09-09')
+    await date.fill('2026-09-14')
+    await verify.click()
+    await expect(confirm).toBeDisabled()
+
+    // Let the previous date arrive after the edit, while the latest date is still pending.
+    const previousResponse = page.waitForResponse(response =>
+      response.url() === edit && response.request().postDataJSON()?.[0]?.readingDate === '2026-09-09')
+    previous.resolve()
+    await previousResponse
+    await expect.poll(lastPreviewDate).toBe('2026-09-14')
+    await expect(confirm).toBeDisabled()
+    await expect(review.getByRole('status')).toHaveText('Vérification des volumes en cours…')
+    await expect(review.getByText(/Index supérieur au relevé suivant/)).toHaveCount(0)
+  } finally {
+    previous.resolve()
+    latest.resolve()
+  }
   await expect((await openPeriods(reviewPoint(review, '001'))).getByText('14/09/2026')).toBeVisible()
   await expect(review.getByText(/Index supérieur au relevé suivant/)).toHaveCount(0)
   await confirm.click()
