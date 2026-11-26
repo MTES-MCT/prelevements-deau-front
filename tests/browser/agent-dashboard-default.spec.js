@@ -31,17 +31,23 @@ async function openAgent(page, context, role, path, {impersonating = false} = {}
 test('équipe PE : définir la première zone, la remplacer par la deuxième puis retirer le défaut', async ({page, context}) => {
   await openAgent(page, context, 'ADMIN', '/agents/' + agentId)
   await expect(page.getByRole('heading', {name: 'Accès aux zones'})).toBeVisible()
-  const [first, second] = zones.map(zone => page.getByRole('article').filter({has: page.getByRole('heading', {name: zone.name})}))
-  const badges = page.getByText(badge, {exact: true})
-  await expect(first.getByRole('button', {name: setDefault})).toBeVisible()
-  await expect(badges).toHaveCount(0)
-  await first.getByRole('button', {name: setDefault}).click()
-  await expect(first.getByText(badge, {exact: true})).toBeVisible()
-  await second.getByRole('button', {name: setDefault}).click()
-  await expect(second.getByText(badge, {exact: true})).toBeVisible()
-  await expect(first.getByRole('button', {name: setDefault})).toBeVisible()
-  await expect(badges).toHaveCount(1)
-  const remove = second.getByRole('button', {name: removeDefault})
+  const select = page.getByRole('combobox', {name: /Zone par défaut du tableau de bord/})
+  const save = page.getByRole('button', {name: 'Enregistrer', exact: true})
+  const confirmation = page.getByText('Zone enregistrée.', {exact: true})
+  const cards = page.getByRole('article')
+  await expect(cards.getByRole('button', {name: /email de rattachement/})).toHaveCount(0)
+  await expect(cards.getByText(/Dernier envoi/)).toHaveCount(0)
+  await expect(cards.getByRole('button', {name: setDefault})).toHaveCount(0)
+  await expect(select).toHaveValue('')
+  await expect(save).toHaveCount(0)
+  for (const zone of zones) {
+    await expect(cards.getByRole('heading', {name: zone.name})).toBeVisible()
+    await select.selectOption({label: zone.name})
+    await save.click()
+    await expect(confirmation).toBeVisible()
+    await expect(select).toHaveValue(zone.id)
+    await expect(save).toHaveCount(0)
+  }
   const {promise: scriptsReady, resolve: releaseScripts} = Promise.withResolvers()
   await page.route(/\/_next\/static\/chunks\/app\/agents\/[^/]+\/page-[^/]+\.js$/, async route => {
     await scriptsReady
@@ -49,16 +55,17 @@ test('équipe PE : définir la première zone, la remplacer par la deuxième pui
   })
   try {
     await page.reload({waitUntil: 'commit'})
-    await expect(second.getByText(badge, {exact: true})).toBeVisible()
-    await expect(remove).toBeDisabled()
+    await expect(select).toHaveValue(zones[1].id)
+    await expect(select).toBeDisabled()
   } finally {
     releaseScripts()
   }
-  await remove.click()
-  await expect(second.getByRole('button', {name: setDefault})).toBeVisible()
+  await select.selectOption('')
+  await save.click()
+  await expect(confirmation).toBeVisible()
   await page.reload()
-  await expect(page.getByRole('button', {name: setDefault})).toHaveCount(2)
-  await expect(badges).toHaveCount(0)
+  await expect(select).toHaveValue('')
+  await expect(save).toHaveCount(0)
 })
 
 test('administrateur de zone : gérer le défaut sur sa fiche locale', async ({page, context}) => {

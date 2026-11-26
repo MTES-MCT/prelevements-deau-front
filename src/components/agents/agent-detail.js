@@ -17,7 +17,7 @@ import {
   DialogTitle
 } from '@mui/material'
 import Link from 'next/link'
-import DashboardDefaultControl from './dashboard-default-control.js'
+import AgentDashboardZone from './agent-dashboard-zone.js'
 
 import ImpersonateUserButton from '@/components/auth/impersonate-user-button.js'
 import CopyableEmail from '@/components/ui/CopyableEmail/index.js'
@@ -35,10 +35,7 @@ import {
   restoreAgentAction,
   sendAgentAccountCreationNotificationAction
 } from '@/server/actions/agents.js'
-import {
-  deleteZoneInstructorAction,
-  sendZoneInstructorAttachmentNotificationAction
-} from '@/server/actions/zones.js'
+import {deleteZoneInstructorAction} from '@/server/actions/zones.js'
 
 const MESSAGE_CONTENT = {
   agent: {
@@ -74,7 +71,7 @@ const MESSAGE_CONTENT = {
   'access-warning': {
     severity: 'warning',
     title: 'Accès ajouté',
-    description: 'Le nouvel accès territorial a bien été enregistré, mais l’email de rattachement n’a pas pu être envoyé.'
+    description: 'L’accès a été enregistré. L’agent n’a pas pu être informé.'
   },
   'access-updated': {
     severity: 'success',
@@ -156,53 +153,6 @@ const HabilitationPermissions = ({catalog, habilitation}) => {
         {labels.map(label => <li key={label}>{label}</li>)}
       </ul>
     </details>
-  )
-}
-
-const ZoneAttachmentNotificationButton = ({agent, habilitation}) => {
-  const router = useRouter()
-  const [error, setError] = useState(null)
-  const [isPending, setIsPending] = useState(false)
-  const [sentAt, setSentAt] = useState(habilitation.zoneAttachmentMailSentAt)
-
-  const send = async () => {
-    setError(null)
-    setIsPending(true)
-
-    const result = await sendZoneInstructorAttachmentNotificationAction(
-      habilitation.zone.id,
-      agent
-    )
-
-    if (!result.success) {
-      setError(result.error || 'Impossible d’envoyer cet email.')
-      setIsPending(false)
-      return
-    }
-
-    const currentHabilitation = result.data?.habilitations
-      ?.find(item => item.zoneId === habilitation.zone.id)
-
-    setSentAt(currentHabilitation?.zoneAttachmentMailSentAt ?? new Date().toISOString())
-    setIsPending(false)
-    router.refresh({showProgress: false})
-  }
-
-  return (
-    <div className='flex flex-col items-start gap-1'>
-      <Button
-        disabled={isPending}
-        priority='tertiary no outline'
-        size='small'
-        onClick={send}
-      >
-        {isPending ? 'Envoi…' : 'Envoyer l’email de rattachement'}
-      </Button>
-      <span className='text-xs text-[var(--text-mention-grey)]'>
-        Dernier envoi : {formatDateTime(sentAt).toLowerCase()}
-      </span>
-      {error && <span className='fr-error-text fr-mb-0'>{error}</span>}
-    </div>
   )
 }
 
@@ -289,6 +239,8 @@ const AgentHabilitations = ({agent, permissionCatalog}) => {
         />
       )}
 
+      <AgentDashboardZone agentId={agent.id} habilitations={habilitations} canManage={accountActive} />
+
       {habilitations.length === 0
         ? <p className='fr-text--sm fr-mb-0 mt-4'><i>Aucun accès territorial.</i></p>
         : (
@@ -309,24 +261,18 @@ const AgentHabilitations = ({agent, permissionCatalog}) => {
                       {formatAccessPeriod(habilitation.startDate, habilitation.endDate)}
                     </p>
                     <HabilitationPermissions catalog={permissionCatalog} habilitation={habilitation} />
-                    <DashboardDefaultControl agentId={agent.id} habilitation={habilitation} canManage={accountActive} />
                   </div>
 
                   {accountActive && (
-                    <div className='flex shrink-0 flex-col items-start gap-2 lg:items-end'>
-                      <div className='flex flex-wrap gap-2 lg:justify-end'>
-                        <Button
-                          priority='secondary'
-                          size='small'
-                          linkProps={{href: `/agents/${agent.id}/zones/${habilitation.zone.id}/modifier`}}
-                        >
-                          Modifier
-                        </Button>
-                        <RemoveHabilitationButton agent={agent} habilitation={habilitation} />
-                      </div>
-                      {habilitation.status !== 'ENDED' && (
-                        <ZoneAttachmentNotificationButton agent={agent} habilitation={habilitation} />
-                      )}
+                    <div className='flex shrink-0 flex-wrap gap-2 lg:justify-end'>
+                      <Button
+                        priority='secondary'
+                        size='small'
+                        linkProps={{href: `/agents/${agent.id}/zones/${habilitation.zone.id}/modifier`}}
+                      >
+                        Modifier
+                      </Button>
+                      <RemoveHabilitationButton agent={agent} habilitation={habilitation} />
                     </div>
                   )}
                 </div>
